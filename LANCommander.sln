@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32328.378
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander", "LANCommander.csproj", "{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CBA5868D-8784-40B3-8E3D-46C24FDDC425}
+	EndGlobalSection
+EndGlobal

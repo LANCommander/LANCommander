@@ -1,0 +1,54 @@
+﻿@model LANCommander.Data.Models.Archive
+
+@{
+    ViewData["Title"] = "Add Archive";
+}
+
+<h1>Add Archive</h1>
+
+<h4>@Html.DisplayFor(m => m.Game.Title)</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="AddArchive" enctype="multipart/form-data" >
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Version" class="control-label"></label>
+                <input asp-for="Version" class="form-control" />
+                <span asp-validation-for="Version" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Changelog" class="control-label"></label>
+                <textarea asp-for="Changelog" class="form-control"></textarea>
+                <span asp-validation-for="Changelog" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="UploadedFile" class="control-label"></label>
+                <input type="file" asp-for="UploadedFile" class="form-control" />
+                <span asp-validation-for="UploadedFile" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="control-label">Last Version</label>
+                <input class="form-control" value="@Html.DisplayFor(m => m.LastVersion.Version)" />
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script src="~/js/Upload.js"></script>
+    <script>
+        var uploader = new Uploader();
+
+        uploader.Init('UploadedFile');
+    </script>
+}

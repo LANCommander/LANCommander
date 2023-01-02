@@ -42,7 +42,7 @@ class Uploader {
                 this.GetChunks();
                 for (let chunk of this.Chunks) {
                     let formData = new FormData();
-                    formData.append('file', this.File.slice(chunk.Start, chunk.End));
+                    formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
                     formData.append('start', chunk.Start.toString());
                     formData.append('end', chunk.End.toString());
                     formData.append('key', this.Key);

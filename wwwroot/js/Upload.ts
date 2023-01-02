@@ -54,8 +54,6 @@ class Uploader {
             this.GetChunks();
 
             for (let chunk of this.Chunks) {
-                let dataChunk = await this.ReadChunkFromFile(this.File, chunk);
-
                 let formData = new FormData();
 
                 formData.append('file', this.File.slice(chunk.Start, chunk.End));
@@ -74,21 +72,6 @@ class Uploader {
                 debugger;
             }
         }
-    }
-
-    ReadChunkFromFile(file: File, chunk: Chunk): Promise<string | ArrayBuffer>  {
-        return new Promise((resolve, reject) => {
-            let reader = new FileReader();
-            let blob = this.File.slice(chunk.Start, chunk.End);
-
-            reader.onload = () => {
-                resolve(reader.result);
-            }
-
-            reader.onerror = reject;
-
-            reader.readAsArrayBuffer(blob);
-        });
     }
 
     GetChunks() {

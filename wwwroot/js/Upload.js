@@ -41,7 +41,6 @@ class Uploader {
                 this.Key = data.key;
                 this.GetChunks();
                 for (let chunk of this.Chunks) {
-                    let dataChunk = yield this.ReadChunkFromFile(this.File, chunk);
                     let formData = new FormData();
                     formData.append('file', this.File.slice(chunk.Start, chunk.End));
                     formData.append('start', chunk.Start.toString());
@@ -56,17 +55,6 @@ class Uploader {
                     debugger;
                 }
             }
-        });
-    }
-    ReadChunkFromFile(file, chunk) {
-        return new Promise((resolve, reject) => {
-            let reader = new FileReader();
-            let blob = this.File.slice(chunk.Start, chunk.End);
-            reader.onload = () => {
-                resolve(reader.result);
-            };
-            reader.onerror = reject;
-            reader.readAsArrayBuffer(blob);
         });
     }
     GetChunks() {

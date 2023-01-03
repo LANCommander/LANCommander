@@ -54,4 +54,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 app.MapRazorPages();
 
+if (!Directory.Exists("Upload"))
+    Directory.CreateDirectory("Upload");
+
 app.Run();

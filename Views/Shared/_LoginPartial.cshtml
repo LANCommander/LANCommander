@@ -3,25 +3,25 @@
 @inject SignInManager<User> SignInManager
 @inject UserManager<User> UserManager
 
-<ul class="navbar-nav">
-@if (SignInManager.IsSignedIn(User))
-{
-    <li class="nav-item">
-        <a  class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index" title="Manage">Hello @User.Identity?.Name!</a>
-    </li>
-    <li class="nav-item">
-        <form  class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-            <button  type="submit" class="nav-link btn btn-link text-dark">Logout</button>
-        </form>
-    </li>
-}
-else
-{
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
-    </li>
-}
-</ul>
+<div class="navbar-nav flex-row order-md-last">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <div class="nav-item dropdown">
+		    <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">
+			    <div class="d-none d-xl-block ps-2">
+				    <div>Hello @User.Identity?.Name!</div>
+			    </div>
+		    </a>
+		    <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+			    <a asp-area="Identity" asp-page="/Account/Manage/Index" class="dropdown-item">Profile & account</a>
+			    <a asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" class="dropdown-item">Logout</a>
+		    </div>
+        </div>
+    }
+    else
+    {
+        <div class="nav-item">
+            <a asp-area="Identity" asp-page="/Account/Login">Login</a>
+        </div>
+    }
+</div>

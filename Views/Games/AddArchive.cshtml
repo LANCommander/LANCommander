@@ -9,31 +9,42 @@
 <h4>@Html.DisplayFor(m => m.Game.Title)</h4>
 <hr />
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <form asp-action="AddArchive" enctype="multipart/form-data" >
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Version" class="control-label"></label>
-                <input asp-for="Version" class="form-control" />
-                <span asp-validation-for="Version" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Changelog" class="control-label"></label>
-                <textarea asp-for="Changelog" class="form-control"></textarea>
-                <span asp-validation-for="Changelog" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UploadedFile" class="control-label"></label>
-                <input type="file" asp-for="UploadedFile" class="form-control" />
-                <span asp-validation-for="UploadedFile" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label class="control-label">Last Version</label>
-                <input class="form-control" value="@Html.DisplayFor(m => m.LastVersion.Version)" />
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
+            <fieldset>
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="form-group">
+                    <label asp-for="Version" class="control-label"></label>
+                    <input asp-for="Version" class="form-control" />
+                    <span asp-validation-for="Version" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Changelog" class="control-label"></label>
+                    <textarea asp-for="Changelog" class="form-control"></textarea>
+                    <span asp-validation-for="Changelog" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label for="File" class="control-label">File</label>
+                    <input type="file" id="File" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label class="control-label">Last Version</label>
+                    <input class="form-control" value="@Html.DisplayFor(m => m.LastVersion.Version)" />
+                </div>
+
+                <div class="form-group">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-primary" id="UploadButton">Upload</button>
+                    <input type="submit" value="Save" id="SaveButton" class="btn btn-primary" style="display: none;" />
+                </div>
+
+                <input type="hidden" asp-for="ObjectKey" />
+            </fieldset>
         </form>
     </div>
 </div>
@@ -49,6 +60,53 @@
     <script>
         var uploader = new Uploader();
 
-        uploader.Init('UploadedFile');
+        uploader.Init('File', 'UploadButton');
+
+        uploader.OnStart = () => {
+            $('fieldset').prop('disabled', true);
+            $('.progress-bar')
+                .css('width', '0%')
+                .removeClass('bg-success')
+                .removeClass('bg-danger')
+                .addClass('progress-bar-striped')
+                .addClass('progress-bar-animated')
+                .text('0%');
+            
+            $('#UploadButton').show();
+            $('#SaveButton').hide();
+        };
+
+        uploader.OnComplete = (key) => {
+            $('#ObjectKey').val(key);
+            $('fieldset').prop('disabled', false);
+            $('.progress-bar')
+                .css('width', '100%')
+                .removeClass('progress-bar-striped')
+                .removeClass('progress-bar-animated')
+                .addClass('bg-success')
+                .text('Upload Complete!');
+
+            $('#UploadButton').hide();
+            $('#SaveButton').show();
+        };
+
+        uploader.OnProgress = (percent) => {
+            $('.progress-bar')
+                .css('width', `${percent * 100}%`)
+                .text(`${Math.round(percent * 100)}%`);
+        };
+
+        uploader.OnError = () => {
+            $('fieldset').prop('disabled', false);
+            $('.progress-bar')
+                .css('width', '100%')
+                .removeClass('progress-bar-striped')
+                .removeClass('progress-bar-animated')
+                .addClass('bg-danger')
+                .text('Error!');
+
+            $('#UploadButton').show();
+            $('#SaveButton').hide();
+        };
     </script>
 }

@@ -20,17 +20,19 @@ class Uploader {
         this.ChunkRoute = "/Upload/Chunk";
         this.MaxChunkSize = 1024 * 1024 * 25;
     }
-    Init(elementId) {
-        this.FileInput = document.getElementById(elementId);
+    Init(fileInputId, uploadButtonId) {
+        this.FileInput = document.getElementById(fileInputId);
+        this.UploadButton = document.getElementById(uploadButtonId);
         this.ParentForm = this.FileInput.closest("form");
         this.Chunks = [];
-        this.ParentForm.onsubmit = (e) => __awaiter(this, void 0, void 0, function* () {
-            yield this.HandleFormSubmit(e);
+        this.UploadButton.onclick = (e) => __awaiter(this, void 0, void 0, function* () {
+            yield this.OnUploadButtonClicked(e);
         });
     }
-    HandleFormSubmit(e) {
+    OnUploadButtonClicked(e) {
         return __awaiter(this, void 0, void 0, function* () {
             e.preventDefault();
+            this.OnStart();
             this.File = this.FileInput.files.item(0);
             this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
             var response = yield fetch(this.InitRoute, {
@@ -40,19 +42,27 @@ class Uploader {
             if (response.ok) {
                 this.Key = data.key;
                 this.GetChunks();
-                for (let chunk of this.Chunks) {
-                    let formData = new FormData();
-                    formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
-                    formData.append('start', chunk.Start.toString());
-                    formData.append('end', chunk.End.toString());
-                    formData.append('key', this.Key);
-                    formData.append('total', this.File.size.toString());
-                    console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
-                    let response = yield fetch(this.ChunkRoute, {
-                        method: "POST",
-                        body: formData
-                    });
-                    debugger;
+                try {
+                    for (let chunk of this.Chunks) {
+                        let formData = new FormData();
+                        formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
+                        formData.append('start', chunk.Start.toString());
+                        formData.append('end', chunk.End.toString());
+                        formData.append('key', this.Key);
+                        formData.append('total', this.File.size.toString());
+                        console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
+                        let chunkResponse = yield fetch(this.ChunkRoute, {
+                            method: "POST",
+                            body: formData
+                        });
+                        if (!chunkResponse)
+                            throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
+                        this.OnProgress(chunk.Index / this.TotalChunks);
+                    }
+                    this.OnComplete(this.Key);
+                }
+                catch (_a) {
+                    this.OnError();
                 }
             }
         });

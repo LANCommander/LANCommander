@@ -13,6 +13,7 @@
 class Uploader {
     ParentForm: HTMLFormElement;
     FileInput: HTMLInputElement;
+    UploadButton: HTMLButtonElement;
     File: File;
 
     InitRoute: string = "/Upload/Init";
@@ -25,19 +26,22 @@ class Uploader {
 
     Key: string;
 
-    Init(elementId: string) {
-        this.FileInput = document.getElementById(elementId) as HTMLInputElement;
+    Init(fileInputId: string, uploadButtonId: string) {
+        this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
+        this.UploadButton = document.getElementById(uploadButtonId) as HTMLButtonElement;
         this.ParentForm = this.FileInput.closest("form");
 
         this.Chunks = [];
 
-        this.ParentForm.onsubmit = async (e) => {
-            await this.HandleFormSubmit(e);
-        };
+        this.UploadButton.onclick = async (e) => {
+            await this.OnUploadButtonClicked(e);
+        }
     }
 
-    async HandleFormSubmit(e: SubmitEvent) {
+    async OnUploadButtonClicked(e: MouseEvent) {
         e.preventDefault();
+
+        this.OnStart();
 
         this.File = this.FileInput.files.item(0);
         this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
@@ -53,23 +57,33 @@ class Uploader {
 
             this.GetChunks();
 
-            for (let chunk of this.Chunks) {
-                let formData = new FormData();
+            try {
+                for (let chunk of this.Chunks) {
+                    let formData = new FormData();
 
-                formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
-                formData.append('start', chunk.Start.toString());
-                formData.append('end', chunk.End.toString());
-                formData.append('key', this.Key);
-                formData.append('total', this.File.size.toString());
+                    formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
+                    formData.append('start', chunk.Start.toString());
+                    formData.append('end', chunk.End.toString());
+                    formData.append('key', this.Key);
+                    formData.append('total', this.File.size.toString());
 
-                console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
+                    console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
 
-                let response = await fetch(this.ChunkRoute, {
-                    method: "POST",
-                    body: formData
-                });
+                    let chunkResponse = await fetch(this.ChunkRoute, {
+                        method: "POST",
+                        body: formData
+                    });
 
-                debugger;
+                    if (!chunkResponse)
+                        throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
+
+                    this.OnProgress(chunk.Index / this.TotalChunks);
+                }
+
+                this.OnComplete(this.Key);
+            }
+            catch {
+                this.OnError();
             }
         }
     }
@@ -85,4 +99,9 @@ class Uploader {
             this.Chunks.push(new Chunk(start, end, currentChunk));
         }
     }
+
+    OnStart: () => void;
+    OnComplete: (key: string) => void;
+    OnProgress: (percent: number) => void;
+    OnError: () => void;
 }

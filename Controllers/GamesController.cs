@@ -191,8 +191,22 @@ namespace LANCommander.Controllers
         }
 
         [HttpPost]
-        public IActionResult AddArchive([Bind("UploadedFile", "Version")] Archive archive)
+        public async Task<IActionResult> AddArchive(Guid? id, Archive archive)
         {
+            archive.Id = Guid.Empty;
+
+            using (Repository<Game> gameRepo = new Repository<Game>(Context, HttpContext))
+            {
+                var game = await gameRepo.Find(id.GetValueOrDefault());
+
+                using (Repository<Archive> archiveRepo = new Repository<Archive>(Context, HttpContext))
+                {
+                    archive.Game = game;
+
+                    archive = await archiveRepo.Add(archive);
+                    await archiveRepo.SaveChanges();
+                }
+            }
             return RedirectToAction(nameof(Index));
         }
 

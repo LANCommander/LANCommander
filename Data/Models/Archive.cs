@@ -12,11 +12,8 @@ namespace LANCommander.Data.Models
         [Required]
         public string Version { get; set; }
 
-        public Game Game { get; set; }
+        public virtual Game Game { get; set; }
 
-        public Archive? LastVersion { get; set; }
-
-        [NotMapped]
-        public IFormFile UploadedFile { get; set; }
+        public virtual Archive? LastVersion { get; set; }
     }
 }

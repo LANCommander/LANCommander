@@ -7,8 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddDbContext<global::LANCommander.Data.DatabaseContext>((global::Microsoft.EntityFrameworkCore.DbContextOptionsBuilder options) =>
-    options.UseSqlite(connectionString));
+
+builder.Services.AddDbContext<LANCommander.Data.DatabaseContext>(b =>
+{
+    b.UseLazyLoadingProxies();
+    b.UseSqlite(connectionString);
+});
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

@@ -8,6 +8,6 @@ namespace LANCommander.Data.Models
     {
         public string Name { get; set; }
 
-        public List<Game> Games { get; set; }
+        public virtual List<Game> Games { get; set; }
     }
 }

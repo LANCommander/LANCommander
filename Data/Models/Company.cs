@@ -4,7 +4,7 @@
     {
         public string Name { get; set; }
 
-        public ICollection<Game> PublishedGames { get; set; }
-        public ICollection<Game> DevelopedGames { get; set; }
+        public virtual ICollection<Game> PublishedGames { get; set; }
+        public virtual ICollection<Game> DevelopedGames { get; set; }
     }
 }

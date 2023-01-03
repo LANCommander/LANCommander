@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace LANCommander.Data.Models
 {
     [Table("Users")]
-    public class User : IdentityUser
+    public class User : IdentityUser<Guid>
     {
     }
 }

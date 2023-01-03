@@ -42,8 +42,8 @@ namespace LANCommander.Data
 
         public async Task<T> Add(T entity)
         {
-            entity.CreatedById = GetCurrentUserId();
-            entity.UpdatedById = GetCurrentUserId();
+            entity.CreatedBy = GetCurrentUser();
+            entity.UpdatedBy = GetCurrentUser();
             entity.CreatedOn = DateTime.Now;
             entity.UpdatedOn = DateTime.Now;
 
@@ -54,7 +54,7 @@ namespace LANCommander.Data
 
         public T Update(T entity)
         {
-            entity.UpdatedById = GetCurrentUserId();
+            entity.UpdatedBy = GetCurrentUser();
             entity.UpdatedOn = DateTime.Now;
 
             Context.Update(entity);
@@ -72,19 +72,19 @@ namespace LANCommander.Data
             return UserDbSet.FirstOrDefault(u => u.UserName == username);
         }
 
-        private Guid GetCurrentUserId()
+        private User GetCurrentUser()
         {
             if (HttpContext != null && HttpContext.User != null && HttpContext.User.Identity != null && HttpContext.User.Identity.IsAuthenticated)
             {
                 var user = GetUser(HttpContext.User.Identity.Name);
 
                 if (user == null)
-                    return Guid.Empty;
+                    return null;
                 else
-                    return Guid.Parse(user.Id);
+                    return user;
             }
             else
-                return Guid.Empty;
+                return null;
         }
 
         public void Dispose()

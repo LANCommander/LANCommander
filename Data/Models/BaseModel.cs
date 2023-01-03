@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LANCommander.Data.Models
 {
@@ -8,8 +9,8 @@ namespace LANCommander.Data.Models
         public Guid Id { get; set; }
 
         public DateTime CreatedOn { get; set; }
-        public Guid CreatedById { get; set; }
+        public virtual User? CreatedBy { get; set; }
         public DateTime UpdatedOn { get; set; }
-        public Guid UpdatedById { get; set; }
+        public virtual User? UpdatedBy { get; set; }
     }
 }

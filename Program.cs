@@ -2,6 +2,7 @@ using LANCommander.Data;
 using LANCommander.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +21,7 @@ builder.Services.AddDefaultIdentity<User>((IdentityOptions options) => {
     options.SignIn.RequireConfirmedAccount = true;
     options.Password.RequireNonAlphanumeric = false;
     options.SignIn.RequireConfirmedEmail = false;
-}).AddEntityFrameworkStores<DatabaseContext>();
+}).AddEntityFrameworkStores<LANCommander.Data.DatabaseContext>();
 
 builder.Services.AddControllersWithViews();
 

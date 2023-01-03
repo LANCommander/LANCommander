@@ -1,10 +1,11 @@
 ﻿using LANCommander.Data.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Data
 {
-    public class DatabaseContext : IdentityDbContext<User>
+    public class DatabaseContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
     {
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)

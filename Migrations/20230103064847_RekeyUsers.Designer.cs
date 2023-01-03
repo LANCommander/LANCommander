@@ -3,6 +3,7 @@ using System;
 using LANCommander.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230103064847_RekeyUsers")]
+    partial class RekeyUsers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.8");
@@ -41,7 +43,7 @@ namespace LANCommander.Migrations
                     b.Property<string>("Changelog")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("CreatedById")
+                    b.Property<Guid>("CreatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
@@ -57,7 +59,7 @@ namespace LANCommander.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("UpdatedById")
+                    b.Property<Guid>("UpdatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedOn")
@@ -86,7 +88,7 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("CreatedById")
+                    b.Property<Guid>("CreatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
@@ -96,7 +98,7 @@ namespace LANCommander.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("UpdatedById")
+                    b.Property<Guid>("UpdatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedOn")
@@ -117,7 +119,7 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("CreatedById")
+                    b.Property<Guid>("CreatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
@@ -146,7 +148,7 @@ namespace LANCommander.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("UpdatedById")
+                    b.Property<Guid>("UpdatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedOn")
@@ -171,7 +173,7 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("CreatedById")
+                    b.Property<Guid>("CreatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
@@ -181,7 +183,7 @@ namespace LANCommander.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("UpdatedById")
+                    b.Property<Guid>("UpdatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedOn")
@@ -410,7 +412,9 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Archives")
@@ -422,7 +426,9 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("CreatedBy");
 
@@ -437,11 +443,15 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("CreatedBy");
 
@@ -452,7 +462,9 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("LANCommander.Data.Models.Company", "Developer")
                         .WithMany("DevelopedGames")
@@ -464,7 +476,9 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("CreatedBy");
 
@@ -479,11 +493,15 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("CreatedBy");
 

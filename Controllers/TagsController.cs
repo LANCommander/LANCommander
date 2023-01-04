@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.Data;
 using LANCommander.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LANCommander.Controllers
 {
+    [Authorize]
     public class TagsController : Controller
     {
         private readonly DatabaseContext _context;

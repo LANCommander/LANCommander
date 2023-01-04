@@ -1,9 +1,11 @@
 ﻿using LANCommander.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Controllers
 {
+    [Authorize]
     public class UploadController : Controller
     {
         private const string UploadDirectory = "Upload";

@@ -7,9 +7,11 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.Data;
 using LANCommander.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LANCommander.Controllers
 {
+    [Authorize]
     public class GamesController : Controller
     {
         private readonly DatabaseContext Context;
@@ -156,7 +158,7 @@ namespace LANCommander.Controllers
         {
             if (Context.Games == null)
             {
-                return Problem("Entity set 'DatabaseContext.Games'  is null.");
+                return Problem("Entity set 'DatabaseContext.Games' is null.");
             }
             var game = await Context.Games.FindAsync(id);
             if (game != null)

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Administrator")]
     public class ArchivesController : Controller
     {
         private readonly DatabaseContext Context;

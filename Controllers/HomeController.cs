@@ -2,11 +2,13 @@
 using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
 namespace LANCommander.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;

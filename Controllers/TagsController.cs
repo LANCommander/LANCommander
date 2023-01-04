@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace LANCommander.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Administrator")]
     public class TagsController : Controller
     {
         private readonly DatabaseContext _context;

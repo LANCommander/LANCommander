@@ -62,6 +62,11 @@ namespace LANCommander.Data
             return entity;
         }
 
+        public void Delete(T entity)
+        {
+            Context.Remove(entity);
+        }
+
         public async Task SaveChanges()
         {
             await Context.SaveChangesAsync();

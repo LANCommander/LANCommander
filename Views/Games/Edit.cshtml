@@ -92,8 +92,8 @@
                                             <td>@ByteSizeLib.ByteSize.FromBytes(new FileInfo(System.IO.Path.Combine("Upload", archive.ObjectKey)).Length)</td>
                                             <td>
                                                 <div class="btn-list flex-nowrap">
-                                                    <a asp-action="DownloadArchive" asp-route-id="@archive.Id" class="btn">Download</a>
-                                                    <a asp-action="DeleteArchive" asp-route-id="@archive.Id" class="btn btn-danger">Delete</a>
+                                                    <a asp-action="Download" asp-controller="Archives" asp-route-id="@archive.Id" class="btn">Download</a>
+                                                    <a asp-action="Delete" asp-controller="Archives" asp-route-id="@archive.Id" class="btn btn-danger">Delete</a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -108,7 +108,7 @@
                             <p class="empty-title">No Archives</p>
                             <p class="empty-subtitle text-muted">There have been no archives uploaded for this game.</p>
                             <div class="empty-action">
-                                <a asp-action="AddArchive" asp-route-id="@Model.Id" class="btn btn-primary">Upload Archive</a>
+                                <a asp-action="Add" asp-controller="Archives" asp-route-id="@Model.Id" class="btn btn-primary">Upload Archive</a>
                             </div>
                         </div>
                     }

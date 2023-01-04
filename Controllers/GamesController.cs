@@ -168,48 +168,6 @@ namespace LANCommander.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> AddArchive(Guid? id)
-        {
-            if (id == null || Context.Games == null)
-                return NotFound();
-
-            using (Repository<Game> repo = new Repository<Game>(Context, HttpContext))
-            {
-                var game = await repo.Find(id.GetValueOrDefault());
-
-                Archive lastVersion = null;
-
-                if (game.Archives != null && game.Archives.Count > 0)
-                    lastVersion = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-
-                return View(new Archive()
-                {
-                    Game = game,
-                    LastVersion = lastVersion,
-                });
-            }
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AddArchive(Guid? id, Archive archive)
-        {
-            archive.Id = Guid.Empty;
-
-            using (Repository<Game> gameRepo = new Repository<Game>(Context, HttpContext))
-            {
-                var game = await gameRepo.Find(id.GetValueOrDefault());
-
-                using (Repository<Archive> archiveRepo = new Repository<Archive>(Context, HttpContext))
-                {
-                    archive.Game = game;
-
-                    archive = await archiveRepo.Add(archive);
-                    await archiveRepo.SaveChanges();
-                }
-            }
-            return RedirectToAction(nameof(Index));
-        }
-
         private bool GameExists(Guid id)
         {
           return (Context.Games?.Any(e => e.Id == id)).GetValueOrDefault();

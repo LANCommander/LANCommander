@@ -78,6 +78,7 @@
                                         <th>Uploaded By</th>
                                         <th>Uploaded On</th>
                                         <th>Size</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
 
@@ -86,9 +87,15 @@
                                     {
                                         <tr>
                                             <td>@Html.DisplayFor(m => archive.Version)</td>
-                                            <td>@Html.DisplayFor(m => archive.CreatedBy)</td>
+                                            <td>@Html.DisplayFor(m => archive.CreatedBy.UserName)</td>
                                             <td>@Html.DisplayFor(m => archive.CreatedOn)</td>
                                             <td>@ByteSizeLib.ByteSize.FromBytes(new FileInfo(System.IO.Path.Combine("Upload", archive.ObjectKey)).Length)</td>
+                                            <td>
+                                                <div class="btn-list flex-nowrap">
+                                                    <a asp-action="DownloadArchive" asp-route-id="@archive.Id" class="btn">Download</a>
+                                                    <a asp-action="DeleteArchive" asp-route-id="@archive.Id" class="btn btn-danger">Delete</a>
+                                                </div>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>

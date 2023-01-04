@@ -1,7 +1,7 @@
 ﻿@model LANCommander.Data.Models.Game
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Add Game";
 }
 
 <div class="container-xl">
@@ -10,7 +10,7 @@
         <div class="row align-items-center">
             <div class="col">
                 <h2 class="page-title">
-                    Create Game
+                    Add Game
                 </h2>
             </div>
         </div>
@@ -21,7 +21,7 @@
     <div class="container-xl">
         <div class="row row-cards">
             <div class="col-12">
-                <form asp-action="Edit" class="card">
+                <form asp-action="Add" class="card">
                     <div class="card-body">
                         <div class="row">
                             <div class="col-12">
@@ -47,8 +47,6 @@
                                     <input asp-for="ReleasedOn" class="form-control" />
                                     <span asp-validation-for="ReleasedOn" class="text-danger"></span>
                                 </div>
-
-                                <input type="hidden" asp-for="Id" />
                             </div>
                         </div>
                     </div>

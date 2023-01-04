@@ -47,15 +47,24 @@ namespace LANCommander.Controllers
             {
                 var game = await gameRepo.Find(id.GetValueOrDefault());
 
-                using (Repository<Archive> archiveRepo = new Repository<Archive>(Context, HttpContext))
-                {
-                    archive.Game = game;
+                archive.Game = game;
 
-                    archive = await archiveRepo.Add(archive);
-                    await archiveRepo.SaveChanges();
+                if (game.Archives != null && game.Archives.Any(a => a.Version == archive.Version))
+                    ModelState.AddModelError("Version", "An archive for this game is already using that version.");
+
+                if (ModelState.IsValid)
+                {
+                    using (Repository<Archive> archiveRepo = new Repository<Archive>(Context, HttpContext))
+                    {
+                        archive = await archiveRepo.Add(archive);
+                        await archiveRepo.SaveChanges();
+                    }
+
+                    return RedirectToAction("Edit", "Games", new { id = id });
                 }
             }
-            return RedirectToAction("Edit", "Games", new { id = id });
+
+            return View(archive);
         }
 
         public async Task<IActionResult> Download(Guid id)

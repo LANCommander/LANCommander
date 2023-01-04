@@ -4,53 +4,72 @@
     ViewData["Title"] = "Add Archive";
 }
 
-<h1>Add Archive</h1>
-
-<h4>@Html.DisplayFor(m => m.Game.Title)</h4>
-<hr />
-<div class="row">
-    <div class="col-md-6">
-        <form asp-action="Add" enctype="multipart/form-data" >
-            <fieldset>
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                <div class="form-group">
-                    <label asp-for="Version" class="control-label"></label>
-                    <input asp-for="Version" class="form-control" />
-                    <span asp-validation-for="Version" class="text-danger"></span>
-                </div>
-                <div class="form-group">
-                    <label asp-for="Changelog" class="control-label"></label>
-                    <textarea asp-for="Changelog" class="form-control"></textarea>
-                    <span asp-validation-for="Changelog" class="text-danger"></span>
-                </div>
-                <div class="form-group">
-                    <label for="File" class="control-label">File</label>
-                    <input type="file" id="File" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label class="control-label">Last Version</label>
-                    <input class="form-control" value="@Html.DisplayFor(m => m.LastVersion.Version)" />
-                </div>
-
-                <div class="form-group">
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <button class="btn btn-primary" id="UploadButton">Upload</button>
-                    <input type="submit" value="Save" id="SaveButton" class="btn btn-primary" style="display: none;" />
-                </div>
-
-                <input type="hidden" asp-for="ObjectKey" />
-            </fieldset>
-        </form>
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">@Model.Game.Title</div>
+                <h2 class="page-title">
+                    Add Archive
+                </h2>
+            </div>
+        </div>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <form asp-action="Add" enctype="multipart/form-data" class="card">
+                    <fieldset>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Version" class="control-label"></label>
+                                        <input asp-for="Version" class="form-control" />
+                                        <span asp-validation-for="Version" class="text-danger"></span>
+                                        @if (Model.LastVersion != null && !String.IsNullOrWhiteSpace(Model.LastVersion.Version))
+                                        {
+                                            <small class="form-hint">Last version: @Model.LastVersion.Version</small>
+                                        }
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Changelog" class="control-label"></label>
+                                        <textarea asp-for="Changelog" class="form-control"></textarea>
+                                        <span asp-validation-for="Changelog" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="File" class="control-label">File</label>
+                                        <input type="file" id="File" class="form-control" />
+                                    </div>
+                                    <div>
+                                        <div class="progress h-4">
+                                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" asp-for="ObjectKey" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-footer">
+                            <div class="d-flex">
+                                <a asp-action="Edit" asp-controller="Games" asp-route-id="@Model.Game.Id" class="btn btn-link">Cancel</a>
+                                <button class="btn btn-primary" id="UploadButton">Upload</button>
+                                <input type="submit" value="Save" id="SaveButton" class="btn btn-primary" style="display: none;" />
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {

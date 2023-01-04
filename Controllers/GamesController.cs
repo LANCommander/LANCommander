@@ -29,26 +29,8 @@ namespace LANCommander.Controllers
                           Problem("Entity set 'DatabaseContext.Games'  is null.");
         }
 
-        // GET: Games/Details/5
-        public async Task<IActionResult> Details(Guid? id)
-        {
-            if (id == null || Context.Games == null)
-            {
-                return NotFound();
-            }
-
-            var game = await Context.Games
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (game == null)
-            {
-                return NotFound();
-            }
-
-            return View(game);
-        }
-
         // GET: Games/Create
-        public IActionResult Create()
+        public IActionResult Add()
         {
             return View();
         }
@@ -58,7 +40,7 @@ namespace LANCommander.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Title,SortTitle,Description,ReleasedOn,Id,CreatedOn,CreatedById,UpdatedOn,UpdatedById")] Game game)
+        public async Task<IActionResult> Add([Bind("Title,SortTitle,Description,ReleasedOn,Id,CreatedOn,CreatedById,UpdatedOn,UpdatedById")] Game game)
         {
             if (ModelState.IsValid)
             {

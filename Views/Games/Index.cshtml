@@ -14,9 +14,9 @@
 
             <div class="col-auto ms-auto">
                 <div class="btn-list">
-                    <a asp-action="Create" class="btn btn-primary d-none d-sm-inline-block">
+                    <a asp-action="Add" class="btn btn-primary d-none d-sm-inline-block">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        Create
+                        Add
                     </a>
                 </div>
             </div>
@@ -92,7 +92,6 @@
                                         <td>
                                             <div class="btn-list flex-nowrap">
                                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn">Edit</a>
-                                                <a asp-action="Details" asp-route-id="@item.Id" class="btn">Details</a>
                                                 <a asp-action="Delete" asp-route-id="@item.Id" class="btn">Delete</a>
                                             </div>
                                         </td>

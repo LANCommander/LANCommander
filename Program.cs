@@ -18,7 +18,7 @@ builder.Services.AddDbContext<LANCommander.Data.DatabaseContext>(b =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<User>((IdentityOptions options) => { 
-    options.SignIn.RequireConfirmedAccount = true;
+    options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireNonAlphanumeric = false;
     options.SignIn.RequireConfirmedEmail = false;
 }).AddEntityFrameworkStores<LANCommander.Data.DatabaseContext>();

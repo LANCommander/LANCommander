@@ -8,9 +8,13 @@ namespace LANCommander.Data.Models
         [Key]
         public Guid Id { get; set; }
 
+        [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }
+        [Display(Name = "Created By")]
         public virtual User? CreatedBy { get; set; }
+        [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
+        [Display(Name = "Updated By")]
         public virtual User? UpdatedBy { get; set; }
     }
 }

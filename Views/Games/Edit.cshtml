@@ -61,6 +61,52 @@
                     </div>
                 </form>
             </div>
+
+            <div class="col-12">
+                <div class="card">
+                    @if (Model.Archives != null && Model.Archives.Count > 0)
+                    {
+                        <div class="card-body">
+                            <h3 class="card-title">Archives</h3>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-vcenter table-mobile-md card-table">
+                                <thead>
+                                    <tr>
+                                        <th>Version</th>
+                                        <th>Uploaded By</th>
+                                        <th>Uploaded On</th>
+                                        <th>Size</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var archive in Model.Archives.OrderByDescending(a => a.CreatedOn))
+                                    {
+                                        <tr>
+                                            <td>@Html.DisplayFor(m => archive.Version)</td>
+                                            <td>@Html.DisplayFor(m => archive.CreatedBy)</td>
+                                            <td>@Html.DisplayFor(m => archive.CreatedOn)</td>
+                                            <td>@ByteSizeLib.ByteSize.FromBytes(new FileInfo(System.IO.Path.Combine("Upload", archive.ObjectKey)).Length)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty">
+                            <p class="empty-title">No Archives</p>
+                            <p class="empty-subtitle text-muted">There have been no archives uploaded for this game.</p>
+                            <div class="empty-action">
+                                <a asp-action="AddArchive" asp-route-id="@Model.Id" class="btn btn-primary">Upload Archive</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     </div>
 </div>

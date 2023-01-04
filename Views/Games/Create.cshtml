@@ -4,45 +4,67 @@
     ViewData["Title"] = "Create";
 }
 
-<h1>Create</h1>
-
-<h4>Game</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Title" class="control-label"></label>
-                <input asp-for="Title" class="form-control" />
-                <span asp-validation-for="Title" class="text-danger"></span>
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <h2 class="page-title">
+                    Create Game
+                </h2>
             </div>
-            <div class="form-group">
-                <label asp-for="SortTitle" class="control-label"></label>
-                <input asp-for="SortTitle" class="form-control" />
-                <span asp-validation-for="SortTitle" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="ReleasedOn" class="control-label"></label>
-                <input asp-for="ReleasedOn" class="form-control" />
-                <span asp-validation-for="ReleasedOn" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <form asp-action="Edit" class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12">
+                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Title" class="control-label"></label>
+                                    <input asp-for="Title" class="form-control" />
+                                    <span asp-validation-for="Title" class="text-danger"></span>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="SortTitle" class="control-label"></label>
+                                    <input asp-for="SortTitle" class="form-control" />
+                                    <span asp-validation-for="SortTitle" class="text-danger"></span>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="control-label"></label>
+                                    <input asp-for="Description" class="form-control" />
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="ReleasedOn" class="control-label"></label>
+                                    <input asp-for="ReleasedOn" class="form-control" />
+                                    <span asp-validation-for="ReleasedOn" class="text-danger"></span>
+                                </div>
+
+                                <input type="hidden" asp-for="Id" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="d-flex">
+                            <a asp-action="Index" class="btn btn-link">Cancel</a>
+                            <button type="submit" class="btn btn-primary ms-auto">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 }

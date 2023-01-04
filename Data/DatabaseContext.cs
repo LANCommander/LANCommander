@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Data
 {
-    public class DatabaseContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
+    public class DatabaseContext : IdentityDbContext<User, Role, Guid>
     {
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)

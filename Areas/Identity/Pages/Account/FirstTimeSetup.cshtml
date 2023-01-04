@@ -1,0 +1,52 @@
+﻿@page
+@model FirstTimeSetupModel
+@{
+    Layout = "/Views/Shared/_LayoutBasic.cshtml";
+}
+@{
+    ViewData["Title"] = "First Time Setup";
+}
+
+<div class="page page-center">
+    <form asp-route-returnUrl="@Model.ReturnUrl" class="container-tight py-4">
+        <div class="text-center mb-4">
+            <h2>LANCommander</h2>
+        </div>
+        <div class="card card-md">
+            <div class="card-body text-center py-4 p-sm-5">
+                <h1>Welcome to LANCommander!</h1>
+                <p class="text-muted">LANCommander is your one stop shop for distributing games on your LAN. Start your adventure with LANCommander and take control of your local multiplayer gaming!</p>
+            </div>
+            <div class="hr-text hr-text-center hr-text-spaceless">registration</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Register your admin account</label>
+                    <input asp-for="Input.UserName" type="text" class="form-control ps-1" autocomplete="off" placeholder="Username" />
+                    <div class="form-hint">For first-time setup, an admin user is required. This user will be able to manage all aspects of the application.</div>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label"></label>
+                    <input asp-for="Input.Password" type="password" class="form-control ps-1" autocomplete="new-password" />
+                    <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Input.ConfirmPassword" class="form-label"></label>
+                    <input asp-for="Input.ConfirmPassword" type="password" class="form-control ps-1" autocomplete="new-password" />
+                    <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row align-items-center mt-3">
+            <div class="col">
+                <div class="btn-list justify-content-end">
+                    <button type="submit" class="btn btn-primary">Continue</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+}

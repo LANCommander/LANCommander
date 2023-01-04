@@ -6,32 +6,44 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using LANCommander.Data.Models;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Areas.Identity.Pages.Account
 {
-    public class LoginModel : PageModel
+    public class FirstTimeSetupModel : PageModel
     {
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
-        private readonly ILogger<LoginModel> _logger;
+        private readonly RoleManager<Role> _roleManager;
+        private readonly IUserStore<User> _userStore;
+        private readonly IUserEmailStore<User> _emailStore;
+        private readonly ILogger<FirstTimeSetupModel> _logger;
+        private readonly IEmailSender _emailSender;
 
-        public LoginModel(
-            SignInManager<User> signInManager,
+        public FirstTimeSetupModel(
             UserManager<User> userManager,
-            ILogger<LoginModel> logger
-            )
+            IUserStore<User> userStore,
+            SignInManager<User> signInManager,
+            RoleManager<Role> roleManager,
+            ILogger<FirstTimeSetupModel> logger,
+            IEmailSender emailSender)
         {
-            _signInManager = signInManager;
             _userManager = userManager;
+            _userStore = userStore;
+            _signInManager = signInManager;
+            _roleManager = roleManager;
             _logger = logger;
         }
 
@@ -46,20 +58,13 @@ namespace LANCommander.Areas.Identity.Pages.Account
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        public IList<AuthenticationScheme> ExternalLogins { get; set; }
-
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
         public string ReturnUrl { get; set; }
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        [TempData]
-        public string ErrorMessage { get; set; }
+        public IList<AuthenticationScheme> ExternalLogins { get; set; }
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
@@ -72,8 +77,7 @@ namespace LANCommander.Areas.Identity.Pages.Account
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
             [Required]
-            [DataType(DataType.Text)]
-            [Display(Name = "User Name")]
+            [Display(Name = "Username")]
             public string UserName { get; set; }
 
             /// <summary>
@@ -81,39 +85,39 @@ namespace LANCommander.Areas.Identity.Pages.Account
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
             [Required]
+            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
             [DataType(DataType.Password)]
+            [Display(Name = "Password")]
             public string Password { get; set; }
 
             /// <summary>
             ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
-            [Display(Name = "Remember me?")]
-            public bool RememberMe { get; set; }
+            [DataType(DataType.Password)]
+            [Display(Name = "Confirm password")]
+            [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+            public string ConfirmPassword { get; set; }
         }
+
 
         public async Task<IActionResult> OnGetAsync(string returnUrl = null)
         {
-            if (!string.IsNullOrEmpty(ErrorMessage))
-            {
-                ModelState.AddModelError(string.Empty, ErrorMessage);
-            }
-
-            returnUrl ??= Url.Content("~/");
-
-            // Clear the existing external cookie to ensure a clean login process
-            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-
+            ReturnUrl = returnUrl;
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
-            ReturnUrl = returnUrl;
+            var administratorRoleExists = await _roleManager.RoleExistsAsync("Administor");
+
+            if (!administratorRoleExists)
+                await _roleManager.CreateAsync(new Role()
+                {
+                    Name = "Administrator"
+                });
 
             var administrators = await _userManager.GetUsersInRoleAsync("Administrator");
 
-            if (administrators.Count == 0)
-            {
-                return RedirectToPage("./FirstTimeSetup");
-            }
+            if (administrators.Count > 0)
+                return RedirectToPage("./Login");
 
             return Page();
         }
@@ -121,37 +125,60 @@ namespace LANCommander.Areas.Identity.Pages.Account
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
-
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+            var administrators = await _userManager.GetUsersInRoleAsync("Administrator");
+
+            if (administrators.Count > 0)
+                return RedirectToPage("./Login");
 
             if (ModelState.IsValid)
             {
-                // This doesn't count login failures towards account lockout
-                // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(Input.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+                var user = CreateUser();
+
+                await _userStore.SetUserNameAsync(user, Input.UserName, CancellationToken.None);
+                var result = await _userManager.CreateAsync(user, Input.Password);
+
+                await _userManager.AddToRoleAsync(user, "Administrator");
+
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("User logged in.");
+                    _logger.LogInformation("Administrator created a new account with password.");
+
+                    var userId = await _userManager.GetUserIdAsync(user);
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                    var callbackUrl = Url.Page(
+                        "/Account/ConfirmEmail",
+                        pageHandler: null,
+                        values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
+                        protocol: Request.Scheme);
+
+                    await _signInManager.SignInAsync(user, isPersistent: false);
                     return LocalRedirect(returnUrl);
                 }
-                if (result.RequiresTwoFactor)
+                foreach (var error in result.Errors)
                 {
-                    return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
-                }
-                if (result.IsLockedOut)
-                {
-                    _logger.LogWarning("User account locked out.");
-                    return RedirectToPage("./Lockout");
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return Page();
+                    ModelState.AddModelError(string.Empty, error.Description);
                 }
             }
 
             // If we got this far, something failed, redisplay form
             return Page();
+        }
+
+        private User CreateUser()
+        {
+            try
+            {
+                return Activator.CreateInstance<User>();
+            }
+            catch
+            {
+                throw new InvalidOperationException($"Can't create an instance of '{nameof(User)}'. " +
+                    $"Ensure that '{nameof(User)}' is not an abstract class and has a parameterless constructor, or alternatively " +
+                    $"override the register page in /Areas/Identity/Pages/Account/FirstTimeSetupModel.cshtml");
+            }
         }
     }
 }

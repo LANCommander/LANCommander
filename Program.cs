@@ -21,7 +21,9 @@ builder.Services.AddDefaultIdentity<User>((IdentityOptions options) => {
     options.SignIn.RequireConfirmedAccount = false;
     options.Password.RequireNonAlphanumeric = false;
     options.SignIn.RequireConfirmedEmail = false;
-}).AddEntityFrameworkStores<LANCommander.Data.DatabaseContext>();
+})
+    .AddRoles<Role>()
+    .AddEntityFrameworkStores<LANCommander.Data.DatabaseContext>();
 
 builder.Services.AddControllersWithViews();
 

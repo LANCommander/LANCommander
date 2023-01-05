@@ -35,5 +35,9 @@ namespace LANCommander.Data.Models
         public override bool LockoutEnabled { get; set; }
         [JsonIgnore]
         public override int AccessFailedCount { get; set; }
+
+        // Refresh Token
+        public string? RefreshToken { get; set; }
+        public DateTime RefreshTokenExpiration { get; set; }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using LANCommander.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -68,7 +69,7 @@ namespace LANCommander.Controllers.Api
 
                 return Ok(new
                 {
-                    Token = new JwtSecurityTokenHandler().WriteToken(token),
+                    AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
                     RefreshToken = refreshToken,
                     Expiration = token.ValidTo
                 });
@@ -76,6 +77,15 @@ namespace LANCommander.Controllers.Api
 
             return RedirectToAction("Index", "Home");
         }
+
+        [HttpPost("Validate")]
+        public IActionResult Validate()
+        {
+            if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
+                return Ok();
+            else
+                return Unauthorized();
+        } 
 
         [HttpPost("Refresh")]
         public async Task<IActionResult> Refresh(TokenModel token)
@@ -109,7 +119,8 @@ namespace LANCommander.Controllers.Api
             return Ok(new
             {
                 AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
-                RefreshToken = newRefreshToken
+                RefreshToken = newRefreshToken,
+                Expiration = newAccessToken.ValidTo
             });
         }
 

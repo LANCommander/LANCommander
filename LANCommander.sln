@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander", "LANCommander.csproj", "{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander", "LANCommander\LANCommander.csproj", "{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Playnite.Extension", "LANCommander.Playnite.Extension\LANCommander.Playnite.Extension.csproj", "{F9EB13D4-8FD9-4095-B934-F7EC681E6901}"
 EndProject

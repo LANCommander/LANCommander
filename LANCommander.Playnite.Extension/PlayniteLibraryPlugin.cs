@@ -13,8 +13,8 @@ namespace LANCommander.Playnite.Extension
     public class PlayniteLibraryPlugin : LibraryPlugin
     {
         public static readonly ILogger Logger = LogManager.GetLogger();
-        private SettingsViewModel Settings { get; set; }
-        private LANCommanderClient LANCommander { get; set; }
+        private PlayniteSettingsViewModel Settings { get; set; }
+        internal LANCommanderClient LANCommander { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
@@ -23,7 +23,7 @@ namespace LANCommander.Playnite.Extension
         public PlayniteLibraryPlugin(IPlayniteAPI api) : base(api)
         {
             LANCommander = new LANCommanderClient();
-            Settings = new SettingsViewModel(this);
+            Settings = new PlayniteSettingsViewModel(this);
             Properties = new LibraryPluginProperties
             {
                 HasSettings = true,
@@ -32,28 +32,51 @@ namespace LANCommander.Playnite.Extension
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
         {
-            // Implement LANCommander client here
-            var games = LANCommander.GetGames().Select(g => new GameMetadata()
+            try
             {
-                Name = g.Title,
-                Description = g.Description,
-                GameId = g.Id.ToString(),
-                ReleaseDate = new ReleaseDate(g.ReleasedOn),
-                SortingName = g.SortTitle,
-                Version = g.Archives != null && g.Archives.Count() > 0 ? g.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version : null,
-            });
+                // Implement LANCommander client here
+                var games = LANCommander.GetGames().Select(g => new GameMetadata()
+                {
+                    Name = g.Title,
+                    Description = g.Description,
+                    GameId = g.Id.ToString(),
+                    ReleaseDate = new ReleaseDate(g.ReleasedOn),
+                    SortingName = g.SortTitle,
+                    Version = g.Archives != null && g.Archives.Count() > 0 ? g.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version : null,
+                });
 
-            return games;
+                return games;
+            }
+            catch
+            {
+                return new List<GameMetadata>();
+            }
         }
 
         public override ISettings GetSettings(bool firstRunSettings)
         {
-            return base.GetSettings(firstRunSettings);
+            return Settings;
         }
 
         public override UserControl GetSettingsView(bool firstRunView)
         {
-            return base.GetSettingsView(firstRunView);
+            return new PlayniteSettingsView(this);
+        }
+
+        public void ShowAuthenticationWindow()
+        {
+            var window = PlayniteApi.Dialogs.CreateWindow(new WindowCreationOptions()
+            {
+                ShowMinimizeButton = false,
+            });
+
+            window.Title = "Authenticate to LANCommander";
+
+            window.Content = new PlayniteSettingsView(this);
+
+            window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
+            window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
+            window.ShowDialog();
         }
     }
 }

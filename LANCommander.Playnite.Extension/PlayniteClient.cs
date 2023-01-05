@@ -13,7 +13,8 @@ namespace LANCommander.Playnite.Extension
 
         public override void Open()
         {
-            throw new NotImplementedException();
+
+            System.Diagnostics.Process.Start("https://localhost:7087");
         }
     }
 }

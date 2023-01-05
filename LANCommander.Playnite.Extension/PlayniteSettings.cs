@@ -8,44 +8,44 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Playnite.Extension
 {
-    public class PlayniteSettings : ObservableObject
-    {
-        private string Option1 = String.Empty;
-        private bool Option2 = false;
-        private bool OptionThatWontBeSaved = false;
-    }
-
-    public class SettingsViewModel : ObservableObject, ISettings
+    public class PlayniteSettingsViewModel : ObservableObject, ISettings
     {
         private readonly PlayniteLibraryPlugin Plugin;
-        private PlayniteSettings EditingClone { get; set; }
-        private PlayniteSettings Settings { get; set; }
 
-        public SettingsViewModel(PlayniteLibraryPlugin plugin)
+        public string ServerUrl { get; set; } = String.Empty;
+        public string AccessToken { get; set; } = String.Empty;
+        public string RefreshToken { get; set; } = String.Empty;
+
+        public PlayniteSettingsViewModel()
+        {
+
+        }
+
+        public PlayniteSettingsViewModel(PlayniteLibraryPlugin plugin)
         {
             Plugin = plugin;
 
-            var savedSettings = Plugin.LoadPluginSettings<PlayniteSettings>();
+            var savedSettings = Plugin.LoadPluginSettings<PlayniteSettingsViewModel>();
 
             if (savedSettings != null)
-                Settings = savedSettings;
-            else
-                Settings = new PlayniteSettings();
+            {
+                ServerUrl = savedSettings.ServerUrl;
+            }
         }
 
         public void BeginEdit()
         {
-            EditingClone = Serialization.GetClone(Settings);
+            
         }
 
         public void CancelEdit()
         {
-            Settings = EditingClone;
+            
         }
 
         public void EndEdit()
         {
-            Plugin.SavePluginSettings(Settings);
+            Plugin.SavePluginSettings(this);
         }
 
         public bool VerifySettings(out List<string> errors)

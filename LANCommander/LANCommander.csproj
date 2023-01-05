@@ -46,6 +46,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <TypeScriptCompile Update="wwwroot\js\Upload.ts">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </TypeScriptCompile>

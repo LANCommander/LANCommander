@@ -14,6 +14,7 @@ namespace LANCommander.Playnite.Extension
     {
         public static readonly ILogger Logger = LogManager.GetLogger();
         private SettingsViewModel Settings { get; set; }
+        private LANCommanderClient LANCommander { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
@@ -21,6 +22,7 @@ namespace LANCommander.Playnite.Extension
 
         public PlayniteLibraryPlugin(IPlayniteAPI api) : base(api)
         {
+            LANCommander = new LANCommanderClient();
             Settings = new SettingsViewModel(this);
             Properties = new LibraryPluginProperties
             {
@@ -31,7 +33,17 @@ namespace LANCommander.Playnite.Extension
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
         {
             // Implement LANCommander client here
-            return new List<GameMetadata>();
+            var games = LANCommander.GetGames().Select(g => new GameMetadata()
+            {
+                Name = g.Title,
+                Description = g.Description,
+                GameId = g.Id.ToString(),
+                ReleaseDate = new ReleaseDate(g.ReleasedOn),
+                SortingName = g.SortTitle,
+                Version = g.Archives != null && g.Archives.Count() > 0 ? g.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version : null,
+            });
+
+            return games;
         }
 
         public override ISettings GetSettings(bool firstRunSettings)

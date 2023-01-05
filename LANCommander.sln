@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander", "LANCommande
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Playnite.Extension", "LANCommander.Playnite.Extension\LANCommander.Playnite.Extension.csproj", "{F9EB13D4-8FD9-4095-B934-F7EC681E6901}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.SDK", "LANCommander.SDK\LANCommander.SDK.csproj", "{4C2A71FD-A30B-4D62-888A-4EF843D8E506}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{F9EB13D4-8FD9-4095-B934-F7EC681E6901}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9EB13D4-8FD9-4095-B934-F7EC681E6901}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9EB13D4-8FD9-4095-B934-F7EC681E6901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C2A71FD-A30B-4D62-888A-4EF843D8E506}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C2A71FD-A30B-4D62-888A-4EF843D8E506}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C2A71FD-A30B-4D62-888A-4EF843D8E506}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C2A71FD-A30B-4D62-888A-4EF843D8E506}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

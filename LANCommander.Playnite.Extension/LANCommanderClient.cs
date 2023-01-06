@@ -38,7 +38,18 @@ namespace LANCommander.Playnite.Extension
                 Password = password
             }));
 
-            return response.Data;
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    return response.Data;
+
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.BadRequest:
+                    throw new WebException("Invalid username or password");
+
+                default:
+                    throw new WebException("Could not communicate with the server");
+            }
         }
 
         public AuthResponse RefreshToken(AuthToken token)

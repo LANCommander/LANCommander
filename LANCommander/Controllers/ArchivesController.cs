@@ -1,8 +1,12 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
+using LANCommander.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IO.Compression;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.Controllers
 {
@@ -97,6 +101,69 @@ namespace LANCommander.Controllers
             }
 
             return RedirectToAction("Edit", "Games", new { id = gameId });
+        }
+
+        public async Task<IActionResult> ValidateManifest(Guid id)
+        {
+            var path = Path.Combine("Upload", id.ToString());
+
+            string manifestContents = String.Empty;
+
+            if (!System.IO.File.Exists(path))
+                return BadRequest("Specified object does not exist");
+
+            try
+            {
+                using (ZipArchive archive = ZipFile.OpenRead(path))
+                {
+                    var manifest = archive.Entries.FirstOrDefault(e => e.FullName == "_manifest.yml");
+
+                    if (manifest == null)
+                        throw new FileNotFoundException("Manifest file not found. Add a _manifest.yml file to your archive and try again.");
+
+                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    {
+                        if (entry.FullName == "_manifest.yml")
+                        {
+                            using (StreamReader sr = new StreamReader(entry.Open()))
+                            {
+                                manifestContents = await sr.ReadToEndAsync();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (InvalidDataException ex)
+            {
+                System.IO.File.Delete(path);
+                return BadRequest("Uploaded archive is corrupt or not a .zip file.");
+            }
+            catch (FileNotFoundException ex)
+            {
+                System.IO.File.Delete(path);
+                return BadRequest(ex.Message);
+            }
+            catch
+            {
+                System.IO.File.Delete(path);
+                return BadRequest("An unknown error occurred.");
+            }
+
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .Build();
+
+            try
+            {
+                var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
+            }
+            catch
+            {
+                System.IO.File.Delete(path);
+                return BadRequest("The manifest file is invalid or corrupt.");
+            }
+
+            return Ok();
         }
     }
 }

@@ -18,6 +18,7 @@ class Uploader {
     constructor() {
         this.InitRoute = "/Upload/Init";
         this.ChunkRoute = "/Upload/Chunk";
+        this.ValidateManifestRoute = "/Archives/ValidateManifest";
         this.MaxChunkSize = 1024 * 1024 * 25;
     }
     Init(fileInputId, uploadButtonId) {
@@ -44,27 +45,48 @@ class Uploader {
                 this.GetChunks();
                 try {
                     for (let chunk of this.Chunks) {
-                        let formData = new FormData();
-                        formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
-                        formData.append('start', chunk.Start.toString());
-                        formData.append('end', chunk.End.toString());
-                        formData.append('key', this.Key);
-                        formData.append('total', this.File.size.toString());
-                        console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
-                        let chunkResponse = yield fetch(this.ChunkRoute, {
-                            method: "POST",
-                            body: formData
-                        });
-                        if (!chunkResponse)
-                            throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
-                        this.OnProgress(chunk.Index / this.TotalChunks);
+                        yield this.UploadChunk(chunk);
                     }
-                    this.OnComplete(this.Key);
+                    var isValid = yield this.ValidateManifest();
+                    if (isValid)
+                        this.OnComplete(this.Key);
+                    else
+                        this.OnError();
                 }
                 catch (_a) {
                     this.OnError();
                 }
             }
+        });
+    }
+    UploadChunk(chunk) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let formData = new FormData();
+            formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
+            formData.append('start', chunk.Start.toString());
+            formData.append('end', chunk.End.toString());
+            formData.append('key', this.Key);
+            formData.append('total', this.File.size.toString());
+            console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
+            let chunkResponse = yield fetch(this.ChunkRoute, {
+                method: "POST",
+                body: formData
+            });
+            if (!chunkResponse)
+                throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
+            this.OnProgress(chunk.Index / this.TotalChunks);
+        });
+    }
+    ValidateManifest() {
+        return __awaiter(this, void 0, void 0, function* () {
+            let validationResponse = yield fetch(`${this.ValidateManifestRoute}/${this.Key}`, {
+                method: "GET"
+            });
+            if (!validationResponse.ok) {
+                ErrorModal.Show("Archive Invalid", yield validationResponse.text());
+                return false;
+            }
+            return true;
         });
     }
     GetChunks() {

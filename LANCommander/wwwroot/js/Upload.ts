@@ -18,6 +18,7 @@ class Uploader {
 
     InitRoute: string = "/Upload/Init";
     ChunkRoute: string = "/Upload/Chunk";
+    ValidateManifestRoute: string = "/Archives/ValidateManifest";
 
     MaxChunkSize: number = 1024 * 1024 * 25;
     TotalChunks: number;
@@ -59,33 +60,56 @@ class Uploader {
 
             try {
                 for (let chunk of this.Chunks) {
-                    let formData = new FormData();
-
-                    formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
-                    formData.append('start', chunk.Start.toString());
-                    formData.append('end', chunk.End.toString());
-                    formData.append('key', this.Key);
-                    formData.append('total', this.File.size.toString());
-
-                    console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
-
-                    let chunkResponse = await fetch(this.ChunkRoute, {
-                        method: "POST",
-                        body: formData
-                    });
-
-                    if (!chunkResponse)
-                        throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
-
-                    this.OnProgress(chunk.Index / this.TotalChunks);
+                    await this.UploadChunk(chunk);
                 }
 
-                this.OnComplete(this.Key);
+                var isValid = await this.ValidateManifest();
+
+                if (isValid)
+                    this.OnComplete(this.Key);
+                else
+                    this.OnError();
             }
             catch {
                 this.OnError();
             }
         }
+    }
+
+    async UploadChunk(chunk: Chunk) {
+        let formData = new FormData();
+
+        formData.append('file', this.File.slice(chunk.Start, chunk.End + 1));
+        formData.append('start', chunk.Start.toString());
+        formData.append('end', chunk.End.toString());
+        formData.append('key', this.Key);
+        formData.append('total', this.File.size.toString());
+
+        console.info(`Uploading chunk ${chunk.Index}/${this.TotalChunks}...`);
+
+        let chunkResponse = await fetch(this.ChunkRoute, {
+            method: "POST",
+            body: formData
+        });
+
+        if (!chunkResponse)
+            throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
+
+        this.OnProgress(chunk.Index / this.TotalChunks);
+    }
+
+    async ValidateManifest(): Promise<boolean> {
+        let validationResponse = await fetch(`${this.ValidateManifestRoute}/${this.Key}`, {
+            method: "GET"
+        });
+
+        if (!validationResponse.ok) {
+            ErrorModal.Show("Archive Invalid", await validationResponse.text())
+
+            return false;
+        }
+
+        return true;
     }
 
     GetChunks() {

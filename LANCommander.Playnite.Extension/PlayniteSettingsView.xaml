@@ -15,7 +15,5 @@
         <TextBlock Text="LANCommander Server URL"/>
         <TextBox Text="{Binding ServerUrl}"/>
         <Button Click="AuthenticateButton_Click" Name="AuthenticateButton">Authenticate</Button>
-        <TextBlock Text="Description for Option2:"/>
-        <CheckBox IsChecked="{Binding Option2}"/>
     </StackPanel>
 </UserControl>

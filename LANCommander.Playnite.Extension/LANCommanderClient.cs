@@ -12,7 +12,7 @@ namespace LANCommander.Playnite.Extension
     internal class LANCommanderClient
     {
         private readonly RestClient Client;
-        private AuthToken Token;
+        public AuthToken Token;
 
         public LANCommanderClient()
         {
@@ -26,6 +26,16 @@ namespace LANCommander.Playnite.Extension
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
             var response = Client.Post<T>(request);
+
+            return response.Data;
+        }
+
+        private T GetRequest<T>(string route)
+        {
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            var response = Client.Get<T>(request);
 
             return response.Data;
         }
@@ -74,9 +84,7 @@ namespace LANCommander.Playnite.Extension
 
         public IEnumerable<Game> GetGames()
         {
-            var response = Client.Get<IEnumerable<Game>>(new RestRequest("/api/Games"));
-
-            return response.Data;
+            return GetRequest<IEnumerable<Game>>("/api/Games");
         }
     }
 }

@@ -79,6 +79,7 @@ namespace LANCommander.Controllers.Api
         }
 
         [HttpPost("Validate")]
+        [Authorize(AuthenticationSchemes = "Bearer")]
         public IActionResult Validate()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)

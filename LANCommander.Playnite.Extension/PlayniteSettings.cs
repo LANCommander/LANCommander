@@ -30,6 +30,8 @@ namespace LANCommander.Playnite.Extension
             if (savedSettings != null)
             {
                 ServerUrl = savedSettings.ServerUrl;
+                AccessToken = savedSettings.AccessToken;
+                RefreshToken = savedSettings.RefreshToken;
             }
         }
 

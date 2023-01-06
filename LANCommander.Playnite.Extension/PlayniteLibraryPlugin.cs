@@ -34,16 +34,44 @@ namespace LANCommander.Playnite.Extension
         {
             try
             {
-                // Implement LANCommander client here
-                var games = LANCommander.GetGames().Select(g => new GameMetadata()
+                var token = new SDK.Models.AuthToken()
                 {
-                    Name = g.Title,
-                    Description = g.Description,
-                    GameId = g.Id.ToString(),
-                    ReleaseDate = new ReleaseDate(g.ReleasedOn),
-                    SortingName = g.SortTitle,
-                    Version = g.Archives != null && g.Archives.Count() > 0 ? g.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version : null,
-                });
+                    AccessToken = Settings.AccessToken,
+                    RefreshToken = Settings.RefreshToken,
+                };
+
+                var tokenIsValid = LANCommander.ValidateToken(token);
+
+                if (!tokenIsValid)
+                {
+                    try
+                    {
+                        LANCommander.RefreshToken(token);
+                    }
+                    catch
+                    {
+                        ShowAuthenticationWindow();
+                    }
+                }
+
+                LANCommander.Token = token;
+
+                var games = LANCommander
+                    .GetGames()
+                    .Where(g => g.Archives != null && g.Archives.Count() > 0)
+                    .Select(g =>
+                    {
+                        return new GameMetadata()
+                        {
+                            IsInstalled = false,
+                            Name = g.Title,
+                            SortingName = g.SortTitle,
+                            Description = g.Description,
+                            GameId = g.Id.ToString(),
+                            ReleaseDate = new ReleaseDate(g.ReleasedOn),
+                            Version = g.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
+                        };
+                    });
 
                 return games;
             }
@@ -63,7 +91,7 @@ namespace LANCommander.Playnite.Extension
             return new PlayniteSettingsView(this);
         }
 
-        public void ShowAuthenticationWindow()
+        public System.Windows.Window ShowAuthenticationWindow()
         {
             var window = PlayniteApi.Dialogs.CreateWindow(new WindowCreationOptions()
             {
@@ -78,6 +106,8 @@ namespace LANCommander.Playnite.Extension
             window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
             window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
             window.ShowDialog();
+
+            return window;
         }
     }
 }

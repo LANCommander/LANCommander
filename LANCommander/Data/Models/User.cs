@@ -37,7 +37,9 @@ namespace LANCommander.Data.Models
         public override int AccessFailedCount { get; set; }
 
         // Refresh Token
+        [JsonIgnore]
         public string? RefreshToken { get; set; }
+        [JsonIgnore]
         public DateTime RefreshTokenExpiration { get; set; }
     }
 }

@@ -15,5 +15,8 @@ namespace LANCommander.Data.Models
         public virtual Game Game { get; set; }
 
         public virtual Archive? LastVersion { get; set; }
+
+        public long UncompressedSize { get; set; }
+        public long CompressedSize { get; set; }
     }
 }

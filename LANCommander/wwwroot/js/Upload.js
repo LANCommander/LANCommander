@@ -18,12 +18,16 @@ class Uploader {
     constructor() {
         this.InitRoute = "/Upload/Init";
         this.ChunkRoute = "/Upload/Chunk";
-        this.ValidateManifestRoute = "/Archives/ValidateManifest";
+        this.ValidateRoute = "/Archives/Validate";
         this.MaxChunkSize = 1024 * 1024 * 25;
     }
     Init(fileInputId, uploadButtonId) {
-        this.FileInput = document.getElementById(fileInputId);
-        this.UploadButton = document.getElementById(uploadButtonId);
+        this.FileInput = document.getElementById("File");
+        this.UploadButton = document.getElementById("UploadButton");
+        this.VersionInput = document.getElementById("Version");
+        this.ChangelogTextArea = document.getElementById("Changelog");
+        this.LastVersionIdInput = document.getElementById("LastVersion_Id");
+        this.GameIdInput = document.getElementById("Game_Id");
         this.ParentForm = this.FileInput.closest("form");
         this.Chunks = [];
         this.UploadButton.onclick = (e) => __awaiter(this, void 0, void 0, function* () {
@@ -47,9 +51,9 @@ class Uploader {
                     for (let chunk of this.Chunks) {
                         yield this.UploadChunk(chunk);
                     }
-                    var isValid = yield this.ValidateManifest();
+                    var isValid = yield this.Validate();
                     if (isValid)
-                        this.OnComplete(this.Key);
+                        this.OnComplete(this.Id, this.Key);
                     else
                         this.OnError();
                 }
@@ -77,15 +81,27 @@ class Uploader {
             this.OnProgress(chunk.Index / this.TotalChunks);
         });
     }
-    ValidateManifest() {
+    Validate() {
         return __awaiter(this, void 0, void 0, function* () {
-            let validationResponse = yield fetch(`${this.ValidateManifestRoute}/${this.Key}`, {
-                method: "GET"
+            let formData = new FormData();
+            formData.append('Version', this.VersionInput.value);
+            formData.append('Changelog', this.ChangelogTextArea.value);
+            formData.append('Game.Id', this.GameIdInput.value);
+            formData.append('ObjectKey', this.Key);
+            let validationResponse = yield fetch(`${this.ValidateRoute}/${this.Key}`, {
+                method: "POST",
+                body: formData
             });
             if (!validationResponse.ok) {
                 ErrorModal.Show("Archive Invalid", yield validationResponse.text());
                 return false;
             }
+            let data = yield validationResponse.json();
+            if (data == null || data.Id === "") {
+                ErrorModal.Show("Upload Error", "Something interfered with the upload. Try again.");
+                return false;
+            }
+            this.Id = data.Id;
             return true;
         });
     }

@@ -53,6 +53,8 @@
                                         </div>
                                     </div>
 
+                                    <input type="hidden" asp-for="Game.Id" />
+                                    <input type="hidden" asp-for="LastVersion.Id" />
                                     <input type="hidden" asp-for="ObjectKey" />
                                 </div>
                             </div>
@@ -62,7 +64,6 @@
                             <div class="d-flex">
                                 <a asp-action="Edit" asp-controller="Games" asp-route-id="@Model.Game.Id" class="btn btn-link">Cancel</a>
                                 <button class="btn btn-primary" id="UploadButton">Upload</button>
-                                <input type="submit" value="Save" id="SaveButton" class="btn btn-primary" style="display: none;" />
                             </div>
                         </div>
                     </fieldset>
@@ -90,14 +91,11 @@
                 .addClass('progress-bar-striped')
                 .addClass('progress-bar-animated')
                 .text('0%');
-            
-            $('#UploadButton').show();
-            $('#SaveButton').hide();
         };
 
-        uploader.OnComplete = (key) => {
+        uploader.OnComplete = (id, key) => {
+            $('#Id').val(id);
             $('#ObjectKey').val(key);
-            $('fieldset').prop('disabled', false);
             $('.progress-bar')
                 .css('width', '100%')
                 .removeClass('progress-bar-striped')
@@ -105,8 +103,9 @@
                 .addClass('bg-success')
                 .text('Upload Complete!');
 
-            $('#UploadButton').hide();
-            $('#SaveButton').show();
+            setTimeout(() => {
+                window.location.href = '@Url.Action("Edit", "Games", new { id = Model.Game.Id })';
+            }, 2000);
         };
 
         uploader.OnProgress = (percent) => {
@@ -123,9 +122,6 @@
                 .removeClass('progress-bar-animated')
                 .addClass('bg-danger')
                 .text('Upload Error!');
-
-            $('#UploadButton').show();
-            $('#SaveButton').hide();
         };
     </script>
 }

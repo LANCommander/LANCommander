@@ -14,11 +14,18 @@ class Uploader {
     ParentForm: HTMLFormElement;
     FileInput: HTMLInputElement;
     UploadButton: HTMLButtonElement;
+    VersionInput: HTMLInputElement;
+    LastVersionIdInput: HTMLInputElement;
+    GameIdInput: HTMLInputElement;
+    ChangelogTextArea: HTMLTextAreaElement;
+    ObjectKeyInput: HTMLInputElement;
+    IdInput: HTMLInputElement;
+
     File: File;
 
     InitRoute: string = "/Upload/Init";
     ChunkRoute: string = "/Upload/Chunk";
-    ValidateManifestRoute: string = "/Archives/ValidateManifest";
+    ValidateRoute: string = "/Archives/Validate";
 
     MaxChunkSize: number = 1024 * 1024 * 25;
     TotalChunks: number;
@@ -26,10 +33,15 @@ class Uploader {
     Chunks: Chunk[];
 
     Key: string;
+    Id: string;
 
     Init(fileInputId: string, uploadButtonId: string) {
-        this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
-        this.UploadButton = document.getElementById(uploadButtonId) as HTMLButtonElement;
+        this.FileInput = document.getElementById("File") as HTMLInputElement;
+        this.UploadButton = document.getElementById("UploadButton") as HTMLButtonElement;
+        this.VersionInput = document.getElementById("Version") as HTMLInputElement;
+        this.ChangelogTextArea = document.getElementById("Changelog") as HTMLTextAreaElement;
+        this.LastVersionIdInput = document.getElementById("LastVersion_Id") as HTMLInputElement;
+        this.GameIdInput = document.getElementById("Game_Id") as HTMLInputElement;
         this.ParentForm = this.FileInput.closest("form");
 
         this.Chunks = [];
@@ -63,10 +75,10 @@ class Uploader {
                     await this.UploadChunk(chunk);
                 }
 
-                var isValid = await this.ValidateManifest();
+                var isValid = await this.Validate();
 
                 if (isValid)
-                    this.OnComplete(this.Key);
+                    this.OnComplete(this.Id, this.Key);
                 else
                     this.OnError();
             }
@@ -98,9 +110,17 @@ class Uploader {
         this.OnProgress(chunk.Index / this.TotalChunks);
     }
 
-    async ValidateManifest(): Promise<boolean> {
-        let validationResponse = await fetch(`${this.ValidateManifestRoute}/${this.Key}`, {
-            method: "GET"
+    async Validate(): Promise<boolean> {
+        let formData = new FormData();
+
+        formData.append('Version', this.VersionInput.value);
+        formData.append('Changelog', this.ChangelogTextArea.value);
+        formData.append('Game.Id', this.GameIdInput.value);
+        formData.append('ObjectKey', this.Key);
+
+        let validationResponse = await fetch(`${this.ValidateRoute}/${this.Key}`, {
+            method: "POST",
+            body: formData
         });
 
         if (!validationResponse.ok) {
@@ -108,6 +128,16 @@ class Uploader {
 
             return false;
         }
+
+        let data = await validationResponse.json();
+
+        if (data == null || data.Id === "") {
+            ErrorModal.Show("Upload Error", "Something interfered with the upload. Try again.");
+
+            return false;
+        }
+
+        this.Id = data.Id;
 
         return true;
     }
@@ -125,7 +155,7 @@ class Uploader {
     }
 
     OnStart: () => void;
-    OnComplete: (key: string) => void;
+    OnComplete: (id: string, key: string) => void;
     OnProgress: (percent: number) => void;
     OnError: () => void;
 }

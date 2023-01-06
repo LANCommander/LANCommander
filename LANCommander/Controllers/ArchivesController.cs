@@ -103,34 +103,33 @@ namespace LANCommander.Controllers
             return RedirectToAction("Edit", "Games", new { id = gameId });
         }
 
-        public async Task<IActionResult> ValidateManifest(Guid id)
+        public async Task<IActionResult> Validate(Guid id, Archive archive)
         {
             var path = Path.Combine("Upload", id.ToString());
 
             string manifestContents = String.Empty;
+            long compressedSize = 0;
+            long uncompressedSize = 0;
 
             if (!System.IO.File.Exists(path))
                 return BadRequest("Specified object does not exist");
 
             try
             {
-                using (ZipArchive archive = ZipFile.OpenRead(path))
+                using (ZipArchive zip = ZipFile.OpenRead(path))
                 {
-                    var manifest = archive.Entries.FirstOrDefault(e => e.FullName == "_manifest.yml");
+                    var manifest = zip.Entries.FirstOrDefault(e => e.FullName == "_manifest.yml");
 
                     if (manifest == null)
                         throw new FileNotFoundException("Manifest file not found. Add a _manifest.yml file to your archive and try again.");
 
-                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    using (StreamReader sr = new StreamReader(manifest.Open()))
                     {
-                        if (entry.FullName == "_manifest.yml")
-                        {
-                            using (StreamReader sr = new StreamReader(entry.Open()))
-                            {
-                                manifestContents = await sr.ReadToEndAsync();
-                            }
-                        }
+                        manifestContents = await sr.ReadToEndAsync();
                     }
+
+                    compressedSize = zip.Entries.Sum(e => e.CompressedLength);
+                    uncompressedSize = zip.Entries.Sum(e => e.Length);
                 }
             }
             catch (InvalidDataException ex)
@@ -163,7 +162,32 @@ namespace LANCommander.Controllers
                 return BadRequest("The manifest file is invalid or corrupt.");
             }
 
-            return Ok();
+            using (var repo = new Repository<Game>(Context, HttpContext))
+            {
+                var game = await repo.Find(archive.Game.Id);
+
+                if (game == null)
+                    return BadRequest("The related game is missing or corrupt.");
+
+                archive.Game = game;
+            }
+
+            using (var repo = new Repository<Archive>(Context, HttpContext))
+            {
+                archive.Id = Guid.Empty;
+                archive.CompressedSize = compressedSize;
+                archive.UncompressedSize = uncompressedSize;
+                archive.ObjectKey = id.ToString();
+
+                archive = await repo.Add(archive);
+                await repo.SaveChanges();
+
+                return Json(new
+                {
+                    Id = archive.Id,
+                    ObjectKey = archive.ObjectKey,
+                });
+            }
         }
     }
 }

@@ -1,0 +1,22 @@
+﻿<UserControl x:Class="LANCommander.Playnite.Extension.Views.Authentication"
+			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             xmlns:ViewModels="clr-namespace:LANCommander.Playnite.Extension.ViewModels"
+			 mc:Ignorable="d"
+			 d:DesignHeight="130" d:DesignWidth="275" d:DataContext="{d:DesignInstance Type=ViewModels:Authentication, IsDesignTimeCreatable=True}">
+    <d:DesignerProperties.DesignStyle>
+        <Style TargetType="UserControl">
+            <Setter Property="Background" Value="White" />
+        </Style>
+    </d:DesignerProperties.DesignStyle>
+    <StackPanel Margin="20">
+        <TextBlock Text="Username"/>
+        <TextBox Name="Username" Text="{Binding UserName}" KeyDown="TextBox_KeyDown" />
+        <TextBlock Text="Password" />
+        <PasswordBox Name="Password" PasswordChanged="Password_PasswordChanged" KeyDown="TextBox_KeyDown" />
+        <Button Click="LoginButton_Click" x:Name="LoginButton">Login</Button>
+    </StackPanel>
+</UserControl>

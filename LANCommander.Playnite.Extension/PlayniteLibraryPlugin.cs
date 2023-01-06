@@ -72,7 +72,8 @@ namespace LANCommander.Playnite.Extension
 
             window.Title = "Authenticate to LANCommander";
 
-            window.Content = new PlayniteSettingsView(this);
+            window.Content = new Views.Authentication(this);
+            window.DataContext = new ViewModels.Authentication();
 
             window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
             window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;

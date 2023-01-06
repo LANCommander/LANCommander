@@ -1,9 +1,11 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Controllers.Api
 {
+    [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
     public class GamesController : ControllerBase

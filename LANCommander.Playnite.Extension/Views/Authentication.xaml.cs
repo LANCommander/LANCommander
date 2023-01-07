@@ -65,6 +65,7 @@ namespace LANCommander.Playnite.Extension.Views
                 Context.Password = String.Empty;
 
                 Plugin.SavePluginSettings(Settings);
+                //Plugin.Settings = Plugin.LoadPluginSettings<PlayniteSettingsViewModel>();
 
                 Window.GetWindow(this).Close();
             }

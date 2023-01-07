@@ -34,7 +34,13 @@ namespace LANCommander.Playnite.Extension
 
             var tempFile = Download(game);
 
-            Extract(game, tempFile);
+            var installDirectory = Extract(game, tempFile);
+            var installInfo = new GameInstallationData()
+            {
+                InstallDirectory = installDirectory
+            };
+
+            InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
         }
 
         private string Download(LANCommander.SDK.Models.Game game)
@@ -45,7 +51,7 @@ namespace LANCommander.Playnite.Extension
 
             if (archive != null)
             {
-                var result = Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
+                Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
                     progress.ProgressMaxValue = 100;
                     progress.CurrentProgressValue = 0;
@@ -58,6 +64,7 @@ namespace LANCommander.Playnite.Extension
                         progress.CurrentProgressValue = 100;
                     });
 
+                    // Lock the thread until download is done
                     while (progress.CurrentProgressValue != 100)
                     {
 
@@ -65,7 +72,7 @@ namespace LANCommander.Playnite.Extension
 
                     tempFile = destination;
                 },
-                new GlobalProgressOptions($"Downloading {game.Title}")
+                new GlobalProgressOptions($"Downloading {game.Title}...")
                 {
                     IsIndeterminate = false,
                     Cancelable = false,
@@ -77,48 +84,62 @@ namespace LANCommander.Playnite.Extension
                 throw new Exception("Game failed to download");
         }
 
-        private void Extract(LANCommander.SDK.Models.Game game, string archivePath)
+        private string Extract(LANCommander.SDK.Models.Game game, string archivePath)
         {
             var destination = $"C:\\Games\\{game.Title.SanitizeFilename()}";
 
-            ZipFile file = null;
-
-            try
+            Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
-                FileStream fs = File.OpenRead(archivePath);
+                ZipFile file = null;
 
-                file = new ZipFile(fs);
-
-                foreach (ZipEntry entry in file)
+                try
                 {
-                    if (!entry.IsFile)
-                        continue;
+                    FileStream fs = File.OpenRead(archivePath);
 
-                    byte[] buffer = new byte[4096];
-                    var zipStream = file.GetInputStream(entry);
+                    file = new ZipFile(fs);
 
-                    var entryDestination = Path.Combine(destination, entry.Name);
-                    var entryDirectory = Path.GetDirectoryName(entryDestination);
+                    progress.ProgressMaxValue = file.Count;
 
-                    if (!String.IsNullOrWhiteSpace(entryDirectory))
-                        Directory.CreateDirectory(entryDirectory);
-
-                    using (FileStream streamWriter = File.Create(entryDestination))
+                    foreach (ZipEntry entry in file)
                     {
-                        StreamUtils.Copy(zipStream, streamWriter, buffer);
+                        if (!entry.IsFile)
+                            continue;
+
+                        byte[] buffer = new byte[4096];
+                        var zipStream = file.GetInputStream(entry);
+
+                        var entryDestination = Path.Combine(destination, entry.Name);
+                        var entryDirectory = Path.GetDirectoryName(entryDestination);
+
+                        if (!String.IsNullOrWhiteSpace(entryDirectory))
+                            Directory.CreateDirectory(entryDirectory);
+
+                        using (FileStream streamWriter = File.Create(entryDestination))
+                        {
+                            StreamUtils.Copy(zipStream, streamWriter, buffer);
+                        }
+
+                        progress.CurrentProgressValue = entry.ZipFileIndex;
                     }
                 }
-            }
-            finally
-            {
-                if (file != null)
+                finally
                 {
-                    file.IsStreamOwner = true;
-                    file.Close();
-                }
+                    if (file != null)
+                    {
+                        file.IsStreamOwner = true;
+                        file.Close();
+                    }
 
-                File.Delete(archivePath);
-            }
+                    File.Delete(archivePath);
+                }
+            },
+            new GlobalProgressOptions($"Extracting {game.Title}...")
+            {
+                IsIndeterminate = false,
+                Cancelable = false,
+            });
+
+            return destination;
         }
     }
 }

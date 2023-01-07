@@ -13,6 +13,8 @@
         </Style>
     </d:DesignerProperties.DesignStyle>
     <StackPanel Margin="20">
+        <TextBlock Text="Server Address" />
+        <TextBox Name="ServerAddress" Text="{Binding ServerAddress}" KeyDown="TextBox_KeyDown" />
         <TextBlock Text="Username"/>
         <TextBox Name="Username" Text="{Binding UserName}" KeyDown="TextBox_KeyDown" />
         <TextBlock Text="Password" />

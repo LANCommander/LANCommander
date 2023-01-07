@@ -12,7 +12,7 @@ namespace LANCommander.Playnite.Extension
     {
         private readonly PlayniteLibraryPlugin Plugin;
 
-        public string ServerUrl { get; set; } = String.Empty;
+        public string ServerAddress { get; set; } = String.Empty;
         public string AccessToken { get; set; } = String.Empty;
         public string RefreshToken { get; set; } = String.Empty;
 
@@ -25,14 +25,9 @@ namespace LANCommander.Playnite.Extension
         {
             Plugin = plugin;
 
-            var savedSettings = Plugin.LoadPluginSettings<PlayniteSettingsViewModel>();
-
-            if (savedSettings != null)
-            {
-                ServerUrl = savedSettings.ServerUrl;
-                AccessToken = savedSettings.AccessToken;
-                RefreshToken = savedSettings.RefreshToken;
-            }
+            ServerAddress = Plugin.Settings.ServerAddress;
+            AccessToken = Plugin.Settings.AccessToken;
+            RefreshToken = Plugin.Settings.RefreshToken;
         }
 
         public void BeginEdit()
@@ -47,7 +42,9 @@ namespace LANCommander.Playnite.Extension
 
         public void EndEdit()
         {
-            // Plugin.SavePluginSettings(this);
+            Plugin.Settings.ServerAddress = ServerAddress;
+
+            Plugin.SaveSettings();
         }
 
         public bool VerifySettings(out List<string> errors)

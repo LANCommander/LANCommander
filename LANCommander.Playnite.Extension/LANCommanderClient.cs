@@ -14,12 +14,12 @@ namespace LANCommander.Playnite.Extension
 {
     internal class LANCommanderClient
     {
-        private readonly RestClient Client;
+        public readonly RestClient Client;
         public AuthToken Token;
 
-        public LANCommanderClient()
+        public LANCommanderClient(string baseUrl)
         {
-            Client = new RestClient("https://localhost:7087");
+            Client = new RestClient(baseUrl);
         }
 
         private T PostRequest<T>(string route, object body)
@@ -88,6 +88,9 @@ namespace LANCommander.Playnite.Extension
                 .AddJsonBody(token);
 
             var response = Client.Post<AuthResponse>(request);
+
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new WebException(response.ErrorMessage);
 
             return response.Data;
         }

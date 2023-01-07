@@ -21,12 +21,10 @@ namespace LANCommander.Playnite.Extension.Views
     {
         private PlayniteLibraryPlugin Plugin;
         private ViewModels.Authentication Context { get { return (ViewModels.Authentication)DataContext; } }
-        private PlayniteSettingsViewModel Settings { get; set; }
 
         public Authentication(PlayniteLibraryPlugin plugin)
         {
             Plugin = plugin;
-            Settings = Plugin.GetSettings(false) as PlayniteSettingsViewModel;
 
             InitializeComponent();
         }
@@ -56,16 +54,21 @@ namespace LANCommander.Playnite.Extension.Views
         {
             try
             {
+                if (Plugin.LANCommander == null)
+                    Plugin.LANCommander = new LANCommanderClient(Context.ServerAddress);
+                else
+                    Plugin.LANCommander.Client.BaseUrl = new Uri(Context.ServerAddress);
+
                 var response = Plugin.LANCommander.Authenticate(Context.UserName, Context.Password);
 
-                Settings.AccessToken = response.AccessToken;
-                Settings.RefreshToken = response.RefreshToken;
+                Plugin.Settings.ServerAddress = Context.ServerAddress;
+                Plugin.Settings.AccessToken = response.AccessToken;
+                Plugin.Settings.RefreshToken = response.RefreshToken;
 
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;
 
-                Plugin.SavePluginSettings(Settings);
-                //Plugin.Settings = Plugin.LoadPluginSettings<PlayniteSettingsViewModel>();
+                Plugin.SaveSettings();
 
                 Window.GetWindow(this).Close();
             }

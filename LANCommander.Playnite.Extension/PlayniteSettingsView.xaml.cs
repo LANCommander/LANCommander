@@ -27,23 +27,40 @@ namespace LANCommander.Playnite.Extension
 
             InitializeComponent();
 
-            var settings = new PlayniteSettingsViewModel(plugin);
+            UpdateAuthenticationButtonVisibility();
+        }
 
-            if (Plugin.LANCommander.ValidateToken(new AuthToken()
+        private void UpdateAuthenticationButtonVisibility()
+        {
+            try
             {
-                AccessToken = settings.AccessToken,
-                RefreshToken = settings.RefreshToken,
-            }))
-            {
-                var authenticateButton = FindName("AuthenticateButton") as Button;
+                if (Plugin.LANCommander.ValidateToken(new AuthToken()
+                {
+                    AccessToken = Plugin.Settings.AccessToken,
+                    RefreshToken = Plugin.Settings.RefreshToken,
+                }))
+                {
+                    var authenticateButton = FindName("AuthenticateButton") as Button;
 
-                authenticateButton.Visibility = Visibility.Hidden;
+                    authenticateButton.Visibility = Visibility.Hidden;
+                }
+            }
+            catch
+            {
+
             }
         }
 
         private void AuthenticateButton_Click(object sender, RoutedEventArgs e)
         {
-            Plugin.ShowAuthenticationWindow();
+            var authWindow = Plugin.ShowAuthenticationWindow();
+
+            authWindow.Closed += AuthWindow_Closed;
+        }
+
+        private void AuthWindow_Closed(object sender, EventArgs e)
+        {
+            UpdateAuthenticationButtonVisibility();
         }
     }
 }

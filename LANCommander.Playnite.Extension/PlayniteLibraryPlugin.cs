@@ -74,6 +74,14 @@ namespace LANCommander.Playnite.Extension
             yield return new LANCommanderInstallController(this, args.Game);
         }
 
+        public override IEnumerable<UninstallController> GetUninstallActions(GetUninstallActionsArgs args)
+        {
+            if (args.Game.PluginId != Id)
+                yield break;
+
+            yield return new LANCommanderUninstallController(this, args.Game);
+        }
+
         public override ISettings GetSettings(bool firstRunSettings)
         {
             return Settings;

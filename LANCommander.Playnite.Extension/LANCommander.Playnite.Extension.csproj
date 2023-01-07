@@ -87,6 +87,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
     <Compile Include="LANCommanderClient.cs" />
     <Compile Include="PlayniteClient.cs" />

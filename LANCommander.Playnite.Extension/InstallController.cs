@@ -41,6 +41,8 @@ namespace LANCommander.Playnite.Extension
             };
 
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
+
+            Plugin.UpdateGamesFromManifest();
         }
 
         private string Download(LANCommander.SDK.Models.Game game)

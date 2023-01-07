@@ -26,7 +26,8 @@ namespace LANCommander.Playnite.Extension
 
         public override void Uninstall(UninstallActionArgs args)
         {
-            Directory.Delete(Game.InstallDirectory, true);
+            if (!String.IsNullOrWhiteSpace(Game.InstallDirectory) && Directory.Exists(Game.InstallDirectory))
+                Directory.Delete(Game.InstallDirectory, true);
 
             InvokeOnUninstalled(new GameUninstalledEventArgs());
         }

@@ -37,33 +37,38 @@ namespace LANCommander.Playnite.Extension
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
         {
+            var gameMetadata = new List<GameMetadata>();
+
             try
             {
-                var syncedGames = PlayniteApi.Database.Games;
-
                 var games = LANCommander
                     .GetGames()
-                    .Where(g => g.Archives != null && g.Archives.Count() > 0)
-                    .Select(g =>
-                    {
-                        return new GameMetadata()
-                        {
-                            IsInstalled = false,
-                            Name = g.Title,
-                            SortingName = g.SortTitle,
-                            Description = g.Description,
-                            GameId = g.Id.ToString(),
-                            ReleaseDate = new ReleaseDate(g.ReleasedOn),
-                            Version = g.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
-                        };
-                    });
+                    .Where(g => g.Archives != null && g.Archives.Count() > 0);
 
-                return games;
+                foreach (var game in games)
+                {
+                    var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
+
+                    var metadata = new GameMetadata()
+                    {
+                        IsInstalled = existingGame != null,
+                        Name = game.Title,
+                        SortingName = game.SortTitle,
+                        Description = game.Description,
+                        GameId = game.Id.ToString(),
+                        ReleaseDate = new ReleaseDate(game.ReleasedOn),
+                        Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,  
+                    };
+
+                    gameMetadata.Add(metadata);
+                };
             }
             catch (Exception ex)
             {
-                return new List<GameMetadata>();
+                
             }
+
+            return gameMetadata;
         }
 
         public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
@@ -157,42 +162,52 @@ namespace LANCommander.Playnite.Extension
             return window;
         }
 
-        private GameMetadata ParseManifest(string installDirectory)
+        public void UpdateGamesFromManifest()
         {
-            var manifestContents = File.ReadAllText(Path.Combine(installDirectory, "_manifest.yml"));
-            var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                .Build();
+            var games = PlayniteApi.Database.Games;
 
-            try
+            foreach (var game in games.Where(g => g.PluginId == Id && g.IsInstalled))
             {
-                var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
+                if (!Directory.Exists(game.InstallDirectory))
+                    continue;
 
-                var metadata = new GameMetadata()
+                var manifestPath = Path.Combine(game.InstallDirectory, "_manifest.yml");
+
+                if (File.Exists(manifestPath))
                 {
-                    Name = manifest.Title,
-                    SortingName = manifest.SortTitle,
-                    Description = manifest.Description,
-                    ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
-                    Version = manifest.Version,
-                    GameActions = manifest.Actions.Select(a =>
+                    try
                     {
-                        return new PN.SDK.Models.GameAction()
-                        {
-                            Name = a.Name,
-                            Arguments = a.Arguments,
-                            Path = a.Path,
-                            WorkingDir = a.WorkingDirectory,
-                            IsPlayAction = a.IsPrimaryAction
-                        };
-                    }).ToList()
-                };
+                        var manifestContents = File.ReadAllText(manifestPath);
+                        var deserializer = new DeserializerBuilder()
+                            .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                            .Build();
 
-                return metadata;
-            }
-            catch
-            {
-                throw new FileNotFoundException("The manifest file is invalid or corrupt.");
+                        var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
+
+                        if (game.GameActions == null)
+                            game.GameActions = new System.Collections.ObjectModel.ObservableCollection<PN.SDK.Models.GameAction>();
+
+                        foreach (var action in manifest.Actions)
+                        {
+                            bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;
+
+                            game.GameActions.AddMissing(new PN.SDK.Models.GameAction()
+                            {
+                                Name = action.Name,
+                                Arguments = action.Arguments,
+                                Path = PlayniteApi.ExpandGameVariables(game, action.Path),
+                                WorkingDir = action.WorkingDirectory ?? game.InstallDirectory,
+                                IsPlayAction = action.IsPrimaryAction || isFirstAction
+                            });
+                        }
+
+                        PlayniteApi.Database.Games.Update(game);
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                }
             }
         }
     }

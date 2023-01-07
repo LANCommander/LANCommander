@@ -77,10 +77,18 @@ namespace LANCommander.Playnite.Extension
 
                 return games;
             }
-            catch
+            catch (Exception ex)
             {
                 return new List<GameMetadata>();
             }
+        }
+
+        public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
+        {
+            if (args.Game.PluginId != Id)
+                yield break;
+
+            yield return new LANCommanderInstallController(this, args.Game);
         }
 
         public override ISettings GetSettings(bool firstRunSettings)

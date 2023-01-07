@@ -1,7 +1,10 @@
 ﻿using LANCommander.SDK.Models;
 using RestSharp;
+using RestSharp.Extensions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -38,6 +41,23 @@ namespace LANCommander.Playnite.Extension
             var response = Client.Get<T>(request);
 
             return response.Data;
+        }
+
+        private string DownloadRequest(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        {
+            var client = new WebClient();
+            var tempFile = Path.GetTempFileName();
+
+            client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+            client.DownloadProgressChanged += (s, e) => progressHandler(e);
+            client.DownloadFileCompleted += (s, e) => completeHandler(e);
+
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            client.DownloadFileAsync(new Uri($"{Client.BaseUrl}{route}"), tempFile);
+
+            return tempFile;
         }
 
         public AuthResponse Authenticate(string username, string password)
@@ -85,6 +105,16 @@ namespace LANCommander.Playnite.Extension
         public IEnumerable<Game> GetGames()
         {
             return GetRequest<IEnumerable<Game>>("/api/Games");
+        }
+
+        public Game GetGame(Guid id)
+        {
+            return GetRequest<Game>($"/api/Games/{id}");
+        }
+
+        public string DownloadArchive(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        {
+            return DownloadRequest($"api/Archives/Download/{id}", progressHandler, completeHandler);
         }
     }
 }

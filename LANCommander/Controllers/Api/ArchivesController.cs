@@ -19,6 +19,24 @@ namespace LANCommander.Controllers.Api
         }
 
         [HttpGet]
+        public IEnumerable<Archive> Get()
+        {
+            using (var repo = new Repository<Archive>(Context, HttpContext))
+            {
+                return repo.Get(a => true).ToList();
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<Archive> Get(Guid id)
+        {
+            using (var repo = new Repository<Archive>(Context, HttpContext))
+            {
+                return await repo.Find(id);
+            }
+        }
+
+        [HttpGet("Download/{id}")]
         public async Task<IActionResult> Download(Guid id)
         {
             using (var repo = new Repository<Archive>(Context, HttpContext))

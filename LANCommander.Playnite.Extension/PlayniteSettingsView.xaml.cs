@@ -27,7 +27,7 @@ namespace LANCommander.Playnite.Extension
 
             InitializeComponent();
 
-            var settings = Plugin.GetSettings(false) as PlayniteSettingsViewModel;
+            var settings = new PlayniteSettingsViewModel(plugin);
 
             if (Plugin.LANCommander.ValidateToken(new AuthToken()
             {

@@ -47,7 +47,7 @@ namespace LANCommander.Playnite.Extension
 
         public void EndEdit()
         {
-            Plugin.SavePluginSettings(this);
+            // Plugin.SavePluginSettings(this);
         }
 
         public bool VerifySettings(out List<string> errors)

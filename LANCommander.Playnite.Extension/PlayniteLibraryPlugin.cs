@@ -40,6 +40,8 @@ namespace LANCommander.Playnite.Extension
                     RefreshToken = Settings.RefreshToken,
                 };
 
+                LANCommander.Token = token;
+
                 var tokenIsValid = LANCommander.ValidateToken(token);
 
                 if (!tokenIsValid)

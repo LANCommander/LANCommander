@@ -7,8 +7,8 @@
     <ProjectGuid>{F9EB13D4-8FD9-4095-B934-F7EC681E6901}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>LANCommander.Playnite.Extension</RootNamespace>
-    <AssemblyName>LANCommander.Playnite.Extension</AssemblyName>
+    <RootNamespace>LANCommander.PlaynitePlugin</RootNamespace>
+    <AssemblyName>LANCommander.PlaynitePlugin</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -51,6 +51,9 @@
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Management.Automation, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\PowerShellStandard.Library.5.1.1\lib\net452\System.Management.Automation.dll</HintPath>
+    </Reference>
     <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.4\lib\net461\System.Memory.dll</HintPath>
     </Reference>
@@ -87,6 +90,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PowerShellRuntime.cs" />
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
     <Compile Include="LANCommanderClient.cs" />

@@ -10,7 +10,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.Playnite.Extension
+namespace LANCommander.PlaynitePlugin
 {
     internal class LANCommanderClient
     {

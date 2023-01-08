@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.Playnite.Extension.ViewModels
+namespace LANCommander.PlaynitePlugin.ViewModels
 {
     internal class Authentication
     {

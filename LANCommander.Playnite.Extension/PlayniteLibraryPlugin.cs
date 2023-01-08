@@ -13,7 +13,7 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using PN = Playnite;
 
-namespace LANCommander.Playnite.Extension
+namespace LANCommander.PlaynitePlugin
 {
     public class PlayniteLibraryPlugin : LibraryPlugin
     {

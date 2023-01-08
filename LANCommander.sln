@@ -5,9 +5,9 @@ VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander", "LANCommander\LANCommander.csproj", "{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Playnite.Extension", "LANCommander.Playnite.Extension\LANCommander.Playnite.Extension.csproj", "{F9EB13D4-8FD9-4095-B934-F7EC681E6901}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.PlaynitePlugin", "LANCommander.Playnite.Extension\LANCommander.PlaynitePlugin.csproj", "{F9EB13D4-8FD9-4095-B934-F7EC681E6901}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.SDK", "LANCommander.SDK\LANCommander.SDK.csproj", "{4C2A71FD-A30B-4D62-888A-4EF843D8E506}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.SDK", "LANCommander.SDK\LANCommander.SDK.csproj", "{4C2A71FD-A30B-4D62-888A-4EF843D8E506}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

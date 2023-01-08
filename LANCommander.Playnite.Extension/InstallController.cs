@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Core;
 
-namespace LANCommander.Playnite.Extension
+namespace LANCommander.PlaynitePlugin
 {
     public class LANCommanderInstallController : InstallController
     {

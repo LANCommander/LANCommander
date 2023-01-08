@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace LANCommander.Playnite.Extension.Views
+namespace LANCommander.PlaynitePlugin.Views
 {
     public partial class Authentication : UserControl
     {

@@ -33,6 +33,7 @@
                         <table class="table table-vcenter table-mobile-md card-table">
                             <thead>
                                 <tr>
+                                    <th></th>
                                     <th>
                                         @Html.DisplayNameFor(model => model.Title)
                                     </th>
@@ -65,6 +66,7 @@
                                 @foreach (var item in Model)
                                 {
                                     <tr>
+                                        <td><img src="@Url.Action("GetIcon", "Games", new { id = item.Id })" /></td>
                                         <td>
                                             @Html.DisplayFor(modelItem => item.Title)
                                         </td>

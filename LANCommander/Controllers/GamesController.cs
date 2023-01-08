@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using LANCommander.Data;
 using LANCommander.Data.Models;
 using Microsoft.AspNetCore.Authorization;
+using LANCommander.Services;
+using System.Drawing;
 
 namespace LANCommander.Controllers
 {
@@ -153,9 +155,13 @@ namespace LANCommander.Controllers
                         foreach (var archive in game.Archives.OrderByDescending(a => a.CreatedOn))
                         {
                             var archiveFile = Path.Combine("Upload", archive.ObjectKey);
+                            var iconFile = Path.Combine("Icon", $"{game.Id}.png");
 
                             if (System.IO.File.Exists(archiveFile))
                                 System.IO.File.Delete(archiveFile);
+
+                            if (System.IO.File.Exists(iconFile))
+                                System.IO.File.Delete(iconFile);
 
                             archiveRepo.Delete(archive);
                         }
@@ -169,6 +175,82 @@ namespace LANCommander.Controllers
                 await repo.SaveChanges();
 
                 return RedirectToAction(nameof(Index));
+            }
+        }
+
+        public async Task<IActionResult> GetIcon(Guid id)
+        {
+            var cachedPath = Path.Combine("Icon", $"{id}.png");
+
+            if (!System.IO.Directory.Exists("Icon"))
+                System.IO.Directory.CreateDirectory("Icon");
+
+            if (System.IO.File.Exists(cachedPath))
+            {
+                return File(System.IO.File.ReadAllBytes(cachedPath), "image/png");
+            }
+            else
+            {
+                using (var repo = new Repository<Game>(Context, HttpContext))
+                {
+                    var game = await repo.Find(id);
+
+                    if (game.Archives == null || game.Archives.Count == 0)
+                        return NotFound();
+
+                    var archive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+                    Bitmap bitmap = null;
+
+                    var manifest = ArchiveService.ReadManifest(archive.ObjectKey);
+                    var iconReference = ArchiveService.ReadFile(archive.ObjectKey, manifest.Icon);
+
+                    if (IsWinPEFile(iconReference))
+                    {
+                        var tmp = System.IO.Path.GetTempFileName();
+
+                        System.IO.File.WriteAllBytes(tmp, iconReference);
+
+                        var icon = System.Drawing.Icon.ExtractAssociatedIcon(tmp);
+
+                        bitmap = icon.ToBitmap();
+                    }
+                    else
+                    {
+                        using (var ms = new MemoryStream(iconReference))
+                        {
+                            bitmap = (Bitmap)Bitmap.FromStream(ms);
+                        }
+                    }
+
+                    var iconPng = ConvertToPng(bitmap);
+
+                    System.IO.File.WriteAllBytes(cachedPath, iconPng);
+
+                    return File(iconPng, "image/png");
+                }
+            }
+        }
+
+        private static bool IsWinPEFile(byte[] file)
+        {
+            var mz = new byte[2];
+
+            using (var ms = new MemoryStream(file))
+            {
+                ms.Read(mz, 0, 2);
+            }
+
+            return System.Text.Encoding.UTF8.GetString(mz) == "MZ";
+        }
+
+        private static byte[] ConvertToPng(Image img)
+        {
+            using (var stream = new MemoryStream())
+            {
+                img.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+
+                return stream.ToArray();
             }
         }
 

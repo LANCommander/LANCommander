@@ -49,6 +49,8 @@ namespace LANCommander.Playnite.Extension
                 {
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
 
+                    var iconUri = new Uri(new Uri(Settings.ServerAddress), $"Games/GetIcon/{game.Id}");
+
                     var metadata = new GameMetadata()
                     {
                         IsInstalled = existingGame != null,
@@ -57,7 +59,8 @@ namespace LANCommander.Playnite.Extension
                         Description = game.Description,
                         GameId = game.Id.ToString(),
                         ReleaseDate = new ReleaseDate(game.ReleasedOn),
-                        Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,  
+                        Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
+                        Icon = new MetadataFile(iconUri.ToString())
                     };
 
                     gameMetadata.Add(metadata);

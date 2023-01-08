@@ -30,6 +30,7 @@ namespace LANCommander.Services
             }
 
             var deserializer = new DeserializerBuilder()
+                .IgnoreUnmatchedProperties()
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
                 .Build();
 

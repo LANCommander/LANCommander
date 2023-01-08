@@ -182,6 +182,7 @@ namespace LANCommander.PlaynitePlugin
                     {
                         var manifestContents = File.ReadAllText(manifestPath);
                         var deserializer = new DeserializerBuilder()
+                            .IgnoreUnmatchedProperties()
                             .WithNamingConvention(PascalCaseNamingConvention.Instance)
                             .Build();
 

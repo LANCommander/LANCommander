@@ -21,5 +21,8 @@ namespace LANCommander.Data.Models
         public virtual Company? Developer { get; set; }
 
         public virtual ICollection<Archive>? Archives { get; set; }
+
+        public string? ValidKeyRegex { get; set; }
+        public virtual ICollection<Key>? Keys { get; set; }
     }
 }

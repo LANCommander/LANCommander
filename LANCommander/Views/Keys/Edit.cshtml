@@ -1,0 +1,100 @@
+﻿@model LANCommander.Models.EditKeysViewModel
+
+@{
+    ViewData["Title"] = "Edit Keys | " + Model.Game.Title;
+}
+
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">@Model.Game.Title</div>
+                <h2 class="page-title">
+                    Edit Keys
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <form asp-action="Edit" class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12">
+                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                                <div class="mb-3 textarea-grow-wrap">
+                                    <textarea asp-for="Keys" class="form-control" oninput="this.parentNode.dataset.replicatedValue = this.value">
+                                        @Model.Keys
+                                    </textarea>
+                                    <span asp-validation-for="Keys" class="text-danger"></span>
+                                </div>
+
+                                <input type="hidden" asp-for="Game.Id" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="d-flex">
+                            <a asp-action="Details" asp-route-id="@Model.Game.Id" class="btn btn-ghost-primary">Cancel</a>
+                            <button type="submit" class="btn btn-primary ms-auto">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .textarea-grow-wrap {
+        display: grid;
+    }
+
+    .textarea-grow-wrap::after {
+        content: attr(data-replicated-value) " ";
+        white-space: pre-wrap;
+        visibility: hidden;
+
+        width: 100%;
+        padding: .4375rem .75rem;
+        font-family: var(--tblr-font-sans-serif);
+        font-size: .875rem;
+        font-weight: 400;
+        line-height: 1.4285714286;
+        color: inherit;
+        background-color: var(--tblr-bg-forms);
+        background-clip: padding-box;
+        border: var(--tblr-border-width) solid var(--tblr-border-color);
+    }
+
+    .textarea-grow-wrap > textarea {
+        resize: none;
+        overflow: hidden;
+    }
+
+    .textarea-grow-wrap > textarea,
+    .textarea-grow-wrap::after {
+        grid-area: 1 / 1 / 2 / 2;
+    }
+</style>
+
+<script>
+    let growers = document.querySelectorAll(".textarea-grow-wrap");
+
+    growers.forEach((grower) => {
+        let textarea = grower.querySelector("textarea");
+
+        grower.dataset.replicatedValue = textarea.value;
+    });
+</script>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

@@ -1,4 +1,5 @@
-﻿@model LANCommander.Data.Models.Game
+﻿@using LANCommander.Data.Models
+@model LANCommander.Data.Models.Game
 
 @{
     ViewData["Title"] = "Edit";
@@ -60,6 +61,61 @@
                         </div>
                     </div>
                 </form>
+            </div>
+
+            <div class="col-12">
+                <div class="card">
+                    @if (Model.Keys != null && Model.Keys.Count > 0)
+                    {
+                        <div class="card-header">
+                            <h3 class="card-title">Keys</h3>
+                            <div class="card-actions">
+                                <a asp-action="Details" asp-controller="Keys" asp-route-id="@Model.Id" class="btn btn-ghost-primary">
+                                    Details
+                                </a>
+                            </div>
+                        </div>
+
+                        var keysAvailable = Model.Keys.Count(k =>
+                        {
+                            return (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress)) ||
+                                (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null);
+                        });
+
+                        <div class="card-body">
+                            <div class="datagrid text-center">
+                                <div class="datagrid-item">
+                                    <div class="datagrid-title">Available</div>
+                                    <div class="datagrid-content">
+                                        @keysAvailable
+                                    </div>
+                                </div>
+                                <div class="datagrid-item">
+                                    <div class="datagrid-title">Claimed</div>
+                                    <div class="datagrid-content">
+                                        @(Model.Keys.Count - keysAvailable)
+                                    </div>
+                                </div>
+                                <div class="datagrid-item">
+                                    <div class="datagrid-title">Total</div>
+                                    <div class="datagrid-content">
+                                        @Model.Keys.Count
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty">
+                            <p class="empty-title">No Keys</p>
+                            <p class="empty-subtitle text-muted">There have been no keys added for this game.</p>
+                            <div class="empty-action">
+                                <a asp-action="Edit" asp-controller="Keys" asp-route-id="@Model.Id" class="btn btn-primary">Edit Keys</a>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
 
             <div class="col-12">

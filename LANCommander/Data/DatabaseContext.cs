@@ -30,6 +30,11 @@ namespace LANCommander.Data
                 .HasMany(g => g.Archives)
                 .WithOne(g => g.Game)
                 .IsRequired(false);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.Keys)
+                .WithOne(g => g.Game)
+                .IsRequired(false);
         }
 
         public DbSet<Game>? Games { get; set; }
@@ -37,5 +42,7 @@ namespace LANCommander.Data
         public DbSet<Tag>? Tags { get; set; }
 
         public DbSet<Company>? Companies { get; set; }
+
+        public DbSet<Key>? Keys { get; set; }
     }
 }

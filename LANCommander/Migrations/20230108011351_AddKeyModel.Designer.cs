@@ -3,6 +3,7 @@ using System;
 using LANCommander.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230108011351_AddKeyModel")]
+    partial class AddKeyModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.8");
@@ -184,7 +186,7 @@ namespace LANCommander.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimedByComputerName")
-                        .HasMaxLength(255)
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ClaimedByIpv4Address")
@@ -218,7 +220,6 @@ namespace LANCommander.Migrations
 
                     b.Property<string>("Value")
                         .IsRequired()
-                        .HasMaxLength(255)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -562,7 +563,9 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Keys")
-                        .HasForeignKey("GameId");
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()

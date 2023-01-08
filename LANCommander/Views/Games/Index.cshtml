@@ -90,9 +90,9 @@
                                             @Html.DisplayFor(modelItem => item.UpdatedBy.UserName)
                                         </td>
                                         <td>
-                                            <div class="btn-list flex-nowrap">
+                                            <div class="btn-list flex-nowrap justify-content-end">
                                                 <a asp-action="Edit" asp-route-id="@item.Id" class="btn">Edit</a>
-                                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn">Delete</a>
+                                                <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-danger">Delete</a>
                                             </div>
                                         </td>
                                     </tr>

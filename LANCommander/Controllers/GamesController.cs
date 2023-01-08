@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -138,18 +139,37 @@ namespace LANCommander.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            if (Context.Games == null)
+            using (Repository<Game> repo = new Repository<Game>(Context, HttpContext))
             {
-                return Problem("Entity set 'DatabaseContext.Games' is null.");
+                var game = await repo.Find(id);
+
+                if (game == null)
+                    return NotFound();
+
+                if (game.Archives != null && game.Archives.Count > 0)
+                {
+                    using (var archiveRepo = new Repository<Archive>(Context, HttpContext))
+                    {
+                        foreach (var archive in game.Archives.OrderByDescending(a => a.CreatedOn))
+                        {
+                            var archiveFile = Path.Combine("Upload", archive.ObjectKey);
+
+                            if (System.IO.File.Exists(archiveFile))
+                                System.IO.File.Delete(archiveFile);
+
+                            archiveRepo.Delete(archive);
+                        }
+
+                        await archiveRepo.SaveChanges();
+                    }
+                }
+
+                repo.Delete(game);
+
+                await repo.SaveChanges();
+
+                return RedirectToAction(nameof(Index));
             }
-            var game = await Context.Games.FindAsync(id);
-            if (game != null)
-            {
-                Context.Games.Remove(game);
-            }
-            
-            await Context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
         }
 
         private bool GameExists(Guid id)

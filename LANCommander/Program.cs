@@ -1,5 +1,6 @@
 using LANCommander.Data;
 using LANCommander.Data.Models;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,13 @@ builder.Services.AddControllersWithViews().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
+
+builder.Services.AddScoped<ArchiveService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<GenreService>();
+builder.Services.AddScoped<KeyService>();
+builder.Services.AddScoped<TagService>();
 
 var app = builder.Build();
 

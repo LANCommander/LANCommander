@@ -11,6 +11,7 @@ using LANCommander.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using LANCommander.Services;
 using System.Drawing;
+using LANCommander.Models;
 
 namespace LANCommander.Controllers
 {
@@ -18,10 +19,18 @@ namespace LANCommander.Controllers
     public class GamesController : Controller
     {
         private readonly DatabaseContext Context;
+        private readonly GameService GameService;
+        private readonly CategoryService CategoryService;
+        private readonly TagService TagService;
+        private readonly GenreService GenreService;
 
-        public GamesController(DatabaseContext context)
+        public GamesController(DatabaseContext context, GameService gameService, CategoryService categoryService, TagService tagService, GenreService genreService)
         {
             Context = context;
+            GameService = gameService;
+            CategoryService = categoryService;
+            TagService = tagService;
+            GenreService = genreService;
         }
 
         // GET: Games

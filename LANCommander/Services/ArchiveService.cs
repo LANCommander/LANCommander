@@ -1,12 +1,18 @@
-﻿using LANCommander.Models;
+﻿using LANCommander.Data;
+using LANCommander.Data.Models;
+using LANCommander.Models;
 using System.IO.Compression;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.Services
 {
-    public static class ArchiveService
+    public class ArchiveService : BaseDatabaseService<Archive>
     {
+        public ArchiveService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
+        {
+        }
+
         public static GameManifest ReadManifest(string objectKey)
         {
             var upload = Path.Combine("Upload", objectKey);

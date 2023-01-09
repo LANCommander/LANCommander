@@ -97,4 +97,7 @@ app.MapRazorPages();
 if (!Directory.Exists("Upload"))
     Directory.CreateDirectory("Upload");
 
+if (!Directory.Exists("Icon"))
+    Directory.CreateDirectory("Icon");
+
 app.Run();

@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Services
 {
-    public class BaseDatabaseService<T> where T : BaseModel
+    public abstract class BaseDatabaseService<T> where T : BaseModel
     {
         public DatabaseContext Context { get; set; }
         public HttpContext HttpContext { get; set; }
@@ -14,12 +14,12 @@ namespace LANCommander.Services
             HttpContext = httpContextAccessor.HttpContext;
         }
 
-        public ICollection<T> Get()
+        public virtual ICollection<T> Get()
         {
             return Get(x => true).ToList();
         }
 
-        public async Task<T> Get(Guid id)
+        public virtual async Task<T> Get(Guid id)
         {
             using (var repo = new Repository<T>(Context, HttpContext))
             {
@@ -27,7 +27,7 @@ namespace LANCommander.Services
             }
         }
 
-        public IQueryable<T> Get(Expression<Func<T, bool>> predicate)
+        public virtual IQueryable<T> Get(Expression<Func<T, bool>> predicate)
         {
             using (var repo = new Repository<T>(Context, HttpContext))
             {
@@ -35,7 +35,12 @@ namespace LANCommander.Services
             }
         }
 
-        public async Task<T> Add(T entity)
+        public virtual bool Exists(Guid id)
+        {
+            return Get(id) != null;
+        }
+
+        public virtual async Task<T> Add(T entity)
         {
             using (var repo = new Repository<T>(Context, HttpContext))
             {
@@ -46,7 +51,7 @@ namespace LANCommander.Services
             }
         }
 
-        public async Task<T> Update(T entity)
+        public virtual async Task<T> Update(T entity)
         {
             using (var repo = new Repository<T>(Context, HttpContext))
             {
@@ -57,7 +62,7 @@ namespace LANCommander.Services
             }
         }
 
-        public async Task Delete(T entity)
+        public virtual async Task Delete(T entity)
         {
             using (var repo = new Repository<T>(Context, HttpContext))
             {

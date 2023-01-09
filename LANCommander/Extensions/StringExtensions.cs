@@ -10,5 +10,10 @@ namespace LANCommander.Extensions
 
             return removeInvalidChars.Replace(filename, replacement);
         }
+
+        public static string ToPath(this string path)
+        {
+            return Path.Combine(path.Split("/"));
+        }
     }
 }

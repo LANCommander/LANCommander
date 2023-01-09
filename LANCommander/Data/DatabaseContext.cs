@@ -16,15 +16,22 @@ namespace LANCommander.Data
         {
             base.OnModelCreating(builder);
 
-            builder.Entity<Company>()
-                .HasMany(c => c.PublishedGames)
-                .WithOne(g => g.Publisher)
+            builder.Entity<Genre>()
+                .HasMany(g => g.Games)
+                .WithMany(g => g.Genres);
+
+            builder.Entity<Category>()
+                .HasMany(c => c.Games)
+                .WithMany(g => g.Categories);
+
+            builder.Entity<Category>()
+                .HasMany(c => c.Children)
+                .WithOne(c => c.Parent)
                 .IsRequired(false);
 
-            builder.Entity<Company>()
-                .HasMany(c => c.DevelopedGames)
-                .WithOne(g => g.Developer)
-                .IsRequired(false);
+            builder.Entity<Tag>()
+                .HasMany(t => t.Games)
+                .WithMany(g => g.Tags);
 
             builder.Entity<Game>()
                 .HasMany(g => g.Archives)
@@ -35,9 +42,42 @@ namespace LANCommander.Data
                 .HasMany(g => g.Keys)
                 .WithOne(g => g.Game)
                 .IsRequired(false);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.Actions)
+                .WithOne(g => g.Game)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.MultiplayerModes)
+                .WithOne(m => m.Game)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.Developers)
+                .WithMany(c => c.DevelopedGames)
+                .UsingEntity<Dictionary<string, object>>(
+                    "GameDeveloper",
+                    g => g.HasOne<Company>().WithMany().HasForeignKey("DeveloperId"),
+                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId")
+                );
+
+            builder.Entity<Game>()
+                .HasMany(g => g.Publishers)
+                .WithMany(c => c.PublishedGames)
+                .UsingEntity<Dictionary<string, object>>(
+                    "GamePublisher",
+                    g => g.HasOne<Company>().WithMany().HasForeignKey("PublisherId"),
+                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId")
+                );
         }
 
         public DbSet<Game>? Games { get; set; }
+
+        public DbSet<Genre>? Genres { get; set; }
+
+        public DbSet<Category>? Categories { get; set; }
 
         public DbSet<Tag>? Tags { get; set; }
 

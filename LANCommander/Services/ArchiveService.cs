@@ -1,5 +1,7 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Models;
+using LANCommander.Extensions;
+using LANCommander.Helpers;
 using LANCommander.Models;
 using System.IO.Compression;
 using YamlDotNet.Serialization;
@@ -13,13 +15,20 @@ namespace LANCommander.Services
         {
         }
 
+        public override Task Delete(Archive entity)
+        {
+            FileHelpers.DeleteIfExists($"Upload/{entity.ObjectKey}".ToPath());
+
+            return base.Delete(entity);
+        }
+
         public static GameManifest ReadManifest(string objectKey)
         {
-            var upload = Path.Combine("Upload", objectKey);
+            var upload = $"Upload/{objectKey}".ToPath();
 
             string manifestContents = String.Empty;
 
-            if (!System.IO.File.Exists(upload))
+            if (!File.Exists(upload))
                 throw new FileNotFoundException(upload);
 
             using (ZipArchive zip = ZipFile.OpenRead(upload))
@@ -40,7 +49,6 @@ namespace LANCommander.Services
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
                 .Build();
 
-
             var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
 
             return manifest;
@@ -48,9 +56,9 @@ namespace LANCommander.Services
 
         public static byte[] ReadFile(string objectKey, string path)
         {
-            var upload = Path.Combine("Upload", objectKey);
+            var upload = $"Upload/{objectKey}".ToPath();
 
-            if (!System.IO.File.Exists(upload))
+            if (!File.Exists(upload))
                 throw new FileNotFoundException(upload);
 
             using (ZipArchive zip = ZipFile.OpenRead(upload))

@@ -36,12 +36,14 @@ namespace LANCommander.Data
             builder.Entity<Game>()
                 .HasMany(g => g.Archives)
                 .WithOne(g => g.Game)
-                .IsRequired(false);
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
                 .HasMany(g => g.Keys)
                 .WithOne(g => g.Game)
-                .IsRequired(false);
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
                 .HasMany(g => g.Actions)

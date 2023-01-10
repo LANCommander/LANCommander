@@ -58,12 +58,15 @@ builder.Services.AddControllersWithViews().AddJsonOptions(x =>
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
+builder.Services.AddScoped<SettingService>();
 builder.Services.AddScoped<ArchiveService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<GenreService>();
 builder.Services.AddScoped<KeyService>();
 builder.Services.AddScoped<TagService>();
+builder.Services.AddScoped<CompanyService>();
+builder.Services.AddScoped<IGDBService>();
 
 var app = builder.Build();
 

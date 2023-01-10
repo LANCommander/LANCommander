@@ -3,6 +3,7 @@ using System;
 using LANCommander.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230110023006_AddGameIGDBId")]
+    partial class AddGameIGDBId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.8");
@@ -277,6 +279,7 @@ namespace LANCommander.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("DirectoryName")
@@ -285,7 +288,7 @@ namespace LANCommander.Migrations
                     b.Property<long?>("IGDBId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("ReleasedOn")
+                    b.Property<DateTime>("ReleasedOn")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("Singleplayer")

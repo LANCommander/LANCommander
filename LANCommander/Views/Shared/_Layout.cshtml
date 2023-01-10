@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - LANCommander</title>
     <link href="~/css/tabler.min.css" rel="stylesheet" />
+    <link href="~/lib/selectize.js/css/selectize.bootstrap5.min.css" rel="stylesheet" />
 </head>
 <body>
     <header class="navbar navbar-expand-md navbar-light">
@@ -87,7 +88,8 @@
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/js/tabler.min.js"></script>
+    <script src="~/lib/selectize.js/js/selectize.min.js"></script>
+    <script src="~/lib/tabler/core/dist/js/tabler.min.js"></script>
     <script src="~/js/Modal.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)

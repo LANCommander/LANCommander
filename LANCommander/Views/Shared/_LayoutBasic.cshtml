@@ -4,13 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - LANCommander</title>
-    <link href="~/css/tabler.min.css" rel="stylesheet" />
+    <link href="~/lib/tabler/core/dist/css/tabler.min.css" type="stylesheet" />
 </head>
 <body>
     @RenderBody()
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/js/tabler.min.js"></script>
+    <script src="~/lib/tabler/core/dist/js/tabler.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

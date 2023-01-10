@@ -6,18 +6,19 @@ namespace LANCommander.Data.Models
     [Table("Games")]
     public class Game : BaseModel
     {
+        public long? IGDBId { get; set; }
         public string Title { get; set; }
         [Display(Name = "Sort Title")]
         public string? SortTitle { get; set; }
         [Display(Name = "Directory Name")]
         public string? DirectoryName { get; set; }
-        public string Description { get; set; }
+        public string? Description { get; set; }
         [Display(Name = "Released On")]
-        public DateTime ReleasedOn { get; set; }
+        public DateTime? ReleasedOn { get; set; }
 
         public virtual ICollection<Action> Actions { get; set; }
 
-        public bool Singleplayer { get; set; }
+        public bool Singleplayer { get; set; } = false;
 
         public virtual ICollection<MultiplayerMode> MultiplayerModes { get; set; }
         public virtual ICollection<Genre> Genres { get; set; }

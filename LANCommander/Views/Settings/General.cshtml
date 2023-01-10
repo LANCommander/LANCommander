@@ -1,0 +1,61 @@
+﻿@model LANCommander.Models.LANCommanderSettings
+
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">Settings</div>
+                <h2 class="page-title">
+                    General
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="card">
+            <div class="row g-0">
+                @{
+                    await Html.RenderPartialAsync("_SidebarPartial");
+                }
+
+                <form method="post" class="col d-flex flex-column">
+                    <div class="card-body">
+                        <h2 class="mb-4">General</h2>
+                        <h3 class="card-title mt-4">IGDB Credentials</h3>
+                        <p class="card-subtitle">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</p>
+                        <div class="row g-3">
+                            <div class="col-md">
+                                <label asp-for="IGDBClientId" class="form-label"></label>
+                                <input asp-for="IGDBClientId" class="form-control" />
+                            </div>
+                            <div class="col-md">
+                                <label asp-for="IGDBClientSecret" class="form-label"></label>
+                                <input asp-for="IGDBClientSecret" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-transparent mt-auto">
+                        <div class="btn-list justify-content-end">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+ }
+}

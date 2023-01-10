@@ -13,6 +13,7 @@
 			    </div>
 		    </a>
 		    <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a asp-controller="Settings" asp-controller="General" class="dropdown-item">Settings</a>
 			    <a asp-area="Identity" asp-page="/Account/Manage/Index" class="dropdown-item">Profile & account</a>
 			    <a asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" class="dropdown-item">Logout</a>
 		    </div>

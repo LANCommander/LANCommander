@@ -242,7 +242,61 @@ namespace LANCommander.Controllers
         {
             if (ModelState.IsValid)
             {
-                await GameService.Add(viewModel.Game);
+                var game = await GameService.Add(viewModel.Game);
+
+                if (viewModel.SelectedDevelopers != null && viewModel.SelectedDevelopers.Length > 0)
+                {
+                    if (game.Developers == null)
+                        game.Developers = new List<Company>();
+
+                    foreach (var selectedDeveloper in viewModel.SelectedDevelopers)
+                    {
+                        var company = await CompanyService.AddMissing(c => c.Name == selectedDeveloper, new Company() { Name = selectedDeveloper });
+
+                        game.Developers.Add(company);
+                    }
+                }
+
+                if (viewModel.SelectedPublishers != null && viewModel.SelectedPublishers.Length > 0)
+                {
+                    if (game.Publishers == null)
+                        game.Publishers = new List<Company>();
+
+                    foreach (var selectedPublisher in viewModel.SelectedPublishers)
+                    {
+                        var company = await CompanyService.AddMissing(c => c.Name == selectedPublisher, new Company() { Name = selectedPublisher });
+
+                        game.Publishers.Add(company);
+                    }
+                }
+
+                if (viewModel.SelectedGenres != null && viewModel.SelectedGenres.Length > 0)
+                {
+                    if (game.Genres == null)
+                        game.Genres = new List<Genre>();
+
+                    foreach (var selectedGenre in viewModel.SelectedGenres)
+                    {
+                        var genre = await GenreService.AddMissing(g => g.Name == selectedGenre, new Genre() { Name = selectedGenre });
+
+                        game.Genres.Add(genre);
+                    }
+                }
+
+                if (viewModel.SelectedTags != null && viewModel.SelectedTags.Length > 0)
+                {
+                    if (game.Tags == null)
+                        game.Tags  = new List<Tag>();
+
+                    foreach (var selectedTag in viewModel.SelectedTags)
+                    {
+                        var tag = await TagService.AddMissing(g => g.Name == selectedTag, new Tag() { Name = selectedTag });
+
+                        game.Tags.Add(tag);
+                    }
+                }
+
+                await GameService.Update(game);
 
                 return RedirectToAction(nameof(Index));
             }
@@ -266,7 +320,7 @@ namespace LANCommander.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, [Bind("Title,SortTitle,Description,ReleasedOn,Id,CreatedOn,CreatedById,UpdatedOn,UpdatedById")] Game game)
+        public async Task<IActionResult> Edit(Guid id, Game game)
         {
             if (id != game.Id)
             {

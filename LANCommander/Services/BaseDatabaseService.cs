@@ -51,6 +51,33 @@ namespace LANCommander.Services
             }
         }
 
+        /// <summary>
+        /// Adds an entity to the database if it does exist as dictated by the predicate
+        /// </summary>
+        /// <param name="predicate">Qualifier expressoin</param>
+        /// <param name="entity">Entity to add</param>
+        /// <returns>Newly created or existing entity</returns>
+        public virtual async Task<T> AddMissing(Expression<Func<T, bool>> predicate, T entity)
+        {
+            using (var repo = new Repository<T>(Context, HttpContext))
+            {
+                var existing = repo.Get(predicate).FirstOrDefault();
+
+                if (existing == null)
+                {
+                    entity = await repo.Add(entity);
+
+                    await repo.SaveChanges();
+
+                    return entity;
+                }
+                else
+                {
+                    return existing;
+                }
+            }
+        }
+
         public virtual async Task<T> Update(T entity)
         {
             using (var repo = new Repository<T>(Context, HttpContext))

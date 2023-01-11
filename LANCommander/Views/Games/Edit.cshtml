@@ -1,5 +1,5 @@
 ﻿@using LANCommander.Data.Models
-@model LANCommander.Data.Models.Game
+@model LANCommander.Models.GameViewModel
 
 @{
     ViewData["Title"] = "Edit";
@@ -29,27 +29,52 @@
                                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
                                 <div class="mb-3">
-                                    <label asp-for="Title" class="control-label"></label>
-                                    <input asp-for="Title" class="form-control" />
-                                    <span asp-validation-for="Title" class="text-danger"></span>
+                                    <label asp-for="Game.Title" class="control-label"></label>
+                                    <div class="input-group">
+                                        <input asp-for="Game.Title" class="form-control" />
+                                        <button class="btn" type="submit" asp-action="Lookup">Lookup</button>
+                                    </div>
+                                    <span asp-validation-for="Game.Title" class="text-danger"></span>
                                 </div>
                                 <div class="mb-3">
-                                    <label asp-for="SortTitle" class="control-label"></label>
-                                    <input asp-for="SortTitle" class="form-control" />
-                                    <span asp-validation-for="SortTitle" class="text-danger"></span>
+                                    <label asp-for="Game.SortTitle" class="control-label"></label>
+                                    <input asp-for="Game.SortTitle" class="form-control" />
+                                    <span asp-validation-for="Game.SortTitle" class="text-danger"></span>
                                 </div>
                                 <div class="mb-3">
-                                    <label asp-for="Description" class="control-label"></label>
-                                    <input asp-for="Description" class="form-control" />
-                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                    <label asp-for="Game.Description" class="control-label"></label>
+                                    <textarea asp-for="Game.Description" class="form-control" data-bs-toggle="autosize"></textarea>
+                                    <span asp-validation-for="Game.Description" class="text-danger"></span>
                                 </div>
                                 <div class="mb-3">
-                                    <label asp-for="ReleasedOn" class="control-label"></label>
-                                    <input asp-for="ReleasedOn" class="form-control" />
-                                    <span asp-validation-for="ReleasedOn" class="text-danger"></span>
+                                    <label asp-for="Game.ReleasedOn" class="control-label"></label>
+                                    <input asp-for="Game.ReleasedOn" class="form-control" />
+                                    <span asp-validation-for="Game.ReleasedOn" class="text-danger"></span>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="Developers" class="control-label"></label>
+                                    <input type="text" class="developer-select" />
+                                    <select asp-for="SelectedDevelopers" class="d-none"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label asp-for="Publishers" class="control-label"></label>
+                                    <input type="text" class="publisher-select" />
+                                    <select asp-for="SelectedPublishers" class="d-none"></select>
                                 </div>
 
-                                <input type="hidden" asp-for="Id" />
+                                <div class="mb-3">
+                                    <label asp-for="Genres" class="control-label"></label>
+                                    <input type="text" class="genre-select" />
+                                    <select asp-for="SelectedGenres" class="d-none"></select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Tags" class="control-label"></label>
+                                    <input type="text" class="tag-select" />
+                                    <select asp-for="SelectedTags" class="d-none"></select>
+                                </div>
+
+                                <input type="hidden" asp-for="Game.Id" />
                             </div>
                         </div>
                     </div>
@@ -65,18 +90,18 @@
 
             <div class="col-12">
                 <div class="card">
-                    @if (Model.Keys != null && Model.Keys.Count > 0)
+                    @if (Model.Game.Keys != null && Model.Game.Keys.Count > 0)
                     {
                         <div class="card-header">
                             <h3 class="card-title">Keys</h3>
                             <div class="card-actions">
-                                <a asp-action="Details" asp-controller="Keys" asp-route-id="@Model.Id" class="btn btn-ghost-primary">
+                                <a asp-action="Details" asp-controller="Keys" asp-route-id="@Model.Game.Id" class="btn btn-ghost-primary">
                                     Details
                                 </a>
                             </div>
                         </div>
 
-                        var keysAvailable = Model.Keys.Count(k =>
+                        var keysAvailable = Model.Game.Keys.Count(k =>
                         {
                             return (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress)) ||
                                 (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null);
@@ -93,13 +118,13 @@
                                 <div class="datagrid-item">
                                     <div class="datagrid-title">Claimed</div>
                                     <div class="datagrid-content">
-                                        @(Model.Keys.Count - keysAvailable)
+                                        @(Model.Game.Keys.Count - keysAvailable)
                                     </div>
                                 </div>
                                 <div class="datagrid-item">
                                     <div class="datagrid-title">Total</div>
                                     <div class="datagrid-content">
-                                        @Model.Keys.Count
+                                        @Model.Game.Keys.Count
                                     </div>
                                 </div>
                             </div>
@@ -111,7 +136,7 @@
                             <p class="empty-title">No Keys</p>
                             <p class="empty-subtitle text-muted">There have been no keys added for this game.</p>
                             <div class="empty-action">
-                                <a asp-action="Edit" asp-controller="Keys" asp-route-id="@Model.Id" class="btn btn-primary">Edit Keys</a>
+                                <a asp-action="Edit" asp-controller="Keys" asp-route-id="@Model.Game.Id" class="btn btn-primary">Edit Keys</a>
                             </div>
                         </div>
                     }
@@ -120,12 +145,12 @@
 
             <div class="col-12">
                 <div class="card">
-                    @if (Model.Archives != null && Model.Archives.Count > 0)
+                    @if (Model.Game.Archives != null && Model.Game.Archives.Count > 0)
                     {
                         <div class="card-header">
                             <h3 class="card-title">Archives</h3>
                             <div class="card-actions">
-                                <a asp-action="Add" asp-controller="Archives" asp-route-id="@Model.Id" class="btn btn-primary">
+                                <a asp-action="Add" asp-controller="Archives" asp-route-id="@Model.Game.Id" class="btn btn-primary">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                                     Add
                                 </a>
@@ -145,7 +170,7 @@
                                 </thead>
 
                                 <tbody>
-                                    @foreach (var archive in Model.Archives.OrderByDescending(a => a.CreatedOn))
+                                    @foreach (var archive in Model.Game.Archives.OrderByDescending(a => a.CreatedOn))
                                     {
                                         <tr>
                                             <td>@Html.DisplayFor(m => archive.Version)</td>
@@ -170,7 +195,7 @@
                             <p class="empty-title">No Archives</p>
                             <p class="empty-subtitle text-muted">There have been no archives uploaded for this game.</p>
                             <div class="empty-action">
-                                <a asp-action="Add" asp-controller="Archives" asp-route-id="@Model.Id" class="btn btn-primary">Upload Archive</a>
+                                <a asp-action="Add" asp-controller="Archives" asp-route-id="@Model.Game.Id" class="btn btn-primary">Upload Archive</a>
                             </div>
                         </div>
                     }
@@ -182,4 +207,61 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+        var developers = @Html.Raw(Json.Serialize(Model.Developers));
+        var publishers = @Html.Raw(Json.Serialize(Model.Publishers));
+        var genres = @Html.Raw(Json.Serialize(Model.Genres));
+        var tags = @Html.Raw(Json.Serialize(Model.Tags));
+
+        function selectize(selector, options) {
+            var selected = [];
+
+            for (let option of options) {
+                if (option.selected)
+                    selected.push(option.value);
+            }
+
+            $(selector).val(selected.join('|'));
+
+            $(selector).selectize({
+                delimiter: '|',
+                plugins: ['remove_button'],
+                create: true,
+                valueField: 'value',
+                labelField: 'text',
+                searchField: 'text',
+                options: options,
+                onItemAdd: function(value) {
+                    for (let option of Object.values(this.options)) {
+                        if (option.value == value)
+                        {
+                            this.$input.siblings('select').append(`<option value="${option.value}" selected>${option.text}</option>`);
+                        }
+                    }
+                },
+                onItemRemove: function(value) {
+                    for (let option of Object.values(this.options)) {
+                        if (option.value == value)
+                        {
+                            this.$input.siblings('select').find(`option[value="${option.value}"]`).remove();
+                        }
+                    }
+                },
+                onInitialize: function() {
+                    for (let option of Object.values(this.options)) {
+                        if (option.selected)
+                        {
+                            this.$input.siblings('select').append(`<option value="${option.value}" selected>${option.text}</option>`);
+                        }
+                    }
+                }
+            });
+        }
+
+        selectize('.developer-select', developers);
+        selectize('.publisher-select', publishers);
+        selectize('.genre-select', genres);
+        selectize('.tag-select', tags);
+    </script>
 }

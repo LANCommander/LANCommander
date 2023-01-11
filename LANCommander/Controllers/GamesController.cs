@@ -245,56 +245,16 @@ namespace LANCommander.Controllers
                 var game = await GameService.Add(viewModel.Game);
 
                 if (viewModel.SelectedDevelopers != null && viewModel.SelectedDevelopers.Length > 0)
-                {
-                    if (game.Developers == null)
-                        game.Developers = new List<Company>();
-
-                    foreach (var selectedDeveloper in viewModel.SelectedDevelopers)
-                    {
-                        var company = await CompanyService.AddMissing(c => c.Name == selectedDeveloper, new Company() { Name = selectedDeveloper });
-
-                        game.Developers.Add(company);
-                    }
-                }
+                    game.Developers = viewModel.SelectedDevelopers.Select(async d => await CompanyService.AddMissing(x => x.Name == d, new Company() { Name = d })).Select(t => t.Result).ToList();
 
                 if (viewModel.SelectedPublishers != null && viewModel.SelectedPublishers.Length > 0)
-                {
-                    if (game.Publishers == null)
-                        game.Publishers = new List<Company>();
-
-                    foreach (var selectedPublisher in viewModel.SelectedPublishers)
-                    {
-                        var company = await CompanyService.AddMissing(c => c.Name == selectedPublisher, new Company() { Name = selectedPublisher });
-
-                        game.Publishers.Add(company);
-                    }
-                }
+                    game.Publishers = viewModel.SelectedPublishers.Select(async p => await CompanyService.AddMissing(x => x.Name == p, new Company() { Name = p })).Select(t => t.Result).ToList();
 
                 if (viewModel.SelectedGenres != null && viewModel.SelectedGenres.Length > 0)
-                {
-                    if (game.Genres == null)
-                        game.Genres = new List<Genre>();
-
-                    foreach (var selectedGenre in viewModel.SelectedGenres)
-                    {
-                        var genre = await GenreService.AddMissing(g => g.Name == selectedGenre, new Genre() { Name = selectedGenre });
-
-                        game.Genres.Add(genre);
-                    }
-                }
+                    game.Genres = viewModel.SelectedGenres.Select(async g => await GenreService.AddMissing(x => x.Name == g, new Genre() { Name = g })).Select(t => t.Result).ToList();
 
                 if (viewModel.SelectedTags != null && viewModel.SelectedTags.Length > 0)
-                {
-                    if (game.Tags == null)
-                        game.Tags  = new List<Tag>();
-
-                    foreach (var selectedTag in viewModel.SelectedTags)
-                    {
-                        var tag = await TagService.AddMissing(g => g.Name == selectedTag, new Tag() { Name = selectedTag });
-
-                        game.Tags.Add(tag);
-                    }
-                }
+                    game.Tags = viewModel.SelectedTags.Select(async t => await TagService.AddMissing(x => x.Name == t, new Tag() { Name = t })).Select(t => t.Result).ToList();
 
                 await GameService.Update(game);
 
@@ -307,12 +267,34 @@ namespace LANCommander.Controllers
         // GET: Games/Edit/5
         public async Task<IActionResult> Edit(Guid? id)
         {
-            Game game = await GameService.Get(id.GetValueOrDefault());
+            var viewModel = new GameViewModel();
 
-            if (game == null)
+            viewModel.Game = await GameService.Get(id.GetValueOrDefault());
+
+            if (viewModel.Game == null)
                 return NotFound();
 
-            return View(game);
+            viewModel.Developers = CompanyService.Get()
+                .OrderBy(c => c.Name)
+                .Select(c => new SelectListItem() { Text = c.Name, Value = c.Name, Selected = viewModel.Game.Developers.Any(d => d.Id == c.Id) })
+                .ToList();
+
+            viewModel.Publishers = CompanyService.Get()
+                .OrderBy(c => c.Name)
+                .Select(c => new SelectListItem() { Text = c.Name, Value = c.Name, Selected = viewModel.Game.Publishers.Any(d => d.Id == c.Id) })
+                .ToList();
+
+            viewModel.Genres = GenreService.Get()
+                .OrderBy(g => g.Name)
+                .Select(g => new SelectListItem() { Text = g.Name, Value = g.Name, Selected = viewModel.Game.Genres.Any(x => x.Id == g.Id) })
+                .ToList();
+
+            viewModel.Tags = TagService.Get()
+                .OrderBy(t => t.Name)
+                .Select(t => new SelectListItem() { Text = t.Name, Value = t.Name, Selected = viewModel.Game.Tags.Any(x => x.Id == t.Id) })
+                .ToList();
+
+            return View(viewModel);
         }
 
         // POST: Games/Edit/5
@@ -320,34 +302,91 @@ namespace LANCommander.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Guid id, Game game)
+        public async Task<IActionResult> Edit(Guid id, GameViewModel viewModel)
         {
-            if (id != game.Id)
+            if (id != viewModel.Game.Id)
             {
                 return NotFound();
             }
 
             if (ModelState.IsValid)
             {
-                try
+                var game = await GameService.Get(viewModel.Game.Id);
+
+                game.Title = viewModel.Game.Title;
+                game.Description = viewModel.Game.Description;
+                game.ReleasedOn = viewModel.Game.ReleasedOn;
+
+                #region Update Developers
+                foreach (var developer in game.Developers)
                 {
-                    await GameService.Update(game);
+                    if (!viewModel.SelectedDevelopers.Any(d => d == developer.Name))
+                        game.Developers.Remove(developer);
                 }
-                catch (DbUpdateConcurrencyException)
+
+                foreach (var newDeveloper in viewModel.SelectedDevelopers.Where(sd => !game.Developers.Any(d => d.Name == sd)))
                 {
-                    if (!GameService.Exists(game.Id))
+                    game.Developers.Add(new Company()
                     {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                        Name = newDeveloper
+                    });
                 }
+                #endregion
+
+                #region Update Publishers
+                foreach (var publisher in game.Publishers)
+                {
+                    if (!viewModel.SelectedPublishers.Any(p => p == publisher.Name))
+                        game.Publishers.Remove(publisher);
+                }
+
+                foreach (var newPublisher in viewModel.SelectedPublishers.Where(sp => !game.Publishers.Any(p => p.Name == sp)))
+                {
+                    game.Publishers.Add(new Company()
+                    {
+                        Name = newPublisher
+                    });
+                }
+                #endregion
+
+                #region Update Genres
+                foreach (var genre in game.Genres)
+                {
+                    if (!viewModel.SelectedGenres.Any(g => g == genre.Name))
+                        game.Genres.Remove(genre);
+                }
+
+                foreach (var newGenre in viewModel.SelectedGenres.Where(sg => !game.Genres.Any(g => g.Name == sg)))
+                {
+                    game.Genres.Add(new Genre()
+                    {
+                        Name = newGenre
+                    });
+                }
+                #endregion
+
+                #region Update Tags
+                foreach (var tag in game.Tags)
+                {
+                    if (!viewModel.SelectedTags.Any(t => t == tag.Name))
+                        game.Tags.Remove(tag);
+                }
+
+                foreach (var newTag in viewModel.SelectedTags.Where(st => !game.Tags.Any(t => t.Name == st)))
+                {
+                    game.Tags.Add(new Tag()
+                    {
+                        Name = newTag
+                    });
+                }
+                #endregion
+
+                await GameService.Update(game);
 
                 return RedirectToAction(nameof(Index));
             }
-            return View(game);
+
+            return View(viewModel);
         }
 
         // GET: Games/Delete/5

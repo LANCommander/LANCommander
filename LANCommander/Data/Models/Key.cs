@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LANCommander.Data.Models
 {
@@ -8,6 +9,7 @@ namespace LANCommander.Data.Models
     {
         [MaxLength(255)]
         public string Value { get; set; }
+        [JsonIgnore]
         public virtual Game Game { get; set; }
         public KeyAllocationMethod AllocationMethod { get; set; }
         [MaxLength(17)]

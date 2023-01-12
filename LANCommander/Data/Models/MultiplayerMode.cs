@@ -1,5 +1,6 @@
 ﻿using LANCommander.Data.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LANCommander.Data.Models
 {
@@ -13,6 +14,7 @@ namespace LANCommander.Data.Models
         public int MaxPlayers { get; set; }
         public int Spectators { get; set; }
 
+        [JsonIgnore]
         public virtual Game Game { get; set; }
     }
 }

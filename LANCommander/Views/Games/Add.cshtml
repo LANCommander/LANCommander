@@ -92,59 +92,9 @@
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 
     <script>
-        var developers = @Html.Raw(Json.Serialize(Model.Developers));
-        var publishers = @Html.Raw(Json.Serialize(Model.Publishers));
-        var genres = @Html.Raw(Json.Serialize(Model.Genres));
-        var tags = @Html.Raw(Json.Serialize(Model.Tags));
-
-        function selectize(selector, options) {
-            var selected = [];
-
-            for (let option of options) {
-                if (option.selected)
-                    selected.push(option.value);
-            }
-
-            $(selector).val(selected.join('|'));
-
-            $(selector).selectize({
-                delimiter: '|',
-                plugins: ['remove_button'],
-                create: true,
-                valueField: 'value',
-                labelField: 'text',
-                searchField: 'text',
-                options: options,
-                onItemAdd: function(value) {
-                    for (let option of Object.values(this.options)) {
-                        if (option.value == value)
-                        {
-                            this.$input.siblings('select').append(`<option value="${option.value}" selected>${option.text}</option>`);
-                        }
-                    }
-                },
-                onItemRemove: function(value) {
-                    for (let option of Object.values(this.options)) {
-                        if (option.value == value)
-                        {
-                            this.$input.siblings('select').find(`option[value="${option.value}"]`).remove();
-                        }
-                    }
-                },
-                onInitialize: function() {
-                    for (let option of Object.values(this.options)) {
-                        if (option.selected)
-                        {
-                            this.$input.siblings('select').append(`<option value="${option.value}" selected>${option.text}</option>`);
-                        }
-                    }
-                }
-            });
-        }
-
-        selectize('.developer-select', developers);
-        selectize('.publisher-select', publishers);
-        selectize('.genre-select', genres);
-        selectize('.tag-select', tags);
+        new Select('.developer-select', @Html.Raw(Json.Serialize(Model.Developers)));
+        new Select('.publisher-select', @Html.Raw(Json.Serialize(Model.Publishers)));
+        new Select('.genre-select', @Html.Raw(Json.Serialize(Model.Genres)));
+        new Select('.tag-select', @Html.Raw(Json.Serialize(Model.Tags)));
     </script>
 }

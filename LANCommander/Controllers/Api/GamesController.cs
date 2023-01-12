@@ -1,5 +1,6 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Models;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,29 +11,24 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class GamesController : ControllerBase
     {
-        private DatabaseContext Context;
+        private readonly GameService GameService;
 
-        public GamesController(DatabaseContext context)
+        public GamesController(GameService gameService)
         {
-            Context = context;
+           
+            GameService = gameService;
         }
 
         [HttpGet]
         public IEnumerable<Game> Get()
         {
-            using (var repo = new Repository<Game>(Context, HttpContext))
-            {
-                return repo.Get(g => true).ToList();
-            }
+            return GameService.Get();
         }
 
         [HttpGet("{id}")]
         public async Task<Game> Get(Guid id)
         {
-            using (var repo = new Repository<Game>(Context, HttpContext))
-            {
-                return await repo.Find(id);
-            }
+            return await GameService.Get(id);
         }
     }
 }

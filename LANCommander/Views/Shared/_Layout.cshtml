@@ -1,4 +1,9 @@
-﻿<!DOCTYPE html>
+﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor _HttpContext
+@{
+    _HttpContext.HttpContext.Response.Headers["Cache-Control"] = "no-store";
+}
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -6,6 +11,7 @@
     <title>@ViewData["Title"] - LANCommander</title>
     <link href="~/css/tabler.min.css" rel="stylesheet" />
     <link href="~/lib/selectize.js/css/selectize.bootstrap5.min.css" rel="stylesheet" />
+    <base href="~/"/>
 </head>
 <body>
     <header class="navbar navbar-expand-md navbar-light">
@@ -92,6 +98,7 @@
     <script src="~/lib/tabler/core/dist/js/tabler.min.js"></script>
     <script src="~/js/Modal.js"></script>
     <script src="~/js/Select.js"></script>
+    <script src="~/_framework/blazor.server.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -56,7 +56,9 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllersWithViews().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    x.JsonSerializerOptions.MaxDepth = 3;
 });
+builder.Services.AddServerSideBlazor();
 
 builder.Services.AddScoped<SettingService>();
 builder.Services.AddScoped<ArchiveService>();
@@ -92,9 +94,14 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}");
+    endpoints.MapBlazorHub();
+});
+
 app.MapRazorPages();
 
 if (!Directory.Exists("Upload"))

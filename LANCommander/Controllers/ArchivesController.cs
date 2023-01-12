@@ -14,13 +14,11 @@ namespace LANCommander.Controllers
     [Authorize(Roles = "Administrator")]
     public class ArchivesController : Controller
     {
-        private readonly DatabaseContext Context;
         private readonly GameService GameService;
         private readonly ArchiveService ArchiveService;
 
-        public ArchivesController(DatabaseContext context, GameService gameService, ArchiveService archiveService)
+        public ArchivesController(GameService gameService, ArchiveService archiveService)
         {
-            Context = context;
             GameService = gameService;
             ArchiveService = archiveService;
         }

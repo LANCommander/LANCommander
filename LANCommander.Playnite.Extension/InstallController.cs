@@ -22,7 +22,6 @@ namespace LANCommander.PlaynitePlugin
         {
             Name = "Install using LANCommander";
             Plugin = plugin;
-            
         }
 
         public override void Install(InstallActionArgs args)
@@ -88,7 +87,7 @@ namespace LANCommander.PlaynitePlugin
 
         private string Extract(LANCommander.SDK.Models.Game game, string archivePath)
         {
-            var destination = $"C:\\Games\\{game.Title.SanitizeFilename()}";
+            var destination = Path.Combine(Plugin.Settings.InstallDirectory, game.Title.SanitizeFilename());
 
             Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {

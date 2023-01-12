@@ -20,35 +20,55 @@ namespace LANCommander.PlaynitePlugin
     public partial class PlayniteSettingsView : UserControl
     {
         private PlayniteLibraryPlugin Plugin;
+        private PlayniteSettingsViewModel Settings;
 
         public PlayniteSettingsView(PlayniteLibraryPlugin plugin)
         {
-            Plugin = plugin;
+            this.Plugin = plugin;
+            this.Settings = plugin.Settings;
 
             InitializeComponent();
+
+            DataContext = this;
 
             UpdateAuthenticationButtonVisibility();
         }
 
         private void UpdateAuthenticationButtonVisibility()
         {
-            try
+            PART_AuthenticateLabel.Content = "Checking authentication status...";
+            PART_AuthenticationButton.IsEnabled = false;
+            PART_AuthenticateLabel.Content = Settings.InstallDirectory;
+            var token = new AuthToken()
             {
-                if (Plugin.LANCommander.ValidateToken(new AuthToken()
-                {
-                    AccessToken = Plugin.Settings.AccessToken,
-                    RefreshToken = Plugin.Settings.RefreshToken,
-                }))
-                {
-                    var authenticateButton = FindName("AuthenticateButton") as Button;
+                AccessToken = Plugin.Settings.AccessToken,
+                RefreshToken = Plugin.Settings.RefreshToken,
+            };
 
-                    authenticateButton.Visibility = Visibility.Hidden;
-                }
-            }
-            catch
-            {
+            var task = Task.Run(() => Plugin.LANCommander.ValidateToken(token))
+                .ContinueWith(antecedent =>
+                {
+                    try
+                    {
+                        Dispatcher.Invoke(new Action(() =>
+                        {
+                            if (antecedent.Result == true)
+                            {
+                                PART_AuthenticateLabel.Content = "Authentication failed!";
+                                PART_AuthenticationButton.IsEnabled = true;
+                            }
+                            else
+                            {
+                                PART_AuthenticateLabel.Content = "Connection established!";
+                                PART_AuthenticationButton.IsEnabled = false;
+                            }
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
 
-            }
+                    }
+                });
         }
 
         private void AuthenticateButton_Click(object sender, RoutedEventArgs e)
@@ -61,6 +81,17 @@ namespace LANCommander.PlaynitePlugin
         private void AuthWindow_Closed(object sender, EventArgs e)
         {
             UpdateAuthenticationButtonVisibility();
+        }
+
+        private void SelectInstallDirectory_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedDirectory = Plugin.PlayniteApi.Dialogs.SelectFolder();
+
+            if (!String.IsNullOrWhiteSpace(selectedDirectory))
+            {
+                PART_InstallDirectory.Text = selectedDirectory;
+                Plugin.Settings.InstallDirectory = selectedDirectory;
+            }
         }
     }
 }

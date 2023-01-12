@@ -15,43 +15,45 @@ namespace LANCommander.PlaynitePlugin
         public string ServerAddress { get; set; } = String.Empty;
         public string AccessToken { get; set; } = String.Empty;
         public string RefreshToken { get; set; } = String.Empty;
+        public string InstallDirectory { get; set; } = String.Empty;
 
-        public PlayniteSettingsViewModel()
-        {
-
-        }
+        public PlayniteSettingsViewModel() { }
 
         public PlayniteSettingsViewModel(PlayniteLibraryPlugin plugin)
         {
             Plugin = plugin;
 
-            ServerAddress = Plugin.Settings.ServerAddress;
-            AccessToken = Plugin.Settings.AccessToken;
-            RefreshToken = Plugin.Settings.RefreshToken;
+            var settings = Plugin.LoadPluginSettings<PlayniteSettingsViewModel>();
+
+            ServerAddress = settings.ServerAddress;
+            AccessToken = settings.AccessToken;
+            RefreshToken = settings.RefreshToken;
+            InstallDirectory = settings.InstallDirectory;
         }
 
         public void BeginEdit()
         {
-            
+
         }
 
         public void CancelEdit()
         {
-            
+
         }
 
         public void EndEdit()
         {
-            Plugin.Settings.ServerAddress = ServerAddress;
-
-            Plugin.SaveSettings();
+            Plugin.SavePluginSettings(this);
         }
 
         public bool VerifySettings(out List<string> errors)
         {
             errors = new List<string>();
 
-            return true;
+            if (String.IsNullOrWhiteSpace(InstallDirectory))
+                errors.Add("An install directory needs to be set!");
+
+            return errors.Count == 0;
         }
     }
 }

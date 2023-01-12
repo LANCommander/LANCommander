@@ -68,7 +68,7 @@ namespace LANCommander.PlaynitePlugin.Views
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;
 
-                Plugin.SaveSettings();
+                Plugin.SavePluginSettings(Plugin.Settings);
 
                 Window.GetWindow(this).Close();
             }

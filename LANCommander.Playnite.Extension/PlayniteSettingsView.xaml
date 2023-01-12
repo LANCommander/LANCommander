@@ -3,17 +3,41 @@
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-			 xmlns:sys="clr-namespace:System;assembly=mscorlib"
-			 mc:Ignorable="d"
+			 xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:playniteplugin="clr-namespace:LANCommander.PlaynitePlugin" d:DataContext="{d:DesignInstance Type=playniteplugin:PlayniteSettingsViewModel}"
+             mc:Ignorable="d"
 			 d:DesignHeight="400" d:DesignWidth="600">
     <d:DesignerProperties.DesignStyle>
         <Style TargetType="UserControl">
             <Setter Property="Background" Value="White" />
         </Style>
     </d:DesignerProperties.DesignStyle>
-    <StackPanel Margin="20">
-        <TextBlock Text="LANCommander Server URL"/>
-        <TextBox Text="{Binding ServerUrl}"/>
-        <Button Click="AuthenticateButton_Click" Name="AuthenticateButton">Authenticate</Button>
-    </StackPanel>
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="auto" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0" Content="Install Directory" />
+            <TextBox Name="PART_InstallDirectory" Grid.Column="2" Text="{Binding InstallDirectory}" />
+            <Button Grid.Column="4" Content="Browse" Click="SelectInstallDirectory_Click" VerticalAlignment="Center" Grid.ColumnSpan="2" />
+        </Grid>
+
+        <Grid Height="40" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button Name="PART_AuthenticationButton" Content="Authenticate" Grid.Column="0" Click="AuthenticateButton_Click" VerticalAlignment="Center" />
+            <Label Name="PART_AuthenticateLabel" Margin="20,0,0,0" VerticalAlignment="Center" Grid.Column="1" />
+        </Grid>
+    </Grid>
 </UserControl>

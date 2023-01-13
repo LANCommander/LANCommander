@@ -23,16 +23,19 @@
 
             @foreach (var action in Actions)
             {
+
                 <tr>
                     <td><input @bind="action.Name" name="Game.Actions[@i].Name" class="form-control" placeholder="Play" /></td>
                     <td><input @bind="action.Path" name="Game.Actions[@i].Path" class="form-control" placeholder="Game.exe" /></td>
                     <td><input @bind="action.Arguments" name="Game.Actions[@i].Arguments" class="form-control" placeholder="Launch Arguments" /></td>
                     <td class="align-middle">
-                        <div class="form-check form-switch form-check-inline mb-0">
-                            <input @bind="action.PrimaryAction" name="Game.Actions[@i].PrimaryAction" class="form-check-input" type="checkbox" />
+                        <div class="form-check form-check-inline mb-0">
+                            <input name="Game.Actions[@i].PrimaryAction" class="form-check-input" type="checkbox" checked="@action.PrimaryAction" value="true" />
                         </div>
                     </td>
                     <td>
+                        <input name="Game.Actions[@i].Game.Id" type="hidden" value="@GameId" />
+
                         <div class="btn-list flex-nowrap justify-content-end">
                             <button class="btn btn-ghost-danger btn-icon" @onclick="() => RemoveAction(i)" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -58,6 +61,7 @@
 
 @code {
     [Parameter] public ICollection<Data.Models.Action> Actions { get; set; }
+    [Parameter] public Guid GameId { get; set; }
 
     private void AddAction()
     {

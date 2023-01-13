@@ -84,13 +84,13 @@
                         <h3 class="card-title">Actions</h3>
                     </div>
 
-                    <component type="typeof(ActionEditor)" render-mode="Server" param-Actions="Model.Game.Actions" />
+                    <component type="typeof(ActionEditor)" render-mode="Server" param-Actions="Model.Game.Actions" param-GameId="Model.Game.Id" />
 
                     <div class="card-header">
                         <h3 class="card-title">Multiplayer Modes</h3>
                     </div>
 
-                    <component type="typeof(MultiplayerModeEditor)" render-mode="Server" param-MultiplayerModes="Model.Game.MultiplayerModes" />
+                    <component type="typeof(MultiplayerModeEditor)" render-mode="Server" param-MultiplayerModes="Model.Game.MultiplayerModes" param-GameId="Model.Game.Id" />
 
                     <div class="card-footer">
                         <div class="d-flex">

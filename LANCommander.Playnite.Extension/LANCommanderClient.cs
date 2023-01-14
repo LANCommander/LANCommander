@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Models;
+﻿using LANCommander.SDK;
+using LANCommander.SDK.Models;
 using RestSharp;
 using RestSharp.Extensions;
 using System;
@@ -113,6 +114,16 @@ namespace LANCommander.PlaynitePlugin
         public Game GetGame(Guid id)
         {
             return GetRequest<Game>($"/api/Games/{id}");
+        }
+
+        public GameManifest GetGameManifest(Guid id)
+        {
+            return GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
+        }
+
+        public string DownloadGame(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        {
+            return DownloadRequest($"/api/Games/{id}/Download", progressHandler, completeHandler);
         }
 
         public string DownloadArchive(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)

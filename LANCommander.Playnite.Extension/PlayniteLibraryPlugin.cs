@@ -1,4 +1,5 @@
-﻿using LANCommander.Models;
+﻿using LANCommander.PlaynitePlugin.Extensions;
+using LANCommander.SDK;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
@@ -48,11 +49,11 @@ namespace LANCommander.PlaynitePlugin
             try
             {
                 var games = LANCommander
-                    .GetGames()
-                    .Where(g => g.Archives != null && g.Archives.Count() > 0);
+                    .GetGames();
 
                 foreach (var game in games)
                 {
+                    var manifest = LANCommander.GetGameManifest(game.Id);
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
 
                     var iconUri = new Uri(new Uri(Settings.ServerAddress), $"Games/GetIcon/{game.Id}");
@@ -60,14 +61,41 @@ namespace LANCommander.PlaynitePlugin
                     var metadata = new GameMetadata()
                     {
                         IsInstalled = existingGame != null,
-                        Name = game.Title,
-                        SortingName = game.SortTitle,
-                        Description = game.Description,
+                        Name = manifest.Title,
+                        SortingName = manifest.SortTitle,
+                        Description = manifest.Description,
                         GameId = game.Id.ToString(),
-                        ReleaseDate = new ReleaseDate(game.ReleasedOn),
-                        Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
-                        Icon = new MetadataFile(iconUri.ToString())
+                        ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
+                        //Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
+                        Icon = new MetadataFile(iconUri.ToString()),
+                        Genres = new HashSet<MetadataProperty>()
                     };
+
+                    if (manifest.Genre != null && manifest.Genre.Count() > 0)
+                        metadata.Genres = new HashSet<MetadataProperty>(manifest.Genre.Select(g => new MetadataNameProperty(g)));
+
+                    if (manifest.Developers != null && manifest.Developers.Count() > 0)
+                        metadata.Developers = new HashSet<MetadataProperty>(manifest.Developers.Select(d => new MetadataNameProperty(d)));
+
+                    if (manifest.Publishers != null && manifest.Publishers.Count() > 0)
+                        metadata.Publishers = new HashSet<MetadataProperty>(manifest.Publishers.Select(p => new MetadataNameProperty(p)));
+
+                    if (manifest.Tags != null && manifest.Tags.Count() > 0)
+                        metadata.Tags = new HashSet<MetadataProperty>(manifest.Tags.Select(t => new MetadataNameProperty(t)));
+
+                    metadata.Features = new HashSet<MetadataProperty>();
+
+                    if (manifest.Singleplayer)
+                        metadata.Features.Add(new MetadataNameProperty("Singleplayer"));
+
+                    if (manifest.LocalMultiplayer != null)
+                        metadata.Features.Add(new MetadataNameProperty($"Local Multiplayer {manifest.LocalMultiplayer.GetPlayerCount()}".Trim()));
+
+                    if (manifest.LanMultiplayer != null)
+                        metadata.Features.Add(new MetadataNameProperty($"LAN Multiplayer {manifest.LanMultiplayer.GetPlayerCount()}".Trim()));
+
+                    if (manifest.OnlineMultiplayer != null)
+                        metadata.Features.Add(new MetadataNameProperty($"Online Multiplayer {manifest.OnlineMultiplayer.GetPlayerCount()}".Trim()));
 
                     gameMetadata.Add(metadata);
                 };

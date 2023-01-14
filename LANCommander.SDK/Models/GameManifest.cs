@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 
-namespace LANCommander.Models
+namespace LANCommander.SDK
 {
     public class GameManifest
     {
@@ -8,17 +9,19 @@ namespace LANCommander.Models
         public string SortTitle { get; set; }
         public string Description { get; set; }
         public DateTime ReleasedOn { get; set; }
-        public string[] Genre { get; set; }
-        public string[] Tags { get; set; }
-        public string[] Publishers { get; set; }
-        public string[] Developers { get; set; }
+        public IEnumerable<string> Genre { get; set; }
+        public IEnumerable<string> Tags { get; set; }
+        public IEnumerable<string> Publishers { get; set; }
+        public IEnumerable<string> Developers { get; set; }
         public string Version { get; set; }
         public string Icon { get; set; }
-        public GameAction[] Actions { get; set; }
+        public IEnumerable<GameAction> Actions { get; set; }
         public bool Singleplayer { get; set; }
         public MultiplayerInfo LocalMultiplayer { get; set; }
         public MultiplayerInfo LanMultiplayer { get; set; }
         public MultiplayerInfo OnlineMultiplayer { get; set; }
+
+        public GameManifest() { }
     }
 
     public class GameAction

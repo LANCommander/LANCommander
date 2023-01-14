@@ -3,6 +3,7 @@ using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Helpers;
 using LANCommander.Models;
+using LANCommander.SDK;
 using System.IO.Compression;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;

@@ -11,6 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Core;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -39,6 +41,8 @@ namespace LANCommander.PlaynitePlugin
                 InstallDirectory = installDirectory
             };
 
+            File.WriteAllText(Path.Combine(installDirectory, "_manifest.yml"), GetManifest(gameId));
+
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
 
             Plugin.UpdateGamesFromManifest();
@@ -48,16 +52,14 @@ namespace LANCommander.PlaynitePlugin
         {
             string tempFile = String.Empty;
 
-            var archive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-
-            if (archive != null)
+            if (game != null)
             {
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
                     progress.ProgressMaxValue = 100;
                     progress.CurrentProgressValue = 0;
 
-                    var destination = Plugin.LANCommander.DownloadArchive(archive.Id, (changed) =>
+                    var destination = Plugin.LANCommander.DownloadGame(game.Id, (changed) =>
                     {
                         progress.CurrentProgressValue = changed.ProgressPercentage;
                     }, (complete) =>
@@ -82,7 +84,7 @@ namespace LANCommander.PlaynitePlugin
                 return tempFile;
             }
             else
-                throw new Exception("Game failed to download");
+                throw new Exception("Game failed to download!");
         }
 
         private string Extract(LANCommander.SDK.Models.Game game, string archivePath)
@@ -141,6 +143,19 @@ namespace LANCommander.PlaynitePlugin
             });
 
             return destination;
+        }
+
+        private string GetManifest(Guid gameId)
+        {
+            var manifest = Plugin.LANCommander.GetGameManifest(gameId);
+
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .Build();
+
+            var yaml = serializer.Serialize(manifest);
+
+            return yaml;
         }
     }
 }

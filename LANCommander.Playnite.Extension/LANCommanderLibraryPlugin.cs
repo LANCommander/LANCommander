@@ -131,7 +131,7 @@ namespace LANCommander.PlaynitePlugin
 
         public override UserControl GetSettingsView(bool firstRunView)
         {
-            return new PlayniteSettingsView(this);
+            return new LANCommanderSettingsView(this);
         }
 
         public System.Windows.Window ShowAuthenticationWindow()

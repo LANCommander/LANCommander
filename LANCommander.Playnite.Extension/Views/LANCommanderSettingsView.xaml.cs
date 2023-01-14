@@ -17,12 +17,12 @@ using System.Windows.Shapes;
 
 namespace LANCommander.PlaynitePlugin
 {
-    public partial class PlayniteSettingsView : UserControl
+    public partial class LANCommanderSettingsView : UserControl
     {
         private LANCommanderLibraryPlugin Plugin;
         private LANCommanderSettingsViewModel Settings;
 
-        public PlayniteSettingsView(LANCommanderLibraryPlugin plugin)
+        public LANCommanderSettingsView(LANCommanderLibraryPlugin plugin)
         {
             this.Plugin = plugin;
             this.Settings = plugin.Settings;

@@ -27,7 +27,7 @@ class Uploader {
         this.VersionInput = document.getElementById("Version");
         this.ChangelogTextArea = document.getElementById("Changelog");
         this.LastVersionIdInput = document.getElementById("LastVersion_Id");
-        this.GameIdInput = document.getElementById("Game_Id");
+        this.GameIdInput = document.getElementById("GameId");
         this.ParentForm = this.FileInput.closest("form");
         this.Chunks = [];
         this.UploadButton.onclick = (e) => __awaiter(this, void 0, void 0, function* () {
@@ -57,7 +57,7 @@ class Uploader {
                     else
                         this.OnError();
                 }
-                catch (_a) {
+                catch (ex) {
                     this.OnError();
                 }
             }
@@ -86,7 +86,7 @@ class Uploader {
             let formData = new FormData();
             formData.append('Version', this.VersionInput.value);
             formData.append('Changelog', this.ChangelogTextArea.value);
-            formData.append('Game.Id', this.GameIdInput.value);
+            formData.append('GameId', this.GameIdInput.value);
             formData.append('ObjectKey', this.Key);
             let validationResponse = yield fetch(`${this.ValidateRoute}/${this.Key}`, {
                 method: "POST",

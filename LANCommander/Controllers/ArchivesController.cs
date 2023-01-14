@@ -31,14 +31,18 @@ namespace LANCommander.Controllers
 
             var game = await GameService.Get(id.GetValueOrDefault());
 
+            if (game == null)
+                return NotFound();
+
             Archive lastVersion = null;
 
             if (game.Archives != null && game.Archives.Count > 0)
-                lastVersion = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+                lastVersion = game.Archives.OrderByDescending(a => a.CreatedOn).First();
 
             return View(new Archive()
             {
                 Game = game,
+                GameId = game.Id,
                 LastVersion = lastVersion,
             });
         }
@@ -50,7 +54,11 @@ namespace LANCommander.Controllers
 
             var game = await GameService.Get(id.GetValueOrDefault());
 
+            if (game == null)
+                return NotFound();
+
             archive.Game = game;
+            archive.GameId = game.Id;
 
             if (game.Archives != null && game.Archives.Any(a => a.Version == archive.Version))
                 ModelState.AddModelError("Version", "An archive for this game is already using that version.");
@@ -144,18 +152,25 @@ namespace LANCommander.Controllers
                 return BadRequest("The manifest file is invalid or corrupt.");
             }
 
-            var game = await GameService.Get(archive.Game.Id);
+            var game = await GameService.Get(archive.GameId);
 
             if (game == null)
                 return BadRequest("The related game is missing or corrupt.");
 
-            archive.Game = game;
+            archive.GameId = game.Id;
             archive.Id = Guid.Empty;
             archive.CompressedSize = compressedSize;
             archive.UncompressedSize = uncompressedSize;
             archive.ObjectKey = id.ToString();
 
-            archive = await ArchiveService.Update(archive);
+            try
+            {
+                archive = await ArchiveService.Add(archive);
+            }
+            catch (Exception ex)
+            {
+
+            }
 
             return Json(new
             {

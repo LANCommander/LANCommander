@@ -29,7 +29,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("GamesId");
 
-                    b.ToTable("CategoryGame");
+                    b.ToTable("CategoryGame", (string)null);
                 });
 
             modelBuilder.Entity("GameDeveloper", b =>
@@ -44,7 +44,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("GameId");
 
-                    b.ToTable("GameDeveloper");
+                    b.ToTable("GameDeveloper", (string)null);
                 });
 
             modelBuilder.Entity("GameGenre", b =>
@@ -59,7 +59,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("GenresId");
 
-                    b.ToTable("GameGenre");
+                    b.ToTable("GameGenre", (string)null);
                 });
 
             modelBuilder.Entity("GamePublisher", b =>
@@ -74,7 +74,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("PublisherId");
 
-                    b.ToTable("GamePublisher");
+                    b.ToTable("GamePublisher", (string)null);
                 });
 
             modelBuilder.Entity("GameTag", b =>
@@ -89,7 +89,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("TagsId");
 
-                    b.ToTable("GameTag");
+                    b.ToTable("GameTag", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Action", b =>
@@ -137,7 +137,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Actions");
+                    b.ToTable("Actions", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Archive", b =>
@@ -191,7 +191,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Archive");
+                    b.ToTable("Archive", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Category", b =>
@@ -227,7 +227,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Company", b =>
@@ -258,7 +258,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Companies");
+                    b.ToTable("Companies", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Game", b =>
@@ -310,7 +310,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Games");
+                    b.ToTable("Games", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Genre", b =>
@@ -341,7 +341,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Genres");
+                    b.ToTable("Genres", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Key", b =>
@@ -401,7 +401,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Keys");
+                    b.ToTable("Keys", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.MultiplayerMode", b =>
@@ -452,7 +452,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("MultiplayerModes");
+                    b.ToTable("MultiplayerModes", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Role", b =>
@@ -510,7 +510,7 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("UpdatedById");
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.User", b =>

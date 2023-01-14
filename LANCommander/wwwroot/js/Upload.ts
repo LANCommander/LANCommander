@@ -41,7 +41,7 @@ class Uploader {
         this.VersionInput = document.getElementById("Version") as HTMLInputElement;
         this.ChangelogTextArea = document.getElementById("Changelog") as HTMLTextAreaElement;
         this.LastVersionIdInput = document.getElementById("LastVersion_Id") as HTMLInputElement;
-        this.GameIdInput = document.getElementById("Game_Id") as HTMLInputElement;
+        this.GameIdInput = document.getElementById("GameId") as HTMLInputElement;
         this.ParentForm = this.FileInput.closest("form");
 
         this.Chunks = [];
@@ -82,7 +82,7 @@ class Uploader {
                 else
                     this.OnError();
             }
-            catch {
+            catch (ex) {
                 this.OnError();
             }
         }
@@ -115,7 +115,7 @@ class Uploader {
 
         formData.append('Version', this.VersionInput.value);
         formData.append('Changelog', this.ChangelogTextArea.value);
-        formData.append('Game.Id', this.GameIdInput.value);
+        formData.append('GameId', this.GameIdInput.value);
         formData.append('ObjectKey', this.Key);
 
         let validationResponse = await fetch(`${this.ValidateRoute}/${this.Key}`, {

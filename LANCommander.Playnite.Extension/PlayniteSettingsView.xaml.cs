@@ -41,8 +41,8 @@ namespace LANCommander.PlaynitePlugin
             PART_AuthenticateLabel.Content = Settings.InstallDirectory;
             var token = new AuthToken()
             {
-                AccessToken = Plugin.Settings.AccessToken,
-                RefreshToken = Plugin.Settings.RefreshToken,
+                AccessToken = Settings.AccessToken,
+                RefreshToken = Settings.RefreshToken,
             };
 
             var task = Task.Run(() => Plugin.LANCommander.ValidateToken(token))
@@ -52,7 +52,7 @@ namespace LANCommander.PlaynitePlugin
                     {
                         Dispatcher.Invoke(new Action(() =>
                         {
-                            if (antecedent.Result == true)
+                            if (antecedent.Result == false)
                             {
                                 PART_AuthenticateLabel.Content = "Authentication failed!";
                                 PART_AuthenticationButton.IsEnabled = true;

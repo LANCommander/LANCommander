@@ -311,13 +311,16 @@ namespace LANCommander.Controllers
 
             if (ModelState.IsValid)
             {
-                var game = await GameService.Get(viewModel.Game.Id);
+                var game = GameService.Get(g => g.Id == viewModel.Game.Id).FirstOrDefault();
 
                 game.Title = viewModel.Game.Title;
                 game.Description = viewModel.Game.Description;
                 game.ReleasedOn = viewModel.Game.ReleasedOn;
 
                 #region Update Developers
+                if (viewModel.SelectedDevelopers == null)
+                    viewModel.SelectedDevelopers = new string[0];
+
                 foreach (var developer in game.Developers)
                 {
                     if (!viewModel.SelectedDevelopers.Any(d => d == developer.Name))
@@ -334,6 +337,9 @@ namespace LANCommander.Controllers
                 #endregion
 
                 #region Update Publishers
+                if (viewModel.SelectedPublishers == null)
+                    viewModel.SelectedPublishers = new string[0];
+
                 foreach (var publisher in game.Publishers)
                 {
                     if (!viewModel.SelectedPublishers.Any(p => p == publisher.Name))
@@ -350,6 +356,9 @@ namespace LANCommander.Controllers
                 #endregion
 
                 #region Update Genres
+                if (viewModel.SelectedGenres == null)
+                    viewModel.SelectedGenres = new string[0];
+
                 foreach (var genre in game.Genres)
                 {
                     if (!viewModel.SelectedGenres.Any(g => g == genre.Name))
@@ -366,6 +375,9 @@ namespace LANCommander.Controllers
                 #endregion
 
                 #region Update Tags
+                if (viewModel.SelectedTags == null)
+                    viewModel.SelectedTags = new string[0];
+
                 foreach (var tag in game.Tags)
                 {
                     if (!viewModel.SelectedTags.Any(t => t == tag.Name))
@@ -378,6 +390,36 @@ namespace LANCommander.Controllers
                     {
                         Name = newTag
                     });
+                }
+                #endregion
+
+                #region Update Actions
+                if (game.Actions != null)
+                {
+                    game.Actions.Clear();
+
+                    if (viewModel.Game.Actions != null)
+                    {
+                        foreach (var action in viewModel.Game.Actions)
+                        {
+                            game.Actions.Add(action);
+                        }
+                    }
+                }
+                #endregion
+
+                #region Update MultiplayerModes
+                if (game.MultiplayerModes != null)
+                {
+                    game.MultiplayerModes.Clear();
+
+                    if (viewModel.Game.MultiplayerModes != null)
+                    {
+                        foreach (var multiplayerMode in viewModel.Game.MultiplayerModes)
+                        {
+                            game.MultiplayerModes.Add(multiplayerMode);
+                        }
+                    }
                 }
                 #endregion
 

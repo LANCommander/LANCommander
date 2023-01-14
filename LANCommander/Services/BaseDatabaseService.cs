@@ -82,9 +82,11 @@ namespace LANCommander.Services
         {
             using (var repo = new Repository<T>(Context, HttpContext))
             {
-                Context.Attach(entity);
+                var existing = await repo.Find(entity.Id);
 
-                entity = repo.Update(entity);
+                Context.Entry(existing).CurrentValues.SetValues(entity);
+
+                entity = repo.Update(existing);
                 await repo.SaveChanges();
 
                 return entity;

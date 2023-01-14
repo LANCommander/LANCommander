@@ -39,7 +39,7 @@
                     <td><input @bind="multiplayerMode.MaxPlayers" name="Game.MultiplayerModes[@i].MaxPlayers" class="form-control" /></td>
                     <td><input @bind="multiplayerMode.Description" name="Game.MultiplayerModes[@i].Description" class="form-control" /></td>
                     <td>
-                        <input name="Game.Actions[@i].GameId" type="hidden" value="@GameId" />
+                        <input name="Game.MultiplayerModes[@i].GameId" type="hidden" value="@GameId" />
 
                         <div class="btn-list flex-nowrap justify-content-end">
                             <button class="btn btn-ghost-danger btn-icon" @onclick="() => RemoveMode(index)" type="button">

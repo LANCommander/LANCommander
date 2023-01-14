@@ -46,15 +46,14 @@ namespace LANCommander.PlaynitePlugin
 
         private string DownloadRequest(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
+            route = route.TrimStart('/');
+
             var client = new WebClient();
             var tempFile = Path.GetTempFileName();
 
             client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
             client.DownloadProgressChanged += (s, e) => progressHandler(e);
             client.DownloadFileCompleted += (s, e) => completeHandler(e);
-
-            var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
             client.DownloadFileAsync(new Uri($"{Client.BaseUrl}{route}"), tempFile);
 
@@ -128,7 +127,7 @@ namespace LANCommander.PlaynitePlugin
 
         public string DownloadArchive(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return DownloadRequest($"api/Archives/Download/{id}", progressHandler, completeHandler);
+            return DownloadRequest($"/api/Archives/Download/{id}", progressHandler, completeHandler);
         }
     }
 }

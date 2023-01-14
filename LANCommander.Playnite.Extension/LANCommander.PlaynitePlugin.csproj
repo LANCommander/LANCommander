@@ -95,11 +95,11 @@
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
     <Compile Include="LANCommanderClient.cs" />
-    <Compile Include="PlayniteClient.cs" />
-    <Compile Include="PlayniteLibraryPlugin.cs" />
-    <Compile Include="PlayniteSettings.cs" />
-    <Compile Include="PlayniteSettingsView.xaml.cs">
-      <DependentUpon>PlayniteSettingsView.xaml</DependentUpon>
+    <Compile Include="LANCommanderLibraryClient.cs" />
+    <Compile Include="LANCommanderLibraryPlugin.cs" />
+    <Compile Include="ViewModels\LANCommanderSettingsViewModel.cs" />
+    <Compile Include="Views\LANCommanderSettingsView.xaml.cs">
+      <DependentUpon>Views\LANCommanderSettingsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewModels\Authentication.cs" />
@@ -121,7 +121,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="PlayniteSettingsView.xaml">
+    <Page Include="Views\LANCommanderSettingsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

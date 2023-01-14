@@ -39,6 +39,7 @@ namespace LANCommander.PlaynitePlugin
             PART_AuthenticateLabel.Content = "Checking authentication status...";
             PART_AuthenticationButton.IsEnabled = false;
             PART_AuthenticateLabel.Content = Settings.InstallDirectory;
+
             var token = new AuthToken()
             {
                 AccessToken = Settings.AccessToken,

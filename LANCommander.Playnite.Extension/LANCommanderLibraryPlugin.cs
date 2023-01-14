@@ -144,7 +144,10 @@ namespace LANCommander.PlaynitePlugin
             window.Title = "Authenticate to LANCommander";
 
             window.Content = new Views.Authentication(this);
-            window.DataContext = new ViewModels.Authentication();
+            window.DataContext = new ViewModels.Authentication()
+            {
+                ServerAddress = Settings.ServerAddress
+            };
 
             window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
             window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;

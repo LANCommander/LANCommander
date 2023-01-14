@@ -20,7 +20,7 @@ namespace LANCommander.PlaynitePlugin
     public partial class PlayniteSettingsView : UserControl
     {
         private LANCommanderLibraryPlugin Plugin;
-        private PlayniteSettingsViewModel Settings;
+        private LANCommanderSettingsViewModel Settings;
 
         public PlayniteSettingsView(LANCommanderLibraryPlugin plugin)
         {

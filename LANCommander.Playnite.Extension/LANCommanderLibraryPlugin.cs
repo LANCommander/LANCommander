@@ -19,7 +19,7 @@ namespace LANCommander.PlaynitePlugin
     public class LANCommanderLibraryPlugin : LibraryPlugin
     {
         public static readonly ILogger Logger = LogManager.GetLogger();
-        internal PlayniteSettingsViewModel Settings { get; set; }
+        internal LANCommanderSettingsViewModel Settings { get; set; }
         internal LANCommanderClient LANCommander { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
@@ -33,7 +33,7 @@ namespace LANCommander.PlaynitePlugin
                 HasSettings = true,
             };
 
-            Settings = new PlayniteSettingsViewModel(this);
+            Settings = new LANCommanderSettingsViewModel(this);
             LANCommander = new LANCommanderClient(Settings.ServerAddress);
             LANCommander.Token = new SDK.Models.AuthToken()
             {

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.PlaynitePlugin
 {
-    public class PlayniteSettingsViewModel : ObservableObject, ISettings
+    public class LANCommanderSettingsViewModel : ObservableObject, ISettings
     {
         private readonly LANCommanderLibraryPlugin Plugin;
 
@@ -17,13 +17,13 @@ namespace LANCommander.PlaynitePlugin
         public string RefreshToken { get; set; } = String.Empty;
         public string InstallDirectory { get; set; } = String.Empty;
 
-        public PlayniteSettingsViewModel() { }
+        public LANCommanderSettingsViewModel() { }
 
-        public PlayniteSettingsViewModel(LANCommanderLibraryPlugin plugin)
+        public LANCommanderSettingsViewModel(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
 
-            var settings = Plugin.LoadPluginSettings<PlayniteSettingsViewModel>();
+            var settings = Plugin.LoadPluginSettings<LANCommanderSettingsViewModel>();
 
             ServerAddress = settings.ServerAddress;
             AccessToken = settings.AccessToken;

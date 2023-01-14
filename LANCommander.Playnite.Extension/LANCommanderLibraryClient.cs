@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.PlaynitePlugin
 {
-    public class PlayniteClient : LibraryClient
+    public class LANCommanderLibraryClient : LibraryClient
     {
         public override bool IsInstalled => true;
 

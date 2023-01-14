@@ -24,7 +24,7 @@ namespace LANCommander.PlaynitePlugin
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
-        public override LibraryClient Client { get; } = new PlayniteClient();
+        public override LibraryClient Client { get; } = new LANCommanderLibraryClient();
 
         public LANCommanderLibraryPlugin(IPlayniteAPI api) : base(api)
         {

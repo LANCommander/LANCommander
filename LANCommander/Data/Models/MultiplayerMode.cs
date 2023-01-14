@@ -13,8 +13,10 @@ namespace LANCommander.Data.Models
         public int MinPlayers { get; set; }
         public int MaxPlayers { get; set; }
         public int Spectators { get; set; }
-
+        public Guid? GameId { get; set; }
         [JsonIgnore]
-        public virtual Game Game { get; set; }
+        [ForeignKey(nameof(GameId))]
+        [InverseProperty("MultiplayerModes")]
+        public virtual Game? Game { get; set; }
     }
 }

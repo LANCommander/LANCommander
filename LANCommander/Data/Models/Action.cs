@@ -12,7 +12,10 @@ namespace LANCommander.Data.Models
         public string? WorkingDirectory { get; set; }
         public bool PrimaryAction { get; set; }
 
+        public Guid GameId { get; set; }
         [JsonIgnore]
-        public virtual Game Game { get; set; }
+        [ForeignKey(nameof(GameId))]
+        [InverseProperty("Actions")]
+        public virtual Game? Game { get; set; }
     }
 }

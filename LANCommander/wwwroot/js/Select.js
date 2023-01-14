@@ -43,8 +43,8 @@
             },
             onInitialize: function () {
                 for (let option of Object.keys(this.options)) {
-                    if (option.selected) {
-                        this.$input.siblings('select').append(`<option value="${option.value}" selected>${option.text}</option>`);
+                    if (this.options[option].selected) {
+                        this.$input.siblings('select').append(`<option value="${this.options[option].value}" selected>${this.options[option].text}</option>`);
                     }
                 }
             }

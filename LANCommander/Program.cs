@@ -56,7 +56,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllersWithViews().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-    x.JsonSerializerOptions.MaxDepth = 3;
 });
 builder.Services.AddServerSideBlazor();
 

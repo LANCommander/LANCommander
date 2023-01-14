@@ -23,6 +23,7 @@
 
             @foreach (var action in Actions)
             {
+                var index = i;
 
                 <tr>
                     <td><input @bind="action.Name" name="Game.Actions[@i].Name" class="form-control" placeholder="Play" /></td>
@@ -34,10 +35,11 @@
                         </div>
                     </td>
                     <td>
-                        <input name="Game.Actions[@i].Game.Id" type="hidden" value="@GameId" />
+                        <input name="Game.Actions[@i].Id" type="hidden" value="@action.Id" />
+                        <input name="Game.Actions[@i].GameId" type="hidden" value="@GameId" />
 
                         <div class="btn-list flex-nowrap justify-content-end">
-                            <button class="btn btn-ghost-danger btn-icon" @onclick="() => RemoveAction(i)" type="button">
+                            <button class="btn btn-ghost-danger btn-icon" @onclick="() => RemoveAction(index)" type="button">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -47,6 +49,8 @@
                         </div>
                     </td>
                 </tr>
+
+                i++;
             }
             <tr>
                 <td colspan="5">

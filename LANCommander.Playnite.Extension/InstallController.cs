@@ -18,9 +18,9 @@ namespace LANCommander.PlaynitePlugin
 {
     public class LANCommanderInstallController : InstallController
     {
-        private PlayniteLibraryPlugin Plugin;
+        private LANCommanderLibraryPlugin Plugin;
 
-        public LANCommanderInstallController(PlayniteLibraryPlugin plugin, Game game) : base(game)
+        public LANCommanderInstallController(LANCommanderLibraryPlugin plugin, Game game) : base(game)
         {
             Name = "Install using LANCommander";
             Plugin = plugin;

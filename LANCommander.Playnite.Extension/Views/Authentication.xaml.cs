@@ -19,10 +19,10 @@ namespace LANCommander.PlaynitePlugin.Views
 {
     public partial class Authentication : UserControl
     {
-        private PlayniteLibraryPlugin Plugin;
+        private LANCommanderLibraryPlugin Plugin;
         private ViewModels.Authentication Context { get { return (ViewModels.Authentication)DataContext; } }
 
-        public Authentication(PlayniteLibraryPlugin plugin)
+        public Authentication(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
 

@@ -16,7 +16,7 @@ using PN = Playnite;
 
 namespace LANCommander.PlaynitePlugin
 {
-    public class PlayniteLibraryPlugin : LibraryPlugin
+    public class LANCommanderLibraryPlugin : LibraryPlugin
     {
         public static readonly ILogger Logger = LogManager.GetLogger();
         internal PlayniteSettingsViewModel Settings { get; set; }
@@ -26,7 +26,7 @@ namespace LANCommander.PlaynitePlugin
         public override string Name => "LANCommander";
         public override LibraryClient Client { get; } = new PlayniteClient();
 
-        public PlayniteLibraryPlugin(IPlayniteAPI api) : base(api)
+        public LANCommanderLibraryPlugin(IPlayniteAPI api) : base(api)
         {
             Properties = new LibraryPluginProperties
             {

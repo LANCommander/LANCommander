@@ -16,9 +16,9 @@ namespace LANCommander.PlaynitePlugin
 {
     public class LANCommanderUninstallController : UninstallController
     {
-        private PlayniteLibraryPlugin Plugin;
+        private LANCommanderLibraryPlugin Plugin;
 
-        public LANCommanderUninstallController(PlayniteLibraryPlugin plugin, Game game) : base(game)
+        public LANCommanderUninstallController(LANCommanderLibraryPlugin plugin, Game game) : base(game)
         {
             Name = "Uninstall LANCommander Game";
             Plugin = plugin;

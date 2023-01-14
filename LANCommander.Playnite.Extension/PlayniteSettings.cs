@@ -10,7 +10,7 @@ namespace LANCommander.PlaynitePlugin
 {
     public class PlayniteSettingsViewModel : ObservableObject, ISettings
     {
-        private readonly PlayniteLibraryPlugin Plugin;
+        private readonly LANCommanderLibraryPlugin Plugin;
 
         public string ServerAddress { get; set; } = String.Empty;
         public string AccessToken { get; set; } = String.Empty;
@@ -19,7 +19,7 @@ namespace LANCommander.PlaynitePlugin
 
         public PlayniteSettingsViewModel() { }
 
-        public PlayniteSettingsViewModel(PlayniteLibraryPlugin plugin)
+        public PlayniteSettingsViewModel(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
 

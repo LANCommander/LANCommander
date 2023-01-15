@@ -32,7 +32,6 @@ namespace LANCommander.PlaynitePlugin
 
         public override void Install(InstallActionArgs args)
         {
-            var tempPath = System.IO.Path.GetTempFileName();
             var gameId = Guid.Parse(Game.GameId);
 
             var game = Plugin.LANCommander.GetGame(gameId);
@@ -50,7 +49,11 @@ namespace LANCommander.PlaynitePlugin
 
             File.WriteAllText(Path.Combine(installDirectory, "_manifest.yml"), GetManifest(gameId));
 
-            PowerShellRuntime.RunInstallScript(PlayniteGame);
+            try
+            {
+                PowerShellRuntime.RunInstallScript(PlayniteGame);
+            }
+            catch { }
 
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
 

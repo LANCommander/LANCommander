@@ -17,15 +17,23 @@ namespace LANCommander.PlaynitePlugin
     public class LANCommanderUninstallController : UninstallController
     {
         private LANCommanderLibraryPlugin Plugin;
+        private PowerShellRuntime PowerShellRuntime;
 
         public LANCommanderUninstallController(LANCommanderLibraryPlugin plugin, Game game) : base(game)
         {
             Name = "Uninstall LANCommander Game";
             Plugin = plugin;
+            PowerShellRuntime = new PowerShellRuntime();
         }
 
         public override void Uninstall(UninstallActionArgs args)
         {
+            try
+            {
+                PowerShellRuntime.RunUninstallScript(Game);
+            }
+            catch { }
+
             if (!String.IsNullOrWhiteSpace(Game.InstallDirectory) && Directory.Exists(Game.InstallDirectory))
                 Directory.Delete(Game.InstallDirectory, true);
 

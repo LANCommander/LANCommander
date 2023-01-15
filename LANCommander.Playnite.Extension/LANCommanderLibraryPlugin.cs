@@ -50,6 +50,26 @@ namespace LANCommander.PlaynitePlugin
         {
             var gameMetadata = new List<GameMetadata>();
 
+            if (!LANCommander.ValidateToken(LANCommander.Token))
+            {
+                try
+                {
+                    var response = LANCommander.RefreshToken(LANCommander.Token);
+
+                    LANCommander.Token.AccessToken = response.AccessToken;
+                    LANCommander.Token.RefreshToken = response.RefreshToken;
+
+                    if (!LANCommander.ValidateToken(LANCommander.Token))
+                    {
+                        throw new Exception();
+                    }
+                }
+                catch
+                {
+                    ShowAuthenticationWindow();
+                }
+            }
+
             try
             {
                 var games = LANCommander
@@ -201,7 +221,8 @@ namespace LANCommander.PlaynitePlugin
                 });
 
                 window.Title = "Authenticate to LANCommander";
-
+                window.Width = 400;
+                window.Height = 230;
                 window.Content = new Views.Authentication(this);
                 window.DataContext = new ViewModels.Authentication()
                 {

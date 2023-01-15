@@ -103,55 +103,6 @@ namespace LANCommander.Controllers
             if (!System.IO.File.Exists(path))
                 return BadRequest("Specified object does not exist");
 
-            try
-            {
-                using (ZipArchive zip = ZipFile.OpenRead(path))
-                {
-                    var manifest = zip.Entries.FirstOrDefault(e => e.FullName == "_manifest.yml");
-
-                    if (manifest == null)
-                        throw new FileNotFoundException("Manifest file not found. Add a _manifest.yml file to your archive and try again.");
-
-                    using (StreamReader sr = new StreamReader(manifest.Open()))
-                    {
-                        manifestContents = await sr.ReadToEndAsync();
-                    }
-
-                    compressedSize = zip.Entries.Sum(e => e.CompressedLength);
-                    uncompressedSize = zip.Entries.Sum(e => e.Length);
-                }
-            }
-            catch (InvalidDataException ex)
-            {
-                System.IO.File.Delete(path);
-                return BadRequest("Uploaded archive is corrupt or not a .zip file.");
-            }
-            catch (FileNotFoundException ex)
-            {
-                System.IO.File.Delete(path);
-                return BadRequest(ex.Message);
-            }
-            catch
-            {
-                System.IO.File.Delete(path);
-                return BadRequest("An unknown error occurred.");
-            }
-
-            var deserializer = new DeserializerBuilder()
-                .IgnoreUnmatchedProperties()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                .Build();
-
-            try
-            {
-                var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
-            }
-            catch
-            {
-                System.IO.File.Delete(path);
-                return BadRequest("The manifest file is invalid or corrupt.");
-            }
-
             var game = await GameService.Get(archive.GameId);
 
             if (game == null)

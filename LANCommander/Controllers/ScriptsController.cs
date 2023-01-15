@@ -44,6 +44,8 @@ namespace LANCommander.Controllers
         [HttpPost]
         public async Task<IActionResult> Add(Script script)
         {
+            script.Id = Guid.Empty;
+
             if (ModelState.IsValid)
             {
                 script = await ScriptService.Add(script);

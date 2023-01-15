@@ -14,5 +14,6 @@ namespace LANCommander.SDK.Models
         public virtual Company Publisher { get; set; }
         public virtual Company Developer { get; set; }
         public virtual IEnumerable<Archive> Archives { get; set; }
+        public virtual IEnumerable<Script> Scripts { get; set; }
     }
 }

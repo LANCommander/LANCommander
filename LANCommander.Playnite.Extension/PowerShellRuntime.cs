@@ -1,4 +1,5 @@
-﻿using Playnite.SDK.Models;
+﻿using LANCommander.SDK.Enums;
+using Playnite.SDK.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,35 +13,46 @@ namespace LANCommander.PlaynitePlugin
 {
     internal class PowerShellRuntime
     {
-        public void RunScript(string script)
+        public void RunScript(string path)
+        {
+            var process = new Process();
+            process.StartInfo.FileName = "powershell.exe";
+            process.StartInfo.Arguments = $@"-File ""{path}""";
+            process.Start();
+            process.WaitForExit();
+        }
+
+        public void RunScriptAsAdmin(string path)
         {
             var process = new Process();
             process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.UseShellExecute = true;
             process.StartInfo.Verb = "runas";
-            process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{script}""";
+            process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
             process.Start();
             process.WaitForExit();
         }
 
-        public void RunInstallScript(Game game)
+        public void RunScript(Game game, ScriptType type)
         {
-            var scriptPath = Path.Combine(game.InstallDirectory, "_install.ps1");
+            Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
+                { ScriptType.Install, "_install.ps1" },
+                { ScriptType.Uninstall, "_uninstall.ps1" },
+                { ScriptType.NameChange, "_changename.ps1" },
+                { ScriptType.KeyChange, "_changekey.ps1" }
+            };
 
-            if (!File.Exists(scriptPath))
-                throw new FileNotFoundException(scriptPath);
+            var path = Path.Combine(game.InstallDirectory, filenames[type]);
 
-            RunScript(scriptPath);
-        }
+            if (File.Exists(path))
+            {
+                var contents = File.ReadAllText(path);
 
-        public void RunUninstallScript(Game game)
-        {
-            var scriptPath = Path.Combine(game.InstallDirectory, "_uninstall.ps1");
-
-            if (!File.Exists(scriptPath))
-                throw new FileNotFoundException(scriptPath);
-
-            RunScript(scriptPath);
+                if (contents.StartsWith("# Requires Admin"))
+                    RunScriptAsAdmin(path);
+                else
+                    RunScript(path);
+            }
         }
     }
 }

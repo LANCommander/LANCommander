@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Core;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -30,7 +31,7 @@ namespace LANCommander.PlaynitePlugin
         {
             try
             {
-                PowerShellRuntime.RunUninstallScript(Game);
+                PowerShellRuntime.RunScript(Game, ScriptType.Uninstall);
             }
             catch { }
 

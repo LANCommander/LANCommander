@@ -1,6 +1,7 @@
 ﻿using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -20,9 +22,9 @@ namespace LANCommander.PlaynitePlugin
     {
         private LANCommanderLibraryPlugin Plugin;
         private PowerShellRuntime PowerShellRuntime;
-        private Game PlayniteGame;
+        private Playnite.SDK.Models.Game PlayniteGame;
 
-        public LANCommanderInstallController(LANCommanderLibraryPlugin plugin, Game game) : base(game)
+        public LANCommanderInstallController(LANCommanderLibraryPlugin plugin, Playnite.SDK.Models.Game game) : base(game)
         {
             Name = "Install using LANCommander";
             Plugin = plugin;
@@ -49,9 +51,14 @@ namespace LANCommander.PlaynitePlugin
 
             File.WriteAllText(Path.Combine(installDirectory, "_manifest.yml"), GetManifest(gameId));
 
+            SaveScript(game, installDirectory, ScriptType.Install);
+            SaveScript(game, installDirectory, ScriptType.Uninstall);
+            SaveScript(game, installDirectory, ScriptType.NameChange);
+            SaveScript(game, installDirectory, ScriptType.KeyChange);
+
             try
             {
-                PowerShellRuntime.RunInstallScript(PlayniteGame);
+                PowerShellRuntime.RunScript(PlayniteGame, ScriptType.Install);
             }
             catch { }
 
@@ -168,6 +175,34 @@ namespace LANCommander.PlaynitePlugin
             var yaml = serializer.Serialize(manifest);
 
             return yaml;
+        }
+
+        private void SaveScript(LANCommander.SDK.Models.Game game, string installationDirectory, ScriptType type)
+        {
+            var script = game.Scripts.FirstOrDefault(s => s.Type == type);
+
+            if (script == null)
+                return;
+
+            if (script.RequiresAdmin)
+                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+
+            Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
+                { ScriptType.Install, "_install.ps1" },
+                { ScriptType.Uninstall, "_uninstall.ps1" },
+                { ScriptType.NameChange, "_changename.ps1" },
+                { ScriptType.KeyChange, "_changekey.ps1" }
+            };
+
+            if (!filenames.ContainsKey(type))
+                return;
+
+            var filename = Path.Combine(installationDirectory, filenames[type]);
+
+            if (File.Exists(filename))
+                File.Delete(filename);
+
+            File.WriteAllText(filename, script.Contents);
         }
     }
 }

@@ -515,16 +515,23 @@ namespace LANCommander.Controllers
 
             viewModel.Results = results.Select(r =>
             {
-                return new Game()
+                var result = new Game()
                 {
                     IGDBId = r.Id.GetValueOrDefault(),
                     Title = r.Name,
                     ReleasedOn = r.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
-                    Developers = r.InvolvedCompanies.Values.Where(c => c.Developer.HasValue && c.Developer.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
+                    Developers = new List<Company>()
+                };
+
+                if (r.InvolvedCompanies != null && r.InvolvedCompanies.Values != null)
+                {
+                    result.Developers = r.InvolvedCompanies.Values.Where(c => c.Developer.HasValue && c.Developer.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
                     {
                         Name = c.Company.Value.Name
-                    }).ToList()
-                };
+                    }).ToList();
+                }
+
+                return result;
             });
 
             return View(viewModel);

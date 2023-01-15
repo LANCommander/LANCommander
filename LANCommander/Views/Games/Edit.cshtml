@@ -287,4 +287,11 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+        new Select('.developer-select', @Html.Raw(Json.Serialize(Model.Developers)));
+        new Select('.publisher-select', @Html.Raw(Json.Serialize(Model.Publishers)));
+        new Select('.genre-select', @Html.Raw(Json.Serialize(Model.Genres)));
+        new Select('.tag-select', @Html.Raw(Json.Serialize(Model.Tags)));
+    </script>
 }

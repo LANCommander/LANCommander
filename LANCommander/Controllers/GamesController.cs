@@ -13,6 +13,7 @@ using LANCommander.Services;
 using System.Drawing;
 using LANCommander.Models;
 using LANCommander.Data.Enums;
+using LANCommander.PCGamingWiki;
 
 namespace LANCommander.Controllers
 {
@@ -26,6 +27,7 @@ namespace LANCommander.Controllers
         private readonly GenreService GenreService;
         private readonly CompanyService CompanyService;
         private readonly IGDBService IGDBService;
+        private readonly PCGamingWikiClient PCGamingWikiClient;
 
         public GamesController(GameService gameService, ArchiveService archiveService, CategoryService categoryService, TagService tagService, GenreService genreService, CompanyService companyService, IGDBService igdbService)
         {
@@ -36,6 +38,7 @@ namespace LANCommander.Controllers
             GenreService = genreService;
             CompanyService = companyService;
             IGDBService = igdbService;
+            PCGamingWikiClient = new PCGamingWikiClient();
         }
 
         // GET: Games
@@ -57,7 +60,12 @@ namespace LANCommander.Controllers
 
             if (igdbid == null)
             {
-                viewModel.Game = new Game();
+                viewModel.Game = new Game()
+                {
+                    Actions = new List<Data.Models.Action>(),
+                    MultiplayerModes = new List<Data.Models.MultiplayerMode>()
+                };
+
                 viewModel.Developers = CompanyService.Get().OrderBy(c => c.Name).Select(c => new SelectListItem() { Text = c.Name, Value = c.Name }).ToList();
                 viewModel.Publishers = CompanyService.Get().OrderBy(c => c.Name).Select(c => new SelectListItem() { Text = c.Name, Value = c.Name }).ToList();
                 viewModel.Genres = GenreService.Get().OrderBy(g => g.Name).Select(g => new SelectListItem() { Text = g.Name, Value = g.Name }).ToList();
@@ -74,8 +82,41 @@ namespace LANCommander.Controllers
                 Title = result.Name,
                 Description = result.Summary,
                 ReleasedOn = result.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
-                MultiplayerModes = new List<MultiplayerMode>(),
+                Actions = new List<Data.Models.Action>(),
+                MultiplayerModes = new List<MultiplayerMode>()
             };
+
+            var playerCounts = await PCGamingWikiClient.GetMultiplayerPlayerCounts(result.Name);
+
+            foreach (var playerCount in playerCounts)
+            {
+                MultiplayerType type;
+
+                switch (playerCount.Key)
+                {
+                    case "Local Play":
+                        type = MultiplayerType.Local;
+                        break;
+
+                    case "LAN Play":
+                        type = MultiplayerType.Lan;
+                        break;
+
+                    case "Online Play":
+                        type = MultiplayerType.Online;
+                        break;
+
+                    default:
+                        continue;
+                }
+
+                viewModel.Game.MultiplayerModes.Add(new MultiplayerMode()
+                {
+                    Type = type,
+                    MaxPlayers = playerCount.Value,
+                    MinPlayers = 2
+                });
+            }
 
             if (result.GameModes != null && result.GameModes.Values != null)
                 viewModel.Game.Singleplayer = result.GameModes.Values.Any(gm => gm.Name == "Singleplayer");

@@ -1,6 +1,7 @@
 ﻿using Playnite.SDK.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
@@ -13,13 +14,13 @@ namespace LANCommander.PlaynitePlugin
     {
         public void RunScript(string script, Dictionary<string, object> parameters)
         {
-            using (PowerShell ps = PowerShell.Create())
-            {
-                ps.AddScript(script);
-                ps.AddParameters(parameters);
-
-                var output = ps.Invoke();
-            }
+            var process = new Process();
+            process.StartInfo.FileName = "powershell.exe";
+            process.StartInfo.UseShellExecute = true;
+            process.StartInfo.Verb = "runas";
+            process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{script}""";
+            process.Start();
+            process.WaitForExit();
         }
 
         public void RunInstallScript(Game game)

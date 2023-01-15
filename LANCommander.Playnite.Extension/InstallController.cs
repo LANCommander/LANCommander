@@ -19,11 +19,15 @@ namespace LANCommander.PlaynitePlugin
     public class LANCommanderInstallController : InstallController
     {
         private LANCommanderLibraryPlugin Plugin;
+        private PowerShellRuntime PowerShellRuntime;
+        private Game PlayniteGame;
 
         public LANCommanderInstallController(LANCommanderLibraryPlugin plugin, Game game) : base(game)
         {
             Name = "Install using LANCommander";
             Plugin = plugin;
+            PlayniteGame = game;
+            PowerShellRuntime = new PowerShellRuntime();
         }
 
         public override void Install(InstallActionArgs args)
@@ -36,12 +40,17 @@ namespace LANCommander.PlaynitePlugin
             var tempFile = Download(game);
 
             var installDirectory = Extract(game, tempFile);
+
             var installInfo = new GameInstallationData()
             {
                 InstallDirectory = installDirectory
             };
 
+            PlayniteGame.InstallDirectory = installDirectory;
+
             File.WriteAllText(Path.Combine(installDirectory, "_manifest.yml"), GetManifest(gameId));
+
+            PowerShellRuntime.RunInstallScript(PlayniteGame);
 
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
 

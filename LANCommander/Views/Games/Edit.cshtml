@@ -53,6 +53,13 @@
                                     <span asp-validation-for="Game.ReleasedOn" class="text-danger"></span>
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-check">
+                                        <input asp-for="Game.Singleplayer" type="checkbox" class="form-check-input" />
+                                        <span class="form-check-label">Singleplayer</span>
+                                        <span class="form-check-description">Game has a singleplayer mode</span>
+                                    </label>
+                                </div>
+                                <div class="mb-3">
                                     <label asp-for="Developers" class="control-label"></label>
                                     <input type="text" class="developer-select" />
                                     <select asp-for="SelectedDevelopers" class="d-none"></select>

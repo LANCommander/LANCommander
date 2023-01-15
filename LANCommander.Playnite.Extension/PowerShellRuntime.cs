@@ -12,7 +12,7 @@ namespace LANCommander.PlaynitePlugin
 {
     internal class PowerShellRuntime
     {
-        public void RunScript(string script, Dictionary<string, object> parameters)
+        public void RunScript(string script)
         {
             var process = new Process();
             process.StartInfo.FileName = "powershell.exe";
@@ -25,22 +25,22 @@ namespace LANCommander.PlaynitePlugin
 
         public void RunInstallScript(Game game)
         {
-            var defaultParameters = new Dictionary<string, object>()
-            {
-                { "InstallDir", game.InstallDirectory },
-                { "Title", game.Name },
-                { "Description", game.Description },
-                { "GameId", game.GameId }
-            };
-
             var scriptPath = Path.Combine(game.InstallDirectory, "_install.ps1");
 
             if (!File.Exists(scriptPath))
                 throw new FileNotFoundException(scriptPath);
 
-            var scriptContents = File.ReadAllText(scriptPath);
+            RunScript(scriptPath);
+        }
 
-            RunScript(scriptPath, defaultParameters);
+        public void RunUninstallScript(Game game)
+        {
+            var scriptPath = Path.Combine(game.InstallDirectory, "_uninstall.ps1");
+
+            if (!File.Exists(scriptPath))
+                throw new FileNotFoundException(scriptPath);
+
+            RunScript(scriptPath);
         }
     }
 }

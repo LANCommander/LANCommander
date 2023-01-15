@@ -1,0 +1,110 @@
+﻿@using LANCommander.Data.Enums
+@model LANCommander.Data.Models.Script
+
+@{
+    ViewData["Title"] = "Add Script | " + Model.Game.Title;
+}
+
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">@Model.Game.Title</div>
+                <h2 class="page-title">
+                    Add Script
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <form asp-action="Add" class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12">
+                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-3">
+                                <div class="mb-3">
+                                    <label asp-for="Type" class="control-label"></label>
+                                    <select asp-for="Type" class="form-control" asp-items="Html.GetEnumSelectList<ScriptType>()"></select>
+                                    <span asp-validation-for="Type" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-9">
+                                <div class="mb-3">
+                                    <label asp-for="Name" class="control-label"></label>
+                                    <input asp-for="Name" class="form-control" />
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label asp-for="Description" class="control-label"></label>
+                                    <textarea asp-for="Description" class="form-control"></textarea>
+                                    <span asp-validation-for="Description" class="text-danger"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-check">
+                                        <input asp-for="RequiresAdmin" type="checkbox" class="form-check-input" />
+                                        <span class="form-check-label">Requires Admin Privileges</span>
+                                        <span class="form-check-description">Marks the script as needing admin privileges. Recommended for any changes to the system e.g. Windows Registry.</span>
+                                    </label>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div id="ScriptEditor" style="height: 100%; min-height: 70vh;"></div>
+                                </div>
+
+                                <input type="hidden" asp-for="Contents" />
+                                <input type="hidden" asp-for="GameId" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="d-flex">
+                            <a asp-action="Details" asp-route-id="@Model.Game.Id" class="btn btn-ghost-primary">Cancel</a>
+                            <button type="submit" class="btn btn-primary ms-auto">Save</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script src="~/lib/monaco-editor/min/vs/loader.js"></script>
+
+    <script>
+        require.config({ paths: { vs: '/lib/monaco-editor/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+            var editor = monaco.editor.create(document.getElementById('ScriptEditor'), {
+                value: $('#Contents').val(),
+                language: 'powershell',
+                readOnly: false,
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+
+            editor.onDidChangeModelContent(function (e) {
+                $('#Contents').val(editor.getModel().getValue());
+            });
+        });
+    </script>
+}

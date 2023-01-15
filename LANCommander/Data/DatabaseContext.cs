@@ -40,6 +40,12 @@ namespace LANCommander.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
+                .HasMany(g => g.Scripts)
+                .WithOne(s => s.Game)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
                 .HasMany(g => g.Keys)
                 .WithOne(g => g.Game)
                 .IsRequired(true)

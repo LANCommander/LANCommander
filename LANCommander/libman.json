@@ -24,22 +24,18 @@
         "dist/css/tabler-payments.min.css",
         "dist/css/tabler-flags.min.css"
       ]
+    },
+    {
+      "provider": "cdnjs",
+      "library": "monaco-editor@0.34.1",
+      "destination": "wwwroot/lib/monaco-editor/",
+      "files": [
+        "min/vs/basic-languages/powershell/powershell.js",
+        "min/vs/editor/editor.main.css",
+        "min/vs/editor/editor.main.js",
+        "min/vs/editor/editor.main.nls.js",
+        "min/vs/loader.js"
+      ]
     }
-  ,
-{
-  "provider": "cdnjs",
-  "library": "tom-select@2.2.2",
-  "destination": "wwwroot/lib/tom-select/",
-  "files": [
-    "js/tom-select.complete.min.js",
-    "js/tom-select.complete.min.js.map",
-    "css/tom-select.bootstrap5.min.css",
-    "css/tom-select.bootstrap5.min.css.map",
-    "css/tom-select.default.min.css",
-    "css/tom-select.default.min.css.map",
-    "css/tom-select.min.css",
-    "css/tom-select.min.css.map"
   ]
-}
-]
 }

@@ -63,6 +63,7 @@ builder.Services.AddScoped<SettingService>();
 builder.Services.AddScoped<ArchiveService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<ScriptService>();
 builder.Services.AddScoped<GenreService>();
 builder.Services.AddScoped<KeyService>();
 builder.Services.AddScoped<TagService>();

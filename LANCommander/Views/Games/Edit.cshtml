@@ -221,17 +221,70 @@
                     }
                 </div>
             </div>
+
+            <div class="col-12">
+                <div class="card">
+                    @if (Model.Game.Scripts != null && Model.Game.Scripts.Count > 0)
+                    {
+                        <div class="card-header">
+                            <h3 class="card-title">Scripts</h3>
+                            <div class="card-actions">
+                                <a asp-action="Add" asp-controller="Scripts" asp-route-id="@Model.Game.Id" class="btn btn-primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Add
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-vcenter table-mobile-md card-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Name</th>
+                                        <th>Created On</th>
+                                        <th>Created By</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var script in Model.Game.Scripts.OrderBy(s => s.Type).ThenByDescending(s => s.CreatedOn))
+                                    {
+                                        <tr>
+                                            <td>@Html.DisplayFor(m => script.Type)</td>
+                                            <td>@Html.DisplayFor(m => script.Name)</td>
+                                            <td>@Html.DisplayFor(m => script.CreatedOn)</td>
+                                            <td>@Html.DisplayFor(m => script.CreatedBy.UserName)</td>
+                                            <td>
+                                                <div class="btn-list flex-nowrap justify-content-end">
+                                                    <a asp-action="Edit" asp-controller="Scripts" asp-route-id="@script.Id" class="btn">Edit</a>
+                                                    <a asp-action="Delete" asp-controller="Scripts" asp-route-id="@script.Id" class="btn btn-danger">Delete</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty">
+                            <p class="empty-title">No Scripts</p>
+                            <p class="empty-subtitle text-muted">There have been no scripts added for this game.</p>
+                            <div class="empty-action">
+                                <a asp-action="Add" asp-controller="Scripts" asp-route-id="@Model.Game.Id" class="btn btn-primary">Add Script</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
-
-    <script>
-        new Select('.developer-select', @Html.Raw(Json.Serialize(Model.Developers)));
-        new Select('.publisher-select', @Html.Raw(Json.Serialize(Model.Publishers)));
-        new Select('.genre-select', @Html.Raw(Json.Serialize(Model.Genres)));
-        new Select('.tag-select', @Html.Raw(Json.Serialize(Model.Tags)));
-    </script>
 }

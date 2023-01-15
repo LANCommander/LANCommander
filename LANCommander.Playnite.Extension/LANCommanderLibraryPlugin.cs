@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -189,24 +190,28 @@ namespace LANCommander.PlaynitePlugin
             return new LANCommanderSettingsView(this);
         }
 
-        public System.Windows.Window ShowAuthenticationWindow()
+        public Window ShowAuthenticationWindow()
         {
-            var window = PlayniteApi.Dialogs.CreateWindow(new WindowCreationOptions()
+            Window window = null;
+            Application.Current.Dispatcher.Invoke((Action)delegate
             {
-                ShowMinimizeButton = false,
+                window = PlayniteApi.Dialogs.CreateWindow(new WindowCreationOptions()
+                {
+                    ShowMinimizeButton = false,
+                });
+
+                window.Title = "Authenticate to LANCommander";
+
+                window.Content = new Views.Authentication(this);
+                window.DataContext = new ViewModels.Authentication()
+                {
+                    ServerAddress = Settings.ServerAddress
+                };
+
+                window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
+                window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
+                window.ShowDialog();
             });
-
-            window.Title = "Authenticate to LANCommander";
-
-            window.Content = new Views.Authentication(this);
-            window.DataContext = new ViewModels.Authentication()
-            {
-                ServerAddress = Settings.ServerAddress
-            };
-
-            window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
-            window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
-            window.ShowDialog();
 
             return window;
         }

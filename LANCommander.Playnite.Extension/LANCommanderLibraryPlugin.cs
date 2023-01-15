@@ -21,6 +21,7 @@ namespace LANCommander.PlaynitePlugin
         public static readonly ILogger Logger = LogManager.GetLogger();
         internal LANCommanderSettingsViewModel Settings { get; set; }
         internal LANCommanderClient LANCommander { get; set; }
+        internal PowerShellRuntime PowerShellRuntime { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
@@ -40,6 +41,8 @@ namespace LANCommander.PlaynitePlugin
                 AccessToken = Settings.AccessToken,
                 RefreshToken = Settings.RefreshToken,
             };
+
+            PowerShellRuntime = new PowerShellRuntime();
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
@@ -122,6 +125,58 @@ namespace LANCommander.PlaynitePlugin
                 yield break;
 
             yield return new LANCommanderUninstallController(this, args.Game);
+        }
+
+        public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
+        {
+            if (args.Games.Count == 1 && args.Games.First().IsInstalled && !String.IsNullOrWhiteSpace(args.Games.First().InstallDirectory))
+            {
+                var nameChangeScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.NameChange);
+                var keyChangeScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.KeyChange);
+
+                if (File.Exists(nameChangeScriptPath))
+                    yield return new GameMenuItem
+                    {
+                        Description = "Change Player Name",
+                        Action = (nameChangeArgs) =>
+                        {
+                            PowerShellRuntime.RunScript(nameChangeArgs.Games.First(), SDK.Enums.ScriptType.NameChange);
+                        }
+                    };
+
+                if (File.Exists(keyChangeScriptPath))
+                    yield return new GameMenuItem
+                    {
+                        Description = "Change Game Key",
+                        Action = (keyChangeArgs) =>
+                        {
+                            PowerShellRuntime.RunScript(keyChangeArgs.Games.First(), SDK.Enums.ScriptType.KeyChange);
+                        }
+                    };
+            }
+        }
+
+        // To add new main menu items override GetMainMenuItems
+        public override IEnumerable<MainMenuItem> GetMainMenuItems(GetMainMenuItemsArgs args)
+        {
+            yield return new MainMenuItem
+            {
+                Description = "Change Player Name (All Games)",
+                Action = (args2) =>
+                {
+                    var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", "");
+
+                    if (result.Result == true)
+                    {
+                        var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
+
+                        foreach (var game in games)
+                        {
+                            PowerShellRuntime.RunScript(game, SDK.Enums.ScriptType.NameChange);
+                        }
+                    }
+                }
+            };
         }
 
         public override ISettings GetSettings(bool firstRunSettings)

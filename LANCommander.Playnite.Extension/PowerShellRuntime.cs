@@ -35,14 +35,7 @@ namespace LANCommander.PlaynitePlugin
 
         public void RunScript(Game game, ScriptType type)
         {
-            Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
-                { ScriptType.Install, "_install.ps1" },
-                { ScriptType.Uninstall, "_uninstall.ps1" },
-                { ScriptType.NameChange, "_changename.ps1" },
-                { ScriptType.KeyChange, "_changekey.ps1" }
-            };
-
-            var path = Path.Combine(game.InstallDirectory, filenames[type]);
+            var path = GetScriptFilePath(game, type);
 
             if (File.Exists(path))
             {
@@ -53,6 +46,20 @@ namespace LANCommander.PlaynitePlugin
                 else
                     RunScript(path);
             }
+        }
+
+        public static string GetScriptFilePath(Game game, ScriptType type)
+        {
+            Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
+                { ScriptType.Install, "_install.ps1" },
+                { ScriptType.Uninstall, "_uninstall.ps1" },
+                { ScriptType.NameChange, "_changename.ps1" },
+                { ScriptType.KeyChange, "_changekey.ps1" }
+            };
+
+            var filename = filenames[type];
+
+            return Path.Combine(game.InstallDirectory, filename);
         }
     }
 }

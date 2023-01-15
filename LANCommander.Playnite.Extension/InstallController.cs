@@ -187,17 +187,7 @@ namespace LANCommander.PlaynitePlugin
             if (script.RequiresAdmin)
                 script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
 
-            Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
-                { ScriptType.Install, "_install.ps1" },
-                { ScriptType.Uninstall, "_uninstall.ps1" },
-                { ScriptType.NameChange, "_changename.ps1" },
-                { ScriptType.KeyChange, "_changekey.ps1" }
-            };
-
-            if (!filenames.ContainsKey(type))
-                return;
-
-            var filename = Path.Combine(installationDirectory, filenames[type]);
+            var filename = PowerShellRuntime.GetScriptFilePath(PlayniteGame, type);
 
             if (File.Exists(filename))
                 File.Delete(filename);

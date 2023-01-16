@@ -23,11 +23,11 @@ namespace LANCommander.Controllers
         public IActionResult Index()
         {
             var drives = DriveInfo.GetDrives();
-
+            var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
             var model = new DashboardViewModel();
 
-            model.TotalStorageSize = ByteSize.FromBytes(drives.Where(d => d.IsReady).Sum(d => d.TotalSize));
-            model.TotalAvailableFreeSpace = ByteSize.FromBytes(drives.Where(d => d.IsReady).Sum(d => d.AvailableFreeSpace));
+            model.TotalStorageSize = ByteSize.FromBytes(drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.TotalSize));
+            model.TotalAvailableFreeSpace = ByteSize.FromBytes(drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace));
             model.TotalUploadDirectorySize = ByteSize.FromBytes(new DirectoryInfo("Upload").EnumerateFiles().Sum(f => f.Length));
 
             using (Repository<Game> repo = new Repository<Game>(Context, HttpContext))

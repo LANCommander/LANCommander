@@ -75,7 +75,10 @@
                                             @Html.DisplayFor(modelItem => item.SortTitle)
                                         </td>
                                         <td>
-                                            @Html.DisplayFor(modelItem => item.ReleasedOn)
+                                            @if (item.ReleasedOn.HasValue)
+                                            {
+                                                @item.ReleasedOn.Value.ToString("MM/dd/yyyy")
+                                            }
                                         </td>
                                         <td>
                                             @Html.DisplayFor(modelItem => item.CreatedOn)

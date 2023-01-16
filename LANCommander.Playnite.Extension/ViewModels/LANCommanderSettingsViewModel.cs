@@ -16,6 +16,7 @@ namespace LANCommander.PlaynitePlugin
         public string AccessToken { get; set; } = String.Empty;
         public string RefreshToken { get; set; } = String.Empty;
         public string InstallDirectory { get; set; } = String.Empty;
+        public string PlayerName { get; set; } = String.Empty;
 
         public LANCommanderSettingsViewModel() { }
 
@@ -29,6 +30,7 @@ namespace LANCommander.PlaynitePlugin
             AccessToken = settings.AccessToken;
             RefreshToken = settings.RefreshToken;
             InstallDirectory = settings.InstallDirectory;
+            PlayerName = settings.PlayerName;
         }
 
         public void BeginEdit()

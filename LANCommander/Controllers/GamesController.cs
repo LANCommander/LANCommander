@@ -470,7 +470,7 @@ namespace LANCommander.Controllers
 
                 await GameService.Update(game);
 
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Edit), new { id = id });
             }
 
             return View(viewModel);

@@ -85,7 +85,7 @@ namespace LANCommander.PlaynitePlugin
 
                     var metadata = new GameMetadata()
                     {
-                        IsInstalled = existingGame != null,
+                        IsInstalled = false,
                         Name = manifest.Title,
                         SortingName = manifest.SortTitle,
                         Description = manifest.Description,
@@ -93,8 +93,23 @@ namespace LANCommander.PlaynitePlugin
                         ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
                         //Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
                         Icon = new MetadataFile(iconUri.ToString()),
-                        Genres = new HashSet<MetadataProperty>()
+                        GameActions = game.Actions.Select(a => new PN.SDK.Models.GameAction()
+                        {
+                            Name = a.Name,
+                            Arguments = a.Arguments,
+                            Path = a.Path,
+                            WorkingDir = a.WorkingDirectory,
+                            IsPlayAction = a.PrimaryAction
+                        }).ToList()
                     };
+
+                    if (existingGame != null)
+                    {
+                        metadata.IsInstalled = true;
+                        metadata.Version = existingGame.Version;
+                        metadata.InstallDirectory = existingGame.InstallDirectory;
+                        metadata.InstallSize = existingGame.InstallSize;
+                    }
 
                     if (manifest.Genre != null && manifest.Genre.Count() > 0)
                         metadata.Genres = new HashSet<MetadataProperty>(manifest.Genre.Select(g => new MetadataNameProperty(g)));

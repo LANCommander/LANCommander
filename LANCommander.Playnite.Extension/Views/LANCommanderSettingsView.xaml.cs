@@ -51,7 +51,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     try
                     {
-                        Dispatcher.Invoke(new Action(() =>
+                        Dispatcher.Invoke(new System.Action(() =>
                         {
                             if (antecedent.Result == false)
                             {

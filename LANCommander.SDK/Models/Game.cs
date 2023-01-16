@@ -10,6 +10,7 @@ namespace LANCommander.SDK.Models
         public string DirectoryName { get; set; }
         public string Description { get; set; }
         public DateTime ReleasedOn { get; set; }
+        public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Tag> Tags { get; set; }
         public virtual Company Publisher { get; set; }
         public virtual Company Developer { get; set; }

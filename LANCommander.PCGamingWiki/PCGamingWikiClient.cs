@@ -56,13 +56,20 @@ namespace LANCommander.PCGamingWiki
             if (multiplayerTable == null)
                 return null;
 
+            var multiplayerRows = multiplayerTable.SelectNodes(".//tr[contains(@class, 'table-network-multiplayer-body-row')]");
             var multiplayerAbbrs = multiplayerTable.SelectNodes(".//abbr");
             var multiplayerCounts = multiplayerTable.SelectNodes(".//td[contains(@class, 'table-network-multiplayer-body-players')]");
 
-            for (int i = 0; i < multiplayerAbbrs.Count; i++)
+            foreach (var row in multiplayerRows)
             {
-                var type = multiplayerAbbrs[i].InnerText;
-                var players = multiplayerCounts[i].InnerText;
+                var abbr = row.SelectNodes(".//abbr");
+                var count = row.SelectNodes(".//td[contains(@class, 'table-network-multiplayer-body-players')]");
+
+                if (abbr == null || count == null)
+                    continue;
+
+                var type = abbr[0].InnerText;
+                var players = count[0].InnerText;
 
                 int playerCount = 0;
 

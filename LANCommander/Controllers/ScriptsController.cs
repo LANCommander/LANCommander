@@ -14,7 +14,7 @@ using LANCommander.Services;
 namespace LANCommander.Controllers
 {
     [Authorize(Roles = "Administrator")]
-    public class ScriptsController : Controller
+    public class ScriptsController : BaseController
     {
         private readonly GameService GameService;
         private readonly ScriptService ScriptService;
@@ -74,6 +74,8 @@ namespace LANCommander.Controllers
             if (ModelState.IsValid)
             {
                 await ScriptService.Update(script);
+
+                Alert("The script has been saved!", "success");
 
                 return RedirectToAction("Edit", "Games", new { id = script.GameId });
             }

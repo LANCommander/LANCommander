@@ -60,7 +60,7 @@
                             </thead>
 
                             <tbody>
-                                @foreach (var item in Model)
+                                @foreach (var item in Model.OrderBy(g => !String.IsNullOrWhiteSpace(g.SortTitle) ? g.SortTitle : g.Title))
                                 {
                                     <tr>
                                         <td>

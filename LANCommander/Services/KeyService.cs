@@ -28,5 +28,28 @@ namespace LANCommander.Services
 
             return key;
         }
+
+        public async Task Release(Guid id)
+        {
+            var key = await Get(id);
+
+            if (key == null)
+                return;
+
+            switch (key.AllocationMethod)
+            {
+                case KeyAllocationMethod.UserAccount:
+                    key.ClaimedByUser = null;
+                    key.ClaimedOn = null;
+                    break;
+
+                case KeyAllocationMethod.MacAddress:
+                    key.ClaimedByMacAddress = "";
+                    key.ClaimedOn = null;
+                    break;
+            }
+
+            await Update(key);
+        }
     }
 }

@@ -31,7 +31,7 @@ namespace LANCommander.PlaynitePlugin.Views
 
         private void TextBox_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter || e.Key == Key.Return)
+            if (e.Key == System.Windows.Input.Key.Enter || e.Key == System.Windows.Input.Key.Return)
             {
                 Authenticate();
             }

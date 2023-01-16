@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -128,6 +129,56 @@ namespace LANCommander.PlaynitePlugin
         public string DownloadArchive(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return DownloadRequest($"/api/Archives/Download/{id}", progressHandler, completeHandler);
+        }
+
+        public string GetKey(Guid id)
+        {
+            var macAddress = GetMacAddress();
+
+            var request = new KeyRequest()
+            {
+                GameId = id,
+                MacAddress = macAddress,
+                ComputerName = Environment.MachineName,
+                IpAddress = GetIpAddress(),
+            };
+
+            var response = PostRequest<Key>($"/api/Keys/Get", request);
+
+            return response.Value;
+        }
+
+        public string GetNewKey(Guid id)
+        {
+            var macAddress = GetMacAddress();
+
+            var request = new KeyRequest()
+            {
+                GameId = id,
+                MacAddress = macAddress,
+                ComputerName = Environment.MachineName,
+                IpAddress = GetIpAddress(),
+            };
+
+            var response = PostRequest<Key>($"/api/Keys/Allocate/{id}", request);
+
+            if (response == null)
+                return String.Empty;
+
+            return response.Value;
+        }
+
+        private string GetMacAddress()
+        {
+            return NetworkInterface.GetAllNetworkInterfaces()
+                .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .Select(nic => nic.GetPhysicalAddress().ToString())
+                .FirstOrDefault();
+        }
+
+        private string GetIpAddress()
+        {
+            return Dns.GetHostEntry(Dns.GetHostName()).AddressList[0].ToString();
         }
     }
 }

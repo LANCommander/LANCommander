@@ -13,27 +13,35 @@ namespace LANCommander.PlaynitePlugin
 {
     internal class PowerShellRuntime
     {
-        public void RunScript(string path)
+        public void RunScript(string path, string arguments = null)
         {
             var process = new Process();
             process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.Arguments = $@"-File ""{path}""";
+
+            if (arguments != null)
+                process.StartInfo.Arguments += " " + arguments;
+
             process.Start();
             process.WaitForExit();
         }
 
-        public void RunScriptAsAdmin(string path)
+        public void RunScriptAsAdmin(string path, string arguments = null)
         {
             var process = new Process();
             process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.UseShellExecute = true;
             process.StartInfo.Verb = "runas";
             process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
+
+            if (arguments != null)
+                process.StartInfo.Arguments += " " + arguments;
+
             process.Start();
             process.WaitForExit();
         }
 
-        public void RunScript(Game game, ScriptType type)
+        public void RunScript(Game game, ScriptType type, string arguments = null)
         {
             var path = GetScriptFilePath(game, type);
 
@@ -42,9 +50,9 @@ namespace LANCommander.PlaynitePlugin
                 var contents = File.ReadAllText(path);
 
                 if (contents.StartsWith("# Requires Admin"))
-                    RunScriptAsAdmin(path);
+                    RunScriptAsAdmin(path, arguments);
                 else
-                    RunScript(path);
+                    RunScript(path, arguments);
             }
         }
 

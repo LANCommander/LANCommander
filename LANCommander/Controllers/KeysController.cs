@@ -9,6 +9,7 @@ using LANCommander.Data;
 using LANCommander.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 using LANCommander.Models;
+using LANCommander.Services;
 
 namespace LANCommander.Controllers
 {
@@ -16,10 +17,12 @@ namespace LANCommander.Controllers
     public class KeysController : Controller
     {
         private readonly DatabaseContext Context;
+        private readonly KeyService KeyService;
 
-        public KeysController(DatabaseContext context)
+        public KeysController(DatabaseContext context, KeyService keyService)
         {
             Context = context;
+            KeyService = keyService;
         }
 
         public async Task<IActionResult> Details(Guid? id)
@@ -94,32 +97,14 @@ namespace LANCommander.Controllers
 
         public async Task<IActionResult> Release(Guid id)
         {
-            using (var repo = new Repository<Key>(Context, HttpContext))
-            {
-                var key = await repo.Find(id);
+            var existing = await KeyService.Get(id);
 
-                if (key == null)
-                    return NotFound();
+            if (existing == null)
+                return NotFound();
 
-                switch (key.AllocationMethod)
-                {
-                    case KeyAllocationMethod.UserAccount:
-                        key.ClaimedByUser = null;
-                        key.ClaimedOn = null;
-                        break;
+            await KeyService.Release(id);
 
-                    case KeyAllocationMethod.MacAddress:
-                        key.ClaimedByMacAddress = "";
-                        key.ClaimedOn = null;
-                        break;
-                }
-
-                repo.Update(key);
-
-                await repo.SaveChanges();
-
-                return RedirectToAction("Details", "Keys", new { id = key.Game.Id });
-            }
+            return RedirectToAction("Details", "Keys", new { id = existing.Game.Id });
         }
     }
 }

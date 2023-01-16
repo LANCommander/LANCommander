@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -171,7 +172,22 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Change Game Key",
                         Action = (keyChangeArgs) =>
                         {
-                            PowerShellRuntime.RunScript(keyChangeArgs.Games.First(), SDK.Enums.ScriptType.KeyChange);
+                            Guid gameId;
+
+                            if (Guid.TryParse(keyChangeArgs.Games.First().GameId, out gameId))
+                            {
+                                // NUKIEEEE
+                                var newKey = LANCommander.GetNewKey(gameId);
+
+                                if (String.IsNullOrEmpty(newKey))
+                                    PlayniteApi.Dialogs.ShowErrorMessage("There are no more keys available on the server.", "No Keys Available");
+                                else
+                                    PowerShellRuntime.RunScript(keyChangeArgs.Games.First(), SDK.Enums.ScriptType.KeyChange, $@"""{newKey}""");
+                            }
+                            else
+                            {
+                                PlayniteApi.Dialogs.ShowErrorMessage("This game could not be found on the server. Your game may be corrupted.");
+                            }
                         }
                     };
             }

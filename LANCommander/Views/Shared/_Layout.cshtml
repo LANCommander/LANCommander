@@ -1,4 +1,5 @@
-﻿@inject Microsoft.AspNetCore.Http.IHttpContextAccessor _HttpContext
+﻿@using System.Text.Json
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor _HttpContext
 @{
     _HttpContext.HttpContext.Response.Headers["Cache-Control"] = "no-store";
 }
@@ -93,12 +94,56 @@
         </div>
     </div>
 
+    <div class="alert-container">
+        @if (TempData["Alerts"] != null)
+        {
+            try
+            {
+                foreach (var alert in JsonSerializer.Deserialize<List<AlertViewModel>>((string)TempData["Alerts"]))
+                {
+                    <div class="alert alert-important alert-@alert.Type @(alert.Dismissable ? "alert-dismissable" : "")" role="alert">
+                        <div class="d-flex">
+                            <div>
+                                @alert.Message
+                            </div>
+                        </div>
+
+                        @if (alert.Dismissable)
+                        {
+                            <a class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="close"></a>
+                        }
+                    </div>
+                }
+            }
+            catch { }
+        }
+    </div>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/selectize.js/js/selectize.min.js"></script>
     <script src="~/lib/tabler/core/dist/js/tabler.min.js"></script>
     <script src="~/js/Modal.js"></script>
     <script src="~/js/Select.js"></script>
     <script src="~/_framework/blazor.server.js"></script>
+
+    <style>
+        .alert-container {
+            position: fixed;
+            top: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            min-width: 400px;
+            z-index: 2;
+        }
+
+        .alert-dismissable .btn-close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 2;
+            padding: 1.25rem 1rem;
+        }
+    </style>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -355,8 +355,11 @@ namespace LANCommander.Controllers
                 var game = GameService.Get(g => g.Id == viewModel.Game.Id).FirstOrDefault();
 
                 game.Title = viewModel.Game.Title;
+                game.SortTitle = viewModel.Game.SortTitle;
+                game.DirectoryName = viewModel.Game.DirectoryName;
                 game.Description = viewModel.Game.Description;
                 game.ReleasedOn = viewModel.Game.ReleasedOn;
+                game.Singleplayer = viewModel.Game.Singleplayer;
 
                 #region Update Developers
                 if (viewModel.SelectedDevelopers == null)

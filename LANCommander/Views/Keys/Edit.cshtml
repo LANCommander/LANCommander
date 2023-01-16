@@ -23,22 +23,12 @@
         <div class="row row-cards">
             <div class="col-12">
                 <form asp-action="Edit" class="card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-12">
-                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                                <div class="mb-3 textarea-grow-wrap">
-                                    <textarea asp-for="Keys" class="form-control" data-bs-toggle="autosize">
-                                        @Model.Keys
-                                    </textarea>
-                                    <span asp-validation-for="Keys" class="text-danger"></span>
-                                </div>
+                    <input type="hidden" asp-for="Keys" />
+                    <input type="hidden" asp-for="Game.Id" />
 
-                                <input type="hidden" asp-for="Game.Id" />
-                            </div>
-                        </div>
-                    </div>
+                    <div id="KeyEditor" style="height: 100%; min-height: 600px;"></div>
 
                     <div class="card-footer">
                         <div class="d-flex">
@@ -54,4 +44,30 @@
 
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script src="~/lib/monaco-editor/min/vs/loader.js"></script>
+
+    <script>
+        require.config({ paths: { vs: '/lib/monaco-editor/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+            var editor = monaco.editor.create(document.getElementById('KeyEditor'), {
+                value: $('#Keys').val(),
+                readOnly: false,
+                theme: 'vs-dark',
+                automaticLayout: true
+            });
+
+            editor.onDidChangeModelContent(function (e) {
+                $('#Keys').val(editor.getModel().getValue());
+            });
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+            
+                $('form').submit();
+            }
+        });
+    </script>
 }

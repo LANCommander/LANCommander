@@ -17,12 +17,15 @@ namespace LANCommander.PlaynitePlugin
         {
             var process = new Process();
             process.StartInfo.FileName = "powershell.exe";
-            process.StartInfo.Arguments = $@"-File ""{path}""";
+            process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.UseShellExecute = false;
 
             if (arguments != null)
                 process.StartInfo.Arguments += " " + arguments;
 
             process.Start();
+
             process.WaitForExit();
         }
 

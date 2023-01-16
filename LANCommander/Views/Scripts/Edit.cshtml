@@ -24,7 +24,7 @@
         <div class="row row-cards">
             <div class="col-12">
                 <form asp-action="Edit" class="card">
-                    <div class="card-body">
+                    <div class="card-body pb-0">
                         <div class="row">
                             <div class="col-12">
                                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
@@ -64,16 +64,14 @@
                                     </label>
                                 </div>
 
-                                <div class="mb-3">
-                                    <div id="ScriptEditor" style="height: 100%; min-height: 70vh;"></div>
-                                </div>
-
                                 <input type="hidden" asp-for="Contents" />
                                 <input type="hidden" asp-for="GameId" />
                                 <input type="hidden" asp-for="Id" />
                             </div>
                         </div>
                     </div>
+
+                    <div id="ScriptEditor" style="height: 100%; min-height: 600px;"></div>
 
                     <div class="card-footer">
                         <div class="d-flex">
@@ -106,6 +104,14 @@
             editor.onDidChangeModelContent(function (e) {
                 $('#Contents').val(editor.getModel().getValue());
             });
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+            
+                $('form').submit();
+            }
         });
     </script>
 }

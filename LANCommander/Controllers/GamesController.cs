@@ -357,6 +357,7 @@ namespace LANCommander.Controllers
                 game.Title = viewModel.Game.Title;
                 game.SortTitle = viewModel.Game.SortTitle;
                 game.DirectoryName = viewModel.Game.DirectoryName;
+                game.Icon = viewModel.Game.Icon;
                 game.Description = viewModel.Game.Description;
                 game.ReleasedOn = viewModel.Game.ReleasedOn;
                 game.Singleplayer = viewModel.Game.Singleplayer;

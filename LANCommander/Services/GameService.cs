@@ -121,8 +121,7 @@ namespace LANCommander.Services
 
                 Bitmap bitmap = null;
 
-                var manifest = ArchiveService.ReadManifest(archive.ObjectKey);
-                var iconReference = ArchiveService.ReadFile(archive.ObjectKey, manifest.Icon);
+                var iconReference = ArchiveService.ReadFile(archive.ObjectKey, game.Icon);
 
                 if (IsWinPEFile(iconReference))
                 {

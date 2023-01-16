@@ -63,7 +63,11 @@
                                 @foreach (var item in Model)
                                 {
                                     <tr>
-                                        <td><img src="@Url.Action("GetIcon", "Games", new { id = item.Id })" /></td>
+                                        <td>
+                                            @if (!String.IsNullOrWhiteSpace(item.Icon)) {
+                                                <img src="@Url.Action("GetIcon", "Games", new { id = item.Id })" />
+                                            }
+                                        </td>
                                         <td>
                                             @Html.DisplayFor(modelItem => item.Title)
                                         </td>

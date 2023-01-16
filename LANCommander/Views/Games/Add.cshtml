@@ -42,6 +42,11 @@
                                     <span asp-validation-for="Game.SortTitle" class="text-danger"></span>
                                 </div>
                                 <div class="mb-3">
+                                    <label asp-for="Game.Icon" class="control-label"></label>
+                                    <input asp-for="Game.Icon" class="form-control" />
+                                    <span asp-validation-for="Game.Icon" class="text-danger"></span>
+                                </div>
+                                <div class="mb-3">
                                     <label asp-for="Game.Description" class="control-label"></label>
                                     <textarea asp-for="Game.Description" class="form-control" data-bs-toggle="autosize"></textarea>
                                     <span asp-validation-for="Game.Description" class="text-danger"></span>

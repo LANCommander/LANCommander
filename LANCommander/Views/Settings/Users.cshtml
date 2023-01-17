@@ -1,0 +1,82 @@
+﻿@model IEnumerable<LANCommander.Models.UserViewModel>
+
+@{
+    ViewData["Title"] = "Settings | Users";
+}
+
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">Settings</div>
+                <h2 class="page-title">
+                    Users
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="card">
+            <div class="row g-0">
+                @{
+                    await Html.RenderPartialAsync("_SidebarPartial");
+                }
+
+                <div class="col d-flex flex-column">
+                    <div class="card-body">
+                        <h2 class="mb-4">Users</h2>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-vcenter table-mobile-md card-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach (var item in Model.OrderBy(u => u.UserName))
+                                {
+                                    <tr>
+                                        <td>
+                                            @item.UserName
+                                        </td>
+                                        <td>
+                                            @String.Join(", ", item.Roles)
+                                        </td>
+                                        <td>
+                                            <div class="btn-list flex-nowrap justify-content-end">
+                                                @if (!item.Roles.Any(r => r == "Administrator"))
+                                                {
+                                                    <a asp-action="PromoteUser" asp-route-id="@item.Id" class="btn btn-ghost-primary">Promote</a>
+                                                }
+                                                else
+                                                {
+                                                    <a asp-action="DemoteUser" asp-route-id="@item.Id" class="btn btn-ghost-primary">Demote</a>
+                                                }
+                                                <a asp-action="DeleteUser" asp-route-id="@item.Id" class="btn btn-danger">Delete</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+ }
+}

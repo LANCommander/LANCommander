@@ -40,6 +40,7 @@ namespace LANCommander.Services
                 Description = game.Description,
                 ReleasedOn = game.ReleasedOn.GetValueOrDefault(),
                 Singleplayer = game.Singleplayer,
+                Icon = game.Icon
             };
 
             if (game.Genres != null && game.Genres.Count > 0)
@@ -56,12 +57,6 @@ namespace LANCommander.Services
 
             if (game.Archives != null && game.Archives.Count > 0)
                 manifest.Version = game.Archives.OrderByDescending(a => a.CreatedOn).First().Version;
-
-            try
-            {
-                manifest.Icon = Convert.ToBase64String(GetIcon(game));
-            }
-            catch { }
 
             if (game.Actions != null && game.Actions.Count > 0)
             {

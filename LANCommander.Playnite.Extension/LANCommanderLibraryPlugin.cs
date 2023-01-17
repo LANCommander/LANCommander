@@ -90,8 +90,6 @@ namespace LANCommander.PlaynitePlugin
                         continue;
                     }
 
-                    var iconUri = new Uri(new Uri(Settings.ServerAddress), $"Games/GetIcon/{game.Id}");
-
                     var metadata = new GameMetadata()
                     {
                         IsInstalled = false,
@@ -101,7 +99,7 @@ namespace LANCommander.PlaynitePlugin
                         GameId = game.Id.ToString(),
                         ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
                         //Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
-                        Icon = new MetadataFile(iconUri.ToString()),
+                        Icon = new MetadataFile($"{Settings.ServerAddress}{manifest.Icon}"),
                         GameActions = game.Actions.OrderBy(a => a.SortOrder).Select(a => new PN.SDK.Models.GameAction()
                         {
                             Name = a.Name,
@@ -111,14 +109,6 @@ namespace LANCommander.PlaynitePlugin
                             IsPlayAction = a.PrimaryAction
                         }).ToList()
                     };
-
-                    if (existingGame != null)
-                    {
-                        metadata.IsInstalled = true;
-                        metadata.Version = existingGame.Version;
-                        metadata.InstallDirectory = existingGame.InstallDirectory;
-                        metadata.InstallSize = existingGame.InstallSize;
-                    }
 
                     if (manifest.Genre != null && manifest.Genre.Count() > 0)
                         metadata.Genres = new HashSet<MetadataProperty>(manifest.Genre.Select(g => new MetadataNameProperty(g)));
@@ -285,10 +275,15 @@ namespace LANCommander.PlaynitePlugin
         {
             var game = PlayniteApi.Database.Games.First(g => g.GameId == gameId.ToString());
 
+            if (game == null)
+                return;
+
             if (game.GameActions == null)
                 game.GameActions = new ObservableCollection<PN.SDK.Models.GameAction>();
             else
                 game.GameActions.Clear();
+
+            game.Icon = $"{Settings.ServerAddress}{manifest.Icon}";
 
             foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder))
             {

@@ -79,6 +79,18 @@ namespace LANCommander.Data
                     g => g.HasOne<Company>().WithMany().HasForeignKey("PublisherId"),
                     g => g.HasOne<Game>().WithMany().HasForeignKey("GameId")
                 );
+
+            builder.Entity<User>()
+                .HasMany(u => u.GameSaves)
+                .WithOne(gs => gs.User)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.GameSaves)
+                .WithOne(gs => gs.Game)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.NoAction);
         }
 
         public DbSet<Game>? Games { get; set; }

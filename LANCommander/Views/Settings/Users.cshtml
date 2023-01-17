@@ -37,6 +37,7 @@
                                 <tr>
                                     <th>Username</th>
                                     <th>Role</th>
+                                    <th>Saves</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -50,6 +51,9 @@
                                         </td>
                                         <td>
                                             @String.Join(", ", item.Roles)
+                                        </td>
+                                        <td>
+                                            @ByteSizeLib.ByteSize.FromBytes(item.SavesSize)
                                         </td>
                                         <td>
                                             <div class="btn-list flex-nowrap justify-content-end">

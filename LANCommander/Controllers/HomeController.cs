@@ -30,6 +30,7 @@ namespace LANCommander.Controllers
             model.TotalStorageSize = ByteSize.FromBytes(drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.TotalSize));
             model.TotalAvailableFreeSpace = ByteSize.FromBytes(drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace));
             model.TotalUploadDirectorySize = ByteSize.FromBytes(new DirectoryInfo("Upload").EnumerateFiles().Sum(f => f.Length));
+            model.TotalSaveDirectorySize = ByteSize.FromBytes(new DirectoryInfo("Save").EnumerateFiles().Sum(f => f.Length));
 
             model.GameCount = GameService.Get().Count;
 

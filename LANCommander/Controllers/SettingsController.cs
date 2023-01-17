@@ -45,11 +45,18 @@ namespace LANCommander.Controllers
 
             foreach (var user in UserManager.Users)
             {
+                var savePath = Path.Combine("Save", user.Id.ToString());
+                long saveSize = 0;
+
+                if (Directory.Exists(savePath))
+                    saveSize = new DirectoryInfo(savePath).EnumerateFiles().Sum(f => f.Length);
+
                 users.Add(new UserViewModel()
                 {
                     Id = user.Id,
                     UserName = user.UserName,
-                    Roles = await UserManager.GetRolesAsync(user)
+                    Roles = await UserManager.GetRolesAsync(user),
+                    SavesSize = saveSize
                 });
             }
 

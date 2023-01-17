@@ -110,4 +110,7 @@ if (!Directory.Exists("Upload"))
 if (!Directory.Exists("Icon"))
     Directory.CreateDirectory("Icon");
 
+if (!Directory.Exists("Save"))
+    Directory.CreateDirectory("Save");
+
 app.Run();

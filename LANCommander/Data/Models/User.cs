@@ -41,5 +41,8 @@ namespace LANCommander.Data.Models
         public string? RefreshToken { get; set; }
         [JsonIgnore]
         public DateTime RefreshTokenExpiration { get; set; }
+
+        [JsonIgnore]
+        public virtual ICollection<GameSave>? GameSaves { get; set; }
     }
 }

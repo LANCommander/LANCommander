@@ -74,7 +74,8 @@ namespace LANCommander.PlaynitePlugin
             try
             {
                 var games = LANCommander
-                    .GetGames();
+                    .GetGames()
+                    .Where(g => g.Archives != null && g.Archives.Count() > 0);
 
                 foreach (var game in games)
                 {

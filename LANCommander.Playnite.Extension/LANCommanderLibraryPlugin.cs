@@ -5,6 +5,7 @@ using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -94,7 +95,7 @@ namespace LANCommander.PlaynitePlugin
                         ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
                         //Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
                         Icon = new MetadataFile(iconUri.ToString()),
-                        GameActions = game.Actions.Select(a => new PN.SDK.Models.GameAction()
+                        GameActions = game.Actions.OrderBy(a => a.SortOrder).Select(a => new PN.SDK.Models.GameAction()
                         {
                             Name = a.Name,
                             Arguments = a.Arguments,
@@ -139,7 +140,25 @@ namespace LANCommander.PlaynitePlugin
                         metadata.Features.Add(new MetadataNameProperty($"Online Multiplayer {manifest.OnlineMultiplayer.GetPlayerCount()}".Trim()));
 
                     gameMetadata.Add(metadata);
+
+                    if (existingGame != null)
+                    {
+                        existingGame.GameActions.Clear();
+
+                        foreach (var action in game.Actions)
+                        {
+                            existingGame.GameActions.Add(new PN.SDK.Models.GameAction()
+                            {
+                                Name = action.Name,
+                                Arguments = action.Arguments,
+                                Path = action.Path,
+                                WorkingDir = action.WorkingDirectory,
+                                IsPlayAction = action.PrimaryAction
+                            });
+                        }
+                    }
                 };
+
             }
             catch (Exception ex)
             {
@@ -272,113 +291,83 @@ namespace LANCommander.PlaynitePlugin
             return window;
         }
 
-        public void UpdateGamesFromManifest()
+        public void UpdateGame(SDK.GameManifest manifest, Guid gameId)
         {
-            var games = PlayniteApi.Database.Games;
+            var game = PlayniteApi.Database.Games.First(g => g.GameId == gameId.ToString());
 
-            foreach (var game in games.Where(g => g.PluginId == Id && g.IsInstalled))
+            if (game.GameActions == null)
+                game.GameActions = new ObservableCollection<PN.SDK.Models.GameAction>();
+            else
+                game.GameActions.Clear();
+
+            foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder))
             {
-                if (!Directory.Exists(game.InstallDirectory))
-                    continue;
+                bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;
 
-                var manifestPath = Path.Combine(game.InstallDirectory, "_manifest.yml");
-
-                if (File.Exists(manifestPath))
+                game.GameActions.Add(new PN.SDK.Models.GameAction()
                 {
-                    try
+                    Name = action.Name,
+                    Arguments = action.Arguments,
+                    Path = PlayniteApi.ExpandGameVariables(game, action.Path?.Replace('/', Path.DirectorySeparatorChar)),
+                    WorkingDir = action.WorkingDirectory?.Replace('/', Path.DirectorySeparatorChar) ?? game.InstallDirectory,
+                    IsPlayAction = action.IsPrimaryAction || isFirstAction
+                });
+            }
+
+            #region Features
+            var singlePlayerFeature = PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == "Single Player");
+
+            if (manifest.LanMultiplayer != null)
+            {
+                var multiplayerInfo = manifest.LanMultiplayer;
+
+                string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
+                string featureName = $"LAN Multiplayer {playerCount}";
+
+                if (PlayniteApi.Database.Features.Any(f => f.Name == featureName))
+                {
+                    game.Features.Add(PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == featureName));
+                }
+                else
+                {
+                    PlayniteApi.Database.Features.Add(new GameFeature()
                     {
-                        var manifestContents = File.ReadAllText(manifestPath);
-                        var deserializer = new DeserializerBuilder()
-                            .IgnoreUnmatchedProperties()
-                            .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                            .Build();
+                        Name = featureName
+                    });
 
-                        var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
-
-                        #region Actions
-                        if (game.GameActions == null)
-                            game.GameActions = new System.Collections.ObjectModel.ObservableCollection<PN.SDK.Models.GameAction>();
-
-                        foreach (var action in manifest.Actions)
-                        {
-                            bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;
-
-                            foreach (var existingAction in game.GameActions)
-                                if (action.Name == existingAction.Name)
-                                    game.GameActions.Remove(existingAction);
-
-                            game.GameActions.AddMissing(new PN.SDK.Models.GameAction()
-                            {
-                                Name = action.Name,
-                                Arguments = action.Arguments,
-                                Path = PlayniteApi.ExpandGameVariables(game, action.Path?.Replace('/', Path.DirectorySeparatorChar)),
-                                WorkingDir = action.WorkingDirectory?.Replace('/', Path.DirectorySeparatorChar) ?? game.InstallDirectory,
-                                IsPlayAction = action.IsPrimaryAction || isFirstAction
-                            });
-                        }
-                        #endregion
-
-                        #region Features
-                        var singlePlayerFeature = PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == "Single Player");
-
-                        if (manifest.LanMultiplayer != null)
-                        {
-                            var multiplayerInfo = manifest.LanMultiplayer;
-
-                            string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
-                            string featureName = $"LAN Multiplayer {playerCount}";
-
-                            if (PlayniteApi.Database.Features.Any(f => f.Name == featureName))
-                            {
-                                game.Features.Add(PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == featureName));
-                            }
-                            else
-                            {
-                                PlayniteApi.Database.Features.Add(new PN.SDK.Models.GameFeature()
-                                {
-                                    Name = featureName
-                                });
-
-                                game.Features.Add(new PN.SDK.Models.GameFeature()
-                                {
-                                    Name = $"LAN Multiplayer {playerCount}"
-                                });
-                            }
-                        }
-
-                        if (manifest.LocalMultiplayer != null)
-                        {
-                            var multiplayerInfo = manifest.LocalMultiplayer;
-
-                            string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
-
-                            game.Features.Add(new PN.SDK.Models.GameFeature()
-                            {
-                                Name = $"Local Multiplayer {playerCount}"
-                            });
-                        }
-
-                        if (manifest.OnlineMultiplayer != null)
-                        {
-                            var multiplayerInfo = manifest.OnlineMultiplayer;
-
-                            string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
-
-                            game.Features.Add(new PN.SDK.Models.GameFeature()
-                            {
-                                Name = $"Online Multiplayer {playerCount}"
-                            });
-                        }
-                        #endregion
-
-                        PlayniteApi.Database.Games.Update(game);
-                    }
-                    catch (Exception ex)
+                    game.Features.Add(new GameFeature()
                     {
-
-                    }
+                        Name = $"LAN Multiplayer {playerCount}"
+                    });
                 }
             }
+
+            if (manifest.LocalMultiplayer != null)
+            {
+                var multiplayerInfo = manifest.LocalMultiplayer;
+
+                string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
+
+                game.Features.Add(new GameFeature()
+                {
+                    Name = $"Local Multiplayer {playerCount}"
+                });
+            }
+
+            if (manifest.OnlineMultiplayer != null)
+            {
+                var multiplayerInfo = manifest.OnlineMultiplayer;
+
+                string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
+
+                game.Features.Add(new GameFeature()
+                {
+                    Name = $"Online Multiplayer {playerCount}"
+                });
+            }
+            #endregion
+
+            PlayniteApi.Database.Games.Update(game);
         }
     }
 }

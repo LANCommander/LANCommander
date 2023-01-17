@@ -31,6 +31,7 @@ namespace LANCommander.SDK
         public string Path { get; set; }
         public string WorkingDirectory { get; set; }
         public bool IsPrimaryAction { get; set; }
+        public int SortOrder { get; set; }
     }
 
     public class MultiplayerInfo

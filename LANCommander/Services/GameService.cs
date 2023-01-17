@@ -71,7 +71,8 @@ namespace LANCommander.Services
                     Arguments = a.Arguments,
                     Path = a.Path,
                     WorkingDirectory = a.WorkingDirectory,
-                    IsPrimaryAction = a.PrimaryAction
+                    IsPrimaryAction = a.PrimaryAction,
+                    SortOrder = a.SortOrder,
                 }).ToArray();
             }
 

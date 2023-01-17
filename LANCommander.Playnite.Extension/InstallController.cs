@@ -15,6 +15,7 @@ using ICSharpCode.SharpZipLib.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using LANCommander.SDK.Models;
+using System.Collections.ObjectModel;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -37,6 +38,7 @@ namespace LANCommander.PlaynitePlugin
             var gameId = Guid.Parse(Game.GameId);
 
             var game = Plugin.LANCommander.GetGame(gameId);
+            var manifest = Plugin.LANCommander.GetGameManifest(gameId);
 
             var tempFile = Download(game);
 
@@ -49,7 +51,7 @@ namespace LANCommander.PlaynitePlugin
 
             PlayniteGame.InstallDirectory = installDirectory;
 
-            File.WriteAllText(Path.Combine(installDirectory, "_manifest.yml"), GetManifest(gameId));
+            WriteManifest(manifest, installDirectory);
 
             SaveScript(game, installDirectory, ScriptType.Install);
             SaveScript(game, installDirectory, ScriptType.Uninstall);
@@ -62,9 +64,9 @@ namespace LANCommander.PlaynitePlugin
             }
             catch { }
 
-            InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
+            Plugin.UpdateGame(manifest, gameId);
 
-            Plugin.UpdateGamesFromManifest();
+            InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
         }
 
         private string Download(LANCommander.SDK.Models.Game game)
@@ -164,17 +166,15 @@ namespace LANCommander.PlaynitePlugin
             return destination;
         }
 
-        private string GetManifest(Guid gameId)
+        private void WriteManifest(SDK.GameManifest manifest, string installDirectory)
         {
-            var manifest = Plugin.LANCommander.GetGameManifest(gameId);
-
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
                 .Build();
 
             var yaml = serializer.Serialize(manifest);
 
-            return yaml;
+            File.WriteAllText(Path.Combine(installDirectory, "_manifest.yml"), yaml);
         }
 
         private void SaveScript(LANCommander.SDK.Models.Game game, string installationDirectory, ScriptType type)

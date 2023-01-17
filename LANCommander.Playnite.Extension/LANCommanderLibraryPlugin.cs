@@ -83,6 +83,13 @@ namespace LANCommander.PlaynitePlugin
                     var manifest = LANCommander.GetGameManifest(game.Id);
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
 
+                    if (existingGame != null)
+                    {
+                        UpdateGame(manifest, game.Id);
+
+                        continue;
+                    }
+
                     var iconUri = new Uri(new Uri(Settings.ServerAddress), $"Games/GetIcon/{game.Id}");
 
                     var metadata = new GameMetadata()
@@ -140,23 +147,6 @@ namespace LANCommander.PlaynitePlugin
                         metadata.Features.Add(new MetadataNameProperty($"Online Multiplayer {manifest.OnlineMultiplayer.GetPlayerCount()}".Trim()));
 
                     gameMetadata.Add(metadata);
-
-                    if (existingGame != null)
-                    {
-                        existingGame.GameActions.Clear();
-
-                        foreach (var action in game.Actions)
-                        {
-                            existingGame.GameActions.Add(new PN.SDK.Models.GameAction()
-                            {
-                                Name = action.Name,
-                                Arguments = action.Arguments,
-                                Path = action.Path,
-                                WorkingDir = action.WorkingDirectory,
-                                IsPlayAction = action.PrimaryAction
-                            });
-                        }
-                    }
                 };
 
             }

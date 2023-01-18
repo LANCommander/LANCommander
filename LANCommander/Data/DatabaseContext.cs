@@ -104,5 +104,7 @@ namespace LANCommander.Data
         public DbSet<Company>? Companies { get; set; }
 
         public DbSet<Key>? Keys { get; set; }
+
+        public DbSet<GameSave>? GameSaves { get; set; }
     }
 }

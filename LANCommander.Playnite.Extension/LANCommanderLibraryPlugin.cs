@@ -294,7 +294,7 @@ namespace LANCommander.PlaynitePlugin
                     Name = action.Name,
                     Arguments = action.Arguments,
                     Path = PlayniteApi.ExpandGameVariables(game, action.Path?.Replace('/', Path.DirectorySeparatorChar)),
-                    WorkingDir = action.WorkingDirectory?.Replace('/', Path.DirectorySeparatorChar) ?? game.InstallDirectory,
+                    WorkingDir = PlayniteApi.ExpandGameVariables(game, action.WorkingDirectory?.Replace('/', Path.DirectorySeparatorChar) ?? game.InstallDirectory),
                     IsPlayAction = action.IsPrimaryAction || isFirstAction
                 });
             }

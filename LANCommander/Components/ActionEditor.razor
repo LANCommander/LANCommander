@@ -11,6 +11,7 @@
                 <th>Name</th>
                 <th>Path</th>
                 <th>Arguments</th>
+                <th>Working Dir</th>
                 <th>Primary</th>
                 <th></th>
             </tr>
@@ -19,7 +20,7 @@
         <tbody>
             @if (Actions == null || Actions.Count == 0)
             {
-                <tr><td colspan="5">Actions are used to start the game or launch other executables. It is recommended to have at least one action to launch the game.</td></tr>
+                <tr><td colspan="6">Actions are used to start the game or launch other executables. It is recommended to have at least one action to launch the game.</td></tr>
             }
 
             @foreach (var action in Actions.OrderBy(a => a.SortOrder))
@@ -30,6 +31,7 @@
                     <td><input @bind="action.Name" name="Game.Actions[@i].Name" class="form-control" placeholder="Play" /></td>
                     <td><input @bind="action.Path" name="Game.Actions[@i].Path" class="form-control" placeholder="Game.exe" /></td>
                     <td><input @bind="action.Arguments" name="Game.Actions[@i].Arguments" class="form-control" placeholder="Launch Arguments" /></td>
+                    <td><input @bind="action.WorkingDirectory" name="Game.Actions[@i].WorkingDirectory" class="form-control" placeholder="Working Directory" /></td>
                     <td class="align-middle">
                         <div class="form-check form-check-inline mb-0">
                             <input name="Game.Actions[@i].PrimaryAction" class="form-check-input" type="checkbox" checked="@action.PrimaryAction" value="true" />
@@ -69,7 +71,7 @@
                 i++;
             }
             <tr>
-                <td colspan="5">
+                <td colspan="6">
                     <div class="btn-list flex-nowrap justify-content-end">
 
                         <button class="btn btn-ghost-primary" @onclick="AddAction" type="button">Add Action</button>

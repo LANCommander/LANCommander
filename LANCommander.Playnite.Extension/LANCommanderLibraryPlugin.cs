@@ -261,7 +261,7 @@ namespace LANCommander.PlaynitePlugin
             if (result.Result == true)
             {
                 // Check to make sure they're staying in ASCII encoding
-                if (String.IsNullOrEmpty(result.SelectedString) || !result.SelectedString.All(c => c > 127))
+                if (String.IsNullOrEmpty(result.SelectedString) || result.SelectedString.Any(c => c > sbyte.MaxValue))
                 {
                     PlayniteApi.Dialogs.ShowErrorMessage("The name you supplied is invalid. Try again.");
 

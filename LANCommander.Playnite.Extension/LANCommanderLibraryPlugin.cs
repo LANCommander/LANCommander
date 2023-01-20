@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -233,10 +234,11 @@ namespace LANCommander.PlaynitePlugin
                 Title = "Click to change your name (All Games)",
                 Icon = new TextBlock
                 {
-                    Text = Settings.PlayerName,
+                    Text = char.ConvertFromUtf32(0xeded),
                     FontSize = 16,
                     FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
                     Padding = new Thickness(10, 0, 10, 0),
+                    
                 },
                 Activated = () => {
                     ShowNameChangeWindow();

@@ -18,8 +18,6 @@ namespace LANCommander.PlaynitePlugin
             var process = new Process();
             process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.UseShellExecute = false;
 
             if (arguments != null)
                 process.StartInfo.Arguments += " " + arguments;
@@ -44,6 +42,38 @@ namespace LANCommander.PlaynitePlugin
             process.WaitForExit();
         }
 
+        public void RunScriptsAsAdmin(IEnumerable<string> paths, string arguments = null)
+        {
+            // Concatenate scripts
+            var sb = new StringBuilder();
+
+            foreach (var path in paths)
+            {
+                var contents = File.ReadAllText(path);
+
+                sb.AppendLine(contents);
+            }
+
+            if (sb.Length > 0)
+            {
+                var scriptPath = Path.GetTempFileName();
+
+                File.WriteAllText(scriptPath, sb.ToString());
+
+                var process = new Process();
+                process.StartInfo.FileName = "powershell.exe";
+                process.StartInfo.UseShellExecute = true;
+                process.StartInfo.Verb = "runas";
+                process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{scriptPath}""";
+
+                if (arguments != null)
+                    process.StartInfo.Arguments += " " + arguments;
+
+                process.Start();
+                process.WaitForExit();
+            }
+        }
+
         public void RunScript(Game game, ScriptType type, string arguments = null)
         {
             var path = GetScriptFilePath(game, type);
@@ -56,6 +86,34 @@ namespace LANCommander.PlaynitePlugin
                     RunScriptAsAdmin(path, arguments);
                 else
                     RunScript(path, arguments);
+            }
+        }
+
+        public void RunScripts(IEnumerable<Game> games, ScriptType type, string arguments = null)
+        {
+            List<string> scripts = new List<string>();
+            List<string> adminScripts = new List<string>();
+
+            foreach (var game in games)
+            {
+                var path = GetScriptFilePath(game, type);
+
+                if (!File.Exists(path))
+                    continue;
+
+                var contents = File.ReadAllText(path);
+
+                if (contents.StartsWith("# Requires Admin"))
+                    adminScripts.Add(path);
+                else
+                    scripts.Add(path);
+            }
+
+            RunScriptsAsAdmin(adminScripts, arguments);
+
+            foreach (var script in scripts)
+            {
+                RunScript(script, arguments);
             }
         }
 

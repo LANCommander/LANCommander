@@ -6,6 +6,7 @@ using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -13,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using PN = Playnite;
@@ -219,17 +221,25 @@ namespace LANCommander.PlaynitePlugin
                 Description = "Change Player Name (All Games)",
                 Action = (args2) =>
                 {
-                    var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", "");
+                    ShowNameChangeWindow();
+                }
+            };
+        }
 
-                    if (result.Result == true)
-                    {
-                        var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
-
-                        foreach (var game in games)
-                        {
-                            PowerShellRuntime.RunScript(game, SDK.Enums.ScriptType.NameChange);
-                        }
-                    }
+        public override IEnumerable<TopPanelItem> GetTopPanelItems()
+        {
+            yield return new TopPanelItem
+            {
+                Title = "Click to change your name (All Games)",
+                Icon = new TextBlock
+                {
+                    Text = Settings.PlayerName,
+                    FontSize = 16,
+                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
+                    Padding = new Thickness(10, 0, 10, 0),
+                },
+                Activated = () => {
+                    ShowNameChangeWindow();
                 }
             };
         }
@@ -242,6 +252,32 @@ namespace LANCommander.PlaynitePlugin
         public override UserControl GetSettingsView(bool firstRunView)
         {
             return new LANCommanderSettingsView(this);
+        }
+
+        public void ShowNameChangeWindow()
+        {
+            var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", Settings.PlayerName);
+
+            if (result.Result == true)
+            {
+                // Check to make sure they're staying in ASCII encoding
+                if (String.IsNullOrEmpty(result.SelectedString) || !result.SelectedString.All(c => c > 127))
+                {
+                    PlayniteApi.Dialogs.ShowErrorMessage("The name you supplied is invalid. Try again.");
+
+                    ShowNameChangeWindow();
+                }
+                else
+                {
+                    Settings.PlayerName = result.SelectedString;
+
+                    SavePluginSettings(Settings);
+
+                    var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
+
+                    PowerShellRuntime.RunScripts(games, SDK.Enums.ScriptType.NameChange, Settings.PlayerName);
+                }
+            }
         }
 
         public Window ShowAuthenticationWindow()

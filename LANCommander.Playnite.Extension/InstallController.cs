@@ -61,6 +61,7 @@ namespace LANCommander.PlaynitePlugin
             try
             {
                 PowerShellRuntime.RunScript(PlayniteGame, ScriptType.Install);
+                PowerShellRuntime.RunScript(PlayniteGame, ScriptType.NameChange, Plugin.Settings.PlayerName);
             }
             catch { }
 

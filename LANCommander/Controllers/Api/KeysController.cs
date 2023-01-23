@@ -34,7 +34,8 @@ namespace LANCommander.Controllers.Api
             if (existing != null)
                 await KeyService.Release(existing.Id);
 
-            var availableKey = KeyService.Get(k =>
+            var availableKey = KeyService.Get(k => k.Game.Id == id)
+                .Where(k =>
                 (k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
                 ||
                 (k.AllocationMethod == Data.Models.KeyAllocationMethod.UserAccount && k.ClaimedByUser == null))

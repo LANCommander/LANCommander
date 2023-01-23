@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,33 +14,34 @@ namespace LANCommander.PlaynitePlugin
 {
     internal class PowerShellRuntime
     {
-        public void RunScript(string path, string arguments = null)
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool Wow64DisableWow64FsRedirection(ref IntPtr ptr);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool Wow64RevertWow64FsRedirection(ref IntPtr ptr);
+
+        public void RunScript(string path, bool asAdmin = false, string arguments = null)
         {
+            var wow64Value = IntPtr.Zero;
+
+            Wow64DisableWow64FsRedirection(ref wow64Value);
+
             var process = new Process();
+
             process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
-
-            if (arguments != null)
-                process.StartInfo.Arguments += " " + arguments;
-
-            process.Start();
-
-            process.WaitForExit();
-        }
-
-        public void RunScriptAsAdmin(string path, string arguments = null)
-        {
-            var process = new Process();
-            process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.UseShellExecute = true;
-            process.StartInfo.Verb = "runas";
-            process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
 
             if (arguments != null)
                 process.StartInfo.Arguments += " " + arguments;
 
+            if (asAdmin)
+                process.StartInfo.Verb = "runas";
+
             process.Start();
             process.WaitForExit();
+
+            Wow64RevertWow64FsRedirection(ref wow64Value);
         }
 
         public void RunScriptsAsAdmin(IEnumerable<string> paths, string arguments = null)
@@ -60,17 +62,7 @@ namespace LANCommander.PlaynitePlugin
 
                 File.WriteAllText(scriptPath, sb.ToString());
 
-                var process = new Process();
-                process.StartInfo.FileName = "powershell.exe";
-                process.StartInfo.UseShellExecute = true;
-                process.StartInfo.Verb = "runas";
-                process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{scriptPath}""";
-
-                if (arguments != null)
-                    process.StartInfo.Arguments += " " + arguments;
-
-                process.Start();
-                process.WaitForExit();
+                RunScript(scriptPath, true, arguments);
             }
         }
 
@@ -83,9 +75,9 @@ namespace LANCommander.PlaynitePlugin
                 var contents = File.ReadAllText(path);
 
                 if (contents.StartsWith("# Requires Admin"))
-                    RunScriptAsAdmin(path, arguments);
+                    RunScript(path, true, arguments);
                 else
-                    RunScript(path, arguments);
+                    RunScript(path, false, arguments);
             }
         }
 
@@ -113,7 +105,7 @@ namespace LANCommander.PlaynitePlugin
 
             foreach (var script in scripts)
             {
-                RunScript(script, arguments);
+                RunScript(script, false, arguments);
             }
         }
 

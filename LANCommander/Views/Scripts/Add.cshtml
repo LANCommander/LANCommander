@@ -62,12 +62,6 @@
                                         <span class="form-check-label">Requires Admin Privileges</span>
                                         <span class="form-check-description">Marks the script as needing admin privileges. Recommended for any changes to the system e.g. Windows Registry.</span>
                                     </label>
-
-                                    <label class="form-check">
-                                        <input asp-for="Requires64Bit" type="checkbox" class="form-check-input" />
-                                        <span class="form-check-label">Requires 64-Bit Runtime</span>
-                                        <span class="form-check-description">Runs the script in a 64-bit runtime. Useful if you want to break out of the registry's WOW6432Node redirection.</span>
-                                    </label>
                                 </div>
 
                                 <input type="hidden" asp-for="Contents" />

@@ -12,7 +12,6 @@ namespace LANCommander.Data.Models
         public ScriptType Type { get; set; }
         public string Contents { get; set; }
         public bool RequiresAdmin { get; set; }
-        public bool Requires64Bit { get; set; }
 
         public Guid? GameId { get; set; }
         [JsonIgnore]

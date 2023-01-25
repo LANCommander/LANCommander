@@ -86,36 +86,40 @@ namespace LANCommander.Controllers
                 MultiplayerModes = new List<MultiplayerMode>()
             };
 
+           
             var playerCounts = await PCGamingWikiClient.GetMultiplayerPlayerCounts(result.Name);
 
-            foreach (var playerCount in playerCounts)
+            if (playerCounts != null)
             {
-                MultiplayerType type;
-
-                switch (playerCount.Key)
+                foreach (var playerCount in playerCounts)
                 {
-                    case "Local Play":
-                        type = MultiplayerType.Local;
-                        break;
+                    MultiplayerType type;
 
-                    case "LAN Play":
-                        type = MultiplayerType.Lan;
-                        break;
+                    switch (playerCount.Key)
+                    {
+                        case "Local Play":
+                            type = MultiplayerType.Local;
+                            break;
 
-                    case "Online Play":
-                        type = MultiplayerType.Online;
-                        break;
+                        case "LAN Play":
+                            type = MultiplayerType.Lan;
+                            break;
 
-                    default:
-                        continue;
+                        case "Online Play":
+                            type = MultiplayerType.Online;
+                            break;
+
+                        default:
+                            continue;
+                    }
+
+                    viewModel.Game.MultiplayerModes.Add(new MultiplayerMode()
+                    {
+                        Type = type,
+                        MaxPlayers = playerCount.Value,
+                        MinPlayers = 2
+                    });
                 }
-
-                viewModel.Game.MultiplayerModes.Add(new MultiplayerMode()
-                {
-                    Type = type,
-                    MaxPlayers = playerCount.Value,
-                    MinPlayers = 2
-                });
             }
 
             if (result.GameModes != null && result.GameModes.Values != null)

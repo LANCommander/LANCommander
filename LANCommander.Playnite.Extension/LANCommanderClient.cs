@@ -70,6 +70,9 @@ namespace LANCommander.PlaynitePlugin
                 Password = password
             }));
 
+            if (String.IsNullOrWhiteSpace(response.Data.AccessToken))
+                throw new WebException("Invalid username or password");
+
             switch (response.StatusCode)
             {
                 case HttpStatusCode.OK:

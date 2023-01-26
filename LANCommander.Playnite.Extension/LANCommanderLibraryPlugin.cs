@@ -55,14 +55,17 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
         {
-            ShowAuthenticationWindow();
+            if (LANCommander.Token == null || !LANCommander.ValidateToken(LANCommander.Token))
+            {
+                ShowAuthenticationWindow();
+            }
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
         {
             var gameMetadata = new List<GameMetadata>();
 
-            if (LANCommander.Token != null && !LANCommander.ValidateToken(LANCommander.Token))
+            if (LANCommander.Token == null || !LANCommander.ValidateToken(LANCommander.Token))
             {
                 try
                 {

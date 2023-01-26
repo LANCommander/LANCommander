@@ -1,6 +1,7 @@
 ﻿using LANCommander.PlaynitePlugin.Extensions;
 using LANCommander.SDK;
 using Playnite.SDK;
+using Playnite.SDK.Events;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
@@ -41,6 +42,7 @@ namespace LANCommander.PlaynitePlugin
             };
 
             Settings = new LANCommanderSettingsViewModel(this);
+
             LANCommander = new LANCommanderClient(Settings.ServerAddress);
             LANCommander.Token = new SDK.Models.AuthToken()
             {
@@ -51,11 +53,16 @@ namespace LANCommander.PlaynitePlugin
             PowerShellRuntime = new PowerShellRuntime();
         }
 
+        public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
+        {
+            ShowAuthenticationWindow();
+        }
+
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
         {
             var gameMetadata = new List<GameMetadata>();
 
-            if (!LANCommander.ValidateToken(LANCommander.Token))
+            if (LANCommander.Token != null && !LANCommander.ValidateToken(LANCommander.Token))
             {
                 try
                 {
@@ -298,7 +305,7 @@ namespace LANCommander.PlaynitePlugin
                 window.Content = new Views.Authentication(this);
                 window.DataContext = new ViewModels.Authentication()
                 {
-                    ServerAddress = Settings.ServerAddress
+                    ServerAddress = Settings?.ServerAddress
                 };
 
                 window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();

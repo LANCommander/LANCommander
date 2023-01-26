@@ -54,7 +54,7 @@ namespace LANCommander.PlaynitePlugin.Views
         {
             try
             {
-                if (Plugin.LANCommander == null)
+                if (Plugin.LANCommander == null || Plugin.LANCommander.Client == null)
                     Plugin.LANCommander = new LANCommanderClient(Context.ServerAddress);
                 else
                     Plugin.LANCommander.Client.BaseUrl = new Uri(Context.ServerAddress);

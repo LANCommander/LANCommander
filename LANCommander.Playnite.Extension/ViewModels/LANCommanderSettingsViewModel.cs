@@ -26,11 +26,14 @@ namespace LANCommander.PlaynitePlugin
 
             var settings = Plugin.LoadPluginSettings<LANCommanderSettingsViewModel>();
 
-            ServerAddress = settings.ServerAddress;
-            AccessToken = settings.AccessToken;
-            RefreshToken = settings.RefreshToken;
-            InstallDirectory = settings.InstallDirectory;
-            PlayerName = settings.PlayerName;
+            if (settings != null)
+            {
+                ServerAddress = settings.ServerAddress;
+                AccessToken = settings.AccessToken;
+                RefreshToken = settings.RefreshToken;
+                InstallDirectory = settings.InstallDirectory;
+                PlayerName = settings.PlayerName;
+            }
         }
 
         public void BeginEdit()

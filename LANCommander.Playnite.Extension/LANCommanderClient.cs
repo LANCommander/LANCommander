@@ -21,7 +21,8 @@ namespace LANCommander.PlaynitePlugin
 
         public LANCommanderClient(string baseUrl)
         {
-            Client = new RestClient(baseUrl);
+            if (!String.IsNullOrWhiteSpace(baseUrl))
+                Client = new RestClient(baseUrl);
         }
 
         private T PostRequest<T>(string route, object body)

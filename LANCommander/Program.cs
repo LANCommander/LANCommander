@@ -26,7 +26,7 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddDbContext<LANCommander.Data.DatabaseContext>(b =>
 {
     b.UseLazyLoadingProxies();
-    b.UseSqlite(connectionString);
+    b.UseSqlite(settings.DatabaseConnectionString);
 });
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -57,7 +57,7 @@ builder.Services.AddAuthentication(options =>
             ValidateAudience = false,
             // ValidAudience = configuration["JWT:ValidAudience"],
             // ValidIssuer = configuration["JWT:ValidIssuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.TokenSecret))
         };
     });
 

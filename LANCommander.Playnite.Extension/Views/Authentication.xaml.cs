@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Models;
+﻿using BeaconLib;
+using LANCommander.SDK.Models;
 using Playnite.SDK;
 using System;
 using System.Collections.Generic;
@@ -27,6 +28,22 @@ namespace LANCommander.PlaynitePlugin.Views
             Plugin = plugin;
 
             InitializeComponent();
+
+            var probe = new Probe("LANCommander");
+
+            probe.BeaconsUpdated += beacons => Dispatcher.BeginInvoke((System.Action)(() =>
+            {
+                var beacon = beacons.First();
+
+                Context.ServerAddress = $"http://{beacon.Address.Address}:{beacon.Address.Port}";
+
+                this.ServerAddress.Text = Context.ServerAddress;
+
+                probe.Stop();
+            }));
+
+            probe.Start();
+
         }
 
         private void TextBox_KeyDown(object sender, KeyEventArgs e)

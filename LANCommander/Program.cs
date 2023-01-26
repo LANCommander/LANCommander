@@ -1,3 +1,4 @@
+using BeaconLib;
 using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Services;
@@ -76,6 +77,9 @@ builder.Services.AddScoped<KeyService>();
 builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<IGDBService>();
+
+if (settings.Beacon)
+    builder.Services.AddHostedService<BeaconService>();
 
 var app = builder.Build();
 

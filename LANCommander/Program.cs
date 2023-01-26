@@ -14,6 +14,13 @@ ConfigurationManager configuration = builder.Configuration;
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var settings = SettingService.GetSettings();
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // Configure as HTTP only
+    options.ListenAnyIP(settings.Port);
+});
 
 builder.Services.AddDbContext<LANCommander.Data.DatabaseContext>(b =>
 {

@@ -8,7 +8,7 @@ namespace LANCommander.Services
     {
         private const string SettingsFilename = "Settings.yml";
 
-        public LANCommanderSettings GetSettings()
+        public static LANCommanderSettings GetSettings()
         {
             if (File.Exists(SettingsFilename))
             {
@@ -25,7 +25,7 @@ namespace LANCommander.Services
                 return new LANCommanderSettings();
         }
 
-        public void SaveSettings(LANCommanderSettings settings)
+        public static void SaveSettings(LANCommanderSettings settings)
         {
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)

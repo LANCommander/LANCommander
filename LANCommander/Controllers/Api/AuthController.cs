@@ -1,4 +1,6 @@
 ﻿using LANCommander.Data.Models;
+using LANCommander.Models;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -28,13 +30,13 @@ namespace LANCommander.Controllers.Api
     {
         private readonly UserManager<User> UserManager;
         private readonly RoleManager<Role> RoleManager;
-        private readonly IConfiguration Configuration;
+        private readonly LANCommanderSettings Settings;
 
-        public AuthController(UserManager<User> userManager, RoleManager<Role> roleManager, IConfiguration configuration)
+        public AuthController(UserManager<User> userManager, RoleManager<Role> roleManager)
         {
             UserManager = userManager;
             RoleManager = roleManager;
-            Configuration = configuration;
+            Settings = SettingService.GetSettings();
         }
 
         [HttpPost]
@@ -60,10 +62,8 @@ namespace LANCommander.Controllers.Api
                 var token = GetToken(authClaims);
                 var refreshToken = GenerateRefreshToken();
 
-                _ = int.TryParse(Configuration["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
-
                 user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiration = DateTime.Now.AddDays(refreshTokenValidityInDays);
+                user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.TokenLifetime);
 
                 await UserManager.UpdateAsync(user);
 
@@ -127,10 +127,10 @@ namespace LANCommander.Controllers.Api
 
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:Secret"]));
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.TokenSecret));
 
             var token = new JwtSecurityToken(
-                expires: DateTime.Now.AddDays(30),
+                expires: DateTime.Now.AddDays(Settings.TokenLifetime),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );
@@ -157,7 +157,7 @@ namespace LANCommander.Controllers.Api
                 ValidateAudience = false,
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["JWT:Secret"])),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.TokenSecret)),
                 ValidateLifetime = false
             };
 

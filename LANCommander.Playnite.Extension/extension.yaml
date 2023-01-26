@@ -1,6 +1,6 @@
 ﻿Id: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc
-Name: LANCommander Playnite Extension
-Author: Pat Hartl
+Name: LANCommander Playnite Library
+Author: DoctorDalek
 Version: 1.0
 Module: LANCommander.PlaynitePlugin.dll
 Type: GameLibrary

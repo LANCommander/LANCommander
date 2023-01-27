@@ -1,4 +1,5 @@
-﻿@using LANCommander.Data.Enums
+﻿@using LANCommander.Components;
+@using LANCommander.Data.Enums
 @model LANCommander.Data.Models.Script
 
 @{
@@ -69,6 +70,12 @@
                                 <input type="hidden" asp-for="Id" />
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="col btn-list mb-3">
+                                <component type="typeof(SnippetBar)" render-mode="Server" />
+                            </div>
+                        </div>
                     </div>
 
                     <div id="ScriptEditor" style="height: 100%; min-height: 600px;"></div>
@@ -91,9 +98,11 @@
     <script src="~/lib/monaco-editor/min/vs/loader.js"></script>
 
     <script>
+        window.Editor = {};
+
         require.config({ paths: { vs: '/lib/monaco-editor/min/vs' } });
         require(['vs/editor/editor.main'], function () {
-            var editor = monaco.editor.create(document.getElementById('ScriptEditor'), {
+            window.Editor = monaco.editor.create(document.getElementById('ScriptEditor'), {
                 value: $('#Contents').val(),
                 language: 'powershell',
                 readOnly: false,
@@ -101,7 +110,7 @@
                 automaticLayout: true
             });
 
-            editor.onDidChangeModelContent(function (e) {
+            window.Editor.onDidChangeModelContent(function (e) {
                 $('#Contents').val(editor.getModel().getValue());
             });
         });

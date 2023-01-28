@@ -111,7 +111,7 @@
             });
 
             window.Editor.onDidChangeModelContent(function (e) {
-                $('#Contents').val(editor.getModel().getValue());
+                $('#Contents').val(window.Editor.getModel().getValue());
             });
         });
 

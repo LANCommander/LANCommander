@@ -152,6 +152,26 @@ namespace LANCommander.PlaynitePlugin
             return response.Value;
         }
 
+        public string GetAllocatedKey(Guid id)
+        {
+            var macAddress = GetMacAddress();
+
+            var request = new KeyRequest()
+            {
+                GameId = id,
+                MacAddress = macAddress,
+                ComputerName = Environment.MachineName,
+                IpAddress = GetIpAddress(),
+            };
+
+            var response = PostRequest<Key>($"/api/Keys/GetAllocated/{id}", request);
+
+            if (response == null)
+                return String.Empty;
+
+            return response.Value;
+        }
+
         public string GetNewKey(Guid id)
         {
             var macAddress = GetMacAddress();

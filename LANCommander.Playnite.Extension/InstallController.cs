@@ -62,6 +62,10 @@ namespace LANCommander.PlaynitePlugin
             {
                 PowerShellRuntime.RunScript(PlayniteGame, ScriptType.Install);
                 PowerShellRuntime.RunScript(PlayniteGame, ScriptType.NameChange, Plugin.Settings.PlayerName);
+
+                var key = Plugin.LANCommander.GetAllocatedKey(game.Id);
+
+                PowerShellRuntime.RunScript(PlayniteGame, ScriptType.KeyChange, $"\"{key}\"");
             }
             catch { }
 

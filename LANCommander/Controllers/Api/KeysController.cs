@@ -26,6 +26,7 @@ namespace LANCommander.Controllers.Api
             return KeyService.Get(k => k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress).First();
         }
 
+        [HttpPost("GetAllocated/{id}")]
         public async Task<Data.Models.Key> GetAllocated(Guid id, KeyRequest keyRequest)
         {
             var existing = KeyService.Get(k => k.Game.Id == id && k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress).FirstOrDefault();

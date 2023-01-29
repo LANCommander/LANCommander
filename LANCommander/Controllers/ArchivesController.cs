@@ -92,6 +92,13 @@ namespace LANCommander.Controllers
             return RedirectToAction("Edit", "Games", new { id = gameId });
         }
 
+        public async Task<IActionResult> Browse(Guid id)
+        {
+            var archive = await ArchiveService.Get(id);
+
+            return View(archive);
+        }
+
         public async Task<IActionResult> Validate(Guid id, Archive archive)
         {
             var path = $"Upload/{id}".ToPath();

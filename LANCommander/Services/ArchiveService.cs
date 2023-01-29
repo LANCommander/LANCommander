@@ -77,5 +77,17 @@ namespace LANCommander.Services
                 }
             }
         }
+
+        public async Task<IEnumerable<ZipArchiveEntry>> GetContents(Guid archiveId)
+        {
+            var archive = await Get(archiveId);
+
+            var upload = $"Upload/{archive.ObjectKey}".ToPath();
+
+            using (ZipArchive zip = ZipFile.OpenRead(upload))
+            {
+                return zip.Entries;
+            }
+        }
     }
 }

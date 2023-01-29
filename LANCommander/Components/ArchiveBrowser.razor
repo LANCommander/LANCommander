@@ -1,0 +1,98 @@
+﻿@using ByteSizeLib;
+@using LANCommander.Services;
+@using System.IO.Compression;
+@inject ArchiveService ArchiveService;
+
+<div class="card-body">
+    <div class="row">
+        <div class="col">
+            <input @bind="CurrentPath" class="form-control" disabled />
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-vcenter table-striped table-hover card-table" id="ArchiveBrowser">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Modified</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (CurrentPath != "")
+            {
+                <tr @ondblclick="GoUpLevel">
+                    <td colspan="3">..</td>
+                </tr>
+            }
+
+            @foreach (var entry in CurrentPathEntries.OrderBy(e => !e.FullName.EndsWith('/')).ThenBy(e => e.FullName))
+            {
+                @if (entry.FullName.EndsWith('/'))
+                {
+                    <tr @ondblclick="() => GoToPath(entry.FullName)">
+                        <td>@entry.FullName.Remove(0, CurrentPath.Length)</td>
+                        <td></td>
+                        <td>@entry.LastWriteTime</td>
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <td>@entry.Name</td>
+                        <td>@ByteSize.FromBytes(entry.Length)</td>
+                        <td>@entry.LastWriteTime</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<style>
+    #ArchiveBrowser tr {
+        cursor: pointer;
+    }
+</style>
+
+
+@code {
+    [Parameter] public Guid ArchiveId { get; set; }
+
+    private IEnumerable<ZipArchiveEntry> Entries { get; set; }
+    private IEnumerable<ZipArchiveEntry> CurrentPathEntries { get; set; }
+    private string CurrentPath { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Entries = await ArchiveService.GetContents(ArchiveId);
+
+        GoToRoot();
+    }
+
+    private void GoToRoot()
+    {
+        CurrentPath = "";
+        CurrentPathEntries = Entries.Where(e => e.FullName.TrimEnd('/').Split('/').Length == 1);
+    }
+
+    private void GoUpLevel()
+    {
+        var parts = CurrentPath.TrimEnd('/').Split('/');
+
+        if (parts.Length == 1)
+            GoToRoot();
+        else
+        {
+            GoToPath(String.Join('/', parts.Take(parts.Length - 1)) + "/");
+        }
+    }
+
+    private void GoToPath(string path)
+    {
+        CurrentPath = path;
+        CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(CurrentPath) && e.FullName != CurrentPath && e.FullName.Remove(0, path.Length).TrimEnd('/').Split('/').Length == 1);
+    }
+}

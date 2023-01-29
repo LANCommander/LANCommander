@@ -6,7 +6,30 @@
 <div class="card-body">
     <div class="row">
         <div class="col">
-            <input @bind="CurrentPath" class="form-control" disabled />
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    @if (BreadCrumbs.Length == 0)
+                    {
+                        <li class="breadcrumb-item active">Root</li>
+                    }
+                    else
+                    {
+                        <li class="breadcrumb-item">Root</li>
+                    }
+
+                    @for (int i = 0; i < BreadCrumbs.Length; i++)
+                    {
+                        if (i == BreadCrumbs.Length - 1)
+                        {
+                            <li class="breadcrumb-item active">@BreadCrumbs[i]</li>
+                        }
+                        else
+                        {
+                            <li class="breadcrumb-item">@BreadCrumbs[i]</li>
+                        }
+                    }
+                </ol>
+            </nav>
         </div>
     </div>
 </div>
@@ -15,6 +38,7 @@
     <table class="table table-vcenter table-striped table-hover card-table" id="ArchiveBrowser">
         <thead>
             <tr>
+                <th></th>
                 <th>Name</th>
                 <th>Size</th>
                 <th>Modified</th>
@@ -24,6 +48,7 @@
             @if (CurrentPath != "")
             {
                 <tr @ondblclick="GoUpLevel">
+                    <td></td>
                     <td colspan="3">..</td>
                 </tr>
             }
@@ -33,6 +58,7 @@
                 @if (entry.FullName.EndsWith('/'))
                 {
                     <tr @ondblclick="() => GoToPath(entry.FullName)">
+                        <td><i class="ti ti-@GetIcon(entry.FullName.ToLower())"></i></td>
                         <td>@entry.FullName.Remove(0, CurrentPath.Length)</td>
                         <td></td>
                         <td>@entry.LastWriteTime</td>
@@ -41,8 +67,9 @@
                 else
                 {
                     <tr>
+                        <td><i class="ti ti-@GetIcon(entry.FullName.ToLower())"></i></td>
                         <td>@entry.Name</td>
-                        <td>@ByteSize.FromBytes(entry.Length)</td>
+                        <td class="text-end">@ByteSize.FromBytes(entry.Length)</td>
                         <td>@entry.LastWriteTime</td>
                     </tr>
                 }
@@ -55,6 +82,13 @@
     #ArchiveBrowser tr {
         cursor: pointer;
     }
+
+    #ArchiveBrowser tr td:first-child {
+        padding: 0;
+        padding-left: .75rem;
+        font-size: 1.5rem;
+        width: .75rem;
+    }
 </style>
 
 
@@ -64,6 +98,7 @@
     private IEnumerable<ZipArchiveEntry> Entries { get; set; }
     private IEnumerable<ZipArchiveEntry> CurrentPathEntries { get; set; }
     private string CurrentPath { get; set; }
+    private string[] BreadCrumbs { get { return CurrentPath.TrimEnd('/').Split('/'); } }
 
     protected override async Task OnInitializedAsync()
     {
@@ -94,5 +129,77 @@
     {
         CurrentPath = path;
         CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(CurrentPath) && e.FullName != CurrentPath && e.FullName.Remove(0, path.Length).TrimEnd('/').Split('/').Length == 1);
+    }
+
+    private string GetIcon(string path)
+    {
+        switch (Path.GetExtension(path))
+        {
+            case "":
+                return "folder";
+
+            case ".exe":
+                return "terminal-2";
+
+            case ".zip":
+            case ".rar":
+            case ".7z":
+            case ".gz":
+            case ".tar":
+                return "file-zip";
+
+            case ".wad":
+            case ".pk3":
+            case ".pak":
+            case ".cab":
+                return "archive";
+
+            case ".txt":
+            case ".cfg":
+            case ".config":
+            case ".ini":
+            case ".yml":
+            case ".yaml":
+            case ".log":
+            case ".doc":
+            case ".nfo":
+                return "file-text";
+
+            case ".bat":
+            case ".ps1":
+            case ".json":
+                return "file-code";
+
+            case ".bik":
+            case ".avi":
+            case ".mov":
+            case ".mp4":
+            case ".m4v":
+            case ".mkv":
+            case ".wmv":
+            case ".mpg":
+            case ".mpeg":
+            case ".flv":
+                return "movie";
+
+            case ".dll":
+                return "package";
+
+            case ".scm":
+                return "map";
+
+            case ".hlp":
+                return "help";
+
+            case ".png":
+            case ".bmp":
+            case ".jpeg":
+            case ".jpg":
+            case ".gif":
+                return "photo";
+
+            default:
+                return "file";
+        }
     }
 }

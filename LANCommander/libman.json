@@ -38,5 +38,18 @@
         "min/vs/base/browser/ui/codicons/codicon/codicon.ttf"
       ]
     }
+  ,
+{
+  "provider": "cdnjs",
+  "library": "tabler-icons@1.35.0",
+  "destination": "wwwroot/lib/tabler-icons/",
+  "files": [
+    "iconfont/tabler-icons.min.css",
+    "iconfont/fonts/tabler-icons.eot",
+    "iconfont/fonts/tabler-icons.ttf",
+    "iconfont/fonts/tabler-icons.woff",
+    "iconfont/fonts/tabler-icons.woff2"
   ]
+}
+]
 }

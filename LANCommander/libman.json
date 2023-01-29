@@ -34,7 +34,8 @@
         "min/vs/editor/editor.main.css",
         "min/vs/editor/editor.main.js",
         "min/vs/editor/editor.main.nls.js",
-        "min/vs/loader.js"
+        "min/vs/loader.js",
+        "min/vs/base/browser/ui/codicons/codicon/codicon.ttf"
       ]
     }
   ]

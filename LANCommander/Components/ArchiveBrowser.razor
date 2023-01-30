@@ -14,18 +14,20 @@
                     }
                     else
                     {
-                        <li class="breadcrumb-item">Root</li>
+                        <li class="breadcrumb-item" @onclick="() => GoToRoot()">Root</li>
                     }
 
                     @for (int i = 0; i < BreadCrumbs.Length; i++)
                     {
+                        var path = String.Join('/', BreadCrumbs.Take(i + 1)) + '/';
+
                         if (i == BreadCrumbs.Length - 1)
                         {
                             <li class="breadcrumb-item active">@BreadCrumbs[i]</li>
                         }
                         else
                         {
-                            <li class="breadcrumb-item">@BreadCrumbs[i]</li>
+                            <li class="breadcrumb-item" @onclick="() => GoToPath(path)">@BreadCrumbs[i]</li>
                         }
                     }
                 </ol>
@@ -79,6 +81,10 @@
 </div>
 
 <style>
+    .breadcrumb-item:not(.active) {
+        cursor: pointer;
+    }
+
     #ArchiveBrowser tr {
         cursor: pointer;
     }

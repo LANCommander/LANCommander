@@ -1,0 +1,198 @@
+﻿@using LANCommander.Data.Enums
+@using LANCommander.Models
+@using LANCommander.PCGamingWiki
+@inject IGDBService IGDBService
+@inject CompanyService CompanyService
+@inject GenreService GenreService
+@inject TagService TagService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-3 mb-n1" />
+            Results for @GameTitle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (Results == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudTable Items="@Results" Hover="true">
+                <HeaderContent>
+                    <MudTh>Title</MudTh>
+                    <MudTh>Released</MudTh>
+                    <MudTh>Developers</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+
+                <RowTemplate>
+                    <MudTh>@context.Title</MudTh>
+                    <MudTh>@context.ReleasedOn?.ToString("MM/dd/yyyy")</MudTh>
+                    <MudTh>@String.Join(", ", context.Developers?.Select(d => d.Name))</MudTh>
+                    <MudTh>
+                        <MudButton OnClick="() => SelectGame(context)">Select</MudButton>
+                    </MudTh>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string GameTitle { get; set; }
+
+    private IEnumerable<Game> Results { get; set; }
+    private PCGamingWikiClient PCGamingWikiClient { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        PCGamingWikiClient = new PCGamingWikiClient();
+
+        await SearchForGame(GameTitle);
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    public async Task SearchForGame(string title)
+    {
+        var results = await IGDBService.Search(GameTitle, "involved_companies.*", "involved_companies.company.*");
+
+        if (results == null)
+            Results = new List<Game>();
+        else
+        {
+            Results = results.Select(r =>
+            {
+                var result = new Game()
+                {
+                    IGDBId = r.Id.GetValueOrDefault(),
+                    Title = r.Name,
+                    ReleasedOn = r.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
+                    Developers = new List<Company>()
+                };
+
+                if (r.InvolvedCompanies != null && r.InvolvedCompanies.Values != null)
+                {
+                    result.Developers = r.InvolvedCompanies.Values.Where(c => c.Developer.HasValue && c.Developer.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
+                    {
+                        Name = c.Company.Value.Name
+                    }).ToList();
+                }
+
+                return result;
+            });
+        }
+    }
+
+    private async Task SelectGame(Game game)
+    {
+        Results = null;
+
+        var result = await IGDBService.Get(game.IGDBId.GetValueOrDefault(), "genres.*", "game_modes.*", "multiplayer_modes.*", "release_dates.*", "platforms.*", "keywords.*", "involved_companies.*", "involved_companies.company.*", "cover.*");
+
+        game.Title = result.Name;
+        game.Description = result.Summary;
+        game.ReleasedOn = result.FirstReleaseDate.GetValueOrDefault().UtcDateTime;
+        game.MultiplayerModes = await GetMultiplayerModes(result.Name);
+        game.Developers = new List<Company>();
+        game.Publishers = new List<Company>();
+        game.Genres = new List<Genre>();
+        game.Tags = new List<Tag>();
+
+        if (result.GameModes != null && result.GameModes.Values != null)
+            game.Singleplayer = result.GameModes.Values.Any(gm => gm.Name == "Singleplayer");
+
+        if (result.InvolvedCompanies != null && result.InvolvedCompanies.Values != null)
+        {
+            // Make sure companie
+            var developers = result.InvolvedCompanies.Values.Where(c => c.Developer.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+            var publishers = result.InvolvedCompanies.Values.Where(c => c.Publisher.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+
+            foreach (var developer in developers)
+            {
+                game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer }));
+            }
+
+            foreach (var publisher in publishers)
+            {
+                game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher }));
+            }
+        }
+
+        if (result.Genres != null && result.Genres.Values != null)
+        {
+            var genres = result.Genres.Values.Select(g => g.Name);
+
+            foreach (var genre in genres)
+            {
+                game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre }));
+            }
+        }
+
+        if (result.Keywords != null && result.Keywords.Values != null)
+        {
+            var tags = result.Keywords.Values.Select(t => t.Name).Take(20);
+
+            foreach (var tag in tags)
+            {
+                game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Tag { Name = tag }));
+            }
+        }
+
+        MudDialog.Close(DialogResult.Ok(game));
+    }
+
+    private async Task<ICollection<MultiplayerMode>> GetMultiplayerModes(string gameTitle)
+    {
+        var multiplayerModes = new List<MultiplayerMode>();
+
+        var playerCounts = await PCGamingWikiClient.GetMultiplayerPlayerCounts(gameTitle);
+
+        if (playerCounts != null)
+        {
+            foreach (var playerCount in playerCounts)
+            {
+                MultiplayerType type;
+
+                switch (playerCount.Key)
+                {
+                    case "Local Play":
+                        type = MultiplayerType.Local;
+                        break;
+
+                    case "LAN Play":
+                        type = MultiplayerType.Lan;
+                        break;
+
+                    case "Online Play":
+                        type = MultiplayerType.Online;
+                        break;
+
+                    default:
+                        continue;
+                }
+
+                multiplayerModes.Add(new MultiplayerMode()
+                {
+                    Type = type,
+                    MaxPlayers = playerCount.Value,
+                    MinPlayers = 2
+                });
+            }
+        }
+
+        return multiplayerModes;
+    }
+}

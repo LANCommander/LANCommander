@@ -38,12 +38,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.11" />
+    <PackageReference Include="MudBlazor" Version="6.1.8" />
     <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.0" />
     <PackageReference Include="YamlDotNet" Version="12.3.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Areas\Archive\Pages\" />
     <Folder Include="bin\Debug\net6.0\" />
     <Folder Include="Data\Migrations\" />
     <Folder Include="Migrations\" />

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using MudBlazor.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,9 @@ ConfigurationManager configuration = builder.Configuration;
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var settings = SettingService.GetSettings();
+
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -65,7 +69,8 @@ builder.Services.AddControllersWithViews().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
-builder.Services.AddServerSideBlazor();
+
+builder.Services.AddMudServices();
 
 builder.Services.AddScoped<SettingService>();
 builder.Services.AddScoped<ArchiveService>();
@@ -80,6 +85,8 @@ builder.Services.AddScoped<IGDBService>();
 
 if (settings.Beacon)
     builder.Services.AddHostedService<BeaconService>();
+
+builder.WebHost.UseStaticWebAssets();
 
 var app = builder.Build();
 
@@ -104,16 +111,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllerRoute(
-        name: "default",
-        pattern: "{controller=Home}/{action=Index}/{id?}");
-    endpoints.MapBlazorHub();
-});
-
-app.MapRazorPages();
+app.MapBlazorHub();
+app.MapFallbackToPage("/_Host");
 
 if (!Directory.Exists("Upload"))
     Directory.CreateDirectory("Upload");

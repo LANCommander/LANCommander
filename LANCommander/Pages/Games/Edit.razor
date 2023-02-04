@@ -1,0 +1,103 @@
+﻿@page "/Games/{id:guid}/Edit"
+@inject GameService GameService
+@inject IDialogService DialogService
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudPaper Class="pa-4">
+            <MudForm>
+                <MudTextField @bind-Value="Game.Title" Label="Title" For="@(() => Game.Title)" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="LookupGameMetadata" />
+                <MudTextField @bind-Value="Game.SortTitle" Label="Sort Title" For="@(() => Game.SortTitle)" />
+                <MudTextField @bind-Value="Game.Icon" Label="Icon" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Folder" OnAdornmentClick="BrowseForIcon" />
+                <MudTextField @bind-Value="Game.Description" Label="Description" For="@(() => Game.Description)" Lines="4" />
+                <MudDatePicker @bind-Date="Game.ReleasedOn" Label="Released" />
+                <MudCheckBox @bind-Checked="@Game.Singleplayer" Label="Singleplayer" Color="Color.Primary"></MudCheckBox>
+
+                <MudChipSet>
+                    @foreach (var developer in Game.Developers)
+                    {
+                        <MudChip>@developer.Name</MudChip>
+                    }
+                </MudChipSet>
+
+                <MudChipSet>
+                    @foreach (var publisher in Game.Publishers)
+                    {
+                        <MudChip>@publisher.Name</MudChip>
+                    }
+                </MudChipSet>
+
+                <MudChipSet>
+                    @foreach (var genre in Game.Genres)
+                    {
+                        <MudChip>@genre.Name</MudChip>
+                    }
+                </MudChipSet>
+
+                <MudChipSet>
+                    @foreach (var tags in Game.Tags)
+                    {
+                        <MudChip>@tags.Name</MudChip>
+                    }
+                </MudChipSet>
+
+                <div class="d-flex align-center justify-space-between">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!Success)">Save</MudButton>
+                </div>
+            </MudForm>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    bool Success;
+    string[] Errors = { };
+    MudForm Form;
+
+    private Game Game { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Game = await GameService.Get(Id);
+    }
+
+    private void Save()
+    {
+
+    }
+
+    private void BrowseForIcon()
+    {
+
+    }
+
+    private async void LookupGameMetadata()
+    {
+        var parameters = new DialogParameters
+        {
+            ["GameTitle"] = Game.Title
+        };
+
+        var dialog = await DialogService.ShowAsync<GameMetadataLookup>("Game Lookup", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var info = result.Data as Game;
+
+            Game.Title = info.Title;
+            Game.Description = info.Description;
+            Game.ReleasedOn = info.ReleasedOn;
+            Game.MultiplayerModes = info.MultiplayerModes;
+            Game.Developers = info.Developers;
+            Game.Publishers = info.Publishers;
+            Game.Genres = info.Genres;
+            Game.Tags = info.Tags;
+            Game.Singleplayer = info.Singleplayer;
+
+            StateHasChanged();
+        }
+    }
+}

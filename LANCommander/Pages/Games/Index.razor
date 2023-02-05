@@ -1,7 +1,7 @@
 ﻿@page "/Games"
 @inject GameService GameService
 
-<MudTable Items="@Games" Hover="true">
+<MudTable Items="@Games" Hover="true" Elevation="0">
     <ToolBarContent>
         <MudText Typo="Typo.h6">Games</MudText>
         <MudSpacer />
@@ -21,7 +21,7 @@
 
     <RowTemplate>
         <MudTd>
-            <MudImage Src="@($"~/Icon/{context.Id}.png")" />
+            <MudImage Src="@GetIcon(context)" />
         </MudTd>
         <MudTd DataLabel="Title">@context.Title</MudTd>
         <MudTd DataLabel="Sort Title">@context.SortTitle</MudTd>
@@ -30,7 +30,7 @@
         <MudTd DataLabel="Created By">@context.CreatedBy?.UserName</MudTd>
         <MudTd DataLabel="Updated">@context.UpdatedOn</MudTd>
         <MudTd DataLabel="Updated By">@context.UpdatedBy?.UserName</MudTd>
-        <MudTd>
+        <MudTd Class="d-flex justify-end">
             <MudButton Href="@($"/Games/{context.Id}/Edit")">Edit</MudButton>
         </MudTd>
     </RowTemplate>
@@ -46,6 +46,20 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Games = GameService.Get();
+        Games = GameService.Get().OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+    }
+
+    private string GetIcon(Game game)
+    {
+        try
+        {
+            var icon = GameService.GetIcon(game);
+
+            return $"data:image/png;base64,{Convert.ToBase64String(icon)}";
+        }
+        catch
+        {
+            return "";
+        }
     }
 }

@@ -3,162 +3,107 @@
 @using System.IO.Compression;
 @inject ArchiveService ArchiveService;
 
-<div class="card-body">
-    <div class="row">
-        <div class="col">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    @if (BreadCrumbs.Length == 0)
-                    {
-                        <li class="breadcrumb-item active">Root</li>
-                    }
-                    else
-                    {
-                        <li class="breadcrumb-item" @onclick="() => GoToRoot()">Root</li>
-                    }
+<MudGrid>
+    <MudItem xs="4">
+        <MudTreeView Items="Root.Children" Hover="true" @bind-SelectedValue="SelectedDirectory" T="ArchiveDirectory">
+            <ItemTemplate>
+                <MudTreeViewItem Value="@context" Items="@context.Children" Text="@context.Name" T="ArchiveDirectory" OnClick="() => ChangeDirectory(context)"></MudTreeViewItem>
+            </ItemTemplate>
+        </MudTreeView>
+    </MudItem>
 
-                    @for (int i = 0; i < BreadCrumbs.Length; i++)
-                    {
-                        var path = String.Join('/', BreadCrumbs.Take(i + 1)) + '/';
-
-                        if (i == BreadCrumbs.Length - 1)
-                        {
-                            <li class="breadcrumb-item active">@BreadCrumbs[i]</li>
-                        }
-                        else
-                        {
-                            <li class="breadcrumb-item" @onclick="() => GoToPath(path)">@BreadCrumbs[i]</li>
-                        }
-                    }
-                </ol>
-            </nav>
-        </div>
-    </div>
-</div>
-
-<div class="table-responsive">
-    <table class="table table-vcenter table-striped table-hover card-table" id="ArchiveBrowser">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Name</th>
-                <th>Size</th>
-                <th>Modified</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (CurrentPath != "")
-            {
-                <tr @ondblclick="GoUpLevel">
-                    <td></td>
-                    <td colspan="3">..</td>
-                </tr>
-            }
-
-            @foreach (var entry in CurrentPathEntries.OrderBy(e => !e.FullName.EndsWith('/')).ThenBy(e => e.FullName))
-            {
-                @if (entry.FullName.EndsWith('/'))
+    <MudItem xs="8">
+        <MudTable Items="@CurrentPathEntries" Hover="true">
+            <HeaderContent>
+                <MudTh></MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>Size</MudTh>
+                <MudTh>Modified</MudTh>
+                @if (OnFileSelected.HasDelegate)
                 {
-                    <tr @ondblclick="() => GoToPath(entry.FullName)">
-                        <td><i class="ti ti-@GetIcon(entry.FullName.ToLower())"></i></td>
-                        <td>@entry.FullName.Remove(0, CurrentPath.Length)</td>
-                        <td></td>
-                        <td>@entry.LastWriteTime</td>
-                    </tr>
+                    <MudTh></MudTh>
                 }
-                else
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd><MudIcon Icon="@GetIcon(context)" /></MudTd>
+                <MudTd>@GetFileName(context)</MudTd>
+                <MudTd>@ByteSize.FromBytes(context.Length)</MudTd>
+                <MudTd>@context.LastWriteTime</MudTd>
+                @if (OnFileSelected.HasDelegate)
                 {
-                    <tr>
-                        <td><i class="ti ti-@GetIcon(entry.FullName.ToLower())"></i></td>
-                        <td>@entry.Name</td>
-                        <td class="text-end">@ByteSize.FromBytes(entry.Length)</td>
-                        <td>@entry.LastWriteTime</td>
-                    </tr>
+                    <MudTd><MudButton OnClick="() => OnFileSelected.InvokeAsync(context.FullName)">Select</MudButton></MudTd>
                 }
-            }
-        </tbody>
-    </table>
-</div>
-
-<style>
-    .breadcrumb-item:not(.active) {
-        cursor: pointer;
-    }
-
-    #ArchiveBrowser tr {
-        cursor: pointer;
-    }
-
-    #ArchiveBrowser tr td:first-child {
-        padding: 0;
-        padding-left: .75rem;
-        font-size: 1.5rem;
-        width: .75rem;
-    }
-</style>
+            </RowTemplate>
+        </MudTable>
+    </MudItem>
+</MudGrid>
 
 
-@code {
+    @code {
     [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public Guid Archive { get; set; }
+    [Parameter] public EventCallback<string> OnFileSelected { get; set; }
+
 
     private IEnumerable<ZipArchiveEntry> Entries { get; set; }
     private IEnumerable<ZipArchiveEntry> CurrentPathEntries { get; set; }
     private string CurrentPath { get; set; }
-    private string[] BreadCrumbs { get { return CurrentPath.TrimEnd('/').Split('/'); } }
+    private ArchiveDirectory Root { get; set; }
+    private ArchiveDirectory SelectedDirectory { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         Entries = await ArchiveService.GetContents(ArchiveId);
 
-        GoToRoot();
-    }
-
-    private void GoToRoot()
-    {
-        CurrentPath = "";
-        CurrentPathEntries = Entries.Where(e => e.FullName.TrimEnd('/').Split('/').Length == 1);
-    }
-
-    private void GoUpLevel()
-    {
-        var parts = CurrentPath.TrimEnd('/').Split('/');
-
-        if (parts.Length == 1)
-            GoToRoot();
-        else
+        Root = new ArchiveDirectory()
         {
-            GoToPath(String.Join('/', parts.Take(parts.Length - 1)) + "/");
+            Name = "/",
+            FullName = ""
+        };
+
+        Root.PopulateChildren(Entries);
+    }
+
+    private void ChangeDirectory(ArchiveDirectory selectedDirectory)
+    {
+        if (SelectedDirectory == null)
+            SelectedDirectory = selectedDirectory;
+
+        CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(SelectedDirectory.FullName) && e.FullName != SelectedDirectory.FullName);
+    }
+
+    private string GetFileName(ZipArchiveEntry entry)
+    {
+        if (String.IsNullOrWhiteSpace(entry.Name) && entry.Length == 0)
+        {
+            return entry.FullName.TrimEnd('/').Split('/').Last();
         }
+        else
+            return entry.Name;
     }
 
-    private void GoToPath(string path)
+    private string GetIcon(ZipArchiveEntry entry)
     {
-        CurrentPath = path;
-        CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(CurrentPath) && e.FullName != CurrentPath && e.FullName.Remove(0, path.Length).TrimEnd('/').Split('/').Length == 1);
-    }
-
-    private string GetIcon(string path)
-    {
-        switch (Path.GetExtension(path))
+        switch (Path.GetExtension(entry.FullName))
         {
             case "":
-                return "folder";
+                return Icons.Material.Filled.Folder;
 
             case ".exe":
-                return "terminal-2";
+                return Icons.Material.Filled.Terminal;
 
             case ".zip":
             case ".rar":
             case ".7z":
             case ".gz":
             case ".tar":
-                return "file-zip";
+                return Icons.Material.Filled.FolderZip;
 
             case ".wad":
             case ".pk3":
             case ".pak":
             case ".cab":
-                return "archive";
+                return Icons.Material.Filled.Token;
 
             case ".txt":
             case ".cfg":
@@ -169,12 +114,12 @@
             case ".log":
             case ".doc":
             case ".nfo":
-                return "file-text";
+                return Icons.Custom.FileFormats.FileDocument;
 
             case ".bat":
             case ".ps1":
             case ".json":
-                return "file-code";
+                return Icons.Custom.FileFormats.FileCode;
 
             case ".bik":
             case ".avi":
@@ -186,26 +131,54 @@
             case ".mpg":
             case ".mpeg":
             case ".flv":
-                return "movie";
+                return Icons.Custom.FileFormats.FileVideo;
 
             case ".dll":
-                return "package";
+                return Icons.Material.Filled.SettingsApplications;
 
             case ".scm":
-                return "map";
+                return Icons.Material.Filled.Map;
 
             case ".hlp":
-                return "help";
+                return Icons.Material.Filled.Help;
 
             case ".png":
             case ".bmp":
             case ".jpeg":
             case ".jpg":
             case ".gif":
-                return "photo";
+                return Icons.Custom.FileFormats.FileImage;
 
             default:
-                return "file";
+                return Icons.Material.Filled.InsertDriveFile;
+        }
+    }
+
+    public class ArchiveDirectory
+    {
+        public string Name { get; set; }
+        public string FullName { get; set; }
+        public bool IsExpanded { get; set; } = false;
+        public bool HasChildren => Children != null && Children.Count > 0;
+        public HashSet<ArchiveDirectory> Children { get; set; } = new HashSet<ArchiveDirectory>();
+
+        public void PopulateChildren(IEnumerable<ZipArchiveEntry> entries)
+        {
+            var childPaths = entries.Where(e => e.FullName.StartsWith(FullName) && e.FullName.EndsWith('/'));
+            var directChildren = childPaths.Where(p => p.FullName != FullName && p.FullName.Substring(FullName.Length + 1).TrimEnd('/').Split('/').Length == 1);
+
+            foreach (var directChild in directChildren)
+            {
+                var child = new ArchiveDirectory()
+                {
+                    FullName = directChild.FullName,
+                    Name = directChild.FullName.Substring(FullName.Length).TrimEnd('/')
+                };
+
+                child.PopulateChildren(entries);
+
+                Children.Add(child);
+            }
         }
     }
 }

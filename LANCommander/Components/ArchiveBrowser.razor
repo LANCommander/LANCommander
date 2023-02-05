@@ -39,7 +39,7 @@
 </MudGrid>
 
 
-    @code {
+@code {
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public Guid Archive { get; set; }
     [Parameter] public EventCallback<string> OnFileSelected { get; set; }
@@ -48,20 +48,24 @@
     private IEnumerable<ZipArchiveEntry> Entries { get; set; }
     private IEnumerable<ZipArchiveEntry> CurrentPathEntries { get; set; }
     private string CurrentPath { get; set; }
-    private ArchiveDirectory Root { get; set; }
+    private HashSet<ArchiveDirectory> Directories { get; set; }
     private ArchiveDirectory SelectedDirectory { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         Entries = await ArchiveService.GetContents(ArchiveId);
+        Directories = new HashSet<ArchiveDirectory>();
 
-        Root = new ArchiveDirectory()
+        var root = new ArchiveDirectory()
         {
             Name = "/",
             FullName = ""
         };
 
-        Root.PopulateChildren(Entries);
+        root.PopulateChildren(Entries);
+
+        Directories.Add(root);
+        SelectedDirectory = root;
     }
 
     private void ChangeDirectory(ArchiveDirectory selectedDirectory)

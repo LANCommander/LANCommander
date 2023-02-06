@@ -1,11 +1,12 @@
 ﻿@page "/Games/{id:guid}/Edit"
 @inject GameService GameService
 @inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <MudGrid>
     <MudItem xs="12">
         <MudPaper Class="pa-4">
-            <MudForm>
+            <MudForm @bind-IsValid="@Success" @bind-Errors="@Errors">
                 <MudTextField @bind-Value="Game.Title" Label="Title" For="@(() => Game.Title)" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="LookupGameMetadata" />
                 <MudTextField @bind-Value="Game.SortTitle" Label="Sort Title" For="@(() => Game.SortTitle)" />
                 <MudTextField @bind-Value="Game.Icon" Label="Icon" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Folder" OnAdornmentClick="BrowseForIcon" />
@@ -42,7 +43,7 @@
                 </MudChipSet>
 
                 <div class="d-flex align-center justify-space-between">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!Success)">Save</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!Success)" OnClick="Save">Save</MudButton>
                 </div>
             </MudForm>
         </MudPaper>
@@ -63,9 +64,18 @@
         Game = await GameService.Get(Id);
     }
 
-    private void Save()
+    private async Task Save()
     {
+        try
+        {
+            Game = await GameService.Update(Game);
 
+            Snackbar.Add("Game updated!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("An unknown error occurred!", Severity.Error);
+        }
     }
 
     private async void BrowseForIcon()

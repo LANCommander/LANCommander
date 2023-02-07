@@ -3,41 +3,36 @@
 @using System.IO.Compression;
 @inject ArchiveService ArchiveService;
 
-<MudGrid>
-    <MudItem xs="4">
-        <MudTreeView Items="Root.Children" Hover="true" @bind-SelectedValue="SelectedDirectory" T="ArchiveDirectory">
-            <ItemTemplate>
-                <MudTreeViewItem Value="@context" Items="@context.Children" Text="@context.Name" T="ArchiveDirectory" OnClick="() => ChangeDirectory(context)"></MudTreeViewItem>
-            </ItemTemplate>
-        </MudTreeView>
-    </MudItem>
+<MudStack Row="true" Style="max-height: 100%">
+    <MudTreeView Items="Directories" Hover="true" @bind-SelectedValue="SelectedDirectory" T="ArchiveDirectory" Style="min-width: 18%">
+        <ItemTemplate>
+            <MudTreeViewItem Value="@context" Items="@context.Children" Text="@context.Name" T="ArchiveDirectory" OnClick="() => ChangeDirectory(context)"></MudTreeViewItem>
+        </ItemTemplate>
+    </MudTreeView>
 
-    <MudItem xs="8">
-        <MudTable Items="@CurrentPathEntries" Hover="true">
-            <HeaderContent>
+    <MudTable Items="@CurrentPathEntries" Hover="true" Class="flex-grow-1" FixedHeader="true" Elevation="0" Height="calc(100vh - 64px)">
+        <HeaderContent>
+            <MudTh></MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Size</MudTh>
+            <MudTh>Modified</MudTh>
+            @if (OnFileSelected.HasDelegate)
+            {
                 <MudTh></MudTh>
-                <MudTh>Name</MudTh>
-                <MudTh>Size</MudTh>
-                <MudTh>Modified</MudTh>
-                @if (OnFileSelected.HasDelegate)
-                {
-                    <MudTh></MudTh>
-                }
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd><MudIcon Icon="@GetIcon(context)" /></MudTd>
-                <MudTd>@GetFileName(context)</MudTd>
-                <MudTd>@ByteSize.FromBytes(context.Length)</MudTd>
-                <MudTd>@context.LastWriteTime</MudTd>
-                @if (OnFileSelected.HasDelegate)
-                {
-                    <MudTd><MudButton OnClick="() => OnFileSelected.InvokeAsync(context.FullName)">Select</MudButton></MudTd>
-                }
-            </RowTemplate>
-        </MudTable>
-    </MudItem>
-</MudGrid>
-
+            }
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd><MudIcon Icon="@GetIcon(context)" /></MudTd>
+            <MudTd>@GetFileName(context)</MudTd>
+            <MudTd>@ByteSize.FromBytes(context.Length)</MudTd>
+            <MudTd>@context.LastWriteTime</MudTd>
+            @if (OnFileSelected.HasDelegate)
+            {
+                <MudTd><MudButton OnClick="() => OnFileSelected.InvokeAsync(context.FullName)">Select</MudButton></MudTd>
+            }
+        </RowTemplate>
+    </MudTable>
+</MudStack>
 
 @code {
     [Parameter] public Guid ArchiveId { get; set; }
@@ -73,7 +68,10 @@
         if (SelectedDirectory == null)
             SelectedDirectory = selectedDirectory;
 
-        CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(SelectedDirectory.FullName) && e.FullName != SelectedDirectory.FullName);
+        if (SelectedDirectory.FullName == "")
+            CurrentPathEntries = Entries.Where(e => !e.FullName.TrimEnd('/').Contains('/'));
+        else
+            CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(SelectedDirectory.FullName) && e.FullName != SelectedDirectory.FullName);
     }
 
     private string GetFileName(ZipArchiveEntry entry)

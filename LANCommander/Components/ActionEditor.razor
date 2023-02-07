@@ -1,141 +1,114 @@
 ﻿@using LANCommander.Data.Models
 @using LANCommander.Extensions
+@inject IDialogService DialogService
 
-@{
-    int i = 0;
-}
-<div class="table-responsive">
-    <table class="table mb-0">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Path</th>
-                <th>Arguments</th>
-                <th>Working Dir</th>
-                <th>Primary</th>
-                <th></th>
-            </tr>
-        </thead>
+<MudText Typo="Typo.h6">Actions</MudText>
 
-        <tbody>
-            @if (Actions == null || Actions.Count == 0)
-            {
-                <tr><td colspan="6">Actions are used to start the game or launch other executables. It is recommended to have at least one action to launch the game.</td></tr>
-            }
+<MudTable Items="@OrderedActions" Elevation="0" Dense="true">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Path</MudTh>
+        <MudTh>Arguments</MudTh>
+        <MudTh>Working Dir</MudTh>
+        <MudTh>Primary</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
 
-            @foreach (var action in Actions.OrderBy(a => a.SortOrder))
-            {
-                var index = i;
+    <RowTemplate>
+        <MudTd><MudTextField @bind-Value="context.Name" /></MudTd>
+        <MudTd><MudTextField @bind-Value="context.Path" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Folder" OnAdornmentClick="() => BrowseForActionPath(context)" /></MudTd>
+        <MudTd><MudTextField @bind-Value="context.Arguments" /></MudTd>
+        <MudTd><MudTextField @bind-Value="context.WorkingDirectory" /></MudTd>
+        <MudTd><MudCheckBox @bind-Checked="context.PrimaryAction" /></MudTd>
+        <MudTd Class="d-flex flex-nowrap">
+            <MudIconButton OnClick="() => MoveUp(context)" Icon="@Icons.Material.Filled.ArrowUpward"></MudIconButton>
+            <MudIconButton OnClick="() => MoveDown(context)" Icon="@Icons.Material.Filled.ArrowDownward"></MudIconButton>
+            <MudIconButton OnClick="() => RemoveAction(context)" Color="Color.Error" Icon="@Icons.Material.Filled.Close"></MudIconButton>
+        </MudTd>
+    </RowTemplate>
+</MudTable>
 
-                <tr>
-                    <td><input @bind="action.Name" name="Game.Actions[@i].Name" class="form-control" placeholder="Play" /></td>
-                    <td><input @bind="action.Path" name="Game.Actions[@i].Path" class="form-control" placeholder="Game.exe" /></td>
-                    <td><input @bind="action.Arguments" name="Game.Actions[@i].Arguments" class="form-control" placeholder="Launch Arguments" /></td>
-                    <td><input @bind="action.WorkingDirectory" name="Game.Actions[@i].WorkingDirectory" class="form-control" placeholder="Working Directory" /></td>
-                    <td class="align-middle">
-                        <div class="form-check form-check-inline mb-0">
-                            <input name="Game.Actions[@i].PrimaryAction" class="form-check-input" type="checkbox" checked="@action.PrimaryAction" value="true" />
-                        </div>
-                    </td>
-                    <td>
-                        <input name="Game.Actions[@i].Id" type="hidden" value="@action.Id" />
-                        <input name="Game.Actions[@i].GameId" type="hidden" value="@GameId" />
-                        <input name="Game.Actions[@i].SortOrder" type="hidden" value="@i" />
-
-                        <div class="btn-list flex-nowrap justify-content-end">
-                            <button class="btn btn-ghost-secondary btn-icon" @onclick="() => MoveUp(index)" type="button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-up" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                   <polyline points="6 15 12 9 18 15"></polyline>
-                                </svg>
-                            </button>
-
-                            <button class="btn btn-ghost-secondary btn-icon" @onclick="() => MoveDown(index)" type="button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-down" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </button>
-
-                            <button class="btn btn-ghost-danger btn-icon" @onclick="() => RemoveAction(index)" type="button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-
-                i++;
-            }
-            <tr>
-                <td colspan="6">
-                    <div class="btn-list flex-nowrap justify-content-end">
-
-                        <button class="btn btn-ghost-primary" @onclick="AddAction" type="button">Add Action</button>
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+<MudPaper Elevation="0" Class="d-flex justify-end mt-3">
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddAction">Add</MudButton>
+</MudPaper>
 
 @code {
-    [Parameter] public List<Data.Models.Action> Actions { get; set; }
-    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public IEnumerable<Data.Models.Action> Actions { get; set; }
+    [Parameter] public Guid ArchiveId { get; set; }
 
-    protected override void OnInitialized()
+    private List<Data.Models.Action> OrderedActions { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        Actions = Actions.OrderBy(a => a.SortOrder).ToList();
-
-        FixSortOrders();
-
-        base.OnInitialized();
+        OrderedActions = Actions.OrderBy(a => a.SortOrder).ToList();
     }
 
     private void AddAction()
     {
-        if (Actions == null)
-            Actions = new List<Data.Models.Action>();
+        if (OrderedActions == null)
+            OrderedActions = new List<Data.Models.Action>();
 
-        Actions.Add(new Data.Models.Action()
+        OrderedActions.Add(new Data.Models.Action()
         {
-            PrimaryAction = Actions.Count == 0,
-            SortOrder = Actions.Count
+            PrimaryAction = OrderedActions.Count == 0,
+            SortOrder = OrderedActions.Count
         });
     }
 
-    private void RemoveAction(int index)
+    private void RemoveAction(Data.Models.Action action)
     {
-        Actions.Remove(Actions.ElementAt(index));
-
-        FixSortOrders();
+        OrderedActions.Remove(action);
     }
 
-    private void MoveUp(int index)
+    private void MoveUp(Data.Models.Action action)
     {
-        if (index == 0)
-            return;
-
-        Actions.Move(Actions.ElementAt(index), index - 1);
-        FixSortOrders();
+        if (action.SortOrder > 0)
+            OrderedActions.Move(action, action.SortOrder - 1);
     }
 
-    private void MoveDown(int index)
+    private void MoveDown(Data.Models.Action action)
     {
-        if (index == Actions.Count - 1)
-            return;
-
-        Actions.Move(Actions.ElementAt(index), index + 1);
-        FixSortOrders();
+        if (action.SortOrder < OrderedActions.Count + 1)
+            OrderedActions.Move(action, action.SortOrder + 1);
     }
 
-    private void FixSortOrders() {
-        for (int i = 0; i < Actions.Count; i++)
+    private async void BrowseForActionPath(Data.Models.Action action)
+    {
+        var parameters = new DialogParameters
         {
-            Actions.ElementAt(i).SortOrder = i;
+            ["ArchiveId"] = ArchiveId
+        };
+
+        var dialog = await DialogService.ShowAsync<ArchiveFileSelector>("File Selector", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            action.Path = result.Data as string;
+
+            var parts = action.Path.Split('/');
+
+            if (parts.Length > 1)
+            {
+                action.Path = parts.Last();
+                action.WorkingDirectory = "{InstallDir}/" + String.Join('/', parts.Take(parts.Length - 1));
+            }
+
+            StateHasChanged();
         }
+    }
+
+    private void FixSortOrder()
+    {
+        int i = 0;
+
+        foreach (var action in OrderedActions)
+        {
+            action.SortOrder = i;
+
+            i++;
+        }
+
+        Actions = OrderedActions;
     }
 }

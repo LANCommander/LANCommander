@@ -85,6 +85,38 @@
         <MultiplayerModeEditor Game="Game" />
     </MudCardContent>
 </MudCard>
+
+<MudCard Class="mt-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Keys</MudText>
+        </CardHeaderContent>
+
+        <CardHeaderActions>
+            <MudButton Href="@($"/Games/{Id}/Keys")">View</MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudGrid>
+            <MudItem md="4" Class="mud-typography-align-center">
+                <MudText Typo="Typo.overline">Available</MudText>
+                <MudText Typo="Typo.body1">@KeysAvailable</MudText>
+            </MudItem>
+
+            <MudItem md="4" Class="mud-typography-align-center">
+                <MudText Typo="Typo.overline">Claimed</MudText>
+                <MudText Typo="Typo.body1">@(Game.Keys.Count - KeysAvailable)</MudText>
+                </MudItem>
+
+                <MudItem md="4" Class="mud-typography-align-center">
+                    <MudText Typo="Typo.overline">Total</MudText>
+                    <MudText Typo="Typo.body1">@Game.Keys.Count</MudText>
+                </MudItem>
+            </MudGrid>
+    </MudCardContent>
+</MudCard>
+
 <MudFab Color="Color.Primary" Disabled="@(!Success)" OnClick="Save" StartIcon="@Icons.Material.Filled.Save" Style="position: fixed; right: 32px; bottom: 32px;" />
 
 @code {
@@ -95,6 +127,15 @@
     MudForm Form;
 
     private Game Game { get; set; }
+
+    private int KeysAvailable { get {
+            return Game.Keys.Count(k =>
+            {
+                return (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
+                ||
+                (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null);
+            });
+        } }
 
     protected override async Task OnInitializedAsync()
     {

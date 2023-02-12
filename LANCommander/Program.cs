@@ -19,8 +19,12 @@ ConfigurationManager configuration = builder.Configuration;
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var settings = SettingService.GetSettings();
 
+builder.Services.AddMvc(options => options.EnableEndpointRouting = false);
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddServerSideBlazor().AddCircuitOptions(option =>
+{
+    option.DetailedErrors = true;
+});
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -66,10 +70,13 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
-builder.Services.AddControllersWithViews().AddJsonOptions(x =>
+builder.Services.AddControllers().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddMudServices(config =>
 {
@@ -83,6 +90,8 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.ShowTransitionDuration = 500;
     config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
+
+builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<SettingService>();
 builder.Services.AddScoped<ArchiveService>();
@@ -106,6 +115,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 else
 {
@@ -122,9 +133,14 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
-app.MapBlazorHub();
-app.MapFallbackToPage("/_Host");
+app.UseMvcWithDefaultRoute();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapBlazorHub();
+    endpoints.MapFallbackToPage("/_Host");
+    endpoints.MapControllers();
+});
 
 if (!Directory.Exists("Upload"))
     Directory.CreateDirectory("Upload");

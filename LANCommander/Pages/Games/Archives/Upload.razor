@@ -1,0 +1,104 @@
+﻿@page "/Games/{id:guid}/Archives/Upload"
+@using System.Net;
+@inject HttpClient HttpClient
+@inject NavigationManager Navigator
+
+<MudFileUpload T="IBrowserFile" FilesChanged="FileSelected">
+    <ButtonTemplate>
+        <MudButton HtmlTag="label"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.CloudUpload"
+                   for="@context">
+            Upload Archive
+        </MudButton>
+    </ButtonTemplate>
+</MudFileUpload>
+
+<MudButton OnClick="UploadArchive">Upload</MudButton>
+
+<MudProgressLinear Color="Color.Primary" Striped="Uploading" Size="Size.Large" Value="Progress" />
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    IBrowserFile File { get; set; }
+
+    const int ChunkSize = 1024 * 1024 * 1;
+
+    int Progress = 0;
+    bool Uploading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+    }
+
+    private void FileSelected(IBrowserFile file)
+    {
+        File = file;
+    }
+
+    private async Task UploadArchive()
+    {
+        var initResponse = await HttpClient.PostAsync("api/Upload/Init", null);
+
+        Guid objectKey = Guid.Empty;
+
+        if (initResponse.StatusCode == HttpStatusCode.OK)
+        {
+            var responseKey = await initResponse.Content.ReadAsStringAsync();
+
+            Guid.TryParse(responseKey, out objectKey);
+        }
+
+        long uploadedBytes = 0;
+        long totalBytes = File.Size;
+
+        using (var stream = File.OpenReadStream(long.MaxValue))
+        {
+            Uploading = true;
+
+            while (Uploading)
+            {
+                byte[] chunk;
+
+                if (totalBytes - uploadedBytes < ChunkSize)
+                    chunk = new byte[totalBytes - uploadedBytes];
+                else
+                    chunk = new byte[ChunkSize];
+
+                await stream.ReadAsync(chunk, 0, chunk.Length);
+
+                using (var formFile = new MultipartFormDataContent())
+                {
+                    var content = new StreamContent(new MemoryStream(chunk));
+
+                    formFile.Add(content, "File", File.Name);
+                    formFile.Add(new StringContent(uploadedBytes.ToString()), "Start");
+                    formFile.Add(new StringContent((uploadedBytes + chunk.Length).ToString()), "End");
+                    formFile.Add(new StringContent(objectKey.ToString()), "Key");
+                    formFile.Add(new StringContent(totalBytes.ToString()), "Total");
+
+                    var response = await HttpClient.PostAsync("api/Upload/Chunk", formFile);
+
+                    if (response.StatusCode == HttpStatusCode.OK) {
+                        uploadedBytes += chunk.Length;
+
+                        Progress = (int)(uploadedBytes * 100 / totalBytes);
+
+                        if (Progress >= 100)
+                            Uploading = false;
+                    }
+                    else
+                    {
+                        Uploading = false;
+                        // Error condition
+                    }
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+}

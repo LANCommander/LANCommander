@@ -14,12 +14,20 @@
                 <MudDatePicker @bind-Date="Game.ReleasedOn" Label="Released" />
                 <MudCheckBox @bind-Checked="@Game.Singleplayer" Label="Singleplayer" Color="Color.Primary"></MudCheckBox>
 
+                <MudDivider Class="mt-4 mb-4" />
+
+                <MudText Typo="Typo.h6">Developers</MudText>
+
                 <MudChipSet>
                     @foreach (var developer in Game.Developers)
                     {
                         <MudChip>@developer.Name</MudChip>
                     }
                 </MudChipSet>
+
+                <MudDivider Class="mt-4 mb-4" />
+
+                <MudText Typo="Typo.h6">Publishers</MudText>
 
                 <MudChipSet>
                     @foreach (var publisher in Game.Publishers)
@@ -28,12 +36,20 @@
                     }
                 </MudChipSet>
 
+                <MudDivider Class="mt-4 mb-4" />
+
+                <MudText Typo="Typo.h6">Genres</MudText>
+
                 <MudChipSet>
                     @foreach (var genre in Game.Genres)
                     {
                         <MudChip>@genre.Name</MudChip>
                     }
                 </MudChipSet>
+
+                <MudDivider Class="mt-4 mb-4" />
+
+                <MudText Typo="Typo.h6">Tags</MudText>
 
                 <MudChipSet>
                     @foreach (var tags in Game.Tags)

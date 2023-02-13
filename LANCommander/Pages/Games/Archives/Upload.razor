@@ -1,9 +1,10 @@
 ﻿@page "/Games/{id:guid}/Archives/Upload"
 @using System.Net;
+@using System.Diagnostics;
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 
-<MudFileUpload T="IBrowserFile" FilesChanged="FileSelected">
+<MudFileUpload T="IBrowserFile" OnFilesChanged="FileSelected">
     <ButtonTemplate>
         <MudButton HtmlTag="label"
                    Variant="Variant.Filled"
@@ -19,38 +20,32 @@
 
 <MudProgressLinear Color="Color.Primary" Striped="Uploading" Size="Size.Large" Value="Progress" />
 
+<MudText>@ByteSizeLib.ByteSize.FromBytes(Speed)/s</MudText>
+
 @code {
     [Parameter] public Guid Id { get; set; }
 
     IBrowserFile File { get; set; }
 
-    const int ChunkSize = 1024 * 1024 * 1;
+    const int ChunkSize = 1024 * 1024 * 10;
 
     int Progress = 0;
     bool Uploading = false;
+    double Speed = 0;
 
     protected override async Task OnInitializedAsync()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
     }
 
-    private void FileSelected(IBrowserFile file)
+    private void FileSelected(InputFileChangeEventArgs args)
     {
-        File = file;
+        File = args.File;
     }
 
     private async Task UploadArchive()
     {
-        var initResponse = await HttpClient.PostAsync("api/Upload/Init", null);
-
-        Guid objectKey = Guid.Empty;
-
-        if (initResponse.StatusCode == HttpStatusCode.OK)
-        {
-            var responseKey = await initResponse.Content.ReadAsStringAsync();
-
-            Guid.TryParse(responseKey, out objectKey);
-        }
+        var archiveId = Guid.NewGuid();
 
         long uploadedBytes = 0;
         long totalBytes = File.Size;
@@ -58,6 +53,10 @@
         using (var stream = File.OpenReadStream(long.MaxValue))
         {
             Uploading = true;
+
+            var watch = new Stopwatch();
+
+            watch.Start();
 
             while (Uploading)
             {
@@ -68,34 +67,30 @@
                 else
                     chunk = new byte[ChunkSize];
 
-                await stream.ReadAsync(chunk, 0, chunk.Length);
+                int bytesRead = 0;
 
-                using (var formFile = new MultipartFormDataContent())
-                {
-                    var content = new StreamContent(new MemoryStream(chunk));
-
-                    formFile.Add(content, "File", File.Name);
-                    formFile.Add(new StringContent(uploadedBytes.ToString()), "Start");
-                    formFile.Add(new StringContent((uploadedBytes + chunk.Length).ToString()), "End");
-                    formFile.Add(new StringContent(objectKey.ToString()), "Key");
-                    formFile.Add(new StringContent(totalBytes.ToString()), "Total");
-
-                    var response = await HttpClient.PostAsync("api/Upload/Chunk", formFile);
-
-                    if (response.StatusCode == HttpStatusCode.OK) {
-                        uploadedBytes += chunk.Length;
-
-                        Progress = (int)(uploadedBytes * 100 / totalBytes);
-
-                        if (Progress >= 100)
-                            Uploading = false;
-                    }
-                    else
-                    {
-                        Uploading = false;
-                        // Error condition
-                    }
+                // This feels hacky, why do we need to do this?
+                // Only 32256 bytes of the file get read unless we
+                // loop through like this. Probably kills performance.
+                while (bytesRead < chunk.Length) {
+                    bytesRead += await stream.ReadAsync(chunk, bytesRead, chunk.Length - bytesRead);
                 }
+
+                using (FileStream fs = new FileStream(Path.Combine("Upload", archiveId.ToString()), FileMode.Append))
+                {
+                    await fs.WriteAsync(chunk);
+                }
+
+                uploadedBytes += chunk.Length;
+
+                Progress = (int)(uploadedBytes * 100 / totalBytes);
+
+                if (Progress >= 100)
+                    Uploading = false;
+
+                Speed = chunk.Length * (1 / watch.Elapsed.TotalSeconds);
+
+                watch.Restart();
 
                 await InvokeAsync(StateHasChanged);
             }

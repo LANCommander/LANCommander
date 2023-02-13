@@ -163,7 +163,7 @@
             ["ArchiveId"] = Game.Archives.OrderByDescending(a => a.CreatedOn).First().Id
         };
 
-        var dialog = await DialogService.ShowAsync<ArchiveFileSelector>("File Selector", parameters);
+        var dialog = await DialogService.ShowAsync<ArchiveFileSelectorDialog>("File Selector", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled)

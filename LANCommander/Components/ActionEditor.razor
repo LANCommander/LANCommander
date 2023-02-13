@@ -18,7 +18,7 @@
         <MudTd><MudTextField @bind-Value="context.Arguments" /></MudTd>
         <MudTd><MudTextField @bind-Value="context.WorkingDirectory" /></MudTd>
         <MudTd><MudCheckBox @bind-Checked="context.PrimaryAction" /></MudTd>
-        <MudTd Class="d-flex flex-nowrap">
+        <MudTd Class="d-flex flex-nowrap justify-end">
             <MudIconButton OnClick="() => MoveUp(context)" Icon="@Icons.Material.Filled.ArrowUpward"></MudIconButton>
             <MudIconButton OnClick="() => MoveDown(context)" Icon="@Icons.Material.Filled.ArrowDownward"></MudIconButton>
             <MudIconButton OnClick="() => RemoveAction(context)" Color="Color.Error" Icon="@Icons.Material.Filled.Close"></MudIconButton>

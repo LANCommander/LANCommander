@@ -1,5 +1,6 @@
 ﻿@page "/Games/{id:guid}/Edit"
 @inject GameService GameService
+@inject ArchiveService ArchiveService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
@@ -117,6 +118,50 @@
     </MudCardContent>
 </MudCard>
 
+<MudCard Class="mt-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Archives</MudText>
+        </CardHeaderContent>
+
+        <CardHeaderActions>
+            <MudButton Href="@($"/Games/{Id}/Archives/Upload")" Color="Color.Primary" Variant="Variant.Filled">Upload</MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudTable Items="Game.Archives" Elevation="0">
+            <HeaderContent>
+                <MudTh>Version</MudTh>
+                <MudTh>Uploaded By</MudTh>
+                <MudTh>Uploaded On</MudTh>
+                <MudTh>Size</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+
+            <RowTemplate>
+                <MudTd>@context.Version</MudTd>
+                <MudTd>@context.CreatedBy?.UserName</MudTd>
+                <MudTd>@context.CreatedOn</MudTd>
+                <MudTd>
+                     @{
+                        long size = 0;
+                        var path = Path.Combine("Upload", context.ObjectKey);
+
+                        if (File.Exists(path))
+                            size = new FileInfo(path).Length;
+                    }
+                    @ByteSizeLib.ByteSize.FromBytes(size)
+                </MudTd>
+                <MudTd Class="d-flex flex-nowrap justify-end">
+                    <MudIconButton OnClick="() => BrowseArchive(context)" Icon="@Icons.Material.Filled.Folder"></MudIconButton>
+                    <MudIconButton OnClick="() => DeleteArchive(context)" Color="Color.Error" Icon="@Icons.Material.Filled.Close"></MudIconButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudCardContent>
+</MudCard>
+
 <MudFab Color="Color.Primary" Disabled="@(!Success)" OnClick="Save" StartIcon="@Icons.Material.Filled.Save" Style="position: fixed; right: 32px; bottom: 32px;" />
 
 @code {
@@ -200,5 +245,30 @@
 
             StateHasChanged();
         }
+    }
+
+    private async void BrowseArchive(Archive archive)
+    {
+        var parameters = new DialogParameters
+        {
+            ["ArchiveId"] = archive.Id
+        };
+
+        var dialog = await DialogService.ShowAsync<ArchiveBrowserDialog>("Archive Browser", parameters);
+    }
+
+    private async void DeleteArchive(Archive archive)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete Archive?",
+            "Do you really want to delete this archive? You will not be able to recover it later.",
+            "Delete",
+            "Cancel"
+        );
+
+        if (result == true)
+            await ArchiveService.Delete(archive);
+
+        StateHasChanged();
     }
 }

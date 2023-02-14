@@ -1,0 +1,117 @@
+﻿@using LANCommander.Data.Enums;
+@using LANCommander.Models
+@using LANCommander.Services
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject ScriptService ScriptService
+
+<MudDialog>
+    <DialogContent>
+        <MudPaper Elevation="0" Class="gap-4 d-flex flex-nowrap justify-content-start mb-2">
+            @foreach (var group in Snippets.Select(s => s.Group).Distinct())
+            {
+                <MudMenu EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Label="@group" Color="Color.Primary" Variant="Variant.Filled">
+                    @foreach (var snippet in Snippets.Where(s => s.Group == group))
+                    {
+                        <MudMenuItem OnClick="() => InsertSnippet(snippet)">@snippet.Name</MudMenuItem>
+                    }
+                </MudMenu>
+            }
+
+            <MudTooltip Text="Browse Archive For Path">
+                <MudIconButton Icon="@Icons.Material.Filled.Folder" OnClick="BrowseForPath" Class="align-self-end" />
+            </MudTooltip>
+        </MudPaper>
+
+        <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
+
+        <MudSelect @bind-Value="Script.Type" Label="Type">
+            @foreach (ScriptType type in Enum.GetValues(typeof(ScriptType)))
+            {
+                <MudSelectItem Value="@((ScriptType)type)">@type</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudCheckBox @bind-Checked="Script.RequiresAdmin" Color="Color.Primary" Label="Requires Admin"></MudCheckBox>
+
+        <MudTextField @bind-Value="Script.Description" Lines="4" Label="Description" />
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Save" OnClick="Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .monaco-editor-container {
+        height: 600px;
+    }
+</style>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public Script Script { get; set; }
+
+    IEnumerable<Snippet> Snippets { get; set; }
+    StandaloneCodeEditor Editor;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "powershell",
+            Value = Script.Contents,
+            Theme = "vs-dark",
+        };
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Snippets = ScriptService.GetSnippets();
+
+        if (Script == null)
+            Script = new Script();
+    }
+
+    private async Task Save()
+    {
+        var value = await Editor.GetValue();
+
+        ScriptService.Update(Script);
+
+        Snackbar.Add("Script saved!", Severity.Success);
+        MudDialog.Close();
+    }
+
+    private async void InsertSnippet(Snippet snippet)
+    {
+        Editor.Trigger("keyboard", "type", new
+        {
+            text = snippet.Content
+        });
+    }
+
+    private async void BrowseForPath()
+    {
+        var parameters = new DialogParameters
+        {
+            ["ArchiveId"] = Script.Game.Archives.OrderByDescending(a => a.CreatedOn).First().Id
+        };
+
+        var dialog = await DialogService.ShowAsync<ArchiveFileSelectorDialog>("File Selector", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var path = result.Data as string;
+
+            Editor.Trigger("keyboard", "type", new
+            {
+                text = $"$InstallDir\\{path.Replace('/', '\\')}"
+            });
+
+            StateHasChanged();
+        }
+    }
+}

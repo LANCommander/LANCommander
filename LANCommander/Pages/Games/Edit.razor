@@ -123,10 +123,6 @@
         <CardHeaderContent>
             <MudText Typo="Typo.h6">Archives</MudText>
         </CardHeaderContent>
-
-        <CardHeaderActions>
-            <MudButton OnClick="() => UploadArchive()" Color="Color.Primary" Variant="Variant.Filled">Upload</MudButton>
-        </CardHeaderActions>
     </MudCardHeader>
 
     <MudCardContent>
@@ -159,6 +155,12 @@
                 </MudTd>
             </RowTemplate>
         </MudTable>
+
+        <MudPaper Class="d-flex justify-end" Elevation="0">
+            <MudButton OnClick="() => UploadArchive()" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Variant="Variant.Filled">Add</MudButton>
+        </MudPaper>
+    </MudCardContent>
+</MudCard>
     </MudCardContent>
 </MudCard>
 

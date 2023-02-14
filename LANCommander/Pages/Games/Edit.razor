@@ -288,7 +288,15 @@
             ["GameId"] = Game.Id
         };
 
-        var dialog = await DialogService.ShowAsync<ArchiveUploader>("Archive Uploader", parameters);
+        var dialog = await DialogService.ShowAsync<ArchiveUploader>("Upload Archive", parameters, new DialogOptions()
+        {
+            CloseButton = false,
+            DisableBackdropClick = true,
+            FullWidth = true,
+            MaxWidth = MaxWidth.Large,
+            CloseOnEscapeKey = false,
+        });
+
         var result = await dialog.Result;
 
         await GameService.Context.Entry(Game).Collection(nameof(Game.Archives)).LoadAsync();

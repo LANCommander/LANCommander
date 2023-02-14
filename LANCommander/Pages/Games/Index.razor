@@ -1,7 +1,7 @@
 ﻿@page "/Games"
 @inject GameService GameService
 
-<MudTable Items="@Games" Hover="true" Elevation="0">
+<MudTable Items="@Games.Where(g => String.IsNullOrEmpty(Search) || g.Title.ToLower().Contains(Search.ToLower().Trim()))" Hover="true">
     <ToolBarContent>
         <MudText Typo="Typo.h6">Games</MudText>
         <MudSpacer />
@@ -21,7 +21,7 @@
 
     <RowTemplate>
         <MudTd>
-            <MudImage Src="@GetIcon(context)" />
+            <MudImage Src="@GetIcon(context)" Height="32" Width="32" />
         </MudTd>
         <MudTd DataLabel="Title">@context.Title</MudTd>
         <MudTd DataLabel="Sort Title">@context.SortTitle</MudTd>
@@ -51,15 +51,6 @@
 
     private string GetIcon(Game game)
     {
-        try
-        {
-            var icon = GameService.GetIcon(game);
-
-            return $"data:image/png;base64,{Convert.ToBase64String(icon)}";
-        }
-        catch
-        {
-            return "";
-        }
+        return $"/api/Games/{game.Id}/Icon.png";
     }
 }

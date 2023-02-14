@@ -125,7 +125,7 @@
         </CardHeaderContent>
 
         <CardHeaderActions>
-            <MudButton Href="@($"/Games/{Id}/Archives/Upload")" Color="Color.Primary" Variant="Variant.Filled">Upload</MudButton>
+            <MudButton OnClick="() => UploadArchive()" Color="Color.Primary" Variant="Variant.Filled">Upload</MudButton>
         </CardHeaderActions>
     </MudCardHeader>
 
@@ -245,6 +245,21 @@
 
             StateHasChanged();
         }
+    }
+
+    private async void UploadArchive()
+    {
+        var parameters = new DialogParameters
+        {
+            ["GameId"] = Game.Id
+        };
+
+        var dialog = await DialogService.ShowAsync<ArchiveUploader>("Archive Uploader", parameters);
+        var result = await dialog.Result;
+
+        await GameService.Context.Entry(Game).Collection(nameof(Game.Archives)).LoadAsync();
+
+        StateHasChanged();
     }
 
     private async void BrowseArchive(Archive archive)

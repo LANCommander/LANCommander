@@ -1,0 +1,172 @@
+﻿@using System.Net;
+@using System.Diagnostics;
+@inject HttpClient HttpClient
+@inject NavigationManager Navigator
+@inject ISnackbar Snackbar
+@inject ArchiveService ArchiveService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @bind-IsValid="@IsValid">
+            <MudTextField T="string" @bind-Value="Archive.Version" Label="Version" Required="true" Disabled="Uploading" RequiredError="Version is required" />
+            <MudTextField T="string" @bind-Value="Archive.Changelog" Label="Changelog" Required="false" Disabled="Uploading" Lines="6" />
+
+            <MudFileUpload T="IBrowserFile" OnFilesChanged="FileSelected" Class="flex-1"
+                           InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20 d-block" InputStyle="opacity: 0;"
+                           @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
+                <ButtonTemplate>
+                    <MudPaper Height="200px" Outlined="true" Class="@DragClass">
+                        <MudText Typo="Typo.h6">Drop files here or click to browse</MudText>
+
+                        @if (File != null)
+                        {
+                            <MudChip Color="Color.Dark" Text="@File.Name" />
+                        }
+                    </MudPaper>
+                </ButtonTemplate>
+            </MudFileUpload>
+
+            <MudProgressLinear Color="Color.Primary" Striped="Uploading" Size="Size.Large" Value="Progress" Class="mt-4" />
+
+            <MudText>@ByteSizeLib.ByteSize.FromBytes(Speed)/s</MudText>
+
+            <MudToolBar DisableGutters="true" Class="gap-4">
+                <MudButton OnClick="UploadArchive" Disabled="@(!IsValid || File == null || Uploading)" Color="Color.Primary" Variant="Variant.Filled">Upload</MudButton>
+                <MudButton OnClick="Clear" Disabled="File == null || Uploading" Color="Color.Error" Variant="Variant.Filled">Clear</MudButton>
+                <MudButton OnClick="Cancel">Cancel</MudButton>
+            </MudToolBar>
+        </MudForm>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public Guid GameId { get; set; }
+
+    Archive Archive;
+
+    IBrowserFile File { get; set; }
+
+    bool IsValid = false;
+
+    private static string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
+    private string DragClass = DefaultDragClass;
+
+    const int ChunkSize = 1024 * 1024 * 10;
+
+    int Progress = 0;
+    bool Uploading = false;
+    double Speed = 0;
+
+    Stopwatch Watch;
+    long WatchBytesTransferred = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+
+        Archive = new Archive()
+        {
+            GameId = GameId,
+            Id = Guid.NewGuid()
+        };
+    }
+
+    private void SetDragClass()
+    {
+        DragClass = $"{DefaultDragClass} mud-border-primary";
+    }
+
+    private void ClearDragClass()
+    {
+        DragClass = DefaultDragClass;
+    }
+
+    private void Clear()
+    {
+        File = null;
+        ClearDragClass();
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void FileSelected(InputFileChangeEventArgs args)
+    {
+        File = args.File;
+    }
+
+    private async Task UploadArchive()
+    {
+        long uploadedBytes = 0;
+        long totalBytes = File.Size;
+
+        Watch = new Stopwatch();
+
+        using (var stream = File.OpenReadStream(long.MaxValue))
+        {
+            Uploading = true;
+
+            Watch.Start();
+
+            while (Uploading)
+            {
+                byte[] chunk;
+
+                if (totalBytes - uploadedBytes < ChunkSize)
+                    chunk = new byte[totalBytes - uploadedBytes];
+                else
+                    chunk = new byte[ChunkSize];
+
+                int bytesRead = 0;
+
+                // This feels hacky, why do we need to do this?
+                // Only 32256 bytes of the file get read unless we
+                // loop through like this. Probably kills performance.
+                while (bytesRead < chunk.Length)
+                {
+                    bytesRead += await stream.ReadAsync(chunk, bytesRead, chunk.Length - bytesRead);
+                }
+
+                using (FileStream fs = new FileStream(Path.Combine("Upload", Archive.Id.ToString()), FileMode.Append))
+                {
+                    await fs.WriteAsync(chunk);
+                }
+
+                uploadedBytes += chunk.Length;
+                WatchBytesTransferred += chunk.Length;
+
+                Progress = (int)(uploadedBytes * 100 / totalBytes);
+
+                if (Watch.Elapsed.TotalSeconds >= 1)
+                {
+                    Speed = WatchBytesTransferred * (1 / Watch.Elapsed.TotalSeconds);
+                    WatchBytesTransferred = 0;
+                    Watch.Restart();
+                }
+
+                if (Progress >= 100)
+                {
+                    Watch.Stop();
+                    Uploading = false;
+                    UploadComplete();
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task UploadComplete()
+    {
+        Archive.ObjectKey = Archive.Id.ToString();
+        Archive.CompressedSize = File.Size;
+
+        ArchiveService.Add(Archive);
+
+        MudDialog.Close();
+        Snackbar.Add("Archive uploaded!", Severity.Success);
+    }
+}

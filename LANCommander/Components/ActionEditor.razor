@@ -17,7 +17,7 @@
         <MudTd><MudTextField @bind-Value="context.Path" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Folder" OnAdornmentClick="() => BrowseForActionPath(context)" /></MudTd>
         <MudTd><MudTextField @bind-Value="context.Arguments" /></MudTd>
         <MudTd><MudTextField @bind-Value="context.WorkingDirectory" /></MudTd>
-        <MudTd><MudCheckBox @bind-Checked="context.PrimaryAction" /></MudTd>
+        <MudTd><MudCheckBox @bind-Checked="context.PrimaryAction" Color="Color.Primary" /></MudTd>
         <MudTd Class="d-flex flex-nowrap justify-end">
             <MudIconButton OnClick="() => MoveUp(context)" Icon="@Icons.Material.Filled.ArrowUpward"></MudIconButton>
             <MudIconButton OnClick="() => MoveDown(context)" Icon="@Icons.Material.Filled.ArrowDownward"></MudIconButton>

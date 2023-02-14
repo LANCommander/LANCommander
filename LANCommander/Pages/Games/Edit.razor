@@ -92,10 +92,6 @@
         <CardHeaderContent>
             <MudText Typo="Typo.h6">Keys</MudText>
         </CardHeaderContent>
-
-        <CardHeaderActions>
-            <MudButton Href="@($"/Games/{Id}/Keys")" Color="Color.Primary" Variant="Variant.Filled">View</MudButton>
-        </CardHeaderActions>
     </MudCardHeader>
 
     <MudCardContent>
@@ -108,13 +104,17 @@
             <MudItem md="4" Class="mud-typography-align-center">
                 <MudText Typo="Typo.overline">Claimed</MudText>
                 <MudText Typo="Typo.body1">@(Game.Keys.Count - KeysAvailable)</MudText>
-                </MudItem>
+            </MudItem>
 
-                <MudItem md="4" Class="mud-typography-align-center">
-                    <MudText Typo="Typo.overline">Total</MudText>
-                    <MudText Typo="Typo.body1">@Game.Keys.Count</MudText>
-                </MudItem>
-            </MudGrid>
+            <MudItem md="4" Class="mud-typography-align-center">
+                <MudText Typo="Typo.overline">Total</MudText>
+                <MudText Typo="Typo.body1">@Game.Keys.Count</MudText>
+            </MudItem>
+        </MudGrid>
+
+        <MudPaper Class="d-flex justify-end" Elevation="0">
+            <MudButton Href="@($"/Games/{Id}/Keys")" Color="Color.Primary" Variant="Variant.Filled">View</MudButton>
+        </MudPaper>
     </MudCardContent>
 </MudCard>
 

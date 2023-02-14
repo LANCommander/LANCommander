@@ -1,7 +1,7 @@
 ﻿@page "/Games"
 @inject GameService GameService
 
-<MudTable Items="@Games.Where(g => String.IsNullOrEmpty(Search) || g.Title.ToLower().Contains(Search.ToLower().Trim()))" Hover="true">
+<MudTable Items="@Games.Where(g => String.IsNullOrEmpty(Search) || g.Title.ToLower().Contains(Search.ToLower().Trim()))" RowsPerPage="25" Hover="true">
     <ToolBarContent>
         <MudText Typo="Typo.h6">Games</MudText>
         <MudSpacer />

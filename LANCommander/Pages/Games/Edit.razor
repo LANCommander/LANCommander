@@ -288,14 +288,7 @@
             ["GameId"] = Game.Id
         };
 
-        var dialog = await DialogService.ShowAsync<ArchiveUploader>("Upload Archive", parameters, new DialogOptions()
-        {
-            CloseButton = false,
-            DisableBackdropClick = true,
-            FullWidth = true,
-            MaxWidth = MaxWidth.Large,
-            CloseOnEscapeKey = false,
-        });
+        var dialog = await DialogService.ShowAsync<ArchiveUploader>("Upload Archive", parameters);
 
         var result = await dialog.Result;
 
@@ -343,14 +336,7 @@
             ["Script"] = script
         };
 
-        var dialog = await DialogService.ShowAsync<ScriptEditorDialog>("Edit Script", parameters, new DialogOptions()
-        {
-            CloseButton = true,
-            DisableBackdropClick = true,
-            FullWidth = true,
-            MaxWidth = MaxWidth.ExtraLarge,
-            CloseOnEscapeKey = false,
-        });
+        var dialog = await DialogService.ShowAsync<ScriptEditorDialog>("Edit Script", parameters);
 
         var result = await dialog.Result;
 

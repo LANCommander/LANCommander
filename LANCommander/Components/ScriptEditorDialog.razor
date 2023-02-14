@@ -68,6 +68,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        MudDialog.Options.MaxWidth = MaxWidth.ExtraLarge;
+        MudDialog.Options.FullWidth = true;
+        MudDialog.Options.CloseButton = true;
+        MudDialog.Options.CloseOnEscapeKey = false;
+        MudDialog.Options.DisableBackdropClick = true;
+
+        MudDialog.SetOptions(MudDialog.Options);
+
         Snippets = ScriptService.GetSnippets();
 
         if (Script == null)

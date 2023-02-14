@@ -63,6 +63,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        MudDialog.Options.MaxWidth = MaxWidth.Large;
+        MudDialog.Options.FullWidth = true;
+        MudDialog.Options.CloseButton = false;
+        MudDialog.Options.CloseOnEscapeKey = false;
+        MudDialog.Options.DisableBackdropClick = true;
+
+        MudDialog.SetOptions(MudDialog.Options);
+
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
 
         Archive = new Archive()

@@ -6,11 +6,11 @@
 <MudStack Row="true" Style="max-height: 100%">
     <MudTreeView Items="Directories" Hover="true" @bind-SelectedValue="SelectedDirectory" T="ArchiveDirectory" Style="min-width: 18%">
         <ItemTemplate>
-            <MudTreeViewItem Value="@context" Items="@context.Children" Text="@context.Name" T="ArchiveDirectory" OnClick="() => ChangeDirectory(context)"></MudTreeViewItem>
+            <MudTreeViewItem Expanded="@context.IsExpanded" Value="@context" Items="@context.Children" Text="@context.Name" T="ArchiveDirectory" OnClick="() => ChangeDirectory(context)"></MudTreeViewItem>
         </ItemTemplate>
     </MudTreeView>
 
-    <MudTable Items="@CurrentPathEntries" Hover="true" Class="flex-grow-1" FixedHeader="true" Elevation="0" Height="calc(100vh - 64px)">
+    <MudTable Items="@CurrentPathEntries" Hover="true" Class="flex-grow-1 archive-browser" FixedHeader="true" Elevation="0" Height="calc(100vh - 64px)">
         <HeaderContent>
             <MudTh></MudTh>
             <MudTh>Name</MudTh>
@@ -28,11 +28,22 @@
             <MudTd>@context.LastWriteTime</MudTd>
             @if (OnFileSelected.HasDelegate)
             {
-                <MudTd><MudButton OnClick="() => OnFileSelected.InvokeAsync(context.FullName)">Select</MudButton></MudTd>
+                <MudTd><MudButton Class="select-file-button" Color="Color.Primary" Variant="Variant.Filled" OnClick="() => OnFileSelected.InvokeAsync(context.FullName)">Select</MudButton></MudTd>
             }
         </RowTemplate>
     </MudTable>
 </MudStack>
+
+<style>
+    .select-file-button {
+        opacity: 0;
+        transition: .1s opacity;
+    }
+
+    .archive-browser tr:hover .select-file-button {
+        opacity: 1;
+    }
+</style>
 
 @code {
     [Parameter] public Guid ArchiveId { get; set; }
@@ -54,13 +65,15 @@
         var root = new ArchiveDirectory()
         {
             Name = "/",
-            FullName = ""
+            FullName = "",
+            IsExpanded = true
         };
 
         root.PopulateChildren(Entries);
 
         Directories.Add(root);
-        SelectedDirectory = root;
+
+        ChangeDirectory(root);
     }
 
     private void ChangeDirectory(ArchiveDirectory selectedDirectory)

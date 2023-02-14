@@ -39,6 +39,7 @@
     protected override async Task OnInitializedAsync()
     {
         OrderedActions = Actions.OrderBy(a => a.SortOrder).ToList();
+        FixSortOrder();
     }
 
     private void AddAction()
@@ -62,12 +63,16 @@
     {
         if (action.SortOrder > 0)
             OrderedActions.Move(action, action.SortOrder - 1);
+
+        FixSortOrder();
     }
 
     private void MoveDown(Data.Models.Action action)
     {
         if (action.SortOrder < OrderedActions.Count + 1)
             OrderedActions.Move(action, action.SortOrder + 1);
+
+        FixSortOrder();
     }
 
     private async void BrowseForActionPath(Data.Models.Action action)

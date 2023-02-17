@@ -86,7 +86,7 @@
     {
         var value = await Editor.GetValue();
 
-        ScriptService.Update(Script);
+        await ScriptService.Update(Script);
 
         Snackbar.Add("Script saved!", Severity.Success);
         MudDialog.Close();

@@ -1,8 +1,6 @@
-/// <reference types="node" />
-import { EventEmitter } from 'events';
 import { DateTime } from './datetime';
 import { ILPConfiguration } from './interfaces';
-export declare class LPCore extends EventEmitter {
+export declare class LPCore {
     static add(name: string, data: object): void;
     protected plugins: string[];
     protected ui: HTMLElement;

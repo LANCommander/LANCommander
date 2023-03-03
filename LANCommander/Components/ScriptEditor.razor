@@ -110,6 +110,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (Game.Scripts == null)
+            Game.Scripts = new List<Script>();
+
         Snippets = ScriptService.GetSnippets();
 
         if (Script == null)

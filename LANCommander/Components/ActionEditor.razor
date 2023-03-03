@@ -60,6 +60,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (Game.Actions == null)
+            Game.Actions = new List<Data.Models.Action>();
+
         OrderedActions = Game.Actions.OrderBy(a => a.SortOrder).ToList();
         FixSortOrder();
     }

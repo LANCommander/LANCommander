@@ -78,6 +78,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (Game.Keys == null)
+            Game.Keys = new List<Key>();
+
         AllocatedKeys = Game.Keys.Count(k => k.IsAllocated());
     }
 

@@ -38,6 +38,12 @@
 @code {
     [Parameter] public Game Game { get; set; }
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (Game.MultiplayerModes == null)
+            Game.MultiplayerModes = new List<MultiplayerMode>();
+    }
+
     private void AddMode()
     {
         if (Game.MultiplayerModes == null)

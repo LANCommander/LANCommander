@@ -99,6 +99,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (Game.Archives == null)
+            Game.Archives = new List<Archive>();
+
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
 
         Archive = new Archive()

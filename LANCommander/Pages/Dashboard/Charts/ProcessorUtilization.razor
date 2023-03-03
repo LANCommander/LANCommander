@@ -1,0 +1,50 @@
+﻿@using System.Diagnostics;
+@using LANCommander.Extensions;
+@using AntDesign.Charts;
+<Line @ref="Chart" Config="Config" />
+
+@code {
+    [Parameter] public int TimerHistory { get; set; }
+    [Parameter] public int TimerInterval { get; set; }
+    IChartComponent? Chart;
+
+    double[] Data;
+
+    PerformanceCounter PerformanceCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+
+    LineConfig Config = new LineConfig
+    {
+        Name = "Processor Utilization",
+        Padding = "auto",
+        YField = "Value",
+        XField = "Index",
+        XAxis = new ValueCatTimeAxis
+        {
+            Type = "dateTime",
+            TickCount = 1
+        }
+    };
+
+    protected override void OnInitialized()
+    {
+        var timer = new System.Timers.Timer();
+
+        timer.Interval = TimerInterval;
+
+        timer.Elapsed += async (s, e) =>
+        {
+            await RefreshData();
+
+            await InvokeAsync(StateHasChanged);
+        };
+
+        timer.Start();
+    }
+
+    private async Task RefreshData()
+    {
+        Data = Data.ShiftArrayAndInsert((double)PerformanceCounter.NextValue(), TimerHistory);
+
+        await Chart.ChangeData(Data.Select((x, i) => new { Value = x, Index = i }), true);
+    }
+}

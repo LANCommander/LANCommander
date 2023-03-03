@@ -1,0 +1,190 @@
+﻿@using LANCommander.Data.Enums;
+@using LANCommander.Models
+@using LANCommander.Services
+@using System.IO.Compression;
+@inject ScriptService ScriptService
+@inject ModalService ModalService
+@inject IMessageService MessageService
+
+<Modal Visible="ModalVisible" OnOk="Save" OnCancel="() => ModalVisible = false" Title="@(Script == null ? "Add Script" : "Edit Script")" OkText="@("Save")" Maximizable="false" DefaultMaximized="true">
+    <Form Model="@Script" Layout="@FormLayout.Vertical">
+        <FormItem>
+            @foreach (var group in Snippets.Select(s => s.Group).Distinct())
+            {
+                <Dropdown>
+                    <Overlay>
+                        <Menu>
+                            @foreach (var snippet in Snippets.Where(s => s.Group == group))
+                            {
+                                <MenuItem OnClick="() => InsertSnippet(snippet)">
+                                    @snippet.Name
+                                </MenuItem>
+                            }
+                        </Menu>
+                    </Overlay>
+
+                    <ChildContent>
+                        <Button Type="@ButtonType.Primary">@group</Button>
+                    </ChildContent>
+                </Dropdown>
+            }
+
+            <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
+        </FormItem>
+
+        <FormItem>
+            <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
+        </FormItem>
+
+        <FormItem Label="Type">
+            <Select @bind-Value="Script.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>()" />
+        </FormItem>
+
+        <FormItem>
+            <Checkbox @bind-Checked="Script.RequiresAdmin">Requires Admin</Checkbox>
+        </FormItem>
+
+        <FormItem Label="Description">
+            <TextArea @bind-Value="Script.Description" MaxLength=500 ShowCount />
+        </FormItem>
+    </Form>
+</Modal>
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Script" DataSource="@Game.Scripts" HidePagination="true">
+            <PropertyColumn Property="s => s.Type" />
+            <PropertyColumn Property="s => s.CreatedBy">
+                @context.CreatedBy?.UserName
+            </PropertyColumn>
+            <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm" />
+            <ActionColumn Title="">
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => Edit(context)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
+
+                        <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this script?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="() => Edit()" Type="@ButtonType.Primary">Add Script</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+<style>
+    .monaco-editor-container {
+        height: 600px;
+    }
+</style>
+
+@code {
+    [Parameter] public Game Game { get; set; }
+
+    Script Script;
+
+    bool ModalVisible = false;
+
+    IEnumerable<Snippet> Snippets { get; set; }
+    StandaloneCodeEditor Editor;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "powershell",
+            Value = Script.Contents,
+            Theme = "vs-dark",
+        };
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Snippets = ScriptService.GetSnippets();
+
+        if (Script == null)
+            Script = new Script();
+    }
+
+    private async void Edit(Script script = null)
+    {
+        if (Script == null)
+            Script = new Script();
+        else
+            Script = script;
+
+        if (Editor != null)
+            await Editor.SetValue(Script.Contents);
+
+        ModalVisible = true;
+    }
+
+    private async void Delete(Script script = null)
+    {
+        if (script != null)
+            await ScriptService.Delete(script);
+
+        await MessageService.Success("Script deleted!");
+    }
+
+    private async Task Save()
+    {
+        var value = await Editor.GetValue();
+
+        await ScriptService.Update(Script);
+
+        await MessageService.Success("Script saved!");
+    }
+
+    private async void InsertSnippet(Snippet snippet)
+    {
+        await Editor.Trigger("keyboard", "type", new
+        {
+            text = snippet.Content
+        });
+    }
+
+    private async void BrowseForPath()
+    {
+        var modalOptions = new ModalOptions()
+            {
+                Title = "Choose Reference",
+                Maximizable = false,
+                DefaultMaximized = true,
+                Closable = true,
+                OkText = "Insert File Path"
+            };
+
+        var browserOptions = new ArchiveBrowserOptions()
+            {
+                ArchiveId = Game.Archives.FirstOrDefault().Id,
+                Select = true,
+                Multiple = false
+            };
+
+        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+
+        modalRef.OnOk = (results) =>
+        {
+            var path = results.FirstOrDefault().FullName;
+
+            Editor.Trigger("keyboard", "type", new
+            {
+                text = $"$InstallDir\\{path.Replace('/', '\\')}"
+            });
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+    }
+}

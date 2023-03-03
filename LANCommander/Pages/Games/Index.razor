@@ -1,56 +1,50 @@
 ﻿@page "/Games"
+@attribute [Authorize]
 @inject GameService GameService
+@inject NavigationManager NavigationManager
 
-<MudTable Items="@Games.Where(g => String.IsNullOrEmpty(Search) || g.Title.ToLower().Contains(Search.ToLower().Trim()))" RowsPerPage="25" Hover="true">
-    <ToolBarContent>
-        <MudText Typo="Typo.h6">Games</MudText>
-        <MudSpacer />
-        <MudTextField @bind-Value="Search" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-    </ToolBarContent>
-
-    <HeaderContent>
-        <MudTh></MudTh>
-        <MudTh>Title</MudTh>
-        <MudTh>Sort Title</MudTh>
-        <MudTh>Released</MudTh>
-        <MudTh>Created</MudTh>
-        <MudTh>Created By</MudTh>
-        <MudTh>Updated</MudTh>
-        <MudTh>Updated By</MudTh>
-    </HeaderContent>
-
-    <RowTemplate>
-        <MudTd>
-            <MudImage Src="@GetIcon(context)" Height="32" Width="32" />
-        </MudTd>
-        <MudTd DataLabel="Title">@context.Title</MudTd>
-        <MudTd DataLabel="Sort Title">@context.SortTitle</MudTd>
-        <MudTd DataLabel="Released">@context.ReleasedOn?.ToString("MM/dd/yyyy")</MudTd>
-        <MudTd DataLabel="Created">@context.CreatedOn</MudTd>
-        <MudTd DataLabel="Created By">@context.CreatedBy?.UserName</MudTd>
-        <MudTd DataLabel="Updated">@context.UpdatedOn</MudTd>
-        <MudTd DataLabel="Updated By">@context.UpdatedBy?.UserName</MudTd>
-        <MudTd Class="d-flex justify-end">
-            <MudButton Href="@($"/Games/{context.Id}/Edit")">Edit</MudButton>
-        </MudTd>
-    </RowTemplate>
-
-    <PagerContent>
-        <MudTablePager />
-    </PagerContent>
-</MudTable>
+<Table TItem="Game" DataSource="@Games">
+    <Column TData="string">
+        <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
+    </Column>
+    <PropertyColumn Property="g => g.Title" Sortable />
+    <PropertyColumn Property="g => g.SortTitle" Sortable />
+    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable />
+    <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm" Sortable />
+    <PropertyColumn Property="g => g.CreatedBy" Sortable>
+        @context.CreatedBy?.UserName
+    </PropertyColumn>
+    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm" Sortable />
+    <PropertyColumn Property="g => g.UpdatedBy" Sortable>
+        @context.UpdatedBy?.UserName
+    </PropertyColumn>
+    <ActionColumn Title="">
+        <Space>
+            <SpaceItem>
+                <Button OnClick="() => Edit(context)">Edit</Button>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
 
 @code {
-    private ICollection<Game> Games { get; set; }
+    IEnumerable<Game> Games { get; set; } = new List<Game>();
     private string Search { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         Games = GameService.Get().OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+
+        StateHasChanged();
     }
 
     private string GetIcon(Game game)
     {
         return $"/api/Games/{game.Id}/Icon.png";
+    }
+
+    private void Edit(Game game)
+    {
+        NavigationManager.NavigateTo($"/Games/{game.Id}/Edit");
     }
 }

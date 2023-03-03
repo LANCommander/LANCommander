@@ -1,32 +1,14 @@
-﻿<MudDialog>
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            Browse Archive
-        </MudText>
-    </TitleContent>
+﻿@inherits FeedbackComponent<ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>
+@using System.IO.Compression;
+@using LANCommander.Models;
 
-    <DialogContent>
-        <ArchiveBrowser ArchiveId="ArchiveId" />
-    </DialogContent>
-</MudDialog>
+<ArchiveBrowser ArchiveId="Options.ArchiveId" @bind-SelectedFiles="SelectedFiles" Select="Options.Select" Multiple="Options.Multiple" />
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
-    [Parameter] public Guid ArchiveId { get; set; }
+    private IEnumerable<ZipArchiveEntry> SelectedFiles { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        MudDialog.Options.MaxWidth = MaxWidth.Large;
-        MudDialog.Options.FullWidth = true;
-        MudDialog.Options.FullScreen = true;
-        MudDialog.Options.CloseButton = true;
-        MudDialog.Options.CloseOnEscapeKey = true;
-
-        MudDialog.SetOptions(MudDialog.Options);
-    }
-
-    private void Cancel()
-    {
-        MudDialog.Cancel();
+        await base.OkCancelRefWithResult!.OnOk(SelectedFiles);
     }
 }

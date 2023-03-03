@@ -2,52 +2,88 @@
 @using System.Diagnostics;
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
-@inject ISnackbar Snackbar
 @inject ArchiveService ArchiveService
+@inject IMessageService MessageService
 
-<MudDialog>
-    <DialogContent>
-        <MudForm @bind-IsValid="@IsValid">
-            <MudTextField T="string" @bind-Value="Archive.Version" Label="Version" Required="true" Disabled="Uploading" RequiredError="Version is required" />
-            <MudTextField T="string" @bind-Value="Archive.Changelog" Label="Changelog" Required="false" Disabled="Uploading" Lines="6" />
+<Space Direction="DirectionVHType.Vertical" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Archive" DataSource="@Game.Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true">
+            <PropertyColumn Property="a => a.Version" />
+            <PropertyColumn Property="a => a.CompressedSize">
+                @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.CreatedBy">
+                @context.CreatedBy?.UserName
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm" />
+            <ActionColumn Title="">
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
 
-            <MudFileUpload T="IBrowserFile" OnFilesChanged="FileSelected" Class="flex-1"
-                           InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20 d-block" InputStyle="opacity: 0;"
-                           @ondragenter="@SetDragClass" @ondragleave="@ClearDragClass" @ondragend="@ClearDragClass">
-                <ButtonTemplate>
-                    <MudPaper Height="200px" Outlined="true" Class="@DragClass">
-                        <MudText Typo="Typo.h6">Drop files here or click to browse</MudText>
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddArchive" Type="@ButtonType.Primary">Upload Archive</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
 
-                        @if (File != null)
-                        {
-                            <MudChip Color="Color.Dark" Text="@File.Name" />
-                        }
-                    </MudPaper>
-                </ButtonTemplate>
-            </MudFileUpload>
+@{
+    RenderFragment Footer =
+    @<Template>
+        <Button OnClick="UploadArchive" Disabled="@(File == null || Uploading)" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="Clear" Disabled="File == null || Uploading" Danger>Clear</Button>
+        <Button OnClick="Cancel">Cancel</Button>
+    </Template>;
+}
 
-            <MudProgressLinear Color="Color.Primary" Striped="Uploading" Size="Size.Large" Value="Progress" Class="mt-4" />
+<Modal Visible="@ModalVisible" Title="Upload Archive" OnOk="UploadArchive" OnCancel="Cancel" Footer="@Footer">
+    <Form Model="@Archive" Layout="@FormLayout.Vertical">
+        <FormItem Label="Version">
+            <Input @bind-Value="@context.Version" /> 
+        </FormItem>
 
-            <MudText>@ByteSizeLib.ByteSize.FromBytes(Speed)/s</MudText>
+        <FormItem Label="Changelog">
+            <TextArea @bind-Value="@context.Changelog" MaxLength=500 ShowCount />
+        </FormItem>
 
-            <MudToolBar DisableGutters="true" Class="gap-4">
-                <MudButton OnClick="UploadArchive" Disabled="@(!IsValid || File == null || Uploading)" Color="Color.Primary" Variant="Variant.Filled">Upload</MudButton>
-                <MudButton OnClick="Clear" Disabled="File == null || Uploading" Color="Color.Error" Variant="Variant.Filled">Clear</MudButton>
-                <MudButton OnClick="Cancel">Cancel</MudButton>
-            </MudToolBar>
-        </MudForm>
-    </DialogContent>
-</MudDialog>
+        <FormItem>
+            <InputFile id="FileInput" OnChange="FileSelected" hidden />
+
+            <Upload Name="files" FileList="FileList">
+                <label class="ant-btn" for="FileInput">
+                    <Icon Type="upload" />
+                    Select Archive
+                </label>
+            </Upload>
+        </FormItem>
+
+        <FormItem>
+            <Progress Percent="Progress" />
+            <Text>@ByteSizeLib.ByteSize.FromBytes(Speed)/s</Text>
+        </FormItem>
+    </Form>
+</Modal>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
-    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Game Game { get; set; }
 
     Archive Archive;
 
     IBrowserFile File { get; set; }
+    List<UploadFileItem> FileList = new List<UploadFileItem>();
 
     bool IsValid = false;
+    bool ModalVisible = false;
 
     private static string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
     private string DragClass = DefaultDragClass;
@@ -63,42 +99,49 @@
 
     protected override async Task OnInitializedAsync()
     {
-        MudDialog.Options.MaxWidth = MaxWidth.Large;
-        MudDialog.Options.FullWidth = true;
-        MudDialog.Options.CloseButton = false;
-        MudDialog.Options.CloseOnEscapeKey = false;
-        MudDialog.Options.DisableBackdropClick = true;
-
-        MudDialog.SetOptions(MudDialog.Options);
-
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
 
         Archive = new Archive()
         {
-            GameId = GameId,
+            GameId = Game.Id,
             Id = Guid.NewGuid()
         };
     }
 
-    private void SetDragClass()
+    private void AddArchive()
     {
-        DragClass = $"{DefaultDragClass} mud-border-primary";
+        Archive = new Archive()
+        {
+            GameId = Game.Id,
+            Id = Guid.NewGuid()
+        };
+
+        ModalVisible = true;
     }
 
-    private void ClearDragClass()
+    private async Task Delete(Archive archive)
     {
-        DragClass = DefaultDragClass;
+        try
+        {
+            await ArchiveService.Delete(archive);
+
+            await MessageService.Success("Archive deleted!");
+        }
+        catch
+        {
+            await MessageService.Error("Archive could not be deleted.");
+        }
     }
 
     private void Clear()
     {
         File = null;
-        ClearDragClass();
     }
 
     private void Cancel()
     {
-        MudDialog.Cancel();
+        File = null;
+        ModalVisible = false;
     }
 
     private void FileSelected(InputFileChangeEventArgs args)
@@ -159,7 +202,7 @@
                 {
                     Watch.Stop();
                     Uploading = false;
-                    UploadComplete();
+                    await UploadComplete();
                 }
 
                 await InvokeAsync(StateHasChanged);
@@ -172,9 +215,10 @@
         Archive.ObjectKey = Archive.Id.ToString();
         Archive.CompressedSize = File.Size;
 
-        ArchiveService.Add(Archive);
+        await ArchiveService.Add(Archive);
 
-        MudDialog.Close();
-        Snackbar.Add("Archive uploaded!", Severity.Success);
+        ModalVisible = false;
+
+        await MessageService.Success("Archive uploaded!");
     }
 }

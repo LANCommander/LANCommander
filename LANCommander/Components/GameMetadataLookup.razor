@@ -1,73 +1,66 @@
-﻿@using LANCommander.Data.Enums
+﻿@using AntDesign.TableModels;
+@using LANCommander.Data.Enums
 @using LANCommander.Models
 @using LANCommander.PCGamingWiki
 @inject IGDBService IGDBService
 @inject CompanyService CompanyService
 @inject GenreService GenreService
 @inject TagService TagService
-@inject ISnackbar Snackbar
 
-<MudDialog>
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-3 mb-n1" />
-            Results for @GameTitle
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        @if (Results == null)
-        {
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-        }
-        else
-        {
-            <MudTable Items="@Results" Hover="true">
-                <HeaderContent>
-                    <MudTh>Title</MudTh>
-                    <MudTh>Released</MudTh>
-                    <MudTh>Developers</MudTh>
-                    <MudTh></MudTh>
-                </HeaderContent>
+@{
+    RenderFragment Footer =
+    @<Template>
+        <Button OnClick="SelectGame" Disabled="@(Results == null || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
+        <Button OnClick="() => ModalVisible= false">Cancel</Button>
+    </Template>;
+}
 
-                <RowTemplate>
-                    <MudTh>@context.Title</MudTh>
-                    <MudTh>@context.ReleasedOn?.ToString("MM/dd/yyyy")</MudTh>
-                    <MudTh>@String.Join(", ", context.Developers?.Select(d => d.Name))</MudTh>
-                    <MudTh>
-                        <MudButton OnClick="() => SelectGame(context)">Select</MudButton>
-                    </MudTh>
-                </RowTemplate>
-            </MudTable>
-        }
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-    </DialogActions>
-</MudDialog>
+<Modal Visible="ModalVisible" Title="Game Metadata Lookup" Footer="@Footer">
+    <Table
+        @ref="ResultsTable"
+        TItem="Game"
+        DataSource="Results"
+        HidePagination="true"
+        Loading="Results == null"
+        OnRowClick="OnRowClicked"
+        @bind-SelectedRows="SelectedResults"
+        ScrollY="calc(100vh - 55px - 55px - 53px)">
+
+        <Selection Key="@context.IGDBId.ToString()" Type="radio" />
+        <PropertyColumn Property="g => g.Title" Title="Title" />
+        <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Title="Released" />
+        <PropertyColumn Property="g => g.Developers">
+            @String.Join(", ", context.Developers?.Select(d => d.Name))
+        </PropertyColumn>
+    </Table>
+</Modal>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public EventCallback<GameLookupResult> OnResultSelected { get; set; }
 
-    [Parameter] public string GameTitle { get; set; }
+    ITable? ResultsTable;
 
-    private IEnumerable<Game> Results { get; set; }
-    private PCGamingWikiClient PCGamingWikiClient { get; set; }
+    IEnumerable<Game> Results { get; set; }
+    IEnumerable<Game> SelectedResults { get; set; }
+    PCGamingWikiClient PCGamingWikiClient { get; set; }
+    bool ModalVisible { get; set; } = false;
 
     protected override async Task OnInitializedAsync()
     {
         PCGamingWikiClient = new PCGamingWikiClient();
-
-        await SearchForGame(GameTitle);
     }
 
-    private void Cancel()
+    private void OnRowClicked(RowData<Game> row)
     {
-        MudDialog.Cancel();
+        ResultsTable.SetSelection(new string[] { row.Data.IGDBId.ToString() });
     }
 
     public async Task SearchForGame(string title)
     {
-        var results = await IGDBService.Search(GameTitle, "involved_companies.*", "involved_companies.company.*");
+        ModalVisible = true;
+        Results = null;
+
+        var results = await IGDBService.Search(title, "involved_companies.*", "involved_companies.company.*");
 
         if (results == null)
             Results = new List<Game>();
@@ -96,62 +89,16 @@
         }
     }
 
-    private async Task SelectGame(Game game)
+    private async Task SelectGame()
     {
-        Results = null;
+        var result = new GameLookupResult();
 
-        var result = await IGDBService.Get(game.IGDBId.GetValueOrDefault(), "genres.*", "game_modes.*", "multiplayer_modes.*", "release_dates.*", "platforms.*", "keywords.*", "involved_companies.*", "involved_companies.company.*", "cover.*");
+        result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), "genres.*", "game_modes.*", "multiplayer_modes.*", "release_dates.*", "platforms.*", "keywords.*", "involved_companies.*", "involved_companies.company.*", "cover.*");
+        result.MultiplayerModes = await GetMultiplayerModes(result.IGDBMetadata.Name);
 
-        game.Title = result.Name;
-        game.Description = result.Summary;
-        game.ReleasedOn = result.FirstReleaseDate.GetValueOrDefault().UtcDateTime;
-        game.MultiplayerModes = await GetMultiplayerModes(result.Name);
-        game.Developers = new List<Company>();
-        game.Publishers = new List<Company>();
-        game.Genres = new List<Genre>();
-        game.Tags = new List<Tag>();
+        await OnResultSelected.InvokeAsync(result);
 
-        if (result.GameModes != null && result.GameModes.Values != null)
-            game.Singleplayer = result.GameModes.Values.Any(gm => gm.Name == "Singleplayer");
-
-        if (result.InvolvedCompanies != null && result.InvolvedCompanies.Values != null)
-        {
-            // Make sure companie
-            var developers = result.InvolvedCompanies.Values.Where(c => c.Developer.GetValueOrDefault()).Select(c => c.Company.Value.Name);
-            var publishers = result.InvolvedCompanies.Values.Where(c => c.Publisher.GetValueOrDefault()).Select(c => c.Company.Value.Name);
-
-            foreach (var developer in developers)
-            {
-                game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer }));
-            }
-
-            foreach (var publisher in publishers)
-            {
-                game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher }));
-            }
-        }
-
-        if (result.Genres != null && result.Genres.Values != null)
-        {
-            var genres = result.Genres.Values.Select(g => g.Name);
-
-            foreach (var genre in genres)
-            {
-                game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre }));
-            }
-        }
-
-        if (result.Keywords != null && result.Keywords.Values != null)
-        {
-            var tags = result.Keywords.Values.Select(t => t.Name).Take(20);
-
-            foreach (var tag in tags)
-            {
-                game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Tag { Name = tag }));
-            }
-        }
-
-        MudDialog.Close(DialogResult.Ok(game));
+        ModalVisible = false;
     }
 
     private async Task<ICollection<MultiplayerMode>> GetMultiplayerModes(string gameTitle)

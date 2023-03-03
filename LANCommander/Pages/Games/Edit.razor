@@ -1,211 +1,138 @@
 ﻿@page "/Games/{id:guid}/Edit"
+@using LANCommander.Models;
+@using System.IO.Compression;
+@attribute [Authorize(Roles = "Administrator")]
 @inject GameService GameService
+@inject CompanyService CompanyService
+@inject GenreService GenreService
+@inject TagService TagService
 @inject ArchiveService ArchiveService
 @inject ScriptService ScriptService
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject IMessageService MessageService
+@inject ModalService ModalService
 
-<MudGrid>
-    <MudItem xs="12">
-        <MudPaper Class="pa-4">
-            <MudForm @bind-IsValid="@Success" @bind-Errors="@Errors">
-                <MudTextField @bind-Value="Game.Title" Label="Title" For="@(() => Game.Title)" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="LookupGameMetadata" />
-                <MudTextField @bind-Value="Game.SortTitle" Label="Sort Title" For="@(() => Game.SortTitle)" />
-                <MudTextField @bind-Value="Game.Icon" Label="Icon" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Folder" OnAdornmentClick="BrowseForIcon" />
-                <MudTextField @bind-Value="Game.Description" Label="Description" For="@(() => Game.Description)" Lines="4" />
-                <MudDatePicker @bind-Date="Game.ReleasedOn" Label="Released" />
-                <MudCheckBox @bind-Checked="@Game.Singleplayer" Label="Singleplayer" Color="Color.Primary"></MudCheckBox>
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%;">
+    <SpaceItem>
+        <Card Title="Game Details">
+            <Body>
+                <Form Model="@Game" Layout="@FormLayout.Vertical">
+                    <FormItem Label="Title">
+                        <GameMetadataLookup @ref="GameMetadataLookup" OnResultSelected="OnGameLookupResultSelected" />
 
-                <MudDivider Class="mt-4 mb-4" />
+                        <Space Style="display: flex">
+                            <SpaceItem Style="flex-grow: 1">
+                                <Input @bind-Value="@context.Title" />
+                            </SpaceItem>
+                            <SpaceItem>
+                                <Button OnClick="() => GameMetadataLookup.SearchForGame(context.Title)" Type="@ButtonType.Primary">Lookup</Button>
+                            </SpaceItem>
+                        </Space>
+                    </FormItem>
+                    <FormItem Label="Sort Title">
+                        <Input @bind-Value="@context.SortTitle" />
+                    </FormItem>
+                    <FormItem Label="Icon">
+                        <Space Style="display: flex">
+                            <SpaceItem Style="flex-grow: 1">
+                                <Input @bind-Value="@context.Icon" />
+                            </SpaceItem>
+                            <SpaceItem>
+                                <Button OnClick="BrowseForIcon" Type="@ButtonType.Primary">Browse</Button>
+                            </SpaceItem>
+                        </Space>
+                    </FormItem>
+                    <FormItem Label="Description">
+                        <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                    </FormItem>
+                    <FormItem Label="Released On">
+                        <DatePicker TValue="DateTime?" @bind-Value="@context.ReleasedOn" Picker="@DatePickerType.Date" />
+                    </FormItem>
+                    <FormItem Label="Singleplayer">
+                        <Checkbox @bind-Checked="@context.Singleplayer" />
+                    </FormItem>
+                    <FormItem Label="Developers">
+                        <TagsInput Entities="Companies" SelectedEntities="Game.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                    </FormItem>
+                    <FormItem Label="Publishers">
+                        <TagsInput Entities="Companies" SelectedEntities="Game.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                    </FormItem>
+                    <FormItem Label="Genres">
+                        <TagsInput Entities="Genres" SelectedEntities="Game.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
+                    </FormItem>
+                    <FormItem Label="Tags">
+                        <TagsInput Entities="Tags" SelectedEntities="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
+                    </FormItem>
+                    <FormItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+                    </FormItem>
+                </Form>
+            </Body>
+        </Card>
+    </SpaceItem>
 
-                <MudText Typo="Typo.h6">Developers</MudText>
+    <SpaceItem>
+        <Card Title="Actions">
+            <Body>
+                <ActionEditor Game="Game" />
+            </Body>
+        </Card>
+    </SpaceItem>
 
-                <MudChipSet>
-                    @foreach (var developer in Game.Developers)
-                    {
-                        <MudChip>@developer.Name</MudChip>
-                    }
-                </MudChipSet>
+    <SpaceItem>
+        <Card Title="Multiplayer Modes">
+            <Body>
+                <MultiplayerModeEditor Game="Game" />
+            </Body>
+        </Card>
+    </SpaceItem>
 
-                <MudDivider Class="mt-4 mb-4" />
+    <SpaceItem>
+        <Card Title="Keys">
+            <Extra>
+                <Button OnClick="() => KeysEditor.Edit()">Edit</Button>
+                <Button OnClick="() => KeysEditor.View()" Type="@ButtonType.Primary">View</Button>
+            </Extra>
+            <Body>
+                <KeysEditor @ref="KeysEditor" Game="Game" />
+            </Body>
+        </Card>
+    </SpaceItem>
 
-                <MudText Typo="Typo.h6">Publishers</MudText>
+    <SpaceItem>
+        <Card Title="Scripts">
+            <Body>
+                <ScriptEditor Game="Game" />
+            </Body>
+        </Card>
+    </SpaceItem>
 
-                <MudChipSet>
-                    @foreach (var publisher in Game.Publishers)
-                    {
-                        <MudChip>@publisher.Name</MudChip>
-                    }
-                </MudChipSet>
-
-                <MudDivider Class="mt-4 mb-4" />
-
-                <MudText Typo="Typo.h6">Genres</MudText>
-
-                <MudChipSet>
-                    @foreach (var genre in Game.Genres)
-                    {
-                        <MudChip>@genre.Name</MudChip>
-                    }
-                </MudChipSet>
-
-                <MudDivider Class="mt-4 mb-4" />
-
-                <MudText Typo="Typo.h6">Tags</MudText>
-
-                <MudChipSet>
-                    @foreach (var tags in Game.Tags)
-                    {
-                        <MudChip>@tags.Name</MudChip>
-                    }
-                </MudChipSet>
-            </MudForm>
-        </MudPaper>
-    </MudItem>
-</MudGrid>
-
-<MudCard Class="mt-4">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">Actions</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
-
-    <MudCardContent>
-        <ActionEditor Actions="Game.Actions" ArchiveId="Game.Archives.OrderByDescending(a => a.CreatedOn).First().Id" />
-    </MudCardContent>
-</MudCard>
-
-<MudCard Class="mt-4">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">Multiplayer Modes</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
-
-    <MudCardContent>
-        <MultiplayerModeEditor Game="Game" />
-    </MudCardContent>
-</MudCard>
-
-<MudCard Class="mt-4">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">Keys</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
-
-    <MudCardContent>
-        <MudGrid>
-            <MudItem md="4" Class="mud-typography-align-center">
-                <MudText Typo="Typo.overline">Available</MudText>
-                <MudText Typo="Typo.body1">@KeysAvailable</MudText>
-            </MudItem>
-
-            <MudItem md="4" Class="mud-typography-align-center">
-                <MudText Typo="Typo.overline">Claimed</MudText>
-                <MudText Typo="Typo.body1">@(Game.Keys.Count - KeysAvailable)</MudText>
-            </MudItem>
-
-            <MudItem md="4" Class="mud-typography-align-center">
-                <MudText Typo="Typo.overline">Total</MudText>
-                <MudText Typo="Typo.body1">@Game.Keys.Count</MudText>
-            </MudItem>
-        </MudGrid>
-
-        <MudPaper Class="d-flex justify-end" Elevation="0">
-            <MudButton Href="@($"/Games/{Id}/Keys")" Color="Color.Primary" Variant="Variant.Filled">View</MudButton>
-        </MudPaper>
-    </MudCardContent>
-</MudCard>
-
-<MudCard Class="mt-4">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">Archives</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
-
-    <MudCardContent>
-        <MudTable Items="Game.Archives" Elevation="0">
-            <HeaderContent>
-                <MudTh>Version</MudTh>
-                <MudTh>Uploaded By</MudTh>
-                <MudTh>Uploaded On</MudTh>
-                <MudTh>Size</MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-
-            <RowTemplate>
-                <MudTd>@context.Version</MudTd>
-                <MudTd>@context.CreatedBy?.UserName</MudTd>
-                <MudTd>@context.CreatedOn</MudTd>
-                <MudTd>
-                     @{
-                        long size = 0;
-                        var path = Path.Combine("Upload", context.ObjectKey);
-
-                        if (File.Exists(path))
-                            size = new FileInfo(path).Length;
-                    }
-                    @ByteSizeLib.ByteSize.FromBytes(size)
-                </MudTd>
-                <MudTd Class="d-flex flex-nowrap justify-end">
-                    <MudIconButton OnClick="() => BrowseArchive(context)" Icon="@Icons.Material.Filled.Folder"></MudIconButton>
-                    <MudIconButton OnClick="() => DeleteArchive(context)" Color="Color.Error" Icon="@Icons.Material.Filled.Close"></MudIconButton>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-
-        <MudPaper Class="d-flex justify-end" Elevation="0">
-            <MudButton OnClick="() => UploadArchive()" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Variant="Variant.Filled">Add</MudButton>
-        </MudPaper>
-    </MudCardContent>
-</MudCard>
-
-<MudCard Class="mt-4">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">Scripts</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
-
-    <MudCardContent>
-        <MudTable Items="Game.Scripts" Elevation="0">
-            <HeaderContent>
-                <MudTh>Type</MudTh>
-                <MudTh>Created By</MudTh>
-                <MudTh>Created On</MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-
-            <RowTemplate>
-                <MudTd>@context.Type</MudTd>
-                <MudTd>@context.CreatedBy?.UserName</MudTd>
-                <MudTd>@context.CreatedOn</MudTd>
-                <MudTd Class="d-flex flex-nowrap justify-end">
-                    <MudIconButton OnClick="() => EditScript(context)" Icon="@Icons.Material.Filled.Edit"></MudIconButton>
-                    <MudIconButton OnClick="() => DeleteScript(context)" Color="Color.Error" Icon="@Icons.Material.Filled.Close"></MudIconButton>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-
-        <MudPaper Class="d-flex justify-end" Elevation="0">
-            <MudButton OnClick="() => EditScript()" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Variant="Variant.Filled">Add</MudButton>
-        </MudPaper>
-    </MudCardContent>
-</MudCard>
-
-<MudFab Color="Color.Primary" Disabled="@(!Success)" OnClick="Save" StartIcon="@Icons.Material.Filled.Save" Style="position: fixed; right: 32px; bottom: 32px;" />
+    <SpaceItem>
+        <Card Title="Archives">
+            <ArchiveUploader Game="Game" />
+        </Card>
+    </SpaceItem>
+</Space>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
     bool Success;
     string[] Errors = { };
-    MudForm Form;
 
-    private Game Game { get; set; }
+    IEnumerable<Company> Companies;
+    IEnumerable<Genre> Genres;
+    IEnumerable<Data.Models.Tag> Tags;
+
+    ArchiveBrowserDialog ArchiveBrowserDialog;
+
+    Modal FileSelectorModal;
+
+    private string value = "blazor";
+    private ConfirmRef _confirmRef;
+
+    private Game Game;
+    private KeysEditor? KeysEditor;
+    private GameMetadataLookup? GameMetadataLookup;
 
     private int KeysAvailable { get {
             return Game.Keys.Count(k =>
@@ -219,6 +146,9 @@
     protected override async Task OnInitializedAsync()
     {
         Game = await GameService.Get(Id);
+        Companies = CompanyService.Get();
+        Genres = GenreService.Get();
+        Tags = TagService.Get();
     }
 
     private async Task Save()
@@ -227,35 +157,105 @@
         {
             Game = await GameService.Update(Game);
 
-            Snackbar.Add("Game updated!", Severity.Success);
+            await MessageService.Success("Game updated!");
         }
         catch (Exception ex)
         {
-            Snackbar.Add("An unknown error occurred!", Severity.Error);
+            await MessageService.Error("Could not save!");
         }
     }
 
-    private async void BrowseForIcon()
+    private async Task BrowseForIcon()
     {
-        var parameters = new DialogParameters
+        var modalOptions = new ModalOptions()
         {
-            ["ArchiveId"] = Game.Archives.OrderByDescending(a => a.CreatedOn).First().Id
+            Title = "Choose Icon",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Select File"
         };
 
-        var dialog = await DialogService.ShowAsync<ArchiveFileSelectorDialog>("File Selector", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
+        var browserOptions = new ArchiveBrowserOptions()
         {
-            Game.Icon = result.Data as string;
+            ArchiveId = Game.Archives.FirstOrDefault().Id,
+            Select = true,
+            Multiple = false
+        };
 
+        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+
+        modalRef.OnOk = (results) =>
+        {
+            Game.Icon = results.FirstOrDefault().FullName;
             StateHasChanged();
+            return Task.CompletedTask;
+        };
+    }
+
+    private async Task OnGameLookupResultSelected(GameLookupResult result)
+    {
+        Game.Title = result.IGDBMetadata.Name;
+        Game.Description = result.IGDBMetadata.Summary;
+        Game.ReleasedOn = result.IGDBMetadata.FirstReleaseDate.GetValueOrDefault().UtcDateTime;
+        Game.MultiplayerModes = result.MultiplayerModes.ToList();
+        Game.Developers = new List<Company>();
+        Game.Publishers = new List<Company>();
+        Game.Genres = new List<Genre>();
+        Game.Tags = new List<Data.Models.Tag>();
+
+        if (result.IGDBMetadata.GameModes != null && result.IGDBMetadata.GameModes.Values != null)
+            Game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Singleplayer");
+
+        if (result.IGDBMetadata.InvolvedCompanies != null && result.IGDBMetadata.InvolvedCompanies.Values != null)
+        {
+            // Make sure companie
+            var developers = result.IGDBMetadata.InvolvedCompanies.Values.Where(c => c.Developer.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+            var publishers = result.IGDBMetadata.InvolvedCompanies.Values.Where(c => c.Publisher.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+
+            foreach (var developer in developers)
+            {
+                Game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer }));
+            }
+
+            foreach (var publisher in publishers)
+            {
+                Game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher }));
+            }
+        }
+
+        if (result.IGDBMetadata.Genres != null && result.IGDBMetadata.Genres.Values != null)
+        {
+            var genres = result.IGDBMetadata.Genres.Values.Select(g => g.Name);
+
+            foreach (var genre in genres)
+            {
+                Game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre }));
+            }
+        }
+
+        if (result.IGDBMetadata.Keywords != null && result.IGDBMetadata.Keywords.Values != null)
+        {
+            var tags = result.IGDBMetadata.Keywords.Values.Select(t => t.Name).Take(20);
+
+            foreach (var tag in tags)
+            {
+                Game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Data.Models.Tag { Name = tag }));
+            }
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        if (_confirmRef != null)
+        {
+            await _confirmRef.CloseAsync();
         }
     }
 
     private async void LookupGameMetadata()
     {
-        var parameters = new DialogParameters
+        /*var parameters = new DialogParameters
         {
             ["GameTitle"] = Game.Title
         };
@@ -278,12 +278,12 @@
             Game.Singleplayer = info.Singleplayer;
 
             StateHasChanged();
-        }
+        }*/
     }
 
     private async void UploadArchive()
     {
-        var parameters = new DialogParameters
+        /*var parameters = new DialogParameters
         {
             ["GameId"] = Game.Id
         };
@@ -294,22 +294,22 @@
 
         await GameService.Context.Entry(Game).Collection(nameof(Game.Archives)).LoadAsync();
 
-        StateHasChanged();
+        StateHasChanged();*/
     }
 
     private async void BrowseArchive(Archive archive)
     {
-        var parameters = new DialogParameters
+        /*var parameters = new DialogParameters
         {
             ["ArchiveId"] = archive.Id
         };
 
-        var dialog = await DialogService.ShowAsync<ArchiveBrowserDialog>("Archive Browser", parameters);
+        var dialog = await DialogService.ShowAsync<ArchiveBrowserDialog>("Archive Browser", parameters);*/
     }
 
     private async void DeleteArchive(Archive archive)
     {
-        bool? result = await DialogService.ShowMessageBox(
+        /*bool? result = await DialogService.ShowMessageBox(
             "Delete Archive?",
             "Do you really want to delete this archive? You will not be able to recover it later.",
             "Delete",
@@ -319,12 +319,12 @@
         if (result == true)
             await ArchiveService.Delete(archive);
 
-        StateHasChanged();
+        StateHasChanged();*/
     }
 
     private async void EditScript(Script script = null)
     {
-        if (script == null)
+        /*if (script == null)
             script = new Script()
             {
                 GameId = Game.Id,
@@ -342,12 +342,12 @@
 
         await GameService.Context.Entry(Game).Collection(nameof(Game.Archives)).LoadAsync();
 
-        StateHasChanged();
+        StateHasChanged();*/
     }
 
     private async void DeleteScript(Script script)
     {
-        bool? result = await DialogService.ShowMessageBox(
+        /*bool? result = await DialogService.ShowMessageBox(
             "Delete Script",
             "Do you really want to delete this script? You will not be able to recover it later.",
             "Delete",
@@ -357,6 +357,6 @@
         if (result == true)
             await ScriptService.Delete(script);
 
-        StateHasChanged();
+        StateHasChanged();*/
     }
 }

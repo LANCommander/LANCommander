@@ -2,54 +2,32 @@
 @using LANCommander.Models;
 @layout SettingsLayout
 @inject SettingService SettingService
-@inject ISnackbar Snackbar
+@inject IMessageService MessageService
 
-<MudCard Elevation="0">
-    <MudCardHeader>
-        <CardHeaderContent>
-            <MudText Typo="Typo.h6">General</MudText>
-        </CardHeaderContent>
-    </MudCardHeader>
-
-    <MudCardContent>
-        <MudText Typo="Typo.subtitle1">IGDB Credentials</MudText>
-        <MudForm Model="@Settings" @ref="Form">
-            <MudTextField @bind-Value="Settings.IGDBClientId" For="@(() => Settings.IGDBClientId)" Immediate="true" Label="Client ID" />
-            <MudTextField @bind-Value="Settings.IGDBClientSecret"
-                            For="@(() => Settings.IGDBClientSecret)"
-                            Immediate="true"
-                            Label="Client Secret"
-                            InputType="@IGDBClientSecretInputType"
-                            Adornment="Adornment.End"
-                            AdornmentIcon="@IGDBClientSecretInputIcon"
-                            OnAdornmentClick="() => ToggleClientSecretInput()" />
-            <MudText Typo="Typo.caption">In order to use IGDB metadata, you need a Twitch developer account. <MudLink Href="https://api-docs.igdb.com/#account-creation" Typo="Typo.caption" Target="_blank">Click here</MudLink> for more details.</MudText>
-        </MudForm>
-    </MudCardContent>
-
-    <MudCardActions>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="Save">Save</MudButton>
-    </MudCardActions>
-</MudCard>
+<Card Title="General">
+    <Body>
+        <Text>IGDB Credentials</Text>
+        <Text>In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
+        <Form Model="Settings">
+            <FormItem Label="Client ID">
+                <Input @bind-Value="context.IGDBClientId" />
+            </FormItem>
+            <FormItem Label="Client Secret">
+                <InputPassword @bind-Value="context.IGDBClientSecret" />
+            </FormItem>
+            <FormItem>
+                <Button OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+            </FormItem>
+        </Form>
+    </Body>
+</Card>
 
 @code {
-    private MudForm Form;
     private LANCommanderSettings Settings;
-
-    private bool ShowIGDBClientSecret = false;
-    private InputType IGDBClientSecretInputType = InputType.Password;
-    private string IGDBClientSecretInputIcon = Icons.Material.Filled.Visibility;
 
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
-    }
-
-    private void ToggleClientSecretInput()
-    {
-        ShowIGDBClientSecret = !ShowIGDBClientSecret;
-        IGDBClientSecretInputIcon = ShowIGDBClientSecret ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
-        IGDBClientSecretInputType = ShowIGDBClientSecret ? InputType.Text : InputType.Password;
     }
 
     private void Save()
@@ -57,11 +35,11 @@
         try
         {
             SettingService.SaveSettings(Settings);
-            Snackbar.Add("Settings saved!", Severity.Success);
+            MessageService.Success("Settings saved!");
         }
         catch
         {
-            Snackbar.Add("An unknown error occurred", Severity.Error);
+            MessageService.Error("An unknown error occurred.");
         }
     }
 }

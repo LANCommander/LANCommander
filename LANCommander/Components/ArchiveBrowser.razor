@@ -1,38 +1,50 @@
-﻿@using ByteSizeLib;
+﻿@using AntDesign.TableModels;
+@using ByteSizeLib;
 @using LANCommander.Services;
 @using System.IO.Compression;
 @inject ArchiveService ArchiveService;
 
-<MudStack Row="true" Style="max-height: 100%">
-    <MudTreeView Items="Directories" Hover="true" @bind-SelectedValue="SelectedDirectory" T="ArchiveDirectory" Style="min-width: 18%">
-        <ItemTemplate>
-            <MudTreeViewItem Expanded="@context.IsExpanded" Value="@context" Items="@context.Children" Text="@context.Name" T="ArchiveDirectory" OnClick="() => ChangeDirectory(context)"></MudTreeViewItem>
-        </ItemTemplate>
-    </MudTreeView>
+<GridRow Style="position: fixed; height: calc(100vh - 55px - 53px); top: 55px; left: 0; width: 100%">
+    <GridCol Span="6" Style="height: 100%; overflow-y: scroll; padding: 24px">
+        <Tree TItem="ArchiveDirectory"
+              DataSource="Directories"
+              TitleExpression="x => x.DataItem.Name"
+              ChildrenExpression="x => x.DataItem.Children"
+              IsLeafExpression="x => !x.DataItem.HasChildren"
+              OnClick="(args) => ChangeDirectory(args.Node.DataItem)">
+        </Tree>
+    </GridCol>
 
-    <MudTable Items="@CurrentPathEntries" Hover="true" Class="flex-grow-1 archive-browser" FixedHeader="true" Elevation="0" Height="calc(100vh - 64px)">
-        <HeaderContent>
-            <MudTh></MudTh>
-            <MudTh>Name</MudTh>
-            <MudTh>Size</MudTh>
-            <MudTh>Modified</MudTh>
-            @if (OnFileSelected.HasDelegate)
+    <GridCol Span="18" Style="height: 100%">
+        <Table
+            @ref="FileTable"
+            TItem="ZipArchiveEntry"
+            DataSource="CurrentPathEntries"
+            HidePagination="true"
+            Loading="Entries == null"
+            RowSelectable="@(x => x.FullName != null && !x.FullName.EndsWith('/'))"
+            OnRowClick="OnRowClicked"
+            SelectedRowsChanged="SelectedFilesChanged"
+            ScrollY="calc(100vh - 55px - 55px - 53px)">
+
+            @if (Select)
             {
-                <MudTh></MudTh>
+                <Selection Key="@context.FullName" Type="@(Multiple ? "checkbox" : "radio")" Disabled="@(context.FullName != null && context.FullName.EndsWith('/'))" />
             }
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd><MudIcon Icon="@GetIcon(context)" /></MudTd>
-            <MudTd>@GetFileName(context)</MudTd>
-            <MudTd>@ByteSize.FromBytes(context.Length)</MudTd>
-            <MudTd>@context.LastWriteTime</MudTd>
-            @if (OnFileSelected.HasDelegate)
-            {
-                <MudTd><MudButton Class="select-file-button" Color="Color.Primary" Variant="Variant.Filled" OnClick="() => OnFileSelected.InvokeAsync(context.FullName)">Select</MudButton></MudTd>
-            }
-        </RowTemplate>
-    </MudTable>
-</MudStack>
+            <Column TData="string" Width="32">
+                <Icon Type="@GetIcon(context)" Theme="outline" />
+            </Column>
+            <PropertyColumn Property="e => e.FullName" Sortable Title="Name">
+                @GetFileName(context)
+            </PropertyColumn>
+            <PropertyColumn Property="e => e.Length" Sortable Title="Size">
+                @ByteSize.FromBytes(context.Length)
+            </PropertyColumn>
+            <PropertyColumn Property="e => e.LastWriteTime" Format="MM/dd/yyyy hh:mm" Sortable Title="Modified" />
+
+        </Table>
+    </GridCol>
+</GridRow>
 
 <style>
     .select-file-button {
@@ -47,9 +59,13 @@
 
 @code {
     [Parameter] public Guid ArchiveId { get; set; }
-    [Parameter] public Guid Archive { get; set; }
-    [Parameter] public EventCallback<string> OnFileSelected { get; set; }
+    [Parameter] public bool Select { get; set; }
+    [Parameter] public bool Multiple { get; set; }
 
+    [Parameter] public IEnumerable<ZipArchiveEntry> SelectedFiles { get; set; }
+    [Parameter] public EventCallback<IEnumerable<ZipArchiveEntry>> SelectedFilesChanged { get; set; }
+
+    ITable? FileTable;
 
     private IEnumerable<ZipArchiveEntry> Entries { get; set; }
     private IEnumerable<ZipArchiveEntry> CurrentPathEntries { get; set; }
@@ -76,10 +92,14 @@
         ChangeDirectory(root);
     }
 
+    private void OnRowClicked(RowData<ZipArchiveEntry> row)
+    {
+        FileTable.SetSelection(new string[] { row.Data.FullName });
+    }
+
     private void ChangeDirectory(ArchiveDirectory selectedDirectory)
     {
-        if (SelectedDirectory == null)
-            SelectedDirectory = selectedDirectory;
+        SelectedDirectory = selectedDirectory;
 
         if (SelectedDirectory.FullName == "")
             CurrentPathEntries = Entries.Where(e => !e.FullName.TrimEnd('/').Contains('/'));
@@ -102,23 +122,23 @@
         switch (Path.GetExtension(entry.FullName))
         {
             case "":
-                return Icons.Material.Filled.Folder;
+                return "folder";
 
             case ".exe":
-                return Icons.Material.Filled.Terminal;
+                return "code";
 
             case ".zip":
             case ".rar":
             case ".7z":
             case ".gz":
             case ".tar":
-                return Icons.Material.Filled.FolderZip;
+                return "file-zip";
 
             case ".wad":
             case ".pk3":
             case ".pak":
             case ".cab":
-                return Icons.Material.Filled.Token;
+                return "file-zip";
 
             case ".txt":
             case ".cfg":
@@ -129,12 +149,12 @@
             case ".log":
             case ".doc":
             case ".nfo":
-                return Icons.Custom.FileFormats.FileDocument;
+                return "file-text";
 
             case ".bat":
             case ".ps1":
             case ".json":
-                return Icons.Custom.FileFormats.FileCode;
+                return "code";
 
             case ".bik":
             case ".avi":
@@ -146,26 +166,23 @@
             case ".mpg":
             case ".mpeg":
             case ".flv":
-                return Icons.Custom.FileFormats.FileVideo;
+                return "video-camera";
 
             case ".dll":
-                return Icons.Material.Filled.SettingsApplications;
-
-            case ".scm":
-                return Icons.Material.Filled.Map;
+                return "api";
 
             case ".hlp":
-                return Icons.Material.Filled.Help;
+                return "file-unknown";
 
             case ".png":
             case ".bmp":
             case ".jpeg":
             case ".jpg":
             case ".gif":
-                return Icons.Custom.FileFormats.FileImage;
+                return "file-image";
 
             default:
-                return Icons.Material.Filled.InsertDriveFile;
+                return "file";
         }
     }
 

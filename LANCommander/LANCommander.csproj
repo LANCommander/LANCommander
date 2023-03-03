@@ -20,6 +20,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AntDesign" Version="0.14.3" />
+    <PackageReference Include="Blazor-ApexCharts" Version="0.9.18-beta" />
     <PackageReference Include="BlazorMonaco" Version="3.0.0" />
     <PackageReference Include="ByteSize" Version="2.1.1" />
     <PackageReference Include="IGDB" Version="2.3.1" />
@@ -48,10 +50,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\Archive\Pages\" />
     <Folder Include="bin\Debug\net6.0\" />
     <Folder Include="Data\Migrations\" />
     <Folder Include="Migrations\" />
+    <Folder Include="Pages\Games\Archives\" />
+    <Folder Include="Pages\Settings\" />
   </ItemGroup>
 
   <ItemGroup>

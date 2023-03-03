@@ -1,48 +1,70 @@
 ﻿@using LANCommander.Data.Models
 @using LANCommander.Extensions
-@inject IDialogService DialogService
+@using LANCommander.Models;
+@using System.IO.Compression;
+@inject ModalService ModalService
 
-<MudTable Items="@OrderedActions" Elevation="0" Dense="true">
-    <HeaderContent>
-        <MudTh>Name</MudTh>
-        <MudTh>Path</MudTh>
-        <MudTh>Arguments</MudTh>
-        <MudTh>Working Dir</MudTh>
-        <MudTh>Primary</MudTh>
-        <MudTh></MudTh>
-    </HeaderContent>
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Data.Models.Action" DataSource="@OrderedActions" HidePagination="true" Style="border: 1px solid #f0f0f0">
+            <PropertyColumn Property="a => a.Name">
+                <Input Type="text" @bind-Value="context.Name" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.Path">
+                <Space Style="display: flex">
+                    <SpaceItem Style="flex-grow: 1">
+                        <Input Type="text" @bind-Value="context.Path" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button OnClick="() => BrowseForActionPath(context)" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
+                    </SpaceItem>
+                </Space>
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.Arguments">
+                <Input Type="text" @bind-Value="context.Arguments" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.WorkingDirectory" Title="Working Dir">
+                <Input Type="text" @bind-Value="context.WorkingDirectory" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.PrimaryAction" Title="Primary" Style="text-align: center">
+                <Checkbox @bind-Checked="context.PrimaryAction" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => MoveUp(context)" Icon="@IconType.Outline.Up" Type="@ButtonType.Text" />
+                        <Button OnClick="() => MoveDown(context)" Icon="@IconType.Outline.Down" Type="@ButtonType.Text" />
 
-    <RowTemplate>
-        <MudTd><MudTextField @bind-Value="context.Name" /></MudTd>
-        <MudTd><MudTextField @bind-Value="context.Path" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Folder" OnAdornmentClick="() => BrowseForActionPath(context)" /></MudTd>
-        <MudTd><MudTextField @bind-Value="context.Arguments" /></MudTd>
-        <MudTd><MudTextField @bind-Value="context.WorkingDirectory" /></MudTd>
-        <MudTd><MudCheckBox @bind-Checked="context.PrimaryAction" Color="Color.Primary" /></MudTd>
-        <MudTd Class="d-flex flex-nowrap justify-end">
-            <MudIconButton OnClick="() => MoveUp(context)" Icon="@Icons.Material.Filled.ArrowUpward"></MudIconButton>
-            <MudIconButton OnClick="() => MoveDown(context)" Icon="@Icons.Material.Filled.ArrowDownward"></MudIconButton>
-            <MudIconButton OnClick="() => RemoveAction(context)" Color="Color.Error" Icon="@Icons.Material.Filled.Close"></MudIconButton>
-        </MudTd>
-    </RowTemplate>
-</MudTable>
+                        <Popconfirm OnConfirm="() => RemoveAction(context)" Title="Are you sure you want to remove this action?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
 
-<MudPaper Elevation="0" Class="d-flex justify-end mt-3">
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddAction">Add</MudButton>
-</MudPaper>
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddAction" Type="@ButtonType.Primary">Add Action</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
 
 @code {
-    [Parameter] public IEnumerable<Data.Models.Action> Actions { get; set; }
-    [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public Game Game { get; set; }
 
     private List<Data.Models.Action> OrderedActions { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        OrderedActions = Actions.OrderBy(a => a.SortOrder).ToList();
+        OrderedActions = Game.Actions.OrderBy(a => a.SortOrder).ToList();
         FixSortOrder();
     }
 
-    private void AddAction()
+    private async Task AddAction()
     {
         if (OrderedActions == null)
             OrderedActions = new List<Data.Models.Action>();
@@ -54,12 +76,12 @@
         });
     }
 
-    private void RemoveAction(Data.Models.Action action)
+    private async Task RemoveAction(Data.Models.Action action)
     {
         OrderedActions.Remove(action);
     }
 
-    private void MoveUp(Data.Models.Action action)
+    private async Task MoveUp(Data.Models.Action action)
     {
         if (action.SortOrder > 0)
             OrderedActions.Move(action, action.SortOrder - 1);
@@ -67,7 +89,7 @@
         FixSortOrder();
     }
 
-    private void MoveDown(Data.Models.Action action)
+    private async Task MoveDown(Data.Models.Action action)
     {
         if (action.SortOrder < OrderedActions.Count + 1)
             OrderedActions.Move(action, action.SortOrder + 1);
@@ -77,17 +99,27 @@
 
     private async void BrowseForActionPath(Data.Models.Action action)
     {
-        var parameters = new DialogParameters
-        {
-            ["ArchiveId"] = ArchiveId
-        };
+        var modalOptions = new ModalOptions()
+            {
+                Title = "Choose Action Executable",
+                Maximizable = false,
+                DefaultMaximized = true,
+                Closable = true,
+                OkText = "Select File"
+            };
 
-        var dialog = await DialogService.ShowAsync<ArchiveFileSelectorDialog>("File Selector", parameters);
-        var result = await dialog.Result;
+        var browserOptions = new ArchiveBrowserOptions()
+            {
+                ArchiveId = Game.Archives.FirstOrDefault().Id,
+                Select = true,
+                Multiple = false
+            };
 
-        if (!result.Canceled)
+        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+
+        modalRef.OnOk = (results) =>
         {
-            action.Path = result.Data as string;
+            action.Path = results.FirstOrDefault().FullName;
 
             var parts = action.Path.Split('/');
 
@@ -98,7 +130,8 @@
             }
 
             StateHasChanged();
-        }
+            return Task.CompletedTask;
+        };
     }
 
     private void FixSortOrder()
@@ -112,6 +145,6 @@
             i++;
         }
 
-        Actions = OrderedActions;
+        Game.Actions = OrderedActions;
     }
 }

@@ -1,9 +1,0 @@
-.mud-table-cell .mud-input-control > .mud-input-control-input-container > div.mud-input.mud-input-text,
-.mud-table-cell .mud-input-control {
-    margin-top: 0;
-}
-
-.mud-dialog-fullscreen .mud-dialog-title + div > div,
-.mud-dialog-fullscreen .mud-dialog-content {
-    max-height: calc(100vh - 64px);
-}

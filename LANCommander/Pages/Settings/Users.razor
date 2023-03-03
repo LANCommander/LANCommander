@@ -3,38 +3,35 @@
 @layout SettingsLayout
 @inject UserManager<User> UserManager
 @inject RoleManager<Role> RoleManager
-@inject ISnackbar Snackbar
+@inject IMessageService MessageService
 
-<MudTable Items="@UserList.Where(u => String.IsNullOrEmpty(Search) || u.UserName.ToLower().Contains(Search.ToLower().Trim()))" RowsPerPage="25" Hover="true" Elevation="0">
-    <ToolBarContent>
-        <MudText Typo="Typo.h6">Users</MudText>
-        <MudSpacer />
-        <MudTextField @bind-Value="Search" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-    </ToolBarContent>
-
-    <HeaderContent>
-        <MudTh>Username</MudTh>
-        <MudTh>Roles</MudTh>
-        <MudTh>Saves</MudTh>
-        <MudTh></MudTh>
-    </HeaderContent>
-
-    <RowTemplate>
-        <MudTd>@context.UserName</MudTd>
-        <MudTd>@String.Join(", ", context.Roles)</MudTd>
-        <MudTd>@ByteSizeLib.ByteSize.FromBytes(context.SavesSize)</MudTd>
-        <MudTd>
-            @if (!context.Roles.Any(r => r == "Administrator"))
-            {
-                <MudButton OnClick="() => PromoteUser(context)">Promote</MudButton>
-            }
-            else
-            {
-                <MudButton OnClick="() => DemoteUser(context)">Demote</MudButton>
-            }
-        </MudTd>
-    </RowTemplate>
-</MudTable>
+<Card Title="Users">
+    <Body>
+        <Table TItem="UserViewModel" DataSource="@UserList">
+            <PropertyColumn Property="u => u.UserName" />
+            <PropertyColumn Property="u => u.Roles">
+                @String.Join(", ", context.Roles)
+            </PropertyColumn>
+            <PropertyColumn Property="u => u.SavesSize">
+                @ByteSizeLib.ByteSize.FromBytes(context.SavesSize)
+            </PropertyColumn>
+            <ActionColumn>
+                <Space>
+                    <SpaceItem>
+                        @if (!context.Roles.Any(r => r == "Administrator"))
+                        {
+                            <Button OnClick="() => PromoteUser(context)">Promote</Button>
+                        }
+                        else
+                        {
+                            <Button OnClick="() => DemoteUser(context)">Demote</Button>
+                        }
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </Body>
+</Card>
 
 @code {
     private ICollection<UserViewModel> UserList { get; set; }
@@ -73,14 +70,14 @@
         await UserManager.AddToRoleAsync(UserManager.Users.First(u => u.UserName == user.UserName), "Administrator");
         await RefreshUserList();
 
-        Snackbar.Add($"Promoted {user.UserName}!", Severity.Success);
+        await MessageService.Success($"Promoted {user.UserName}!");
     }
 
     private async Task DemoteUser(UserViewModel user)
     {
         if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
         {
-            Snackbar.Add("Cannot demote the only administrator!", Severity.Error);
+            await MessageService.Error("Cannot demote the only administrator!");
         }
         else
         {

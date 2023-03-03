@@ -1,36 +1,39 @@
 ﻿@using LANCommander.Data.Enums
 @using LANCommander.Data.Models
 
-<MudTable Items="@Game.MultiplayerModes" Elevation="0" Dense="true">
-    <HeaderContent>
-        <MudTh>Type</MudTh>
-        <MudTh>Min Players</MudTh>
-        <MudTh>Max Players</MudTh>
-        <MudTh>Description</MudTh>
-        <MudTh></MudTh>
-    </HeaderContent>
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="MultiplayerMode" DataSource="@Game.MultiplayerModes" HidePagination="true">
+            <PropertyColumn Property="m => m.Type">
+                <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.MinPlayers">
+                <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.MaxPlayers">
+                <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.Description">
+                <Input Type="text" @bind-Value="context.Description" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => RemoveMode(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
 
-    <RowTemplate>
-        <MudTd>
-            <MudSelect @bind-Value="context.Type" Margin="0">
-                @foreach (MultiplayerType type in Enum.GetValues(typeof(MultiplayerType)))
-                {
-                    <MudSelectItem Value="@((MultiplayerType)type)">@type</MudSelectItem>
-                }
-            </MudSelect>
-        </MudTd>
-        <MudTd><MudNumericField @bind-Value="context.MinPlayers" Margin="0" /></MudTd>
-        <MudTd><MudNumericField @bind-Value="context.MaxPlayers" Margin="0" /></MudTd>
-        <MudTd><MudTextField @bind-Value="context.Description" Margin="0" /></MudTd>
-        <MudTd Class="d-flex justify-end">
-            <MudIconButton Color="Color.Error" OnClick="() => RemoveMode(context)" Icon="@Icons.Material.Filled.Close"></MudIconButton>
-        </MudTd>
-    </RowTemplate>
-</MudTable>
-
-<MudPaper Elevation="0" Class="d-flex justify-end mt-3">
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddMode">Add</MudButton>
-</MudPaper>
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
 
 @code {
     [Parameter] public Game Game { get; set; }

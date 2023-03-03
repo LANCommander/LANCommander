@@ -1,19 +1,15 @@
 ﻿@inherits LayoutComponentBase
 @layout MainLayout
 
-<MudPaper>
-    <MudGrid Style="width: 100%">
-        <MudItem xs="12" sm="4" md="3" lg="2">
-            <MudNavMenu Bordered="true">
-                <MudText Typo="Typo.h6" Class="px-4">Settings</MudText>
-                <MudDivider Class="my-2" />
-                <MudNavLink Href="/SettingsNew/General" Match="NavLinkMatch.Prefix">General</MudNavLink>
-                <MudNavLink Href="/SettingsNew/Users" Match="NavLinkMatch.Prefix">Users</MudNavLink>
-            </MudNavMenu>
-        </MudItem>
+<GridRow>
+    <GridCol Span="6">
+        <Menu Mode=@MenuMode.Vertical>
+            <MenuItem RouterLink="/Settings/General">General</MenuItem>
+            <MenuItem RouterLink="/Settings/Users">Users</MenuItem>
+        </Menu>
+    </GridCol>
 
-        <MudItem xs="12" sm="8" md="9" lg="10">
-            @Body
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+    <GridCol Span="18">
+        @Body
+    </GridCol>
+</GridRow>

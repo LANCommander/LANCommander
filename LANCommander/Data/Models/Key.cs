@@ -20,6 +20,17 @@ namespace LANCommander.Data.Models
         public string? ClaimedByComputerName { get; set; }
         public virtual User? ClaimedByUser { get; set; }
         public DateTime? ClaimedOn { get; set; }
+
+        public bool IsAllocated()
+        {
+            if (AllocationMethod == KeyAllocationMethod.MacAddress && !String.IsNullOrWhiteSpace(ClaimedByMacAddress))
+                return true;
+
+            if (AllocationMethod == KeyAllocationMethod.UserAccount && ClaimedByUser != null)
+                return true;
+
+            return false; 
+        }
     }
 
     public enum KeyAllocationMethod

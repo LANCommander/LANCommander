@@ -1,15 +1,21 @@
 ﻿@inherits LayoutComponentBase
 @layout MainLayout
 
-<GridRow>
-    <GridCol Span="6">
-        <Menu Mode=@MenuMode.Vertical>
+<Layout Class="site-layout-background" Style="padding: 24px 0;">
+    <Sider Class="site-layout-background" Width="200">
+        <Menu Mode=@MenuMode.Inline Style="height: 100%">
             <MenuItem RouterLink="/Settings/General">General</MenuItem>
             <MenuItem RouterLink="/Settings/Users">Users</MenuItem>
         </Menu>
-    </GridCol>
+    </Sider>
 
-    <GridCol Span="18">
+    <Content>
         @Body
-    </GridCol>
-</GridRow>
+    </Content>
+</Layout>
+
+<style>
+    .site-layout-background {
+        background: #fff;
+    }
+</style>

@@ -4,23 +4,24 @@
 @inject SettingService SettingService
 @inject IMessageService MessageService
 
-<Card Title="General">
-    <Body>
-        <Text>IGDB Credentials</Text>
-        <Text>In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
-        <Form Model="Settings">
-            <FormItem Label="Client ID">
-                <Input @bind-Value="context.IGDBClientId" />
-            </FormItem>
-            <FormItem Label="Client Secret">
-                <InputPassword @bind-Value="context.IGDBClientSecret" />
-            </FormItem>
-            <FormItem>
-                <Button OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
-            </FormItem>
-        </Form>
-    </Body>
-</Card>
+<PageHeader Title="General" />
+
+<div style="padding: 0 24px;">
+    <Text>IGDB Credentials</Text>
+    <Text>In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Client ID">
+            <Input @bind-Value="context.IGDBClientId" />
+        </FormItem>
+        <FormItem Label="Client Secret">
+            <InputPassword @bind-Value="context.IGDBClientSecret" />
+        </FormItem>
+        <FormItem>
+            <Button OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
 
 @code {
     private LANCommanderSettings Settings;

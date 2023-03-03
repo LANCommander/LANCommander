@@ -5,41 +5,48 @@
 @inject RoleManager<Role> RoleManager
 @inject IMessageService MessageService
 
-<Card Title="Users">
-    <Body>
-        <Table TItem="UserViewModel" DataSource="@UserList">
-            <PropertyColumn Property="u => u.UserName" />
-            <PropertyColumn Property="u => u.Roles">
-                @String.Join(", ", context.Roles)
-            </PropertyColumn>
-            <PropertyColumn Property="u => u.SavesSize">
-                @ByteSizeLib.ByteSize.FromBytes(context.SavesSize)
-            </PropertyColumn>
-            <ActionColumn>
-                <Space>
-                    <SpaceItem>
-                        @if (!context.Roles.Any(r => r == "Administrator"))
-                        {
-                            <Button OnClick="() => PromoteUser(context)">Promote</Button>
-                        }
-                        else
-                        {
-                            <Button OnClick="() => DemoteUser(context)">Demote</Button>
-                        }
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </Body>
-</Card>
+<PageHeader Title="Users" />
+
+<div style="padding: 0 24px;">
+    <Table TItem="UserViewModel" DataSource="@UserList" Loading="@(Loading)">
+        <PropertyColumn Property="u => u.UserName" Title="Username" />
+        <PropertyColumn Property="u => u.Roles">
+            @String.Join(", ", context.Roles)
+        </PropertyColumn>
+        <PropertyColumn Property="u => u.SavesSize" Title="Saves">
+            @ByteSizeLib.ByteSize.FromBytes(context.SavesSize)
+        </PropertyColumn>
+        <ActionColumn>
+            <Space Style="display: flex; justify-content: end">
+                <SpaceItem>
+                    @if (!context.Roles.Any(r => r == "Administrator"))
+                    {
+                        <Button OnClick="() => PromoteUser(context)" Type="@ButtonType.Primary">Promote</Button>
+                    }
+                    else
+                    {
+                        <Button OnClick="() => DemoteUser(context)" Danger>Demote</Button>
+                    }
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </Table>
+</div>
 
 @code {
-    private ICollection<UserViewModel> UserList { get; set; }
-    private string Search { get; set; }
+    ICollection<UserViewModel> UserList { get; set; }
+
+    bool Loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await RefreshUserList();
+        UserList = new List<UserViewModel>();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await RefreshUserList();
     }
 
     private async Task RefreshUserList()
@@ -63,6 +70,9 @@
                 SavesSize = saveSize
             });
         }
+
+        Loading = false;
+        StateHasChanged();
     }
 
     private async Task PromoteUser(UserViewModel user)

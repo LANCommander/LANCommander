@@ -37,19 +37,27 @@
         "min/vs/loader.js",
         "min/vs/base/browser/ui/codicons/codicon/codicon.ttf"
       ]
+    },
+    {
+      "provider": "cdnjs",
+      "library": "tabler-icons@1.35.0",
+      "destination": "wwwroot/lib/tabler-icons/",
+      "files": [
+        "iconfont/tabler-icons.min.css",
+        "iconfont/fonts/tabler-icons.eot",
+        "iconfont/fonts/tabler-icons.ttf",
+        "iconfont/fonts/tabler-icons.woff",
+        "iconfont/fonts/tabler-icons.woff2"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "@antv/g2plot@1.1.28",
+      "destination": "wwwroot/lib/antv/g2plot/",
+      "files": [
+        "dist/g2plot.js",
+        "dist/g2plot.js.map"
+      ]
     }
-  ,
-{
-  "provider": "cdnjs",
-  "library": "tabler-icons@1.35.0",
-  "destination": "wwwroot/lib/tabler-icons/",
-  "files": [
-    "iconfont/tabler-icons.min.css",
-    "iconfont/fonts/tabler-icons.eot",
-    "iconfont/fonts/tabler-icons.ttf",
-    "iconfont/fonts/tabler-icons.woff",
-    "iconfont/fonts/tabler-icons.woff2"
   ]
-}
-]
 }

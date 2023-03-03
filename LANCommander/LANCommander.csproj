@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="AntDesign" Version="0.14.3" />
+    <PackageReference Include="AntDesign.Charts" Version="0.3.0" />
     <PackageReference Include="Blazor-ApexCharts" Version="0.9.18-beta" />
     <PackageReference Include="BlazorMonaco" Version="3.0.0" />
     <PackageReference Include="ByteSize" Version="2.1.1" />

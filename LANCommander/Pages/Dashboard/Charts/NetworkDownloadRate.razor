@@ -1,0 +1,83 @@
+﻿@using System.Diagnostics;
+@using LANCommander.Extensions;
+@using AntDesign.Charts;
+@using System.Collections.Concurrent;
+
+<Area @ref="Chart" Config="Config" />
+
+@code {
+    [Parameter] public int TimerHistory { get; set; }
+    [Parameter] public int TimerInterval { get; set; }
+
+    IChartComponent? Chart;
+    System.Timers.Timer Timer;
+
+    Dictionary<string, double[]> Data = new Dictionary<string, double[]>();
+
+    ConcurrentDictionary<string, PerformanceCounter> PerformanceCounters = new ConcurrentDictionary<string, PerformanceCounter>();
+
+    string JsConfig = @"{
+        meta: {
+            value: {
+                alias: 'Speed',
+                formatter: (v) => humanFileSize(v, true) + '/s'
+            }
+        }
+    }";
+
+    AreaConfig Config = new AreaConfig
+    {
+        Name = "Network Download Rate",
+        Padding = "auto",
+        SeriesField = "series",
+        YField = "value",
+        XField = "index",
+        Animation = false,
+        XAxis = new ValueCatTimeAxis
+        {
+            Visible = false
+        }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Timer == null)
+        {
+            Timer = new System.Timers.Timer();
+
+            Timer.Interval = TimerInterval;
+
+            Timer.Elapsed += async (s, e) =>
+            {
+                await RefreshData();
+            };
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Chart.UpdateChart(Config, null, null, JsConfig);
+            Timer.Start();
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        var category = new PerformanceCounterCategory("Network Interface");
+
+        foreach (var instance in category.GetInstanceNames())
+        {
+            if (!Data.ContainsKey(instance))
+                Data[instance] = new double[TimerHistory];
+
+            if (!PerformanceCounters.ContainsKey(instance))
+                PerformanceCounters[instance] = new PerformanceCounter("Network Interface", "Bytes Received/sec", instance);
+
+            Data[instance] = Data[instance].ShiftArrayAndInsert((double)PerformanceCounters[instance].NextValue(), TimerHistory);
+        }
+
+        await Chart.ChangeData(Data.SelectMany(x => x.Value.Select((y, i) => new { value = y, index = i, series = x.Key })), true);
+    }
+}

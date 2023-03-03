@@ -1,45 +1,66 @@
 ﻿@using System.Diagnostics;
 @using LANCommander.Extensions;
 @using AntDesign.Charts;
-<Line @ref="Chart" Config="Config" />
+@using System.Collections.Concurrent;
+
+<Area @ref="Chart" Config="Config" />
 
 @code {
     [Parameter] public int TimerHistory { get; set; }
     [Parameter] public int TimerInterval { get; set; }
+
     IChartComponent? Chart;
+    System.Timers.Timer Timer;
 
     Dictionary<string, double[]> Data = new Dictionary<string, double[]>();
 
-    Dictionary<string, PerformanceCounter> PerformanceCounters = new Dictionary<string, PerformanceCounter>();
+    ConcurrentDictionary<string, PerformanceCounter> PerformanceCounters = new ConcurrentDictionary<string, PerformanceCounter>();
 
-    LineConfig Config = new LineConfig
+    string JsConfig = @"{
+        meta: {
+            value: {
+                alias: 'Speed',
+                formatter: (v) => humanFileSize(v, true) + '/s'
+            }
+        }
+    }";
+
+    AreaConfig Config = new AreaConfig
     {
         Name = "Network Upload Rate",
         Padding = "auto",
-        SeriesField = "Series",
-        YField = "Value",
-        XField = "Index",
+        SeriesField = "series",
+        YField = "value",
+        XField = "index",
+        Animation = false,
         XAxis = new ValueCatTimeAxis
         {
-            Type = "dateTime",
-            TickCount = 1
+            Visible = false
         }
     };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        var timer = new System.Timers.Timer();
-
-        timer.Interval = TimerInterval;
-
-        timer.Elapsed += async (s, e) =>
+        if (Timer == null)
         {
-            await RefreshData();
+            Timer = new System.Timers.Timer();
 
-            await InvokeAsync(StateHasChanged);
-        };
+            Timer.Interval = TimerInterval;
 
-        timer.Start();
+            Timer.Elapsed += async (s, e) =>
+            {
+                await RefreshData();
+            };
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Chart.UpdateChart(Config, null, null, JsConfig);
+            Timer.Start();
+        }
     }
 
     private async Task RefreshData()
@@ -57,6 +78,6 @@
             Data[instance] = Data[instance].ShiftArrayAndInsert((double)PerformanceCounters[instance].NextValue(), TimerHistory);
         }
 
-        await Chart.ChangeData(Data.SelectMany(x => x.Value.Select((y, i) => new { Value = y, Index = i, Series = x.Key })), true);
+        await Chart.ChangeData(Data.SelectMany(x => x.Value.Select((y, i) => new { value = y, index = i, series = x.Key })), true);
     }
 }

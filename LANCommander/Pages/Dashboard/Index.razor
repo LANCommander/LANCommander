@@ -1,10 +1,39 @@
-﻿@page "/Dashboard"
+﻿@page "/"
+@page "/Dashboard"
 @using LANCommander.Pages.Dashboard.Charts
 
-<NetworkDownloadRate TimerHistory="60" TimerInterval="1000" />
-<NetworkUploadRate TimerHistory="60" TimerInterval="1000" />
-<ProcessorUtilization TimerHistory="60" TimerInterval="1000" />
+<PageHeader Title="Dashboard" Style="margin-bottom: 24px" />
 
-@code {
+<GridRow Gutter="(16, 16)">
+    <GridCol Sm="24" Md="12">
+        <Card Title="Network Upload Rate">
+            <Body>
+                <NetworkDownloadRate TimerHistory="60" TimerInterval="1000" />
+            </Body>
+        </Card>
+    </GridCol>
 
-}
+    <GridCol Sm="24" Md="12">
+        <Card Title="Network Download Rate">
+            <Body>
+                <NetworkUploadRate TimerHistory="60" TimerInterval="1000" />
+            </Body>
+        </Card>
+    </GridCol>
+
+    <GridCol Sm="24" Md="12">
+        <Card Title="CPU Usage (%)">
+            <Body>
+                <ProcessorUtilization TimerHistory="60" TimerInterval="1000" />
+            </Body>
+        </Card>
+    </GridCol>
+
+    <GridCol Sm="24" Md="12">
+        <Card Title="Storage Usage">
+            <Body>
+                <StorageUsage />
+            </Body>
+        </Card>
+    </GridCol>
+</GridRow>

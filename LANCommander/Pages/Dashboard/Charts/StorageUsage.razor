@@ -1,0 +1,63 @@
+﻿@using AntDesign.Charts
+@using ByteSizeLib
+
+<Pie Data="Data" Config="Config" JsConfig="@JsConfig" />
+
+@code {
+    object[] Data;
+
+    string JsConfig = @"{
+        meta: {
+            value: {
+                alias: 'Data Usage',
+                formatter: (v) => humanFileSize(v, true)
+            }
+        },
+        label: {
+            visible: true,
+            type: 'outer-center'
+        }
+    }";
+
+    PieConfig Config = new PieConfig
+    {
+        Radius = 0.8,
+        AngleField = "value",
+        ColorField = "type",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var drives = DriveInfo.GetDrives();
+        var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+        var totalStorageSize = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.TotalSize);
+        var totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
+        var totalUploadDirectorySize = new DirectoryInfo("Upload").EnumerateFiles().Sum(f => f.Length);
+        var totalSaveDirectorySize = new DirectoryInfo("Save").EnumerateFiles().Sum(f => f.Length);
+
+        Data = new object[]
+        {
+            new {
+                type = "Free",
+                value = totalAvailableFreeSpace
+            },
+            new {
+                type = "Games",
+                value = totalUploadDirectorySize
+            },
+            new
+            {
+                type = "Saves",
+                value = totalSaveDirectorySize
+            },
+            new
+            {
+                type = "Other",
+                value = totalStorageSize - totalAvailableFreeSpace - totalUploadDirectorySize - totalSaveDirectorySize
+            }
+        };
+
+        StateHasChanged();
+    }
+}

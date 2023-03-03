@@ -40,7 +40,7 @@
             <PropertyColumn Property="e => e.Length" Sortable Title="Size">
                 @ByteSize.FromBytes(context.Length)
             </PropertyColumn>
-            <PropertyColumn Property="e => e.LastWriteTime" Format="MM/dd/yyyy hh:mm" Sortable Title="Modified" />
+            <PropertyColumn Property="e => e.LastWriteTime" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
 
         </Table>
     </GridCol>

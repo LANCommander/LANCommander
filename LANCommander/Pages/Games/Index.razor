@@ -3,33 +3,35 @@
 @inject GameService GameService
 @inject NavigationManager NavigationManager
 
-<Card Title="Games">
-    <Body>
-        <Table TItem="Game" DataSource="@Games" Loading="@Loading">
-            <Column TData="string">
-                <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
-            </Column>
-            <PropertyColumn Property="g => g.Title" Sortable />
-            <PropertyColumn Property="g => g.SortTitle" Sortable />
-            <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable />
-            <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm" Sortable />
-            <PropertyColumn Property="g => g.CreatedBy" Sortable>
-                @context.CreatedBy?.UserName
-            </PropertyColumn>
-            <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm" Sortable />
-            <PropertyColumn Property="g => g.UpdatedBy" Sortable>
-                @context.UpdatedBy?.UserName
-            </PropertyColumn>
-            <ActionColumn Title="">
-                <Space Style="display: flex; justify-content: end">
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Edit" OnClick="() => Edit(context)" />
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </Body>
-</Card>
+<PageHeader Title="Games">
+    <PageHeaderExtra>
+        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<Table TItem="Game" DataSource="@Games" Loading="@Loading">
+    <Column TData="string">
+        <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
+    </Column>
+    <PropertyColumn Property="g => g.Title" Sortable />
+    <PropertyColumn Property="g => g.SortTitle" Sortable />
+    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable />
+    <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="g => g.CreatedBy" Sortable>
+        @context.CreatedBy?.UserName
+    </PropertyColumn>
+    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="g => g.UpdatedBy" Sortable>
+        @context.UpdatedBy?.UserName
+    </PropertyColumn>
+    <ActionColumn Title="">
+        <Space>
+            <SpaceItem>
+                <Button OnClick="() => Edit(context)">Edit</Button>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
 
 @code {
     IEnumerable<Game> Games { get; set; } = new List<Game>();
@@ -51,6 +53,11 @@
     private string GetIcon(Game game)
     {
         return $"/api/Games/{game.Id}/Icon.png";
+    }
+
+    private void Add()
+    {
+        NavigationManager.NavigateTo("/Games/Add");
     }
 
     private void Edit(Game game)

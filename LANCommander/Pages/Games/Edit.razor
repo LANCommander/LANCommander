@@ -1,4 +1,5 @@
 ﻿@page "/Games/{id:guid}/Edit"
+@page "/Games/Add"
 @using LANCommander.Models;
 @using System.IO.Compression;
 @attribute [Authorize(Roles = "Administrator")]
@@ -145,7 +146,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Game = await GameService.Get(Id);
+        if (Id == Guid.Empty)
+            Game = new Game();
+        else
+            Game = await GameService.Get(Id);
+
         Companies = CompanyService.Get();
         Genres = GenreService.Get();
         Tags = TagService.Get();

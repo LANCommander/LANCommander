@@ -1,0 +1,275 @@
+﻿@page "/Games/{id:guid}/Edit"
+@page "/Games/Add"
+@using LANCommander.Models;
+@using System.IO.Compression;
+@attribute [Authorize(Roles = "Administrator")]
+@inject GameService GameService
+@inject CompanyService CompanyService
+@inject GenreService GenreService
+@inject TagService TagService
+@inject ArchiveService ArchiveService
+@inject ScriptService ScriptService
+@inject IMessageService MessageService
+@inject ModalService ModalService
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%;">
+    <SpaceItem>
+        <Card Title="Game Details">
+            <Body>
+                <Form Model="@Game" Layout="@FormLayout.Vertical">
+                    <FormItem Label="Title">
+                        <GameMetadataLookup @ref="GameMetadataLookup" OnResultSelected="OnGameLookupResultSelected" />
+
+                        <Space Style="display: flex">
+                            <SpaceItem Style="flex-grow: 1">
+                                <Input @bind-Value="@context.Title" />
+                            </SpaceItem>
+                            <SpaceItem>
+                                <Button OnClick="() => GameMetadataLookup.SearchForGame(context.Title)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(context.Title))">Lookup</Button>
+                            </SpaceItem>
+                        </Space>
+                    </FormItem>
+                    <FormItem Label="Sort Title">
+                        <Input @bind-Value="@context.SortTitle" />
+                    </FormItem>
+                    <FormItem Label="Icon">
+                        <Space Style="display: flex">
+                            <SpaceItem Style="flex-grow: 1">
+                                <Input @bind-Value="@context.Icon" />
+                            </SpaceItem>
+                            @if (context.Archives != null && context.Archives.Count > 0)
+                            {
+                                <SpaceItem>
+                                    <Button OnClick="BrowseForIcon" Type="@ButtonType.Primary">Browse</Button>
+                                </SpaceItem>
+                            }
+                        </Space>
+                    </FormItem>
+                    <FormItem Label="Description">
+                        <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                    </FormItem>
+                    <FormItem Label="Released On">
+                        <DatePicker TValue="DateTime?" @bind-Value="@context.ReleasedOn" Picker="@DatePickerType.Date" />
+                    </FormItem>
+                    <FormItem Label="Singleplayer">
+                        <Checkbox @bind-Checked="@context.Singleplayer" />
+                    </FormItem>
+                    <FormItem Label="Developers">
+                        <TagsInput Entities="Companies" SelectedEntities="Game.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                    </FormItem>
+                    <FormItem Label="Publishers">
+                        <TagsInput Entities="Companies" SelectedEntities="Game.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                    </FormItem>
+                    <FormItem Label="Genres">
+                        <TagsInput Entities="Genres" SelectedEntities="Game.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
+                    </FormItem>
+                    <FormItem Label="Tags">
+                        <TagsInput Entities="Tags" SelectedEntities="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
+                    </FormItem>
+                    <FormItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+                    </FormItem>
+                </Form>
+            </Body>
+        </Card>
+    </SpaceItem>
+
+    @if (Game.Id != Guid.Empty)
+    {
+        <SpaceItem>
+            <Card Title="Actions">
+                <Body>
+                    <ActionEditor Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Card Title="Multiplayer Modes">
+                <Body>
+                    <MultiplayerModeEditor Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Card Title="Keys">
+                <Extra>
+                    <Button OnClick="() => KeysEditor.Edit()">Edit</Button>
+                    <Button OnClick="() => KeysEditor.View()" Type="@ButtonType.Primary">View</Button>
+                </Extra>
+                <Body>
+                    <KeysEditor @ref="KeysEditor" Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Card Title="Scripts">
+                <Body>
+                    <ScriptEditor Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Card Title="Archives">
+                <ArchiveUploader Game="Game" />
+            </Card>
+        </SpaceItem>
+    }
+</Space>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    bool Success;
+    string[] Errors = { };
+
+    IEnumerable<Company> Companies;
+    IEnumerable<Genre> Genres;
+    IEnumerable<Data.Models.Tag> Tags;
+
+    ArchiveBrowserDialog ArchiveBrowserDialog;
+
+    Modal FileSelectorModal;
+
+    private string value = "blazor";
+    private ConfirmRef _confirmRef;
+
+    private Game Game;
+    private KeysEditor? KeysEditor;
+    private GameMetadataLookup? GameMetadataLookup;
+
+    private int KeysAvailable { get {
+            return Game.Keys.Count(k =>
+            {
+                return (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
+                ||
+                (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null);
+            });
+        } }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+            Game = new Game();
+        else
+            Game = await GameService.Get(Id);
+
+        Companies = CompanyService.Get();
+        Genres = GenreService.Get();
+        Tags = TagService.Get();
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Game.Id != Guid.Empty)
+            {
+                Game = await GameService.Update(Game);
+
+                await MessageService.Success("Game updated!");
+            }
+            else
+            {
+                Game = await GameService.Add(Game);
+
+                await MessageService.Success("Game added!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error("Could not save!");
+        }
+    }
+
+    private async Task BrowseForIcon()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Choose Icon",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Select File"
+        };
+
+        var browserOptions = new ArchiveBrowserOptions()
+        {
+            ArchiveId = Game.Archives.FirstOrDefault().Id,
+            Select = true,
+            Multiple = false
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+
+        modalRef.OnOk = (results) =>
+        {
+            Game.Icon = results.FirstOrDefault().FullName;
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+    }
+
+    private async Task OnGameLookupResultSelected(GameLookupResult result)
+    {
+        Game.Title = result.IGDBMetadata.Name;
+        Game.Description = result.IGDBMetadata.Summary;
+        Game.ReleasedOn = result.IGDBMetadata.FirstReleaseDate.GetValueOrDefault().UtcDateTime;
+        Game.MultiplayerModes = result.MultiplayerModes.ToList();
+        Game.Developers = new List<Company>();
+        Game.Publishers = new List<Company>();
+        Game.Genres = new List<Genre>();
+        Game.Tags = new List<Data.Models.Tag>();
+
+        if (result.IGDBMetadata.GameModes != null && result.IGDBMetadata.GameModes.Values != null)
+            Game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Singleplayer");
+
+        if (result.IGDBMetadata.InvolvedCompanies != null && result.IGDBMetadata.InvolvedCompanies.Values != null)
+        {
+            // Make sure companie
+            var developers = result.IGDBMetadata.InvolvedCompanies.Values.Where(c => c.Developer.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+            var publishers = result.IGDBMetadata.InvolvedCompanies.Values.Where(c => c.Publisher.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+
+            foreach (var developer in developers)
+            {
+                Game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer }));
+            }
+
+            foreach (var publisher in publishers)
+            {
+                Game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher }));
+            }
+        }
+
+        if (result.IGDBMetadata.Genres != null && result.IGDBMetadata.Genres.Values != null)
+        {
+            var genres = result.IGDBMetadata.Genres.Values.Select(g => g.Name);
+
+            foreach (var genre in genres)
+            {
+                Game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre }));
+            }
+        }
+
+        if (result.IGDBMetadata.Keywords != null && result.IGDBMetadata.Keywords.Values != null)
+        {
+            var tags = result.IGDBMetadata.Keywords.Values.Select(t => t.Name).Take(20);
+
+            foreach (var tag in tags)
+            {
+                Game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Data.Models.Tag { Name = tag }));
+            }
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        if (_confirmRef != null)
+        {
+            await _confirmRef.CloseAsync();
+        }
+    }
+}

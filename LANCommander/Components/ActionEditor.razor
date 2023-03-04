@@ -1,141 +1,153 @@
 ﻿@using LANCommander.Data.Models
 @using LANCommander.Extensions
+@using LANCommander.Models;
+@using System.IO.Compression;
+@inject ModalService ModalService
 
-@{
-    int i = 0;
-}
-<div class="table-responsive">
-    <table class="table mb-0">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Path</th>
-                <th>Arguments</th>
-                <th>Working Dir</th>
-                <th>Primary</th>
-                <th></th>
-            </tr>
-        </thead>
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Data.Models.Action" DataSource="@OrderedActions" HidePagination="true" Style="border: 1px solid #f0f0f0">
+            <PropertyColumn Property="a => a.Name">
+                <Input Type="text" @bind-Value="context.Name" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.Path">
+                <Space Style="display: flex">
+                    <SpaceItem Style="flex-grow: 1">
+                        <Input Type="text" @bind-Value="context.Path" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button OnClick="() => BrowseForActionPath(context)" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
+                    </SpaceItem>
+                </Space>
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.Arguments">
+                <Input Type="text" @bind-Value="context.Arguments" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.WorkingDirectory" Title="Working Dir">
+                <Input Type="text" @bind-Value="context.WorkingDirectory" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.PrimaryAction" Title="Primary" Style="text-align: center">
+                <Checkbox @bind-Checked="context.PrimaryAction" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => MoveUp(context)" Icon="@IconType.Outline.Up" Type="@ButtonType.Text" />
+                        <Button OnClick="() => MoveDown(context)" Icon="@IconType.Outline.Down" Type="@ButtonType.Text" />
 
-        <tbody>
-            @if (Actions == null || Actions.Count == 0)
-            {
-                <tr><td colspan="6">Actions are used to start the game or launch other executables. It is recommended to have at least one action to launch the game.</td></tr>
-            }
+                        <Popconfirm OnConfirm="() => RemoveAction(context)" Title="Are you sure you want to remove this action?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
 
-            @foreach (var action in Actions.OrderBy(a => a.SortOrder))
-            {
-                var index = i;
-
-                <tr>
-                    <td><input @bind="action.Name" name="Game.Actions[@i].Name" class="form-control" placeholder="Play" /></td>
-                    <td><input @bind="action.Path" name="Game.Actions[@i].Path" class="form-control" placeholder="Game.exe" /></td>
-                    <td><input @bind="action.Arguments" name="Game.Actions[@i].Arguments" class="form-control" placeholder="Launch Arguments" /></td>
-                    <td><input @bind="action.WorkingDirectory" name="Game.Actions[@i].WorkingDirectory" class="form-control" placeholder="Working Directory" /></td>
-                    <td class="align-middle">
-                        <div class="form-check form-check-inline mb-0">
-                            <input name="Game.Actions[@i].PrimaryAction" class="form-check-input" type="checkbox" checked="@action.PrimaryAction" value="true" />
-                        </div>
-                    </td>
-                    <td>
-                        <input name="Game.Actions[@i].Id" type="hidden" value="@action.Id" />
-                        <input name="Game.Actions[@i].GameId" type="hidden" value="@GameId" />
-                        <input name="Game.Actions[@i].SortOrder" type="hidden" value="@i" />
-
-                        <div class="btn-list flex-nowrap justify-content-end">
-                            <button class="btn btn-ghost-secondary btn-icon" @onclick="() => MoveUp(index)" type="button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-up" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                   <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                   <polyline points="6 15 12 9 18 15"></polyline>
-                                </svg>
-                            </button>
-
-                            <button class="btn btn-ghost-secondary btn-icon" @onclick="() => MoveDown(index)" type="button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chevron-down" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                            </button>
-
-                            <button class="btn btn-ghost-danger btn-icon" @onclick="() => RemoveAction(index)" type="button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-
-                i++;
-            }
-            <tr>
-                <td colspan="6">
-                    <div class="btn-list flex-nowrap justify-content-end">
-
-                        <button class="btn btn-ghost-primary" @onclick="AddAction" type="button">Add Action</button>
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddAction" Type="@ButtonType.Primary">Add Action</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
 
 @code {
-    [Parameter] public List<Data.Models.Action> Actions { get; set; }
-    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Game Game { get; set; }
 
-    protected override void OnInitialized()
+    private List<Data.Models.Action> OrderedActions { get; set; }
+
+    protected override async Task OnInitializedAsync()
     {
-        Actions = Actions.OrderBy(a => a.SortOrder).ToList();
+        if (Game.Actions == null)
+            Game.Actions = new List<Data.Models.Action>();
 
-        FixSortOrders();
-
-        base.OnInitialized();
+        OrderedActions = Game.Actions.OrderBy(a => a.SortOrder).ToList();
+        FixSortOrder();
     }
 
-    private void AddAction()
+    private async Task AddAction()
     {
-        if (Actions == null)
-            Actions = new List<Data.Models.Action>();
+        if (OrderedActions == null)
+            OrderedActions = new List<Data.Models.Action>();
 
-        Actions.Add(new Data.Models.Action()
+        OrderedActions.Add(new Data.Models.Action()
         {
-            PrimaryAction = Actions.Count == 0,
-            SortOrder = Actions.Count
+            PrimaryAction = OrderedActions.Count == 0,
+            SortOrder = OrderedActions.Count
         });
     }
 
-    private void RemoveAction(int index)
+    private async Task RemoveAction(Data.Models.Action action)
     {
-        Actions.Remove(Actions.ElementAt(index));
-
-        FixSortOrders();
+        OrderedActions.Remove(action);
     }
 
-    private void MoveUp(int index)
+    private async Task MoveUp(Data.Models.Action action)
     {
-        if (index == 0)
-            return;
+        if (action.SortOrder > 0)
+            OrderedActions.Move(action, action.SortOrder - 1);
 
-        Actions.Move(Actions.ElementAt(index), index - 1);
-        FixSortOrders();
+        FixSortOrder();
     }
 
-    private void MoveDown(int index)
+    private async Task MoveDown(Data.Models.Action action)
     {
-        if (index == Actions.Count - 1)
-            return;
+        if (action.SortOrder < OrderedActions.Count + 1)
+            OrderedActions.Move(action, action.SortOrder + 1);
 
-        Actions.Move(Actions.ElementAt(index), index + 1);
-        FixSortOrders();
+        FixSortOrder();
     }
 
-    private void FixSortOrders() {
-        for (int i = 0; i < Actions.Count; i++)
+    private async void BrowseForActionPath(Data.Models.Action action)
+    {
+        var modalOptions = new ModalOptions()
+            {
+                Title = "Choose Action Executable",
+                Maximizable = false,
+                DefaultMaximized = true,
+                Closable = true,
+                OkText = "Select File"
+            };
+
+        var browserOptions = new ArchiveBrowserOptions()
+            {
+                ArchiveId = Game.Archives.FirstOrDefault().Id,
+                Select = true,
+                Multiple = false
+            };
+
+        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+
+        modalRef.OnOk = (results) =>
         {
-            Actions.ElementAt(i).SortOrder = i;
+            action.Path = results.FirstOrDefault().FullName;
+
+            var parts = action.Path.Split('/');
+
+            if (parts.Length > 1)
+            {
+                action.Path = parts.Last();
+                action.WorkingDirectory = "{InstallDir}/" + String.Join('/', parts.Take(parts.Length - 1));
+            }
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+    }
+
+    private void FixSortOrder()
+    {
+        int i = 0;
+
+        foreach (var action in OrderedActions)
+        {
+            action.SortOrder = i;
+
+            i++;
         }
+
+        Game.Actions = OrderedActions;
     }
 }

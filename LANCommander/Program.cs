@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using MudBlazor;
+using MudBlazor.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,16 @@ ConfigurationManager configuration = builder.Configuration;
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var settings = SettingService.GetSettings();
+
+builder.Services.AddMvc(options => options.EnableEndpointRouting = false);
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor().AddCircuitOptions(option =>
+{
+    option.DetailedErrors = true;
+}).AddHubOptions(option =>
+{
+    option.MaximumReceiveMessageSize = 1024 * 1024 * 11;
+});
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -61,11 +73,30 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
-builder.Services.AddControllersWithViews().AddJsonOptions(x =>
+builder.Services.AddControllers().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
-builder.Services.AddServerSideBlazor();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddAntDesign();
+
+builder.Services.AddMudServices(config =>
+{
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomLeft;
+
+    config.SnackbarConfiguration.PreventDuplicates = false;
+    config.SnackbarConfiguration.NewestOnTop = false;
+    config.SnackbarConfiguration.ShowCloseIcon = true;
+    config.SnackbarConfiguration.VisibleStateDuration = 10000;
+    config.SnackbarConfiguration.HideTransitionDuration = 500;
+    config.SnackbarConfiguration.ShowTransitionDuration = 500;
+    config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
+});
+
+builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<SettingService>();
 builder.Services.AddScoped<ArchiveService>();
@@ -81,12 +112,16 @@ builder.Services.AddScoped<IGDBService>();
 if (settings.Beacon)
     builder.Services.AddHostedService<BeaconService>();
 
+builder.WebHost.UseStaticWebAssets();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 else
 {
@@ -103,17 +138,14 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+app.UseMvcWithDefaultRoute();
 
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapControllerRoute(
-        name: "default",
-        pattern: "{controller=Home}/{action=Index}/{id?}");
     endpoints.MapBlazorHub();
+    endpoints.MapFallbackToPage("/_Host");
+    endpoints.MapControllers();
 });
-
-app.MapRazorPages();
 
 if (!Directory.Exists("Upload"))
     Directory.CreateDirectory("Upload");

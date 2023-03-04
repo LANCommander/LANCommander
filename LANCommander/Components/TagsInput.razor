@@ -1,0 +1,42 @@
+﻿@typeparam TItem where TItem : BaseModel
+
+<Select Mode="tags" TItem="Guid" TItemValue="Guid" @bind-Values="@SelectedValues" OnSelectedItemsChanged="OnSelectedItemsChanged" EnableSearch>
+    <SelectOptions>
+        @foreach (var entity in Entities)
+        {
+            <SelectOption TItemValue="Guid" TItem="Guid" Value="@entity.Id" Label="@OptionLabelSelector.Invoke(entity)" />
+        }
+    </SelectOptions>
+</Select>
+
+@code {
+    [Parameter] public Func<TItem, string> OptionLabelSelector { get; set; }
+    [Parameter] public IEnumerable<TItem> Entities { get; set; }
+    [Parameter] public ICollection<TItem> SelectedEntities { get; set; }
+
+    private IEnumerable<Guid> SelectedValues;
+
+    protected override void OnInitialized()
+    {
+        if (SelectedEntities != null)
+            SelectedValues = SelectedEntities.Select(e => e.Id);
+    }
+
+    private void OnSelectedItemsChanged(IEnumerable<Guid> values)
+    {
+        var toAdd = values.Where(v => !SelectedEntities.Any(e => e.Id == v)).ToList();
+        var toRemove = SelectedEntities.Where(e => !values.Any(v => v == e.Id)).ToList();
+
+        foreach (var value in toAdd)
+        {
+            SelectedEntities.Add(Entities.First(e => e.Id == value));
+        }
+
+        foreach (var value in toRemove)
+        {
+            SelectedEntities.Remove(value);
+        }
+
+        SelectedValues = SelectedEntities.Select(e => e.Id);
+    }
+}

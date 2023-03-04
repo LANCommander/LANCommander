@@ -1,85 +1,59 @@
 ﻿@using LANCommander.Data.Enums
 @using LANCommander.Data.Models
 
-@{
-    int i = 0;
-}
-<div class="table-responsive">
-    <table class="table mb-0">
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>Min Players</th>
-                <th>Max Players</th>
-                <th>Description</th>
-                <th></th>
-            </tr>
-        </thead>
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="MultiplayerMode" DataSource="@Game.MultiplayerModes" HidePagination="true">
+            <PropertyColumn Property="m => m.Type">
+                <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.MinPlayers">
+                <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.MaxPlayers">
+                <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.Description">
+                <Input Type="text" @bind-Value="context.Description" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => RemoveMode(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
 
-        <tbody>
-            @if (MultiplayerModes.Count == 0)
-            {
-                <tr><td colspan="5">If the game has any multiplayer modes you can add them here to provide metadata to clients.</td></tr>
-            }
-
-            @foreach (var multiplayerMode in MultiplayerModes)
-            {
-                var index = i;
-
-                <tr>
-                    <td>
-                        <select @bind="multiplayerMode.Type" name="Game.MultiplayerModes[@i].Type" class="form-control">
-                            @foreach (var type in Enum.GetValues(typeof(MultiplayerType)))
-                            {
-                                <option value="@type">@type</option>
-                            }
-                        </select>
-                    </td>
-                    <td><input @bind="multiplayerMode.MinPlayers" name="Game.MultiplayerModes[@i].MinPlayers" class="form-control" /></td>
-                    <td><input @bind="multiplayerMode.MaxPlayers" name="Game.MultiplayerModes[@i].MaxPlayers" class="form-control" /></td>
-                    <td><input @bind="multiplayerMode.Description" name="Game.MultiplayerModes[@i].Description" class="form-control" /></td>
-                    <td>
-                        <input name="Game.MultiplayerModes[@i].GameId" type="hidden" value="@GameId" />
-
-                        <div class="btn-list flex-nowrap justify-content-end">
-                            <button class="btn btn-ghost-danger btn-icon" @onclick="() => RemoveMode(index)" type="button">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-
-                i++;
-            }
-            <tr>
-                <td colspan="5">
-                    <div class="btn-list flex-nowrap justify-content-end">
-                        <button class="btn btn-ghost-primary" @onclick="AddMode" type="button">Add Mode</button>
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</div>
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
 
 @code {
-    [Parameter] public ICollection<MultiplayerMode> MultiplayerModes { get; set; }
-    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Game Game { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Game.MultiplayerModes == null)
+            Game.MultiplayerModes = new List<MultiplayerMode>();
+    }
 
     private void AddMode()
     {
-        if (MultiplayerModes == null)
-            MultiplayerModes = new List<MultiplayerMode>();
+        if (Game.MultiplayerModes == null)
+            Game.MultiplayerModes = new List<MultiplayerMode>();
 
-        MultiplayerModes.Add(new MultiplayerMode());
+        Game.MultiplayerModes.Add(new MultiplayerMode());
     }
 
-    private void RemoveMode(int index)
+    private void RemoveMode(MultiplayerMode mode)
     {
-        MultiplayerModes.Remove(MultiplayerModes.ElementAt(index));
+        Game.MultiplayerModes.Remove(mode);
     }
 }

@@ -1,0 +1,75 @@
+﻿@using System.Diagnostics;
+@using LANCommander.Extensions;
+@using AntDesign.Charts;
+
+<Area @ref="Chart" Config="Config" />
+
+@code {
+    [Parameter] public int TimerHistory { get; set; }
+    [Parameter] public int TimerInterval { get; set; }
+    IChartComponent? Chart;
+    System.Timers.Timer Timer;
+
+    double[] Data;
+
+    PerformanceCounter PerformanceCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+
+    string JsConfig = @"{
+        meta: {
+            value: {
+                alias: '% Usage',
+                formatter: (v) => v + '%'
+            }
+        }
+    }";
+
+    AreaConfig Config = new AreaConfig
+    {
+        Name = "Processor Utilization",
+        Padding = "auto",
+        YField = "value",
+        XField = "index",
+        Animation = false,
+        IsPercent = true,
+        YAxis = new ValueAxis
+        {
+            Min = 0,
+            Max = 100
+        },
+        XAxis = new ValueCatTimeAxis
+        {
+            Visible = false
+        }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Timer == null)
+        {
+            Timer = new System.Timers.Timer();
+
+            Timer.Interval = TimerInterval;
+
+            Timer.Elapsed += async (s, e) =>
+            {
+                await RefreshData();
+            };
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Chart.UpdateChart(Config, null, null, JsConfig);
+            Timer.Start();
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        Data = Data.ShiftArrayAndInsert((double)Math.Ceiling(PerformanceCounter.NextValue()), TimerHistory);
+
+        await Chart.ChangeData(Data.Select((x, i) => new { value = x, index = i }), true);
+    }
+}

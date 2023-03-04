@@ -1,0 +1,145 @@
+﻿@using AntDesign.TableModels;
+@using LANCommander.Data.Enums
+@using LANCommander.Models
+@using LANCommander.PCGamingWiki
+@inject IGDBService IGDBService
+@inject CompanyService CompanyService
+@inject GenreService GenreService
+@inject TagService TagService
+
+@{
+    RenderFragment Footer =
+    @<Template>
+        <Button OnClick="SelectGame" Disabled="@(Results == null || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
+        <Button OnClick="() => ModalVisible= false">Cancel</Button>
+    </Template>;
+}
+
+<Modal Visible="ModalVisible" Title="Game Metadata Lookup" Footer="@Footer">
+    <Table
+        @ref="ResultsTable"
+        TItem="Game"
+        DataSource="Results"
+        HidePagination="true"
+        Loading="Results == null"
+        OnRowClick="OnRowClicked"
+        @bind-SelectedRows="SelectedResults"
+        ScrollY="calc(100vh - 55px - 55px - 53px)">
+
+        <Selection Key="@context.IGDBId.ToString()" Type="radio" />
+        <PropertyColumn Property="g => g.Title" Title="Title" />
+        <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Title="Released" />
+        <PropertyColumn Property="g => g.Developers">
+            @String.Join(", ", context.Developers?.Select(d => d.Name))
+        </PropertyColumn>
+    </Table>
+</Modal>
+
+@code {
+    [Parameter] public EventCallback<GameLookupResult> OnResultSelected { get; set; }
+
+    ITable? ResultsTable;
+
+    IEnumerable<Game> Results { get; set; }
+    IEnumerable<Game> SelectedResults { get; set; }
+    PCGamingWikiClient PCGamingWikiClient { get; set; }
+    bool ModalVisible { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        PCGamingWikiClient = new PCGamingWikiClient();
+    }
+
+    private void OnRowClicked(RowData<Game> row)
+    {
+        ResultsTable.SetSelection(new string[] { row.Data.IGDBId.ToString() });
+    }
+
+    public async Task SearchForGame(string title)
+    {
+        ModalVisible = true;
+        Results = null;
+
+        var results = await IGDBService.Search(title, "involved_companies.*", "involved_companies.company.*");
+
+        if (results == null)
+            Results = new List<Game>();
+        else
+        {
+            Results = results.Select(r =>
+            {
+                var result = new Game()
+                {
+                    IGDBId = r.Id.GetValueOrDefault(),
+                    Title = r.Name,
+                    ReleasedOn = r.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
+                    Developers = new List<Company>()
+                };
+
+                if (r.InvolvedCompanies != null && r.InvolvedCompanies.Values != null)
+                {
+                    result.Developers = r.InvolvedCompanies.Values.Where(c => c.Developer.HasValue && c.Developer.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
+                    {
+                        Name = c.Company.Value.Name
+                    }).ToList();
+                }
+
+                return result;
+            });
+        }
+    }
+
+    private async Task SelectGame()
+    {
+        var result = new GameLookupResult();
+
+        result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), "genres.*", "game_modes.*", "multiplayer_modes.*", "release_dates.*", "platforms.*", "keywords.*", "involved_companies.*", "involved_companies.company.*", "cover.*");
+        result.MultiplayerModes = await GetMultiplayerModes(result.IGDBMetadata.Name);
+
+        await OnResultSelected.InvokeAsync(result);
+
+        ModalVisible = false;
+    }
+
+    private async Task<ICollection<MultiplayerMode>> GetMultiplayerModes(string gameTitle)
+    {
+        var multiplayerModes = new List<MultiplayerMode>();
+
+        var playerCounts = await PCGamingWikiClient.GetMultiplayerPlayerCounts(gameTitle);
+
+        if (playerCounts != null)
+        {
+            foreach (var playerCount in playerCounts)
+            {
+                MultiplayerType type;
+
+                switch (playerCount.Key)
+                {
+                    case "Local Play":
+                        type = MultiplayerType.Local;
+                        break;
+
+                    case "LAN Play":
+                        type = MultiplayerType.Lan;
+                        break;
+
+                    case "Online Play":
+                        type = MultiplayerType.Online;
+                        break;
+
+                    default:
+                        continue;
+                }
+
+                multiplayerModes.Add(new MultiplayerMode()
+                {
+                    Type = type,
+                    MaxPlayers = playerCount.Value,
+                    MinPlayers = 2
+                });
+            }
+        }
+
+        return multiplayerModes;
+    }
+}

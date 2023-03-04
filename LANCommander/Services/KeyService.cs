@@ -29,13 +29,18 @@ namespace LANCommander.Services
             return key;
         }
 
-        public async Task Release(Guid id)
+        public async Task<Key> Release(Guid id)
         {
             var key = await Get(id);
 
             if (key == null)
-                return;
+                return null;
 
+            return await Release(key);
+        }
+
+        public async Task<Key> Release(Key key)
+        {
             switch (key.AllocationMethod)
             {
                 case KeyAllocationMethod.UserAccount:
@@ -49,7 +54,7 @@ namespace LANCommander.Services
                     break;
             }
 
-            await Update(key);
+            return await Update(key);
         }
     }
 }

@@ -1,0 +1,227 @@
+﻿@using System.Net;
+@using System.Diagnostics;
+@inject HttpClient HttpClient
+@inject NavigationManager Navigator
+@inject ArchiveService ArchiveService
+@inject IMessageService MessageService
+
+<Space Direction="DirectionVHType.Vertical" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Archive" DataSource="@Game.Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true">
+            <PropertyColumn Property="a => a.Version" />
+            <PropertyColumn Property="a => a.CompressedSize">
+                @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.CreatedBy">
+                @context.CreatedBy?.UserName
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />
+            <ActionColumn Title="">
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddArchive" Type="@ButtonType.Primary">Upload Archive</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+@{
+    RenderFragment Footer =
+    @<Template>
+        <Button OnClick="UploadArchive" Disabled="@(File == null || Uploading)" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="Clear" Disabled="File == null || Uploading" Danger>Clear</Button>
+        <Button OnClick="Cancel">Cancel</Button>
+    </Template>;
+}
+
+<Modal Visible="@ModalVisible" Title="Upload Archive" OnOk="UploadArchive" OnCancel="Cancel" Footer="@Footer">
+    <Form Model="@Archive" Layout="@FormLayout.Vertical">
+        <FormItem Label="Version">
+            <Input @bind-Value="@context.Version" /> 
+        </FormItem>
+
+        <FormItem Label="Changelog">
+            <TextArea @bind-Value="@context.Changelog" MaxLength=500 ShowCount />
+        </FormItem>
+
+        <FormItem>
+            <InputFile id="FileInput" OnChange="FileSelected" hidden />
+
+            <Upload Name="files" FileList="FileList">
+                <label class="ant-btn" for="FileInput">
+                    <Icon Type="upload" />
+                    Select Archive
+                </label>
+            </Upload>
+        </FormItem>
+
+        <FormItem>
+            <Progress Percent="Progress" />
+            <Text>@ByteSizeLib.ByteSize.FromBytes(Speed)/s</Text>
+        </FormItem>
+    </Form>
+</Modal>
+
+@code {
+    [Parameter] public Game Game { get; set; }
+
+    Archive Archive;
+
+    IBrowserFile File { get; set; }
+    List<UploadFileItem> FileList = new List<UploadFileItem>();
+
+    bool IsValid = false;
+    bool ModalVisible = false;
+
+    private static string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
+    private string DragClass = DefaultDragClass;
+
+    const int ChunkSize = 1024 * 1024 * 10;
+
+    int Progress = 0;
+    bool Uploading = false;
+    double Speed = 0;
+
+    Stopwatch Watch;
+    long WatchBytesTransferred = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Game.Archives == null)
+            Game.Archives = new List<Archive>();
+
+        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+
+        Archive = new Archive()
+        {
+            GameId = Game.Id,
+            Id = Guid.NewGuid()
+        };
+    }
+
+    private void AddArchive()
+    {
+        Archive = new Archive()
+        {
+            GameId = Game.Id,
+            Id = Guid.NewGuid()
+        };
+
+        ModalVisible = true;
+    }
+
+    private async Task Delete(Archive archive)
+    {
+        try
+        {
+            await ArchiveService.Delete(archive);
+
+            await MessageService.Success("Archive deleted!");
+        }
+        catch
+        {
+            await MessageService.Error("Archive could not be deleted.");
+        }
+    }
+
+    private void Clear()
+    {
+        File = null;
+    }
+
+    private void Cancel()
+    {
+        File = null;
+        ModalVisible = false;
+    }
+
+    private void FileSelected(InputFileChangeEventArgs args)
+    {
+        File = args.File;
+    }
+
+    private async Task UploadArchive()
+    {
+        long uploadedBytes = 0;
+        long totalBytes = File.Size;
+
+        Watch = new Stopwatch();
+
+        using (var stream = File.OpenReadStream(long.MaxValue))
+        {
+            Uploading = true;
+
+            Watch.Start();
+
+            while (Uploading)
+            {
+                byte[] chunk;
+
+                if (totalBytes - uploadedBytes < ChunkSize)
+                    chunk = new byte[totalBytes - uploadedBytes];
+                else
+                    chunk = new byte[ChunkSize];
+
+                int bytesRead = 0;
+
+                // This feels hacky, why do we need to do this?
+                // Only 32256 bytes of the file get read unless we
+                // loop through like this. Probably kills performance.
+                while (bytesRead < chunk.Length)
+                {
+                    bytesRead += await stream.ReadAsync(chunk, bytesRead, chunk.Length - bytesRead);
+                }
+
+                using (FileStream fs = new FileStream(Path.Combine("Upload", Archive.Id.ToString()), FileMode.Append))
+                {
+                    await fs.WriteAsync(chunk);
+                }
+
+                uploadedBytes += chunk.Length;
+                WatchBytesTransferred += chunk.Length;
+
+                Progress = (int)(uploadedBytes * 100 / totalBytes);
+
+                if (Watch.Elapsed.TotalSeconds >= 1)
+                {
+                    Speed = WatchBytesTransferred * (1 / Watch.Elapsed.TotalSeconds);
+                    WatchBytesTransferred = 0;
+                    Watch.Restart();
+                }
+
+                if (Progress >= 100)
+                {
+                    Watch.Stop();
+                    Uploading = false;
+                    await UploadComplete();
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task UploadComplete()
+    {
+        Archive.ObjectKey = Archive.Id.ToString();
+        Archive.CompressedSize = File.Size;
+
+        await ArchiveService.Add(Archive);
+
+        ModalVisible = false;
+
+        await MessageService.Success("Archive uploaded!");
+    }
+}

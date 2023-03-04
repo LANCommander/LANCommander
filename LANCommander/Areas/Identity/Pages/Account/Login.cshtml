@@ -6,47 +6,84 @@
     ViewData["Title"] = "Log in";
 }
 
-<div class="page page-center">
-    <div class="container-tight py-4">
-        <div class="text-center mb-4">
+<div class="ant-row ant-row-middle ant-row-space-around" style="position: absolute; top:0; left: 0; right: 0; bottom: 0;">
+    <div class="ant-col ant-col-10">
+
+        <div style="text-align: center; margin-bottom: 24px;">
             <img src="~/static/logo.svg" />
         </div>
 
-        <form id="account" method="post" class="card card-md" autocomplete="off">
-            <div class="card-body">
-                <h2 class="card-title text-center mb-4">Login to your account</h2>
-
-                <div class="mb-3">
-                    <label asp-for="Input.UserName" class="form-label"></label>
-                    <input asp-for="Input.UserName" class="form-control" autocomplete="username" aria-required="true" />
-                    <span asp-validation-for="Input.UserName" class="text-danger"></span>
-                </div>
-
-                <div class="mb-2">
-                    <label asp-for="Input.Password" class="form-label"></label>
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" />
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-
-                <div class="mb-2">
-                    <label asp-for="Input.RememberMe" class="form-check">
-                        <input class="form-check-input" asp-for="Input.RememberMe" />
-                        <span class="form-check-label">@Html.DisplayNameFor(m => m.Input.RememberMe)</span>
-                    </label>
-                </div>
-
-                <div class="form-footer">
-                    <button id="login-submit" type="submit" class="btn btn-primary w-100">Sign in</button>
+        <div class="ant-card ant-card-bordered">
+            <div class="ant-card-head">
+                <div class="ant-card-head-wrapper">
+                    <div class="ant-card-head-title">Login</div>
                 </div>
             </div>
-        </form>
+            <form id="account" method="post" class="ant-card-body" autocomplete="off">
+                <div class="ant-form ant-form-vertical">
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Input.UserName" class="form-label"></label>
+                            </div>
 
-        <div class="text-center text-muted mt-3">
-          Don't have account yet? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" tabindex="-1">Register</a>
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.UserName" class="ant-input" autocomplete="username" aria-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Input.Password" class="form-label"></label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.Password" class="ant-input" autocomplete="current-password" aria-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <label class="ant-checkbox-wrapper">
+                                            <span class="ant-checkbox">
+                                                <input class="ant-checkbox-input" asp-for="Input.RememberMe" />
+                                                <span class="ant-checkbox-inner"></span>
+                                            </span>
+                                            <span>
+                                                @Html.DisplayNameFor(m => m.Input.RememberMe)
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item" style="margin-bottom: 0;">
+                        <div class="ant-form-item-row ant-row">
+                            <button id="login-submit" type="submit" class="ant-btn ant-btn-primary ant-btn-block">Sign in</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div style="text-align: center; margin-top: 16px;">
+            Don't have account yet? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" tabindex="-1">Register</a>
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}

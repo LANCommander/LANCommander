@@ -1,0 +1,126 @@
+﻿@inject KeyService KeyService
+@inject IMessageService MessageService
+
+<Row>
+    <Col Span="8">
+        <Statistic Title="Available" Value="Game.Keys.Count - AllocatedKeys" Style="text-align: center;" />
+    </Col>
+    <Col Span="8">
+        <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
+    </Col>
+    <Col Span="8">
+        <Statistic Title="Total" Value="Game.Keys.Count" Style="text-align: center;" />
+    </Col>
+</Row>
+
+<Modal Title="View Keys" Visible="ViewModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => ViewModalVisible = false" OnOk="() => ViewModalVisible = false">
+    <Table TItem="Key" DataSource="@Game.Keys" Bordered>
+        <PropertyColumn Property="k => k.Value">
+            <InputPassword @bind-Value="@context.Value" />
+        </PropertyColumn>
+        <PropertyColumn Property="k => k.AllocationMethod" />
+        <Column TData="string">
+            @switch (context.AllocationMethod)
+            {
+                case KeyAllocationMethod.MacAddress:
+                    <text>@context.ClaimedByMacAddress</text>
+                    break;
+
+                case KeyAllocationMethod.UserAccount:
+                    <text>@context.ClaimedByUser?.UserName</text>
+                    break;
+            }
+        </Column>
+        <PropertyColumn Property="g => g.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <ActionColumn Title="">
+            <Space>
+                <SpaceItem>
+                    @if (context.IsAllocated())
+                    {
+                        <Button OnClick="() => Release(context)">Release</Button>
+                    }
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </Table>
+</Modal>
+
+<Modal Title="Edit Keys" Visible="EditModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => EditModalVisible = false" OnOk="Save">
+    <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
+</Modal>
+
+<style>
+    .monaco-editor-container {
+        height: 600px;
+    }
+</style>
+
+@code {
+    [Parameter] public Game Game { get; set; }
+
+    int AllocatedKeys;
+
+    bool ViewModalVisible = false;
+    bool EditModalVisible = false;
+
+    private StandaloneCodeEditor? Editor;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "text",
+            Value = String.Join('\n', Game.Keys.Select(k => k.Value)),
+            Theme = "vs-dark",
+        };
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Game.Keys == null)
+            Game.Keys = new List<Key>();
+
+        AllocatedKeys = Game.Keys.Count(k => k.IsAllocated());
+    }
+
+    public void Edit()
+    {
+        EditModalVisible = true;
+    }
+
+    public void View()
+    {
+        ViewModalVisible = true;
+    }
+
+    private async Task Release(Key key)
+    {
+        key = await KeyService.Release(key);
+
+        await MessageService.Success("Key was unallocated!");
+    }
+
+    private async Task Save()
+    {
+        var value = await Editor.GetValue();
+        var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k));
+
+        var keysDeleted = Game.Keys.Where(k => !keys.Contains(k.Value));
+        var keysAdded = keys.Where(k => !Game.Keys.Any(gk => gk.Value == k));
+
+        foreach (var key in keysDeleted)
+            KeyService.Delete(key);
+
+        foreach (var key in keysAdded)
+            await KeyService.Add(new Key()
+                {
+                    Game = Game,
+                    Value = key
+                });
+
+        EditModalVisible = false;
+
+        await MessageService.Success("Keys updated!");
+    }
+}

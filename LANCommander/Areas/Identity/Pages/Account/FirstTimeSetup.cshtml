@@ -7,46 +7,84 @@
     ViewData["Title"] = "First Time Setup";
 }
 
-<div class="page page-center">
-    <form asp-route-returnUrl="@Model.ReturnUrl" class="container-tight py-4">
-        <div class="text-center mb-4">
-            <h2>LANCommander</h2>
-        </div>
-        <div class="card card-md">
-            <div class="card-body text-center py-4 p-sm-5">
-                <h1>Welcome to LANCommander!</h1>
-                <p class="text-muted">LANCommander is your one stop shop for distributing games on your LAN. Start your adventure with LANCommander and take control of your local multiplayer gaming!</p>
-            </div>
-            <div class="hr-text hr-text-center hr-text-spaceless">registration</div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Register your admin account</label>
-                    <input asp-for="Input.UserName" type="text" class="form-control ps-1" autocomplete="off" placeholder="Username" />
-                    <div class="form-hint">For first-time setup, an admin user is required. This user will be able to manage all aspects of the application.</div>
-                </div>
-                <div class="mb-3">
-                    <label asp-for="Input.Password" class="form-label"></label>
-                    <input asp-for="Input.Password" type="password" class="form-control ps-1" autocomplete="new-password" />
-                    <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
-                </div>
-                <div class="mb-3">
-                    <label asp-for="Input.ConfirmPassword" class="form-label"></label>
-                    <input asp-for="Input.ConfirmPassword" type="password" class="form-control ps-1" autocomplete="new-password" />
-                    <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
-                </div>
-            </div>
+<div class="ant-row ant-row-middle ant-row-space-around" style="position: absolute; top:0; left: 0; right: 0; bottom: 0;">
+    <div class="ant-col ant-col-10">
+
+        <div style="text-align: center; margin-bottom: 24px;">
+            <img src="~/static/logo.svg" />
         </div>
 
-        <div class="row align-items-center mt-3">
-            <div class="col">
-                <div class="btn-list justify-content-end">
-                    <button type="submit" class="btn btn-primary">Continue</button>
+        <div class="ant-card ant-card-bordered">
+            <div class="ant-card-head">
+                <div class="ant-card-head-wrapper">
+                    <div class="ant-card-head-title">First Time Setup</div>
                 </div>
             </div>
+            <form asp-route-returnUrl="@Model.ReturnUrl" class="ant-card-body" autocomplete="off">
+                <div class="ant-form ant-form-vertical">
+                    <div class="ant-form-item">
+                        <p>LANCommander is your one stop shop for distributing games on your LAN. Start your adventure with LANCommander and take control of your local multiplayer gaming!</p>
+                    </div>
+
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label class="form-label">Register your admin account</label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.UserName" class="ant-input" autocomplete="username" aria-required="true" placeholder="Username" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Input.Password" class="form-label"></label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.Password" class="ant-input" autocomplete="current-password" aria-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Input.ConfirmPassword" class="form-label"></label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.ConfirmPassword" class="ant-input" autocomplete="new-password" aria-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item" style="margin-bottom: 0;">
+                        <div class="ant-form-item-row ant-row">
+                            <button type="submit" class="ant-btn ant-btn-primary ant-btn-block">Continue</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
-    </form>
+
+        <div style="text-align: center; margin-top: 16px;">
+            Don't have account yet? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" tabindex="-1">Register</a>
+        </div>
+    </div>
 </div>
-
-@section Scripts {
-<partial name="_ValidationScriptsPartial" />
-}

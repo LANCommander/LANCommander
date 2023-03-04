@@ -1,0 +1,67 @@
+﻿@page "/Games"
+@attribute [Authorize]
+@inject GameService GameService
+@inject NavigationManager NavigationManager
+
+<PageHeader Title="Games">
+    <PageHeaderExtra>
+        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<Table TItem="Game" DataSource="@Games" Loading="@Loading">
+    <Column TData="string">
+        <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
+    </Column>
+    <PropertyColumn Property="g => g.Title" Sortable />
+    <PropertyColumn Property="g => g.SortTitle" Sortable />
+    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable />
+    <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="g => g.CreatedBy" Sortable>
+        @context.CreatedBy?.UserName
+    </PropertyColumn>
+    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="g => g.UpdatedBy" Sortable>
+        @context.UpdatedBy?.UserName
+    </PropertyColumn>
+    <ActionColumn Title="">
+        <Space>
+            <SpaceItem>
+                <Button OnClick="() => Edit(context)">Edit</Button>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
+
+@code {
+    IEnumerable<Game> Games { get; set; } = new List<Game>();
+
+    bool Loading = true;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Games = GameService.Get().OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+
+            Loading = false;
+
+            StateHasChanged();
+        }
+    }
+
+    private string GetIcon(Game game)
+    {
+        return $"/api/Games/{game.Id}/Icon.png";
+    }
+
+    private void Add()
+    {
+        NavigationManager.NavigateTo("/Games/Add");
+    }
+
+    private void Edit(Game game)
+    {
+        NavigationManager.NavigateTo($"/Games/{game.Id}/Edit");
+    }
+}

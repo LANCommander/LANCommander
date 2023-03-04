@@ -1,151 +1,131 @@
-﻿@using ByteSizeLib;
+﻿@using AntDesign.TableModels;
+@using ByteSizeLib;
 @using LANCommander.Services;
 @using System.IO.Compression;
 @inject ArchiveService ArchiveService;
 
-<div class="card-body">
-    <div class="row">
-        <div class="col">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    @if (BreadCrumbs.Length == 0)
-                    {
-                        <li class="breadcrumb-item active">Root</li>
-                    }
-                    else
-                    {
-                        <li class="breadcrumb-item" @onclick="() => GoToRoot()">Root</li>
-                    }
+<GridRow Style="position: fixed; height: calc(100vh - 55px - 53px); top: 55px; left: 0; width: 100%">
+    <GridCol Span="6" Style="height: 100%; overflow-y: scroll; padding: 24px">
+        <Tree TItem="ArchiveDirectory"
+              DataSource="Directories"
+              TitleExpression="x => x.DataItem.Name"
+              ChildrenExpression="x => x.DataItem.Children"
+              IsLeafExpression="x => !x.DataItem.HasChildren"
+              OnClick="(args) => ChangeDirectory(args.Node.DataItem)">
+        </Tree>
+    </GridCol>
 
-                    @for (int i = 0; i < BreadCrumbs.Length; i++)
-                    {
-                        var path = String.Join('/', BreadCrumbs.Take(i + 1)) + '/';
+    <GridCol Span="18" Style="height: 100%">
+        <Table
+            @ref="FileTable"
+            TItem="ZipArchiveEntry"
+            DataSource="CurrentPathEntries"
+            HidePagination="true"
+            Loading="Entries == null"
+            RowSelectable="@(x => x.FullName != null && !x.FullName.EndsWith('/'))"
+            OnRowClick="OnRowClicked"
+            SelectedRowsChanged="SelectedFilesChanged"
+            ScrollY="calc(100vh - 55px - 55px - 53px)">
 
-                        if (i == BreadCrumbs.Length - 1)
-                        {
-                            <li class="breadcrumb-item active">@BreadCrumbs[i]</li>
-                        }
-                        else
-                        {
-                            <li class="breadcrumb-item" @onclick="() => GoToPath(path)">@BreadCrumbs[i]</li>
-                        }
-                    }
-                </ol>
-            </nav>
-        </div>
-    </div>
-</div>
-
-<div class="table-responsive">
-    <table class="table table-vcenter table-striped table-hover card-table" id="ArchiveBrowser">
-        <thead>
-            <tr>
-                <th></th>
-                <th>Name</th>
-                <th>Size</th>
-                <th>Modified</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (CurrentPath != "")
+            @if (Select)
             {
-                <tr @ondblclick="GoUpLevel">
-                    <td></td>
-                    <td colspan="3">..</td>
-                </tr>
+                <Selection Key="@context.FullName" Type="@(Multiple ? "checkbox" : "radio")" Disabled="@(context.FullName != null && context.FullName.EndsWith('/'))" />
             }
+            <Column TData="string" Width="32">
+                <Icon Type="@GetIcon(context)" Theme="outline" />
+            </Column>
+            <PropertyColumn Property="e => e.FullName" Sortable Title="Name">
+                @GetFileName(context)
+            </PropertyColumn>
+            <PropertyColumn Property="e => e.Length" Sortable Title="Size">
+                @ByteSize.FromBytes(context.Length)
+            </PropertyColumn>
+            <PropertyColumn Property="e => e.LastWriteTime" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
 
-            @foreach (var entry in CurrentPathEntries.OrderBy(e => !e.FullName.EndsWith('/')).ThenBy(e => e.FullName))
-            {
-                @if (entry.FullName.EndsWith('/'))
-                {
-                    <tr @ondblclick="() => GoToPath(entry.FullName)">
-                        <td><i class="ti ti-@GetIcon(entry.FullName.ToLower())"></i></td>
-                        <td>@entry.FullName.Remove(0, CurrentPath.Length)</td>
-                        <td></td>
-                        <td>@entry.LastWriteTime</td>
-                    </tr>
-                }
-                else
-                {
-                    <tr>
-                        <td><i class="ti ti-@GetIcon(entry.FullName.ToLower())"></i></td>
-                        <td>@entry.Name</td>
-                        <td class="text-end">@ByteSize.FromBytes(entry.Length)</td>
-                        <td>@entry.LastWriteTime</td>
-                    </tr>
-                }
-            }
-        </tbody>
-    </table>
-</div>
+        </Table>
+    </GridCol>
+</GridRow>
 
 <style>
-    .breadcrumb-item:not(.active) {
-        cursor: pointer;
+    .select-file-button {
+        opacity: 0;
+        transition: .1s opacity;
     }
 
-    #ArchiveBrowser tr {
-        cursor: pointer;
-    }
-
-    #ArchiveBrowser tr td:first-child {
-        padding: 0;
-        padding-left: .75rem;
-        font-size: 1.5rem;
-        width: .75rem;
+    .archive-browser tr:hover .select-file-button {
+        opacity: 1;
     }
 </style>
 
-
 @code {
     [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public bool Select { get; set; }
+    [Parameter] public bool Multiple { get; set; }
+
+    [Parameter] public IEnumerable<ZipArchiveEntry> SelectedFiles { get; set; }
+    [Parameter] public EventCallback<IEnumerable<ZipArchiveEntry>> SelectedFilesChanged { get; set; }
+
+    ITable? FileTable;
 
     private IEnumerable<ZipArchiveEntry> Entries { get; set; }
     private IEnumerable<ZipArchiveEntry> CurrentPathEntries { get; set; }
     private string CurrentPath { get; set; }
-    private string[] BreadCrumbs { get { return CurrentPath.TrimEnd('/').Split('/'); } }
+    private HashSet<ArchiveDirectory> Directories { get; set; }
+    private ArchiveDirectory SelectedDirectory { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         Entries = await ArchiveService.GetContents(ArchiveId);
+        Directories = new HashSet<ArchiveDirectory>();
 
-        GoToRoot();
-    }
-
-    private void GoToRoot()
-    {
-        CurrentPath = "";
-        CurrentPathEntries = Entries.Where(e => e.FullName.TrimEnd('/').Split('/').Length == 1);
-    }
-
-    private void GoUpLevel()
-    {
-        var parts = CurrentPath.TrimEnd('/').Split('/');
-
-        if (parts.Length == 1)
-            GoToRoot();
-        else
+        var root = new ArchiveDirectory()
         {
-            GoToPath(String.Join('/', parts.Take(parts.Length - 1)) + "/");
+            Name = "/",
+            FullName = "",
+            IsExpanded = true
+        };
+
+        root.PopulateChildren(Entries);
+
+        Directories.Add(root);
+
+        ChangeDirectory(root);
+    }
+
+    private void OnRowClicked(RowData<ZipArchiveEntry> row)
+    {
+        FileTable.SetSelection(new string[] { row.Data.FullName });
+    }
+
+    private void ChangeDirectory(ArchiveDirectory selectedDirectory)
+    {
+        SelectedDirectory = selectedDirectory;
+
+        if (SelectedDirectory.FullName == "")
+            CurrentPathEntries = Entries.Where(e => !e.FullName.TrimEnd('/').Contains('/'));
+        else
+            CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(SelectedDirectory.FullName) && e.FullName != SelectedDirectory.FullName);
+    }
+
+    private string GetFileName(ZipArchiveEntry entry)
+    {
+        if (String.IsNullOrWhiteSpace(entry.Name) && entry.Length == 0)
+        {
+            return entry.FullName.TrimEnd('/').Split('/').Last();
         }
+        else
+            return entry.Name;
     }
 
-    private void GoToPath(string path)
+    private string GetIcon(ZipArchiveEntry entry)
     {
-        CurrentPath = path;
-        CurrentPathEntries = Entries.Where(e => e.FullName.StartsWith(CurrentPath) && e.FullName != CurrentPath && e.FullName.Remove(0, path.Length).TrimEnd('/').Split('/').Length == 1);
-    }
-
-    private string GetIcon(string path)
-    {
-        switch (Path.GetExtension(path))
+        switch (Path.GetExtension(entry.FullName))
         {
             case "":
                 return "folder";
 
             case ".exe":
-                return "terminal-2";
+                return "code";
 
             case ".zip":
             case ".rar":
@@ -158,7 +138,7 @@
             case ".pk3":
             case ".pak":
             case ".cab":
-                return "archive";
+                return "file-zip";
 
             case ".txt":
             case ".cfg":
@@ -174,7 +154,7 @@
             case ".bat":
             case ".ps1":
             case ".json":
-                return "file-code";
+                return "code";
 
             case ".bik":
             case ".avi":
@@ -186,26 +166,51 @@
             case ".mpg":
             case ".mpeg":
             case ".flv":
-                return "movie";
+                return "video-camera";
 
             case ".dll":
-                return "package";
-
-            case ".scm":
-                return "map";
+                return "api";
 
             case ".hlp":
-                return "help";
+                return "file-unknown";
 
             case ".png":
             case ".bmp":
             case ".jpeg":
             case ".jpg":
             case ".gif":
-                return "photo";
+                return "file-image";
 
             default:
                 return "file";
+        }
+    }
+
+    public class ArchiveDirectory
+    {
+        public string Name { get; set; }
+        public string FullName { get; set; }
+        public bool IsExpanded { get; set; } = false;
+        public bool HasChildren => Children != null && Children.Count > 0;
+        public HashSet<ArchiveDirectory> Children { get; set; } = new HashSet<ArchiveDirectory>();
+
+        public void PopulateChildren(IEnumerable<ZipArchiveEntry> entries)
+        {
+            var childPaths = entries.Where(e => e.FullName.StartsWith(FullName) && e.FullName.EndsWith('/'));
+            var directChildren = childPaths.Where(p => p.FullName != FullName && p.FullName.Substring(FullName.Length + 1).TrimEnd('/').Split('/').Length == 1);
+
+            foreach (var directChild in directChildren)
+            {
+                var child = new ArchiveDirectory()
+                {
+                    FullName = directChild.FullName,
+                    Name = directChild.FullName.Substring(FullName.Length).TrimEnd('/')
+                };
+
+                child.PopulateChildren(entries);
+
+                Children.Add(child);
+            }
         }
     }
 }

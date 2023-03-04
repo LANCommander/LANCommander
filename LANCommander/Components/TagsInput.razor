@@ -36,5 +36,7 @@
         {
             SelectedEntities.Remove(value);
         }
+
+        SelectedValues = SelectedEntities.Select(e => e.Id);
     }
 }

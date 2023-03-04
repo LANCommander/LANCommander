@@ -24,8 +24,8 @@
 
     private void OnSelectedItemsChanged(IEnumerable<Guid> values)
     {
-        var toAdd = values.Where(v => !SelectedEntities.Any(e => e.Id == v));
-        var toRemove = SelectedEntities.Where(e => !values.Any(v => v == e.Id));
+        var toAdd = values.Where(v => !SelectedEntities.Any(e => e.Id == v)).ToList();
+        var toRemove = SelectedEntities.Where(e => !values.Any(v => v == e.Id)).ToList();
 
         foreach (var value in toAdd)
         {

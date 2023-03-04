@@ -37,9 +37,12 @@
                             <SpaceItem Style="flex-grow: 1">
                                 <Input @bind-Value="@context.Icon" />
                             </SpaceItem>
-                            <SpaceItem>
-                                <Button OnClick="BrowseForIcon" Type="@ButtonType.Primary">Browse</Button>
-                            </SpaceItem>
+                            @if (context.Archives != null && context.Archives.Count > 0)
+                            {
+                                <SpaceItem>
+                                    <Button OnClick="BrowseForIcon" Type="@ButtonType.Primary">Browse</Button>
+                                </SpaceItem>
+                            }
                         </Space>
                     </FormItem>
                     <FormItem Label="Description">

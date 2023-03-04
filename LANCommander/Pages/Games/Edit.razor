@@ -166,9 +166,18 @@
     {
         try
         {
-            Game = await GameService.Update(Game);
+            if (Game.Id != Guid.Empty)
+            {
+                Game = await GameService.Update(Game);
 
-            await MessageService.Success("Game updated!");
+                await MessageService.Success("Game updated!");
+            }
+            else
+            {
+                Game = await GameService.Add(Game);
+
+                await MessageService.Success("Game added!");
+            }
         }
         catch (Exception ex)
         {

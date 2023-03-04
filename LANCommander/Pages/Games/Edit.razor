@@ -74,47 +74,50 @@
         </Card>
     </SpaceItem>
 
-    <SpaceItem>
-        <Card Title="Actions">
-            <Body>
-                <ActionEditor Game="Game" />
-            </Body>
-        </Card>
-    </SpaceItem>
+    @if (Game.Id != Guid.Empty)
+    {
+        <SpaceItem>
+            <Card Title="Actions">
+                <Body>
+                    <ActionEditor Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
 
-    <SpaceItem>
-        <Card Title="Multiplayer Modes">
-            <Body>
-                <MultiplayerModeEditor Game="Game" />
-            </Body>
-        </Card>
-    </SpaceItem>
+        <SpaceItem>
+            <Card Title="Multiplayer Modes">
+                <Body>
+                    <MultiplayerModeEditor Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
 
-    <SpaceItem>
-        <Card Title="Keys">
-            <Extra>
-                <Button OnClick="() => KeysEditor.Edit()">Edit</Button>
-                <Button OnClick="() => KeysEditor.View()" Type="@ButtonType.Primary">View</Button>
-            </Extra>
-            <Body>
-                <KeysEditor @ref="KeysEditor" Game="Game" />
-            </Body>
-        </Card>
-    </SpaceItem>
+        <SpaceItem>
+            <Card Title="Keys">
+                <Extra>
+                    <Button OnClick="() => KeysEditor.Edit()">Edit</Button>
+                    <Button OnClick="() => KeysEditor.View()" Type="@ButtonType.Primary">View</Button>
+                </Extra>
+                <Body>
+                    <KeysEditor @ref="KeysEditor" Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
 
-    <SpaceItem>
-        <Card Title="Scripts">
-            <Body>
-                <ScriptEditor Game="Game" />
-            </Body>
-        </Card>
-    </SpaceItem>
+        <SpaceItem>
+            <Card Title="Scripts">
+                <Body>
+                    <ScriptEditor Game="Game" />
+                </Body>
+            </Card>
+        </SpaceItem>
 
-    <SpaceItem>
-        <Card Title="Archives">
-            <ArchiveUploader Game="Game" />
-        </Card>
-    </SpaceItem>
+        <SpaceItem>
+            <Card Title="Archives">
+                <ArchiveUploader Game="Game" />
+            </Card>
+        </SpaceItem>
+    }
 </Space>
 
 @code {

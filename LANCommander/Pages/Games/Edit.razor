@@ -25,7 +25,7 @@
                                 <Input @bind-Value="@context.Title" />
                             </SpaceItem>
                             <SpaceItem>
-                                <Button OnClick="() => GameMetadataLookup.SearchForGame(context.Title)" Type="@ButtonType.Primary">Lookup</Button>
+                                <Button OnClick="() => GameMetadataLookup.SearchForGame(context.Title)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(context.Title))">Lookup</Button>
                             </SpaceItem>
                         </Space>
                     </FormItem>

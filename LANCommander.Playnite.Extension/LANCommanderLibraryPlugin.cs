@@ -55,7 +55,7 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
         {
-            if (LANCommander.Token == null || !LANCommander.ValidateToken(LANCommander.Token))
+            if (LANCommander.Token == null || LANCommander.Client == null || !LANCommander.ValidateToken(LANCommander.Token))
             {
                 ShowAuthenticationWindow();
             }

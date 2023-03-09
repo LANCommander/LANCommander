@@ -82,6 +82,12 @@ namespace LANCommander.PlaynitePlugin.Views
                 Plugin.Settings.AccessToken = response.AccessToken;
                 Plugin.Settings.RefreshToken = response.RefreshToken;
 
+                Plugin.LANCommander.Token = new AuthToken()
+                {
+                    AccessToken = response.AccessToken,
+                    RefreshToken = response.RefreshToken,
+                };
+
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;
 

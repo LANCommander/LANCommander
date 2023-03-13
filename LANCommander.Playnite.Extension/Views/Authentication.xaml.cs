@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -67,16 +68,30 @@ namespace LANCommander.PlaynitePlugin.Views
             }
         }
 
-        private void Authenticate()
+        public RelayCommand<object> LoginCommand
+        {
+            get => new RelayCommand<object>(async (a) =>
+            {
+                await Authenticate();
+            });
+        }
+
+        private async Task Authenticate()
         {
             try
             {
+                LoginButton.Dispatcher.Invoke(new System.Action(() =>
+                {
+                    LoginButton.IsEnabled = false;
+                    LoginButton.Content = "Logging in...";
+                }));
+
                 if (Plugin.LANCommander == null || Plugin.LANCommander.Client == null)
                     Plugin.LANCommander = new LANCommanderClient(Context.ServerAddress);
                 else
                     Plugin.LANCommander.Client.BaseUrl = new Uri(Context.ServerAddress);
 
-                var response = Plugin.LANCommander.Authenticate(Context.UserName, Context.Password);
+                var response = await Plugin.LANCommander.AuthenticateAsync(Context.UserName, Context.Password);
 
                 Plugin.Settings.ServerAddress = Context.ServerAddress;
                 Plugin.Settings.AccessToken = response.AccessToken;

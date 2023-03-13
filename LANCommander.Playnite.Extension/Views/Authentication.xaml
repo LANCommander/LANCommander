@@ -214,6 +214,6 @@
         <TextBox Grid.Row="1" Grid.Column="1" Name="Username" Text="{Binding UserName}" KeyDown="TextBox_KeyDown" />
         <TextBlock Grid.Row="2" Grid.Column="0" Text="Password" />
         <PasswordBox Grid.Row="2" Grid.Column="1" Name="Password" PasswordChanged="Password_PasswordChanged" KeyDown="TextBox_KeyDown" />
-        <Button Grid.Row="3" Grid.ColumnSpan="2" Click="LoginButton_Click" x:Name="LoginButton">Login</Button>
+        <Button Grid.Row="3" Grid.ColumnSpan="2" Command="{Binding LoginCommand}" x:Name="LoginButton">Login</Button>
     </Grid>
 </UserControl>

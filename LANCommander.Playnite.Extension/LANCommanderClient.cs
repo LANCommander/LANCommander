@@ -62,9 +62,9 @@ namespace LANCommander.PlaynitePlugin
             return tempFile;
         }
 
-        public AuthResponse Authenticate(string username, string password)
+        public async Task<AuthResponse> AuthenticateAsync(string username, string password)
         {
-            var response = Client.Post<AuthResponse>(new RestRequest("/api/Auth").AddJsonBody(new AuthRequest()
+            var response = await Client.ExecuteAsync<AuthResponse>(new RestRequest("/api/Auth", Method.POST).AddJsonBody(new AuthRequest()
             {
                 UserName = username,
                 Password = password

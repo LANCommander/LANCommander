@@ -113,6 +113,12 @@ namespace LANCommander.PlaynitePlugin.Views
             catch (Exception ex)
             {
                 Plugin.PlayniteApi.Dialogs.ShowErrorMessage(ex.Message);
+
+                LoginButton.Dispatcher.Invoke(new System.Action(() =>
+                {
+                    LoginButton.IsEnabled = true;
+                    LoginButton.Content = "Login";
+                }));
             }
         }
     }

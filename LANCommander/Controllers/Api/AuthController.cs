@@ -75,7 +75,7 @@ namespace LANCommander.Controllers.Api
                 });
             }
 
-            return RedirectToAction("Index", "Home");
+            return Unauthorized();
         }
 
         [HttpPost("Validate")]

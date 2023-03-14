@@ -312,7 +312,8 @@ namespace LANCommander.PlaynitePlugin
                 };
 
                 window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
-                window.WindowStartupLocation = System.Windows.WindowStartupLocation.CenterOwner;
+                window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
+                window.ResizeMode = ResizeMode.NoResize;
                 window.ShowDialog();
             });
 

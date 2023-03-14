@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Converters;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -83,6 +84,36 @@ namespace LANCommander.PlaynitePlugin
                 default:
                     throw new WebException("Could not communicate with the server");
             }
+        }
+
+        public async Task<AuthResponse> RegisterAsync(string username, string password)
+        {
+            var response = await Client.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.POST).AddJsonBody(new AuthRequest()
+            {
+                UserName = username,
+                Password = password
+            }));
+
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    return response.Data;
+
+                case HttpStatusCode.BadRequest:
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    throw new WebException(response.Data.Message);
+
+                default:
+                    throw new WebException("Could not communicate with the server");
+            }
+        }
+
+        public async Task<bool> PingAsync()
+        {
+            var response = await Client.ExecuteAsync(new RestRequest("/api/Ping", Method.GET));
+
+            return response.StatusCode == HttpStatusCode.OK;
         }
 
         public AuthResponse RefreshToken(AuthToken token)

@@ -16,9 +16,16 @@ namespace LANCommander.Controllers.Api
     {
         public string AccessToken { get; set; }
         public string RefreshToken { get; set; }
+        public DateTime Expiration { get; set; }
     }
 
     public class LoginModel
+    {
+        public string UserName { get; set; }
+        public string Password { get; set; }
+    }
+
+    public class RegisterModel
     {
         public string UserName { get; set; }
         public string Password { get; set; }
@@ -29,12 +36,14 @@ namespace LANCommander.Controllers.Api
     public class AuthController : ControllerBase
     {
         private readonly UserManager<User> UserManager;
+        private readonly IUserStore<User> UserStore;
         private readonly RoleManager<Role> RoleManager;
         private readonly LANCommanderSettings Settings;
 
-        public AuthController(UserManager<User> userManager, RoleManager<Role> roleManager)
+        public AuthController(UserManager<User> userManager, IUserStore<User> userStore, RoleManager<Role> roleManager)
         {
             UserManager = userManager;
+            UserStore = userStore;
             RoleManager = roleManager;
             Settings = SettingService.GetSettings();
         }
@@ -44,38 +53,16 @@ namespace LANCommander.Controllers.Api
         {
             var user = await UserManager.FindByNameAsync(model.UserName);
 
-            if (user != null && await UserManager.CheckPasswordAsync(user, model.Password))
+            try
             {
-                var userRoles = await UserManager.GetRolesAsync(user);
+                var token = await Login(user, model.Password);
 
-                var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                };
-
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
-                }
-
-                var token = GetToken(authClaims);
-                var refreshToken = GenerateRefreshToken();
-
-                user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.TokenLifetime);
-
-                await UserManager.UpdateAsync(user);
-
-                return Ok(new
-                {
-                    AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
-                    RefreshToken = refreshToken,
-                    Expiration = token.ValidTo
-                });
+                return Ok(token);
             }
-
-            return Unauthorized();
+            catch
+            {
+                return Unauthorized();
+            }
         }
 
         [HttpPost("Validate")]
@@ -123,6 +110,82 @@ namespace LANCommander.Controllers.Api
                 RefreshToken = newRefreshToken,
                 Expiration = newAccessToken.ValidTo
             });
+        }
+
+        [HttpPost("Register")]
+        public async Task<IActionResult> Register([FromBody] RegisterModel model)
+        {
+            var user = await UserManager.FindByNameAsync(model.UserName);
+
+            if (user != null)
+                return Unauthorized(new
+                {
+                    Message = "Username is unavailable"
+                });
+
+            user = new User();
+
+            await UserStore.SetUserNameAsync(user, model.UserName, CancellationToken.None);
+
+            var result = await UserManager.CreateAsync(user, model.Password);
+
+            if (result.Succeeded)
+            {
+                try
+                {
+                    var token = await Login(user, model.Password);
+
+                    return Ok(token);
+                }
+                catch
+                {
+                    return BadRequest(new
+                    {
+                        Message = "An unknown error occurred"
+                    });
+                }
+            }
+
+            return Unauthorized(new
+            {
+                Message = "Error:\n" + String.Join('\n', result.Errors.Select(e => e.Description))
+            });
+        }
+
+        private async Task<TokenModel> Login(User user, string password)
+        {
+            if (user != null && await UserManager.CheckPasswordAsync(user, password))
+            {
+                var userRoles = await UserManager.GetRolesAsync(user);
+
+                var authClaims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                };
+
+                foreach (var userRole in userRoles)
+                {
+                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                }
+
+                var token = GetToken(authClaims);
+                var refreshToken = GenerateRefreshToken();
+
+                user.RefreshToken = refreshToken;
+                user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.TokenLifetime);
+
+                await UserManager.UpdateAsync(user);
+
+                return new TokenModel()
+                {
+                    AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
+                    RefreshToken = refreshToken,
+                    Expiration = token.ValidTo
+                };
+            }
+
+            throw new Exception("Invalid username or password");
         }
 
         private JwtSecurityToken GetToken(List<Claim> authClaims)

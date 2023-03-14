@@ -60,6 +60,11 @@ namespace LANCommander.PlaynitePlugin.Views
             Authenticate();
         }
 
+        private void RegisterButton_Click(object sender, RoutedEventArgs e)
+        {
+            Register();
+        }
+
         private void Password_PasswordChanged(object sender, RoutedEventArgs e)
         {
             if (DataContext != null)
@@ -119,6 +124,47 @@ namespace LANCommander.PlaynitePlugin.Views
                     LoginButton.IsEnabled = true;
                     LoginButton.Content = "Login";
                 }));
+            }
+        }
+
+        private async Task Register()
+        {
+            try
+            {
+                LoginButton.IsEnabled = false;
+                RegisterButton.IsEnabled = false;
+                RegisterButton.Content = "Working...";
+
+                if (Plugin.LANCommander == null || Plugin.LANCommander.Client == null)
+                    Plugin.LANCommander = new LANCommanderClient(Context.ServerAddress);
+                else
+                    Plugin.LANCommander.Client.BaseUrl = new Uri(Context.ServerAddress);
+
+                var response = await Plugin.LANCommander.RegisterAsync(Context.UserName, Context.Password);
+
+                Plugin.Settings.ServerAddress = Context.ServerAddress;
+                Plugin.Settings.AccessToken = response.AccessToken;
+                Plugin.Settings.RefreshToken = response.RefreshToken;
+
+                Plugin.LANCommander.Token = new AuthToken()
+                {
+                    AccessToken = response.AccessToken,
+                    RefreshToken = response.RefreshToken,
+                };
+
+                Context.Password = String.Empty;
+
+                Plugin.SavePluginSettings(Plugin.Settings);
+
+                Window.GetWindow(this).Close();
+            }
+            catch (Exception ex)
+            {
+                Plugin.PlayniteApi.Dialogs.ShowErrorMessage(ex.Message);
+
+                LoginButton.IsEnabled = true;
+                RegisterButton.IsEnabled = true;
+                RegisterButton.Content = "Register";
             }
         }
     }

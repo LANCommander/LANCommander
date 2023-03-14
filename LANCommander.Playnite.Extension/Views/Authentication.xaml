@@ -27,7 +27,7 @@
             <sys:Double x:Key="EllipseBorderThickness">1</sys:Double>
             <CornerRadius x:Key="ControlCornerRadius">1</CornerRadius>
             <Thickness x:Key="SidebarItemPadding">8</Thickness>
-            
+
             <Color x:Key="BlackColor">#FF000000</Color>
             <Color x:Key="WhiteColor">#FFFFFFFF</Color>
             <Color x:Key="TextColor">#f2f2f2</Color>
@@ -202,6 +202,7 @@
             <RowDefinition Height="auto" />
             <RowDefinition Height="auto" />
             <RowDefinition Height="auto" />
+            <RowDefinition Height="auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="auto" />
@@ -214,6 +215,20 @@
         <TextBox Grid.Row="1" Grid.Column="1" Name="Username" Text="{Binding UserName}" KeyDown="TextBox_KeyDown" />
         <TextBlock Grid.Row="2" Grid.Column="0" Text="Password" />
         <PasswordBox Grid.Row="2" Grid.Column="1" Name="Password" PasswordChanged="Password_PasswordChanged" KeyDown="TextBox_KeyDown" />
-        <Button Grid.Row="3" Grid.ColumnSpan="2" Command="{Binding LoginCommand}" x:Name="LoginButton">Login</Button>
+
+        <GridSplitter Grid.Row="4" />
+
+        <Grid Grid.Row="5" Grid.ColumnSpan="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Row="0" Grid.Column="0" Click="LoginButton_Click" x:Name="LoginButton">Login</Button>
+            <Button Grid.Row="0" Grid.Column="1" Click="RegisterButton_Click" x:Name="RegisterButton">Register</Button>
+        </Grid>
     </Grid>
 </UserControl>

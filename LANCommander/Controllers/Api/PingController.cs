@@ -2,8 +2,11 @@
 
 namespace LANCommander.Controllers.Api
 {
-    public class PingController : Controller
+    [Route("api/[controller]")]
+    [ApiController]
+    public class PingController : ControllerBase
     {
+        [HttpGet]
         public IActionResult Index()
         {
             return Ok("Pong!");

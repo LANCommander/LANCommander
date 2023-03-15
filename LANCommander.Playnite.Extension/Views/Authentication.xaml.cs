@@ -101,6 +101,7 @@ namespace LANCommander.PlaynitePlugin.Views
                 Plugin.Settings.ServerAddress = Context.ServerAddress;
                 Plugin.Settings.AccessToken = response.AccessToken;
                 Plugin.Settings.RefreshToken = response.RefreshToken;
+                Plugin.Settings.PlayerName = Context.UserName;
 
                 Plugin.LANCommander.Token = new AuthToken()
                 {
@@ -145,6 +146,7 @@ namespace LANCommander.PlaynitePlugin.Views
                 Plugin.Settings.ServerAddress = Context.ServerAddress;
                 Plugin.Settings.AccessToken = response.AccessToken;
                 Plugin.Settings.RefreshToken = response.RefreshToken;
+                Plugin.Settings.PlayerName = Context.UserName;
 
                 Plugin.LANCommander.Token = new AuthToken()
                 {

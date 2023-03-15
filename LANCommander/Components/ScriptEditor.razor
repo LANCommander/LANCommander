@@ -6,7 +6,15 @@
 @inject ModalService ModalService
 @inject IMessageService MessageService
 
-<Modal Visible="ModalVisible" OnOk="Save" OnCancel="() => ModalVisible = false" Title="@(Script == null ? "Add Script" : "Edit Script")" OkText="@("Save")" Maximizable="false" DefaultMaximized="true">
+@{
+    RenderFragment Footer =
+    @<Template>
+        <Button OnClick="Save" Disabled="@(String.IsNullOrWhiteSpace(Script.Name))" Type="@ButtonType.Primary">Save</Button>
+        <Button OnClick="() => ModalVisible = false">Close</Button>
+    </Template>;
+}
+
+<Modal Visible="ModalVisible" Footer="@Footer" Title="@(Script == null ? "Add Script" : "Edit Script")" OkText="@("Save")" Maximizable="false" DefaultMaximized="true" Closable="true">
     <Form Model="@Script" Layout="@FormLayout.Vertical">
         <FormItem>
             @foreach (var group in Snippets.Select(s => s.Group).Distinct())
@@ -36,16 +44,20 @@
             <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
         </FormItem>
 
+        <FormItem Label="Name">
+            <Input @bind-Value="@context.Name" />
+        </FormItem>
+
         <FormItem Label="Type">
-            <Select @bind-Value="Script.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>()" />
+            <Select @bind-Value="context.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>()" />
         </FormItem>
 
         <FormItem>
-            <Checkbox @bind-Checked="Script.RequiresAdmin">Requires Admin</Checkbox>
+            <Checkbox @bind-Checked="context.RequiresAdmin">Requires Admin</Checkbox>
         </FormItem>
 
         <FormItem Label="Description">
-            <TextArea @bind-Value="Script.Description" MaxLength=500 ShowCount />
+            <TextArea @bind-Value="context.Description" MaxLength=500 ShowCount />
         </FormItem>
     </Form>
 </Modal>
@@ -95,7 +107,7 @@
     bool ModalVisible = false;
 
     IEnumerable<Snippet> Snippets { get; set; }
-    StandaloneCodeEditor Editor;
+    StandaloneCodeEditor? Editor;
 
     private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
     {
@@ -121,12 +133,15 @@
 
     private async void Edit(Script script = null)
     {
-        if (Script == null)
-            Script = new Script();
+        if (script == null)
+            Script = new Script()
+            {
+                GameId = Game.Id
+            };
         else
             Script = script;
 
-        if (Editor != null)
+        if (Editor != null && Script != null)
             await Editor.SetValue(Script.Contents);
 
         ModalVisible = true;
@@ -144,7 +159,12 @@
     {
         var value = await Editor.GetValue();
 
-        await ScriptService.Update(Script);
+        Script.Contents = value;
+
+        if (Script.Id == Guid.Empty)
+            Script = await ScriptService.Add(Script);
+        else
+            Script = await ScriptService.Update(Script);
 
         await MessageService.Success("Script saved!");
     }

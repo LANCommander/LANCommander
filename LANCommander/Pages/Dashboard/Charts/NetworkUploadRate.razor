@@ -78,6 +78,10 @@
             Data[instance] = Data[instance].ShiftArrayAndInsert((double)PerformanceCounters[instance].NextValue(), TimerHistory);
         }
 
-        await Chart.ChangeData(Data.SelectMany(x => x.Value.Select((y, i) => new { value = y, index = i, series = x.Key })), true);
+        try
+        {
+            await Chart.ChangeData(Data.SelectMany(x => x.Value.Select((y, i) => new { value = y, index = i, series = x.Key })), true);
+        }
+        catch { }
     }
 }

@@ -70,6 +70,10 @@
     {
         Data = Data.ShiftArrayAndInsert((double)Math.Ceiling(PerformanceCounter.NextValue()), TimerHistory);
 
-        await Chart.ChangeData(Data.Select((x, i) => new { value = x, index = i }), true);
+        try
+        {
+            await Chart.ChangeData(Data.Select((x, i) => new { value = x, index = i }), true);
+        }
+        catch { }
     }
 }

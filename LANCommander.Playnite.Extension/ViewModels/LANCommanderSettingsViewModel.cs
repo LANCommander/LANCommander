@@ -34,6 +34,10 @@ namespace LANCommander.PlaynitePlugin
                 InstallDirectory = settings.InstallDirectory;
                 PlayerName = settings.PlayerName;
             }
+            else
+            {
+                InstallDirectory = "C:\\Games";
+            }
         }
 
         public void BeginEdit()

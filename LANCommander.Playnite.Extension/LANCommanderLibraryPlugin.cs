@@ -334,6 +334,9 @@ namespace LANCommander.PlaynitePlugin
 
             game.Icon = $"{Settings.ServerAddress}{manifest.Icon}";
 
+            if (manifest.Actions == null)
+                throw new Exception("The game has no actions defined.");
+
             foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder))
             {
                 bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;

@@ -25,9 +25,14 @@
         @context.UpdatedBy?.UserName
     </PropertyColumn>
     <ActionColumn Title="">
-        <Space>
+        <Space Direction="DirectionVHType.Horizontal">
             <SpaceItem>
                 <Button OnClick="() => Edit(context)">Edit</Button>
+            </SpaceItem>
+            <SpaceItem>
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
             </SpaceItem>
         </Space>
     </ActionColumn>
@@ -63,5 +68,18 @@
     private void Edit(Game game)
     {
         NavigationManager.NavigateTo($"/Games/{game.Id}/Edit");
+    }
+
+    private async Task Delete(Game game)
+    {
+        Games = new List<Game>();
+
+        Loading = true;
+
+        await GameService.Delete(game);
+
+        Games = GameService.Get().OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+
+        Loading = false;
     }
 }

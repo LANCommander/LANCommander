@@ -149,6 +149,8 @@
             await Editor.SetValue(Script.Contents);
 
         ModalVisible = true;
+
+        StateHasChanged();
     }
 
     private async void Delete(Script script = null)
@@ -171,6 +173,8 @@
             Script = await ScriptService.Update(Script);
 
         ModalVisible = false;
+
+        StateHasChanged();
 
         await MessageService.Success("Script saved!");
     }

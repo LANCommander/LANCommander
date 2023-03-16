@@ -133,11 +133,14 @@
 
     private async void Edit(Script script = null)
     {
-        if (script == null)
+        if (script == null) {
             Script = new Script()
             {
                 GameId = Game.Id
             };
+
+            await Editor.SetValue("");
+        }
         else
             Script = script;
 

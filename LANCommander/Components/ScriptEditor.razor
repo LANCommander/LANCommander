@@ -170,6 +170,8 @@
             Script = await ScriptService.Update(Script);
 
         await MessageService.Success("Script saved!");
+
+        ModalVisible = false;
     }
 
     private async void InsertSnippet(Snippet snippet)

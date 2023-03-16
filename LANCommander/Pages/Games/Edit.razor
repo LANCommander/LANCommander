@@ -10,6 +10,7 @@
 @inject ArchiveService ArchiveService
 @inject ScriptService ScriptService
 @inject IMessageService MessageService
+@inject NavigationManager NavigationManager
 @inject ModalService ModalService
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%;">
@@ -177,6 +178,8 @@
                 Game = await GameService.Add(Game);
 
                 await MessageService.Success("Game added!");
+
+                NavigationManager.NavigateTo($"/Games/{Game.Id}/Edit");
             }
         }
         catch (Exception ex)

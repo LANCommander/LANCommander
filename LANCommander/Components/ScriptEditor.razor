@@ -139,7 +139,8 @@
                 GameId = Game.Id
             };
 
-            await Editor.SetValue("");
+            if (Editor != null)
+                await Editor.SetValue("");
         }
         else
             Script = script;

@@ -180,10 +180,12 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Change Player Name",
                         Action = (nameChangeArgs) =>
                         {
+                            var oldName = Settings.PlayerName;
+
                             var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", Settings.PlayerName);
 
                             if (result.Result == true)
-                                PowerShellRuntime.RunScript(nameChangeArgs.Games.First(), SDK.Enums.ScriptType.NameChange, $@"""{result.SelectedString}""");
+                                PowerShellRuntime.RunScript(nameChangeArgs.Games.First(), SDK.Enums.ScriptType.NameChange, $@"""{result.SelectedString}"" ""{oldName}""");
                         }
                     };
 

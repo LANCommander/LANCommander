@@ -131,8 +131,14 @@ namespace LANCommander.PlaynitePlugin
 
         public bool ValidateToken(AuthToken token)
         {
+            if (token == null)
+                return false;
+
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {token.AccessToken}");
+
+            if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
+                return false;
 
             var response = Client.Post(request);
 

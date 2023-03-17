@@ -35,6 +35,11 @@ namespace LANCommander.PlaynitePlugin
 
         public override void Install(InstallActionArgs args)
         {
+            while (!Plugin.ValidateConnection())
+            {
+                Plugin.ShowAuthenticationWindow();
+            }
+
             var gameId = Guid.Parse(Game.GameId);
 
             var game = Plugin.LANCommander.GetGame(gameId);

@@ -61,28 +61,18 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
+        public bool ValidateConnection()
+        {
+            return LANCommander.ValidateToken(LANCommander.Token);
+        }
+
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
         {
             var gameMetadata = new List<GameMetadata>();
 
-            if (LANCommander.Token == null || !LANCommander.ValidateToken(LANCommander.Token))
+            while (!ValidateConnection())
             {
-                try
-                {
-                    var response = LANCommander.RefreshToken(LANCommander.Token);
-
-                    LANCommander.Token.AccessToken = response.AccessToken;
-                    LANCommander.Token.RefreshToken = response.RefreshToken;
-
-                    if (!LANCommander.ValidateToken(LANCommander.Token))
-                    {
-                        throw new Exception();
-                    }
-                }
-                catch
-                {
-                    ShowAuthenticationWindow();
-                }
+                ShowAuthenticationWindow();
             }
 
             try

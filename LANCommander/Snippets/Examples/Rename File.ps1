@@ -1,0 +1,1 @@
+﻿Rename-Item -Path "$InstallDir\<FilePath>" -NewName "$InstallDir\<NewName>"

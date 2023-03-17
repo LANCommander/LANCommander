@@ -136,7 +136,6 @@
     Modal FileSelectorModal;
 
     private string value = "blazor";
-    private ConfirmRef _confirmRef;
 
     private Game Game;
     private KeysEditor? KeysEditor;
@@ -265,14 +264,6 @@
             {
                 Game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Data.Models.Tag { Name = tag }));
             }
-        }
-    }
-
-    private async Task CloseModal()
-    {
-        if (_confirmRef != null)
-        {
-            await _confirmRef.CloseAsync();
         }
     }
 }

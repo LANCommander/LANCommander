@@ -48,6 +48,9 @@ namespace LANCommander.PCGamingWiki
         {
             var results = new Dictionary<string, int>();
 
+            if (url == null)
+                return results;
+
             HtmlWeb web = new HtmlWeb();
             HtmlDocument dom = web.Load(url);
 

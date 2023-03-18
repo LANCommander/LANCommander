@@ -1,0 +1,66 @@
+﻿@page "/Servers/{id:guid}/Edit"
+@page "/Servers/Add"
+@inject ServerService ServerService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+
+<Card Title="Server Details">
+    <Body>
+        <Form Model="@Server" Layout="@FormLayout.Vertical">
+            <FormItem Label="Name">
+                <Input @bind-Value="@context.Name" />
+            </FormItem>
+            <FormItem Label="Path">
+                <Input @bind-Value="@context.Path" />
+            </FormItem>
+            <FormItem Label="Arguments">
+                <Input @bind-Value="@context.Arguments" />
+            </FormItem>
+            <FormItem Label="Working Directory">
+                <Input @bind-Value="@context.WorkingDirectory" />
+            </FormItem>
+            <FormItem>
+                <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+            </FormItem>
+        </Form>
+    </Body>
+</Card>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Server Server;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+            Server = new Server();
+        else
+            Server = await ServerService.Get(Id);
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Server.Id != Guid.Empty)
+            {
+                Server = await ServerService.Update(Server);
+
+                await MessageService.Success("Server updated!");
+            }
+            else
+            {
+                Server = await ServerService.Add(Server);
+
+                await MessageService.Success("Server added!");
+
+                NavigationManager.NavigateTo($"/Servers/{Server.Id}/Edit");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error("Could not save!");
+        }
+    }
+}

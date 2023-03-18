@@ -1,0 +1,88 @@
+﻿@page "/Servers"
+@attribute [Authorize]
+@inject ServerService ServerService
+@inject ServerProcessService ServerProcessService
+@inject NavigationManager NavigationManager
+
+<PageHeader Title="Servers">
+    <PageHeaderExtra>
+        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Server</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<Table TItem="Server" DataSource="@Servers" Loading="@Loading">
+    <PropertyColumn Property="s => s.Name" Sortable />
+    <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="s => s.CreatedBy" Sortable>
+        @context.CreatedBy?.UserName
+    </PropertyColumn>
+    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="g => g.UpdatedBy" Sortable>
+        @context.UpdatedBy?.UserName
+    </PropertyColumn>
+    <ActionColumn Title="">
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Button OnClick="() => Edit(context)">Edit</Button>
+                <Button OnClick="() => Start(context)">Start</Button>
+                <Button OnClick="() => Stop(context)">Stop</Button>
+            </SpaceItem>
+            <SpaceItem>
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
+
+@code {
+    IEnumerable<Server> Servers { get; set; } = new List<Server>();
+
+    bool Loading = true;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Servers = ServerService.Get().OrderBy(s => s.Name).ToList();
+
+            Loading = false;
+
+            StateHasChanged();
+        }
+    }
+
+    private void Add()
+    {
+        NavigationManager.NavigateTo("/Servers/Add");
+    }
+
+    private void Edit(Server server)
+    {
+        NavigationManager.NavigateTo($"/Servers/{server.Id}/Edit");
+    }
+
+    private void Start(Server server)
+    {
+        ServerProcessService.StartServer(server);
+    }
+
+    private void Stop(Server server)
+    {
+        ServerProcessService.StopServer(server);
+    }
+
+    private async Task Delete(Server server)
+    {
+        Servers = new List<Server>();
+
+        Loading = true;
+
+        await ServerService.Delete(server);
+
+        Servers = ServerService.Get().OrderBy(s => s.Name).ToList();
+
+        Loading = false;
+    }
+}

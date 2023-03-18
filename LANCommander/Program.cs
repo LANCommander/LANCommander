@@ -78,6 +78,7 @@ builder.Services.AddControllers().AddJsonOptions(x =>
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 
+builder.Services.AddFusionCache();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -108,6 +109,9 @@ builder.Services.AddScoped<KeyService>();
 builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<IGDBService>();
+builder.Services.AddScoped<ServerService>();
+
+builder.Services.AddSingleton<ServerProcessService>();
 
 if (settings.Beacon)
     builder.Services.AddHostedService<BeaconService>();

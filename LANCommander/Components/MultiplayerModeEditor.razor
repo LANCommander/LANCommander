@@ -3,7 +3,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="MultiplayerMode" DataSource="@Game.MultiplayerModes" HidePagination="true">
+        <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true">
             <PropertyColumn Property="m => m.Type">
                 <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()" />
             </PropertyColumn>
@@ -36,24 +36,41 @@
 </Space>
 
 @code {
+    [Parameter] public ICollection<MultiplayerMode> Value { get; set; }
+    [Parameter] public EventCallback<ICollection<MultiplayerMode>> ValueChanged { get; set; }
     [Parameter] public Game Game { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        if (Game.MultiplayerModes == null)
-            Game.MultiplayerModes = new List<MultiplayerMode>();
+        if (Value == null)
+            Value = new List<MultiplayerMode>();
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
     }
 
-    private void AddMode()
+    private async Task AddMode()
     {
-        if (Game.MultiplayerModes == null)
-            Game.MultiplayerModes = new List<MultiplayerMode>();
+        if (Value == null)
+            Value = new List<MultiplayerMode>();
 
-        Game.MultiplayerModes.Add(new MultiplayerMode());
+        Value.Add(new MultiplayerMode());
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
     }
 
-    private void RemoveMode(MultiplayerMode mode)
+    private async Task RemoveMode(MultiplayerMode mode)
     {
-        Game.MultiplayerModes.Remove(mode);
+        Value.Remove(mode);
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
     }
 }

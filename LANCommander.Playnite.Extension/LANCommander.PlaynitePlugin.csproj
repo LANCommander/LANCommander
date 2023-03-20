@@ -94,6 +94,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
+    <Compile Include="Helpers\RetryHelper.cs" />
     <Compile Include="PowerShellRuntime.cs" />
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />

@@ -16,6 +16,8 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using LANCommander.SDK.Models;
 using System.Collections.ObjectModel;
+using System.Web.Caching;
+using LANCommander.PlaynitePlugin.Helpers;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -41,13 +43,19 @@ namespace LANCommander.PlaynitePlugin
             }
 
             var gameId = Guid.Parse(Game.GameId);
-
             var game = Plugin.LANCommander.GetGame(gameId);
-            var manifest = Plugin.LANCommander.GetGameManifest(gameId);
 
-            var tempFile = Download(game);
+            string tempDownloadLocation;
 
-            var installDirectory = Extract(game, tempFile);
+            if (Plugin.DownloadCache.ContainsKey(gameId))
+                tempDownloadLocation = Plugin.DownloadCache[gameId];
+            else
+            {
+                tempDownloadLocation = Download(game);
+                Plugin.DownloadCache[gameId] = tempDownloadLocation;
+            }
+
+            var installDirectory = Extract(game, tempDownloadLocation);
 
             var installInfo = new GameInstallationData()
             {
@@ -56,7 +64,19 @@ namespace LANCommander.PlaynitePlugin
 
             PlayniteGame.InstallDirectory = installDirectory;
 
-            WriteManifest(manifest, installDirectory);
+            SDK.GameManifest manifest = null;
+
+            var writeManifestSuccess = RetryHelper.RetryOnException(10, TimeSpan.FromSeconds(1), false, () =>
+            {
+                manifest = Plugin.LANCommander.GetGameManifest(gameId);
+
+                WriteManifest(manifest, installDirectory);
+
+                return true;
+            });
+
+            if (!writeManifestSuccess)
+                throw new Exception("Could not get or write the manifest file. Retry the install or check your connection.");
 
             SaveScript(game, installDirectory, ScriptType.Install);
             SaveScript(game, installDirectory, ScriptType.Uninstall);
@@ -75,6 +95,9 @@ namespace LANCommander.PlaynitePlugin
             catch { }
 
             Plugin.UpdateGame(manifest, gameId);
+
+            Plugin.DownloadCache.Remove(gameId);
+            File.Delete(tempDownloadLocation);
 
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
         }
@@ -163,8 +186,6 @@ namespace LANCommander.PlaynitePlugin
                         file.IsStreamOwner = true;
                         file.Close();
                     }
-
-                    File.Delete(archivePath);
                 }
             },
             new GlobalProgressOptions($"Extracting {game.Title}...")

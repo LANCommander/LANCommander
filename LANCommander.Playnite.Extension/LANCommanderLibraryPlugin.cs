@@ -34,6 +34,8 @@ namespace LANCommander.PlaynitePlugin
         public override string Name => "LANCommander";
         public override LibraryClient Client { get; } = new LANCommanderLibraryClient();
 
+        internal Dictionary<Guid, string> DownloadCache = new Dictionary<Guid, string>();
+
         public LANCommanderLibraryPlugin(IPlayniteAPI api) : base(api)
         {
             Properties = new LibraryPluginProperties
@@ -225,6 +227,21 @@ namespace LANCommander.PlaynitePlugin
                 Action = (args2) =>
                 {
                     ShowNameChangeWindow();
+                }
+            };
+
+            yield return new MainMenuItem
+            {
+                Description = "Clear Download Cache",
+                Action = (args2) =>
+                {
+                    foreach (var gameId in DownloadCache.Keys)
+                    {
+                        File.Delete(DownloadCache[gameId]);
+                        DownloadCache.Remove(gameId);
+                    }
+
+                    PlayniteApi.Dialogs.ShowMessage("The download cache has been cleared and any temporary files have been deleted.", "Cache Cleared!", MessageBoxButton.OK);
                 }
             };
         }

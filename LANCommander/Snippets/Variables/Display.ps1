@@ -1,2 +1,3 @@
-﻿# Accessible via $Display.ScreenWidth and $Display.ScreenHeight
-$Display = Get-WmiObject -Class Win32_DesktopMonitor | Select-Object ScreenWidth,ScreenHeight
+﻿# Accessible via $Display.Width and $Display.Height
+Add-Type -AssemblyName System.Windows.Forms
+$Display = [System.Windows.Forms.Screen]::AllScreens | Where-Object Primary | Select Bounds

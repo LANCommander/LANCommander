@@ -173,7 +173,7 @@ namespace LANCommander.Controllers.Api
                 var refreshToken = GenerateRefreshToken();
 
                 user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.TokenLifetime);
+                user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.Authentication.TokenLifetime);
 
                 await UserManager.UpdateAsync(user);
 
@@ -190,10 +190,10 @@ namespace LANCommander.Controllers.Api
 
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.TokenSecret));
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.Authentication.TokenSecret));
 
             var token = new JwtSecurityToken(
-                expires: DateTime.Now.AddDays(Settings.TokenLifetime),
+                expires: DateTime.Now.AddDays(Settings.Authentication.TokenLifetime),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );
@@ -220,7 +220,7 @@ namespace LANCommander.Controllers.Api
                 ValidateAudience = false,
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.TokenSecret)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.Authentication.TokenSecret)),
                 ValidateLifetime = false
             };
 

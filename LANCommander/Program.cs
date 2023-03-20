@@ -46,8 +46,13 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<User>((IdentityOptions options) =>
 {
     options.SignIn.RequireConfirmedAccount = false;
-    options.Password.RequireNonAlphanumeric = false;
     options.SignIn.RequireConfirmedEmail = false;
+
+    options.Password.RequireNonAlphanumeric = settings.Authentication.PasswordRequireNonAlphanumeric;
+    options.Password.RequireLowercase = settings.Authentication.PasswordRequireLowercase;
+    options.Password.RequireUppercase = settings.Authentication.PasswordRequireUppercase;
+    options.Password.RequireDigit = settings.Authentication.PasswordRequireDigit;
+    options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
 })
     .AddRoles<Role>()
     .AddEntityFrameworkStores<LANCommander.Data.DatabaseContext>()
@@ -69,7 +74,7 @@ builder.Services.AddAuthentication(options =>
             ValidateAudience = false,
             // ValidAudience = configuration["JWT:ValidAudience"],
             // ValidIssuer = configuration["JWT:ValidIssuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.TokenSecret))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Authentication.TokenSecret))
         };
     });
 

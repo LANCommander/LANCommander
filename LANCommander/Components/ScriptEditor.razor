@@ -64,7 +64,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Script" DataSource="@Game.Scripts" HidePagination="true">
+        <Table TItem="Script" DataSource="@Scripts" HidePagination="true">
             <PropertyColumn Property="s => s.Type" />
             <PropertyColumn Property="s => s.CreatedBy">
                 @context.CreatedBy?.UserName
@@ -100,7 +100,10 @@
 </style>
 
 @code {
-    [Parameter] public Game Game { get; set; }
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public ICollection<Script> Scripts { get; set; }
+    [Parameter] public EventCallback<ICollection<Script>> ScriptsChanged { get; set; }
 
     Script Script;
 
@@ -122,8 +125,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Game.Scripts == null)
-            Game.Scripts = new List<Script>();
+        if (Scripts == null)
+            Scripts = new List<Script>();
 
         Snippets = ScriptService.GetSnippets();
 
@@ -136,7 +139,7 @@
         if (script == null) {
             Script = new Script()
             {
-                GameId = Game.Id
+                GameId = GameId
             };
 
             if (Editor != null)
@@ -200,7 +203,7 @@
 
         var browserOptions = new ArchiveBrowserOptions()
             {
-                ArchiveId = Game.Archives.FirstOrDefault().Id,
+                ArchiveId = ArchiveId,
                 Select = true,
                 Multiple = false
             };

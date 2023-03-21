@@ -108,7 +108,7 @@
         <SpaceItem>
             <Card Title="Scripts">
                 <Body>
-                    <ScriptEditor Game="Game" />
+                    <ScriptEditor @bind-Scripts="Game.Scripts" GameId="Game.Id" ArchiveId="Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
                 </Body>
             </Card>
         </SpaceItem>

@@ -80,7 +80,7 @@
         <SpaceItem>
             <Card Title="Actions">
                 <Body>
-                    <ActionEditor Game="Game" />
+                    <ActionEditor @bind-Value="Game.Actions" ArchiveId="Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
                 </Body>
             </Card>
         </SpaceItem>

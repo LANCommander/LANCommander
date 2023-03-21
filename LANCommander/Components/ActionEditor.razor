@@ -54,17 +54,21 @@
 </Space>
 
 @code {
-    [Parameter] public Game Game { get; set; }
+    [Parameter] public ICollection<Data.Models.Action> Value { get; set; }
+    [Parameter] public EventCallback<ICollection<Data.Models.Action>> ValueChanged { get; set; }
+
+    [Parameter] public Guid ArchiveId { get; set; }
 
     private List<Data.Models.Action> OrderedActions { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        if (Game.Actions == null)
-            Game.Actions = new List<Data.Models.Action>();
+        if (Value == null)
+            Value = new List<Data.Models.Action>();
 
-        OrderedActions = Game.Actions.OrderBy(a => a.SortOrder).ToList();
-        FixSortOrder();
+        OrderedActions = Value.OrderBy(a => a.SortOrder).ToList();
+
+        await FixSortOrder();
     }
 
     private async Task AddAction()
@@ -77,11 +81,15 @@
             PrimaryAction = OrderedActions.Count == 0,
             SortOrder = OrderedActions.Count
         });
+
+        await FixSortOrder();
     }
 
     private async Task RemoveAction(Data.Models.Action action)
     {
         OrderedActions.Remove(action);
+
+        await FixSortOrder();
     }
 
     private async Task MoveUp(Data.Models.Action action)
@@ -89,7 +97,7 @@
         if (action.SortOrder > 0)
             OrderedActions.Move(action, action.SortOrder - 1);
 
-        FixSortOrder();
+        await FixSortOrder();
     }
 
     private async Task MoveDown(Data.Models.Action action)
@@ -97,7 +105,7 @@
         if (action.SortOrder < OrderedActions.Count + 1)
             OrderedActions.Move(action, action.SortOrder + 1);
 
-        FixSortOrder();
+        await FixSortOrder();
     }
 
     private async void BrowseForActionPath(Data.Models.Action action)
@@ -112,11 +120,11 @@
             };
 
         var browserOptions = new ArchiveBrowserOptions()
-            {
-                ArchiveId = Game.Archives.FirstOrDefault().Id,
-                Select = true,
-                Multiple = false
-            };
+        {
+            ArchiveId = ArchiveId,
+            Select = true,
+            Multiple = false
+        };
 
         var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
 
@@ -137,7 +145,7 @@
         };
     }
 
-    private void FixSortOrder()
+    private async Task FixSortOrder()
     {
         int i = 0;
 
@@ -148,6 +156,9 @@
             i++;
         }
 
-        Game.Actions = OrderedActions;
+        Value = OrderedActions;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync();
     }
 }

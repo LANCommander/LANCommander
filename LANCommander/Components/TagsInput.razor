@@ -12,31 +12,41 @@
 @code {
     [Parameter] public Func<TItem, string> OptionLabelSelector { get; set; }
     [Parameter] public IEnumerable<TItem> Entities { get; set; }
-    [Parameter] public ICollection<TItem> SelectedEntities { get; set; }
 
-    private IEnumerable<Guid> SelectedValues;
+    [Parameter] public ICollection<TItem> Values { get; set; }
+    [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
 
-    protected override void OnInitialized()
+    private IEnumerable<Guid> SelectedValues
     {
-        if (SelectedEntities != null)
-            SelectedValues = SelectedEntities.Select(e => e.Id);
+        get
+        {
+            return Values?.Select(e => e.Id);
+        }
+        set
+        {
+            if (value != null)
+                Values = value.ToList() as ICollection<TItem>;
+        }
     }
 
-    private void OnSelectedItemsChanged(IEnumerable<Guid> values)
+    private async Task OnSelectedItemsChanged(IEnumerable<Guid> values)
     {
-        var toAdd = values.Where(v => !SelectedEntities.Any(e => e.Id == v)).ToList();
-        var toRemove = SelectedEntities.Where(e => !values.Any(v => v == e.Id)).ToList();
+        var toAdd = values.Where(v => !Values.Any(e => e.Id == v)).ToList();
+        var toRemove = Values.Where(e => !values.Any(v => v == e.Id)).ToList();
 
         foreach (var value in toAdd)
         {
-            SelectedEntities.Add(Entities.First(e => e.Id == value));
+            Values.Add(Entities.First(e => e.Id == value));
         }
 
         foreach (var value in toRemove)
         {
-            SelectedEntities.Remove(value);
+            Values.Remove(value);
         }
 
-        SelectedValues = SelectedEntities.Select(e => e.Id);
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync();
+
+        StateHasChanged();
     }
 }

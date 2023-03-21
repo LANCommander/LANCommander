@@ -56,16 +56,16 @@
                         <Checkbox @bind-Checked="@context.Singleplayer" />
                     </FormItem>
                     <FormItem Label="Developers">
-                        <TagsInput Entities="Companies" SelectedEntities="Game.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                        <TagsInput Entities="Companies" @bind-Values="Game.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
                     </FormItem>
                     <FormItem Label="Publishers">
-                        <TagsInput Entities="Companies" SelectedEntities="Game.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                        <TagsInput Entities="Companies" @bind-Values="Game.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
                     </FormItem>
                     <FormItem Label="Genres">
-                        <TagsInput Entities="Genres" SelectedEntities="Game.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
+                        <TagsInput Entities="Genres" @bind-Values="Game.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
                     </FormItem>
                     <FormItem Label="Tags">
-                        <TagsInput Entities="Tags" SelectedEntities="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
+                        <TagsInput Entities="Tags" @bind-Values="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
                     </FormItem>
                     <FormItem>
                         <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>

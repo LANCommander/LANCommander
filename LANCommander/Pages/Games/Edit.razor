@@ -100,7 +100,7 @@
                     <Button OnClick="() => KeysEditor.View()" Type="@ButtonType.Primary">View</Button>
                 </Extra>
                 <Body>
-                    <KeysEditor @ref="KeysEditor" Game="Game" />
+                    <KeysEditor @ref="KeysEditor" @bind-Keys="Game.Keys" GameId="Game.Id" />
                 </Body>
             </Card>
         </SpaceItem>

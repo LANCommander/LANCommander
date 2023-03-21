@@ -3,18 +3,18 @@
 
 <Row>
     <Col Span="8">
-        <Statistic Title="Available" Value="Game.Keys.Count - AllocatedKeys" Style="text-align: center;" />
+        <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
     </Col>
     <Col Span="8">
         <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
     </Col>
     <Col Span="8">
-        <Statistic Title="Total" Value="Game.Keys.Count" Style="text-align: center;" />
+        <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
     </Col>
 </Row>
 
 <Modal Title="View Keys" Visible="ViewModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => ViewModalVisible = false" OnOk="() => ViewModalVisible = false">
-    <Table TItem="Key" DataSource="@Game.Keys" Bordered>
+    <Table TItem="Key" DataSource="@Keys" Bordered>
         <PropertyColumn Property="k => k.Value">
             <InputPassword @bind-Value="@context.Value" />
         </PropertyColumn>
@@ -56,7 +56,9 @@
 </style>
 
 @code {
-    [Parameter] public Game Game { get; set; }
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public ICollection<Key> Keys { get; set; }
+    [Parameter] public EventCallback<ICollection<Key>> KeysChanged { get; set; }
 
     int AllocatedKeys;
 
@@ -71,17 +73,17 @@
         {
             AutomaticLayout = true,
             Language = "text",
-            Value = String.Join('\n', Game.Keys.Select(k => k.Value)),
+            Value = String.Join('\n', Keys.Select(k => k.Value)),
             Theme = "vs-dark",
         };
     }
 
     protected override async Task OnInitializedAsync()
     {
-        if (Game.Keys == null)
-            Game.Keys = new List<Key>();
+        if (Keys == null)
+            Keys = new List<Key>();
 
-        AllocatedKeys = Game.Keys.Count(k => k.IsAllocated());
+        AllocatedKeys = Keys.Count(k => k.IsAllocated());
     }
 
     public void Edit()
@@ -106,8 +108,8 @@
         var value = await Editor.GetValue();
         var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k));
 
-        var keysDeleted = Game.Keys.Where(k => !keys.Contains(k.Value));
-        var keysAdded = keys.Where(k => !Game.Keys.Any(gk => gk.Value == k));
+        var keysDeleted = Keys.Where(k => !keys.Contains(k.Value));
+        var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k));
 
         foreach (var key in keysDeleted)
             KeyService.Delete(key);
@@ -115,7 +117,7 @@
         foreach (var key in keysAdded)
             await KeyService.Add(new Key()
                 {
-                    Game = Game,
+                    GameId = GameId,
                     Value = key
                 });
 

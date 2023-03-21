@@ -9,7 +9,10 @@ namespace LANCommander.Data.Models
     {
         [MaxLength(255)]
         public string Value { get; set; }
+        public Guid GameId { get; set; }
         [JsonIgnore]
+        [ForeignKey(nameof(GameId))]
+        [InverseProperty("Keys")]
         public virtual Game Game { get; set; }
         public KeyAllocationMethod AllocationMethod { get; set; }
         [MaxLength(17)]

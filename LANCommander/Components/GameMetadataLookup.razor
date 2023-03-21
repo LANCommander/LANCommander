@@ -10,8 +10,8 @@
 @{
     RenderFragment Footer =
     @<Template>
-        <Button OnClick="SelectGame" Disabled="@(Results == null || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
-        <Button OnClick="() => ModalVisible= false">Cancel</Button>
+        <Button OnClick="SelectGame" Disabled="@(Loading || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
+        <Button OnClick="() => ModalVisible = false">Cancel</Button>
     </Template>;
 }
 
@@ -21,7 +21,7 @@
         TItem="Game"
         DataSource="Results"
         HidePagination="true"
-        Loading="Results == null"
+        Loading="Loading"
         OnRowClick="OnRowClicked"
         @bind-SelectedRows="SelectedResults"
         ScrollY="calc(100vh - 55px - 55px - 53px)">
@@ -44,6 +44,7 @@
     IEnumerable<Game> SelectedResults { get; set; }
     PCGamingWikiClient PCGamingWikiClient { get; set; }
     bool ModalVisible { get; set; } = false;
+    bool Loading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -57,10 +58,13 @@
 
     public async Task SearchForGame(string title)
     {
+        Loading = true;
         ModalVisible = true;
         Results = null;
 
         var results = await IGDBService.Search(title, "involved_companies.*", "involved_companies.company.*");
+
+        Loading = false;
 
         if (results == null)
             Results = new List<Game>();
@@ -91,6 +95,8 @@
 
     private async Task SelectGame()
     {
+        Loading = true;
+
         var result = new GameLookupResult();
 
         result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), "genres.*", "game_modes.*", "multiplayer_modes.*", "release_dates.*", "platforms.*", "keywords.*", "involved_companies.*", "involved_companies.company.*", "cover.*");

@@ -10,7 +10,7 @@
 @{
     RenderFragment Footer =
     @<Template>
-        <Button OnClick="SelectGame" Disabled="@(Loading || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
+        <Button OnClick="SelectGame" Disabled="@(Loading || (SelectedResults != null && SelectedResults.Count() == 0) || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
         <Button OnClick="() => ModalVisible = false">Cancel</Button>
     </Template>;
 }

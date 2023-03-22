@@ -200,7 +200,7 @@ namespace LANCommander.PlaynitePlugin
         private void WriteManifest(SDK.GameManifest manifest, string installDirectory)
         {
             var serializer = new SerializerBuilder()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
             var yaml = serializer.Serialize(manifest);

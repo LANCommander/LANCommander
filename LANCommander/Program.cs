@@ -164,4 +164,7 @@ if (!Directory.Exists("Icon"))
 if (!Directory.Exists("Save"))
     Directory.CreateDirectory("Save");
 
+if (!Directory.Exists("Snippets"))
+    Directory.CreateDirectory("Snippets");
+
 app.Run();

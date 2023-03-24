@@ -6,7 +6,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Data.Models.Action" DataSource="@OrderedActions" HidePagination="true" Style="border: 1px solid #f0f0f0">
+        <Table TItem="Data.Models.Action" DataSource="@Actions" HidePagination="true" Style="border: 1px solid #f0f0f0">
             <PropertyColumn Property="a => a.Name">
                 <Input Type="text" @bind-Value="context.Name" />
             </PropertyColumn>
@@ -15,9 +15,11 @@
                     <SpaceItem Style="flex-grow: 1">
                         <Input Type="text" @bind-Value="context.Path" />
                     </SpaceItem>
-                    <SpaceItem>
-                        <Button OnClick="() => BrowseForActionPath(context)" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
-                    </SpaceItem>
+                    @if (ArchiveId != Guid.Empty) {
+                        <SpaceItem>
+                            <Button OnClick="() => BrowseForActionPath(context)" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
+                        </SpaceItem>
+                    }
                 </Space>
             </PropertyColumn>
             <PropertyColumn Property="a => a.Arguments">
@@ -54,58 +56,46 @@
 </Space>
 
 @code {
-    [Parameter] public ICollection<Data.Models.Action> Value { get; set; }
-    [Parameter] public EventCallback<ICollection<Data.Models.Action>> ValueChanged { get; set; }
+    [Parameter] public ICollection<Data.Models.Action> Actions { get; set; }
+    [Parameter] public EventCallback<ICollection<Data.Models.Action>> ActionsChanged { get; set; }
 
+    [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
-
-    private List<Data.Models.Action> OrderedActions { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        if (Value == null)
-            Value = new List<Data.Models.Action>();
-
-        OrderedActions = Value.OrderBy(a => a.SortOrder).ToList();
-
-        await FixSortOrder();
+        if (Actions == null)
+            Actions = new List<Data.Models.Action>();
     }
 
     private async Task AddAction()
     {
-        if (OrderedActions == null)
-            OrderedActions = new List<Data.Models.Action>();
+        if (Actions == null)
+            Actions = new List<Data.Models.Action>();
 
-        OrderedActions.Add(new Data.Models.Action()
+        Actions.Add(new Data.Models.Action()
         {
-            PrimaryAction = OrderedActions.Count == 0,
-            SortOrder = OrderedActions.Count
+            PrimaryAction = Actions.Count == 0,
+            SortOrder = Actions.Count,
+            GameId = GameId
         });
-
-        await FixSortOrder();
     }
 
     private async Task RemoveAction(Data.Models.Action action)
     {
-        OrderedActions.Remove(action);
-
-        await FixSortOrder();
+        Actions.Remove(action);
     }
 
     private async Task MoveUp(Data.Models.Action action)
     {
         if (action.SortOrder > 0)
-            OrderedActions.Move(action, action.SortOrder - 1);
-
-        await FixSortOrder();
+            Move(action.SortOrder, action.SortOrder - 1);
     }
 
     private async Task MoveDown(Data.Models.Action action)
     {
-        if (action.SortOrder < OrderedActions.Count + 1)
-            OrderedActions.Move(action, action.SortOrder + 1);
-
-        await FixSortOrder();
+        if (action.SortOrder < Actions.Count + 1)
+            Move(action.SortOrder, action.SortOrder + 1);
     }
 
     private async void BrowseForActionPath(Data.Models.Action action)
@@ -145,20 +135,15 @@
         };
     }
 
-    private async Task FixSortOrder()
+    private void Move(int oldIndex, int newIndex)
     {
-        int i = 0;
-
-        foreach (var action in OrderedActions)
+        foreach (var action in Actions)
         {
-            action.SortOrder = i;
+            if (action.SortOrder == oldIndex)
+                action.SortOrder = newIndex;
 
-            i++;
+            if (action.SortOrder == newIndex)
+                action.SortOrder = oldIndex;
         }
-
-        Value = OrderedActions;
-
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync();
     }
 }

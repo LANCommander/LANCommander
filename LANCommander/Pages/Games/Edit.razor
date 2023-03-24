@@ -75,12 +75,12 @@
         </Card>
     </SpaceItem>
 
-    @if (Game.Id != Guid.Empty)
+    @if (Game != null && Game.Id != Guid.Empty)
     {
         <SpaceItem>
             <Card Title="Actions">
                 <Body>
-                    <ActionEditor @bind-Value="Game.Actions" ArchiveId="Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
+                    <ActionEditor @bind-Actions="Game.Actions" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
                 </Body>
             </Card>
         </SpaceItem>
@@ -140,6 +140,17 @@
     private Game Game;
     private KeysEditor? KeysEditor;
     private GameMetadataLookup? GameMetadataLookup;
+
+    private Guid LatestArchiveId
+    {
+        get
+        {
+            if (Game != null && Game.Archives != null && Game.Archives.Count > 0)
+                return Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
+            else
+                return Guid.Empty;
+        }
+    }
 
     private int KeysAvailable { get {
             return Game.Keys.Count(k =>

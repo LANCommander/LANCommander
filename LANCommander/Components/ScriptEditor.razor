@@ -37,7 +37,10 @@
                 </Dropdown>
             }
 
-            <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
+            @if (ArchiveId != Guid.Empty)
+            {
+                <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
+            }
         </FormItem>
 
         <FormItem>

@@ -55,7 +55,13 @@ namespace LANCommander.PlaynitePlugin
                 Plugin.DownloadCache[gameId] = tempDownloadLocation;
             }
 
-            var installDirectory = Extract(game, tempDownloadLocation);
+            var installDirectory = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(500), "", () =>
+            {
+                return Extract(game, tempDownloadLocation);
+            });
+
+            if (installDirectory == "")
+                throw new Exception("Could not extract the install archive. Retry the install or check your connection.");
 
             var installInfo = new GameInstallationData()
             {

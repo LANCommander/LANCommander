@@ -38,7 +38,7 @@
                             <SpaceItem Style="flex-grow: 1">
                                 <Input @bind-Value="@context.Icon" />
                             </SpaceItem>
-                            @if (context.Archives != null && context.Archives.Count > 0)
+                            @if (LatestArchiveId != Guid.Empty)
                             {
                                 <SpaceItem>
                                     <Button OnClick="BrowseForIcon" Type="@ButtonType.Primary">Browse</Button>
@@ -108,7 +108,7 @@
         <SpaceItem>
             <Card Title="Scripts">
                 <Body>
-                    <ScriptEditor @bind-Scripts="Game.Scripts" GameId="Game.Id" ArchiveId="Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
+                    <ScriptEditor @bind-Scripts="Game.Scripts" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
                 </Body>
             </Card>
         </SpaceItem>

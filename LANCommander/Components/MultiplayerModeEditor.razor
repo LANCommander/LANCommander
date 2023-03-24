@@ -7,10 +7,10 @@
             <PropertyColumn Property="m => m.Type">
                 <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()" />
             </PropertyColumn>
-            <PropertyColumn Property="m => m.MinPlayers">
+            <PropertyColumn Property="m => m.MinPlayers" Title="Min Players">
                 <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />
             </PropertyColumn>
-            <PropertyColumn Property="m => m.MaxPlayers">
+            <PropertyColumn Property="m => m.MaxPlayers" Title="Max Players">
                 <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
             </PropertyColumn>
             <PropertyColumn Property="m => m.Description">

@@ -2,7 +2,7 @@
 @using System.IO.Compression;
 @using LANCommander.Models;
 
-<ArchiveBrowser ArchiveId="Options.ArchiveId" @bind-SelectedFiles="SelectedFiles" Select="Options.Select" Multiple="Options.Multiple" />
+<ArchiveBrowser ArchiveId="Options.ArchiveId" @bind-SelectedFiles="SelectedFiles" Select="Options.Select" Multiple="Options.Multiple" AllowDirectories="Options.AllowDirectories" />
 
 @code {
     private IEnumerable<ZipArchiveEntry> SelectedFiles { get; set; }

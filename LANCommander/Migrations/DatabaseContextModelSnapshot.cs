@@ -525,6 +525,45 @@ namespace LANCommander.Migrations
                     b.ToTable("AspNetRoles", (string)null);
                 });
 
+            modelBuilder.Entity("LANCommander.Data.Models.SavePath", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("SavePaths");
+                });
+
             modelBuilder.Entity("LANCommander.Data.Models.Script", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1110,6 +1149,27 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Data.Models.SavePath", b =>
+                {
+                    b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById");
+
+                    b.HasOne("LANCommander.Data.Models.Game", "Game")
+                        .WithMany("SavePaths")
+                        .HasForeignKey("GameId");
+
+                    b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Data.Models.Script", b =>
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
@@ -1230,6 +1290,8 @@ namespace LANCommander.Migrations
                     b.Navigation("Keys");
 
                     b.Navigation("MultiplayerModes");
+
+                    b.Navigation("SavePaths");
 
                     b.Navigation("Scripts");
                 });

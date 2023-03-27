@@ -1,0 +1,31 @@
+﻿<AntDesign.Input Type="text" @bind-Value="Path" OnBlur="() => OnChanged()">
+    <AddOnBefore>
+        <SimpleSelect @bind-Value="Hive" Style="width: auto;" OnSelectedItemsChanged="() => OnChanged()">
+            <SelectOptions>
+                <SimpleSelectOption Value="HKCR:\" Label="HKCR:\"></SimpleSelectOption>
+                <SimpleSelectOption Value="HKCU:\" Label="HKCU:\"></SimpleSelectOption>
+                <SimpleSelectOption Value="HKLM:\" Label="HKLM:\"></SimpleSelectOption>
+                <SimpleSelectOption Value="HKU:\" Label="HKU:\"></SimpleSelectOption>
+                <SimpleSelectOption Value="HKCC:\" Label="HKCC:\"></SimpleSelectOption>
+            </SelectOptions>
+        </SimpleSelect>
+    </AddOnBefore>
+</AntDesign.Input>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    string Hive = "HKCU:\\";
+    string Path = "SOFTWARE";
+
+    private async void OnChanged()
+    {
+        Value = Hive + Path;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
+    }
+}

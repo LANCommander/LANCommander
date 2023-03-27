@@ -1,6 +1,7 @@
 ﻿using LANCommander.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Build.Framework;
 using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Data

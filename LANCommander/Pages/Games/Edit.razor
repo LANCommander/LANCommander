@@ -94,6 +94,14 @@
         </SpaceItem>
 
         <SpaceItem>
+            <Card Title="Save Paths">
+                <Body>
+                    <SavePathEditor @bind-Value="Game.SavePaths" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
+                </Body>
+            </Card>
+        </SpaceItem>
+
+        <SpaceItem>
             <Card Title="Keys">
                 <Extra>
                     <Button OnClick="() => KeysEditor.Edit()">Edit</Button>

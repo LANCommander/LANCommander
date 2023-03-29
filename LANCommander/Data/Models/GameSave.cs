@@ -16,5 +16,10 @@ namespace LANCommander.Data.Models
         [ForeignKey(nameof(UserId))]
         [InverseProperty("GameSaves")]
         public virtual User? User { get; set; }
+
+        public string GetUploadPath()
+        {
+            return Path.Combine("Saves", UserId.ToString(), GameId.ToString(), Id.ToString());
+        }
     }
 }

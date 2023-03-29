@@ -99,6 +99,16 @@ namespace LANCommander.Services
                     };
             }
 
+            if (game.SavePaths != null && game.SavePaths.Count > 0)
+            {
+                manifest.SavePaths = game.SavePaths.Select(p => new SDK.SavePath()
+                {
+                    Id = p.Id,
+                    Path = p.Path,
+                    Type = p.Type.ToString()
+                });
+            }
+
             return manifest;
         }
 

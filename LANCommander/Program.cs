@@ -114,6 +114,7 @@ builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<IGDBService>();
 builder.Services.AddScoped<ServerService>();
+builder.Services.AddScoped<GameSaveService>();
 
 builder.Services.AddSingleton<ServerProcessService>();
 
@@ -161,8 +162,8 @@ if (!Directory.Exists("Upload"))
 if (!Directory.Exists("Icon"))
     Directory.CreateDirectory("Icon");
 
-if (!Directory.Exists("Save"))
-    Directory.CreateDirectory("Save");
+if (!Directory.Exists("Saves"))
+    Directory.CreateDirectory("Saves");
 
 if (!Directory.Exists("Snippets"))
     Directory.CreateDirectory("Snippets");

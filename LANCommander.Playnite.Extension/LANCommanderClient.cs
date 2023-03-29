@@ -12,6 +12,7 @@ using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media.Converters;
+using YamlDotNet.Core;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -168,6 +169,28 @@ namespace LANCommander.PlaynitePlugin
         public string DownloadArchive(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return DownloadRequest($"/api/Archives/Download/{id}", progressHandler, completeHandler);
+        }
+
+        public string DownloadSave(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        {
+            return DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);
+        }
+
+        public string DownloadLatestSave(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        {
+            return DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
+        }
+
+        public GameSave UploadSave(string gameId, byte[] data)
+        {
+            var request = new RestRequest($"/api/Saves/Upload/{gameId}", Method.POST)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.AddFile(gameId, data, gameId);
+
+            var response = Client.Post<GameSave>(request);
+
+            return response.Data;
         }
 
         public string GetKey(Guid id)

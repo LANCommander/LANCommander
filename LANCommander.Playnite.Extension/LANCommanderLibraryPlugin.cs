@@ -1,4 +1,5 @@
-﻿using LANCommander.PlaynitePlugin.Extensions;
+﻿using ICSharpCode.SharpZipLib.Zip;
+using LANCommander.PlaynitePlugin.Extensions;
 using LANCommander.SDK;
 using Playnite.SDK;
 using Playnite.SDK.Events;
@@ -175,6 +176,7 @@ namespace LANCommander.PlaynitePlugin
             {
                 var nameChangeScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.NameChange);
                 var keyChangeScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.KeyChange);
+                var installScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.Install);
 
                 if (File.Exists(nameChangeScriptPath))
                     yield return new GameMenuItem
@@ -215,6 +217,25 @@ namespace LANCommander.PlaynitePlugin
                             }
                         }
                     };
+
+                if (File.Exists(installScriptPath))
+                    yield return new GameMenuItem
+                    {
+                        Description = "Run Install Script",
+                        Action = (installArgs) =>
+                        {
+                            Guid gameId;
+
+                            if (Guid.TryParse(installArgs.Games.First().GameId, out gameId))
+                            {
+                                PowerShellRuntime.RunScript(installArgs.Games.First(), SDK.Enums.ScriptType.Install);
+                            }
+                            else
+                            {
+                                PlayniteApi.Dialogs.ShowErrorMessage("This game could not be found on the server. Your game may be corrupted.");
+                            }
+                        }
+                    };
             }
         }
 
@@ -244,6 +265,77 @@ namespace LANCommander.PlaynitePlugin
                     PlayniteApi.Dialogs.ShowMessage("The download cache has been cleared and any temporary files have been deleted.", "Cache Cleared!", MessageBoxButton.OK);
                 }
             };
+        }
+
+        public override void OnGameStopped(OnGameStoppedEventArgs args)
+        {
+            var manifestPath = Path.Combine(args.Game.InstallDirectory, "_manifest.yml");
+
+            if (File.Exists(manifestPath))
+            {
+                var deserializer = new DeserializerBuilder()
+                    .WithNamingConvention(new PascalCaseNamingConvention())
+                    .Build();
+
+                var manifest = deserializer.Deserialize<GameManifest>(File.ReadAllText(manifestPath));
+                var temp = Path.GetTempFileName();
+
+                using (ZipOutputStream zipStream = new ZipOutputStream(File.Create(temp)))
+                {
+                    zipStream.SetLevel(5);
+
+                    foreach (var savePath in manifest.SavePaths)
+                    {
+                        savePath.Path = savePath.Path.Replace('/', '\\').Replace("{InstallDir}", args.Game.InstallDirectory);
+
+                        if (Directory.Exists(savePath.Path))
+                        {
+                            AddDirectoryToZip(zipStream, savePath.Path);
+                        }
+                        else if (File.Exists(savePath.Path))
+                        {
+                            var entry = new ZipEntry(Path.Combine(savePath.Id.ToString(), Path.GetFileName(savePath.Path)));
+
+                            zipStream.PutNextEntry(entry);
+
+                            byte[] buffer = File.ReadAllBytes(savePath.Path);
+
+                            zipStream.Write(buffer, 0, buffer.Length);
+                            zipStream.CloseEntry();
+                        }
+                    }
+                }
+
+                var save = LANCommander.UploadSave(args.Game.GameId, File.ReadAllBytes(temp));
+
+                File.Delete(temp);
+            }
+        }
+
+        private void AddDirectoryToZip(ZipOutputStream zipStream, string path)
+        {
+            foreach (var file in Directory.GetFiles(path))
+            {
+                var entry = new ZipEntry(Path.GetFileName(file));
+
+                zipStream.PutNextEntry(entry);
+
+                byte[] buffer = File.ReadAllBytes(file);
+
+                zipStream.Write(buffer, 0, buffer.Length);
+
+                zipStream.CloseEntry();
+            }
+
+            foreach (var child in Directory.GetDirectories(path))
+            {
+                ZipEntry entry = new ZipEntry(Path.GetFileName(path));
+
+                zipStream.PutNextEntry(entry);
+                zipStream.CloseEntry();
+
+                AddDirectoryToZip(zipStream, child);
+            }
         }
 
         public override IEnumerable<TopPanelItem> GetTopPanelItems()

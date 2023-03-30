@@ -2,11 +2,10 @@
     <AddOnBefore>
         <SimpleSelect @bind-Value="Hive" Style="width: auto;" OnSelectedItemsChanged="() => OnChanged()">
             <SelectOptions>
-                <SimpleSelectOption Value="HKCR:\" Label="HKCR:\"></SimpleSelectOption>
-                <SimpleSelectOption Value="HKCU:\" Label="HKCU:\"></SimpleSelectOption>
-                <SimpleSelectOption Value="HKLM:\" Label="HKLM:\"></SimpleSelectOption>
-                <SimpleSelectOption Value="HKU:\" Label="HKU:\"></SimpleSelectOption>
-                <SimpleSelectOption Value="HKCC:\" Label="HKCC:\"></SimpleSelectOption>
+                @foreach (var hive in AvailableHives)
+                {
+                    <SimpleSelectOption Value="@hive" Label="@hive"></SimpleSelectOption>
+                }
             </SelectOptions>
         </SimpleSelect>
     </AddOnBefore>
@@ -18,6 +17,21 @@
 
     string Hive = "HKCU:\\";
     string Path = "SOFTWARE";
+
+    string[] AvailableHives = new string[]
+    {
+        "HKCR:\\",
+        "HKCU:\\",
+        "HKLM:\\",
+        "HKU:\\",
+        "HKCC:\\"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Hive = AvailableHives.FirstOrDefault(h => Value != null && Value.StartsWith(h));
+        Path = Value.Substring(Hive.Length);
+    }
 
     private async void OnChanged()
     {

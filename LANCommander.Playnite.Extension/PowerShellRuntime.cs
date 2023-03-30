@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Runtime.InteropServices;
+using System.Security.RightsManagement;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,6 +21,17 @@ namespace LANCommander.PlaynitePlugin
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool Wow64RevertWow64FsRedirection(ref IntPtr ptr);
 
+        public void RunCommand(string command, bool asAdmin = false)
+        {
+            var tempScript = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".ps1");
+
+            File.WriteAllText(tempScript, command);
+
+            RunScript(tempScript, asAdmin);
+
+            File.Delete(tempScript);
+        }
+
         public void RunScript(string path, bool asAdmin = false, string arguments = null)
         {
             var wow64Value = IntPtr.Zero;
@@ -30,7 +42,8 @@ namespace LANCommander.PlaynitePlugin
 
             process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
-            process.StartInfo.UseShellExecute = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardOutput = true;
 
             if (arguments != null)
                 process.StartInfo.Arguments += " " + arguments;

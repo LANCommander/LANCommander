@@ -1,6 +1,7 @@
 ﻿using ICSharpCode.SharpZipLib.Core;
 using ICSharpCode.SharpZipLib.Zip;
 using LANCommander.PlaynitePlugin.Extensions;
+using LANCommander.PlaynitePlugin.Services;
 using LANCommander.SDK;
 using Playnite.SDK;
 using Playnite.SDK.Events;
@@ -32,6 +33,7 @@ namespace LANCommander.PlaynitePlugin
         internal LANCommanderSettingsViewModel Settings { get; set; }
         internal LANCommanderClient LANCommander { get; set; }
         internal PowerShellRuntime PowerShellRuntime { get; set; }
+        internal GameSaveService GameSaveService { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
@@ -56,6 +58,8 @@ namespace LANCommander.PlaynitePlugin
             };
 
             PowerShellRuntime = new PowerShellRuntime();
+
+            GameSaveService = new GameSaveService(LANCommander, PlayniteApi, PowerShellRuntime);
         }
 
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
@@ -271,212 +275,14 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnGameStarting(OnGameStartingEventArgs args)
         {
-            DownloadSave(args.Game);
+            GameSaveService.DownloadSave(args.Game);
         }
 
-        private void DownloadSave(Game game)
-        {
-            string tempFile = String.Empty;
 
-            if (game != null)
-            {
-                PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
-                {
-                    progress.ProgressMaxValue = 100;
-                    progress.CurrentProgressValue = 0;
-
-                    var destination = LANCommander.DownloadLatestSave(Guid.Parse(game.GameId), (changed) =>
-                    {
-                        progress.CurrentProgressValue = changed.ProgressPercentage;
-                    }, (complete) =>
-                    {
-                        progress.CurrentProgressValue = 100;
-                    });
-
-                    // Lock the thread until download is done
-                    while (progress.CurrentProgressValue != 100)
-                    {
-
-                    }
-
-                    tempFile = destination;
-                },
-                new GlobalProgressOptions("Downloading latest save...")
-                {
-                    IsIndeterminate = false,
-                    Cancelable = false
-                });
-
-                // Go into the archive and extract the files to the correct locations
-                try
-                {
-                    var tempLocation = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-
-                    Directory.CreateDirectory(tempLocation);
-
-                    ExtractFilesFromZip(tempFile, tempLocation);
-
-                    var deserializer = new DeserializerBuilder()
-                        .WithNamingConvention(new PascalCaseNamingConvention())
-                        .Build();
-
-                    var manifestContents = File.ReadAllText(Path.Combine(tempLocation, "_manifest.yml"));
-
-                    var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
-
-                    foreach (var savePath in manifest.SavePaths)
-                    {
-                        var pathTemp = Path.Combine(tempLocation, savePath.Id.ToString(), savePath.Path.Replace('/', '\\').Replace("{InstallDir}\\", ""));
-                        var destination = savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory);
-
-                        if (File.Exists(pathTemp))
-                        {
-                            if (File.Exists(destination))
-                                File.Delete(destination);
-
-                            File.Move(pathTemp, destination);
-                        }
-                        else if (Directory.Exists(pathTemp))
-                        {
-                            // Better way to handle this? Maybe merge files?
-                            Directory.Delete(destination, true);
-                            Directory.Move(pathTemp, destination);
-                        }
-                    }
-
-                    // Clean up temp files
-                    Directory.Delete(tempLocation, true);
-                }
-                catch (Exception ex)
-                {
-
-                }
-            }
-        }
 
         public override void OnGameStopped(OnGameStoppedEventArgs args)
         {
-            UploadSave(args.Game);
-        }
-
-        private void UploadSave(Game game)
-        {
-            var manifestPath = Path.Combine(game.InstallDirectory, "_manifest.yml");
-
-            if (File.Exists(manifestPath))
-            {
-                var deserializer = new DeserializerBuilder()
-                    .WithNamingConvention(new PascalCaseNamingConvention())
-                    .Build();
-
-                var manifest = deserializer.Deserialize<GameManifest>(File.ReadAllText(manifestPath));
-                var temp = Path.GetTempFileName();
-
-                using (ZipOutputStream zipStream = new ZipOutputStream(File.Create(temp)))
-                {
-                    zipStream.SetLevel(5);
-
-                    foreach (var savePath in manifest.SavePaths)
-                    {
-                        var localPath = savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory);
-
-                        if (Directory.Exists(localPath))
-                        {
-                            AddDirectoryToZip(zipStream, localPath);
-                        }
-                        else if (File.Exists(localPath))
-                        {
-                            var entry = new ZipEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")));
-
-                            zipStream.PutNextEntry(entry);
-
-                            byte[] buffer = File.ReadAllBytes(localPath);
-
-                            zipStream.Write(buffer, 0, buffer.Length);
-                            zipStream.CloseEntry();
-                        }
-                    }
-
-                    var manifestEntry = new ZipEntry("_manifest.yml");
-
-                    zipStream.PutNextEntry(manifestEntry);
-
-                    byte[] manifestBuffer = File.ReadAllBytes(manifestPath);
-
-                    zipStream.Write(manifestBuffer, 0, manifestBuffer.Length);
-                    zipStream.CloseEntry();
-                }
-
-                var save = LANCommander.UploadSave(game.GameId, File.ReadAllBytes(temp));
-
-                File.Delete(temp);
-            }
-        }
-
-        private void AddDirectoryToZip(ZipOutputStream zipStream, string path)
-        {
-            foreach (var file in Directory.GetFiles(path))
-            {
-                var entry = new ZipEntry(Path.GetFileName(file));
-
-                zipStream.PutNextEntry(entry);
-
-                byte[] buffer = File.ReadAllBytes(file);
-
-                zipStream.Write(buffer, 0, buffer.Length);
-
-                zipStream.CloseEntry();
-            }
-
-            foreach (var child in Directory.GetDirectories(path))
-            {
-                ZipEntry entry = new ZipEntry(Path.GetFileName(path));
-
-                zipStream.PutNextEntry(entry);
-                zipStream.CloseEntry();
-
-                AddDirectoryToZip(zipStream, child);
-            }
-        }
-
-        private void ExtractFilesFromZip(string zipPath, string destination)
-        {
-            ZipFile file = null;
-
-            try
-            {
-                FileStream fs = File.OpenRead(zipPath);
-
-                file = new ZipFile(fs);
-
-                foreach (ZipEntry entry in file)
-                {
-                    if (!entry.IsFile)
-                        continue;
-
-                    byte[] buffer = new byte[4096];
-                    var zipStream = file.GetInputStream(entry);
-
-                    var entryDestination = Path.Combine(destination, entry.Name);
-                    var entryDirectory = Path.GetDirectoryName(entryDestination);
-
-                    if (!String.IsNullOrWhiteSpace(entryDirectory))
-                        Directory.CreateDirectory(entryDirectory);
-
-                    using (FileStream streamWriter = File.Create(entryDestination))
-                    {
-                        StreamUtils.Copy(zipStream, streamWriter, buffer);
-                    }
-                }
-            }
-            finally
-            {
-                if (file != null)
-                {
-                    file.IsStreamOwner = true;
-                    file.Close();
-                }
-            }
+            GameSaveService.UploadSave(args.Game);
         }
 
         public override IEnumerable<TopPanelItem> GetTopPanelItems()

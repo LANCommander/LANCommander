@@ -4,7 +4,7 @@
 
 <Space Style="display: flex">
     <SpaceItem Style="flex-grow: 1">
-        <Input Type="text" @bind-Value="Value" />
+        <Input Type="text" @bind-Value="Value" OnChange="ValueChanged" />
     </SpaceItem>
     @if (ArchiveId != Guid.Empty) {
         <SpaceItem>
@@ -43,7 +43,7 @@
 
         modalRef.OnOk = async (results) =>
         {
-            Value = results.FirstOrDefault().FullName;
+            Value = "{InstallDir}/" + results.FirstOrDefault().FullName;
 
             if (ValueChanged.HasDelegate)
                 await ValueChanged.InvokeAsync(Value);

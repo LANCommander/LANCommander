@@ -160,34 +160,37 @@ namespace LANCommander.PlaynitePlugin.Services
                     #endregion
 
                     #region Export registry keys
-                    List<string> tempRegFiles = new List<string>();
-
-                    var exportCommand = new StringBuilder();
-
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "Registry"))
+                    if (manifest.SavePaths.Any(sp => sp.Type == "Registry"))
                     {
-                        var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
+                        List<string> tempRegFiles = new List<string>();
 
-                        exportCommand.AppendLine($"reg.exe export \"{savePath.Path.Replace(":\\", "\\")}\" \"{tempRegFile}\"");
-                        tempRegFiles.Add(tempRegFile);
+                        var exportCommand = new StringBuilder();
+
+                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "Registry"))
+                        {
+                            var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
+
+                            exportCommand.AppendLine($"reg.exe export \"{savePath.Path.Replace(":\\", "\\")}\" \"{tempRegFile}\"");
+                            tempRegFiles.Add(tempRegFile);
+                        }
+
+                        PowerShellRuntime.RunCommand(exportCommand.ToString());
+
+                        var exportFile = new StringBuilder();
+
+                        foreach (var tempRegFile in tempRegFiles)
+                        {
+                            exportFile.AppendLine(File.ReadAllText(tempRegFile));
+                            File.Delete(tempRegFile);
+                        }
+
+                        zipStream.PutNextEntry(new ZipEntry("_registry.reg"));
+
+                        byte[] regBuffer = Encoding.UTF8.GetBytes(exportFile.ToString());
+
+                        zipStream.Write(regBuffer, 0, regBuffer.Length);
+                        zipStream.CloseEntry();
                     }
-
-                    PowerShellRuntime.RunCommand(exportCommand.ToString());
-
-                    var exportFile = new StringBuilder();
-
-                    foreach (var tempRegFile in tempRegFiles)
-                    {
-                        exportFile.AppendLine(File.ReadAllText(tempRegFile));
-                        File.Delete(tempRegFile);
-                    }
-
-                    zipStream.PutNextEntry(new ZipEntry("_registry.reg"));
-
-                    byte[] regBuffer = Encoding.UTF8.GetBytes(exportFile.ToString());
-
-                    zipStream.Write(regBuffer, 0, regBuffer.Length);
-                    zipStream.CloseEntry();
                     #endregion
 
                     var manifestEntry = new ZipEntry("_manifest.yml");

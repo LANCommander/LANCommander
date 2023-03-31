@@ -139,7 +139,7 @@ namespace LANCommander.PlaynitePlugin.Services
                     #region Add files from defined paths
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
-                        var localPath = savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory);
+                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
 
                         if (Directory.Exists(localPath))
                         {

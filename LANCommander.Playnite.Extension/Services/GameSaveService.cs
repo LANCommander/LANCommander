@@ -77,10 +77,10 @@ namespace LANCommander.PlaynitePlugin.Services
                     var manifest = deserializer.Deserialize<GameManifest>(manifestContents);
 
                     #region Move files
-                    foreach (var savePath in manifest.SavePaths)
+                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
                         var pathTemp = Path.Combine(tempLocation, savePath.Id.ToString(), savePath.Path.Replace('/', '\\').Replace("{InstallDir}\\", ""));
-                        var destination = savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory);
+                        var destination = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
 
                         if (File.Exists(pathTemp))
                         {
@@ -143,7 +143,7 @@ namespace LANCommander.PlaynitePlugin.Services
 
                         if (Directory.Exists(localPath))
                         {
-                            AddDirectoryToZip(zipStream, localPath);
+                            AddDirectoryToZip(zipStream, localPath, localPath, savePath.Id);
                         }
                         else if (File.Exists(localPath))
                         {
@@ -209,11 +209,14 @@ namespace LANCommander.PlaynitePlugin.Services
             }
         }
 
-        private void AddDirectoryToZip(ZipOutputStream zipStream, string path)
+        private void AddDirectoryToZip(ZipOutputStream zipStream, string path, string workingDirectory, Guid pathId)
         {
             foreach (var file in Directory.GetFiles(path))
             {
-                var entry = new ZipEntry(Path.GetFileName(file));
+                // Oh man is this a hack. We should be removing only the working directory from the start,
+                // but we're making the assumption that the working dir put in actually prefixes the path.
+                // Also wtf, that Path.Combine is stripping the pathId out?
+                var entry = new ZipEntry(pathId.ToString() + Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(file)));
 
                 zipStream.PutNextEntry(entry);
 
@@ -226,12 +229,13 @@ namespace LANCommander.PlaynitePlugin.Services
 
             foreach (var child in Directory.GetDirectories(path))
             {
-                ZipEntry entry = new ZipEntry(Path.GetFileName(path));
+                // See above
+                //ZipEntry entry = new ZipEntry(Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(path)));
 
-                zipStream.PutNextEntry(entry);
-                zipStream.CloseEntry();
+                //zipStream.PutNextEntry(entry);
+                //zipStream.CloseEntry();
 
-                AddDirectoryToZip(zipStream, child);
+                AddDirectoryToZip(zipStream, child, workingDirectory, pathId);
             }
         }
 

@@ -4,6 +4,7 @@
 @inject UserManager<User> UserManager
 @inject RoleManager<Role> RoleManager
 @inject IMessageService MessageService
+@attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Users" />
 

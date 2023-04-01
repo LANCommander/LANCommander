@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @layout MainLayout
+@attribute [Authorize(Roles = "Administrator")]
 
 <Layout Class="site-layout-background" Style="padding: 24px 0;">
     <Sider Class="site-layout-background" Width="200">

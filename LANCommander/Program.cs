@@ -27,6 +27,7 @@ builder.Services.AddServerSideBlazor().AddCircuitOptions(option =>
 }).AddHubOptions(option =>
 {
     option.MaximumReceiveMessageSize = 1024 * 1024 * 11;
+    option.DisableImplicitFromServicesParameters = true;
 });
 
 builder.WebHost.ConfigureKestrel(options =>

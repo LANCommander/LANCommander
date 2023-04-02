@@ -43,7 +43,7 @@ namespace LANCommander.PlaynitePlugin
             process.StartInfo.FileName = "powershell.exe";
             process.StartInfo.Arguments = $@"-ExecutionPolicy Unrestricted -File ""{path}""";
             process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardOutput = false;
 
             if (arguments != null)
                 process.StartInfo.Arguments += " " + arguments;

@@ -197,7 +197,7 @@
 
                 await MessageService.Success("Game added!");
 
-                NavigationManager.NavigateTo($"/Games/{Game.Id}/Edit");
+                NavigationManager.NavigateTo($"/Games/{Game.Id}/Edit", true);
             }
         }
         catch (Exception ex)

@@ -67,7 +67,7 @@
 
     private void Edit(Game game)
     {
-        NavigationManager.NavigateTo($"/Games/{game.Id}/Edit");
+        NavigationManager.NavigateTo($"/Games/{game.Id}/Edit", true);
     }
 
     private async Task Delete(Game game)

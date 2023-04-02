@@ -84,13 +84,14 @@ namespace LANCommander.PlaynitePlugin
                 ShowAuthenticationWindow();
             }
 
-            try
-            {
-                var games = LANCommander
-                    .GetGames()
-                    .Where(g => g.Archives != null && g.Archives.Count() > 0);
 
-                foreach (var game in games)
+            var games = LANCommander
+                .GetGames()
+                .Where(g => g.Archives != null && g.Archives.Count() > 0);
+
+            foreach (var game in games)
+            {
+                try
                 {
                     var manifest = LANCommander.GetGameManifest(game.Id);
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
@@ -149,13 +150,12 @@ namespace LANCommander.PlaynitePlugin
                         metadata.Features.Add(new MetadataNameProperty($"Online Multiplayer {manifest.OnlineMultiplayer.GetPlayerCount()}".Trim()));
 
                     gameMetadata.Add(metadata);
-                };
+                }
+                catch (Exception ex)
+                {
 
-            }
-            catch (Exception ex)
-            {
-                
-            }
+                }
+            };
 
             return gameMetadata;
         }

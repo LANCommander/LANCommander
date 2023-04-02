@@ -23,7 +23,7 @@
 
                         <Space Style="display: flex">
                             <SpaceItem Style="flex-grow: 1">
-                                <Input @bind-Value="@context.Title" />
+                                <Input @bind-Value="@context.Title" BindOnInput="true" />
                             </SpaceItem>
                             <SpaceItem>
                                 <Button OnClick="() => GameMetadataLookup.SearchForGame(context.Title)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(context.Title))">Lookup</Button>

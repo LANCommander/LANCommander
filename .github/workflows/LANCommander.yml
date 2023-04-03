@@ -23,4 +23,4 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet .\LANCommander\LANCommander.csproj build --no-restore
+      run: dotnet build .\LANCommander\LANCommander.csproj --no-restore

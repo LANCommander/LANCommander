@@ -79,21 +79,49 @@ namespace LANCommander.PlaynitePlugin.Services
                     #region Move files
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
-                        var pathTemp = Path.Combine(tempLocation, savePath.Id.ToString(), savePath.Path.Replace('/', '\\').Replace("{InstallDir}\\", ""));
+                        bool inInstallDir = savePath.Path.StartsWith("{InstallDir}");
+                        string tempSavePath = Path.Combine(tempLocation, savePath.Id.ToString());
+
+                        var tempSavePathFile = Path.Combine(tempSavePath, savePath.Path.Replace('/', '\\').Replace("{InstallDir}\\", ""));
+
                         var destination = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
 
-                        if (File.Exists(pathTemp))
+                        if (File.Exists(tempSavePathFile))
                         {
+                            // Is file, move file
                             if (File.Exists(destination))
                                 File.Delete(destination);
 
-                            File.Move(pathTemp, destination);
+                            File.Move(tempSavePathFile, destination);
                         }
-                        else if (Directory.Exists(pathTemp))
+                        else if (Directory.Exists(tempSavePathFile))
                         {
-                            // Better way to handle this? Maybe merge files?
-                            Directory.Delete(destination, true);
-                            Directory.Move(pathTemp, destination);
+                            var files = Directory.GetFiles(tempSavePath, "*", SearchOption.AllDirectories);
+
+                            if (inInstallDir)
+                            {
+                                foreach (var file in files)
+                                {
+                                    if (inInstallDir)
+                                    {
+                                        // Files are in the game's install directory. Move them there from the save path.
+                                        destination = file.Replace(tempSavePath, game.InstallDirectory);
+
+                                        File.Move(file, destination);
+                                    }
+                                    else
+                                    {
+                                        // Specified path is probably an absolute path, maybe with environment variables.
+                                        destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePath, savePath.Path.Replace('/', '\\')));
+
+                                        File.Move(file, destination);
+                                    }
+                                }
+                            }
+                            else
+                            {
+
+                            }
                         }
                     }
                     #endregion
@@ -216,7 +244,7 @@ namespace LANCommander.PlaynitePlugin.Services
                 // Oh man is this a hack. We should be removing only the working directory from the start,
                 // but we're making the assumption that the working dir put in actually prefixes the path.
                 // Also wtf, that Path.Combine is stripping the pathId out?
-                var entry = new ZipEntry(pathId.ToString() + Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(file)));
+                var entry = new ZipEntry(Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(file)));
 
                 zipStream.PutNextEntry(entry);
 

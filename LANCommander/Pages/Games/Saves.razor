@@ -54,7 +54,7 @@
 
         await GameSaveService.Delete(gameSave);
 
-        GameSaves = GameSaveService.Get().ToList();
+        GameSaves = GameSaveService.Get(gs => gs.GameId == Id).OrderBy(gs => gs.User.UserName).ThenByDescending(gs => gs.CreatedOn).ToList();
 
         Loading = false;
     }

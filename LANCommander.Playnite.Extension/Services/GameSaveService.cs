@@ -94,7 +94,7 @@ namespace LANCommander.PlaynitePlugin.Services
 
                             File.Move(tempSavePathFile, destination);
                         }
-                        else if (Directory.Exists(tempSavePathFile))
+                        else if (Directory.Exists(tempSavePath))
                         {
                             var files = Directory.GetFiles(tempSavePath, "*", SearchOption.AllDirectories);
 
@@ -105,14 +105,20 @@ namespace LANCommander.PlaynitePlugin.Services
                                     if (inInstallDir)
                                     {
                                         // Files are in the game's install directory. Move them there from the save path.
-                                        destination = file.Replace(tempSavePath, game.InstallDirectory);
+                                        destination = file.Replace(tempSavePath, savePath.Path.Replace('/', '\\').TrimEnd('\\').Replace("{InstallDir}", game.InstallDirectory));
+
+                                        if (File.Exists(destination))
+                                            File.Delete(destination);
 
                                         File.Move(file, destination);
                                     }
                                     else
                                     {
                                         // Specified path is probably an absolute path, maybe with environment variables.
-                                        destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePath, savePath.Path.Replace('/', '\\')));
+                                        destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', '\\')));
+
+                                        if (File.Exists(destination))
+                                            File.Delete(destination);
 
                                         File.Move(file, destination);
                                     }

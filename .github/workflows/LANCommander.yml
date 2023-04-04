@@ -23,4 +23,11 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
-      run: dotnet build .\LANCommander\LANCommander.csproj --no-restore
+      run: dotnet build "./LANCommander/LANCommander.csproj" --no-restore
+    - name: Publish
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o LANCommander
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: LANCommander
+        path: "./LANCommander"

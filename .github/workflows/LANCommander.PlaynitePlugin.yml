@@ -36,7 +36,7 @@ jobs:
         tag: 10.13
         fileName: Playnite1013.zip
     - name: Extract Playnite
-      run: Expand-Archive -Path -DestinationPath Playnite
+      run: Expand-Archive -Path Playnite1013.zip -DestinationPath Playnite
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
     - name: Upload Artifact

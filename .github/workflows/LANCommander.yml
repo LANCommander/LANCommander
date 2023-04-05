@@ -25,9 +25,9 @@ jobs:
     - name: Build
       run: dotnet build "./LANCommander/LANCommander.csproj" --no-restore
     - name: Publish
-      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o LANCommander
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
         name: LANCommander
-        path: "./LANCommander"
+        path: "./_Build"

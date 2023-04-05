@@ -27,7 +27,7 @@ jobs:
     - name: Restore NuGet packages
       run: nuget restore LANCommander.sln
     - name: Build and Publish Library
-      run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release;OutputPath=Build
+      run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build
     - name: Upload Artifact
       uses: actions/upload-artifact@v3.1.2
       with:

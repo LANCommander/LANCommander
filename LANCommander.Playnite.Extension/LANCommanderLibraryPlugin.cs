@@ -278,8 +278,6 @@ namespace LANCommander.PlaynitePlugin
             GameSaveService.DownloadSave(args.Game);
         }
 
-
-
         public override void OnGameStopped(OnGameStoppedEventArgs args)
         {
             GameSaveService.UploadSave(args.Game);

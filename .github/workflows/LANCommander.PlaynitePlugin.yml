@@ -5,9 +5,13 @@ name: LANCommander Playnite Plugin
 
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - 'LANCommander.Playnite.Extension/**'
+      - 'LANCommander.SDK/**'
   pull_request:
-    branches: [ "main" ]
+    paths:
+      - 'LANCommander.Playnite.Extension/**'
+      - 'LANCommander.SDK/**'
 
 jobs:
   build:

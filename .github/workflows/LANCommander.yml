@@ -5,9 +5,15 @@ name: LANCommander
 
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - 'LANCommander/**'
+      - 'LANCommander.PCGamingWiki/**'
+      - 'LANCommander.SDK/**'
   pull_request:
-    branches: [ "main" ]
+    paths:
+      - 'LANCommander/**'
+      - 'LANCommander.PCGamingWiki/**'
+      - 'LANCommander.SDK/**'
 
 jobs:
   build:

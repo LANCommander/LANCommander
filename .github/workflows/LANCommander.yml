@@ -14,6 +14,7 @@ on:
       - 'LANCommander/**'
       - 'LANCommander.PCGamingWiki/**'
       - 'LANCommander.SDK/**'
+  workflow_dispatch:
 
 jobs:
   build:

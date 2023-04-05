@@ -36,9 +36,7 @@ jobs:
         tag: 10.13
         fileName: Playnite1013.zip
     - name: Extract Playnite
-      uses: montudor/action-zip@v1.0.0
-      with:
-        args: unzip -qq Playnite1013.zip -d Playnite
+      run: Expand-Archive -Path -DestinationPath Playnite
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
     - name: Upload Artifact

@@ -18,20 +18,41 @@ class Uploader {
     constructor() {
         this.InitRoute = "/Upload/Init";
         this.ChunkRoute = "/Upload/Chunk";
-        this.ValidateRoute = "/Archives/Validate";
         this.MaxChunkSize = 1024 * 1024 * 25;
     }
-    Init(fileInputId, uploadButtonId) {
-        this.FileInput = document.getElementById("File");
-        this.UploadButton = document.getElementById("UploadButton");
-        this.VersionInput = document.getElementById("Version");
-        this.ChangelogTextArea = document.getElementById("Changelog");
-        this.LastVersionIdInput = document.getElementById("LastVersion_Id");
-        this.GameIdInput = document.getElementById("GameId");
-        this.ParentForm = this.FileInput.closest("form");
+    Init(fileInputId, uploadButtonId, objectKeyInputId) {
+        this.FileInput = document.getElementById(fileInputId);
+        this.UploadButton = document.getElementById(uploadButtonId);
+        this.ObjectKeyInput = document.getElementById(objectKeyInputId);
         this.Chunks = [];
         this.UploadButton.onclick = (e) => __awaiter(this, void 0, void 0, function* () {
             yield this.OnUploadButtonClicked(e);
+        });
+    }
+    Upload(fileInputId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.FileInput = document.getElementById(fileInputId);
+            this.Chunks = [];
+            this.File = this.FileInput.files.item(0);
+            this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
+            var response = yield fetch(this.InitRoute, {
+                method: "POST"
+            });
+            const data = yield response.json();
+            if (response.ok) {
+                this.Key = data.key;
+                this.GetChunks();
+                try {
+                    for (let chunk of this.Chunks) {
+                        yield this.UploadChunk(chunk);
+                    }
+                }
+                catch (ex) {
+                    this.OnError();
+                }
+                return this.Key;
+            }
+            return null;
         });
     }
     OnUploadButtonClicked(e) {
@@ -51,11 +72,11 @@ class Uploader {
                     for (let chunk of this.Chunks) {
                         yield this.UploadChunk(chunk);
                     }
-                    var isValid = yield this.Validate();
-                    if (isValid)
-                        this.OnComplete(this.Id, this.Key);
-                    else
-                        this.OnError();
+                    this.ObjectKeyInput.value = this.Key;
+                    var event = document.createEvent('HTMLEvents');
+                    event.initEvent('change', false, true);
+                    this.ObjectKeyInput.dispatchEvent(event);
+                    this.OnComplete(this.Id, this.Key);
                 }
                 catch (ex) {
                     this.OnError();
@@ -78,31 +99,7 @@ class Uploader {
             });
             if (!chunkResponse)
                 throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
-            this.OnProgress(chunk.Index / this.TotalChunks);
-        });
-    }
-    Validate() {
-        return __awaiter(this, void 0, void 0, function* () {
-            let formData = new FormData();
-            formData.append('Version', this.VersionInput.value);
-            formData.append('Changelog', this.ChangelogTextArea.value);
-            formData.append('GameId', this.GameIdInput.value);
-            formData.append('ObjectKey', this.Key);
-            let validationResponse = yield fetch(`${this.ValidateRoute}/${this.Key}`, {
-                method: "POST",
-                body: formData
-            });
-            if (!validationResponse.ok) {
-                ErrorModal.Show("Archive Invalid", yield validationResponse.text());
-                return false;
-            }
-            let data = yield validationResponse.json();
-            if (data == null || data.Id === "") {
-                ErrorModal.Show("Upload Error", "Something interfered with the upload. Try again.");
-                return false;
-            }
-            this.Id = data.Id;
-            return true;
+            //this.OnProgress(chunk.Index / this.TotalChunks);
         });
     }
     GetChunks() {

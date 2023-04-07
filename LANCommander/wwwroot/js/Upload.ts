@@ -11,21 +11,14 @@
 }
 
 class Uploader {
-    ParentForm: HTMLFormElement;
     FileInput: HTMLInputElement;
     UploadButton: HTMLButtonElement;
-    VersionInput: HTMLInputElement;
-    LastVersionIdInput: HTMLInputElement;
-    GameIdInput: HTMLInputElement;
-    ChangelogTextArea: HTMLTextAreaElement;
     ObjectKeyInput: HTMLInputElement;
-    IdInput: HTMLInputElement;
 
     File: File;
 
     InitRoute: string = "/Upload/Init";
     ChunkRoute: string = "/Upload/Chunk";
-    ValidateRoute: string = "/Archives/Validate";
 
     MaxChunkSize: number = 1024 * 1024 * 25;
     TotalChunks: number;
@@ -35,20 +28,49 @@ class Uploader {
     Key: string;
     Id: string;
 
-    Init(fileInputId: string, uploadButtonId: string) {
-        this.FileInput = document.getElementById("File") as HTMLInputElement;
-        this.UploadButton = document.getElementById("UploadButton") as HTMLButtonElement;
-        this.VersionInput = document.getElementById("Version") as HTMLInputElement;
-        this.ChangelogTextArea = document.getElementById("Changelog") as HTMLTextAreaElement;
-        this.LastVersionIdInput = document.getElementById("LastVersion_Id") as HTMLInputElement;
-        this.GameIdInput = document.getElementById("GameId") as HTMLInputElement;
-        this.ParentForm = this.FileInput.closest("form");
+    Init(fileInputId: string, uploadButtonId: string, objectKeyInputId: string) {
+        this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
+        this.UploadButton = document.getElementById(uploadButtonId) as HTMLButtonElement;
+        this.ObjectKeyInput = document.getElementById(objectKeyInputId) as HTMLInputElement;
 
         this.Chunks = [];
 
         this.UploadButton.onclick = async (e) => {
             await this.OnUploadButtonClicked(e);
         }
+    }
+
+    async Upload(fileInputId: string) {
+        this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
+        this.Chunks = [];
+
+        this.File = this.FileInput.files.item(0);
+        this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
+
+        var response = await fetch(this.InitRoute, {
+            method: "POST"
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            this.Key = data.key;
+
+            this.GetChunks();
+
+            try {
+                for (let chunk of this.Chunks) {
+                    await this.UploadChunk(chunk);
+                }
+            }
+            catch (ex) {
+                this.OnError();
+            }
+
+            return this.Key;
+        }
+
+        return null;
     }
 
     async OnUploadButtonClicked(e: MouseEvent) {
@@ -75,12 +97,12 @@ class Uploader {
                     await this.UploadChunk(chunk);
                 }
 
-                var isValid = await this.Validate();
+                this.ObjectKeyInput.value = this.Key;
 
-                if (isValid)
-                    this.OnComplete(this.Id, this.Key);
-                else
-                    this.OnError();
+                var event = document.createEvent('HTMLEvents');
+                event.initEvent('change', false, true);
+                this.ObjectKeyInput.dispatchEvent(event);
+                this.OnComplete(this.Id, this.Key);
             }
             catch (ex) {
                 this.OnError();
@@ -107,39 +129,7 @@ class Uploader {
         if (!chunkResponse)
             throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
 
-        this.OnProgress(chunk.Index / this.TotalChunks);
-    }
-
-    async Validate(): Promise<boolean> {
-        let formData = new FormData();
-
-        formData.append('Version', this.VersionInput.value);
-        formData.append('Changelog', this.ChangelogTextArea.value);
-        formData.append('GameId', this.GameIdInput.value);
-        formData.append('ObjectKey', this.Key);
-
-        let validationResponse = await fetch(`${this.ValidateRoute}/${this.Key}`, {
-            method: "POST",
-            body: formData
-        });
-
-        if (!validationResponse.ok) {
-            ErrorModal.Show("Archive Invalid", await validationResponse.text())
-
-            return false;
-        }
-
-        let data = await validationResponse.json();
-
-        if (data == null || data.Id === "") {
-            ErrorModal.Show("Upload Error", "Something interfered with the upload. Try again.");
-
-            return false;
-        }
-
-        this.Id = data.Id;
-
-        return true;
+        //this.OnProgress(chunk.Index / this.TotalChunks);
     }
 
     GetChunks() {

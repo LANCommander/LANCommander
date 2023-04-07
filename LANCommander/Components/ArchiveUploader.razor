@@ -4,6 +4,7 @@
 @inject NavigationManager Navigator
 @inject ArchiveService ArchiveService
 @inject IMessageService MessageService
+@inject IJSRuntime JS
 
 <Space Direction="DirectionVHType.Vertical" Style="width: 100%">
     <SpaceItem>
@@ -40,7 +41,7 @@
 @{
     RenderFragment Footer =
     @<Template>
-        <Button OnClick="UploadArchive" Disabled="@(File == null || Uploading)" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="UploadArchiveJS" Disabled="@(File == null || Uploading)" Type="@ButtonType.Primary">Upload</Button>
         <Button OnClick="Clear" Disabled="File == null || Uploading" Danger>Clear</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
@@ -147,9 +148,18 @@
         ModalVisible = false;
     }
 
-    private void FileSelected(InputFileChangeEventArgs args)
+    private async void FileSelected(InputFileChangeEventArgs args)
     {
         File = args.File;
+
+        //var buffer = new byte[File.Size];
+
+        //await File.OpenReadStream().ReadAsync(buffer);
+    }
+
+    private async Task UploadArchiveJS()
+    {
+        var key = (await JS.InvokeAsync<string>("Uploader.Upload", "FileInput"));
     }
 
     private async Task UploadArchive()
@@ -179,18 +189,20 @@
                 // This feels hacky, why do we need to do this?
                 // Only 32256 bytes of the file get read unless we
                 // loop through like this. Probably kills performance.
-                while (bytesRead < chunk.Length)
+                /*while (bytesRead < chunk.Length)
                 {
                     bytesRead += await stream.ReadAsync(chunk, bytesRead, chunk.Length - bytesRead);
-                }
+                }*/
+
 
                 using (FileStream fs = new FileStream(Path.Combine("Upload", Archive.Id.ToString()), FileMode.Append))
                 {
-                    await fs.WriteAsync(chunk);
+                    await stream.CopyToAsync(fs, ChunkSize);
+                    //await fs.WriteAsync(chunk);
                 }
 
-                uploadedBytes += chunk.Length;
-                WatchBytesTransferred += chunk.Length;
+                uploadedBytes += ChunkSize;
+                WatchBytesTransferred += ChunkSize;
 
                 Progress = (int)(uploadedBytes * 100 / totalBytes);
 

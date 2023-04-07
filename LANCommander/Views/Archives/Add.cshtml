@@ -1,0 +1,127 @@
+﻿@model LANCommander.Data.Models.Archive
+
+@{
+    ViewData["Title"] = "Add Archive";
+}
+
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">@Model.Game.Title</div>
+                <h2 class="page-title">
+                    Add Archive
+                </h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <form asp-action="Add" enctype="multipart/form-data" class="card">
+                    <fieldset>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                                    <div class="mb-3">
+                                        <label asp-for="Version" class="control-label"></label>
+                                        <input asp-for="Version" class="form-control" />
+                                        <span asp-validation-for="Version" class="text-danger"></span>
+                                        @if (Model.LastVersion != null && !String.IsNullOrWhiteSpace(Model.LastVersion.Version))
+                                        {
+                                            <small class="form-hint">Last version: @Model.LastVersion.Version</small>
+                                        }
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Changelog" class="control-label"></label>
+                                        <textarea asp-for="Changelog" class="form-control"></textarea>
+                                        <span asp-validation-for="Changelog" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="File" class="control-label">File</label>
+                                        <input type="file" id="File" class="form-control" />
+                                    </div>
+                                    <div>
+                                        <div class="progress h-4">
+                                            <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" asp-for="GameId" />
+                                    <input type="hidden" asp-for="LastVersion.Id" />
+                                    <input type="hidden" asp-for="ObjectKey" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-footer">
+                            <div class="d-flex">
+                                <a asp-action="Edit" asp-controller="Games" asp-route-id="@Model.Game.Id" class="btn btn-ghost-primary">Cancel</a>
+                                <button class="btn btn-primary ms-auto" id="UploadButton">Upload</button>
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script src="~/js/Upload.js"></script>
+    <script>
+        var uploader = new Uploader();
+
+        uploader.Init('File', 'UploadButton');
+
+        uploader.OnStart = () => {
+            $('fieldset').prop('disabled', true);
+            $('.progress-bar')
+                .css('width', '0%')
+                .removeClass('bg-success')
+                .removeClass('bg-danger')
+                .addClass('progress-bar-striped')
+                .addClass('progress-bar-animated')
+                .text('0%');
+        };
+
+        uploader.OnComplete = (id, key) => {
+            $('#Id').val(id);
+            $('#ObjectKey').val(key);
+            $('.progress-bar')
+                .css('width', '100%')
+                .removeClass('progress-bar-striped')
+                .removeClass('progress-bar-animated')
+                .addClass('bg-success')
+                .text('Upload Complete!');
+
+            setTimeout(() => {
+                window.location.href = '@Url.Action("Edit", "Games", new { id = Model.Game.Id })';
+            }, 2000);
+        };
+
+        uploader.OnProgress = (percent) => {
+            $('.progress-bar')
+                .css('width', `${percent * 100}%`)
+                .text(`${Math.round(percent * 100)}%`);
+        };
+
+        uploader.OnError = () => {
+            $('fieldset').prop('disabled', false);
+            $('.progress-bar')
+                .css('width', '100%')
+                .removeClass('progress-bar-striped')
+                .removeClass('progress-bar-animated')
+                .addClass('bg-danger')
+                .text('Upload Error!');
+        };
+    </script>
+}

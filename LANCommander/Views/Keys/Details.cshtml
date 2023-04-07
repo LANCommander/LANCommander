@@ -1,0 +1,106 @@
+﻿@using LANCommander.Data.Models
+@model LANCommander.Data.Models.Game
+
+@{
+    ViewData["Title"] = "Keys | " + Model.Title;
+}
+
+<div class="container-xl">
+    <!-- Page title -->
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col">
+                <div class="page-pretitle">@Model.Title</div>
+                <h2 class="page-title">
+                    Keys
+                </h2>
+            </div>
+
+            <div class="col-auto ms-auto">
+                <div class="btn-list">
+                    <a asp-action="Edit" asp-controller="Games" asp-route-id="@Model.Id" class="btn btn-ghost-primary">Back</a>
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary d-none d-sm-inline-block">Edit</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body">
+    <div class="container-xl">
+        <div class="row row-cards">
+            <div class="col-12">
+                <form asp-action="Edit" class="card">
+                    @if (Model.Keys != null && Model.Keys.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-vcenter table-mobile-md card-table">
+                                <thead>
+                                    <tr>
+                                        <th>Key</th>
+                                        <th>Allocation Method</th>
+                                        <th>Claimed By</th>
+                                        <th>Claimed On</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var key in Model.Keys.OrderByDescending(k => k.ClaimedOn))
+                                    {
+                                        <tr>
+                                            <td class="game-key">@Html.DisplayFor(m => key.Value)</td>
+                                            <td>@Html.DisplayFor(m => key.AllocationMethod)</td>
+                                            <td>
+                                                @switch (key.AllocationMethod)
+                                                {
+                                                    case KeyAllocationMethod.MacAddress:
+                                                        <text>@key.ClaimedByMacAddress</text>
+                                                        break;
+
+                                                    case KeyAllocationMethod.UserAccount:
+                                                        <text>@key.ClaimedByUser?.UserName</text>
+                                                        break;
+                                                }
+                                            </td>
+                                            <td>@key.ClaimedOn</td>
+                                            <td>
+                                                <div class="btn-list flex-nowrap justify-content-end">
+                                                    @if ((key.AllocationMethod == KeyAllocationMethod.MacAddress && !String.IsNullOrWhiteSpace(key.ClaimedByMacAddress)) || (key.AllocationMethod == KeyAllocationMethod.UserAccount && key.ClaimedByUser != null))
+                                                    {
+                                                        <a asp-action="Release" asp-controller="Keys" asp-route-id="@key.Id" class="btn btn-sm btn-ghost-dark">Release</a>   
+                                                    }
+                                                    <a asp-action="Delete" asp-controller="Keys" asp-route-id="@key.Id" class="btn btn-sm btn-ghost-danger">Delete</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty">
+                            <p class="empty-title">No Key</p>
+                            <p class="empty-subtitle text-muted">There have been no keys added for this game.</p>
+                            <div class="empty-action">
+                                <a asp-action="Edit" asp-controller="Keys" asp-route-id="@Model.Id" class="btn btn-primary">Edit Keys</a>
+                            </div>
+                        </div>
+                    }
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .game-key {
+        font-family: var(--tblr-font-monospace);
+    }
+</style>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

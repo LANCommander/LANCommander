@@ -1,0 +1,65 @@
+﻿@model LANCommander.Data.Models.Game
+
+@{
+    ViewData["Title"] = "Delete";
+}
+
+<div class="container container-tight py-4">
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h2 class="page-title">Delete @Model.Title?</h2>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted">Are you sure you want to delete this game?
+                @if (Model.Archives != null && Model.Archives.Count > 0)
+                {
+                    <span>It will also delete the following archives:</span>
+                }
+            </p>
+        </div>
+
+        @if (Model.Archives != null && Model.Archives.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-vcenter table-mobile-md card-table">
+                    <thead>
+                        <tr>
+                            <th>Version</th>
+                            <th>Uploaded By</th>
+                            <th>Uploaded On</th>
+                            <th>Size</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var archive in Model.Archives.OrderByDescending(a => a.CreatedOn))
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(m => archive.Version)</td>
+                                <td>@Html.DisplayFor(m => archive.CreatedBy.UserName)</td>
+                                <td>@Html.DisplayFor(m => archive.CreatedOn)</td>
+                                <td>@ByteSizeLib.ByteSize.FromBytes(archive.CompressedSize)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <div class="card-footer">
+            <div class="d-flex justify-content-between">
+                <a asp-action="Index" class="btn btn-ghost-primary">Cancel</a>
+
+                <form asp-action="Delete">
+                    <input type="hidden" asp-for="Id" />
+                    <button type="submit" class="btn btn-danger ms-auto">Delete</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>

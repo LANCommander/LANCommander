@@ -1,7 +1,6 @@
 ﻿using LANCommander.SDK;
 using LANCommander.SDK.Models;
 using RestSharp;
-using RestSharp.Extensions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,10 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
-using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Media.Converters;
-using YamlDotNet.Core;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -62,6 +58,20 @@ namespace LANCommander.PlaynitePlugin
             client.DownloadFileAsync(new Uri($"{Client.BaseUrl}{route}"), tempFile);
 
             return tempFile;
+        }
+
+        private TrackableStream StreamRequest(string route)
+        {
+            route = route.TrimStart('/');
+
+            var client = new WebClient();
+            var tempFile = Path.GetTempFileName();
+
+            client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+
+            var ws = client.OpenRead(new Uri($"{Client.BaseUrl}{route}"));
+
+            return new TrackableStream(ws, true, Convert.ToInt64(client.ResponseHeaders["Content-Length"]));
         }
 
         public async Task<AuthResponse> AuthenticateAsync(string username, string password)
@@ -164,6 +174,11 @@ namespace LANCommander.PlaynitePlugin
         public string DownloadGame(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return DownloadRequest($"/api/Games/{id}/Download", progressHandler, completeHandler);
+        }
+
+        public TrackableStream StreamGame(Guid id)
+        {
+            return StreamRequest($"/api/Games/{id}/Download");
         }
 
         public string DownloadArchive(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)

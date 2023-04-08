@@ -1,13 +1,16 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace LANCommander.PlaynitePlugin
 {
-    internal class TrackableStream : MemoryStream
+    internal class TrackableStream : MemoryStream, IDisposable
     {
         public delegate void OnProgressDelegate(long Position, long Length);
         public event OnProgressDelegate OnProgress = delegate { };
         private long internalStreamProgress = 0;
         private Stream internalStream;
+        private bool disposeStream = false;
+        private long? streamLength;
 
         //
         // Summary:
@@ -19,9 +22,11 @@ namespace LANCommander.PlaynitePlugin
         // Summary:
         //     Initializes a new instance of the TrackableStream class with the contents of stream.
         //     capacity initialized to zero.
-        public TrackableStream(Stream stream) : base()
+        public TrackableStream(Stream stream, bool disposeStream = false, long? streamLength = null) : base()
         {
             internalStream = stream;
+            this.disposeStream = disposeStream;
+            this.streamLength = streamLength;
         }
 
         //
@@ -321,5 +326,15 @@ namespace LANCommander.PlaynitePlugin
             }
             return r;
         }
+
+        public void Dispose()
+        {
+            if (disposeStream)
+            {
+                internalStream.Dispose();
+            }
+        }
+
+        public long Length => streamLength ?? internalStream.Length;
     }
 }

@@ -39,19 +39,9 @@ namespace LANCommander.PlaynitePlugin
             var gameId = Guid.Parse(Game.GameId);
             var game = Plugin.LANCommander.GetGame(gameId);
 
-            string tempDownloadLocation;
-
-            if (Plugin.DownloadCache.ContainsKey(gameId))
-                tempDownloadLocation = Plugin.DownloadCache[gameId];
-            else
-            {
-                tempDownloadLocation = Download(game);
-                Plugin.DownloadCache[gameId] = tempDownloadLocation;
-            }
-
             var installDirectory = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(500), "", () =>
             {
-                return Extract(game, tempDownloadLocation);
+                return DownloadAndExtract(game);
             });
 
             if (installDirectory == "")
@@ -97,9 +87,49 @@ namespace LANCommander.PlaynitePlugin
             Plugin.UpdateGame(manifest, gameId);
 
             Plugin.DownloadCache.Remove(gameId);
-            File.Delete(tempDownloadLocation);
 
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
+        }
+
+        private string DownloadAndExtract(LANCommander.SDK.Models.Game game)
+        {
+            if (game == null)
+            {
+                throw new Exception("Game failed to download!");
+            }
+
+            var destination = Path.Combine(Plugin.Settings.InstallDirectory, game.Title.SanitizeFilename());
+
+            Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
+            {
+                Directory.CreateDirectory(destination);
+                progress.ProgressMaxValue = 100;
+                progress.CurrentProgressValue = 0;
+
+                using (var gameStream = Plugin.LANCommander.StreamGame(game.Id))
+                using (var reader = ReaderFactory.Open(gameStream))
+                {
+                    progress.ProgressMaxValue = gameStream.Length;
+
+                    gameStream.OnProgress += (pos, len) =>
+                    {
+                        progress.CurrentProgressValue = pos;
+                    };
+
+                    reader.WriteAllToDirectory(destination, new ExtractionOptions()
+                    {
+                        ExtractFullPath = true,
+                        Overwrite = true
+                    });
+                }
+            },
+            new GlobalProgressOptions($"Downloading {game.Title}...")
+            {
+                IsIndeterminate = false,
+                Cancelable = false,
+            });
+
+            return destination;
         }
 
         private string Download(LANCommander.SDK.Models.Game game)

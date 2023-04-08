@@ -47,7 +47,7 @@
     </Template>;
 }
 
-<Modal Visible="@ModalVisible" Title="Upload Archive" OnOk="UploadArchive" OnCancel="Cancel" Footer="@Footer">
+<Modal Visible="@ModalVisible" Title="Upload Archive" OnOk="UploadArchiveJS" OnCancel="Cancel" Footer="@Footer">
     <Form Model="@Archive" Layout="@FormLayout.Vertical">
         <FormItem Label="Version">
             <Input @bind-Value="@context.Version" /> 

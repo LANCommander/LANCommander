@@ -3,56 +3,58 @@
 
 @if (Keys != null)
 {
-    <GridRow>
-        <GridCol Span="8">
-            <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
-        </GridCol>
-        <GridCol Span="8">
-            <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
-        </GridCol>
-        <GridCol Span="8">
-            <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
-        </GridCol>
-    </GridRow>
+    <Space Direction="@DirectionVHType.Vertical" Style="width: 100%;">
+        <SpaceItem>
+            <GridRow>
+                <GridCol Span="8">
+                    <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
+                </GridCol>
+                <GridCol Span="8">
+                    <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
+                </GridCol>
+                <GridCol Span="8">
+                    <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
+                </GridCol>
+            </GridRow>
+        </SpaceItem>
 
-    <Modal Title="View Keys" Visible="ViewModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => ViewModalVisible = false" OnOk="() => ViewModalVisible = false">
-        <Table TItem="Key" DataSource="@Keys" Bordered>
-            <PropertyColumn Property="k => k.Value">
-                <InputPassword @bind-Value="@context.Value" />
-            </PropertyColumn>
-            <PropertyColumn Property="k => k.AllocationMethod" />
-            <Column TData="string">
-                @switch (context.AllocationMethod)
-                {
-                    case KeyAllocationMethod.MacAddress:
-                        <text>@context.ClaimedByMacAddress</text>
-                        break;
+        <SpaceItem>
+            <Table TItem="Key" DataSource="@Keys">
+                <PropertyColumn Property="k => k.Value">
+                    <InputPassword @bind-Value="@context.Value" />
+                </PropertyColumn>
+                <PropertyColumn Property="k => k.AllocationMethod" Title="Allocation Method" />
+                <Column TData="string" Title="Claimed By">
+                    @switch (context.AllocationMethod)
+                    {
+                        case KeyAllocationMethod.MacAddress:
+                            <text>@context.ClaimedByMacAddress</text>
+                            break;
 
-                    case KeyAllocationMethod.UserAccount:
-                        <text>@context.ClaimedByUser?.UserName</text>
-                        break;
-                }
-            </Column>
-            <PropertyColumn Property="g => g.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-            <ActionColumn Title="">
-                <Space>
-                    <SpaceItem>
-                        @if (context.IsAllocated())
-                        {
-                            <Button OnClick="() => Release(context)">Release</Button>
-                        }
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </Modal>
+                        case KeyAllocationMethod.UserAccount:
+                            <text>@context.ClaimedByUser?.UserName</text>
+                            break;
+                    }
+                </Column>
+                <PropertyColumn Property="g => g.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Title="Claimed On" Sortable />
+                <ActionColumn Title="">
+                    <Space Style="display: flex; justify-content: end">
+                        <SpaceItem>
+                            @if (context.IsAllocated())
+                            {
+                                <Button OnClick="() => Release(context)">Release</Button>
+                            }
+                        </SpaceItem>
+                    </Space>
+                </ActionColumn>
+            </Table>
+        </SpaceItem>
+    </Space>
 
     <Modal Title="Edit Keys" Visible="EditModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => EditModalVisible = false" OnOk="Save">
         <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
     </Modal>
 }
-
-
 
 <style>
     .monaco-editor-container {
@@ -67,7 +69,6 @@
 
     int AllocatedKeys;
 
-    bool ViewModalVisible = false;
     bool EditModalVisible = false;
 
     private StandaloneCodeEditor? Editor;
@@ -94,11 +95,6 @@
     public void Edit()
     {
         EditModalVisible = true;
-    }
-
-    public void View()
-    {
-        ViewModalVisible = true;
     }
 
     private async Task Release(Key key)

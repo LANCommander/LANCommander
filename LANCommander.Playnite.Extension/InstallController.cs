@@ -102,25 +102,35 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
-                Directory.CreateDirectory(destination);
-                progress.ProgressMaxValue = 100;
-                progress.CurrentProgressValue = 0;
-
-                using (var gameStream = Plugin.LANCommander.StreamGame(game.Id))
-                using (var reader = ReaderFactory.Open(gameStream))
+                try
                 {
-                    progress.ProgressMaxValue = gameStream.Length;
+                    Directory.CreateDirectory(destination);
+                    progress.ProgressMaxValue = 100;
+                    progress.CurrentProgressValue = 0;
 
-                    gameStream.OnProgress += (pos, len) =>
+                    using (var gameStream = Plugin.LANCommander.StreamGame(game.Id))
+                    using (var reader = ReaderFactory.Open(gameStream))
                     {
-                        progress.CurrentProgressValue = pos;
-                    };
+                        progress.ProgressMaxValue = gameStream.Length;
 
-                    reader.WriteAllToDirectory(destination, new ExtractionOptions()
+                        gameStream.OnProgress += (pos, len) =>
+                        {
+                            progress.CurrentProgressValue = pos;
+                        };
+
+                        reader.WriteAllToDirectory(destination, new ExtractionOptions()
+                        {
+                            ExtractFullPath = true,
+                            Overwrite = true
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (Directory.Exists(destination))
                     {
-                        ExtractFullPath = true,
-                        Overwrite = true
-                    });
+                        Directory.Delete(destination, true);
+                    }
                 }
             },
             new GlobalProgressOptions($"Downloading {game.Title}...")

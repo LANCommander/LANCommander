@@ -1,17 +1,8 @@
-﻿using Playnite.SDK;
+﻿using LANCommander.SDK.Enums;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
-using LANCommander.SDK.Extensions;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using ICSharpCode.SharpZipLib.Zip;
-using ICSharpCode.SharpZipLib.Core;
-using LANCommander.SDK.Enums;
 
 namespace LANCommander.PlaynitePlugin
 {

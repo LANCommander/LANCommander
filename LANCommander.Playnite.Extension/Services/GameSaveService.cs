@@ -1,16 +1,17 @@
-﻿using ICSharpCode.SharpZipLib.Zip;
-using LANCommander.SDK;
+﻿using LANCommander.SDK;
+using Playnite.SDK;
 using Playnite.SDK.Models;
+using SharpCompress.Archives;
+using SharpCompress.Archives.Zip;
+using SharpCompress.Common;
+using SharpCompress.Readers;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
-using ICSharpCode.SharpZipLib.Core;
-using Playnite.SDK;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.PlaynitePlugin.Services
 {
@@ -20,7 +21,8 @@ namespace LANCommander.PlaynitePlugin.Services
         private readonly IPlayniteAPI PlayniteApi;
         private readonly PowerShellRuntime PowerShellRuntime;
 
-        internal GameSaveService(LANCommanderClient lanCommander, IPlayniteAPI playniteApi, PowerShellRuntime powerShellRuntime) {
+        internal GameSaveService(LANCommanderClient lanCommander, IPlayniteAPI playniteApi, PowerShellRuntime powerShellRuntime)
+        {
             LANCommander = lanCommander;
             PlayniteApi = playniteApi;
             PowerShellRuntime = powerShellRuntime;
@@ -166,9 +168,9 @@ namespace LANCommander.PlaynitePlugin.Services
                 var manifest = deserializer.Deserialize<GameManifest>(File.ReadAllText(manifestPath));
                 var temp = Path.GetTempFileName();
 
-                using (ZipOutputStream zipStream = new ZipOutputStream(File.Create(temp)))
+                using (var archive = ZipArchive.Create())
                 {
-                    zipStream.SetLevel(5);
+                    archive.DeflateCompressionLevel = SharpCompress.Compressors.Deflate.CompressionLevel.BestCompression;
 
                     #region Add files from defined paths
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
@@ -177,18 +179,27 @@ namespace LANCommander.PlaynitePlugin.Services
 
                         if (Directory.Exists(localPath))
                         {
-                            AddDirectoryToZip(zipStream, localPath, localPath, savePath.Id);
+                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
                         }
                         else if (File.Exists(localPath))
                         {
-                            var entry = new ZipEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")));
+                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
+                        }
+                    }
+                    #endregion
 
-                            zipStream.PutNextEntry(entry);
+                    #region Add files from defined paths
+                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
+                    {
+                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
 
-                            byte[] buffer = File.ReadAllBytes(localPath);
-
-                            zipStream.Write(buffer, 0, buffer.Length);
-                            zipStream.CloseEntry();
+                        if (Directory.Exists(localPath))
+                        {
+                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
+                        }
+                        else if (File.Exists(localPath))
+                        {
+                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
                         }
                     }
                     #endregion
@@ -218,47 +229,32 @@ namespace LANCommander.PlaynitePlugin.Services
                             File.Delete(tempRegFile);
                         }
 
-                        zipStream.PutNextEntry(new ZipEntry("_registry.reg"));
-
-                        byte[] regBuffer = Encoding.UTF8.GetBytes(exportFile.ToString());
-
-                        zipStream.Write(regBuffer, 0, regBuffer.Length);
-                        zipStream.CloseEntry();
+                        archive.AddEntry("_registry.reg", new MemoryStream(Encoding.UTF8.GetBytes(exportFile.ToString())), true);
                     }
                     #endregion
 
-                    var manifestEntry = new ZipEntry("_manifest.yml");
+                    archive.AddEntry("_manifest.yml", manifestPath);
 
-                    zipStream.PutNextEntry(manifestEntry);
+                    using (var ms = new MemoryStream())
+                    {
+                        archive.SaveTo(ms);
 
-                    byte[] manifestBuffer = File.ReadAllBytes(manifestPath);
+                        ms.Seek(0, SeekOrigin.Begin);
 
-                    zipStream.Write(manifestBuffer, 0, manifestBuffer.Length);
-                    zipStream.CloseEntry();
+                        var save = LANCommander.UploadSave(game.GameId, ms.ToArray());
+                    }
                 }
-
-                var save = LANCommander.UploadSave(game.GameId, File.ReadAllBytes(temp));
-
-                File.Delete(temp);
             }
         }
 
-        private void AddDirectoryToZip(ZipOutputStream zipStream, string path, string workingDirectory, Guid pathId)
+        private void AddDirectoryToZip(ZipArchive zipArchive, string path, string workingDirectory, Guid pathId)
         {
             foreach (var file in Directory.GetFiles(path))
             {
                 // Oh man is this a hack. We should be removing only the working directory from the start,
                 // but we're making the assumption that the working dir put in actually prefixes the path.
                 // Also wtf, that Path.Combine is stripping the pathId out?
-                var entry = new ZipEntry(Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(file)));
-
-                zipStream.PutNextEntry(entry);
-
-                byte[] buffer = File.ReadAllBytes(file);
-
-                zipStream.Write(buffer, 0, buffer.Length);
-
-                zipStream.CloseEntry();
+                zipArchive.AddEntry(Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(file)), file);
             }
 
             foreach (var child in Directory.GetDirectories(path))
@@ -269,47 +265,21 @@ namespace LANCommander.PlaynitePlugin.Services
                 //zipStream.PutNextEntry(entry);
                 //zipStream.CloseEntry();
 
-                AddDirectoryToZip(zipStream, child, workingDirectory, pathId);
+                AddDirectoryToZip(zipArchive, child, workingDirectory, pathId);
             }
         }
 
         private void ExtractFilesFromZip(string zipPath, string destination)
         {
-            ZipFile file = null;
-
-            try
+            using (var fs = File.OpenRead(zipPath))
+            using (var ts = new TrackableStream(fs))
+            using (var reader = ReaderFactory.Open(ts))
             {
-                FileStream fs = File.OpenRead(zipPath);
-
-                file = new ZipFile(fs);
-
-                foreach (ZipEntry entry in file)
+                reader.WriteAllToDirectory(destination, new ExtractionOptions()
                 {
-                    if (!entry.IsFile)
-                        continue;
-
-                    byte[] buffer = new byte[4096];
-                    var zipStream = file.GetInputStream(entry);
-
-                    var entryDestination = Path.Combine(destination, entry.Name);
-                    var entryDirectory = Path.GetDirectoryName(entryDestination);
-
-                    if (!String.IsNullOrWhiteSpace(entryDirectory))
-                        Directory.CreateDirectory(entryDirectory);
-
-                    using (FileStream streamWriter = File.Create(entryDestination))
-                    {
-                        StreamUtils.Copy(zipStream, streamWriter, buffer);
-                    }
-                }
-            }
-            finally
-            {
-                if (file != null)
-                {
-                    file.IsStreamOwner = true;
-                    file.Close();
-                }
+                    ExtractFullPath = true,
+                    Overwrite = true
+                });
             }
         }
     }

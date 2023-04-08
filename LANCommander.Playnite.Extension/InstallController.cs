@@ -1,23 +1,17 @@
-﻿using Playnite.SDK;
-using Playnite.SDK.Models;
-using Playnite.SDK.Plugins;
+﻿using LANCommander.PlaynitePlugin.Helpers;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Models;
+using Playnite.SDK;
+using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
+using SharpCompress.Common;
+using SharpCompress.Readers;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using ICSharpCode.SharpZipLib.Zip;
-using ICSharpCode.SharpZipLib.Core;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using LANCommander.SDK.Models;
-using System.Collections.ObjectModel;
-using System.Web.Caching;
-using LANCommander.PlaynitePlugin.Helpers;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -153,45 +147,23 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
-                ZipFile file = null;
+                Directory.CreateDirectory(destination);
 
-                try
+                using (var fs = File.OpenRead(archivePath))
+                using (var ts = new TrackableStream(fs))
+                using (var reader = ReaderFactory.Open(ts))
                 {
-                    FileStream fs = File.OpenRead(archivePath);
-
-                    file = new ZipFile(fs);
-
-                    progress.ProgressMaxValue = file.Count;
-
-                    foreach (ZipEntry entry in file)
+                    progress.ProgressMaxValue = ts.Length;
+                    ts.OnProgress += (pos, len) =>
                     {
-                        if (!entry.IsFile)
-                            continue;
+                        progress.CurrentProgressValue = pos;
+                    };
 
-                        byte[] buffer = new byte[4096];
-                        var zipStream = file.GetInputStream(entry);
-
-                        var entryDestination = Path.Combine(destination, entry.Name);
-                        var entryDirectory = Path.GetDirectoryName(entryDestination);
-
-                        if (!String.IsNullOrWhiteSpace(entryDirectory))
-                            Directory.CreateDirectory(entryDirectory);
-
-                        using (FileStream streamWriter = File.Create(entryDestination))
-                        {
-                            StreamUtils.Copy(zipStream, streamWriter, buffer);
-                        }
-
-                        progress.CurrentProgressValue = entry.ZipFileIndex;
-                    }
-                }
-                finally
-                {
-                    if (file != null)
+                    reader.WriteAllToDirectory(destination, new ExtractionOptions()
                     {
-                        file.IsStreamOwner = true;
-                        file.Close();
-                    }
+                        ExtractFullPath = true,
+                        Overwrite = true
+                    });
                 }
             },
             new GlobalProgressOptions($"Extracting {game.Title}...")

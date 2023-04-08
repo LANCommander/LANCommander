@@ -1,28 +1,17 @@
-﻿using ICSharpCode.SharpZipLib.Core;
-using ICSharpCode.SharpZipLib.Zip;
-using LANCommander.PlaynitePlugin.Extensions;
+﻿using LANCommander.PlaynitePlugin.Extensions;
 using LANCommander.PlaynitePlugin.Services;
-using LANCommander.SDK;
 using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Media;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 using PN = Playnite;
 
 namespace LANCommander.PlaynitePlugin
@@ -294,9 +283,10 @@ namespace LANCommander.PlaynitePlugin
                     FontSize = 16,
                     FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
                     Padding = new Thickness(10, 0, 10, 0),
-                    
+
                 },
-                Activated = () => {
+                Activated = () =>
+                {
                     ShowNameChangeWindow();
                 }
             };

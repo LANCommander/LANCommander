@@ -109,6 +109,11 @@ if (settings.Beacon)
 
 builder.WebHost.UseStaticWebAssets();
 
+builder.WebHost.UseKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 1024 * 1024 * 150;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

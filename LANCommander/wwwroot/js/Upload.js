@@ -18,7 +18,7 @@ class Uploader {
     constructor() {
         this.InitRoute = "/Upload/Init";
         this.ChunkRoute = "/Upload/Chunk";
-        this.MaxChunkSize = 1024 * 1024 * 25;
+        this.MaxChunkSize = 1024 * 1024 * 50;
     }
     Init(fileInputId, uploadButtonId, objectKeyInputId) {
         this.FileInput = document.getElementById(fileInputId);

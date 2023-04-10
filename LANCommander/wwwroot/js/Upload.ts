@@ -20,7 +20,7 @@ class Uploader {
     InitRoute: string = "/Upload/Init";
     ChunkRoute: string = "/Upload/Chunk";
 
-    MaxChunkSize: number = 1024 * 1024 * 25;
+    MaxChunkSize: number = 1024 * 1024 * 50;
     TotalChunks: number;
     CurrentChunk: number;
     Chunks: Chunk[];

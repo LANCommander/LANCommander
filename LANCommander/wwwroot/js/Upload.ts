@@ -129,7 +129,11 @@ class Uploader {
         if (!chunkResponse)
             throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
 
-        //this.OnProgress(chunk.Index / this.TotalChunks);
+        var percent = Math.ceil((chunk.Index / this.TotalChunks) * 100);
+
+        let progress: HTMLElement = document.querySelector('.ant-progress-bg');
+
+        progress.style.width = percent + '%';
     }
 
     GetChunks() {

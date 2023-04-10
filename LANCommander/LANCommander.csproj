@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-LANCommander-C1F79CFA-9767-4AD7-BD5A-2549F8328A2D</UserSecretsId>
+    <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Content Remove="wwwroot\js\Upload.ts" />

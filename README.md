@@ -94,3 +94,5 @@ The following features are being considered:
  - Dedicated server management/administration
  - Linux build
  - Some expansion of the dashboard with useful stats
+ - Built-in VPN client/server for remote LAN parties
+ - Game patching

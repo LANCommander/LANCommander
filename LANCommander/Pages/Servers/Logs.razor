@@ -1,23 +1,24 @@
 ﻿@page "/Servers/{id:guid}/Logs"
 @using Microsoft.AspNetCore.SignalR.Client
+@using XtermBlazor
 @attribute [Authorize]
 @inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
-<pre>
-    @foreach (var message in Messages)
-    {
-        @message <br />
-    }
-</pre>
+<Xterm @ref="Terminal" Options="TerminalOptions" />
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
+    Xterm? Terminal;
     HubConnection? HubConnection;
-    List<string> Messages = new List<string>();
+    TerminalOptions TerminalOptions = new TerminalOptions
+    {
+        CursorBlink = true,
+        CursorStyle = CursorStyle.Underline
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -27,8 +28,7 @@
 
         HubConnection.On<string>("Log", (message) =>
         {
-            Messages.Add(message);
-            InvokeAsync(StateHasChanged);
+            Terminal.WriteLine(message);
         });
 
         await HubConnection.StartAsync();

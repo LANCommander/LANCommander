@@ -1,0 +1,42 @@
+﻿@page "/Servers/{id:guid}/Logs"
+@using Microsoft.AspNetCore.SignalR.Client
+@attribute [Authorize]
+@inject ServerService ServerService
+@inject ServerProcessService ServerProcessService
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<pre>
+    @foreach (var message in Messages)
+    {
+        @message <br />
+    }
+</pre>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    HubConnection? HubConnection;
+    List<string> Messages = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        HubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/logging"))
+            .Build();
+
+        HubConnection.On<string>("Log", (message) =>
+        {
+            Messages.Add(message);
+            InvokeAsync(StateHasChanged);
+        });
+
+        await HubConnection.StartAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (HubConnection is not null)
+            await HubConnection.DisposeAsync();
+    }
+}

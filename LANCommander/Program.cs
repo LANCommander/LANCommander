@@ -1,12 +1,14 @@
 using BeaconLib;
 using LANCommander.Data;
 using LANCommander.Data.Models;
+using LANCommander.Hubs;
 using LANCommander.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using NLog.Web;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -114,6 +116,8 @@ builder.WebHost.UseKestrel(options =>
     options.Limits.MaxRequestBodySize = 1024 * 1024 * 150;
 });
 
+builder.Host.UseNLog();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -139,6 +143,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseMvcWithDefaultRoute();
+
+app.MapHub<LoggingHub>("/hubs/logging");
 
 app.UseEndpoints(endpoints =>
 {

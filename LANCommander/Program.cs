@@ -144,7 +144,7 @@ app.UseAuthorization();
 
 app.UseMvcWithDefaultRoute();
 
-app.MapHub<LoggingHub>("/hubs/logging");
+app.MapHub<GameServerHub>("/hubs/gameserver");
 
 app.UseEndpoints(endpoints =>
 {

@@ -1,23 +1,24 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
+using NLog;
 
 namespace LANCommander.Logging
 {
-    public class LoggingHubConnection : IAsyncDisposable
+    public class GameServerHubConnection : IAsyncDisposable
     {
         private HubConnection? HubConnection;
         private string HubUrl;
 
-        public LoggingHubConnection(string hubUrl)
+        public GameServerHubConnection(string hubUrl)
         {
             HubUrl = hubUrl;
         }
 
-        public async Task Log(string logMessage)
+        public async Task Log(Guid serverId, string message)
         {
             await EnsureConnection();
 
             if (HubConnection != null)
-                await HubConnection.SendAsync("Log", logMessage);
+                await HubConnection.SendAsync("Log", serverId, message);
         }
 
         public async Task EnsureConnection()

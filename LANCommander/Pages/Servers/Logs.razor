@@ -1,5 +1,6 @@
 ﻿@page "/Servers/{id:guid}/Logs"
 @using Microsoft.AspNetCore.SignalR.Client
+@using NLog;
 @using XtermBlazor
 @attribute [Authorize]
 @inject ServerService ServerService
@@ -23,12 +24,13 @@
     protected override async Task OnInitializedAsync()
     {
         HubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/logging"))
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
             .Build();
 
-        HubConnection.On<string>("Log", (message) =>
+        HubConnection.On<Guid, string>("Log", (serverId, message) =>
         {
-            Terminal.WriteLine(message);
+            if (serverId == Id)
+                Terminal.WriteLine(message);
         });
 
         await HubConnection.StartAsync();

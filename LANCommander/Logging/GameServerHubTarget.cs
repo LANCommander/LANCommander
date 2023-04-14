@@ -4,25 +4,23 @@ using NLog.Targets;
 
 namespace LANCommander.Logging
 {
-    [Target("LoggingHub")]
-    public class LoggingHubTarget : AsyncTaskTarget
+    [Target("GameServerHub")]
+    public class GameServerHubTarget : AsyncTaskTarget
     {
-        private LoggingHubConnection? Connection;
+        private GameServerHubConnection? Connection;
 
         [RequiredParameter]
         public string HubUrl { get; set; }
 
         protected override void InitializeTarget()
         {
-            Connection = new LoggingHubConnection(HubUrl);
+            Connection = new GameServerHubConnection(HubUrl);
         }
 
         protected override async Task WriteAsyncTask(LogEventInfo logEvent, CancellationToken token)
         {
-            string message = Layout.Render(logEvent);
-
-            if (Connection != null)
-                await Connection.Log(message);
+            if (Connection != null && logEvent.Properties.ContainsKey("ServerId"))
+                await Connection.Log((Guid)logEvent.Properties["ServerId"], logEvent.FormattedMessage);
         }
 
         protected override async void CloseTarget()

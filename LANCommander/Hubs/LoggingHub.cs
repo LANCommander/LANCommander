@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using NLog;
 
 namespace LANCommander.Hubs
 {
-    public class LoggingHub : Hub
+    public class GameServerHub : Hub
     {
-        public void Log(string logMessage)
+        public void Log(Guid serverId, string message)
         {
-            Clients.All.SendAsync("Log", logMessage);
+            Clients.All.SendAsync("Log", serverId, message);
         }
     }
 }

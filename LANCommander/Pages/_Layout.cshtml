@@ -24,10 +24,14 @@
         <script src="~/_content/AntDesign/js/ant-design-blazor.js"></script>
         <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
         <script src="~/_framework/blazor.server.js"></script>
+
+        <script src="~/_content/XtermBlazor/XtermBlazor.min.js"></script>
+        <script src="~/lib/xterm-addon-fit/lib/xterm-addon-fit.min.js"></script>
+        <script>XtermBlazor.registerAddons({ "xterm-addon-fit": new FitAddon.FitAddon() });</script>
+
         <script src="~/_content/BlazorMonaco/jsInterop.js"></script>
         <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
         <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
-        <script src="~/_content/XtermBlazor/XtermBlazor.min.js"></script>
         <script src="~/js/site.js"></script>
         <script src="~/js/Upload.js"></script>
         <script>window.Uploader = new Uploader();</script>

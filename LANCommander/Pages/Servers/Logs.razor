@@ -8,17 +8,23 @@
 @inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
-<Xterm @ref="Terminal" Options="TerminalOptions" />
+<Xterm @ref="Terminal" Options="TerminalOptions" AddonIds="TerminalAddons" />
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
     Xterm? Terminal;
     HubConnection? HubConnection;
+
     TerminalOptions TerminalOptions = new TerminalOptions
     {
         CursorBlink = true,
-        CursorStyle = CursorStyle.Underline
+        CursorStyle = CursorStyle.Block
+    };
+
+    string[] TerminalAddons = new string[]
+    {
+        "xterm-addon-fit"
     };
 
     protected override async Task OnInitializedAsync()
@@ -34,6 +40,19 @@
         });
 
         await HubConnection.StartAsync();
+
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(100);
+
+            if (Terminal != null)
+                await Terminal.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
+        }
     }
 
     public async ValueTask DisposeAsync()

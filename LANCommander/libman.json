@@ -58,6 +58,15 @@
         "dist/g2plot.js",
         "dist/g2plot.js.map"
       ]
+    },
+    {
+      "provider": "jsdelivr",
+      "library": "xterm-addon-fit@0.7.0",
+      "destination": "wwwroot/lib/xterm-addon-fit/",
+      "files": [
+        "lib/xterm-addon-fit.min.js",
+        "lib/xterm-addon-fit.js.map"
+      ]
     }
   ]
 }

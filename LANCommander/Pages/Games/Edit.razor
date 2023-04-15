@@ -2,6 +2,7 @@
 @page "/Games/{id:guid}/Edit/{panel}"
 @page "/Games/Add"
 @using LANCommander.Models;
+@using LANCommander.Pages.Games.Components
 @using System.IO.Compression;
 @attribute [Authorize(Roles = "Administrator")]
 @inject GameService GameService

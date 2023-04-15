@@ -20,16 +20,48 @@
     <PropertyColumn Property="g => g.UpdatedBy" Sortable>
         @context.UpdatedBy?.UserName
     </PropertyColumn>
+    <Column TData="string" Title="Status">
+
+        @switch (Status.GetValueOrDefault(context.Id))
+        {
+            case ServerProcessStatus.Running:
+                <Badge Status="success" Text="Running" />
+                break;
+
+            case ServerProcessStatus.Starting:
+                <Badge Status="processing" Text="Starting" />
+                break;
+
+            case ServerProcessStatus.Error:
+                <Badge Status="error" Text="Error" />
+                break;
+
+            case ServerProcessStatus.Stopped:
+            default:
+                <Badge Status="default" Text="Stopped" />
+                break;
+        }
+    </Column>
     <ActionColumn Title="">
         <Space Direction="DirectionVHType.Horizontal">
             <SpaceItem>
                 <Button OnClick="() => Edit(context)">Edit</Button>
                 <Button OnClick="() => Logs(context)">Logs</Button>
-                <Button OnClick="() => Start(context)">Start</Button>
-                <Button OnClick="() => Stop(context)">Stop</Button>
+
+                @if (Status.GetValueOrDefault(context.Id) != ServerProcessStatus.Running)
+                {
+                    <Button Type="@ButtonType.Primary" OnClick="() => Start(context)">Start</Button>
+                }
+
+                @if (Status.GetValueOrDefault(context.Id) == ServerProcessStatus.Running)
+                {
+                    <Popconfirm OnConfirm="() => Stop(context)" Title="Are you sure you want to kill this server process?">
+                        <Button Danger Type="@ButtonType.Primary" OnClick="() => Stop(context)">Stop</Button>
+                    </Popconfirm>
+                }
             </SpaceItem>
             <SpaceItem>
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this server?">
                     <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
                 </Popconfirm>
             </SpaceItem>
@@ -41,6 +73,8 @@
     IEnumerable<Server> Servers { get; set; } = new List<Server>();
 
     bool Loading = true;
+    Dictionary<Guid, ServerProcessStatus> Status = new Dictionary<Guid, ServerProcessStatus>();
+    Timer Timer;
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -49,6 +83,16 @@
             Servers = ServerService.Get().OrderBy(s => s.Name).ToList();
 
             Loading = false;
+
+            Timer = new Timer(async (object? stateInfo) =>
+            {
+                foreach (var server in Servers)
+                {
+                    Status[server.Id] = ServerProcessService.GetStatus(server);
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }, new AutoResetEvent(false), 1000, 1000);
 
             StateHasChanged();
         }

@@ -4,6 +4,14 @@ using System.Diagnostics;
 
 namespace LANCommander.Services
 {
+    public enum ServerProcessStatus
+    {
+        Stopped,
+        Starting,
+        Running,
+        Error
+    }
+
     public class ServerProcessService
     {
         private readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -52,6 +60,25 @@ namespace LANCommander.Services
 
                 process.Kill();
             }
+        }
+
+        public ServerProcessStatus GetStatus(Server server)
+        {
+            Process process = null;
+
+            if (Processes.ContainsKey(server.Id))
+                process = Processes[server.Id];
+
+            if (process == null || process.HasExited)
+                return ServerProcessStatus.Stopped;
+
+            if (!process.HasExited)
+                return ServerProcessStatus.Running;
+
+            if (process.ExitCode != 0)
+                return ServerProcessStatus.Error;
+
+            return ServerProcessStatus.Stopped;
         }
     }
 }

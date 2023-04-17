@@ -56,7 +56,7 @@
                 @if (Status.GetValueOrDefault(context.Id) == ServerProcessStatus.Running)
                 {
                     <Popconfirm OnConfirm="() => Stop(context)" Title="Are you sure you want to kill this server process?">
-                        <Button Danger Type="@ButtonType.Primary" OnClick="() => Stop(context)">Stop</Button>
+                        <Button Danger Type="@ButtonType.Primary">Stop</Button>
                     </Popconfirm>
                 }
             </SpaceItem>

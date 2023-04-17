@@ -1,35 +1,132 @@
 ﻿@page "/Servers/{id:guid}/Edit"
+@page "/Servers/{id:guid}/Edit/{panel}"
 @page "/Servers/Add"
+@using LANCommander.Pages.Servers.Components
 @inject ServerService ServerService
+@inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 
-<Card Title="Server Details">
-    <Body>
-        <Form Model="@Server" Layout="@FormLayout.Vertical">
-            <FormItem Label="Name">
-                <Input @bind-Value="@context.Name" />
-            </FormItem>
-            <FormItem Label="Path">
-                <Input @bind-Value="@context.Path" />
-            </FormItem>
-            <FormItem Label="Arguments">
-                <Input @bind-Value="@context.Arguments" />
-            </FormItem>
-            <FormItem Label="Working Directory">
-                <Input @bind-Value="@context.WorkingDirectory" />
-            </FormItem>
-            <FormItem>
-                <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
-            </FormItem>
-        </Form>
-    </Body>
-</Card>
+<Layout Class="site-layout-background" Style="padding: 24px 0;">
+    <Sider Class="site-layout-background" Width="200">
+        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+            <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/General")">General</MenuItem>
+
+            @if (Server != null && Server.Id != Guid.Empty)
+            {
+                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/Logs")">Logs</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/Files")">Files</MenuItem>
+            }
+        </Menu>
+    </Sider>
+
+    <Content>
+        @if (Panel == "Logs")
+        {
+            <PageHeader>
+                <PageHeaderTitle>Logs</PageHeaderTitle>
+                <PageHeaderExtra>
+                    <Space Size="@("large")">
+                        <SpaceItem Style="margin-right: 24px;">
+                            @switch (Status)
+                            {
+                                case ServerProcessStatus.Running:
+                                    <Badge Status="success" Text="Running" />
+                                    break;
+
+                                case ServerProcessStatus.Starting:
+                                    <Badge Status="processing" Text="Starting" />
+                                    break;
+
+                                case ServerProcessStatus.Error:
+                                    <Badge Status="error" Text="Error" />
+                                    break;
+
+                                case ServerProcessStatus.Stopped:
+                                default:
+                                    <Badge Status="default" Text="Stopped" />
+                                    break;
+                            }
+                        </SpaceItem>
+
+                        @if (Status == ServerProcessStatus.Error || Status == ServerProcessStatus.Stopped)
+                        {
+                            <Button Type="@ButtonType.Primary" OnClick="() => Start()">Start</Button>
+                        }
+                        else
+                        {
+                            <Popconfirm OnConfirm="() => Stop()" Title="Are you sure you want to kill this server process?">
+                                <Button Danger Type="@ButtonType.Primary">Stop</Button>
+                            </Popconfirm>
+                        }
+                    </Space>
+                </PageHeaderExtra>
+                    </PageHeader>
+        }
+        else
+        {
+            <PageHeader>
+                <PageHeaderTitle>@Panel</PageHeaderTitle>
+            </PageHeader>
+        }
+
+
+        <div class="site-layout-content">
+            @if (Panel == "General")
+            {
+                <Form Model="@Server" Layout="@FormLayout.Vertical">
+                    <FormItem Label="Name">
+                        <Input @bind-Value="@context.Name" />
+                    </FormItem>
+                    <FormItem Label="Path">
+                        <Input @bind-Value="@context.Path" />
+                    </FormItem>
+                    <FormItem Label="Arguments">
+                        <Input @bind-Value="@context.Arguments" />
+                    </FormItem>
+                    <FormItem Label="Working Directory">
+                        <Input @bind-Value="@context.WorkingDirectory" />
+                    </FormItem>
+                    <FormItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+                    </FormItem>
+                </Form>
+            }
+
+            @if (Panel == "Logs")
+            {
+                <Logs Id="@Server.Id" />
+            }
+
+            @if (Panel == "Files")
+            {
+                <TextEditor WorkingDirectory="@Server.WorkingDirectory" />
+            }
+        </div>
+    </Content>
+</Layout>
+
+<style>
+    .site-layout-background {
+        background: #fff;
+    }
+
+    .site-layout-content {
+        padding: 0 24px;
+    }
+
+    .ant-layout-content > .ant-page-header-heading {
+        padding-top: 0;
+    }
+</style>
 
 @code {
     [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Panel { get; set; }
 
     Server Server;
+    ServerProcessStatus Status;
+    Timer Timer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -37,6 +134,32 @@
             Server = new Server();
         else
             Server = await ServerService.Get(Id);
+
+        if (String.IsNullOrWhiteSpace(Server.WorkingDirectory))
+            Server.WorkingDirectory = "C:\\";
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Timer = new Timer(async (object? stateInfo) =>
+            {
+                Status = ServerProcessService.GetStatus(Server);
+
+                await InvokeAsync(StateHasChanged);
+            }, new AutoResetEvent(false), 1000, 1000);
+        }
+    }
+
+    private void Start()
+    {
+        ServerProcessService.StartServer(Server);
+    }
+
+    private void Stop()
+    {
+        ServerProcessService.StopServer(Server);
     }
 
     private async Task Save()

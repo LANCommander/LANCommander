@@ -105,12 +105,12 @@
 
     private void Edit(Server server)
     {
-        NavigationManager.NavigateTo($"/Servers/{server.Id}/Edit");
+        NavigationManager.NavigateTo($"/Servers/{server.Id}/Edit/General");
     }
 
     private void Logs(Server server)
     {
-        NavigationManager.NavigateTo($"/Servers/{server.Id}/Logs");
+        NavigationManager.NavigateTo($"/Servers/{server.Id}/Edit/Logs");
     }
 
     private void Start(Server server)

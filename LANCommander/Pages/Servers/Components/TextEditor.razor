@@ -1,0 +1,152 @@
+﻿@using LANCommander.Extensions;
+
+<GridRow>
+    <GridCol Span="6">
+        <Tree TItem="FileTreeNode"
+              DataSource="FileTree"
+              TitleExpression="x => x.DataItem.Name"
+              ChildrenExpression="x => x.DataItem.Children"
+              IsLeafExpression="x => !x.DataItem.HasChildren"
+              OnDblClick="(args) => OpenFile(args.Node.DataItem)">
+        </Tree>
+    </GridCol>
+
+    <GridCol Span="18">
+        <Breadcrumb>
+            @foreach (var part in CurrentFile.Split(Path.DirectorySeparatorChar))
+            {
+                <BreadcrumbItem>@part</BreadcrumbItem>
+            }
+        </Breadcrumb>
+        <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
+    </GridCol>
+</GridRow>
+
+<style>
+    .monaco-editor-container {
+        min-height: 600px;
+    }
+</style>
+
+@code {
+    [Parameter] public string WorkingDirectory { get; set; }
+
+    StandaloneCodeEditor? Editor;
+
+    IEnumerable<string> Files;
+    HashSet<FileTreeNode> FileTree { get; set; } = new HashSet<FileTreeNode>();
+    string CurrentFile = "";
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Theme = "vs-dark"
+        };
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var root = new FileTreeNode
+            {
+                Name = "/",
+                FullName = WorkingDirectory,
+                IsExpanded = true
+            };
+
+        root.PopulateChildren(WorkingDirectory);
+
+        FileTree.Add(root);
+    }
+
+    private void OpenFile(FileTreeNode node)
+    {
+        if (File.Exists(node.FullName))
+        {
+            var file = new FileInfo(node.FullName);
+
+            CurrentFile = node.FullName;
+
+            if (!file.IsBinaryFile())
+            {
+                Editor.SetValue(File.ReadAllText(file.FullName));
+            }
+            else
+            {
+                Editor.SetValue("This file cannot be edited because it is a binary file.");
+            }
+        }
+    }
+
+    public class FileTreeNode
+    {
+        public string Name { get; set; }
+        public string FullName { get; set; }
+        public bool IsExpanded { get; set; } = false;
+        public bool IsDirectory { get; set; } = false;
+        public bool HasChildren => Children != null && Children.Count > 0;
+        public HashSet<FileTreeNode> Children { get; set; } = new HashSet<FileTreeNode>();
+
+        public void PopulateChildren(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                try
+                {
+                    foreach (var file in Directory.GetFiles(path))
+                    {
+                        var fileInfo = new FileInfo(file);
+
+                        Children.Add(new FileTreeNode
+                        {
+                            Name = fileInfo.Name,
+                            FullName = fileInfo.FullName,
+                            IsDirectory = false
+                        });
+                    }
+                }
+                catch { }
+
+                try
+                {
+                    foreach (var directory in Directory.GetDirectories(path))
+                    {
+                        var directoryInfo = new DirectoryInfo(directory);
+
+                        var child = new FileTreeNode
+                        {
+                            Name = directoryInfo.Name,
+                            FullName = directoryInfo.FullName,
+                            IsDirectory = true
+                        };
+
+                        child.PopulateChildren(directoryInfo.FullName);
+
+                        Children.Add(child);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        public void PopulateChildren(IEnumerable<string> paths)
+        {
+            var childPaths = paths.Where(p => p.StartsWith(FullName) && p.EndsWith(Path.PathSeparator));
+            var directChildren = childPaths.Where(p => p != FullName && p.Substring(FullName.Length + 1).TrimEnd(Path.PathSeparator).Split(Path.PathSeparator).Length == 1);
+
+            foreach (var directChild in directChildren)
+            {
+                var child = new FileTreeNode()
+                {
+                    FullName = directChild,
+                    Name = directChild.Substring(FullName.Length).TrimEnd(Path.PathSeparator)
+                };
+
+                child.PopulateChildren(paths);
+
+                Children.Add(child);
+            }
+        }
+    }
+}

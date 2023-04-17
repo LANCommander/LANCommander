@@ -1,8 +1,6 @@
-﻿@page "/Servers/{id:guid}/Logs"
-@using Microsoft.AspNetCore.SignalR.Client
+﻿@using Microsoft.AspNetCore.SignalR.Client
 @using NLog;
 @using XtermBlazor
-@attribute [Authorize]
 @inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager

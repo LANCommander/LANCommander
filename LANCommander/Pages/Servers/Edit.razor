@@ -72,7 +72,7 @@
 
 
         <div class="site-layout-content">
-            @if (Panel == "General")
+            @if (Panel == "General" || String.IsNullOrWhiteSpace(Panel))
             {
                 <Form Model="@Server" Layout="@FormLayout.Vertical">
                     <FormItem Label="Name">

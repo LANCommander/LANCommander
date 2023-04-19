@@ -1,0 +1,93 @@
+﻿@using LANCommander.Extensions;
+
+@if (FileInfo != null)
+{
+    <TabPane Key="@FileInfo.FullName" ForceRender Tab="@FileInfo.Name">
+        <ChildContent>
+        <GridRow Align="middle" Class="text-editor-info-bar">
+                <GridCol Flex=@("auto")>
+                    <Breadcrumb>
+                        @foreach (var part in FileInfo.FullName.Split(Path.DirectorySeparatorChar))
+                        {
+                            <BreadcrumbItem>@part</BreadcrumbItem>
+                        }
+                    </Breadcrumb>
+                </GridCol>
+
+                <GridCol>
+                    <Button Type="@ButtonType.Primary" OnClick="async () => await Save()" Disabled="!HasUnsavedChanges">Save</Button>
+                </GridCol>
+            </GridRow>
+
+
+            <StandaloneCodeEditor @ref="Editor" CssClass="text-editor" ConstructionOptions="EditorConstructionOptions" OnDidChangeModelContent="OnChange" />
+        </ChildContent>
+    </TabPane>
+}
+
+@code {
+    [Parameter] public string FilePath { get; set; }
+
+    TabPane Pane;
+    FileInfo FileInfo;
+    StandaloneCodeEditor Editor;
+    string Contents;
+    bool HasUnsavedChanges = false;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Theme = "vs-dark"
+        };
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        FileInfo = new FileInfo(FilePath);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Editor != null && firstRender)
+        {
+            if (File.Exists(FileInfo.FullName))
+            {
+                if (!FileInfo.IsBinaryFile())
+                {
+                    Contents = await File.ReadAllTextAsync(FileInfo.FullName);
+
+                    await Editor.SetValue(Contents);
+                }
+                else
+                {
+                    await Editor.SetValue("This file cannot be edited because it is a binary file.");
+                }
+            }
+
+            await Editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async (editor) =>
+            {
+                await Save();
+            }, null);
+        }
+    }
+
+    private void OnChange(ModelContentChangedEvent eventArgs)
+    {
+        if (!HasUnsavedChanges)
+        {
+            HasUnsavedChanges = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Save()
+    {
+        await File.WriteAllTextAsync(FileInfo.FullName, await Editor.GetValue());
+
+        HasUnsavedChanges = false;
+
+        StateHasChanged();
+    }
+}

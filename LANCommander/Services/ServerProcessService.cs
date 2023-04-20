@@ -12,10 +12,8 @@ namespace LANCommander.Services
         Error
     }
 
-    public class ServerProcessService
+    public class ServerProcessService : BaseService
     {
-        private readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
         public Dictionary<Guid, Process> Processes = new Dictionary<Guid, Process>();
         public Dictionary<Guid, int> Threads { get; set; } = new Dictionary<Guid, int>();
 

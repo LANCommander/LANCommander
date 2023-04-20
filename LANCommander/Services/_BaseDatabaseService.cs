@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Services
 {
-    public abstract class BaseDatabaseService<T> where T : BaseModel
+    public abstract class BaseDatabaseService<T> : BaseService where T : BaseModel
     {
         public DatabaseContext Context { get; set; }
         public HttpContext HttpContext { get; set; }

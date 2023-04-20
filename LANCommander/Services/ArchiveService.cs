@@ -16,16 +16,26 @@ namespace LANCommander.Services
         {
         }
 
-        public override Task Delete(Archive entity)
+        public static string GetArchiveFileLocation(Archive archive)
         {
-            FileHelpers.DeleteIfExists($"Upload/{entity.ObjectKey}".ToPath());
+            return GetArchiveFileLocation(archive.ObjectKey);
+        }
 
-            return base.Delete(entity);
+        public static string GetArchiveFileLocation(string objectKey)
+        {
+            return $"Upload/{objectKey}".ToPath();
+        }
+
+        public override Task Delete(Archive archive)
+        {
+            FileHelpers.DeleteIfExists(GetArchiveFileLocation(archive));
+
+            return base.Delete(archive);
         }
 
         public static GameManifest ReadManifest(string objectKey)
         {
-            var upload = $"Upload/{objectKey}".ToPath();
+            var upload = GetArchiveFileLocation(objectKey);
 
             string manifestContents = String.Empty;
 
@@ -57,7 +67,7 @@ namespace LANCommander.Services
 
         public static byte[] ReadFile(string objectKey, string path)
         {
-            var upload = $"Upload/{objectKey}".ToPath();
+            var upload = GetArchiveFileLocation(objectKey);
 
             if (!File.Exists(upload))
                 throw new FileNotFoundException(upload);
@@ -82,12 +92,77 @@ namespace LANCommander.Services
         {
             var archive = await Get(archiveId);
 
-            var upload = $"Upload/{archive.ObjectKey}".ToPath();
+            var upload = GetArchiveFileLocation(archive);
 
             using (ZipArchive zip = ZipFile.OpenRead(upload))
             {
                 return zip.Entries;
             }
+        }
+
+        public async Task PatchArchive(Archive originalArchive, Archive alteredArchive, CompressionLevel compressionLevel = CompressionLevel.Optimal)
+        {
+            var alteredZipPath = GetArchiveFileLocation(alteredArchive);
+            var patchZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+            ZipArchive originalZip = ZipFile.Open(GetArchiveFileLocation(originalArchive), ZipArchiveMode.Update);
+            ZipArchive alteredZip = ZipFile.OpenRead(alteredZipPath);
+            ZipArchive patchZip = ZipFile.Open(patchZipPath, ZipArchiveMode.Create);
+
+            int i = 0;
+
+            foreach (var entry in alteredZip.Entries)
+            {
+                var originalEntry = originalZip.GetEntry(entry.FullName);
+
+                if (originalEntry == null || originalEntry.Crc32 != entry.Crc32)
+                {
+                    originalEntry?.Delete();
+
+                    var updatedEntry = originalZip.CreateEntry(entry.FullName, compressionLevel);
+                    var patchEntry = patchZip.CreateEntry(entry.FullName, compressionLevel);
+
+                    // Copy the contents of the entry from the altered archive to the original archive
+                    using (var updatedStream = updatedEntry.Open())
+                    using (var alteredStream = entry.Open())
+                    {
+                        await alteredStream.CopyToAsync(updatedStream);
+
+                        Logger.Info("Added {EntryFullName} to base archive {ArchiveId} and new patch archive", entry.FullName, originalArchive.Id.ToString());
+                    }
+
+                    // Copy the contents of the entry from the altered archive to the patch archive
+                    using (var patchStream = patchEntry.Open())
+                    using (var alteredStream = entry.Open())
+                    {
+                        await alteredStream.CopyToAsync(patchStream);
+
+                        Logger.Info("Updated {EntryFullName} in base archive {ArchiveId} and added to new patch archive", entry.FullName, originalArchive.Id.ToString());
+                    }
+                }
+
+                i++;
+
+                Logger.Info("Finished processing entry {EntryIndex}/{TotalEntries} for original archive {ArchiveId}", i.ToString(), originalZip.Entries.Count.ToString(), originalArchive.Id.ToString());
+            }
+
+            originalZip.Dispose();
+            alteredZip.Dispose();
+            patchZip.Dispose();
+
+            // Replace the uploaded altered ZIP with the new patch ZIP
+            if (File.Exists(alteredZipPath))
+                File.Delete(alteredZipPath);
+
+            File.Move(patchZipPath, alteredZipPath);
+
+            alteredArchive.CompressedSize = new FileInfo(GetArchiveFileLocation(alteredArchive)).Length;
+            originalArchive.CompressedSize = new FileInfo(GetArchiveFileLocation(originalArchive)).Length;
+
+            await Update(alteredArchive);
+            await Update(originalArchive);
+
+            Logger.Info("Finished merging original archive {ArchiveId} and rebuilt patch archive {PatchArchivePath}", originalArchive.Id.ToString(), alteredZipPath);
         }
     }
 }

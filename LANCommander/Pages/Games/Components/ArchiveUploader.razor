@@ -1,5 +1,7 @@
 ﻿@using System.Net;
 @using System.Diagnostics;
+@using Hangfire;
+@using LANCommander.Jobs.Background;
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ArchiveService ArchiveService
@@ -177,10 +179,17 @@
         Archive.ObjectKey = objectKey.ToString();
         Archive.CompressedSize = File.Size;
 
-        await ArchiveService.Add(Archive);
+        var originalArchive = Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+        Archive = await ArchiveService.Add(Archive);
 
         ModalVisible = false;
 
         await MessageService.Success("Archive uploaded!");
+
+        if (originalArchive != null)
+        {
+            BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(originalArchive.Id, Archive.Id));
+        }
     }
 }

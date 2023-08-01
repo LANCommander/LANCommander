@@ -30,7 +30,7 @@
                 <Button OnClick="() => ViewSaves(context)">Saves</Button>
             </SpaceItem>
             <SpaceItem>
-                <Button OnClick="() => Edit(context)">Edit</Button>
+                <a href="/Games/@(context.Id)/Edit" class="ant-btn ant-btn-primary">Edit</a>
             </SpaceItem>
             <SpaceItem>
                 <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">

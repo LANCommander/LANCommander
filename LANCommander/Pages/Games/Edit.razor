@@ -41,8 +41,7 @@
         </PageHeader>
 
         <div class="site-layout-content">
-            @if (Panel == "General" || String.IsNullOrWhiteSpace(Panel))
-            {
+            <div data-panel="General">
                 <Form Model="@Game" Layout="@FormLayout.Vertical">
                     <FormItem Label="Title">
                         <GameMetadataLookup @ref="GameMetadataLookup" OnResultSelected="OnGameLookupResultSelected" />
@@ -94,41 +93,35 @@
                         <TagsInput Entities="Tags" @bind-Values="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
                     </FormItem>
                 </Form>
-            }
+            </div>
 
             @if (Game != null && Game.Id != Guid.Empty)
             {
-                if (Panel == "Actions")
-                {
+                <div data-panel="Actions">
                     <ActionEditor @bind-Actions="Game.Actions" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
-                }
+                </div>
 
-                if (Panel == "Multiplayer")
-                {
+                <div data-panel="Multiplayer">
                     <MultiplayerModeEditor @bind-Value="Game.MultiplayerModes" />
-                }
+                </div>
 
-                if (Panel == "Saves")
-                {
+                <div data-panel="Saves">
                     <SavePathEditor @bind-Value="Game.SavePaths" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
-                }
+                </div>
 
-                if (Panel == "Keys")
-                {
+                <div data-panel="Keys">
                     <KeysEditor @ref="KeysEditor" @bind-Keys="Game.Keys" GameId="Game.Id" />
 
                     <Button OnClick="() => KeysEditor.Edit()">Edit</Button>
-                }
+                </div>
 
-                if (Panel == "Scripts")
-                {
+                <div data-panel="Scripts">
                     <ScriptEditor @bind-Scripts="Game.Scripts" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
-                }
+                </div>
 
-                if (Panel == "Archives")
-                {
+                <div data-panel="Archives">
                     <ArchiveUploader Game="Game" />
-                }
+                </div>
             }
 
         </div>
@@ -146,6 +139,14 @@
 
     .ant-layout-content > .ant-page-header-heading {
         padding-top: 0;
+    }
+
+    [data-panel] {
+        display: none;
+    }
+
+    [data-panel="@Panel"] {
+        display: block;
     }
 </style>
 

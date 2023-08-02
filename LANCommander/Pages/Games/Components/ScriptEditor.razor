@@ -10,11 +10,11 @@
     RenderFragment Footer =
     @<Template>
         <Button OnClick="Save" Disabled="@(String.IsNullOrWhiteSpace(Script.Name))" Type="@ButtonType.Primary">Save</Button>
-        <Button OnClick="() => ModalVisible = false">Close</Button>
+        <Button OnClick="Close">Close</Button>
     </Template>;
 }
 
-<Modal Visible="ModalVisible" Footer="@Footer" Title="@(Script == null ? "Add Script" : "Edit Script")" OkText="@("Save")" Maximizable="false" DefaultMaximized="true" Closable="true">
+<Modal Visible="ModalVisible" Footer="@Footer" Title="@(Script == null ? "Add Script" : "Edit Script")" OkText="@("Save")" Maximizable="false" DefaultMaximized="true" Closable="true" OnCancel="Close">
     <Form Model="@Script" Layout="@FormLayout.Vertical">
         <FormItem>
             @foreach (var group in Snippets.Select(s => s.Group).Distinct())
@@ -167,6 +167,11 @@
         await MessageService.Success("Script deleted!");
     }
 
+    private void Close()
+    {
+        ModalVisible = false;
+    }
+
     private async Task Save()
     {
         var value = await Editor.GetValue();
@@ -178,7 +183,7 @@
         else
             Script = await ScriptService.Update(Script);
 
-        ModalVisible = false;
+        Close();
 
         StateHasChanged();
 

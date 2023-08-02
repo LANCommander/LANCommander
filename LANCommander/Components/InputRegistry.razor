@@ -29,7 +29,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Hive = AvailableHives.FirstOrDefault(h => Value != null && Value.StartsWith(h));
+        if (Hive == null)
+            Hive = "HKCU:\\";
+
+        if (Value == null)
+            Value = Hive;
+        
+        if (!String.IsNullOrWhiteSpace(Value))
+            Hive = AvailableHives.FirstOrDefault(h => Value != null && Value.StartsWith(h));
+
         Path = Value.Substring(Hive.Length);
     }
 

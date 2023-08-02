@@ -144,11 +144,24 @@
     [data-panel] {
         display: none;
     }
-
-    [data-panel="@Panel"] {
-        display: block;
-    }
 </style>
+
+@if (!String.IsNullOrWhiteSpace(Panel))
+{
+    <style>
+        [data-panel="@Panel"] {
+            display: block;
+        }
+    </style>
+}
+else
+{
+    <style>
+        [data-panel="General"] {
+            display: block;
+        }
+    </style>
+}
 
 @code {
     [Parameter] public Guid Id { get; set; }

@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Models;
 @using System.IO.Compression;
 @inject ModalService ModalService
+@inject ArchiveService ArchiveService
 
 <Space Style="display: flex">
     <SpaceItem Style="flex-grow: 1">
@@ -8,7 +9,7 @@
     </SpaceItem>
     @if (ArchiveId != Guid.Empty) {
         <SpaceItem>
-            <Button OnClick="() => BrowseForFile()" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
+            <Button OnClick="() => BrowseForFile()" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" Disabled="!ArchiveExists" />
         </SpaceItem>
     }
 </Space>
@@ -19,6 +20,14 @@
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public string ArchiveBrowserTitle { get; set; } = "Choose File";
     [Parameter] public bool AllowDirectories { get; set; } = false;
+
+    bool ArchiveExists { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ArchiveId != Guid.Empty)
+            ArchiveExists = await ArchiveService.Exists(ArchiveId);
+    }
 
     private async void BrowseForFile()
     {

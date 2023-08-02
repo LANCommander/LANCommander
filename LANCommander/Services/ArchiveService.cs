@@ -88,6 +88,15 @@ namespace LANCommander.Services
             }
         }
 
+        public async Task<bool> Exists(Guid archiveId)
+        {
+            var archive = await Get(archiveId);
+
+            var path = GetArchiveFileLocation(archive);
+
+            return File.Exists(path);
+        }
+
         public async Task<IEnumerable<ZipArchiveEntry>> GetContents(Guid archiveId)
         {
             var archive = await Get(archiveId);

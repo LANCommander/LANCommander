@@ -1,4 +1,5 @@
 ﻿@using LANCommander.Data.Enums;
+@using LANCommander.Extensions;
 @using LANCommander.Models
 @using LANCommander.Services
 @using System.IO.Compression;
@@ -68,7 +69,7 @@
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
         <Table TItem="Script" DataSource="@Scripts" HidePagination="true">
-            <PropertyColumn Property="s => s.Type" />
+            <PropertyColumn Property="s => s.Type">@context.Type.GetDisplayName()</PropertyColumn>
             <PropertyColumn Property="s => s.CreatedBy">
                 @context.CreatedBy?.UserName
             </PropertyColumn>

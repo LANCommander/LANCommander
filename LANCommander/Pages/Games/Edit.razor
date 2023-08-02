@@ -59,17 +59,7 @@
                         <Input @bind-Value="@context.SortTitle" />
                     </FormItem>
                     <FormItem Label="Icon">
-                        <Space Style="display: flex">
-                            <SpaceItem Style="flex-grow: 1">
-                                <Input @bind-Value="@context.Icon" />
-                            </SpaceItem>
-                            @if (LatestArchiveId != Guid.Empty)
-                            {
-                                <SpaceItem>
-                                    <Button OnClick="BrowseForIcon" Type="@ButtonType.Primary">Browse</Button>
-                                </SpaceItem>
-                            }
-                        </Space>
+                        <InputArchiveFile @bind-Value="context.Icon" ArchiveId="@LatestArchiveId" AllowDirectories="true" />
                     </FormItem>
                     <FormItem Label="Description">
                         <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />

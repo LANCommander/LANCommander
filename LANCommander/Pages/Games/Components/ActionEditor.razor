@@ -11,16 +11,7 @@
                 <Input Type="text" @bind-Value="context.Name" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Path">
-                <Space Style="display: flex">
-                    <SpaceItem Style="flex-grow: 1">
-                        <Input Type="text" @bind-Value="context.Path" />
-                    </SpaceItem>
-                    @if (ArchiveId != Guid.Empty) {
-                        <SpaceItem>
-                            <Button OnClick="() => BrowseForActionPath(context)" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
-                        </SpaceItem>
-                    }
-                </Space>
+                <InputArchiveFile @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Arguments">
                 <Input Type="text" @bind-Value="context.Arguments" />

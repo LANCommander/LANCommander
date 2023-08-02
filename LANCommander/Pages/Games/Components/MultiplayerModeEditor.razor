@@ -1,11 +1,15 @@
 ﻿@using LANCommander.Data.Enums
 @using LANCommander.Data.Models
+@using LANCommander.Extensions;
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
         <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true">
             <PropertyColumn Property="m => m.Type">
-                <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()" />
+                <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
             </PropertyColumn>
             <PropertyColumn Property="m => m.MinPlayers" Title="Min Players">
                 <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />

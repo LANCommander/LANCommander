@@ -120,6 +120,7 @@ namespace LANCommander.Services
                 return File.ReadAllBytes(cachedPath);
             else
             {
+                #if WINDOWS
                 if (game.Archives == null || game.Archives.Count == 0)
                     throw new FileNotFoundException();
 
@@ -127,31 +128,38 @@ namespace LANCommander.Services
 
                 Bitmap bitmap = null;
 
-                var iconReference = ArchiveService.ReadFile(archive.ObjectKey, game.Icon);
-
-                if (IsWinPEFile(iconReference))
+                try
                 {
-                    var tmp = System.IO.Path.GetTempFileName();
+                    var iconReference = ArchiveService.ReadFile(archive.ObjectKey, game.Icon);
 
-                    System.IO.File.WriteAllBytes(tmp, iconReference);
-
-                    var icon = System.Drawing.Icon.ExtractAssociatedIcon(tmp);
-
-                    bitmap = icon.ToBitmap();
-                }
-                else
-                {
-                    using (var ms = new MemoryStream(iconReference))
+                    if (IsWinPEFile(iconReference))
                     {
-                        bitmap = (Bitmap)Bitmap.FromStream(ms);
+                        var tmp = System.IO.Path.GetTempFileName();
+
+                        System.IO.File.WriteAllBytes(tmp, iconReference);
+
+                        var icon = System.Drawing.Icon.ExtractAssociatedIcon(tmp);
+
+                        bitmap = icon.ToBitmap();
                     }
+                    else
+                    {
+                        using (var ms = new MemoryStream(iconReference))
+                        {
+                            bitmap = (Bitmap)Bitmap.FromStream(ms);
+                        }
+                    }
+
+                    var iconPng = ConvertToPng(bitmap);
+
+                    File.WriteAllBytes(cachedPath, iconPng);
+
+                    return iconPng;
                 }
+                catch (Exception ex) { }
+                #endif
 
-                var iconPng = ConvertToPng(bitmap);
-
-                File.WriteAllBytes(cachedPath, iconPng);
-
-                return iconPng;
+                return File.ReadAllBytes("favicon.png");
             }
         }
 

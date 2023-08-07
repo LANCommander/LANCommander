@@ -65,6 +65,7 @@
 
     private async Task RefreshData()
     {
+        #if WINDOWS
         var category = new PerformanceCounterCategory("Network Interface");
 
         foreach (var instance in category.GetInstanceNames())
@@ -83,5 +84,6 @@
             await Chart.ChangeData(Data.SelectMany(x => x.Value.Select((y, i) => new { value = y, index = i, series = x.Key })), true);
         }
         catch { }
+        #endif
     }
 }

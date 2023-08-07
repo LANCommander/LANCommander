@@ -10,6 +10,16 @@
     <Content Remove="wwwroot\js\Upload.ts" />
   </ItemGroup>
 
+    <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">
+	    <DefineConstants>WINDOWS</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))">
+	    <DefineConstants>LINUX</DefineConstants>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))">
+	    <DefineConstants>MACOS</DefineConstants>
+    </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="AntDesign" Version="0.15.4" />
     <PackageReference Include="AntDesign.Charts" Version="0.3.1" />
@@ -62,6 +72,12 @@
 
   <ItemGroup>
     <TypeScriptCompile Include="wwwroot\js\Upload.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="favicon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

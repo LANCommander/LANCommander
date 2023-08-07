@@ -68,6 +68,7 @@
 
     private async Task RefreshData()
     {
+        #if WINDOWS
         Data = Data.ShiftArrayAndInsert((double)Math.Ceiling(PerformanceCounter.NextValue()), TimerHistory);
 
         try
@@ -75,5 +76,6 @@
             await Chart.ChangeData(Data.Select((x, i) => new { value = x, index = i }), true);
         }
         catch { }
+        #endif
     }
 }

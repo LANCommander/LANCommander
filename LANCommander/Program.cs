@@ -162,6 +162,11 @@ app.UseEndpoints(endpoints =>
     endpoints.MapControllers();
 });
 
+// Migrate
+await using var scope = app.Services.CreateAsyncScope();
+using var db = scope.ServiceProvider.GetService<DatabaseContext>();
+await db.Database.MigrateAsync();
+
 if (!Directory.Exists("Upload"))
     Directory.CreateDirectory("Upload");
 

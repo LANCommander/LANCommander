@@ -1,0 +1,6 @@
+name: LANCommander Release
+
+on:
+  push:
+    tags:
+      - 'v*'

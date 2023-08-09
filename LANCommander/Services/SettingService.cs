@@ -22,7 +22,28 @@ namespace LANCommander.Services
                 return deserializer.Deserialize<LANCommanderSettings>(contents);
             }
             else
-                return new LANCommanderSettings();
+            {
+                var settings = new LANCommanderSettings
+                {
+                    Port = 1337,
+                    Beacon = true,
+                    DatabaseConnectionString = "Data Source=LANCommander.db;Cache=Shared",
+                    Authentication = new LANCommanderAuthenticationSettings
+                    {
+                        TokenSecret = Guid.NewGuid().ToString(),
+                        TokenLifetime = 30,
+                        PasswordRequireNonAlphanumeric = false,
+                        PasswordRequireLowercase = false,
+                        PasswordRequireUppercase = false,
+                        PasswordRequireDigit = true,
+                        PasswordRequiredLength = 6
+                    }
+                };
+
+                SaveSettings(settings);
+
+                return settings;
+            }
         }
 
         public static void SaveSettings(LANCommanderSettings settings)

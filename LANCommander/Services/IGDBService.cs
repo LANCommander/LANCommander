@@ -5,17 +5,41 @@ namespace LANCommander.Services
 {
     public class IGDBService
     {
-        private readonly IGDBClient Client;
         private readonly SettingService SettingService;
         private const string DefaultFields = "*";
+        private IGDBClient Client;
+
+        public bool Authenticated = false;
+
+        private string ClientId { get; set; }
+        private string ClientSecret { get; set; }
 
         public IGDBService(SettingService settingService)
         {
             SettingService = settingService;
 
+            Authenticate();
+        }
+
+        public void Authenticate()
+        {
             var settings = SettingService.GetSettings();
 
-            Client = new IGDBClient(settings.IGDBClientId, settings.IGDBClientSecret);
+            ClientId = settings.IGDBClientId;
+            ClientSecret = settings.IGDBClientSecret;
+
+            try
+            {
+                if (String.IsNullOrWhiteSpace(ClientId) || String.IsNullOrWhiteSpace(ClientSecret))
+                    throw new Exception("Invalid IGDB credentials");
+
+                Client = new IGDBClient(ClientId, ClientSecret);
+                Authenticated = true;
+            }
+            catch (Exception ex)
+            {
+                Authenticated = false;
+            }
         }
 
         public async Task<Game> Get(long id, params string[] additionalFields)

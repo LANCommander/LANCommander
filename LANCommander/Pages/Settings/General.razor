@@ -3,6 +3,7 @@
 @using LANCommander.Models;
 @layout SettingsLayout
 @inject SettingService SettingService
+@inject IGDBService IGDBService
 @inject IMessageService MessageService
 @attribute [Authorize(Roles = "Administrator")]
 
@@ -47,6 +48,9 @@
         try
         {
             SettingService.SaveSettings(Settings);
+
+            IGDBService.Authenticate();
+
             MessageService.Success("Settings saved!");
         }
         catch

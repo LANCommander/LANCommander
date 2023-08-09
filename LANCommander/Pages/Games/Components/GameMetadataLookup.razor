@@ -6,6 +6,7 @@
 @inject CompanyService CompanyService
 @inject GenreService GenreService
 @inject TagService TagService
+@inject NavigationManager NavigationManager
 
 @{
     RenderFragment Footer =
@@ -35,8 +36,21 @@
     </Table>
 </Modal>
 
+@if (IGDBService.Authenticated)
+{
+    <Button OnClick="() => SearchForGame(GameTitle)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(GameTitle))">@ButtonText</Button>
+}
+else
+{
+    <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
+        <Button Type="@ButtonType.Primary">@ButtonText</Button>
+    </Popconfirm>
+}
+
 @code {
     [Parameter] public EventCallback<GameLookupResult> OnResultSelected { get; set; }
+    [Parameter] public string ButtonText { get; set; }
+    [Parameter] public string GameTitle { get; set; }
 
     ITable? ResultsTable;
 
@@ -56,7 +70,7 @@
         ResultsTable.SetSelection(new string[] { row.Data.IGDBId.ToString() });
     }
 
-    public async Task SearchForGame(string title)
+    private async Task SearchForGame(string title)
     {
         Loading = true;
         ModalVisible = true;
@@ -147,5 +161,10 @@
         }
 
         return multiplayerModes;
+    }
+
+    private void NavigateToSettings()
+    {
+        NavigationManager.NavigateTo("/Settings/General", true);
     }
 }

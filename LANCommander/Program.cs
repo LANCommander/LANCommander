@@ -15,7 +15,6 @@ var builder = WebApplication.CreateBuilder(args);
 ConfigurationManager configuration = builder.Configuration;
 
 // Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var settings = SettingService.GetSettings();
 
 builder.Services.AddMvc(options => options.EnableEndpointRouting = false);

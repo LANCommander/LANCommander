@@ -29,6 +29,21 @@
                         <Button OnClick="() => DemoteUser(context)" Danger>Demote</Button>
                     }
                 </SpaceItem>
+
+                <SpaceItem>
+                    @if (!context.Roles.Any(r => r == "Administrator"))
+                    {
+                        <Popconfirm OnConfirm="() => DeleteUser(context)" Title="Are you sure you want to delete this user?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    }
+                    else
+                    {
+                        <Tooltip Title="Admins cannot be deleted. They must be demoted first.">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
+                        </Tooltip>
+                    }
+                </SpaceItem>
             </Space>
         </ActionColumn>
     </Table>
@@ -94,6 +109,21 @@
         {
             await UserManager.RemoveFromRoleAsync(UserManager.Users.First(u => u.UserName == user.UserName), "Administrator");
             await RefreshUserList();
+        }
+    }
+
+    private async Task DeleteUser(UserViewModel user)
+    {
+        if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
+        {
+            await MessageService.Error("Cannot delete the only administrator!");
+        }
+        else
+        {
+            await UserManager.DeleteAsync(UserManager.Users.First(u => u.UserName == user.UserName));
+            await RefreshUserList();
+
+            await MessageService.Success($"Deleted {user.UserName}!");
         }
     }
 }

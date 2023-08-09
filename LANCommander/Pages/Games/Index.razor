@@ -13,9 +13,9 @@
     <Column TData="string">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
     </Column>
-    <PropertyColumn Property="g => g.Title" Sortable />
-    <PropertyColumn Property="g => g.SortTitle" Sortable />
-    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable />
+    <PropertyColumn Property="g => g.Title" Sortable Filterable />
+    <PropertyColumn Property="g => g.SortTitle" Sortable Filterable />
+    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
     <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
     <PropertyColumn Property="g => g.CreatedBy" Sortable>
         @context.CreatedBy?.UserName

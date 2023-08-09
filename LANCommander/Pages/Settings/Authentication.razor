@@ -10,7 +10,7 @@
 <div style="padding: 0 24px;">
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Token Secret">
-            <Input @bind-Value="context.Authentication.TokenSecret" />
+            <InputPassword @bind-Value="context.Authentication.TokenSecret" />
         </FormItem>
         <FormItem Label="Token Lifetime">
             <AntDesign.InputNumber @bind-Value="context.Authentication.TokenLifetime" Formatter="FormatTokenLifetime" Min="1" />

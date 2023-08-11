@@ -87,8 +87,16 @@
                     <FormItem Label="Working Directory">
                         <Input @bind-Value="@context.WorkingDirectory" />
                     </FormItem>
-                    <FormItem Label="Use Shell Execute">
-                        <Switch @bind-Checked="context.UseShellExecute" />
+                    <FormItem>
+                        <LabelTemplate>
+                            Use Shell Execute
+                            <Tooltip Title="This option specifies whether you would like to run the server using the shell. Some servers may require this as they will have a UI or won't output logs to stdout">
+                                <Icon Type="@IconType.Outline.QuestionCircle" Theme="@IconThemeType.Outline" />
+                            </Tooltip>
+                        </LabelTemplate>
+                        <ChildContent>
+                            <Switch @bind-Checked="context.UseShellExecute" />
+                        </ChildContent>
                     </FormItem>
                     <FormItem Label="Autostart">
                         <Switch @bind-Checked="context.Autostart" />

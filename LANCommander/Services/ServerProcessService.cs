@@ -17,7 +17,7 @@ namespace LANCommander.Services
         public Dictionary<Guid, Process> Processes = new Dictionary<Guid, Process>();
         public Dictionary<Guid, int> Threads { get; set; } = new Dictionary<Guid, int>();
 
-        public async Task StartServer(Server server)
+        public async Task StartServerAsync(Server server)
         {
             var process = new Process();
 

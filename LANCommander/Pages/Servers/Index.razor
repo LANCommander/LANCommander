@@ -3,6 +3,7 @@
 @inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
+@inject IMessageService MessageService
 
 <PageHeader Title="Servers">
     <PageHeaderExtra>
@@ -113,9 +114,16 @@
         NavigationManager.NavigateTo($"/Servers/{server.Id}/Edit/Logs");
     }
 
-    private void Start(Server server)
+    private async Task Start(Server server)
     {
-        ServerProcessService.StartServer(server);
+        try
+        {
+            await ServerProcessService.StartServerAsync(server);
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error("There was an unexpected error while trying to start the server.");
+        }
     }
 
     private void Stop(Server server)

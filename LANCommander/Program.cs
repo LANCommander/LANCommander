@@ -50,7 +50,7 @@ builder.Services.AddDbContext<LANCommander.Data.DatabaseContext>(b =>
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-Logger.Debug("Initializing Identity")
+Logger.Debug("Initializing Identity");
 builder.Services.AddDefaultIdentity<User>((IdentityOptions options) =>
 {
     options.SignIn.RequireConfirmedAccount = false;

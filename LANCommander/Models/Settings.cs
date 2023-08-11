@@ -13,6 +13,7 @@
 
     public class LANCommanderAuthenticationSettings
     {
+        public bool RequireApproval { get; set; } = false;
         public string TokenSecret { get; set; } = "";
         public int TokenLifetime { get; set; } = 30;
         public bool PasswordRequireNonAlphanumeric { get; set; }

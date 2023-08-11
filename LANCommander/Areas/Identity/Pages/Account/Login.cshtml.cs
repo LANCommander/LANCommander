@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using LANCommander.Services;
 
 namespace LANCommander.Areas.Identity.Pages.Account
 {
@@ -126,6 +127,19 @@ namespace LANCommander.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                var settings = SettingService.GetSettings();
+
+                if (settings.Authentication.RequireApproval)
+                {
+                    var user = await _userManager.FindByNameAsync(Input.UserName);
+
+                    if (user != null && !user.Approved)
+                    {
+                        ModelState.AddModelError(string.Empty, "Your account must be approved by an administrator.");
+                        return Page();
+                    }
+                }
+
                 // This doesn't count login failures towards account lockout
                 // To enable password failures to trigger account lockout, set lockoutOnFailure: true
                 var result = await _signInManager.PasswordSignInAsync(Input.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: false);

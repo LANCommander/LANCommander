@@ -156,6 +156,9 @@ namespace LANCommander.Controllers.Api
         {
             if (user != null && await UserManager.CheckPasswordAsync(user, password))
             {
+                if (Settings.Authentication.RequireApproval && !user.Approved)
+                    throw new Exception("Account must be approved by an administrator");
+
                 var userRoles = await UserManager.GetRolesAsync(user);
 
                 var authClaims = new List<Claim>

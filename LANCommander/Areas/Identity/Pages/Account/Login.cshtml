@@ -13,12 +13,22 @@
             <img src="~/static/logo.svg" />
         </div>
 
+        @foreach (var error in ModelState.SelectMany(x => x.Value.Errors))
+        {
+            <div data-show="true" class="ant-alert ant-alert-error ant-alert-no-icon" style="margin-bottom: 16px">
+                <div class="ant-alert-content">
+                    <div class="ant-alert-message">@error.ErrorMessage</div>
+                </div>
+            </div>
+        }
+
         <div class="ant-card ant-card-bordered">
             <div class="ant-card-head">
                 <div class="ant-card-head-wrapper">
                     <div class="ant-card-head-title">Login</div>
                 </div>
             </div>
+
             <form id="account" method="post" class="ant-card-body" autocomplete="off">
                 <div class="ant-form ant-form-vertical">
                     <div class="ant-form-item">

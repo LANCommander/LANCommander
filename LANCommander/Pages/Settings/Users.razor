@@ -19,6 +19,13 @@
         </PropertyColumn>
         <ActionColumn>
             <Space Style="display: flex; justify-content: end">
+                @if (!context.Approved)
+                {
+                    <SpaceItem>
+                        <Button OnClick="() => ApproveUser(context)" Type="@ButtonType.Primary">Approve</Button>
+                    </SpaceItem>
+                }
+
                 <SpaceItem>
                     @if (!context.Roles.Any(r => r == "Administrator"))
                     {
@@ -83,12 +90,30 @@
                 Id = user.Id,
                 UserName = user.UserName,
                 Roles = await UserManager.GetRolesAsync(user),
-                SavesSize = saveSize
+                SavesSize = saveSize,
+                Approved = user.Approved
             });
         }
 
         Loading = false;
         StateHasChanged();
+    }
+
+    private async Task ApproveUser(UserViewModel user)
+    {
+        var dbUser = await UserManager.FindByIdAsync(user.Id.ToString());
+
+        if (dbUser != null)
+        {
+            dbUser.Approved = true;
+            dbUser.ApprovedOn = DateTime.Now;
+
+            await UserManager.UpdateAsync(dbUser);
+
+            user.Approved = true;
+
+            await MessageService.Success($"Approved {user.UserName}!");
+        }
     }
 
     private async Task PromoteUser(UserViewModel user)

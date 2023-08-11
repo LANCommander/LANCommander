@@ -45,6 +45,12 @@ namespace LANCommander.Data.Models
         [JsonIgnore]
         public virtual ICollection<GameSave>? GameSaves { get; set; }
 
+        [JsonIgnore]
+        public bool Approved { get; set; }
+
+        [JsonIgnore]
+        public DateTime ApprovedOn { get; set; }
+
         public string GetGameSaveUploadPath()
         {
             return Path.Combine("Saves", Id.ToString());

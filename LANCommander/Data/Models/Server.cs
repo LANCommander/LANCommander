@@ -10,6 +10,8 @@
         public string OnStartScriptPath { get; set; } = "";
         public string OnStopScriptPath { get; set; } = "";
 
+        public bool UseShellExecute { get; set; }
         public bool Autostart { get; set; }
+        public int AutostartDelay { get; set; }
     }
 }

@@ -161,11 +161,6 @@ app.UseEndpoints(endpoints =>
     endpoints.MapControllers();
 });
 
-// Migrate
-await using var scope = app.Services.CreateAsyncScope();
-using var db = scope.ServiceProvider.GetService<DatabaseContext>();
-await db.Database.MigrateAsync();
-
 if (!Directory.Exists("Upload"))
     Directory.CreateDirectory("Upload");
 
@@ -177,5 +172,29 @@ if (!Directory.Exists("Saves"))
 
 if (!Directory.Exists("Snippets"))
     Directory.CreateDirectory("Snippets");
+
+// Migrate
+await using var scope = app.Services.CreateAsyncScope();
+using var db = scope.ServiceProvider.GetService<DatabaseContext>();
+await db.Database.MigrateAsync();
+
+// Autostart any server processes
+var serverService = scope.ServiceProvider.GetService<ServerService>();
+var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
+
+foreach (var server in await serverService.Get(s => s.Autostart).ToListAsync())
+{
+    try
+    {
+        if (server.AutostartDelay > 0)
+            await Task.Delay(server.AutostartDelay);
+
+        serverProcessService.StartServerAsync(server);
+    }
+    catch (Exception ex)
+    {
+
+    }
+}
 
 app.Run();

@@ -24,25 +24,32 @@ namespace LANCommander.Services
             process.StartInfo.FileName = server.Path;
             process.StartInfo.WorkingDirectory = server.WorkingDirectory;
             process.StartInfo.Arguments = server.Arguments;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.UseShellExecute = server.UseShellExecute;
             process.EnableRaisingEvents = true;
 
-            process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+            if (!process.StartInfo.UseShellExecute)
             {
-                Logger.Info("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
-            });
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
 
-            process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
-            {
-                Logger.Error("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
-            });
+                process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+                {
+                    Logger.Info("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
+                });
+
+                process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+                {
+                    Logger.Error("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
+                });
+            }
 
             process.Start();
 
-            process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
+            if (!process.StartInfo.UseShellExecute)
+            {
+                process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
+            }
 
             Processes[server.Id] = process;
 

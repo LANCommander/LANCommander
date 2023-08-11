@@ -9,6 +9,10 @@
 
 <div style="padding: 0 24px;">
     <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Require Account Approval">
+            <Switch @bind-Checked="context.Authentication.RequireApproval" />
+        </FormItem>
+
         <FormItem Label="Token Secret">
             <InputPassword @bind-Value="context.Authentication.TokenSecret" />
         </FormItem>

@@ -136,6 +136,9 @@ namespace LANCommander.Areas.Identity.Pages.Account
             {
                 var user = CreateUser();
 
+                user.Approved = true;
+                user.ApprovedOn = DateTime.Now;
+
                 await _userStore.SetUserNameAsync(user, Input.UserName, CancellationToken.None);
                 var result = await _userManager.CreateAsync(user, Input.Password);
 

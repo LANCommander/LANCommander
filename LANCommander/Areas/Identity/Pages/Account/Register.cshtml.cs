@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using LANCommander.Services;
 
 namespace LANCommander.Areas.Identity.Pages.Account
 {
@@ -106,11 +107,19 @@ namespace LANCommander.Areas.Identity.Pages.Account
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
+            var settings = SettingService.GetSettings();
+
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (ModelState.IsValid)
             {
                 var user = CreateUser();
+
+                if (!settings.Authentication.RequireApproval)
+                {
+                    user.Approved = false;
+                    user.ApprovedOn = DateTime.Now;
+                }
 
                 await _userStore.SetUserNameAsync(user, Input.UserName, CancellationToken.None);
                 var result = await _userManager.CreateAsync(user, Input.Password);

@@ -92,6 +92,12 @@ namespace LANCommander.Data
                 .WithOne(gs => gs.Game)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<Server>()
+                .HasOne(s => s.Game)
+                .WithMany(g => g.Servers)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.NoAction);
         }
 
         public DbSet<Game>? Games { get; set; }

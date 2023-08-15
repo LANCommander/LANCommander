@@ -2,6 +2,7 @@
 @page "/Servers/{id:guid}/Edit/{panel}"
 @page "/Servers/Add"
 @using LANCommander.Pages.Servers.Components
+@inject GameService GameService
 @inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
@@ -78,6 +79,22 @@
                     <FormItem Label="Name">
                         <Input @bind-Value="@context.Name" />
                     </FormItem>
+                    <FormItem Label="Game">
+                        <Select TItem="Game"
+                                TItemValue="Guid"
+                                DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                        @bind-Value="@GameId"
+                                LabelName="Title"
+                                ValueName="Id"
+                                Placeholder="Select a Game"
+                                DefaultActiveFirstOption="false"
+                                EnableSearch>
+                                <ItemTemplate Context="game">
+                                    <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
+                                    @game.Title
+                                </ItemTemplate>
+                        </Select>
+                    </FormItem>
                     <FormItem Label="Path">
                         <Input @bind-Value="@context.Path" />
                     </FormItem>
@@ -146,9 +163,12 @@
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Panel { get; set; }
 
+    IEnumerable<Game> Games = new List<Game>();
+
     Server Server;
     ServerProcessStatus Status;
     Timer Timer;
+    Guid GameId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -159,6 +179,11 @@
 
         if (String.IsNullOrWhiteSpace(Server.WorkingDirectory))
             Server.WorkingDirectory = "C:\\";
+
+        if (Server.GameId.HasValue)
+            GameId = Server.GameId.Value;
+
+        Games = GameService.Get().ToList();
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -195,6 +220,8 @@
     {
         try
         {
+            Server.GameId = GameId;
+
             if (Server.Id != Guid.Empty)
             {
                 Server = await ServerService.Update(Server);
@@ -214,5 +241,10 @@
         {
             await MessageService.Error("Could not save!");
         }
+    }
+
+    private string GetIcon(Game game)
+    {
+        return $"/api/Games/{game?.Id}/Icon.png";
     }
 }

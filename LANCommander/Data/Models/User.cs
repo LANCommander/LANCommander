@@ -49,7 +49,7 @@ namespace LANCommander.Data.Models
         public bool Approved { get; set; }
 
         [JsonIgnore]
-        public DateTime ApprovedOn { get; set; }
+        public DateTime? ApprovedOn { get; set; }
 
         public string GetGameSaveUploadPath()
         {

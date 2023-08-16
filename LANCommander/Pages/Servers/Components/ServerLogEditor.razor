@@ -1,0 +1,74 @@
+﻿@using LANCommander.Data.Enums
+@using LANCommander.Data.Models
+@using LANCommander.Extensions;
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="ServerLog" DataSource="@Value" HidePagination="true">
+            <PropertyColumn Property="m => m.Name">
+                <Input Type="text" @bind-Value="context.Name" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.Path">
+                <Input Type="text" @bind-Value="context.Path" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => RemoveLog(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddLog" Type="@ButtonType.Primary">Add Log</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+@code {
+    [Parameter] public ICollection<ServerLog> Value { get; set; }
+    [Parameter] public EventCallback<ICollection<ServerLog>> ValueChanged { get; set; }
+    [Parameter] public Guid ServerId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Value == null)
+            Value = new List<ServerLog>();
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
+    }
+
+    private async Task AddLog()
+    {
+        if (Value == null)
+            Value = new List<ServerLog>();
+
+        Value.Add(new ServerLog
+        {
+            ServerId = ServerId
+        });
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
+    }
+
+    private async Task RemoveLog(ServerLog log)
+    {
+        Value.Remove(log);
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
+    }
+}

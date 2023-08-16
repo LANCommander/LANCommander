@@ -1,4 +1,6 @@
 ﻿using LANCommander.Data.Models;
+using LANCommander.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using NLog;
 using System.Diagnostics;
 
@@ -12,10 +14,32 @@ namespace LANCommander.Services
         Error
     }
 
+    public class ServerLogEventArgs : EventArgs
+    {
+        public string Line { get; private set; }
+        public ServerLog Log { get; private set; }
+
+        public ServerLogEventArgs(string line, ServerLog log)
+        {
+            Line = line;
+            Log = log;
+        }
+    }
+
     public class ServerProcessService : BaseService
     {
         public Dictionary<Guid, Process> Processes = new Dictionary<Guid, Process>();
         public Dictionary<Guid, int> Threads { get; set; } = new Dictionary<Guid, int>();
+
+        public delegate void OnLogHandler(object sender, ServerLogEventArgs e);
+        public event OnLogHandler OnLog;
+
+        private IHubContext<GameServerHub> HubContext;
+
+        public ServerProcessService(IHubContext<GameServerHub> hubContext)
+        {
+            HubContext = hubContext;
+        }
 
         public async Task StartServerAsync(Server server)
         {
@@ -53,6 +77,11 @@ namespace LANCommander.Services
 
             Processes[server.Id] = process;
 
+            foreach (var log in server.ServerLogs)
+            {
+                MonitorLog(log, server);
+            }
+
             await process.WaitForExitAsync();
         }
 
@@ -65,6 +94,59 @@ namespace LANCommander.Services
 
                 process.Kill();
             }
+        }
+
+        private void MonitorLog(ServerLog log, Server server)
+        {
+            var logPath = Path.Combine(server.WorkingDirectory, log.Path);
+
+            if (File.Exists(logPath))
+            {
+                var lockMe = new object();
+                using (var latch = new ManualResetEvent(true))
+                using (var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var fsw = new FileSystemWatcher(Path.GetDirectoryName(logPath)))
+                {
+                    fsw.Changed += (s, e) =>
+                    {
+                        lock (lockMe)
+                        {
+                            if (e.FullPath != logPath)
+                                return;
+
+                            latch.Set();
+                        }
+                    };
+
+                    using (var sr = new StreamReader(fs))
+                    {
+                        while (true)
+                        {
+                            Thread.Sleep(100);
+
+                            latch.WaitOne();
+
+                            lock(lockMe)
+                            {
+                                String line;
+
+                                while ((line = sr.ReadLine()) != null)
+                                {
+                                    HubContext.Clients.All.SendAsync("Log", log.ServerId, line);
+                                    //OnLog?.Invoke(this, new ServerLogEventArgs(line, log));
+                                }
+
+                                latch.Set();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private void Fsw_Changed(object sender, FileSystemEventArgs e)
+        {
+            throw new NotImplementedException();
         }
 
         public ServerProcessStatus GetStatus(Server server)

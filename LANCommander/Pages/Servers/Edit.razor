@@ -126,6 +126,11 @@
                             </AntDesign.Input>
                         </FormItem>
                     }
+                    
+                    <FormItem>
+                        <ServerLogEditor @bind-Value="Server.ServerLogs" ServerId="Id" />
+                    </FormItem>
+
                     <FormItem>
                         <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
                     </FormItem>

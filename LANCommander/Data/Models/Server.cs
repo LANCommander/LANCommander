@@ -22,5 +22,7 @@ namespace LANCommander.Data.Models
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Servers")]
         public virtual Game? Game { get; set; }
+
+        public virtual ICollection<ServerLog>? ServerLogs { get; set; }
     }
 }

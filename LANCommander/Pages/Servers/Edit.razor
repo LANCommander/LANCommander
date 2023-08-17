@@ -15,28 +15,22 @@
 
             @if (Server != null && Server.Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/Logs")">Logs</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/Console")">Console</MenuItem>
                 <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/Files")">Files</MenuItem>
             }
         </Menu>
     </Sider>
 
     <Content>
-        @if (Panel == "Logs")
-        {
-            <PageHeader>
-                <PageHeaderTitle>Logs</PageHeaderTitle>
-                <PageHeaderExtra>
+        <PageHeader>
+            <PageHeaderTitle>@Panel</PageHeaderTitle>
+            <PageHeaderExtra>
+                @if (Server.Id != Guid.Empty)
+                {
                     <ServerControl ServerId="Id" />
-                </PageHeaderExtra>
-            </PageHeader>
-        }
-        else
-        {
-            <PageHeader>
-                <PageHeaderTitle>@Panel</PageHeaderTitle>
-            </PageHeader>
-        }
+                }
+            </PageHeaderExtra>
+        </PageHeader>
 
 
         <div class="site-layout-content">
@@ -104,9 +98,9 @@
                 </Form>
             }
 
-            @if (Panel == "Logs")
+            @if (Panel == "Console")
             {
-                <Logs Id="@Server.Id" />
+                <Console ServerId="@Server.Id" />
             }
 
             @if (Panel == "Files")

@@ -9,7 +9,7 @@
 <Xterm @ref="Terminal" Options="TerminalOptions" AddonIds="TerminalAddons" />
 
 @code {
-    [Parameter] public Guid Id { get; set; }
+    [Parameter] public Guid ServerId { get; set; }
 
     Xterm? Terminal;
     HubConnection? HubConnection;
@@ -33,7 +33,7 @@
 
         HubConnection.On<Guid, string>("Log", (serverId, message) =>
         {
-            if (serverId == Id)
+            if (serverId == ServerId)
                 Terminal.WriteLine(message);
         });
 

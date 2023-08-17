@@ -10,6 +10,7 @@
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
+    [Parameter] public Guid ServerLogId { get; set; }
 
     Xterm? Terminal;
     HubConnection? HubConnection;
@@ -31,9 +32,9 @@
             .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
             .Build();
 
-        HubConnection.On<Guid, string>("Log", (serverId, message) =>
+        HubConnection.On<Guid, Guid, string>("Log", (serverId, logId, message) =>
         {
-            if (serverId == ServerId)
+            if (serverId == ServerId && logId == ServerLogId)
                 Terminal.WriteLine(message);
         });
 

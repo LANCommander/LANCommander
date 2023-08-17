@@ -1,5 +1,6 @@
-﻿@page "/Servers/{id:guid}/Edit"
-@page "/Servers/{id:guid}/Edit/{panel}"
+﻿@page "/Servers/{id:guid}"
+@page "/Servers/{id:guid}/{panel}"
+@page "/Servers/{id:guid}/{panel}/{logId:guid}"
 @page "/Servers/Add"
 @using LANCommander.Pages.Servers.Components
 @inject GameService GameService
@@ -11,12 +12,17 @@
 <Layout Class="site-layout-background" Style="padding: 24px 0;">
     <Sider Class="site-layout-background" Width="200">
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
-            <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/General")">General</MenuItem>
+            <MenuItem RouterLink="@($"/Servers/{Server.Id}/General")">General</MenuItem>
 
             @if (Server != null && Server.Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/Console")">Console</MenuItem>
-                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Edit/Files")">Files</MenuItem>
+                <SubMenu Key="sub1" Title="Console">
+                    @foreach (var log in Server.ServerLogs)
+                    {
+                        <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Console/{log.Id}")">@log.Name</MenuItem>
+                    }
+                </SubMenu>
+                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Files")">Files</MenuItem>
             }
         </Menu>
     </Sider>
@@ -100,7 +106,7 @@
 
             @if (Panel == "Console")
             {
-                <Console ServerId="@Server.Id" />
+                <Console ServerId="@Server.Id" ServerLogId="@LogId" />
             }
 
             @if (Panel == "Files")
@@ -128,6 +134,7 @@
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Panel { get; set; }
+    [Parameter] public Guid LogId { get; set; }
 
     IEnumerable<Game> Games = new List<Game>();
 
@@ -168,7 +175,7 @@
 
                 await MessageService.Success("Server added!");
 
-                NavigationManager.NavigateTo($"/Servers/{Server.Id}/Edit");
+                NavigationManager.NavigateTo($"/Servers/{Server.Id}");
             }
         }
         catch (Exception ex)

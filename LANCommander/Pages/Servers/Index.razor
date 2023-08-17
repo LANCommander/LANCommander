@@ -66,12 +66,12 @@
 
     private void Edit(Server server)
     {
-        NavigationManager.NavigateTo($"/Servers/{server.Id}/Edit/General");
+        NavigationManager.NavigateTo($"/Servers/{server.Id}/General");
     }
 
     private void Console(Server server)
     {
-        NavigationManager.NavigateTo($"/Servers/{server.Id}/Edit/Console");
+        NavigationManager.NavigateTo($"/Servers/{server.Id}/Console");
     }
 
     private async Task Delete(Server server)

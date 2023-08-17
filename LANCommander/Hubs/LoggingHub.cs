@@ -15,7 +15,7 @@ namespace LANCommander.Hubs
 
         private void ServerProcessService_OnLog(object sender, ServerLogEventArgs e)
         {
-            Clients.All.SendAsync("Log", e.Log.ServerId, e.Line);
+            Clients.All.SendAsync("Log", e.Log.ServerId, e.Log.Id, e.Line);
         }
 
         public void Log(Guid serverId, string message)

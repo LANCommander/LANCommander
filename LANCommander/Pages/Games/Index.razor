@@ -1,9 +1,11 @@
 ﻿@page "/Games"
 @using LANCommander.Extensions;
 @using System.ComponentModel.DataAnnotations;
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 @attribute [Authorize]
 @inject GameService GameService
 @inject NavigationManager NavigationManager
+@inject ProtectedLocalStorage BrowserStorage
 
 <PageHeader Title="Games">
     <PageHeaderExtra>
@@ -11,7 +13,7 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<Drawer Closable="true" Visible="@FieldPickerVisible" Placement="right" Title="@("Fields")" OnClose="() => FieldPickerVisible = false">
+<Drawer Closable="true" Visible="@FieldPickerVisible" Placement="right" Title="@("Fields")" OnClose="() => CloseFieldPicker()">
     <Space Direction="@DirectionVHType.Vertical">
         <SpaceItem><Switch Checked="FieldVisible(Field.Icon)" OnChange="(state) => ChangeFieldVisibility(Field.Icon, state)" /> @Field.Icon.GetDisplayName()</SpaceItem>
         <SpaceItem><Switch Checked="FieldVisible(Field.Title)" OnChange="(state) => ChangeFieldVisibility(Field.Title, state)" /> @Field.Title.GetDisplayName()</SpaceItem>
@@ -163,7 +165,7 @@
     <ActionColumn Title="" Style="text-align: right">
         <TitleTemplate>
             <div style="text-align: right">
-                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => FieldPickerVisible = true" />
+                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenFieldPicker()" />
             </div>
         </TitleTemplate>
         <ChildContent>
@@ -233,13 +235,18 @@
         ArchiveSize,
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             Games = GameService.Get().OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
 
             Loading = false;
+
+            var storedFieldVisibility = await BrowserStorage.GetAsync<Dictionary<Field, bool>>("Views.Games.FieldPicker");
+
+            if (storedFieldVisibility.Success && storedFieldVisibility.Value != null)
+                FieldVisibility = storedFieldVisibility.Value;
 
             StateHasChanged();
         }
@@ -286,5 +293,17 @@
         Games = GameService.Get().OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
 
         Loading = false;
+    }
+
+    private async Task OpenFieldPicker()
+    {
+        FieldPickerVisible = true;
+    }
+
+    private async Task CloseFieldPicker()
+    {
+        FieldPickerVisible = false;
+
+        await BrowserStorage.SetAsync("Views.Games.FieldPicker", FieldVisibility);
     }
 }

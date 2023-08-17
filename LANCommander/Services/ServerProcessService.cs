@@ -1,13 +1,16 @@
 ﻿using LANCommander.Data.Models;
 using LANCommander.Hubs;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using NLog;
+using NLog.Fluent;
 using System.Diagnostics;
 
 namespace LANCommander.Services
 {
     public enum ServerProcessStatus
     {
+        Retrieving,
         Stopped,
         Starting,
         Running,
@@ -26,10 +29,78 @@ namespace LANCommander.Services
         }
     }
 
+    public class LogMonitor : IDisposable
+    {
+        private ManualResetEvent Latch;
+        private FileStream FileStream;
+        private FileSystemWatcher FileSystemWatcher;
+
+        public LogMonitor(Server server, ServerLog serverLog, IHubContext<GameServerHub> hubContext)
+        {
+            var logPath = Path.Combine(server.WorkingDirectory, serverLog.Path);
+
+            if (File.Exists(serverLog.Path))
+            {
+                var lockMe = new object();
+
+                Latch = new ManualResetEvent(true);
+                FileStream = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                FileSystemWatcher = new FileSystemWatcher(Path.GetDirectoryName(logPath));
+
+                FileSystemWatcher.Changed += (s, e) =>
+                {
+                    lock (lockMe)
+                    {
+                        if (e.FullPath != logPath)
+                            return;
+
+                        Latch.Set();
+                    }
+                };
+
+                using (var sr = new StreamReader(FileStream))
+                {
+                    while (true)
+                    {
+                        Thread.Sleep(100);
+
+                        Latch.WaitOne();
+
+                        lock (lockMe)
+                        {
+                            String line;
+
+                            while ((line = sr.ReadLine()) != null)
+                            {
+                                hubContext.Clients.All.SendAsync("Log", serverLog.ServerId, line);
+                                //OnLog?.Invoke(this, new ServerLogEventArgs(line, log));
+                            }
+
+                            Latch.Set();
+                        }
+                    }
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            if (Latch != null)
+                Latch.Dispose();
+
+            if (FileStream != null)
+                FileStream.Dispose();
+
+            if (FileSystemWatcher != null)
+                FileSystemWatcher.Dispose();
+        }
+    }
+
     public class ServerProcessService : BaseService
     {
         public Dictionary<Guid, Process> Processes = new Dictionary<Guid, Process>();
         public Dictionary<Guid, int> Threads { get; set; } = new Dictionary<Guid, int>();
+        public Dictionary<Guid, LogMonitor> LogMonitors { get; set; } = new Dictionary<Guid, LogMonitor>();
 
         public delegate void OnLogHandler(object sender, ServerLogEventArgs e);
         public event OnLogHandler OnLog;
@@ -79,7 +150,7 @@ namespace LANCommander.Services
 
             foreach (var log in server.ServerLogs)
             {
-                MonitorLog(log, server);
+                StartMonitoringLog(log, server);
             }
 
             await process.WaitForExitAsync();
@@ -94,59 +165,22 @@ namespace LANCommander.Services
 
                 process.Kill();
             }
-        }
 
-        private void MonitorLog(ServerLog log, Server server)
-        {
-            var logPath = Path.Combine(server.WorkingDirectory, log.Path);
-
-            if (File.Exists(logPath))
+            if (LogMonitors.ContainsKey(server.Id))
             {
-                var lockMe = new object();
-                using (var latch = new ManualResetEvent(true))
-                using (var fs = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var fsw = new FileSystemWatcher(Path.GetDirectoryName(logPath)))
-                {
-                    fsw.Changed += (s, e) =>
-                    {
-                        lock (lockMe)
-                        {
-                            if (e.FullPath != logPath)
-                                return;
-
-                            latch.Set();
-                        }
-                    };
-
-                    using (var sr = new StreamReader(fs))
-                    {
-                        while (true)
-                        {
-                            Thread.Sleep(100);
-
-                            latch.WaitOne();
-
-                            lock(lockMe)
-                            {
-                                String line;
-
-                                while ((line = sr.ReadLine()) != null)
-                                {
-                                    HubContext.Clients.All.SendAsync("Log", log.ServerId, line);
-                                    //OnLog?.Invoke(this, new ServerLogEventArgs(line, log));
-                                }
-
-                                latch.Set();
-                            }
-                        }
-                    }
-                }
+                LogMonitors[server.Id].Dispose();
+                LogMonitors.Remove(server.Id);
             }
         }
 
-        private void Fsw_Changed(object sender, FileSystemEventArgs e)
+        private void StartMonitoringLog(ServerLog log, Server server)
         {
-            throw new NotImplementedException();
+            var logPath = Path.Combine(server.WorkingDirectory, log.Path);
+
+            if (!LogMonitors.ContainsKey(server.Id))
+            {
+                LogMonitors[server.Id] = new LogMonitor(server, log, HubContext);
+            }
         }
 
         public ServerProcessStatus GetStatus(Server server)

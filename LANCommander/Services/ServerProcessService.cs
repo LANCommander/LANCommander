@@ -13,6 +13,7 @@ namespace LANCommander.Services
         Retrieving,
         Stopped,
         Starting,
+        Stopping,
         Running,
         Error
     }

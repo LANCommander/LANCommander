@@ -1,0 +1,104 @@
+﻿@inject ServerService ServerService
+@inject ServerProcessService ServerProcessService
+@inject IMessageService MessageService
+@implements IAsyncDisposable
+
+<Space Size="@("large")">
+    <SpaceItem>
+        @switch (Status)
+        {
+            case ServerProcessStatus.Running:
+                <Badge Status="success" Text="Running" />
+                break;
+
+            case ServerProcessStatus.Starting:
+                <Badge Status="processing" Text="Starting" />
+                break;
+
+            case ServerProcessStatus.Error:
+                <Badge Status="error" Text="Error" />
+                break;
+
+            case ServerProcessStatus.Stopped:
+                <Badge Status="default" Text="Stopped" />
+                break;
+
+            case ServerProcessStatus.Stopping:
+                <Badge Status="error" Text="Stopping" />
+                break;
+
+            default:
+                <Badge Status="warning" Text="Retrieving" />
+                break;
+        }
+    </SpaceItem>
+
+    <SpaceItem>
+        @if (Status != ServerProcessStatus.Running)
+        {
+            <Button Type="@ButtonType.Primary" OnClick="() => Start()" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
+        }
+        else
+        {
+            <Popconfirm OnConfirm="() => Stop()" Title="Are you sure you want to kill this server process?">
+                <Button Danger Type="@ButtonType.Primary">Stop</Button>
+            </Popconfirm>
+        }
+    </SpaceItem>
+</Space>
+
+@code {
+    [Parameter] public Guid ServerId { get; set; }
+
+    Server Server;
+    Timer Timer;
+
+    ServerProcessStatus Status = ServerProcessStatus.Retrieving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Server = await ServerService.Get(ServerId);
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Timer = new Timer(async (object? stateInfo) =>
+            {
+                Status = ServerProcessService.GetStatus(Server);
+
+                await InvokeAsync(StateHasChanged);
+            }, new AutoResetEvent(false), 1000, 1000);
+        }
+    }
+
+    private async Task Start()
+    {
+        try
+        {
+            Status = ServerProcessStatus.Starting;
+
+            await ServerProcessService.StartServerAsync(Server);
+        }
+        catch (Exception ex)
+        {
+            Status = ServerProcessStatus.Error;
+
+            await MessageService.Error("There was an unexpected error while trying to start the server.");
+        }
+    }
+
+    private void Stop()
+    {
+        Status = ServerProcessStatus.Stopping;
+
+        ServerProcessService.StopServer(Server);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (Timer != null)
+            await Timer.DisposeAsync();
+    }
+}

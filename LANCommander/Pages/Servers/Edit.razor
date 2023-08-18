@@ -17,7 +17,7 @@
             @if (Server != null && Server.Id != Guid.Empty)
             {
                 <SubMenu Key="sub1" Title="Console">
-                    @foreach (var log in Server.ServerLogs)
+                    @foreach (var log in Server.ServerConsoles)
                     {
                         <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Console/{log.Id}")">@log.Name</MenuItem>
                     }
@@ -95,7 +95,7 @@
                     }
                     
                     <FormItem>
-                        <ServerLogEditor @bind-Value="Server.ServerLogs" ServerId="Id" />
+                        <ServerConsoleEditor @bind-Value="Server.ServerConsoles" ServerId="Id" />
                     </FormItem>
 
                     <FormItem>
@@ -106,7 +106,7 @@
 
             @if (Panel == "Console")
             {
-                <Console ServerId="@Server.Id" ServerLogId="@LogId" />
+                <Console ServerId="@Server.Id" ServerConsoleId="@LogId" />
             }
 
             @if (Panel == "Files")

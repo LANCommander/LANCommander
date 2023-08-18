@@ -1,4 +1,5 @@
-﻿using LANCommander.Data.Models;
+﻿using LANCommander.Data.Enums;
+using LANCommander.Data.Models;
 using LANCommander.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -21,26 +22,26 @@ namespace LANCommander.Services
     public class ServerLogEventArgs : EventArgs
     {
         public string Line { get; private set; }
-        public ServerLog Log { get; private set; }
+        public ServerConsole Log { get; private set; }
 
-        public ServerLogEventArgs(string line, ServerLog log)
+        public ServerLogEventArgs(string line, ServerConsole console)
         {
             Line = line;
-            Log = log;
+            Log = console;
         }
     }
 
-    public class LogMonitor : IDisposable
+    public class LogFileMonitor : IDisposable
     {
         private ManualResetEvent Latch;
         private FileStream FileStream;
         private FileSystemWatcher FileSystemWatcher;
 
-        public LogMonitor(Server server, ServerLog serverLog, IHubContext<GameServerHub> hubContext)
+        public LogFileMonitor(Server server, ServerConsole serverConsole, IHubContext<GameServerHub> hubContext)
         {
-            var logPath = Path.Combine(server.WorkingDirectory, serverLog.Path);
+            var logPath = Path.Combine(server.WorkingDirectory, serverConsole.Path);
 
-            if (File.Exists(serverLog.Path))
+            if (File.Exists(serverConsole.Path))
             {
                 var lockMe = new object();
 
@@ -73,7 +74,7 @@ namespace LANCommander.Services
 
                             while ((line = sr.ReadLine()) != null)
                             {
-                                hubContext.Clients.All.SendAsync("Log", serverLog.ServerId, line);
+                                hubContext.Clients.All.SendAsync("Log", serverConsole.ServerId, line);
                                 //OnLog?.Invoke(this, new ServerLogEventArgs(line, log));
                             }
 
@@ -101,7 +102,7 @@ namespace LANCommander.Services
     {
         public Dictionary<Guid, Process> Processes = new Dictionary<Guid, Process>();
         public Dictionary<Guid, int> Threads { get; set; } = new Dictionary<Guid, int>();
-        public Dictionary<Guid, LogMonitor> LogMonitors { get; set; } = new Dictionary<Guid, LogMonitor>();
+        public Dictionary<Guid, LogFileMonitor> LogFileMonitors { get; set; } = new Dictionary<Guid, LogFileMonitor>();
 
         public delegate void OnLogHandler(object sender, ServerLogEventArgs e);
         public event OnLogHandler OnLog;
@@ -149,9 +150,9 @@ namespace LANCommander.Services
 
             Processes[server.Id] = process;
 
-            foreach (var log in server.ServerLogs)
+            foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
             {
-                StartMonitoringLog(log, server);
+                StartMonitoringLog(logFile, server);
             }
 
             await process.WaitForExitAsync();
@@ -167,20 +168,20 @@ namespace LANCommander.Services
                 process.Kill();
             }
 
-            if (LogMonitors.ContainsKey(server.Id))
+            if (LogFileMonitors.ContainsKey(server.Id))
             {
-                LogMonitors[server.Id].Dispose();
-                LogMonitors.Remove(server.Id);
+                LogFileMonitors[server.Id].Dispose();
+                LogFileMonitors.Remove(server.Id);
             }
         }
 
-        private void StartMonitoringLog(ServerLog log, Server server)
+        private void StartMonitoringLog(ServerConsole log, Server server)
         {
             var logPath = Path.Combine(server.WorkingDirectory, log.Path);
 
-            if (!LogMonitors.ContainsKey(server.Id))
+            if (!LogFileMonitors.ContainsKey(server.Id))
             {
-                LogMonitors[server.Id] = new LogMonitor(server, log, HubContext);
+                LogFileMonitors[server.Id] = new LogFileMonitor(server, log, HubContext);
             }
         }
 

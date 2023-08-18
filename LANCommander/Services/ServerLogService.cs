@@ -4,9 +4,9 @@ using System.Diagnostics;
 
 namespace LANCommander.Services
 {
-    public class ServerLogService : BaseDatabaseService<ServerLog>
+    public class ServerConsoleService : BaseDatabaseService<ServerConsole>
     {
-        public ServerLogService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor) { }
+        public ServerConsoleService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor) { }
 
         public async Task<string[]> ReadLog(Guid logId)
         {

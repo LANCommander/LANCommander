@@ -2,7 +2,7 @@
 @using NLog;
 @using XtermBlazor
 @inject ServerService ServerService
-@inject ServerLogService ServerLogService
+@inject ServerConsoleService ServerConsoleService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @implements IAsyncDisposable
@@ -11,10 +11,11 @@
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
-    [Parameter] public Guid ServerLogId { get; set; }
+    [Parameter] public Guid ServerConsoleId { get; set; }
 
     Xterm? Terminal;
     HubConnection? HubConnection;
+    ServerConsole ServerConsole;
 
     TerminalOptions TerminalOptions = new TerminalOptions
     {
@@ -29,13 +30,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ServerConsole = await ServerConsoleService.Get(ServerConsoleId);
+        
         HubConnection = new HubConnectionBuilder()
             .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
             .Build();
 
         HubConnection.On<Guid, Guid, string>("Log", (serverId, logId, message) =>
         {
-            if (serverId == ServerId && logId == ServerLogId)
+            if (serverId == ServerId && logId == ServerConsoleId)
                 Terminal.WriteLine(message);
         });
 
@@ -51,7 +54,7 @@
             if (Terminal != null)
                 await Terminal.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
 
-            var log = await ServerLogService.ReadLog(ServerLogId);
+            var log = await ServerConsoleService.ReadLog(ServerConsoleId);
 
             foreach (var line in log)
             {

@@ -100,7 +100,7 @@ namespace LANCommander.Data
                 .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<Server>()
-                .HasMany<ServerLog>()
+                .HasMany<ServerConsole>()
                 .WithOne(sl => sl.Server)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -121,5 +121,7 @@ namespace LANCommander.Data
         public DbSet<GameSave>? GameSaves { get; set; }
 
         public DbSet<Server>? Servers { get; set; }
+
+        public DbSet<ServerConsole>? ServerConsoles { get; set; }
     }
 }

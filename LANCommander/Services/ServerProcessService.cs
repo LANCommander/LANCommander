@@ -202,7 +202,7 @@ namespace LANCommander.Services
         {
             if (!RconConnections.ContainsKey(console.Id))
             {
-                var rcon = new RCON(new IPEndPoint(IPAddress.Parse(console.Host), console.Port), console.Password);
+                var rcon = new RCON(new IPEndPoint(IPAddress.Parse(console.Host), console.Port.GetValueOrDefault()), console.Password);
 
                 RconConnections[console.Id] = rcon;
 

@@ -3,23 +3,72 @@
 @using LANCommander.Extensions;
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
-    <SpaceItem>
-        <Table TItem="ServerConsole" DataSource="@Value" HidePagination="true">
-            <PropertyColumn Property="m => m.Name">
-                <Input Type="text" @bind-Value="context.Name" />
-            </PropertyColumn>
-            <PropertyColumn Property="m => m.Path">
-                <Input Type="text" @bind-Value="context.Path" />
-            </PropertyColumn>
-            <ActionColumn>
-                <Space Style="display: flex; justify-content: end">
-                    <SpaceItem>
-                        <Button OnClick="() => RemoveConsole(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </SpaceItem>
+    @foreach (var console in Value)
+    {
+        <SpaceItem>
+            @if (console.Type == ServerConsoleType.RCON)
+            {
+                <Card Size="small">
+                    <Body>
+                        <Form Layout="@FormLayout.Vertical" Model="@console">
+                            <GridRow Gutter="16">
+                                <GridCol Span="8">
+                                    <FormItem Label="Type">
+                                        <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
+                                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                                        </Select>
+                                    </FormItem>
+                                    <FormItem Label="Name">
+                                        <Input @bind-Value="context.Name" />
+                                    </FormItem>
+                                </GridCol>
+
+                                <GridCol Span="16">
+                                    <FormItem Label="Server">
+                                        <InputGroup Compact>
+                                            <Input @bind-Value="context.Host" Placeholder="Host" />
+                                            <Input @bind-Value="context.Port" Placeholder="Port" Style="width: 25%" />
+                                        </InputGroup>
+                                    </FormItem>
+                                    <FormItem Label="Password">
+                                        <InputPassword @bind-Value="context.Password" Placeholder="Password" />
+                                    </FormItem>
+                                </GridCol>
+                            </GridRow>
+                        </Form>
+                    </Body>
+                </Card>
+            }
+            else if (console.Type == ServerConsoleType.LogFile)
+            {
+                <Card Size="small">
+                    <Body>
+                        <Form Layout="@FormLayout.Vertical" Model="@console">
+                            <GridRow Gutter="16">
+                                <GridCol Span="8">
+                                    <FormItem Label="Type">
+                                        <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
+                                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                                        </Select>
+                                    </FormItem>
+                                    <FormItem Label="Name">
+                                        <Input Type="text" @bind-Value="context.Name" />
+                                    </FormItem>
+                                </GridCol>
+                                <GridCol Span="16">
+                                    <FormItem Label="Path">
+                                        <Input Type="text" @bind-Value="context.Path" Placeholder="Host" />
+                                    </FormItem>
+                                </GridCol>
+                            </GridRow>
+                        </Form>
+                    </Body>
+                </Card>
+            }
+        </SpaceItem>
+    }
 
     <SpaceItem>
         <GridRow Justify="end">

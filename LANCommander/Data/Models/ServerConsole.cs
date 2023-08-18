@@ -12,7 +12,7 @@ namespace LANCommander.Data.Models
         public string Path { get; set; } = "";
 
         public string Host { get; set; } = "";
-        public int Port { get; set; }
+        public int? Port { get; set; }
 
         // Change to a secure string at some point
         public string Password { get; set; } = "";

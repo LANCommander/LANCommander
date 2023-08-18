@@ -1,4 +1,5 @@
-﻿using LANCommander.Data.Enums;
+﻿using CoreRCON;
+using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
 using LANCommander.Hubs;
 using Microsoft.AspNetCore.SignalR;
@@ -6,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using NLog;
 using NLog.Fluent;
 using System.Diagnostics;
+using System.Net;
 
 namespace LANCommander.Services
 {
@@ -98,11 +100,24 @@ namespace LANCommander.Services
         }
     }
 
+    public class RconConnection
+    {
+        public RCON RCON { get; set; }
+        public LogReceiver LogReceiver { get; set; }
+
+        public RconConnection(string host, int port, string password)
+        {
+            RCON = new RCON(new IPEndPoint(IPAddress.Parse(host), port), password);
+        }
+    }
+
     public class ServerProcessService : BaseService
     {
         public Dictionary<Guid, Process> Processes = new Dictionary<Guid, Process>();
         public Dictionary<Guid, int> Threads { get; set; } = new Dictionary<Guid, int>();
         public Dictionary<Guid, LogFileMonitor> LogFileMonitors { get; set; } = new Dictionary<Guid, LogFileMonitor>();
+
+        private Dictionary<Guid, RCON> RconConnections { get; set; } = new Dictionary<Guid, RCON>();
 
         public delegate void OnLogHandler(object sender, ServerLogEventArgs e);
         public event OnLogHandler OnLog;
@@ -177,12 +192,34 @@ namespace LANCommander.Services
 
         private void StartMonitoringLog(ServerConsole log, Server server)
         {
-            var logPath = Path.Combine(server.WorkingDirectory, log.Path);
-
             if (!LogFileMonitors.ContainsKey(server.Id))
             {
                 LogFileMonitors[server.Id] = new LogFileMonitor(server, log, HubContext);
             }
+        }
+
+        public RCON RconConnect(ServerConsole console)
+        {
+            if (!RconConnections.ContainsKey(console.Id))
+            {
+                var rcon = new RCON(new IPEndPoint(IPAddress.Parse(console.Host), console.Port), console.Password);
+
+                RconConnections[console.Id] = rcon;
+
+                return rcon;
+            }
+            else
+                return RconConnections[console.Id];
+        }
+
+        public async Task<string> RconSendCommandAsync(string command, ServerConsole console)
+        {
+            if (RconConnections.ContainsKey(console.Id))
+            {
+                return await RconConnections[console.Id].SendCommandAsync(command);
+            }
+            else
+                return "";
         }
 
         public ServerProcessStatus GetStatus(Server server)

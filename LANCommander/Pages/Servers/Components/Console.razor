@@ -1,13 +1,20 @@
-﻿@using Microsoft.AspNetCore.SignalR.Client
+﻿@using LANCommander.Data.Enums;
+@using Microsoft.AspNetCore.SignalR.Client
 @using NLog;
 @using XtermBlazor
 @inject ServerService ServerService
 @inject ServerConsoleService ServerConsoleService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
+@inject IMessageService MessageService
 @implements IAsyncDisposable
 
 <Xterm @ref="Terminal" Options="TerminalOptions" AddonIds="TerminalAddons" />
+
+@if (ServerConsole.Type == ServerConsoleType.RCON)
+{
+    <Input @ref="CommandInput" @bind-Value="Command" BindOnInput OnPressEnter="OnPressEnter" @onkeyup="OnCommandKeyDown" />
+}
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
@@ -16,6 +23,11 @@
     Xterm? Terminal;
     HubConnection? HubConnection;
     ServerConsole ServerConsole;
+
+    Input<string> CommandInput;
+    string Command;
+    string[] History;
+    int HistoryPosition;
 
     TerminalOptions TerminalOptions = new TerminalOptions
     {
@@ -31,18 +43,34 @@
     protected override async Task OnInitializedAsync()
     {
         ServerConsole = await ServerConsoleService.Get(ServerConsoleId);
-        
-        HubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
-            .Build();
 
-        HubConnection.On<Guid, Guid, string>("Log", (serverId, logId, message) =>
+        History = new string[50];
+        HistoryPosition = 0;
+
+        if (ServerConsole.Type == ServerConsoleType.LogFile)
         {
-            if (serverId == ServerId && logId == ServerConsoleId)
-                Terminal.WriteLine(message);
-        });
+            HubConnection = new HubConnectionBuilder()
+                .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
+                .Build();
 
-        await HubConnection.StartAsync();
+            HubConnection.On<Guid, Guid, string>("Log", (serverId, logId, message) =>
+            {
+                if (serverId == ServerId && logId == ServerConsoleId)
+                    Terminal.WriteLine(message);
+            });
+
+            await HubConnection.StartAsync();
+        }
+        else if (ServerConsole.Type == ServerConsoleType.RCON)
+        {
+            try {
+                ServerProcessService.RconConnect(ServerConsole);
+            }
+            catch (Exception ex)
+            {
+                await MessageService.Error($"Could not connect to RCON server: {ex.Message}");
+            }
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -60,6 +88,52 @@
             {
                 await Terminal.WriteLine(line);
             }
+        }
+    }
+
+    public async Task OnPressEnter() {
+        await ServerProcessService.RconSendCommandAsync(Command, ServerConsole);
+
+        Array.Copy(History, 0, History, 1, History.Length - 1);
+        History[0] = Command;
+        HistoryPosition = -1;
+        Command = "";
+        CommandInput.Value = "";
+        await Task.Yield();
+        await CommandInput.ValueChanged.InvokeAsync();
+        await CommandInput.Focus(FocusBehavior.FocusAndClear);
+
+        StateHasChanged();
+    }
+
+    public async Task OnCommandKeyDown(KeyboardEventArgs args)
+    {
+        switch (args.Key)
+        {
+            case "ArrowUp":
+                if (HistoryPosition < History.Length && History[HistoryPosition + 1] != null)
+                    HistoryPosition++;
+
+                Command = History[HistoryPosition];
+
+                StateHasChanged();
+                break;
+
+            case "ArrowDown":
+                if (HistoryPosition >= 0)
+                {
+                    HistoryPosition--;
+
+                    if (HistoryPosition >= 0)
+                        Command = History[HistoryPosition];
+                    else
+                    {
+                        Command = "";
+                    }
+                }
+
+                StateHasChanged();
+                break;
         }
     }
 

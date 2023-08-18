@@ -2,6 +2,7 @@
 @using NLog;
 @using XtermBlazor
 @inject ServerService ServerService
+@inject ServerLogService ServerLogService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @implements IAsyncDisposable
@@ -49,6 +50,13 @@
 
             if (Terminal != null)
                 await Terminal.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
+
+            var log = await ServerLogService.ReadLog(ServerLogId);
+
+            foreach (var line in log)
+            {
+                await Terminal.WriteLine(line);
+            }
         }
     }
 

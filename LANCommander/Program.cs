@@ -122,6 +122,7 @@ builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<IGDBService>();
 builder.Services.AddScoped<ServerService>();
+builder.Services.AddScoped<ServerLogService>();
 builder.Services.AddScoped<GameSaveService>();
 
 builder.Services.AddSingleton<ServerProcessService>();

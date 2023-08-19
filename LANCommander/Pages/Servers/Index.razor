@@ -31,7 +31,6 @@
         <Space Direction="DirectionVHType.Horizontal">
             <SpaceItem>
                 <Button OnClick="() => Edit(context)">Edit</Button>
-                <Button OnClick="() => Console(context)">Console</Button>
             </SpaceItem>
             <SpaceItem>
                 <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this server?">
@@ -67,11 +66,6 @@
     private void Edit(Server server)
     {
         NavigationManager.NavigateTo($"/Servers/{server.Id}/General");
-    }
-
-    private void Console(Server server)
-    {
-        NavigationManager.NavigateTo($"/Servers/{server.Id}/Console");
     }
 
     private async Task Delete(Server server)

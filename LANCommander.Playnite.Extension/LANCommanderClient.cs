@@ -1,5 +1,6 @@
 ﻿using LANCommander.SDK;
 using LANCommander.SDK.Models;
+using Playnite.SDK;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,8 @@ namespace LANCommander.PlaynitePlugin
 {
     internal class LANCommanderClient
     {
+        public static readonly ILogger Logger = LogManager.GetLogger();
+
         public readonly RestClient Client;
         public AuthToken Token;
 
@@ -142,16 +145,31 @@ namespace LANCommander.PlaynitePlugin
 
         public bool ValidateToken(AuthToken token)
         {
+            Logger.Trace("Validating token...");
+
             if (token == null)
+            {
+                Logger.Trace("Token is null!");
                 return false;
+            }
 
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {token.AccessToken}");
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
+            {
+                Logger.Trace("Token is empty!");
                 return false;
+            }
 
             var response = Client.Post(request);
+
+            var valid = response.StatusCode == HttpStatusCode.OK;
+
+            if (valid)
+                Logger.Trace("Token is valid!");
+            else
+                Logger.Trace("Token is invalid!");
 
             return response.StatusCode == HttpStatusCode.OK;
         }
@@ -198,6 +216,8 @@ namespace LANCommander.PlaynitePlugin
 
         public GameSave UploadSave(string gameId, byte[] data)
         {
+            Logger.Trace("Uploading save...");
+
             var request = new RestRequest($"/api/Saves/Upload/{gameId}", Method.POST)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
@@ -210,6 +230,8 @@ namespace LANCommander.PlaynitePlugin
 
         public string GetKey(Guid id)
         {
+            Logger.Trace("Requesting key allocation...");
+
             var macAddress = GetMacAddress();
 
             var request = new KeyRequest()
@@ -227,6 +249,8 @@ namespace LANCommander.PlaynitePlugin
 
         public string GetAllocatedKey(Guid id)
         {
+            Logger.Trace("Requesting allocated key...");
+
             var macAddress = GetMacAddress();
 
             var request = new KeyRequest()
@@ -247,6 +271,8 @@ namespace LANCommander.PlaynitePlugin
 
         public string GetNewKey(Guid id)
         {
+            Logger.Trace("Requesting new key allocation...");
+
             var macAddress = GetMacAddress();
 
             var request = new KeyRequest()

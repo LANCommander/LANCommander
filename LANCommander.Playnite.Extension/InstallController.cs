@@ -17,6 +17,8 @@ namespace LANCommander.PlaynitePlugin
 {
     public class LANCommanderInstallController : InstallController
     {
+        public static readonly ILogger Logger = LogManager.GetLogger();
+
         private LANCommanderLibraryPlugin Plugin;
         private PowerShellRuntime PowerShellRuntime;
         private Playnite.SDK.Models.Game PlayniteGame;
@@ -31,16 +33,23 @@ namespace LANCommander.PlaynitePlugin
 
         public override void Install(InstallActionArgs args)
         {
+            Logger.Trace("Game install triggered, checking connection...");
+
             while (!Plugin.ValidateConnection())
             {
+                Logger.Trace("User not authenticated. Opening auth window...");
+
                 Plugin.ShowAuthenticationWindow();
             }
 
             var gameId = Guid.Parse(Game.GameId);
             var game = Plugin.LANCommander.GetGame(gameId);
 
+            Logger.Trace($"Installing game {game.Title} ({game.Id})...");
+
             var installDirectory = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(500), "", () =>
             {
+                Logger.Trace("Attempting to download and extract game...");
                 return DownloadAndExtract(game);
             });
 
@@ -58,6 +67,8 @@ namespace LANCommander.PlaynitePlugin
 
             var writeManifestSuccess = RetryHelper.RetryOnException(10, TimeSpan.FromSeconds(1), false, () =>
             {
+                Logger.Trace("Attempting to get game manifest...");
+
                 manifest = Plugin.LANCommander.GetGameManifest(gameId);
 
                 WriteManifest(manifest, installDirectory);
@@ -67,6 +78,8 @@ namespace LANCommander.PlaynitePlugin
 
             if (!writeManifestSuccess)
                 throw new Exception("Could not get or write the manifest file. Retry the install or check your connection.");
+
+            Logger.Trace("Saving scripts...");
 
             SaveScript(game, installDirectory, ScriptType.Install);
             SaveScript(game, installDirectory, ScriptType.Uninstall);
@@ -95,10 +108,14 @@ namespace LANCommander.PlaynitePlugin
         {
             if (game == null)
             {
+                Logger.Trace("Game failed to download! No game was specified!");
+
                 throw new Exception("Game failed to download!");
             }
 
             var destination = Path.Combine(Plugin.Settings.InstallDirectory, game.Title.SanitizeFilename());
+
+            Logger.Trace($"Downloading and extracting \"{game}\" to path {destination}");
 
             Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
@@ -127,8 +144,12 @@ namespace LANCommander.PlaynitePlugin
                 }
                 catch (Exception ex)
                 {
+                    Logger.Error(ex, $"Could not extract to path {destination}");
+
                     if (Directory.Exists(destination))
                     {
+                        Logger.Trace("Directory at install path already exists. Deleting...");
+
                         Directory.Delete(destination, true);
                     }
                 }
@@ -138,6 +159,8 @@ namespace LANCommander.PlaynitePlugin
                 IsIndeterminate = false,
                 Cancelable = false,
             });
+
+            Logger.Trace($"Game successfully downloaded and extracted to {destination}");
 
             return destination;
         }
@@ -217,13 +240,19 @@ namespace LANCommander.PlaynitePlugin
 
         private void WriteManifest(SDK.GameManifest manifest, string installDirectory)
         {
+            var destination = Path.Combine(installDirectory, "_manifest.yml");
+
+            Logger.Trace($"Attempting to write manifest to path {destination}");
+
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
+            Logger.Trace("Serializing manifest...");
             var yaml = serializer.Serialize(manifest);
 
-            File.WriteAllText(Path.Combine(installDirectory, "_manifest.yml"), yaml);
+            Logger.Trace("Writing manifest file...");
+            File.WriteAllText(destination, yaml);
         }
 
         private void SaveScript(LANCommander.SDK.Models.Game game, string installationDirectory, ScriptType type)
@@ -240,6 +269,8 @@ namespace LANCommander.PlaynitePlugin
 
             if (File.Exists(filename))
                 File.Delete(filename);
+
+            Logger.Trace($"Writing {type} script to {filename}");
 
             File.WriteAllText(filename, script.Contents);
         }

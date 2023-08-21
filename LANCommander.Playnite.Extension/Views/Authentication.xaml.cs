@@ -21,6 +21,8 @@ namespace LANCommander.PlaynitePlugin.Views
 {
     public partial class Authentication : UserControl
     {
+        public static readonly ILogger Logger = LogManager.GetLogger();
+
         private LANCommanderLibraryPlugin Plugin;
         private ViewModels.Authentication Context { get { return (ViewModels.Authentication)DataContext; } }
 
@@ -32,6 +34,8 @@ namespace LANCommander.PlaynitePlugin.Views
 
             var probe = new Probe("LANCommander");
 
+            Logger.Trace("Attempting to find a LANCommander server on the local network...");
+
             probe.BeaconsUpdated += beacons => Dispatcher.BeginInvoke((System.Action)(() =>
             {
                 var beacon = beacons.First();
@@ -39,6 +43,8 @@ namespace LANCommander.PlaynitePlugin.Views
                 Context.ServerAddress = $"http://{beacon.Address.Address}:{beacon.Address.Port}";
 
                 this.ServerAddress.Text = Context.ServerAddress;
+
+                Logger.Trace($"The beacons have been lit! LANCommander calls for aid! {Context.ServerAddress}");
 
                 probe.Stop();
             }));

@@ -55,6 +55,7 @@ namespace LANCommander.PlaynitePlugin
         {
             if (LANCommander.Token == null || LANCommander.Client == null || !LANCommander.ValidateToken(LANCommander.Token))
             {
+                Logger.Trace("No valid authentication token exists. Showing auth window...");
                 ShowAuthenticationWindow();
             }
         }
@@ -70,9 +71,9 @@ namespace LANCommander.PlaynitePlugin
 
             while (!ValidateConnection())
             {
+                Logger.Trace("Authentication invalid, showing auth window...");
                 ShowAuthenticationWindow();
             }
-
 
             var games = LANCommander
                 .GetGames()
@@ -82,15 +83,23 @@ namespace LANCommander.PlaynitePlugin
             {
                 try
                 {
+                    Logger.Trace($"Importing/updating metadata for game \"{game.Title}\"...");
+
                     var manifest = LANCommander.GetGameManifest(game.Id);
+                    Logger.Trace("Successfully grabbed game manifest");
+
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
 
                     if (existingGame != null)
                     {
+                        Logger.Trace("Game already exists in library, updating metadata...");
+
                         UpdateGame(manifest, game.Id);
 
                         continue;
                     }
+
+                    Logger.Trace("Game does not exist in the library, importing metadata...");
 
                     var metadata = new GameMetadata()
                     {
@@ -142,7 +151,7 @@ namespace LANCommander.PlaynitePlugin
                 }
                 catch (Exception ex)
                 {
-
+                    Logger.Error(ex, $"Could not update game \"{game.Title}\" in library");
                 }
             };
 
@@ -167,6 +176,8 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
         {
+            Logger.Trace("Populating game menu items...");
+
             if (args.Games.Count == 1 && args.Games.First().IsInstalled && !String.IsNullOrWhiteSpace(args.Games.First().InstallDirectory))
             {
                 var nameChangeScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.NameChange);
@@ -174,6 +185,9 @@ namespace LANCommander.PlaynitePlugin
                 var installScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.Install);
 
                 if (File.Exists(nameChangeScriptPath))
+                {
+                    Logger.Trace($"Name change script found at path {nameChangeScriptPath}");
+
                     yield return new GameMenuItem
                     {
                         Description = "Change Player Name",
@@ -187,8 +201,12 @@ namespace LANCommander.PlaynitePlugin
                                 PowerShellRuntime.RunScript(nameChangeArgs.Games.First(), SDK.Enums.ScriptType.NameChange, $@"""{result.SelectedString}"" ""{oldName}""");
                         }
                     };
+                }
 
                 if (File.Exists(keyChangeScriptPath))
+                {
+                    Logger.Trace($"Key change script found at path {keyChangeScriptPath}");
+
                     yield return new GameMenuItem
                     {
                         Description = "Change Game Key",
@@ -212,8 +230,12 @@ namespace LANCommander.PlaynitePlugin
                             }
                         }
                     };
+                }
 
                 if (File.Exists(installScriptPath))
+                {
+                    Logger.Trace($"Install script found at path {installScriptPath}");
+
                     yield return new GameMenuItem
                     {
                         Description = "Run Install Script",
@@ -231,6 +253,7 @@ namespace LANCommander.PlaynitePlugin
                             }
                         }
                     };
+                }
             }
         }
 
@@ -304,14 +327,20 @@ namespace LANCommander.PlaynitePlugin
 
         public void ShowNameChangeWindow()
         {
+            Logger.Trace("Showing name change dialog!");
+
             var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", Settings.PlayerName);
 
             if (result.Result == true)
             {
+                Logger.Trace($"New name entered was \"{result.SelectedString}\"");
+
                 // Check to make sure they're staying in ASCII encoding
                 if (String.IsNullOrEmpty(result.SelectedString) || result.SelectedString.Any(c => c > sbyte.MaxValue))
                 {
                     PlayniteApi.Dialogs.ShowErrorMessage("The name you supplied is invalid. Try again.");
+
+                    Logger.Trace("An invalid name was specified. Showing the name dialog again...");
 
                     ShowNameChangeWindow();
                 }
@@ -319,13 +348,20 @@ namespace LANCommander.PlaynitePlugin
                 {
                     Settings.PlayerName = result.SelectedString;
 
+                    Logger.Trace($"New player name of \"{Settings.PlayerName}\" has been set!");
+
+                    Logger.Trace("Saving plugin settings!");
                     SavePluginSettings(Settings);
 
                     var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
 
+                    Logger.Trace($"Running name change scripts across {games.Count} installed game(s)");
+
                     PowerShellRuntime.RunScripts(games, SDK.Enums.ScriptType.NameChange, Settings.PlayerName);
                 }
             }
+            else
+                Logger.Trace("Name change was cancelled");
         }
 
         public Window ShowAuthenticationWindow()

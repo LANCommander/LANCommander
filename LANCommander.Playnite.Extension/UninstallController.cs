@@ -1,4 +1,5 @@
 ﻿using LANCommander.SDK.Enums;
+using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
@@ -8,6 +9,8 @@ namespace LANCommander.PlaynitePlugin
 {
     public class LANCommanderUninstallController : UninstallController
     {
+        public static readonly ILogger Logger = LogManager.GetLogger();
+
         private LANCommanderLibraryPlugin Plugin;
         private PowerShellRuntime PowerShellRuntime;
 
@@ -26,8 +29,12 @@ namespace LANCommander.PlaynitePlugin
             }
             catch { }
 
+            Logger.Trace("Attempting to delete install directory...");
+
             if (!String.IsNullOrWhiteSpace(Game.InstallDirectory) && Directory.Exists(Game.InstallDirectory))
                 Directory.Delete(Game.InstallDirectory, true);
+
+            Logger.Trace("Deleted!");
 
             InvokeOnUninstalled(new GameUninstalledEventArgs());
         }

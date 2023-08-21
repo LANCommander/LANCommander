@@ -2,13 +2,23 @@
 @using LANCommander.Data.Models
 @using LANCommander.Extensions;
 
+
+
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    @if (Value == null || Value.Count == 0)
+    {
+        <Empty />
+    }
+
     @foreach (var console in Value)
     {
         <SpaceItem>
             @if (console.Type == ServerConsoleType.RCON)
             {
-                <Card Size="small">
+                <Card Size="small" Title="@console.Name">
+                    <Extra>
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
+                    </Extra>
                     <Body>
                         <Form Layout="@FormLayout.Vertical" Model="@console">
                             <GridRow Gutter="16">
@@ -20,7 +30,7 @@
                                         </Select>
                                     </FormItem>
                                     <FormItem Label="Name">
-                                        <Input @bind-Value="context.Name" />
+                                        <Input @bind-Value="context.Name" BindOnInput />
                                     </FormItem>
                                 </GridCol>
 
@@ -42,7 +52,10 @@
             }
             else if (console.Type == ServerConsoleType.LogFile)
             {
-                <Card Size="small">
+                <Card Size="small" Title="@console.Name">
+                    <Extra>
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
+                    </Extra>
                     <Body>
                         <Form Layout="@FormLayout.Vertical" Model="@console">
                             <GridRow Gutter="16">
@@ -73,7 +86,7 @@
     <SpaceItem>
         <GridRow Justify="end">
             <GridCol>
-                <Button OnClick="AddConsole" Type="@ButtonType.Primary">Add Console</Button>
+                <Button OnClick="Add" Type="@ButtonType.Primary">Add Console</Button>
             </GridCol>
         </GridRow>
     </SpaceItem>
@@ -95,7 +108,7 @@
         StateHasChanged();
     }
 
-    private async Task AddConsole()
+    private async Task Add()
     {
         if (Value == null)
             Value = new List<ServerConsole>();
@@ -111,7 +124,7 @@
         StateHasChanged();
     }
 
-    private async Task RemoveConsole(ServerConsole console)
+    private async Task Remove(ServerConsole console)
     {
         Value.Remove(console);
 

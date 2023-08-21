@@ -16,10 +16,11 @@
 
             @if (Server != null && Server.Id != Guid.Empty)
             {
-                <SubMenu Key="sub1" Title="Console">
+                <SubMenu Key="sub1" Title="Consoles">
+                    <MenuItem Key="Edit" RouterLink="@($"/Servers/{Server.Id}/Consoles")">Edit</MenuItem>
                     @foreach (var log in Server.ServerConsoles)
                     {
-                        <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Console/{log.Id}")">@log.Name</MenuItem>
+                        <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Consoles/{log.Id}")">@log.Name</MenuItem>
                     }
                 </SubMenu>
                 <MenuItem RouterLink="@($"/Servers/{Server.Id}/Files")">Files</MenuItem>
@@ -82,17 +83,23 @@
                             <Switch @bind-Checked="context.UseShellExecute" />
                         </ChildContent>
                     </FormItem>
-                    <FormItem Label="Autostart">
-                        <Switch @bind-Checked="context.Autostart" />
-                    </FormItem>
-                    @if (context.Autostart)
-                    {
-                        <FormItem Label="Autostart Delay">
-                            <AntDesign.Input @bind-Value="context.AutostartDelay" Placeholder="0">
-                                <Suffix>Seconds</Suffix>
-                            </AntDesign.Input>
-                        </FormItem>
-                    }
+                    <GridRow Wrap="false" Gutter="16">
+                        <GridCol Flex="@("none")">
+                            <FormItem Label="Autostart">
+                                <Switch @bind-Checked="context.Autostart" />
+                            </FormItem>
+                        </GridCol>
+                        <GridCol Flex="@("auto")">
+                            @if (context.Autostart)
+                            {
+                                <FormItem Label="Delay">
+                                    <AntDesign.Input @bind-Value="context.AutostartDelay" Placeholder="0">
+                                        <Suffix>Seconds</Suffix>
+                                    </AntDesign.Input>
+                                </FormItem>
+                            }
+                        </GridCol>
+                    </GridRow>
                     
                     <FormItem>
                         <ServerConsoleEditor @bind-Value="Server.ServerConsoles" ServerId="Id" />
@@ -104,9 +111,16 @@
                 </Form>
             }
 
-            @if (Panel == "Console")
+            @if (Panel == "Consoles")
             {
-                <Console ServerId="@Server.Id" ServerConsoleId="@LogId" />
+                @if (LogId != null && LogId != Guid.Empty)
+                {
+                    <Console ServerId="@Server.Id" ServerConsoleId="@LogId" />
+                }
+                else
+                {
+                    <ServerConsoleEditor @bind-Value="Server.ServerConsoles" ServerId="Id" />
+                }
             }
 
             @if (Panel == "Files")

@@ -132,6 +132,8 @@ namespace LANCommander.PlaynitePlugin
 
         public AuthResponse RefreshToken(AuthToken token)
         {
+            Logger.Trace("Refreshing token...");
+
             var request = new RestRequest("/api/Auth/Refresh")
                 .AddJsonBody(token);
 

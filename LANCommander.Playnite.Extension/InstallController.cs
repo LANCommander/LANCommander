@@ -148,10 +148,12 @@ namespace LANCommander.PlaynitePlugin
 
                     if (Directory.Exists(destination))
                     {
-                        Logger.Trace("Directory at install path already exists. Deleting...");
+                        Logger.Trace("Cleaning up orphaned install files after bad install...");
 
                         Directory.Delete(destination, true);
                     }
+
+                    throw new Exception("The game archive could not be extracted. Please try again or fix the archive!");
                 }
             },
             new GlobalProgressOptions($"Downloading {game.Title}...")

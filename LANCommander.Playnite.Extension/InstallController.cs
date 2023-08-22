@@ -115,7 +115,7 @@ namespace LANCommander.PlaynitePlugin
 
             var destination = Path.Combine(Plugin.Settings.InstallDirectory, game.Title.SanitizeFilename());
 
-            Logger.Trace($"Downloading and extracting \"{game}\" to path {destination}");
+            Logger.Trace($"Downloading and extracting \"{game.Title}\" to path {destination}");
 
             Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {

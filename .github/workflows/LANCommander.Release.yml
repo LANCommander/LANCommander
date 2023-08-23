@@ -24,7 +24,7 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: LANCommander-${{ github.event.release.tag_name }}
+        name: LANCommander-${{ github.ref }}
         path: "./_Build"
     # Client
     - uses: actions/checkout@v3
@@ -49,7 +49,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v3.1.2
       with:
-        name: LANCommander.PlaynitePlugin-${{ github.event.release.tag_name }}
+        name: LANCommander.PlaynitePlugin-${{ github.ref }}
         path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_1_0.pext
     # Release
     

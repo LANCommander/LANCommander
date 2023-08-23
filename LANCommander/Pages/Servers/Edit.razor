@@ -16,8 +16,8 @@
 
             @if (Server != null && Server.Id != Guid.Empty)
             {
-                <SubMenu Key="sub1" Title="Consoles">
-                    <MenuItem Key="Edit" RouterLink="@($"/Servers/{Server.Id}/Consoles")">Edit</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Consoles")">Consoles</MenuItem>
+                <SubMenu Key="Monitor" Title="Monitor" Disabled="@(Server.ServerConsoles == null || Server.ServerConsoles.Count == 0)">
                     @foreach (var log in Server.ServerConsoles)
                     {
                         <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Consoles/{log.Id}")">@log.Name</MenuItem>

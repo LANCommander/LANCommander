@@ -1,4 +1,5 @@
 ﻿@page "/Games"
+@using AntDesign.TableModels;
 @using LANCommander.Extensions;
 @using System.ComponentModel.DataAnnotations;
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
@@ -9,7 +10,14 @@
 
 <PageHeader Title="Games">
     <PageHeaderExtra>
-        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
+            </SpaceItem>
+            <SpaceItem>
+                <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
+            </SpaceItem>
+        </Space>
     </PageHeaderExtra>
 </PageHeader>
 
@@ -35,7 +43,7 @@
     </Space>
 </Drawer>
 
-<Table TItem="Game" DataSource="@Games" Loading="@Loading">
+<Table @ref="Table" TItem="Game" DataSource="@Games" Loading="@Loading" PageSize="25">
     @if (FieldVisible(Field.Icon))
     {
         <Column TData="string">
@@ -192,6 +200,10 @@
     bool Loading = true;
     bool FieldPickerVisible = false;
 
+    string Search = "";
+
+    ITable Table;
+
     Dictionary<Field, bool> FieldVisibility = new Dictionary<Field, bool>()
     {
         { Field.Icon, true },
@@ -239,7 +251,7 @@
     {
         if (firstRender)
         {
-            Games = GameService.Get().OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+            LoadData();
 
             Loading = false;
 
@@ -250,6 +262,11 @@
 
             StateHasChanged();
         }
+    }
+
+    private void LoadData()
+    {
+        Games = GameService.Get(g => g.Title.ToLower().Contains(Search.ToLower().Trim()) || g.SortTitle.ToLower().Contains(Search.ToLower().Trim())).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
     }
 
     private bool FieldVisible(Field field)

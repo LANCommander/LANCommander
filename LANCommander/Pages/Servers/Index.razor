@@ -8,11 +8,18 @@
 
 <PageHeader Title="Servers">
     <PageHeaderExtra>
-        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Server</Button>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
+            </SpaceItem>
+            <SpaceItem>
+                <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Server</Button>
+            </SpaceItem>
+        </Space>
     </PageHeaderExtra>
 </PageHeader>
 
-<Table TItem="Server" DataSource="@Servers" Loading="@Loading">
+<Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25">
     <PropertyColumn Property="s => s.Name" Sortable />
     <PropertyColumn Property="s => s.Game">
         <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
@@ -46,16 +53,25 @@
 
     bool Loading = true;
 
+    string Search = "";
+
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender)
         {
-            Servers = ServerService.Get().OrderBy(s => s.Name).ToList();
+            LoadData();
 
             Loading = false;
 
             StateHasChanged();
         }
+    }
+
+    private void LoadData()
+    {
+        var fuzzySearch = Search.ToLower().Trim();
+
+        Servers = ServerService.Get(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch)))).OrderBy(s => s.Name).ToList();
     }
 
     private void Add()

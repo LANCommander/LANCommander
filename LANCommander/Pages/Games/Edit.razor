@@ -1,5 +1,5 @@
-﻿@page "/Games/{id:guid}/Edit"
-@page "/Games/{id:guid}/Edit/{panel}"
+﻿@page "/Games/{id:guid}"
+@page "/Games/{id:guid}/{panel}"
 @page "/Games/Add"
 @using LANCommander.Models;
 @using LANCommander.Pages.Games.Components
@@ -18,23 +18,36 @@
 <Layout Class="site-layout-background" Style="padding: 24px 0;">
     <Sider Class="site-layout-background" Width="200">
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
-            <MenuItem RouterLink="@($"/Games/{Game.Id}/Edit/General")">General</MenuItem>
+            <MenuItem RouterLink="@($"/Games/{Game.Id}/General")">General</MenuItem>
 
             @if (Game != null && Game.Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Edit/Actions")">Actions</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Edit/Multiplayer")">Multiplayer</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Edit/Saves")">Saves</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Edit/Keys")">Keys</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Edit/Scripts")">Scripts</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Edit/Archives")">Archives</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Actions")">Actions</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Multiplayer")">Multiplayer</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/SavePaths")">Save Paths</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Keys")">Keys</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Archives")">Archives</MenuItem>
             }
         </Menu>
     </Sider>
 
     <Content>
         <PageHeader>
-            <PageHeaderTitle>@Panel</PageHeaderTitle>
+            <PageHeaderTitle>
+                @if (Panel == null)
+                {
+                    <Text>Add New Game</Text>
+                }
+                else if (PanelDisplayNames.ContainsKey(Panel))
+                {
+                    @PanelDisplayNames[Panel]
+                }
+                else
+                {
+                    @Panel
+                }
+            </PageHeaderTitle>
             <PageHeaderExtra>
                 <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
             </PageHeaderExtra>
@@ -93,7 +106,7 @@
                     <MultiplayerModeEditor @bind-Value="Game.MultiplayerModes" />
                 </div>
 
-                <div data-panel="Saves">
+                <div data-panel="SavePaths">
                     <SavePathEditor @bind-Value="Game.SavePaths" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
                 </div>
 
@@ -172,6 +185,11 @@ else
     private KeysEditor? KeysEditor;
     private GameMetadataLookup? GameMetadataLookup;
 
+    private Dictionary<string, string> PanelDisplayNames = new Dictionary<string, string>
+    {
+        { "SavePaths", "Save Paths" }
+    };
+
     private Guid LatestArchiveId
     {
         get
@@ -220,7 +238,7 @@ else
 
                 await MessageService.Success("Game added!");
 
-                NavigationManager.NavigateTo($"/Games/{Game.Id}/Edit", true);
+                NavigationManager.NavigateTo($"/Games/{Game.Id}");
             }
         }
         catch (Exception ex)

@@ -217,9 +217,9 @@ else
         else
             Game = await GameService.Get(Id);
 
-        Companies = CompanyService.Get();
-        Genres = GenreService.Get();
-        Tags = TagService.Get();
+        Companies = await CompanyService.Get();
+        Genres = await GenreService.Get();
+        Tags = await TagService.Get();
     }
 
     private async Task Save()

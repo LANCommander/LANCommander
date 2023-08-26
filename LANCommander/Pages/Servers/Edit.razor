@@ -166,7 +166,7 @@
         if (Server.GameId.HasValue)
             GameId = Server.GameId.Value;
 
-        Games = GameService.Get().ToList();
+        Games = await GameService.Get();
     }
 
     private async Task Save()

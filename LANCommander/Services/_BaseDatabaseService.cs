@@ -1,5 +1,6 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
 namespace LANCommander.Services
@@ -14,9 +15,9 @@ namespace LANCommander.Services
             HttpContext = httpContextAccessor.HttpContext;
         }
 
-        public virtual ICollection<T> Get()
+        public virtual async Task<ICollection<T>> Get()
         {
-            return Get(x => true).ToList();
+            return await Get(x => true).ToListAsync();
         }
 
         public virtual async Task<T> Get(Guid id)

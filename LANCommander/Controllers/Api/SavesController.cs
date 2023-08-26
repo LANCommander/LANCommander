@@ -29,9 +29,9 @@ namespace LANCommander.Controllers.Api
         }
 
         [HttpGet]
-        public IEnumerable<GameSave> Get()
+        public async Task<IEnumerable<GameSave>> Get()
         {
-            return GameSaveService.Get();
+            return await GameSaveService.Get();
         }
 
         [HttpGet("{id}")]

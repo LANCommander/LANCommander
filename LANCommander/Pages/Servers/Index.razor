@@ -1,5 +1,6 @@
 ﻿@page "/Servers"
 @using LANCommander.Pages.Servers.Components
+@using Microsoft.EntityFrameworkCore;
 @attribute [Authorize]
 @inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
@@ -67,11 +68,11 @@
         }
     }
 
-    private void LoadData()
+    private async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Servers = ServerService.Get(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch)))).OrderBy(s => s.Name).ToList();
+        Servers = await ServerService.Get(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch)))).OrderBy(s => s.Name).ToListAsync();
     }
 
     private void Add()
@@ -92,7 +93,7 @@
 
         await ServerService.Delete(server);
 
-        Servers = ServerService.Get().OrderBy(s => s.Name).ToList();
+        Servers = await ServerService.Get(x => true).OrderBy(s => s.Name).ToListAsync();
 
         Loading = false;
     }

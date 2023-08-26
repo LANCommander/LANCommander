@@ -3,6 +3,7 @@ using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Controllers.Api
 {
@@ -19,11 +20,11 @@ namespace LANCommander.Controllers.Api
         }
 
         [HttpGet]
-        public IEnumerable<Archive> Get()
+        public async Task<IEnumerable<Archive>> Get()
         {
             using (var repo = new Repository<Archive>(Context, HttpContext))
             {
-                return repo.Get(a => true).ToList();
+                return await repo.Get(a => true).ToListAsync();
             }
         }
 

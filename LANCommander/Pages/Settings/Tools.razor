@@ -1,0 +1,73 @@
+﻿@page "/Settings/Tools"
+@using LANCommander.Models;
+@layout SettingsLayout
+@inject IMessageService MessageService
+@inject ArchiveService ArchiveService
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Tools" />
+
+<div style="padding: 0 24px;">
+    <h3>Icon Cache</h3>
+    <p>
+        If your icons look wrong or need to be refreshed, click the button below to clear the icon cache. Note that icons will only be regenerated when requested.
+    </p>
+    <Button Type="@ButtonType.Primary" OnClick="ClearIconCache" Loading="ClearingIconCache">Clear Icon Cache</Button>
+
+    <Divider />
+
+    <h3>Recalculate File Sizes</h3>
+    <p>
+        Some file sizes are cached in the database. Click the button below to scan through all files and recalculate their size.
+    </p>
+    <Button Type="@ButtonType.Primary" OnClick="RecalculateFileSizes" Loading="RecalculatingFileSizes">Recalculate</Button>
+</div>
+
+
+@code {
+    bool ClearingIconCache = false;
+    bool RecalculatingFileSizes = false;
+
+    async Task ClearIconCache()
+    {
+        ClearingIconCache = true;
+
+        foreach (var icon in Directory.GetFiles("Icon"))
+        {
+            try
+            {
+                File.Delete(icon);
+            }
+            catch { }
+        }
+
+        ClearingIconCache = false;
+
+        await MessageService.Success("Icon cache cleared!");
+    }
+
+    async Task RecalculateFileSizes()
+    {
+        RecalculatingFileSizes = true;
+
+        StateHasChanged();
+
+        var archives = await ArchiveService.Get();
+
+        foreach (var archive in archives)
+        {
+            var path = ArchiveService.GetArchiveFileLocation(archive);
+
+            if (File.Exists(path))
+            {
+                archive.CompressedSize = new FileInfo(path).Length;
+
+                await ArchiveService.Update(archive);
+            }
+        }
+
+        await MessageService.Success("File sizes recalculated!");
+
+        RecalculatingFileSizes = false;
+    }
+}

@@ -19,9 +19,13 @@ namespace LANCommander.Data.Models
         [InverseProperty("Archives")]
         public virtual Game? Game { get; set; }
 
+        [Display(Name = "Last Version")]
         public virtual Archive? LastVersion { get; set; }
 
+        [Display(Name = "Uncompressed Size")]
         public long UncompressedSize { get; set; }
+
+        [Display(Name = "Compressed Size")]
         public long CompressedSize { get; set; }
     }
 }

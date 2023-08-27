@@ -72,6 +72,9 @@
                     <FormItem Label="Icon">
                         <InputArchiveFile @bind-Value="context.Icon" ArchiveId="@LatestArchiveId" AllowDirectories="true" />
                     </FormItem>
+                    <FormItem Label="Notes">
+                        <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+                     </FormItem>
                     <FormItem Label="Description">
                         <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
                     </FormItem>

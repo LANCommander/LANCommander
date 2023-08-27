@@ -14,6 +14,8 @@ namespace LANCommander.Data.Models
         [Display(Name = "Directory Name")]
         public string? DirectoryName { get; set; }
         public string? Description { get; set; }
+        public string? Notes { get; set; }
+
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }
 

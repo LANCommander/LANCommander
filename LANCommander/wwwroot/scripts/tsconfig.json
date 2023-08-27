@@ -3,8 +3,9 @@
     "target": "ES6",
     "module": "ESNext",
     "outDir": "./dist",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "sourceMap": true
   },
-  "include": [ "wwwroot/scripts/**/*.ts" ],
+  "include": [ "**/*.ts" ],
   "exclude": [ "node_modules" ]
 }

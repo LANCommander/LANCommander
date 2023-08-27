@@ -4,29 +4,6 @@
   "libraries": [
     {
       "provider": "cdnjs",
-      "library": "selectize.js@0.15.2",
-      "destination": "wwwroot/lib/selectize.js/",
-      "files": [
-        "js/selectize.min.js",
-        "css/selectize.bootstrap5.min.css",
-        "css/selectize.min.css",
-        "css/selectize.default.min.css"
-      ]
-    },
-    {
-      "provider": "jsdelivr",
-      "library": "@tabler/core@1.0.0-beta16",
-      "destination": "wwwroot/lib/tabler/core/",
-      "files": [
-        "dist/js/tabler.min.js",
-        "dist/css/tabler-vendors.min.css",
-        "dist/css/tabler.min.css",
-        "dist/css/tabler-payments.min.css",
-        "dist/css/tabler-flags.min.css"
-      ]
-    },
-    {
-      "provider": "cdnjs",
       "library": "monaco-editor@0.34.1",
       "destination": "wwwroot/lib/monaco-editor/",
       "files": [
@@ -36,18 +13,6 @@
         "min/vs/editor/editor.main.nls.js",
         "min/vs/loader.js",
         "min/vs/base/browser/ui/codicons/codicon/codicon.ttf"
-      ]
-    },
-    {
-      "provider": "cdnjs",
-      "library": "tabler-icons@1.35.0",
-      "destination": "wwwroot/lib/tabler-icons/",
-      "files": [
-        "iconfont/tabler-icons.min.css",
-        "iconfont/fonts/tabler-icons.eot",
-        "iconfont/fonts/tabler-icons.ttf",
-        "iconfont/fonts/tabler-icons.woff",
-        "iconfont/fonts/tabler-icons.woff2"
       ]
     },
     {
@@ -66,6 +31,13 @@
       "files": [
         "lib/xterm-addon-fit.min.js",
         "lib/xterm-addon-fit.js.map"
+      ]
+    },
+    {
+      "library": "axios@1.4.0",
+      "destination": "wwwroot/lib/axios/",
+      "files": [
+        "axios.min.js"
       ]
     }
   ]

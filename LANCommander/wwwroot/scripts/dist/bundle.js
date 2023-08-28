@@ -62,13 +62,13 @@ class Uploader {
         this.UploadButton = document.getElementById(uploadButtonId);
         this.ObjectKeyInput = document.getElementById(objectKeyInputId);
         this.Chunks = [];
-        this.UploadButton.onclick = (e) => __awaiter(this, void 0, void 0, function* () {
-            yield this.OnUploadButtonClicked(e);
-        });
     }
-    Upload(fileInputId) {
+    Upload(fileInputId, dotNetObject) {
         return __awaiter(this, void 0, void 0, function* () {
             this.FileInput = document.getElementById(fileInputId);
+            this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-bg');
+            this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
+            this.ProgressRate = document.querySelector('.uploader-progress-rate');
             this.Chunks = [];
             this.File = this.FileInput.files.item(0);
             this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
@@ -82,42 +82,16 @@ class Uploader {
                     }
                 }
                 catch (ex) {
-                    this.OnError();
-                }
-                return this.Key;
-            }
-            catch (ex) {
-                console.error(`Could not init upload: ${ex}`);
-                return null;
-            }
-        });
-    }
-    OnUploadButtonClicked(e) {
-        return __awaiter(this, void 0, void 0, function* () {
-            e.preventDefault();
-            this.OnStart();
-            this.File = this.FileInput.files.item(0);
-            this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
-            try {
-                var resp = yield axios__WEBPACK_IMPORTED_MODULE_1__["default"].post(this.InitRoute);
-                this.Key = resp.data.key;
-                this.GetChunks();
-                try {
-                    for (let chunk of this.Chunks) {
-                        yield this.UploadChunk(chunk);
-                    }
-                    this.ObjectKeyInput.value = this.Key;
-                    var event = document.createEvent('HTMLEvents');
-                    event.initEvent('change', false, true);
-                    this.ObjectKeyInput.dispatchEvent(event);
-                    this.OnComplete(this.Id, this.Key);
-                }
-                catch (ex) {
-                    this.OnError();
+                    if (this.OnError != null)
+                        this.OnError();
                 }
             }
             catch (ex) {
+                this.Key = null;
                 console.error(`Could not init upload: ${ex}`);
+            }
+            finally {
+                dotNetObject.invokeMethodAsync('OnUploadComplete', this.Key);
             }
         });
     }
@@ -135,16 +109,22 @@ class Uploader {
                     method: "post",
                     url: this.ChunkRoute,
                     data: formData,
-                    headers: { "Content-Type": "multipart/form-data" }
+                    headers: { "Content-Type": "multipart/form-data" },
+                    onUploadProgress: (progressEvent) => {
+                        console.log(progressEvent);
+                        this.UpdateProgressBar(chunk.Index, progressEvent);
+                    }
                 });
             }
             catch (ex) {
+                console.error(ex);
                 throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
             }
             finally {
+                console.log("Updating progress bar");
                 var percent = Math.ceil((chunk.Index / this.TotalChunks) * 100);
-                let progress = document.querySelector('.ant-progress-bg');
-                progress.style.width = percent + '%';
+                this.ProgressBar.style.width = percent + '%';
+                this.ProgressText.innerText = percent + '%';
             }
         });
     }
@@ -156,6 +136,29 @@ class Uploader {
                 end = this.File.size;
             this.Chunks.push(new _Chunk__WEBPACK_IMPORTED_MODULE_0__["default"](start, end, currentChunk));
         }
+    }
+    UpdateProgressBar(chunkIndex, progressEvent) {
+        var percent = ((1 / this.TotalChunks) * progressEvent.progress) + ((chunkIndex - 1) / this.TotalChunks);
+        this.ProgressBar.style.width = (percent * 100) + '%';
+        this.ProgressText.innerText = Math.ceil(percent * 100) + '%';
+        if (progressEvent.rate > 0)
+            this.ProgressRate.innerText = this.GetHumanFileSize(progressEvent.rate, false, 1) + '/s';
+    }
+    GetHumanFileSize(bytes, si, dp) {
+        const thresh = si ? 1000 : 1024;
+        if (Math.abs(bytes) < thresh) {
+            return bytes + ' B';
+        }
+        const units = si
+            ? ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+            : ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+        let u = -1;
+        const r = Math.pow(10, dp);
+        do {
+            bytes /= thresh;
+            ++u;
+        } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
+        return bytes.toFixed(dp) + ' ' + units[u];
     }
 }
 

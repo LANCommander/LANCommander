@@ -9,3 +9,12 @@
 .ant-card .ant-form > .ant-form-item:last-child {
     margin-bottom: 0;
 }
+
+.uploader-progress .ant-progress-outer {
+    padding-right: 0;
+    margin-right: 0;
+}
+
+.uploader-progress .ant-progress-bg {
+    transition: none;
+}

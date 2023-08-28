@@ -29,6 +29,9 @@ jobs:
         dotnet-version: 6.0.x
     - name: Restore dependencies
       run: dotnet restore
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v3.8.1
+    - run: npm ci
     - name: Build
       run: dotnet build "./LANCommander/LANCommander.csproj" --no-restore
     - name: Publish

@@ -2,13 +2,16 @@
 @using LANCommander.Extensions;
 @using AntDesign.Charts;
 
-<Area @ref="Chart" Config="Config" />
+<Spin Spinning="Loading">
+    <Area @ref="Chart" Config="Config" />
+</Spin>
 
 @code {
     [Parameter] public int TimerHistory { get; set; }
     [Parameter] public int TimerInterval { get; set; }
     IChartComponent? Chart;
     System.Timers.Timer Timer;
+    bool Loading = true;
 
     double[] Data;
 
@@ -42,27 +45,28 @@
         }
     };
 
-    protected override async Task OnInitializedAsync()
-    {
-        if (Timer == null)
-        {
-            Timer = new System.Timers.Timer();
-
-            Timer.Interval = TimerInterval;
-
-            Timer.Elapsed += async (s, e) =>
-            {
-                await RefreshData();
-            };
-        }
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            if (Timer == null)
+            {
+                Timer = new System.Timers.Timer();
+
+                Timer.Interval = TimerInterval;
+
+                Timer.Elapsed += async (s, e) =>
+                {
+                    await RefreshData();
+                };
+            }
+
             await Chart.UpdateChart(Config, null, null, JsConfig);
             Timer.Start();
+
+            Loading = false;
+
+            StateHasChanged();
         }
     }
 

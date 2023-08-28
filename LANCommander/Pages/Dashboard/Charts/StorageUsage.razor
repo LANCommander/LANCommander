@@ -1,16 +1,20 @@
 ﻿@using AntDesign.Charts
 @using ByteSizeLib
 
-<Pie Data="Data" Config="Config" JsConfig="@JsConfig" />
+<Spin Spinning="Loading">
+    <Pie Data="Data" Config="Config" JsConfig="@JsConfig" />
+</Spin>
 
 @code {
     object[] Data;
+
+    bool Loading = true;
 
     string JsConfig = @"{
         meta: {
             value: {
                 alias: 'Data Usage',
-                formatter: (v) => humanFileSize(v, true)
+                formatter: (v) => Uploader.GetHumanFileSize(v, true, 1)
             }
         },
         label: {
@@ -57,6 +61,8 @@
                 value = totalStorageSize - totalAvailableFreeSpace - totalUploadDirectorySize - totalSaveDirectorySize
             }
         };
+
+        Loading = false;
 
         StateHasChanged();
     }

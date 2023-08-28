@@ -121,15 +121,15 @@ namespace LANCommander.Services
             else
             {
                 #if WINDOWS
-                if (game.Archives == null || game.Archives.Count == 0)
-                    throw new FileNotFoundException();
-
-                var archive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-
-                Bitmap bitmap = null;
-
                 try
                 {
+                    if (game.Archives == null || game.Archives.Count == 0)
+                        throw new FileNotFoundException();
+
+                    var archive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+                    Bitmap bitmap = null;
+
                     var iconReference = ArchiveService.ReadFile(archive.ObjectKey, game.Icon);
 
                     if (IsWinPEFile(iconReference))
@@ -156,10 +156,13 @@ namespace LANCommander.Services
 
                     return iconPng;
                 }
-                catch (Exception ex) { }
-                #endif
+                catch (Exception ex)
+                {
+
+                }
 
                 return File.ReadAllBytes("favicon.png");
+                #endif
             }
         }
 

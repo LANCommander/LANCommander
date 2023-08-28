@@ -168,80 +168,83 @@ namespace LANCommander.PlaynitePlugin.Services
                 var manifest = deserializer.Deserialize<GameManifest>(File.ReadAllText(manifestPath));
                 var temp = Path.GetTempFileName();
 
-                using (var archive = ZipArchive.Create())
+                if (manifest.SavePaths != null && manifest.SavePaths.Count() > 0)
                 {
-                    archive.DeflateCompressionLevel = SharpCompress.Compressors.Deflate.CompressionLevel.BestCompression;
-
-                    #region Add files from defined paths
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
+                    using (var archive = ZipArchive.Create())
                     {
-                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
+                        archive.DeflateCompressionLevel = SharpCompress.Compressors.Deflate.CompressionLevel.BestCompression;
 
-                        if (Directory.Exists(localPath))
+                        #region Add files from defined paths
+                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                         {
-                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
+                            var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
+
+                            if (Directory.Exists(localPath))
+                            {
+                                AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
+                            }
+                            else if (File.Exists(localPath))
+                            {
+                                archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
+                            }
                         }
-                        else if (File.Exists(localPath))
+                        #endregion
+
+                        #region Add files from defined paths
+                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                         {
-                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
+                            var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
+
+                            if (Directory.Exists(localPath))
+                            {
+                                AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
+                            }
+                            else if (File.Exists(localPath))
+                            {
+                                archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
+                            }
                         }
-                    }
-                    #endregion
+                        #endregion
 
-                    #region Add files from defined paths
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
-                    {
-                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", game.InstallDirectory));
-
-                        if (Directory.Exists(localPath))
+                        #region Export registry keys
+                        if (manifest.SavePaths.Any(sp => sp.Type == "Registry"))
                         {
-                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
+                            List<string> tempRegFiles = new List<string>();
+
+                            var exportCommand = new StringBuilder();
+
+                            foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "Registry"))
+                            {
+                                var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
+
+                                exportCommand.AppendLine($"reg.exe export \"{savePath.Path.Replace(":\\", "\\")}\" \"{tempRegFile}\"");
+                                tempRegFiles.Add(tempRegFile);
+                            }
+
+                            PowerShellRuntime.RunCommand(exportCommand.ToString());
+
+                            var exportFile = new StringBuilder();
+
+                            foreach (var tempRegFile in tempRegFiles)
+                            {
+                                exportFile.AppendLine(File.ReadAllText(tempRegFile));
+                                File.Delete(tempRegFile);
+                            }
+
+                            archive.AddEntry("_registry.reg", new MemoryStream(Encoding.UTF8.GetBytes(exportFile.ToString())), true);
                         }
-                        else if (File.Exists(localPath))
+                        #endregion
+
+                        archive.AddEntry("_manifest.yml", manifestPath);
+
+                        using (var ms = new MemoryStream())
                         {
-                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
+                            archive.SaveTo(ms);
+
+                            ms.Seek(0, SeekOrigin.Begin);
+
+                            var save = LANCommander.UploadSave(game.GameId, ms.ToArray());
                         }
-                    }
-                    #endregion
-
-                    #region Export registry keys
-                    if (manifest.SavePaths.Any(sp => sp.Type == "Registry"))
-                    {
-                        List<string> tempRegFiles = new List<string>();
-
-                        var exportCommand = new StringBuilder();
-
-                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "Registry"))
-                        {
-                            var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
-
-                            exportCommand.AppendLine($"reg.exe export \"{savePath.Path.Replace(":\\", "\\")}\" \"{tempRegFile}\"");
-                            tempRegFiles.Add(tempRegFile);
-                        }
-
-                        PowerShellRuntime.RunCommand(exportCommand.ToString());
-
-                        var exportFile = new StringBuilder();
-
-                        foreach (var tempRegFile in tempRegFiles)
-                        {
-                            exportFile.AppendLine(File.ReadAllText(tempRegFile));
-                            File.Delete(tempRegFile);
-                        }
-
-                        archive.AddEntry("_registry.reg", new MemoryStream(Encoding.UTF8.GetBytes(exportFile.ToString())), true);
-                    }
-                    #endregion
-
-                    archive.AddEntry("_manifest.yml", manifestPath);
-
-                    using (var ms = new MemoryStream())
-                    {
-                        archive.SaveTo(ms);
-
-                        ms.Seek(0, SeekOrigin.Begin);
-
-                        var save = LANCommander.UploadSave(game.GameId, ms.ToArray());
                     }
                 }
             }

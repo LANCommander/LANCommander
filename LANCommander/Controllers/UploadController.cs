@@ -50,8 +50,6 @@ namespace LANCommander.Controllers
                 }
             }
 
-            Thread.Sleep(100);
-
             return Json("Done!");
         }
     }

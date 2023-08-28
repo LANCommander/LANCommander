@@ -8,41 +8,6 @@
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 
-<Space Direction="DirectionVHType.Vertical" Style="width: 100%">
-    <SpaceItem>
-        <Table TItem="Archive" DataSource="@Game.Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true">
-            <PropertyColumn Property="a => a.Version" />
-            <PropertyColumn Property="a => a.CompressedSize">
-                @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
-            </PropertyColumn>
-            <PropertyColumn Property="a => a.CreatedBy">
-                @context.CreatedBy?.UserName
-            </PropertyColumn>
-            <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />
-            <ActionColumn Title="">
-                <Space Style="display: flex; justify-content: end">
-                    <SpaceItem>
-                        <Button OnClick="() => Download(context)" Icon="@IconType.Outline.Download" Type="@ButtonType.Text" />
-                    </SpaceItem>
-                    <SpaceItem>
-                        <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                        </Popconfirm>
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </SpaceItem>
-
-    <SpaceItem>
-        <GridRow Justify="end">
-            <GridCol>
-                <Button OnClick="AddArchive" Type="@ButtonType.Primary">Upload Archive</Button>
-            </GridCol>
-        </GridRow>
-    </SpaceItem>
-</Space>
-
 @{
     RenderFragment Footer =
     @<Template>
@@ -52,7 +17,7 @@
     </Template>;
 }
 
-<Modal Visible="@ModalVisible" Title="Upload Archive" OnOk="UploadArchiveJS" OnCancel="Cancel" Footer="@Footer">
+<Modal Visible="@Visible" Title="Upload Archive" OnOk="UploadArchiveJS" OnCancel="Cancel" Footer="@Footer">
     <Form Model="@Archive" Layout="@FormLayout.Vertical">
         <FormItem Label="Version">
             <Input @bind-Value="@context.Version" /> 
@@ -96,8 +61,8 @@
     </Form>
 </Modal>
 
- @code {
-    [Parameter] public Game Game { get; set; }
+@code {
+    [Parameter] public EventCallback<Archive> OnArchiveUploaded { get; set; }
 
     Archive Archive;
 
@@ -105,20 +70,12 @@
     List<UploadFileItem> FileList = new List<UploadFileItem>();
 
     bool IsValid = false;
-    bool ModalVisible = false;
-
-    private static string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-4 mud-width-full mud-height-full z-10";
-    private string DragClass = DefaultDragClass;
-
-    const int ChunkSize = 1024 * 1024 * 10;
+    bool Visible = false;
 
     int Progress = 0;
     bool Uploading = false;
     bool Finished = false;
     double Speed = 0;
-
-    Stopwatch Watch;
-    long WatchBytesTransferred = 0;
 
     string Filename;
 
@@ -136,48 +93,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Game.Archives == null)
-            Game.Archives = new List<Archive>();
-
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
-
-        Archive = new Archive()
-        {
-            GameId = Game.Id,
-            Id = Guid.NewGuid()
-        };
-    }
-
-    private async Task Download(Archive archive)
-    {
-        string url = $"/Download/Game/{archive.Id}";
-
-        await JS.InvokeAsync<object>("open", url, "_blank");
-    }
-
-    private void AddArchive()
-    {
-        Archive = new Archive()
-        {
-            GameId = Game.Id,
-            Id = Guid.NewGuid()
-        };
-
-        ModalVisible = true;
-    }
-
-    private async Task Delete(Archive archive)
-    {
-        try
-        {
-            await ArchiveService.Delete(archive);
-
-            await MessageService.Success("Archive deleted!");
-        }
-        catch (Exception ex)
-        {
-            await MessageService.Error("Archive could not be deleted.");
-        }
     }
 
     private void Clear()
@@ -188,12 +104,30 @@
     private void Cancel()
     {
         File = null;
-        ModalVisible = false;
+        Visible = false;
     }
 
     private async void FileSelected(InputFileChangeEventArgs args)
     {
         File = args.File;
+    }
+
+    public async Task Open(Archive archive)
+    {
+        Archive = archive;
+
+        Visible = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        await Task.Delay(500);
+
+        if (!String.IsNullOrWhiteSpace(archive.ObjectKey) && archive.ObjectKey != Guid.Empty.ToString())
+            await JS.InvokeVoidAsync("Uploader.Init", "FileInput", archive.ObjectKey.ToString());
+        else
+            await JS.InvokeVoidAsync("Uploader.Init", "FileInput", "");
+
+
     }
 
     private async Task UploadArchiveJS()
@@ -202,7 +136,7 @@
 
         var dotNetReference = DotNetObjectReference.Create(this);
 
-        await JS.InvokeVoidAsync("Uploader.Upload", "FileInput", dotNetReference);
+        await JS.InvokeVoidAsync("Uploader.Upload", dotNetReference);
 
         await InvokeAsync(StateHasChanged);
     }
@@ -218,22 +152,18 @@
             Archive.ObjectKey = objectKey.ToString();
             Archive.CompressedSize = File.Size;
 
-            var originalArchive = Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-
-            Archive = await ArchiveService.Add(Archive);
-
-            ModalVisible = false;
+            Visible = false;
 
             await InvokeAsync(StateHasChanged);
 
-            await MessageService.Success("Archive uploaded!");
+            if (OnArchiveUploaded.HasDelegate)
+                await OnArchiveUploaded.InvokeAsync(Archive);
 
-            if (originalArchive != null)
-                BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(originalArchive.Id, Archive.Id));
+            await MessageService.Success("Archive uploaded!");
         }
         else
         {
-            ModalVisible = false;
+            Visible = false;
 
             await InvokeAsync(StateHasChanged);
 

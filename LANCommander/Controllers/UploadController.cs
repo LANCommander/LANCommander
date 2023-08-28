@@ -19,6 +19,8 @@ namespace LANCommander.Controllers
 
             if (!System.IO.File.Exists(Path.Combine(UploadDirectory, key)))
                 System.IO.File.Create(Path.Combine(UploadDirectory, key)).Close();
+            else
+                System.IO.File.Delete(Path.Combine(UploadDirectory, key));
 
             return Json(new
             {

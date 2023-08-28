@@ -57,24 +57,32 @@ class Uploader {
         this.Key = "";
         this.Id = "";
     }
-    Init(fileInputId, uploadButtonId, objectKeyInputId) {
-        this.FileInput = document.getElementById(fileInputId);
-        this.UploadButton = document.getElementById(uploadButtonId);
-        this.ObjectKeyInput = document.getElementById(objectKeyInputId);
-        this.Chunks = [];
-    }
-    Upload(fileInputId, dotNetObject) {
+    Init(fileInputId, objectKey) {
         return __awaiter(this, void 0, void 0, function* () {
             this.FileInput = document.getElementById(fileInputId);
             this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-bg');
             this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
             this.ProgressRate = document.querySelector('.uploader-progress-rate');
+            if (objectKey == undefined || objectKey == "") {
+                try {
+                    var response = yield axios__WEBPACK_IMPORTED_MODULE_1__["default"].post(this.InitRoute);
+                    this.Key = response.data.key;
+                }
+                catch (ex) {
+                    this.Key = null;
+                    console.error(`Could not init upload: ${ex}`);
+                }
+            }
+            else
+                this.Key = objectKey;
             this.Chunks = [];
+        });
+    }
+    Upload(dotNetObject) {
+        return __awaiter(this, void 0, void 0, function* () {
             this.File = this.FileInput.files.item(0);
             this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
             try {
-                var resp = yield axios__WEBPACK_IMPORTED_MODULE_1__["default"].post(this.InitRoute);
-                this.Key = resp.data.key;
                 this.GetChunks();
                 try {
                     for (let chunk of this.Chunks) {
@@ -87,8 +95,7 @@ class Uploader {
                 }
             }
             catch (ex) {
-                this.Key = null;
-                console.error(`Could not init upload: ${ex}`);
+                console.error(`Could not chunk upload: ${ex}`);
             }
             finally {
                 dotNetObject.invokeMethodAsync('OnUploadComplete', this.Key);
@@ -119,12 +126,6 @@ class Uploader {
             catch (ex) {
                 console.error(ex);
                 throw `Error uploading chunk ${chunk.Index}/${this.TotalChunks}`;
-            }
-            finally {
-                console.log("Updating progress bar");
-                var percent = Math.ceil((chunk.Index / this.TotalChunks) * 100);
-                this.ProgressBar.style.width = percent + '%';
-                this.ProgressText.innerText = percent + '%';
             }
         });
     }

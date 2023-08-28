@@ -1,0 +1,113 @@
+﻿@using System.Net;
+@using System.Diagnostics;
+@using Hangfire;
+@using LANCommander.Jobs.Background;
+@using Microsoft.EntityFrameworkCore;
+@inject HttpClient HttpClient
+@inject NavigationManager Navigator
+@inject ArchiveService ArchiveService
+@inject IMessageService MessageService
+@inject IJSRuntime JS
+
+<Space Direction="DirectionVHType.Vertical" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Archive" DataSource="@Game.Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true">
+            <PropertyColumn Property="a => a.Version" />
+            <PropertyColumn Property="a => a.CompressedSize">
+                @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.CreatedBy">
+                @context.CreatedBy?.UserName
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />
+            <ActionColumn Title="">
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => Download(context)" Icon="@IconType.Outline.Download" Type="@ButtonType.Text" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+<ArchiveUploader @ref="Uploader" OnArchiveUploaded="AddArchive" />
+
+ @code {
+    [Parameter] public Game Game { get; set; }
+
+    Archive Archive;
+    ArchiveUploader Uploader;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+
+        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+    }
+
+    private async Task LoadData()
+    {
+        Game.Archives = await ArchiveService.Get(a => a.GameId == Game.Id).OrderByDescending(a => a.CreatedOn).ToListAsync();
+
+        if (Game.Archives == null)
+            Game.Archives = new List<Archive>();
+    }
+
+    private async Task Download(Archive archive)
+    {
+        string url = $"/Download/Game/{archive.Id}";
+
+        await JS.InvokeAsync<object>("open", url, "_blank");
+    }
+
+    private async Task UploadArchive()
+    {
+        Archive = new Archive()
+        {
+            GameId = Game.Id,
+            Id = Guid.NewGuid()
+        };
+
+        await Uploader.Open(Archive);
+    }
+
+    private async Task AddArchive(Archive archive)
+    {
+        var lastArchive = Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+        Archive = await ArchiveService.Add(archive);
+
+        await LoadData();
+
+        if (lastArchive != null)
+            BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
+    }
+
+    private async Task Delete(Archive archive)
+    {
+        try
+        {
+            await ArchiveService.Delete(archive);
+
+            await MessageService.Success("Archive deleted!");
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error("Archive could not be deleted.");
+        }
+    }
+}

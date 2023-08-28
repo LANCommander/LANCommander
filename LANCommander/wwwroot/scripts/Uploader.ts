@@ -23,29 +23,34 @@ export default class Uploader {
     Key: string = "";
     Id: string = "";
 
-    Init(fileInputId: string, uploadButtonId: string, objectKeyInputId: string) {
-        this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
-        this.UploadButton = document.getElementById(uploadButtonId) as HTMLButtonElement;
-        this.ObjectKeyInput = document.getElementById(objectKeyInputId) as HTMLInputElement;
-
-        this.Chunks = [];
-    }
-
-    async Upload(fileInputId: string, dotNetObject: any) {
+    async Init(fileInputId: string, objectKey: string) {
         this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
         this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-bg');
         this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
         this.ProgressRate = document.querySelector('.uploader-progress-rate');
-        this.Chunks = [];
 
+        if (objectKey == undefined || objectKey == "") {
+            try {
+                var response = await axios.post<UploadInitResponse>(this.InitRoute);
+
+                this.Key = response.data.key;
+            }
+            catch (ex) {
+                this.Key = null;
+                console.error(`Could not init upload: ${ex}`);
+            }
+        }
+        else
+            this.Key = objectKey;
+
+        this.Chunks = [];
+    }
+
+    async Upload(dotNetObject: any) {
         this.File = this.FileInput.files.item(0);
         this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
 
         try {
-            var resp = await axios.post<UploadInitResponse>(this.InitRoute);
-
-            this.Key = resp.data.key;
-
             this.GetChunks();
 
             try {
@@ -58,8 +63,7 @@ export default class Uploader {
                     this.OnError();
             }
         } catch (ex) {
-            this.Key = null;
-            console.error(`Could not init upload: ${ex}`);
+            console.error(`Could not chunk upload: ${ex}`);
         } finally {
             dotNetObject.invokeMethodAsync('OnUploadComplete', this.Key);
         }

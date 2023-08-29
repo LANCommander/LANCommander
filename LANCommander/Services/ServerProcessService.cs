@@ -146,11 +146,13 @@ namespace LANCommander.Services
 
                 process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
                 {
+                    HubContext.Clients.All.SendAsync("Log", e.Data);
                     Logger.Info("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
                 });
 
                 process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
                 {
+                    HubContext.Clients.All.SendAsync("Log", e.Data);
                     Logger.Error("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
                 });
             }

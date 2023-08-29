@@ -11,7 +11,7 @@
 
 <Xterm @ref="Terminal" Options="TerminalOptions" AddonIds="TerminalAddons" />
 
-@if (ServerConsole.Type == ServerConsoleType.RCON)
+@if (ServerConsole != null && ServerConsole.Type == ServerConsoleType.RCON)
 {
     <Input @ref="CommandInput" @bind-Value="Command" BindOnInput OnPressEnter="OnPressEnter" @onkeyup="OnCommandKeyDown" />
 }
@@ -42,8 +42,56 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ServerConsole = await ServerConsoleService.Get(ServerConsoleId);
+        if (ServerConsoleId != Guid.Empty)
+        {
+            ServerConsole = await ServerConsoleService.Get(ServerConsoleId);
 
+            await Connect(ServerConsole);
+        }
+        else
+        {
+            await Connect();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(100);
+
+            if (Terminal != null)
+                await Terminal.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
+
+            if (ServerConsoleId != Guid.Empty)
+            {
+                var log = await ServerConsoleService.ReadLog(ServerConsoleId);
+
+                foreach (var line in log)
+                {
+                    await Terminal.WriteLine(line);
+                }
+            }
+        }
+    }
+
+    async Task Connect()
+    {
+        HubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
+            .Build();
+
+        HubConnection.On<Guid, string>("Log", (serverId, message) =>
+        {
+            if (serverId == ServerId)
+                Terminal.WriteLine(message);
+        });
+
+        await HubConnection.StartAsync();
+    }
+
+    async Task Connect(ServerConsole serverConsole)
+    {
         History = new string[50];
         HistoryPosition = 0;
 
@@ -63,30 +111,13 @@
         }
         else if (ServerConsole.Type == ServerConsoleType.RCON)
         {
-            try {
+            try
+            {
                 ServerProcessService.RconConnect(ServerConsole);
             }
             catch (Exception ex)
             {
                 await MessageService.Error($"Could not connect to RCON server: {ex.Message}");
-            }
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await Task.Delay(100);
-
-            if (Terminal != null)
-                await Terminal.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
-
-            var log = await ServerConsoleService.ReadLog(ServerConsoleId);
-
-            foreach (var line in log)
-            {
-                await Terminal.WriteLine(line);
             }
         }
     }

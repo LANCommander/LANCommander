@@ -1,6 +1,6 @@
 ﻿@page "/Servers/{id:guid}"
 @page "/Servers/{id:guid}/{panel}"
-@page "/Servers/{id:guid}/{panel}/{logId:guid}"
+@page "/Servers/{id:guid}/{panel}/{logId}"
 @page "/Servers/Add"
 @using LANCommander.Pages.Servers.Components
 @inject GameService GameService
@@ -18,9 +18,14 @@
             {
                 <MenuItem RouterLink="@($"/Servers/{Server.Id}/Consoles")">Consoles</MenuItem>
                 <SubMenu Key="Monitor" Title="Monitor" Disabled="@(Server.ServerConsoles == null || Server.ServerConsoles.Count == 0)">
+                    @if (!Server.UseShellExecute)
+                    {
+                        <MenuItem Key="Console" RouterLink="@($"/Servers/{Server.Id}/Monitor/Console")">Console</MenuItem>
+                    }
+
                     @foreach (var log in Server.ServerConsoles)
                     {
-                        <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Consoles/{log.Id}")">@log.Name</MenuItem>
+                        <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Monitor/{log.Id}")">@log.Name</MenuItem>
                     }
                 </SubMenu>
                 <MenuItem RouterLink="@($"/Servers/{Server.Id}/Files")">Files</MenuItem>
@@ -107,11 +112,14 @@
                 </Form>
             }
 
-            @if (Panel == "Consoles")
+            @if (Panel == "Monitor")
             {
-                @if (LogId != null && LogId != Guid.Empty)
+                @if (LogId == "Console") {
+                    <Console ServerId="@Server.Id" />
+                }
+                else if (LogId != null && LogId != Guid.Empty.ToString())
                 {
-                    <Console ServerId="@Server.Id" ServerConsoleId="@LogId" />
+                    <Console ServerId="@Server.Id" ServerConsoleId="@Guid.Parse(LogId)" />
                 }
                 else
                 {
@@ -146,7 +154,7 @@
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Panel { get; set; }
-    [Parameter] public Guid LogId { get; set; }
+    [Parameter] public string LogId { get; set; }
 
     IEnumerable<Game> Games = new List<Game>();
 

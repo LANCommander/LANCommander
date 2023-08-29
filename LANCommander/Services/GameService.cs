@@ -160,9 +160,9 @@ namespace LANCommander.Services
                 {
 
                 }
+                #endif
 
                 return File.ReadAllBytes("favicon.png");
-                #endif
             }
         }
 

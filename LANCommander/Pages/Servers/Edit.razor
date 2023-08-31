@@ -23,9 +23,12 @@
                         <MenuItem Key="Console" RouterLink="@($"/Servers/{Server.Id}/Monitor/Console")">Console</MenuItem>
                     }
 
-                    @foreach (var log in Server.ServerConsoles)
+                    @if (Server.ServerConsoles != null)
                     {
-                        <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Monitor/{log.Id}")">@log.Name</MenuItem>
+                        foreach (var log in Server.ServerConsoles)
+                        {
+                            <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Monitor/{log.Id}")">@log.Name</MenuItem>
+                        }
                     }
                 </SubMenu>
                 <MenuItem RouterLink="@($"/Servers/{Server.Id}/Files")">Files</MenuItem>

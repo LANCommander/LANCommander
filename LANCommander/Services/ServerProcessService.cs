@@ -228,6 +228,9 @@ namespace LANCommander.Services
         {
             Process process = null;
 
+            if (server == null)
+                return ServerProcessStatus.Stopped;
+
             if (Processes.ContainsKey(server.Id))
                 process = Processes[server.Id];
 

@@ -125,7 +125,7 @@
 
                 if (status == ServerProcessStatus.Stopped || status == ServerProcessStatus.Error)
                 {
-                    await ServerProcessService.StartServerAsync(server);
+                    ServerProcessService.StartServerAsync(server);
                 }
             }
             catch { }

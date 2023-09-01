@@ -7,7 +7,6 @@
 @attribute [Authorize]
 @inject GameService GameService
 @inject NavigationManager NavigationManager
-@inject ProtectedLocalStorage BrowserStorage
 
 <PageHeader Title="Games">
     <PageHeaderExtra>
@@ -22,154 +21,74 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<Drawer Closable="true" Visible="@FieldPickerVisible" Placement="right" Title="@("Fields")" OnClose="() => CloseFieldPicker()">
-    <Space Direction="@DirectionVHType.Vertical">
-        <SpaceItem><Switch Checked="FieldVisible(Field.Icon)" OnChange="(state) => ChangeFieldVisibility(Field.Icon, state)" /> @Field.Icon.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.Title)" OnChange="(state) => ChangeFieldVisibility(Field.Title, state)" /> @Field.Title.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.SortTitle)" OnChange="(state) => ChangeFieldVisibility(Field.SortTitle, state)" /> @Field.SortTitle.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.ReleasedOn)" OnChange="(state) => ChangeFieldVisibility(Field.ReleasedOn, state)" /> @Field.ReleasedOn.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.CreatedOn)" OnChange="(state) => ChangeFieldVisibility(Field.CreatedOn, state)" /> @Field.CreatedOn.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.CreatedBy)" OnChange="(state) => ChangeFieldVisibility(Field.CreatedBy, state)" /> @Field.CreatedBy.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.UpdatedOn)" OnChange="(state) => ChangeFieldVisibility(Field.UpdatedOn, state)" /> @Field.UpdatedOn.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.UpdatedBy)" OnChange="(state) => ChangeFieldVisibility(Field.UpdatedBy, state)" /> @Field.UpdatedBy.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.Singleplayer)" OnChange="(state) => ChangeFieldVisibility(Field.Singleplayer, state)" /> @Field.Singleplayer.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.Multiplayer)" OnChange="(state) => ChangeFieldVisibility(Field.Multiplayer, state)" /> @Field.Multiplayer.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.TotalKeys)" OnChange="(state) => ChangeFieldVisibility(Field.TotalKeys, state)" /> @Field.TotalKeys.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.KeysAllocated)" OnChange="(state) => ChangeFieldVisibility(Field.KeysAllocated, state)" /> @Field.KeysAllocated.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.Developers)" OnChange="(state) => ChangeFieldVisibility(Field.Developers, state)" /> @Field.Developers.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.Publishers)" OnChange="(state) => ChangeFieldVisibility(Field.Publishers, state)" /> @Field.Publishers.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.Genres)" OnChange="(state) => ChangeFieldVisibility(Field.Genres, state)" /> @Field.Genres.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.MultiplayerModes)" OnChange="(state) => ChangeFieldVisibility(Field.MultiplayerModes, state)" /> @Field.MultiplayerModes.GetDisplayName()</SpaceItem>
-        <SpaceItem><Switch Checked="FieldVisible(Field.ArchiveSize)" OnChange="(state) => ChangeFieldVisibility(Field.ArchiveSize, state)" /> @Field.ArchiveSize.GetDisplayName()</SpaceItem>
-    </Space>
-</Drawer>
+<TableCustomizer @ref="TableCustomizer" TItem="Game" Table="Table" Key="Games" @bind-Visible="FieldPickerVisible" />
 
 <Table @ref="Table" TItem="Game" DataSource="@Games" Loading="@Loading" PageSize="25">
-    @if (FieldVisible(Field.Icon))
-    {
-        <Column TData="string">
-            <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
-        </Column>
-    }
+    <PickableColumn TData="string" Title="Icon">
+        <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
+    </PickableColumn>
     
-    @if (FieldVisible(Field.Title))
-    {
-        <PropertyColumn Property="g => g.Title" Sortable Filterable />
-    }
-
-    @if (FieldVisible(Field.SortTitle))
-    {
-        <PropertyColumn Property="g => g.SortTitle" Title="@Field.SortTitle.GetDisplayName()" Sortable Filterable />
-    }
-
-    @if (FieldVisible(Field.ReleasedOn))
-    {
-        <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
-    }
-
-    @if (FieldVisible(Field.CreatedOn))
-    {
-        <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-    }
+    <PickablePropertyColumn Property="g => g.Title" Sortable Filterable />
     
-    @if (FieldVisible(Field.CreatedBy))
-    {
-        <PropertyColumn Property="g => g.CreatedBy" Sortable>
-            @context.CreatedBy?.UserName
-        </PropertyColumn>
-    }
+    <PickablePropertyColumn Property="g => g.SortTitle" Title="Sort Title" Sortable Filterable />
+    
+    <PickablePropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
+    
+    <PickablePropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    
+    <PickablePropertyColumn Property="g => g.CreatedBy" Sortable>
+        @context.CreatedBy?.UserName
+    </PickablePropertyColumn>
+    
+    <PickablePropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    
+    <PickablePropertyColumn Property="g => g.UpdatedBy" Sortable>
+        @context.UpdatedBy?.UserName
+    </PickablePropertyColumn>
+    
+    <PickablePropertyColumn Property="g => g.Singleplayer" Sortable Filterable>
+        <Checkbox Disabled="true" Checked="context.Singleplayer" />
+    </PickablePropertyColumn>
+    
+    <PickableColumn TData="bool" Title="Multiplayer">
+        <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
+    </PickableColumn>
 
-    @if (FieldVisible(Field.UpdatedOn))
-    {
-        <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-    }
+    <PickableColumn TData="int" Title="Total Keys">
+        @context.Keys?.Count
+    </PickableColumn>
 
-    @if (FieldVisible(Field.UpdatedBy))
-    {
-        <PropertyColumn Property="g => g.UpdatedBy" Sortable>
-            @context.UpdatedBy?.UserName
-        </PropertyColumn>
-    }
+    <PickableColumn TData="int" Title="Keys Allocated">
+        @context.Keys?.Count(k => k.ClaimedOn.HasValue)
+    </PickableColumn>
 
-    @if (FieldVisible(Field.Singleplayer))
-    {
-        <PropertyColumn Property="g => g.Singleplayer" Sortable Filterable>
-            <Checkbox Disabled="true" Checked="context.Singleplayer" />
-        </PropertyColumn>
-    }
+    <PickableColumn TData="string[]" Title="Developers">
+        @foreach (var dev in context.Developers)
+        {
+            <Tag>@dev.Name</Tag>
+        }
+    </PickableColumn>
 
-    @if (FieldVisible(Field.Multiplayer))
-    {
-        <Column TData="bool" Title="@Field.Multiplayer.GetDisplayName()">
-            <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
-        </Column>
-    }
+    <PickableColumn TData="string[]" Title="Publishers">
+        @foreach (var pub in context.Publishers)
+        {
+            <Tag>@pub.Name</Tag>
+        }
+    </PickableColumn>
 
-    @if (FieldVisible(Field.TotalKeys))
-    {
-        <Column TData="int" Title="@Field.TotalKeys.GetDisplayName()">
-            @context.Keys?.Count
-        </Column>
-    }
+    <PickableColumn TData="string[]" Title="Genres">
+        @foreach (var genre in context.Genres)
+        {
+            <Tag>@genre.Name</Tag>
+        }
+    </PickableColumn>
 
-    @if (FieldVisible(Field.KeysAllocated))
-    {
-        <Column TData="int" Title="@Field.KeysAllocated.GetDisplayName()">
-            @context.Keys?.Count(k => k.ClaimedOn.HasValue)
-        </Column>
-    }
-
-    @if (FieldVisible(Field.Developers))
-    {
-        <Column TData="string[]" Title="@Field.Developers.GetDisplayName()">
-            @foreach (var dev in context.Developers)
-            {
-                <Tag>@dev.Name</Tag>
-            }
-        </Column>
-    }
-
-    @if (FieldVisible(Field.Publishers))
-    {
-        <Column TData="string[]" Title="@Field.Publishers.GetDisplayName()">
-            @foreach (var pub in context.Publishers)
-            {
-                <Tag>@pub.Name</Tag>
-            }
-        </Column>
-    }
-
-    @if (FieldVisible(Field.Genres))
-    {
-        <Column TData="string[]" Title="@Field.Genres.GetDisplayName()">
-            @foreach (var genre in context.Genres)
-            {
-                <Tag>@genre.Name</Tag>
-            }
-        </Column>
-    }
-
-    @if (FieldVisible(Field.MultiplayerModes))
-    {
-        <Column TData="Data.Enums.MultiplayerType[]" Title="@Field.MultiplayerModes.GetDisplayName()">
-            @foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
-            {
-                <Tag>@mode.GetDisplayName()</Tag>
-            }
-        </Column>
-    }
-
-    @if (FieldVisible(Field.ArchiveSize))
-    {
-        long? compressedSize = context.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.CompressedSize;
-
-        <Column TData="long" Title="@Field.ArchiveSize.GetDisplayName()">
-            @if (compressedSize.HasValue)
-            {
-                @ByteSizeLib.ByteSize.FromBytes((double)compressedSize)
-            }
-        </Column>
-    }
+    <PickableColumn TData="Data.Enums.MultiplayerType[]" Title="Multiplayer Modes">
+        @foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
+        {
+            <Tag>@mode.GetDisplayName()</Tag>
+        }
+    </PickableColumn>
 
     <ActionColumn Title="" Style="text-align: right">
         <TitleTemplate>
@@ -195,7 +114,7 @@
     </ActionColumn>
 </Table>
 
-@code {
+ @code {
     IEnumerable<Game> Games { get; set; } = new List<Game>();
 
     bool Loading = true;
@@ -203,50 +122,10 @@
 
     string Search = "";
 
-    ITable Table;
+    Table<Game> Table;
+    TableCustomizer<Game> TableCustomizer;
 
-    Dictionary<Field, bool> FieldVisibility = new Dictionary<Field, bool>()
-    {
-        { Field.Icon, true },
-        { Field.Title, true },
-        { Field.SortTitle, true },
-        { Field.ReleasedOn, true },
-        { Field.CreatedOn, true },
-        { Field.CreatedBy, true },
-        { Field.UpdatedOn, true },
-        { Field.UpdatedBy, true }
-    };
-
-    enum Field
-    {
-        Icon,
-        Title,
-        [Display(Name = "Sort Title")]
-        SortTitle,
-        [Display(Name = "Released On")]
-        ReleasedOn,
-        [Display(Name = "Created On")]
-        CreatedOn,
-        [Display(Name = "Created By")]
-        CreatedBy,
-        [Display(Name = "Updated On")]
-        UpdatedOn,
-        [Display(Name = "Updated By")]
-        UpdatedBy,
-        Singleplayer,
-        Multiplayer,
-        [Display(Name = "Total Keys")]
-        TotalKeys,
-        [Display(Name = "Keys Allocated")]
-        KeysAllocated,
-        Developers,
-        Publishers,
-        Genres,
-        [Display(Name = "Multiplayer Modes")]
-        MultiplayerModes,
-        [Display(Name = "Archive Size")]
-        ArchiveSize,
-    }
+    Dictionary<int, bool> ColumnVisibility = new Dictionary<int, bool>();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -256,11 +135,6 @@
 
             Loading = false;
 
-            var storedFieldVisibility = await BrowserStorage.GetAsync<Dictionary<Field, bool>>("Views.Games.FieldPicker");
-
-            if (storedFieldVisibility.Success && storedFieldVisibility.Value != null)
-                FieldVisibility = storedFieldVisibility.Value;
-
             StateHasChanged();
         }
     }
@@ -268,16 +142,6 @@
     private async Task LoadData()
     {
         Games = await GameService.Get(g => g.Title.ToLower().Contains(Search.ToLower().Trim()) || g.SortTitle.ToLower().Contains(Search.ToLower().Trim())).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToListAsync();
-    }
-
-    private bool FieldVisible(Field field)
-    {
-        return FieldVisibility.ContainsKey(field) && FieldVisibility[field] == true;
-    }
-
-    private void ChangeFieldVisibility(Field field, bool state)
-    {
-        FieldVisibility[field] = state;
     }
 
     private string GetIcon(Game game)
@@ -321,7 +185,5 @@
     private async Task CloseFieldPicker()
     {
         FieldPickerVisible = false;
-
-        await BrowserStorage.SetAsync("Views.Games.FieldPicker", FieldVisibility);
     }
 }

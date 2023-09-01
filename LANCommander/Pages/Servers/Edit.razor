@@ -196,7 +196,7 @@
             {
                 Server = await ServerService.Add(Server);
 
-                await MessageService.Success("Server added!");
+                NavigationManager.LocationChanged += NotifyServerAdded;
 
                 NavigationManager.NavigateTo($"/Servers/{Server.Id}");
             }
@@ -205,6 +205,13 @@
         {
             await MessageService.Error("Could not save!");
         }
+    }
+
+    private void NotifyServerAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyServerAdded;
+
+        MessageService.Success("Server added!");
     }
 
     private string GetIcon(Game game)

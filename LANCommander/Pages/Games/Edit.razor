@@ -239,7 +239,7 @@ else
             {
                 Game = await GameService.Add(Game);
 
-                await MessageService.Success("Game added!");
+                NavigationManager.LocationChanged += NotifyGameAdded;
 
                 NavigationManager.NavigateTo($"/Games/{Game.Id}");
             }
@@ -248,6 +248,13 @@ else
         {
             await MessageService.Error("Could not save!");
         }
+    }
+
+    private void NotifyGameAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyGameAdded;
+
+        MessageService.Success("Game added!");
     }
 
     private async Task BrowseForIcon()

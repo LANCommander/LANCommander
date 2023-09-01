@@ -33,6 +33,18 @@ namespace LANCommander.Services
         }
     }
 
+    public class ServerStatusUpdateEventArgs : EventArgs
+    {
+        public Server Server { get; private set; }
+        public ServerProcessStatus Status { get; private set; }
+
+        public ServerStatusUpdateEventArgs(Server server, ServerProcessStatus status)
+        {
+            Server = server;
+            Status = status;
+        }
+    }
+
     public class LogFileMonitor : IDisposable
     {
         private ManualResetEvent Latch;
@@ -122,6 +134,9 @@ namespace LANCommander.Services
         public delegate void OnLogHandler(object sender, ServerLogEventArgs e);
         public event OnLogHandler OnLog;
 
+        public delegate void OnStatusUpdateHandler(object sender, ServerStatusUpdateEventArgs e);
+        public event OnStatusUpdateHandler OnStatusUpdate;
+
         private IHubContext<GameServerHub> HubContext;
 
         public ServerProcessService(IHubContext<GameServerHub> hubContext)
@@ -157,27 +172,42 @@ namespace LANCommander.Services
                 });
             }
 
-            process.Start();
-
-            if (!process.StartInfo.UseShellExecute)
+            try
             {
-                process.BeginErrorReadLine();
-                process.BeginOutputReadLine();
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
+
+                process.Start();
+
+                if (!process.StartInfo.UseShellExecute)
+                {
+                    process.BeginErrorReadLine();
+                    process.BeginOutputReadLine();
+                }
+
+                Processes[server.Id] = process;
+
+                foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
+                {
+                    StartMonitoringLog(logFile, server);
+                }
+
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Running));
+
+                await process.WaitForExitAsync();
             }
-
-            Processes[server.Id] = process;
-
-            foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
+            catch (Exception ex)
             {
-                StartMonitoringLog(logFile, server);
-            }
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error));
 
-            await process.WaitForExitAsync();
+                Logger.Error(ex, "Could not start server process");
+            }
         }
 
 
         public void StopServer(Server server)
         {
+            OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
+
             if (Processes.ContainsKey(server.Id))
             {
                 var process = Processes[server.Id];
@@ -190,6 +220,8 @@ namespace LANCommander.Services
                 LogFileMonitors[server.Id].Dispose();
                 LogFileMonitors.Remove(server.Id);
             }
+
+            OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
         }
 
         private void StartMonitoringLog(ServerConsole log, Server server)

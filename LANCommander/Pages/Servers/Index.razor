@@ -10,6 +10,15 @@
 <PageHeader Title="Servers">
     <PageHeaderExtra>
         <Space Direction="DirectionVHType.Horizontal">
+            @if (SelectedServers != null && SelectedServers.Count() > 0)
+            {
+                <SpaceItem>
+                    <Button Type="@ButtonType.Primary" OnClick="() => StartServers()">Start</Button>
+                    <Popconfirm OnConfirm="() => StopServers()" Title="Are you sure you want to kill these server processes?">
+                        <Button Danger Type="@ButtonType.Primary">Stop</Button>
+                    </Popconfirm>
+                </SpaceItem>
+            }
             <SpaceItem>
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
             </SpaceItem>
@@ -20,7 +29,8 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25">
+<Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25" @bind-SelectedRows="SelectedServers">
+    <Selection Key="@(context.Id.ToString())" />
     <PropertyColumn Property="s => s.Name" Sortable />
     <PropertyColumn Property="s => s.Game">
         <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
@@ -55,6 +65,8 @@
     bool Loading = true;
 
     string Search = "";
+
+    IEnumerable<Server> SelectedServers;
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -101,5 +113,31 @@
     private string GetIcon(Game game)
     {
         return $"/api/Games/{game?.Id}/Icon.png";
+    }
+
+    private async Task StartServers()
+    {
+        foreach (var server in SelectedServers)
+        {
+            try
+            {
+                var status = ServerProcessService.GetStatus(server);
+
+                if (status == ServerProcessStatus.Stopped || status == ServerProcessStatus.Error)
+                {
+                    await ServerProcessService.StartServerAsync(server);
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void StopServers()
+    {
+        foreach (var server in SelectedServers)
+        {
+            if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
+                ServerProcessService.StopServer(server);
+        }
     }
 }

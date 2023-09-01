@@ -37,11 +37,17 @@ namespace LANCommander.Services
     {
         public Server Server { get; private set; }
         public ServerProcessStatus Status { get; private set; }
+        public Exception Exception { get; private set; }
 
         public ServerStatusUpdateEventArgs(Server server, ServerProcessStatus status)
         {
             Server = server;
             Status = status;
+        }
+
+        public ServerStatusUpdateEventArgs(Server server, ServerProcessStatus status, Exception exception) : this(server, status)
+        {
+            Exception = exception;
         }
     }
 
@@ -197,7 +203,7 @@ namespace LANCommander.Services
             }
             catch (Exception ex)
             {
-                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error));
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
 
                 Logger.Error(ex, "Could not start server process");
             }

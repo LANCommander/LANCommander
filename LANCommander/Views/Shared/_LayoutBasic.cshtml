@@ -9,7 +9,11 @@
     <link href="~/css/site.css" rel="stylesheet" />
 </head>
 <body>
-    @RenderBody()
+    <section class="layout ant-layout">
+        <main class="ant-layout-content" style="padding: 24px; min-height: 100vh;">
+            @RenderBody()
+        </main>
+    </section>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/antv/g2plot/dist/g2plot.js"></script>

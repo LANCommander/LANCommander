@@ -1,0 +1,37 @@
+﻿@inject NavigationManager NavigationManager
+
+<div class="mobile-menu">
+    <Header Class="mobile-header">
+        <div class="logo" style="background: url('/static/logo-dark.svg'); width: 143px; height: 31px; background-size: contain;" />
+        <Button Icon="@IconType.Outline.Menu" Type="@ButtonType.Text" OnClick="ToggleMenu" />
+    </Header>
+
+    <Drawer Closable="true" Visible="@MenuDrawerOpen" Placement="@("top")" Class="menu-drawer">
+        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Vertical">
+            @ChildContent
+        </Menu>
+    </Drawer>
+</div>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+
+    bool MenuDrawerOpen = true;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+            NavigationManager.LocationChanged += CloseMenu;
+    }
+
+    void ToggleMenu()
+    {
+        MenuDrawerOpen = !MenuDrawerOpen;
+    }
+
+    void CloseMenu(object? sender, LocationChangedEventArgs e)
+    {
+        MenuDrawerOpen = false;
+        StateHasChanged();
+    }
+}

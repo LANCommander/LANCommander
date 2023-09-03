@@ -18,3 +18,66 @@
 .uploader-progress .ant-progress-bg {
     transition: none;
 }
+
+.menu-drawer {
+    margin-top: 63px;
+}
+
+.menu-drawer .ant-drawer-content {
+    background: #001529;
+}
+
+.menu-drawer .ant-drawer-header-no-title {
+    display: none;
+}
+
+.menu-drawer .ant-drawer-body {
+    padding: 0;
+}
+
+.menu-drawer .ant-drawer-wrapper,
+.menu-drawer .ant-drawer-content {
+    height: auto;
+}
+
+.menu-drawer .ant-drawer-content-wrapper {
+    height: auto !important;
+}
+
+.mobile-header .ant-btn {
+    color: #fff;
+    position: absolute;
+    right: 16px;
+}
+
+@media screen and (min-width: 768px) {
+    .mobile-menu {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    .mobile-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+    }
+
+    .ant-header:not(.mobile-header) {
+        display: none;
+    }
+
+    .ant-header .logo {
+        margin-right: 0 !important;
+        float: none;
+    }
+
+    .ant-layout-content {
+        margin-top: 63px;
+    }
+}

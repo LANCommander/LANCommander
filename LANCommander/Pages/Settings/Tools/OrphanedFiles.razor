@@ -3,6 +3,7 @@
 @using LANCommander.Models;
 @layout SettingsLayout
 @inject ArchiveService ArchiveService;
+@attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Orphaned Files" />
 

@@ -36,6 +36,14 @@ jobs:
       run: dotnet build "./LANCommander/LANCommander.csproj" --no-restore
     - name: Publish
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build --self-contained --os win -p:PublishSingleFile=true
+    - name: Sign Windows Binary
+      uses: jchen42703/windows-signer-action@v0.0.2-no-timestamp
+      env:
+        NAME: LANCommander
+        DOMAIN: https://lancommander.app
+        BINARY: "./_Build/LANCommander.exe"
+        WINDOWS_CERT: ${{ secrets.WINDOWS_CERT }}
+        WINDOWS_KEY: ${{ secrets.WINDOWS_KEY }}
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:

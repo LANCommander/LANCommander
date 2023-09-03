@@ -37,13 +37,11 @@ jobs:
     - name: Publish
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build --self-contained --os win -p:PublishSingleFile=true
     - name: Sign Windows Binary
-      uses: DanaBear/code-sign-action@v4
+      uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
       with:
         certificate: "${{ secrets.CERTIFICATE }}"
-        certificatesha1: "${{ secrets.CERTIFICATE_HASH }}"
-        password: "${{ secrets.CERTIFICATE_PASSWORD }}"
-        folder: "./_Build"
-        recursive: false
+        cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
+        filepath: "./_Build/LANCommander.exe"
     - name: Upload Artifacts
       uses: actions/upload-artifact@v2
       with:

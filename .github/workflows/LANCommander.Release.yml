@@ -5,7 +5,7 @@ on:
     tags:
       - 'v*'
 jobs:
-  build-server:
+  build:
     runs-on: windows-latest
 
     steps:
@@ -57,7 +57,7 @@ jobs:
       with:
         certificate: "${{ secrets.CERTIFICATE }}"
         cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
-        filepath: "LANCommander.Playnite.Extension/Build/LANCommander.Playnite.Extension.dll"
+        filepath: "./LANCommander.Playnite.Extension/Build/LANCommander.PlaynitePlugin.dll"
     - name: Download Playnite Release
       uses: robinraju/release-downloader@v1.7
       with:

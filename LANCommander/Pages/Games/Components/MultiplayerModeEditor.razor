@@ -4,7 +4,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true">
+        <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true" Responsive>
             <PropertyColumn Property="m => m.Type">
                 <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
                     <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>

@@ -19,7 +19,7 @@
         </SpaceItem>
 
         <SpaceItem>
-            <Table TItem="Key" DataSource="@Keys">
+            <Table TItem="Key" DataSource="@Keys" Responsive>
                 <PropertyColumn Property="k => k.Value">
                     <InputPassword @bind-Value="@context.Value" />
                 </PropertyColumn>

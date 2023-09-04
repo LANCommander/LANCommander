@@ -11,7 +11,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Archive" DataSource="@Game.Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true">
+        <Table TItem="Archive" DataSource="@Game.Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true" Responsive>
             <PropertyColumn Property="a => a.Version" />
             <PropertyColumn Property="a => a.CompressedSize">
                 @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)

@@ -14,7 +14,7 @@
 @inject ModalService ModalService
 @inject GameSaveService GameSaveService
 
-<Table TItem="GameSave" DataSource="@GameSaves" Loading="@Loading">
+<Table TItem="GameSave" DataSource="@GameSaves" Loading="@Loading" Responsive>
     <PropertyColumn Property="g => g.User" Sortable>
         @context.User?.UserName
     </PropertyColumn>

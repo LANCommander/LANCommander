@@ -6,7 +6,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Data.Models.Action" DataSource="@Actions" HidePagination="true" Style="border: 1px solid #f0f0f0">
+        <Table TItem="Data.Models.Action" DataSource="@Actions" HidePagination="true" Style="border: 1px solid #f0f0f0" Responsive>
             <PropertyColumn Property="a => a.Name">
                 <Input Type="text" @bind-Value="context.Name" />
             </PropertyColumn>

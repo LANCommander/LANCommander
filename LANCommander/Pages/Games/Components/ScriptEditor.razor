@@ -71,7 +71,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Script" DataSource="@Scripts" HidePagination="true">
+        <Table TItem="Script" DataSource="@Scripts" HidePagination="true" Responsive>
             <PropertyColumn Property="s => s.Type">@context.Type.GetDisplayName()</PropertyColumn>
             <PropertyColumn Property="s => s.CreatedBy">
                 @context.CreatedBy?.UserName

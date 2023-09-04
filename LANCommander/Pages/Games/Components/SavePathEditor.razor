@@ -3,7 +3,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="SavePath" DataSource="@Value" HidePagination="true">
+        <Table TItem="SavePath" DataSource="@Value" HidePagination="true" Responsive>
             <PropertyColumn Property="p => p.Type">
                 <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()" />
             </PropertyColumn>

@@ -25,7 +25,8 @@
         Loading="Loading"
         OnRowClick="OnRowClicked"
         @bind-SelectedRows="SelectedResults"
-        ScrollY="calc(100vh - 55px - 55px - 53px)">
+        ScrollY="calc(100vh - 55px - 55px - 53px)"
+        Responsive>
 
         <Selection Key="@context.IGDBId.ToString()" Type="radio" />
         <PropertyColumn Property="g => g.Title" Title="Title" />

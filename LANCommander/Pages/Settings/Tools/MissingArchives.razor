@@ -13,7 +13,7 @@
         These archives are missing their backing file in the "Upload" directory of your server. This may result in broken downloads for clients. To fix, either upload a new file or delete the offending archive.
     </p>
 
-    <Table TItem="Archive" DataSource="@Archives" Loading="@Loading">
+    <Table TItem="Archive" DataSource="@Archives" Loading="@Loading" Responsive>
         <PropertyColumn Property="a => a.Version" Sortable />
         <PropertyColumn Property="a => a.Game.Title" />
         <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />

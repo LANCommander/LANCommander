@@ -9,7 +9,7 @@
 <PageHeader Title="Users" />
 
 <div style="padding: 0 24px;">
-    <Table TItem="UserViewModel" DataSource="@UserList" Loading="@(Loading)">
+    <Table TItem="UserViewModel" DataSource="@UserList" Loading="@(Loading)" Responsive>
         <PropertyColumn Property="u => u.UserName" Title="Username" />
         <PropertyColumn Property="u => u.Roles">
             @String.Join(", ", context.Roles)

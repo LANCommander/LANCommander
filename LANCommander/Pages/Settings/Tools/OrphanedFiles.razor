@@ -12,7 +12,7 @@
         These files exist on the server, but aren't linked in the database. Use this tool to identify and delete orphaned files.
     </p>
 
-    <Table TItem="OrphanedFile" DataSource="@Orphans" Loading="@Loading" PageSize="25">
+    <Table TItem="OrphanedFile" DataSource="@Orphans" Loading="@Loading" PageSize="25" Responsive>
         <PropertyColumn Property="f => f.Path" />
         <PropertyColumn Property="f => f.Size" Sortable>
             @ByteSizeLib.ByteSize.FromBytes(context.Size).ToString()

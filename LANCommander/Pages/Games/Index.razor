@@ -21,79 +21,79 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<TableCustomizer @ref="TableCustomizer" TItem="Game" Table="Table" Key="Games" @bind-Visible="FieldPickerVisible" />
+<TableColumnPicker @ref="Picker" Key="Games" @bind-Visible="ColumnPickerVisible" />
 
-<Table @ref="Table" TItem="Game" DataSource="@Games" Loading="@Loading" PageSize="25">
-    <PickableColumn TData="string" Title="Icon">
+<Table TItem="Game" DataSource="@Games" Loading="@Loading" PageSize="25" Responsive>
+    <Column TData="string" Title="Icon" Hidden="@(Picker.IsColumnHidden("Icon"))">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
-    </PickableColumn>
+    </Column>
     
-    <PickablePropertyColumn Property="g => g.Title" Sortable Filterable />
+    <PropertyColumn Property="g => g.Title" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Title"))" />
     
-    <PickablePropertyColumn Property="g => g.SortTitle" Title="Sort Title" Sortable Filterable />
+    <PropertyColumn Property="g => g.SortTitle" Title="Sort Title" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Sort Title", false))" />
     
-    <PickablePropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
+    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Released On"))" />
     
-    <PickablePropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     
-    <PickablePropertyColumn Property="g => g.CreatedBy" Sortable>
+    <PropertyColumn Property="g => g.CreatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))">
         @context.CreatedBy?.UserName
-    </PickablePropertyColumn>
+    </PropertyColumn>
     
-    <PickablePropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
     
-    <PickablePropertyColumn Property="g => g.UpdatedBy" Sortable>
+    <PropertyColumn Property="g => g.UpdatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Updated By", false))">
         @context.UpdatedBy?.UserName
-    </PickablePropertyColumn>
+    </PropertyColumn>
     
-    <PickablePropertyColumn Property="g => g.Singleplayer" Sortable Filterable>
+    <PropertyColumn Property="g => g.Singleplayer" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Singleplayer", false))">
         <Checkbox Disabled="true" Checked="context.Singleplayer" />
-    </PickablePropertyColumn>
+    </PropertyColumn>
     
-    <PickableColumn TData="bool" Title="Multiplayer">
+    <Column TData="bool" Title="Multiplayer" Hidden="@(Picker.IsColumnHidden("Multiplayer", false))">
         <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
-    </PickableColumn>
+    </Column>
 
-    <PickableColumn TData="int" Title="Total Keys">
+    <Column TData="int" Title="Total Keys" Hidden="@(Picker.IsColumnHidden("Total Keys"))">
         @context.Keys?.Count
-    </PickableColumn>
+    </Column>
 
-    <PickableColumn TData="int" Title="Keys Allocated">
+    <Column TData="int" Title="Keys Allocated" Hidden="@(Picker.IsColumnHidden("Keys Allocated"))">
         @context.Keys?.Count(k => k.ClaimedOn.HasValue)
-    </PickableColumn>
+    </Column>
 
-    <PickableColumn TData="string[]" Title="Developers">
+    <Column TData="string[]" Title="Developers" Hidden="@(Picker.IsColumnHidden("Developers", false))">
         @foreach (var dev in context.Developers)
         {
             <Tag>@dev.Name</Tag>
         }
-    </PickableColumn>
+    </Column>
 
-    <PickableColumn TData="string[]" Title="Publishers">
+    <Column TData="string[]" Title="Publishers" Hidden="@(Picker.IsColumnHidden("Publishers", false))">
         @foreach (var pub in context.Publishers)
         {
             <Tag>@pub.Name</Tag>
         }
-    </PickableColumn>
+    </Column>
 
-    <PickableColumn TData="string[]" Title="Genres">
+    <Column TData="string[]" Title="Genres" Hidden="@(Picker.IsColumnHidden("Genres", false))">
         @foreach (var genre in context.Genres)
         {
             <Tag>@genre.Name</Tag>
         }
-    </PickableColumn>
+    </Column>
 
-    <PickableColumn TData="Data.Enums.MultiplayerType[]" Title="Multiplayer Modes">
+    <Column TData="Data.Enums.MultiplayerType[]" Title="Multiplayer Modes" Hidden="@(Picker.IsColumnHidden("Multiplayer Modes"))">
         @foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
         {
             <Tag>@mode.GetDisplayName()</Tag>
         }
-    </PickableColumn>
+    </Column>
 
     <ActionColumn Title="" Style="text-align: right">
         <TitleTemplate>
             <div style="text-align: right">
-                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenFieldPicker()" />
+                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
             </div>
         </TitleTemplate>
         <ChildContent>
@@ -118,14 +118,13 @@
     IEnumerable<Game> Games { get; set; } = new List<Game>();
 
     bool Loading = true;
-    bool FieldPickerVisible = false;
 
     string Search = "";
 
-    Table<Game> Table;
-    TableCustomizer<Game> TableCustomizer;
+    bool Visibility = false;
 
-    Dictionary<int, bool> ColumnVisibility = new Dictionary<int, bool>();
+    TableColumnPicker Picker;
+    bool ColumnPickerVisible = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -177,13 +176,13 @@
         Loading = false;
     }
 
-    private async Task OpenFieldPicker()
+    private async Task OpenColumnPicker()
     {
-        FieldPickerVisible = true;
+        ColumnPickerVisible = true;
     }
 
-    private async Task CloseFieldPicker()
+    private async Task CloseColumnPicker()
     {
-        FieldPickerVisible = false;
+        ColumnPickerVisible = false;
     }
 }

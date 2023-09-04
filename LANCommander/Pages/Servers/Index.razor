@@ -29,33 +29,42 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25" @bind-SelectedRows="SelectedServers">
+<TableColumnPicker @ref="Picker" Key="Servers" @bind-Visible="ColumnPickerVisible" />
+
+<Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25" @bind-SelectedRows="SelectedServers" Responsive>
     <Selection Key="@(context.Id.ToString())" />
-    <PropertyColumn Property="s => s.Name" Sortable />
-    <PropertyColumn Property="s => s.Game">
+    <PropertyColumn Property="s => s.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
+     <PropertyColumn Property="s => s.Game" Hidden="@(Picker.IsColumnHidden("Game"))">
         <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
         @context.Game?.Title
     </PropertyColumn>
-    <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-    <PropertyColumn Property="s => s.CreatedBy" Sortable>
+    <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
+    <PropertyColumn Property="s => s.CreatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))">
         @context.CreatedBy?.UserName
     </PropertyColumn>
-    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-    <PropertyColumn Property="g => g.UpdatedBy" Sortable>
+    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On"))" />
+    <PropertyColumn Property="g => g.UpdatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))">
         @context.UpdatedBy?.UserName
     </PropertyColumn>
     <ActionColumn Title="" Style="text-align: right">
-        <ServerControl ServerId="context.Id" />
-        <Space Direction="DirectionVHType.Horizontal">
-            <SpaceItem>
-                <Button OnClick="() => Edit(context)">Edit</Button>
-            </SpaceItem>
-            <SpaceItem>
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this server?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                </Popconfirm>
-            </SpaceItem>
-        </Space>
+        <TitleTemplate>
+            <div style="text-align: right">
+                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
+            </div>
+        </TitleTemplate>
+        <ChildContent>
+            <ServerControl ServerId="context.Id" />
+            <Space Direction="DirectionVHType.Horizontal">
+                <SpaceItem>
+                    <Button OnClick="() => Edit(context)">Edit</Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this server?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                    </Popconfirm>
+                </SpaceItem>
+            </Space>
+        </ChildContent>
     </ActionColumn>
 </Table>
 
@@ -67,6 +76,8 @@
     string Search = "";
 
     IEnumerable<Server> SelectedServers;
+    TableColumnPicker Picker;
+    bool ColumnPickerVisible = false;
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -139,5 +150,15 @@
             if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
                 ServerProcessService.StopServer(server);
         }
+    }
+
+    private async Task OpenColumnPicker()
+    {
+        ColumnPickerVisible = true;
+    }
+
+    private async Task CloseColumnPicker()
+    {
+        ColumnPickerVisible = false;
     }
 }

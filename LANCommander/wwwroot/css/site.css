@@ -81,3 +81,40 @@
         margin-top: 63px;
     }
 }
+
+@media (max-width: 960px) {
+    .ant-scrolling-effect {
+        overflow: visible !important;
+        width: 100% !important;
+    }
+
+    .ant-table-responsive .ant-table-tbody .ant-table-row > .ant-table-cell:first-child {
+        padding-top: 16px;
+    }
+
+    .ant-table-responsive .ant-table-tbody .ant-table-row > .ant-table-cell:last-child {
+        padding-bottom: 16px;
+    }
+
+    .ant-table-responsive .ant-table-tbody .ant-table-cell {
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .ant-table-responsive .ant-table-tbody .ant-table-cell:before {
+        flex-grow: 1;
+    }
+
+    .ant-layout.ant-layout-has-sider {
+        flex-direction: column
+    }
+
+    .ant-layout-sider {
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    .ant-layout.ant-layout-has-sider > .ant-layout, .ant-layout.ant-layout-has-sider > .ant-layout-content {
+        width: 100%
+    }
+}

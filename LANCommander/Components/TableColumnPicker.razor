@@ -1,0 +1,72 @@
+﻿@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+@inject ProtectedLocalStorage BrowserStorage
+
+<Drawer Closable="true" Visible="@Visible" Placement="right" Title="@("Columns")" OnClose="() => Close()">
+    <Space Direction="@DirectionVHType.Vertical">
+        @foreach (var column in ColumnVisibility.Keys)
+        {
+            <SpaceItem>
+                <Switch Checked="ColumnVisibility[column]" OnChange="(state) => ChangeColumnVisibility(column, state)" /> @column
+            </SpaceItem>
+        }
+    </Space>
+</Drawer>
+
+@code {
+    [Parameter] public string Key { get; set; }
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
+    Dictionary<string, bool> ColumnVisibility = new Dictionary<string, bool>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var storedColumnVisibility = await BrowserStorage.GetAsync<Dictionary<string, bool>>($"Views.{Key}.ColumnPicker");
+
+                if (storedColumnVisibility.Success && storedColumnVisibility.Value != null)
+                    ColumnVisibility = storedColumnVisibility.Value;
+
+                StateHasChanged();
+            }
+            catch
+            {
+                ColumnVisibility = new Dictionary<string, bool>();
+                await BrowserStorage.SetAsync($"Views.{Key}.FieldPicker", ColumnVisibility);
+            }
+        }
+    }
+
+    public bool IsColumnHidden(string columnName, bool isDefault = true)
+    {
+        if (!ColumnVisibility.ContainsKey(columnName))
+            ColumnVisibility[columnName] = isDefault;
+
+        return !ColumnVisibility[columnName];
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (ColumnVisibility == null)
+            ColumnVisibility = new Dictionary<string, bool>();
+    }
+
+    async Task ChangeColumnVisibility(string column, bool state)
+    {
+        ColumnVisibility[column] = state;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Close()
+    {
+        Visible = false;
+
+        await VisibleChanged.InvokeAsync();
+    }
+}

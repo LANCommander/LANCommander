@@ -30,7 +30,7 @@
         <FormItem>
             <Space Direction="DirectionVHType.Horizontal">
                 <SpaceItem>
-                     <InputFile id="FileInput" OnChange="FileSelected" hidden />
+                     <InputFile @ref="FileInput" id="FileInput" OnChange="FileSelected" hidden />
                      <Upload Name="files" FileList="FileList">
                          <label class="ant-btn" for="FileInput">
                              <Icon Type="upload" />
@@ -66,6 +66,7 @@
 
     Archive Archive;
 
+    InputFile FileInput;
     IBrowserFile File { get; set; }
     List<UploadFileItem> FileList = new List<UploadFileItem>();
 
@@ -120,14 +121,24 @@
 
         await InvokeAsync(StateHasChanged);
 
-        await Task.Delay(500);
+        var i = 0;
 
-        if (!String.IsNullOrWhiteSpace(archive.ObjectKey) && archive.ObjectKey != Guid.Empty.ToString())
-            await JS.InvokeVoidAsync("Uploader.Init", "FileInput", archive.ObjectKey.ToString());
-        else
-            await JS.InvokeVoidAsync("Uploader.Init", "FileInput", "");
+        // Check every 10 seconds to see if the file input is available
+        while (i < 20)
+        {
+            if (FileInput != null)
+            {
+                if (!String.IsNullOrWhiteSpace(archive.ObjectKey) && archive.ObjectKey != Guid.Empty.ToString())
+                    await JS.InvokeVoidAsync("Uploader.Init", "FileInput", archive.ObjectKey.ToString());
+                else
+                    await JS.InvokeVoidAsync("Uploader.Init", "FileInput", "");
 
+                break;
+            }
 
+            i++;
+            await Task.Delay(500);
+        }
     }
 
     private async Task UploadArchiveJS()

@@ -49,6 +49,34 @@ namespace LANCommander.PlaynitePlugin
             PowerShellRuntime = new PowerShellRuntime();
 
             GameSaveService = new GameSaveService(LANCommander, PlayniteApi, PowerShellRuntime);
+
+            api.UriHandler.RegisterSource("lancommander", args =>
+            {
+                if (args.Arguments.Length == 0)
+                    return;
+
+                Guid gameId;
+
+                switch (args.Arguments[0].ToLower())
+                {
+                    case "install":
+                        if (args.Arguments.Length == 1)
+                            break;
+
+                        if (Guid.TryParse(args.Arguments[1], out gameId))
+                            PlayniteApi.InstallGame(gameId);
+                        break;
+
+                    case "run":
+                        if (args.Arguments.Length == 1)
+                            break;
+
+                        if (Guid.TryParse(args.Arguments[1], out gameId))
+                            PlayniteApi.StartGame(gameId);
+                        break;
+                }
+
+            });
         }
 
         public override void OnApplicationStarted(OnApplicationStartedEventArgs args)

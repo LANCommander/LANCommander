@@ -1,0 +1,77 @@
+﻿@page "/Settings/Tools/OrphanedFiles"
+@using LANCommander.Helpers;
+@using LANCommander.Models;
+@layout SettingsLayout
+@inject ArchiveService ArchiveService;
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Orphaned Files" />
+
+<div style="padding: 0 24px;">
+    <p>
+        These files exist on the server, but aren't linked in the database. Use this tool to identify and delete orphaned files.
+    </p>
+
+    <Table TItem="OrphanedFile" DataSource="@Orphans" Loading="@Loading" PageSize="25">
+        <PropertyColumn Property="f => f.Path" />
+        <PropertyColumn Property="f => f.Size" Sortable>
+            @ByteSizeLib.ByteSize.FromBytes(context.Size).ToString()
+        </PropertyColumn>
+        <PropertyColumn Property="f => f.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <ActionColumn Title="" Style="text-align: right">
+            <Space Direction="DirectionVHType.Horizontal">
+                <SpaceItem>
+                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this file?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                    </Popconfirm>
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </Table>
+</div>
+
+ @code {
+    ICollection<OrphanedFile> Orphans = new List<OrphanedFile>();
+    bool Loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        Loading = true;
+
+        Orphans = new List<OrphanedFile>();
+
+        var archives = await ArchiveService.Get();
+        var archiveFiles = archives.Select(a => ArchiveService.GetArchiveFileLocation(a));
+        var files = Directory.GetFiles("Upload");
+
+        foreach (var file in files.Where(f => !archiveFiles.Contains(f)))
+        {
+            var fileInfo = new FileInfo(file);
+
+            Orphans.Add(new OrphanedFile
+                {
+                    Path = file,
+                    Size = fileInfo.Length,
+                    CreatedOn = fileInfo.CreationTime
+                });
+        }
+
+        Orphans = Orphans.OrderByDescending(f => f.Size).ToList();
+
+        Loading = false;
+    }
+
+    async Task Delete(OrphanedFile file)
+    {
+        FileHelpers.DeleteIfExists(file.Path);
+
+        Orphans.Remove(file);
+
+        StateHasChanged();
+    }
+}

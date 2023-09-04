@@ -1,6 +1,7 @@
 ﻿@inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
+@inject INotificationService NotificationService
 @implements IAsyncDisposable
 
 <Space Size="@("large")">
@@ -58,6 +59,8 @@
     protected override async Task OnInitializedAsync()
     {
         Server = await ServerService.Get(ServerId);
+
+        ServerProcessService.OnStatusUpdate += OnStatusUpdate;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -73,26 +76,32 @@
         }
     }
 
+    private void OnStatusUpdate(object sender, ServerStatusUpdateEventArgs args)
+    {
+        if (args?.Server?.Id == ServerId)
+        {
+            Status = args.Status;
+            StateHasChanged();
+
+            if (Status == ServerProcessStatus.Error)
+            {
+                NotificationService.Error(new NotificationConfig
+                    {
+                        Message = $"Error starting server {args.Server.Name}",
+                        Description = args.Exception.Message,
+                    }
+                );
+            }
+        }
+    }
+
     private async Task Start()
     {
-        try
-        {
-            Status = ServerProcessStatus.Starting;
-
-            await ServerProcessService.StartServerAsync(Server);
-        }
-        catch (Exception ex)
-        {
-            Status = ServerProcessStatus.Error;
-
-            await MessageService.Error("There was an unexpected error while trying to start the server.");
-        }
+        ServerProcessService.StartServerAsync(Server);
     }
 
     private void Stop()
     {
-        Status = ServerProcessStatus.Stopping;
-
         ServerProcessService.StopServer(Server);
     }
 

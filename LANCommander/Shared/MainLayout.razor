@@ -1,18 +1,14 @@
 ﻿@inherits LayoutComponentBase
 
 <Layout Class="layout">
-    <Header>
-        <div class="logo" style="background: url('/static/logo-dark.svg'); width: 143px; height: 31px; margin: 16px 24px 16px 0; float: left; background-size: contain;" />
+    <MainMenu>
+        <MenuItem RouterLink="/Dashboard">Dashboard</MenuItem>
+        <MenuItem RouterLink="/Games">Games</MenuItem>
+        <MenuItem RouterLink="/Servers">Servers</MenuItem>
+        <MenuItem RouterLink="/Settings">Settings</MenuItem>
+    </MainMenu>
 
-        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal">
-            <MenuItem RouterLink="/Dashboard">Dashboard</MenuItem>
-            <MenuItem RouterLink="/Games">Games</MenuItem>
-            <MenuItem RouterLink="/Servers">Servers</MenuItem>
-            <MenuItem RouterLink="/Settings">Settings</MenuItem>
-        </Menu>
-    </Header>
-
-    <Content Style="padding: 24px;">
+    <Content Style="padding: 24px; min-height: 100vh;">
         @Body
     </Content>
 </Layout>

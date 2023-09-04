@@ -11,16 +11,20 @@ namespace LANCommander.Services
 {
     public class GameService : BaseDatabaseService<Game>
     {
-        public GameService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
+        private readonly ArchiveService ArchiveService;
+
+        public GameService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, ArchiveService archiveService) : base(dbContext, httpContextAccessor)
         {
+            ArchiveService = archiveService;
         }
 
         public override async Task Delete(Game game)
         {
             foreach (var archive in game.Archives.OrderByDescending(a => a.CreatedOn))
             {
+                await ArchiveService.Delete(archive);
+
                 FileHelpers.DeleteIfExists($"Icon/{game.Id}.png".ToPath());
-                FileHelpers.DeleteIfExists($"Upload/{archive.ObjectKey}".ToPath());
             }
 
             await base.Delete(game);

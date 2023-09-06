@@ -1,4 +1,6 @@
 ﻿@page
+@using LANCommander.Models;
+@using LANCommander.Services;
 @model LoginModel
 @{ Layout = "/Views/Shared/_LayoutBasic.cshtml"; }
 
@@ -10,7 +12,16 @@
     <div class="ant-col ant-col-xs-24 ant-col-md-10">
 
         <div style="text-align: center; margin-bottom: 24px;">
-            <img src="~/static/logo.svg" />
+            @switch (SettingService.GetSettings().Theme)
+            {
+                case LANCommanderTheme.Light:
+                    <img src="~/static/logo.svg" />
+                    break;
+
+                case LANCommanderTheme.Dark:
+                    <img src="~/static/logo-dark.svg" />
+                    break;
+            }
         </div>
 
         @foreach (var error in ModelState.SelectMany(x => x.Value.Errors))

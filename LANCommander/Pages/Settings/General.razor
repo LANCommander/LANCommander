@@ -1,6 +1,7 @@
 ﻿@page "/Settings"
 @page "/Settings/General"
 @using LANCommander.Models;
+@using LANCommander.Extensions;
 @layout SettingsLayout
 @inject SettingService SettingService
 @inject IGDBService IGDBService
@@ -16,6 +17,13 @@
         </FormItem>
 
         <Text Type="@TextElementType.Secondary">Enabling the beacon will allow clients on the same network to auto-discover the LANCommander address.</Text>
+
+        <FormItem Label="Theme">
+            <Select @bind-Value="context.Theme" TItem="LANCommanderTheme" TItemValue="LANCommanderTheme" DataSource="Enum.GetValues<LANCommanderTheme>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
 
         <Divider Text="IGDB Credentials" />
 

@@ -1,11 +1,25 @@
-﻿<!DOCTYPE html>
+﻿@using LANCommander.Services;
+@using LANCommander.Models;
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - LANCommander</title>
     <base href="~/" />
-    <link href="_content/AntDesign/css/ant-design-blazor.css" rel="stylesheet" />
+
+    @switch (SettingService.GetSettings().Theme)
+    {
+        case LANCommanderTheme.Light:
+            <link href="_content/AntDesign/css/ant-design-blazor.css" rel="stylesheet" />
+            break;
+
+        case LANCommanderTheme.Dark:
+            <link href="_content/AntDesign/css/ant-design-blazor.dark.css" rel="stylesheet" />
+            break;
+    }
+
     <link href="~/css/site.css" rel="stylesheet" />
 </head>
 <body>

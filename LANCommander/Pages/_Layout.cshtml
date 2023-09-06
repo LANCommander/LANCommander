@@ -1,7 +1,9 @@
-﻿@using Microsoft.AspNetCore.Components.Web
+﻿@using LANCommander.Services;
+@using Microsoft.AspNetCore.Components.Web
 @using LANCommander.Components
 @namespace LANCommander.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@inject SettingService SettingService
 
 <!DOCTYPE html>
 <html lang="en">
@@ -9,11 +11,23 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <base href="~/" />
-        <link href="_content/AntDesign/css/ant-design-blazor.css" rel="stylesheet" />
+
+        @switch (SettingService.GetSettings().Theme)
+        {
+            case Models.LANCommanderTheme.Light:
+                <link href="_content/AntDesign/css/ant-design-blazor.css" rel="stylesheet" />
+                break;
+
+            case Models.LANCommanderTheme.Dark:
+                <link href="_content/AntDesign/css/ant-design-blazor.dark.css" rel="stylesheet" />
+                break;
+        }
+
         <link href="_content/XtermBlazor/XtermBlazor.css" rel="stylesheet" />
+
         <link href="~/css/site.css" rel="stylesheet" />
     </head>
-    <body>
+    <body data-theme="@SettingService.GetSettings().Theme">
         
 
         <div class="page-wrapper">

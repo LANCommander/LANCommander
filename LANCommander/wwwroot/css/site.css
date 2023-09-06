@@ -1,3 +1,23 @@
+.panel-layout {
+    background: #fff;
+}
+
+.panel-layout-content {
+    padding: 0 24px;
+}
+
+.panel-layout .ant-layout-content > .ant-page-header-heading {
+    padding-top: 0;
+}
+
+.panel-layout [data-panel] {
+    display: none;
+}
+
+[data-theme="Dark"] .panel-layout {
+    background: #141414;
+}
+
 .ant-select-selector {
     line-height: 30px;
 }

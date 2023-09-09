@@ -1,0 +1,224 @@
+﻿@using AntDesign.TableModels;
+<GridRow>
+    <Space>
+        <SpaceItem>
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" />
+        </SpaceItem>
+        <SpaceItem>
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" />
+        </SpaceItem>
+        <SpaceItem>
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(Path.Parent == null)" />
+        </SpaceItem>
+        <SpaceItem>
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Reload" OnClick="() => ChangeDirectory(Path, false)" />
+        </SpaceItem>
+        <SpaceItem>
+            <Breadcrumb>
+                @foreach (var breadcrumb in Breadcrumbs)
+                {
+                    <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>
+                }
+            </Breadcrumb>
+        </SpaceItem>
+    </Space>
+</GridRow>
+
+<GridRow>
+    <GridCol Span="6" Class="file-manager-tree">
+        <Tree TItem="FileManagerDirectory"
+            DataSource="Directories"
+            TitleExpression="x => x.DataItem.Name"
+            ChildrenExpression="x => x.DataItem.Children"
+            IsLeafExpression="x => !x.DataItem.HasChildren"
+            OnClick="(args) => ChangeDirectory(args.Node.DataItem, false)"
+            OnNodeLoadDelayAsync="ExpandTree" />
+    </GridCol>
+
+    <GridCol Span="18" Class="file-manager-list">
+        <Table
+            TItem="IFileManagerEntry"
+            DataSource="Entries"
+            HidePagination="true"
+            Loading="Entries == null"
+            OnRow="OnRow">
+            <Column TData="string" Width="32">
+                <Text></Text>
+            </Column>
+            <PropertyColumn Property="e => e.Path" Sortable Title="Name">
+                @GetEntryName(context)
+            </PropertyColumn>
+            <PropertyColumn Property="e => e.Length" Sortable Title="Size">
+                @ByteSizeLib.ByteSize.FromBytes(context.Length)
+            </PropertyColumn>
+            <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
+        </Table>
+    </GridCol>
+</GridRow>
+
+ @code {
+    [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public string WorkingDirectory { get; set; }
+
+    FileManagerDirectory Path { get; set; }
+
+    List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
+    List<FileManagerDirectory> Future { get; set; } = new List<FileManagerDirectory>();
+    List<FileManagerDirectory> Breadcrumbs = new List<FileManagerDirectory>();
+
+    List<IFileManagerEntry> Entries { get; set; } = new List<IFileManagerEntry>();
+    HashSet<FileManagerDirectory> Directories { get; set; } = new HashSet<FileManagerDirectory>();
+
+    Dictionary<string, object> OnRow(RowData<IFileManagerEntry> row) => new()
+    {
+        ["data-path"] = row.Data.Path,
+        ["ondblclick"] = ((System.Action)delegate
+        {
+            if (row.Data is FileManagerDirectory)
+                ChangeDirectory((FileManagerDirectory)row.Data, true);
+        })
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!String.IsNullOrWhiteSpace(WorkingDirectory))
+        {
+            Directories = GetDirectories(WorkingDirectory);
+        }
+    }
+
+    HashSet<FileManagerDirectory> GetDirectories(string path)
+    {
+        var paths = Directory.EnumerateDirectories(path, "*", new EnumerationOptions
+        {
+            IgnoreInaccessible = true,
+            RecurseSubdirectories = true,
+            MaxRecursionDepth = 1
+        });
+
+        var root = new FileManagerDirectory()
+        {
+            Name = path,
+            Path = path,
+            IsExpanded = true
+        };
+
+        root.PopulateChildren(paths);
+
+        ChangeDirectory(root, true);
+
+        return new HashSet<FileManagerDirectory>
+        {
+            root
+        };
+    }
+
+    string GetEntryName(IFileManagerEntry entry)
+    {
+        if (String.IsNullOrWhiteSpace(entry.Name) && entry.Length == 0)
+        {
+            return entry.Path.TrimEnd('/').Split('/').Last();
+        }
+        else
+            return entry.Name;
+    }
+
+    void ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
+    {
+        Past.Add(Path);
+
+        Path = directory;
+
+        UpdateEntries();
+        UpdateBreadcrumbs();
+
+        if (clearFuture)
+            Future.Clear();
+    }
+
+    async Task ExpandTree(TreeEventArgs<FileManagerDirectory> args)
+    {
+        var directory = (FileManagerDirectory)args.Node.DataItem;
+
+        foreach (var child in directory.Children)
+        {
+            var paths = Directory.EnumerateDirectories(child.Path, "*", new EnumerationOptions
+            {
+                IgnoreInaccessible = true,
+                RecurseSubdirectories = true,
+                MaxRecursionDepth = 1
+            });
+
+            child.PopulateChildren(paths);
+        }
+    }
+
+    void UpdateEntries()
+    {
+        Entries.Clear();
+        var entries = Directory.EnumerateFileSystemEntries(Path.Path);
+        var separator = System.IO.Path.DirectorySeparatorChar;
+
+        foreach (var entry in Directory.EnumerateFileSystemEntries(Path.Path))
+        {
+            if (Directory.Exists(entry))
+            {
+                Entries.Add(new FileManagerDirectory
+                {
+                    Path = entry,
+                    Name = entry.Substring(Path.Path.Length).TrimStart(separator),
+                });
+            }
+            else
+            {
+                Entries.Add(new FileManagerFile
+                {
+                    Path = entry,
+                    Name = System.IO.Path.GetFileNameWithoutExtension(entry)
+                });
+            }
+        }
+    }
+
+    void UpdateBreadcrumbs()
+    {
+        Breadcrumbs.Clear();
+
+        var currentPath = Path;
+
+        while (currentPath != null)
+        {
+            Breadcrumbs.Add(currentPath);
+
+            currentPath = currentPath.Parent;
+        }
+
+        Breadcrumbs.Reverse();
+    }
+
+    void NavigateBack()
+    {
+        if (Past.Count > 0)
+        {
+            Future.Add(Path);
+            Path = Past.Last();
+            Past = Past.Take(Past.Count - 1).ToList();
+        }
+    }
+
+    void NavigateForward()
+    {
+        if (Future.Count > 0)
+        {
+            Past.Add(Path);
+            Path = Future.First();
+            Future = Future.Skip(1).ToList();
+        }
+    }
+
+    void NavigateUp()
+    {
+        if (Path.Parent != null)
+            ChangeDirectory(Path.Parent, true);
+    }
+}

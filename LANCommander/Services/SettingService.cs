@@ -8,7 +8,9 @@ namespace LANCommander.Services
     {
         private const string SettingsFilename = "Settings.yml";
 
-        public static LANCommanderSettings GetSettings()
+        private static LANCommanderSettings Settings { get; set; }
+
+        public static LANCommanderSettings LoadSettings()
         {
             if (File.Exists(SettingsFilename))
             {
@@ -19,31 +21,24 @@ namespace LANCommander.Services
                     .WithNamingConvention(PascalCaseNamingConvention.Instance)
                     .Build();
 
-                return deserializer.Deserialize<LANCommanderSettings>(contents);
+                Settings = deserializer.Deserialize<LANCommanderSettings>(contents);
             }
             else
             {
-                var settings = new LANCommanderSettings
-                {
-                    Port = 1337,
-                    Beacon = true,
-                    DatabaseConnectionString = "Data Source=LANCommander.db;Cache=Shared",
-                    Authentication = new LANCommanderAuthenticationSettings
-                    {
-                        TokenSecret = Guid.NewGuid().ToString(),
-                        TokenLifetime = 30,
-                        PasswordRequireNonAlphanumeric = false,
-                        PasswordRequireLowercase = false,
-                        PasswordRequireUppercase = false,
-                        PasswordRequireDigit = true,
-                        PasswordRequiredLength = 6
-                    }
-                };
+                Settings = new LANCommanderSettings();
 
-                SaveSettings(settings);
-
-                return settings;
+                SaveSettings(Settings);
             }
+
+            return Settings;
+        }
+
+        public static LANCommanderSettings GetSettings(bool forceLoad = false)
+        {
+            if (Settings == null || forceLoad)
+                Settings = LoadSettings();
+
+            return Settings;
         }
 
         public static void SaveSettings(LANCommanderSettings settings)
@@ -53,6 +48,8 @@ namespace LANCommander.Services
                 .Build();
 
             File.WriteAllText(SettingsFilename, serializer.Serialize(settings));
+
+            Settings = settings;
         }
     }
 }

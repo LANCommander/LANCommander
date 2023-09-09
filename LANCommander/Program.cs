@@ -19,7 +19,7 @@ ConfigurationManager configuration = builder.Configuration;
 
 // Add services to the container.
 Logger.Debug("Loading settings");
-var settings = SettingService.GetSettings();
+var settings = SettingService.GetSettings(true);
 Logger.Debug("Loaded!");
 
 Logger.Debug("Configuring MVC and Blazor");

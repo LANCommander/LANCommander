@@ -1,0 +1,53 @@
+﻿@page "/Settings/IPXRelay"
+@using LANCommander.Models;
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject IPXRelayService IPXRelayService
+@inject IMessageService MessageService
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="IPX Relay" />
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Enable">
+            <Switch @bind-Checked="context.IPXRelay.Enabled" />
+        </FormItem>
+
+        <FormItem Label="Port">
+            <AntDesign.InputNumber @bind-Value="Settings.IPXRelay.Port" Max="65535" />
+        </FormItem>
+
+        <FormItem Label="Logging">
+            <Switch @bind-Checked="context.IPXRelay.Logging" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    LANCommanderSettings Settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+
+            IPXRelayService.Init();
+        }
+        catch
+        {
+            MessageService.Error("An unknown error occurred.");
+        }
+    }
+}

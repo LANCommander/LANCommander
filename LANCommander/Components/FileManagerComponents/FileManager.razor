@@ -214,7 +214,8 @@
 
     void ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
     {
-        Past.Add(Path);
+        if (Path != null && directory.Path != Path.Path)
+            Past.Add(Path);
 
         Path = directory;
 

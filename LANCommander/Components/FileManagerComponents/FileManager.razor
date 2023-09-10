@@ -325,6 +325,8 @@
     void Refresh()
     {
         ChangeDirectory(Path, false);
+
+        StateHasChanged();
     }
 
     void AddFolder(string name)

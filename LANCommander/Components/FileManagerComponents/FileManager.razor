@@ -302,7 +302,7 @@
         if (Past.Count > 0)
         {
             Future.Add(Path);
-            Path = Past.Last();
+            ChangeDirectory(Past.Last(), false);
             Past = Past.Take(Past.Count - 1).ToList();
         }
     }
@@ -312,7 +312,7 @@
         if (Future.Count > 0)
         {
             Past.Add(Path);
-            Path = Future.First();
+            ChangeDirectory(Future.First(), false);
             Future = Future.Skip(1).ToList();
         }
     }

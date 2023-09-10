@@ -2,12 +2,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NLog;
 
 namespace LANCommander.Controllers
 {
     [Authorize(Roles = "Administrator")]
     public class UploadController : Controller
     {
+        protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
         private const string UploadDirectory = "Upload";
 
         public JsonResult Init()

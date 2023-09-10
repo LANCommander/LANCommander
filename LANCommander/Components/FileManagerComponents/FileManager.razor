@@ -221,6 +221,8 @@
 
         if (clearFuture)
             Future.Clear();
+
+        StateHasChanged();
     }
 
     async Task ExpandTree(TreeEventArgs<FileManagerDirectory> args)

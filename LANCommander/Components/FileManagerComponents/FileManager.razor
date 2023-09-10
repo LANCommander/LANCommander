@@ -7,12 +7,12 @@
         <Space>
             <SpaceItem>
                 <Tooltip Title="Back" MouseEnterDelay="2">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" />
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" Disabled="@(Past.Count == 0)" />
                 </Tooltip>
             </SpaceItem>
             <SpaceItem>
                 <Tooltip Title="Forward" MouseEnterDelay="2">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" />
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" Disabled="@(Future.Count == 0)" />
                 </Tooltip>
             </SpaceItem>
             <SpaceItem>

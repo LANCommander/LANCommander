@@ -84,7 +84,9 @@
                    HidePagination="true"
                    Loading="Entries == null"
                    OnRow="OnRow"
+                   @bind-SelectedRows="Selected"
                    Size="@TableSize.Small">
+                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" />
                 <Column TData="string" Width="32">
                     @if (context is FileManagerFile)
                     {
@@ -110,6 +112,9 @@
  @code {
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public string WorkingDirectory { get; set; }
+    [Parameter] public bool SelectMultiple { get; set; } = true;
+    [Parameter] public IEnumerable<IFileManagerEntry> Selected { get; set; } = new List<IFileManagerEntry>();
+    [Parameter] public EventCallback<IEnumerable<IFileManagerEntry>> SelectedChanged { get; set; }
 
     FileManagerDirectory Path { get; set; }
 

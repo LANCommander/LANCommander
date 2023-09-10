@@ -1,60 +1,111 @@
 ﻿@using AntDesign.TableModels;
-<GridRow>
-    <Space>
-        <SpaceItem>
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" />
-        </SpaceItem>
-        <SpaceItem>
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" />
-        </SpaceItem>
-        <SpaceItem>
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(Path.Parent == null)" />
-        </SpaceItem>
-        <SpaceItem>
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Reload" OnClick="() => ChangeDirectory(Path, false)" />
-        </SpaceItem>
-        <SpaceItem>
-            <Breadcrumb>
-                @foreach (var breadcrumb in Breadcrumbs)
-                {
-                    <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>
-                }
-            </Breadcrumb>
-        </SpaceItem>
-    </Space>
-</GridRow>
+@inject ArchiveService ArchiveService
 
-<GridRow>
-    <GridCol Span="6" Class="file-manager-tree">
-        <Tree TItem="FileManagerDirectory"
-            DataSource="Directories"
-            TitleExpression="x => x.DataItem.Name"
-            ChildrenExpression="x => x.DataItem.Children"
-            IsLeafExpression="x => !x.DataItem.HasChildren"
-            OnClick="(args) => ChangeDirectory(args.Node.DataItem, false)"
-            OnNodeLoadDelayAsync="ExpandTree" />
-    </GridCol>
+<div class="file-manager">
+    <GridRow Class="file-manager-nav">
+        <Space>
+            <SpaceItem>
+                <Tooltip Title="Back" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" />
+                </Tooltip>
+            </SpaceItem>
+            <SpaceItem>
+                <Tooltip Title="Forward" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" />
+                </Tooltip>
+            </SpaceItem>
+            <SpaceItem>
+                <Tooltip Title="Up a Level" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(Path.Parent == null)" />
+                </Tooltip>
+            </SpaceItem>
+            <SpaceItem>
+                <Tooltip Title="Refresh" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Reload" OnClick="() => ChangeDirectory(Path, false)" />
+                </Tooltip>
+            </SpaceItem>
+            <SpaceItem Class="file-manager-nav-breadcrumbs">
+                <Breadcrumb>
+                    @foreach (var breadcrumb in Breadcrumbs)
+                    {
+                        <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>
+                    }
+                </Breadcrumb>
+            </SpaceItem>
+            <SpaceItem>
+                <Tooltip Title="New Folder" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.FolderAdd" OnClick="NewFolder" />
+                </Tooltip>
+            </SpaceItem>
+            <SpaceItem>
+                <Tooltip Title="Upload File" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Upload" />
+                </Tooltip>
+            </SpaceItem>
+            <SpaceItem>
+                <Tooltip Title="Delete" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Delete" />
+                </Tooltip>
+            </SpaceItem>
+        </Space>
+    </GridRow>
 
-    <GridCol Span="18" Class="file-manager-list">
-        <Table
-            TItem="IFileManagerEntry"
-            DataSource="Entries"
-            HidePagination="true"
-            Loading="Entries == null"
-            OnRow="OnRow">
-            <Column TData="string" Width="32">
-                <Text></Text>
-            </Column>
-            <PropertyColumn Property="e => e.Path" Sortable Title="Name">
-                @GetEntryName(context)
-            </PropertyColumn>
-            <PropertyColumn Property="e => e.Length" Sortable Title="Size">
-                @ByteSizeLib.ByteSize.FromBytes(context.Length)
-            </PropertyColumn>
-            <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
-        </Table>
-    </GridCol>
-</GridRow>
+    <GridRow>
+        <GridCol Span="6" Class="file-manager-tree">
+            <Tree TItem="FileManagerDirectory"
+                  DataSource="Directories"
+                  SwitcherIcon="@IconType.Outline.Down"
+                  TitleExpression="x => x.DataItem.Name"
+                  ChildrenExpression="x => x.DataItem.Children"
+                  IsLeafExpression="x => !x.DataItem.HasChildren"
+                  IconExpression="x => x.Expanded ? IconType.Outline.FolderOpen : IconType.Outline.Folder"
+                  DefaultExpandParent="true"
+                  OnClick="(args) => ChangeDirectory(args.Node.DataItem, false)"
+                  OnNodeLoadDelayAsync="ExpandTree">
+                <SwitcherIconTemplate>
+                    <Icon Type="@IconType.Outline.Down" />
+                </SwitcherIconTemplate>
+                <TitleIconTemplate>
+                    @if (context.Expanded)
+                    {
+                        <Icon Type="@IconType.Outline.FolderOpen" />
+                    }
+                    else
+                    {
+                        <Icon Type="@IconType.Outline.Folder" />
+                    }
+                </TitleIconTemplate>
+            </Tree>
+        </GridCol>
+
+        <GridCol Span="18" Class="file-manager-list">
+            <Table TItem="IFileManagerEntry"
+                   DataSource="Entries"
+                   HidePagination="true"
+                   Loading="Entries == null"
+                   OnRow="OnRow"
+                   Size="@TableSize.Small">
+                <Column TData="string" Width="32">
+                    @if (context is FileManagerFile)
+                    {
+                        <Icon Type="@(((FileManagerFile)context).GetIcon())" Theme="outline" />
+                    }
+                    else if (context is FileManagerDirectory)
+                    {
+                        <Icon Type="@IconType.Outline.Folder" />
+                    }
+                </Column>
+                <PropertyColumn Property="e => e.Path" Sortable Title="Name">
+                    @GetEntryName(context)
+                </PropertyColumn>
+                <PropertyColumn Property="e => e.Size" Sortable Title="Size">
+                    @ByteSizeLib.ByteSize.FromBytes(context.Size)
+                </PropertyColumn>
+                <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
+             </Table>
+         </GridCol>
+     </GridRow>
+</div>
 
  @code {
     [Parameter] public Guid ArchiveId { get; set; }
@@ -85,6 +136,10 @@
         {
             Directories = GetDirectories(WorkingDirectory);
         }
+        else if (ArchiveId != Guid.Empty)
+        {
+            Directories = await GetArchiveDirectories(ArchiveId);
+        }
     }
 
     HashSet<FileManagerDirectory> GetDirectories(string path)
@@ -96,7 +151,7 @@
             MaxRecursionDepth = 1
         });
 
-        var root = new FileManagerDirectory()
+        var root = new FileManagerDirectory
         {
             Name = path,
             Path = path,
@@ -113,9 +168,31 @@
         };
     }
 
+    async Task<HashSet<FileManagerDirectory>> GetArchiveDirectories(Guid archiveId)
+    {
+        var entries = await ArchiveService.GetContents(archiveId);
+        var directories = new HashSet<FileManagerDirectory>();
+
+        var root = new FileManagerDirectory
+        {
+            Name = "/",
+            Path = "",
+            IsExpanded = true
+        };
+
+        root.PopulateChildren(entries);
+
+        ChangeDirectory(root, true);
+
+        return new HashSet<FileManagerDirectory>
+        {
+            root
+        };
+    }
+
     string GetEntryName(IFileManagerEntry entry)
     {
-        if (String.IsNullOrWhiteSpace(entry.Name) && entry.Length == 0)
+        if (String.IsNullOrWhiteSpace(entry.Name) && entry.Size == 0)
         {
             return entry.Path.TrimEnd('/').Split('/').Last();
         }
@@ -163,18 +240,27 @@
         {
             if (Directory.Exists(entry))
             {
+                var info = new DirectoryInfo(entry);
+
                 Entries.Add(new FileManagerDirectory
                 {
                     Path = entry,
                     Name = entry.Substring(Path.Path.Length).TrimStart(separator),
+                    ModifiedOn = info.LastWriteTime,
+                    CreatedOn = info.CreationTime,
                 });
             }
             else
             {
+                var info = new FileInfo(entry);
+
                 Entries.Add(new FileManagerFile
                 {
                     Path = entry,
-                    Name = System.IO.Path.GetFileNameWithoutExtension(entry)
+                    Name = System.IO.Path.GetFileName(entry),
+                    ModifiedOn = info.LastWriteTime,
+                    CreatedOn = info.CreationTime,
+                    Size = info.Length
                 });
             }
         }
@@ -220,5 +306,10 @@
     {
         if (Path.Parent != null)
             ChangeDirectory(Path.Parent, true);
+    }
+
+    void NewFolder()
+    {
+        
     }
 }

@@ -70,6 +70,72 @@
     right: 16px;
 }
 
+.file-manager {
+    background: #fff;
+}
+
+.file-manager-nav {
+    border-bottom: 1px solid #f0f0f0;
+    padding-left: 8px;
+    padding-right: 8px;
+    height: 58px;
+}
+
+.file-manager-nav .ant-space {
+    flex-grow: 1;
+}
+
+.file-manager-nav-breadcrumbs {
+    flex-grow: 1;
+}
+
+.file-manager-nav .ant-breadcrumb {
+    font-size: 16px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.018);
+}
+
+.file-manager-nav .ant-breadcrumb-link {
+    border-radius: 2px;
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.file-manager-nav .ant-breadcrumb-link:hover,
+.file-manager-nav .ant-breadcrumb-link:active {
+    background: rgba(0, 0, 0, 0.018);
+}
+
+.file-manager .ant-tree-treenode {
+    padding-left: 4px;
+}
+
+.file-manager .ant-tree-treenode:hover,
+.file-manager .ant-tree-treenode:active {
+    background: rgba(0, 0, 0, 0.018);
+}
+
+.file-manager-tree {
+    padding-top: 8px;
+    border-right: 1px solid #f0f0f0;
+}
+
+.file-manager .ant-tree-node-content-wrapper {
+    flex-grow: 1;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.file-manager .ant-tree-node-content-wrapper:hover {
+    background: none;
+}
+
+.file-manager .ant-tree-switcher .ant-tree-switcher-icon {
+    vertical-align: middle;
+    margin-top: 4px;
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

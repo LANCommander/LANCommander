@@ -1,5 +1,6 @@
 ﻿@using AntDesign.TableModels;
 @inject ArchiveService ArchiveService
+@inject IMessageService MessageService
 
 <div class="file-manager">
     <GridRow Class="file-manager-nav">
@@ -21,7 +22,7 @@
             </SpaceItem>
             <SpaceItem>
                 <Tooltip Title="Refresh" MouseEnterDelay="2">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Reload" OnClick="() => ChangeDirectory(Path, false)" />
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Reload" OnClick="Refresh" />
                 </Tooltip>
             </SpaceItem>
             <SpaceItem Class="file-manager-nav-breadcrumbs">
@@ -34,7 +35,7 @@
             </SpaceItem>
             <SpaceItem>
                 <Tooltip Title="New Folder" MouseEnterDelay="2">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.FolderAdd" OnClick="NewFolder" />
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.FolderAdd" OnClick="() => NewFolderModal.Open()" />
                 </Tooltip>
             </SpaceItem>
             <SpaceItem>
@@ -44,7 +45,7 @@
             </SpaceItem>
             <SpaceItem>
                 <Tooltip Title="Delete" MouseEnterDelay="2">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Delete" />
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Delete" OnClick="Delete" Disabled="@(Selected.Count() == 0)" />
                 </Tooltip>
             </SpaceItem>
         </Space>
@@ -109,6 +110,8 @@
      </GridRow>
 </div>
 
+<NewFolderModal @ref="NewFolderModal" OnFolderNameEntered="AddFolder" />
+
  @code {
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public string WorkingDirectory { get; set; }
@@ -124,6 +127,8 @@
 
     List<IFileManagerEntry> Entries { get; set; } = new List<IFileManagerEntry>();
     HashSet<FileManagerDirectory> Directories { get; set; } = new HashSet<FileManagerDirectory>();
+
+    NewFolderModal NewFolderModal;
 
     Dictionary<string, object> OnRow(RowData<IFileManagerEntry> row) => new()
     {
@@ -313,8 +318,47 @@
             ChangeDirectory(Path.Parent, true);
     }
 
-    void NewFolder()
+    void Refresh()
     {
-        
+        ChangeDirectory(Path, false);
+    }
+
+    void AddFolder(string name)
+    {
+        try
+        {
+            Directory.CreateDirectory(System.IO.Path.Combine(Path.Path, name));
+
+            Refresh();
+
+            MessageService.Success("Folder created!");
+        }
+        catch
+        {
+            MessageService.Error("Error creating folder!");
+        }
+    }
+
+    void Delete()
+    {
+        try
+        {
+            foreach (var entry in Selected)
+            {
+                if (entry is FileManagerDirectory)
+                    Directory.Delete(entry.Path);
+                else if (entry is FileManagerFile)
+                    File.Delete(entry.Path);
+            }
+
+            Selected = new List<IFileManagerEntry>();
+            MessageService.Success("Deleted!");
+        }
+        catch
+        {
+            MessageService.Error("Error deleting!");
+        }
+
+        Refresh();
     }
 }

@@ -52,5 +52,30 @@ namespace LANCommander.Controllers
 
             return Json("Done!");
         }
+
+        [HttpPost]
+        public async Task<IActionResult> File(IFormFile file, string path)
+        {
+            try
+            {
+                if (!Directory.Exists(path))
+                    return BadRequest("Destination path does not exist.");
+
+                path = Path.Combine(path, file.FileName);
+
+                using (var fileStream = System.IO.File.OpenWrite(path))
+                {
+                    await file.CopyToAsync(fileStream);
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "An error occurred while uploading the file");
+
+                return BadRequest("An error occurred while uploading the file.");
+            }
+        }
     }
 }

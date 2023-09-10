@@ -1,0 +1,42 @@
+﻿<Modal Title="Upload Files" Visible="@Visible" Draggable="true" DragInViewport="false" OnCancel="Close">
+    <Upload Action="/Upload/File" Name="file" Drag Multiple Data="Data" OnCompleted="OnCompleted">
+        <p class="ant-upload-drag-icon">
+            <Icon Type="@IconType.Outline.Upload" />
+        </p>
+        <p class="ant-upload-text">Click or Drag Files</p>
+    </Upload>
+</Modal>
+
+ @code {
+    [Parameter] public string Path { get; set; }
+    [Parameter] public EventCallback OnUploadCompleted { get; set; }
+
+    bool Visible = false;
+
+    Dictionary<string, object> Data = new Dictionary<string, object>();
+
+    protected override void OnParametersSet()
+    {
+        Data["Path"] = Path;
+    }
+
+    public void Open()
+    {
+        Visible = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        Visible = false;
+        StateHasChanged();
+    }
+
+    async Task OnCompleted()
+    {
+        Close();
+
+        if (OnUploadCompleted.HasDelegate)
+            await OnUploadCompleted.InvokeAsync();
+    }
+}

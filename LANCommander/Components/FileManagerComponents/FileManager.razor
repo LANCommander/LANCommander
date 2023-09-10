@@ -40,7 +40,7 @@
             </SpaceItem>
             <SpaceItem>
                 <Tooltip Title="Upload File" MouseEnterDelay="2">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Upload" />
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Upload" OnClick="() => UploadModal.Open()" />
                 </Tooltip>
             </SpaceItem>
             <SpaceItem>
@@ -111,6 +111,7 @@
 </div>
 
 <NewFolderModal @ref="NewFolderModal" OnFolderNameEntered="AddFolder" />
+<UploadModal @ref="UploadModal" Path="@Path.Path" OnUploadCompleted="() => Refresh()" />
 
  @code {
     [Parameter] public Guid ArchiveId { get; set; }
@@ -129,6 +130,7 @@
     HashSet<FileManagerDirectory> Directories { get; set; } = new HashSet<FileManagerDirectory>();
 
     NewFolderModal NewFolderModal;
+    UploadModal UploadModal;
 
     Dictionary<string, object> OnRow(RowData<IFileManagerEntry> row) => new()
     {

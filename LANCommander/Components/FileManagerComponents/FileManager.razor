@@ -188,7 +188,7 @@
         })
     };
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
             Source = FileManagerSource.FileSystem;

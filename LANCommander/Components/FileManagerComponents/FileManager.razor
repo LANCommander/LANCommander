@@ -125,7 +125,7 @@
                    HidePagination="true"
                    Loading="Entries == null"
                    OnRow="OnRow"
-                   @bind-SelectedRows="Selected"
+                   SelectedRowsChanged="SelectedChanged"
                    RowSelectable="EntrySelectable"
                    Size="@TableSize.Small">
                 <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" />

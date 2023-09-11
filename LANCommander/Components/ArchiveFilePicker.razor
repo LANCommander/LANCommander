@@ -56,7 +56,9 @@
         modalRef.OnOk = async (results) =>
         {
             if (!String.IsNullOrWhiteSpace(Prefix))
-                Value = "{InstallDir}/" + results.FirstOrDefault().Path;
+                Value = "{InstallDir}/" + results?.FirstOrDefault()?.Path;
+            else
+                Value = results?.FirstOrDefault()?.Path;
 
             if (ValueChanged.HasDelegate)
                 await ValueChanged.InvokeAsync(Value);

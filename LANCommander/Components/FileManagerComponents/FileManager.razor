@@ -452,6 +452,9 @@
 
     async Task AddFolder(string name)
     {
+        if (Source == FileManagerSource.Archive)
+            throw new NotImplementedException();
+
         try
         {
             Directory.CreateDirectory(System.IO.Path.Combine(Path.Path, name));
@@ -468,6 +471,9 @@
 
     async Task Delete()
     {
+        if (Source == FileManagerSource.Archive)
+            throw new NotImplementedException();
+
         try
         {
             foreach (var entry in Selected)

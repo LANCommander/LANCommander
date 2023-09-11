@@ -10,15 +10,17 @@ namespace LANCommander.Components.FileManagerComponents
 
         public void PopulateChildren(IEnumerable<ZipArchiveEntry> entries)
         {
-            var childPaths = entries.Where(e => e.FullName.StartsWith("/") && e.FullName.EndsWith('/'));
-            var directChildren = childPaths.Where(p => p.FullName != Path && p.FullName.Substring(Path.Length + 1).TrimEnd('/').Split('/').Length == 1);
+            var path = Path == "/" ? "" : Path;
+            var childPaths = entries.Where(e => e.FullName.EndsWith('/'));
+            var directChildren = childPaths.Where(p => p.FullName != path && p.FullName.StartsWith(path) && p.FullName.Substring(path.Length).TrimEnd('/').Split('/').Length == 1);
 
             foreach (var directChild in directChildren)
             {
                 var child = new FileManagerDirectory()
                 {
                     Path = directChild.FullName,
-                    Name = directChild.FullName.Substring(Path.Length).TrimEnd('/')
+                    Name = directChild.FullName.Substring(path.Length).TrimEnd('/'),
+                    Parent = this
                 };
 
                 child.PopulateChildren(entries);

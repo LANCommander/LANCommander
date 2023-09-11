@@ -323,7 +323,7 @@
         var entries = Directory.EnumerateFileSystemEntries(Path.Path);
         var separator = System.IO.Path.DirectorySeparatorChar;
 
-        foreach (var entry in Directory.EnumerateFileSystemEntries(Path.Path))
+        foreach (var entry in entries)
         {
             if (Directory.Exists(entry))
             {

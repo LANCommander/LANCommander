@@ -71,7 +71,7 @@
                         <Input @bind-Value="@context.SortTitle" />
                     </FormItem>
                     <FormItem Label="Icon">
-                        <ArchiveFilePicker @bind-Value="context.Icon" ArchiveId="@LatestArchiveId" AllowDirectories="true" />
+                        <FilePicker @bind-Value="context.Icon" ArchiveId="@LatestArchiveId" AllowDirectories="true" />
                     </FormItem>
                     <FormItem Label="Notes">
                         <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
@@ -161,7 +161,7 @@ else
     IEnumerable<Genre> Genres;
     IEnumerable<Data.Models.Tag> Tags;
 
-    ArchiveFilePickerDialog ArchiveFilePickerDialog;
+    FilePickerDialog ArchiveFilePickerDialog;
 
     Modal FileSelectorModal;
 
@@ -251,14 +251,14 @@ else
             OkText = "Select File"
         };
 
-        var browserOptions = new ArchiveFilePickerOptions()
+        var browserOptions = new FilePickerOptions()
         {
             ArchiveId = Game.Archives.FirstOrDefault().Id,
             Select = true,
             Multiple = false
         };
 
-        var modalRef = await ModalService.CreateModalAsync<ArchiveFilePickerDialog, ArchiveFilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
+        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 
         modalRef.OnOk = (results) =>
         {

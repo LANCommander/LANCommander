@@ -333,32 +333,40 @@
         {
             if (Directory.Exists(entry))
             {
-                var info = new DirectoryInfo(entry);
-                var directory = new FileManagerDirectory
+                try
                 {
-                    Path = entry,
-                    Name = entry.Substring(Path.Path.Length).TrimStart(separator),
-                    ModifiedOn = info.LastWriteTime,
-                    CreatedOn = info.CreationTime,
-                };
+                    var info = new DirectoryInfo(entry);
+                    var directory = new FileManagerDirectory
+                        {
+                            Path = entry,
+                            Name = entry.Substring(Path.Path.Length).TrimStart(separator),
+                            ModifiedOn = info.LastWriteTime,
+                            CreatedOn = info.CreationTime,
+                        };
 
-                if (EntryVisible.Invoke(directory))
-                    Entries.Add(directory);
+                    if (EntryVisible.Invoke(directory))
+                        Entries.Add(directory);
+                }
+                catch { }
             }
             else
             {
-                var info = new FileInfo(entry);
-                var file = new FileManagerFile
+                try
                 {
-                    Path = entry,
-                    Name = System.IO.Path.GetFileName(entry),
-                    ModifiedOn = info.LastWriteTime,
-                    CreatedOn = info.CreationTime,
-                    Size = info.Length
-                };
+                    var info = new FileInfo(entry);
+                    var file = new FileManagerFile
+                        {
+                            Path = entry,
+                            Name = System.IO.Path.GetFileName(entry),
+                            ModifiedOn = info.LastWriteTime,
+                            CreatedOn = info.CreationTime,
+                            Size = info.Length
+                        };
 
-                if (EntryVisible.Invoke(file))
-                    Entries.Add(file);
+                    if (EntryVisible.Invoke(file))
+                        Entries.Add(file);
+                }
+                catch { }
             }
         }
     }

@@ -476,11 +476,11 @@
             }
 
             Selected = new List<IFileManagerEntry>();
-            await MessageService.Success("Deleted!");
+            MessageService.Success("Deleted!");
         }
         catch
         {
-            await MessageService.Error("Error deleting!");
+            MessageService.Error("Error deleting!");
         }
 
         await Refresh();

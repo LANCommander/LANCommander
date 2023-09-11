@@ -10,7 +10,13 @@
     </SpaceItem>
     @if (ArchiveId != Guid.Empty) {
         <SpaceItem>
-            <Button OnClick="() => BrowseForFile()" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" Disabled="!ArchiveExists" />
+            <Button OnClick="BrowseForFile" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" Disabled="!ArchiveExists" />
+        </SpaceItem>
+    }
+    else if (!String.IsNullOrWhiteSpace(Root))
+    {
+        <SpaceItem>
+            <Button OnClick="BrowseForFile" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
         </SpaceItem>
     }
 </Space>
@@ -19,9 +25,10 @@
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
-    [Parameter] public string ArchiveBrowserTitle { get; set; } = "Choose File";
+    [Parameter] public string Title { get; set; } = "Choose File";
     [Parameter] public bool AllowDirectories { get; set; } = false;
     [Parameter] public string Prefix { get; set; }
+    [Parameter] public string Root { get; set; }
 
     bool ArchiveExists { get; set; } = false;
 
@@ -35,28 +42,29 @@
     {
         var modalOptions = new ModalOptions()
         {
-            Title = ArchiveBrowserTitle,
+            Title = Title,
             Maximizable = false,
             DefaultMaximized = true,
             Closable = true,
             OkText = "Select File",
-            WrapClassName = "archive-file-picker-dialog"
+            WrapClassName = "file-picker-dialog"
         };
 
-        var browserOptions = new ArchiveFilePickerOptions()
+        var browserOptions = new FilePickerOptions()
         {
             ArchiveId = ArchiveId,
+            Root = Root,
             Select = true,
             Multiple = false,
             AllowDirectories = AllowDirectories
         };
 
-        var modalRef = await ModalService.CreateModalAsync<ArchiveFilePickerDialog, ArchiveFilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
+        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 
         modalRef.OnOk = async (results) =>
         {
             if (!String.IsNullOrWhiteSpace(Prefix))
-                Value = "{InstallDir}/" + results?.FirstOrDefault()?.Path;
+                Value = Prefix + results?.FirstOrDefault()?.Path;
             else
                 Value = results?.FirstOrDefault()?.Path;
 

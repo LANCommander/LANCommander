@@ -12,7 +12,7 @@
                 <Input Type="text" @bind-Value="context.Name" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Path">
-                <ArchiveFilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
+                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Arguments">
                 <Input Type="text" @bind-Value="context.Arguments" />
@@ -101,14 +101,14 @@
                 OkText = "Select File"
             };
 
-        var browserOptions = new ArchiveFilePickerOptions()
+        var browserOptions = new FilePickerOptions()
         {
             ArchiveId = ArchiveId,
             Select = true,
             Multiple = false
         };
 
-        var modalRef = await ModalService.CreateModalAsync<ArchiveFilePickerDialog, ArchiveFilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
+        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 
         modalRef.OnOk = (results) =>
         {

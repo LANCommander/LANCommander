@@ -1,6 +1,8 @@
 ﻿@using AntDesign.TableModels;
+@using LANCommander.Components.FileManagerComponents
 @inject ArchiveService ArchiveService
 @inject IMessageService MessageService
+@namespace LANCommander.Components
 
 <div class="file-manager">
     <GridRow Class="file-manager-nav">
@@ -124,6 +126,7 @@
                    Loading="Entries == null"
                    OnRow="OnRow"
                    @bind-SelectedRows="Selected"
+                   RowSelectable="EntrySelectable"
                    Size="@TableSize.Small">
                 <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" />
                 <Column TData="string" Width="32">
@@ -158,6 +161,10 @@
     [Parameter] public FileManagerFeatures Features { get; set; } = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete;
     [Parameter] public IEnumerable<IFileManagerEntry> Selected { get; set; } = new List<IFileManagerEntry>();
     [Parameter] public EventCallback<IEnumerable<IFileManagerEntry>> SelectedChanged { get; set; }
+    [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
+    [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
+
+    FileManagerSource Source = FileManagerSource.FileSystem;
 
     FileManagerDirectory Path { get; set; }
 
@@ -184,16 +191,27 @@
     protected override async Task OnParametersSetAsync()
     {
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
-        {
-            Directories = GetDirectories(WorkingDirectory);
-        }
+            Source = FileManagerSource.FileSystem;
         else if (ArchiveId != Guid.Empty)
-        {
-            Directories = await GetArchiveDirectories(ArchiveId);
-        }
+            Source = FileManagerSource.Archive;
+
+        Directories = await GetDirectoriesAsync();
     }
 
-    HashSet<FileManagerDirectory> GetDirectories(string path)
+    async Task<HashSet<FileManagerDirectory>> GetDirectoriesAsync()
+    {
+        switch (Source)
+        {
+            case FileManagerSource.FileSystem:
+                return await GetFileSystemDirectoriesAsync(WorkingDirectory);
+            case FileManagerSource.Archive:
+                return await GetArchiveDirectoriesAsync(ArchiveId);
+        }
+
+        return new HashSet<FileManagerDirectory>();
+    }
+
+    async Task<HashSet<FileManagerDirectory>> GetFileSystemDirectoriesAsync(string path)
     {
         var paths = Directory.EnumerateDirectories(path, "*", new EnumerationOptions
         {
@@ -211,7 +229,7 @@
 
         root.PopulateChildren(paths);
 
-        ChangeDirectory(root, true);
+        await ChangeDirectory(root, true);
 
         return new HashSet<FileManagerDirectory>
         {
@@ -219,7 +237,7 @@
         };
     }
 
-    async Task<HashSet<FileManagerDirectory>> GetArchiveDirectories(Guid archiveId)
+    async Task<HashSet<FileManagerDirectory>> GetArchiveDirectoriesAsync(Guid archiveId)
     {
         var entries = await ArchiveService.GetContents(archiveId);
         var directories = new HashSet<FileManagerDirectory>();
@@ -233,7 +251,7 @@
 
         root.PopulateChildren(entries);
 
-        ChangeDirectory(root, true);
+        await ChangeDirectory(root, true);
 
         return new HashSet<FileManagerDirectory>
         {
@@ -251,14 +269,14 @@
             return entry.Name;
     }
 
-    void ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
+    async Task ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
     {
         if (Path != null && directory.Path != Path.Path)
             Past.Add(Path);
 
         Path = directory;
 
-        UpdateEntries();
+        await UpdateEntries();
         UpdateBreadcrumbs();
 
         if (clearFuture)
@@ -284,9 +302,24 @@
         }
     }
 
-    void UpdateEntries()
+    async Task UpdateEntries()
     {
         Entries.Clear();
+
+        switch (Source)
+        {
+            case FileManagerSource.FileSystem:
+                UpdateFileSystemEntries();
+                break;
+
+            case FileManagerSource.Archive:
+                await UpdateArchiveEntries();
+                break;
+        }
+    }
+
+    void UpdateFileSystemEntries()
+    {
         var entries = Directory.EnumerateFileSystemEntries(Path.Path);
         var separator = System.IO.Path.DirectorySeparatorChar;
 
@@ -295,27 +328,69 @@
             if (Directory.Exists(entry))
             {
                 var info = new DirectoryInfo(entry);
-
-                Entries.Add(new FileManagerDirectory
+                var directory = new FileManagerDirectory
                 {
                     Path = entry,
                     Name = entry.Substring(Path.Path.Length).TrimStart(separator),
                     ModifiedOn = info.LastWriteTime,
                     CreatedOn = info.CreationTime,
-                });
+                };
+
+                if (EntryVisible.Invoke(directory))
+                    Entries.Add(directory);
             }
             else
             {
                 var info = new FileInfo(entry);
-
-                Entries.Add(new FileManagerFile
+                var file = new FileManagerFile
                 {
                     Path = entry,
                     Name = System.IO.Path.GetFileName(entry),
                     ModifiedOn = info.LastWriteTime,
                     CreatedOn = info.CreationTime,
                     Size = info.Length
-                });
+                };
+
+                if (EntryVisible.Invoke(file))
+                    Entries.Add(file);
+            }
+        }
+    }
+
+    async Task UpdateArchiveEntries()
+    {
+        var entries = await ArchiveService.GetContents(ArchiveId);
+        var separator = '/';
+
+        foreach (var entry in entries)
+        {
+            if (entry.FullName.EndsWith(separator))
+            {
+                var directory = new FileManagerDirectory
+                {
+                    Path = entry.FullName,
+                    Name = entry.Name,
+                    ModifiedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
+                    CreatedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
+                    Size = entry.Length
+                };
+
+                if (EntryVisible.Invoke(directory))
+                    Entries.Add(directory);
+            }
+            else
+            {
+                var file = new FileManagerFile
+                {
+                    Path = entry.FullName,
+                    Name = entry.Name,
+                    ModifiedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
+                    CreatedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
+                    Size = entry.Length
+                };
+
+                if (EntryVisible.Invoke(file))
+                    Entries.Add(file);
             }
         }
     }
@@ -336,56 +411,56 @@
         Breadcrumbs.Reverse();
     }
 
-    void NavigateBack()
+    async Task NavigateBack()
     {
         if (Past.Count > 0)
         {
             Future.Add(Path);
-            ChangeDirectory(Past.Last(), false);
+            await ChangeDirectory(Past.Last(), false);
             Past = Past.Take(Past.Count - 1).ToList();
         }
     }
 
-    void NavigateForward()
+    async Task NavigateForward()
     {
         if (Future.Count > 0)
         {
             Past.Add(Path);
-            ChangeDirectory(Future.First(), false);
+            await ChangeDirectory(Future.First(), false);
             Future = Future.Skip(1).ToList();
         }
     }
 
-    void NavigateUp()
+    async Task NavigateUp()
     {
         if (Path.Parent != null)
-            ChangeDirectory(Path.Parent, true);
+            await ChangeDirectory(Path.Parent, true);
     }
 
-    void Refresh()
+    async Task Refresh()
     {
-        ChangeDirectory(Path, false);
+        await ChangeDirectory(Path, false);
 
         StateHasChanged();
     }
 
-    void AddFolder(string name)
+    async Task AddFolder(string name)
     {
         try
         {
             Directory.CreateDirectory(System.IO.Path.Combine(Path.Path, name));
 
-            Refresh();
+            await Refresh();
 
-            MessageService.Success("Folder created!");
+            await MessageService.Success("Folder created!");
         }
         catch
         {
-            MessageService.Error("Error creating folder!");
+            await MessageService.Error("Error creating folder!");
         }
     }
 
-    void Delete()
+    async Task Delete()
     {
         try
         {
@@ -398,13 +473,13 @@
             }
 
             Selected = new List<IFileManagerEntry>();
-            MessageService.Success("Deleted!");
+            await MessageService.Success("Deleted!");
         }
         catch
         {
-            MessageService.Error("Error deleting!");
+            await MessageService.Error("Error deleting!");
         }
 
-        Refresh();
+        await Refresh();
     }
 }

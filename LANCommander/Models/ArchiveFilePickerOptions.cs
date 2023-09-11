@@ -1,6 +1,6 @@
 ﻿namespace LANCommander.Models
 {
-    public class ArchiveBrowserOptions
+    public class ArchiveFilePickerOptions
     {
         public Guid ArchiveId { get; set; }
         public bool Select { get; set; }

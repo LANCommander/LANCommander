@@ -1,4 +1,5 @@
-﻿@using LANCommander.Models;
+﻿@using LANCommander.Components.FileManagerComponents;
+@using LANCommander.Models;
 @using System.IO.Compression;
 @inject ModalService ModalService
 @inject ArchiveService ArchiveService
@@ -20,6 +21,7 @@
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public string ArchiveBrowserTitle { get; set; } = "Choose File";
     [Parameter] public bool AllowDirectories { get; set; } = false;
+    [Parameter] public string Prefix { get; set; }
 
     bool ArchiveExists { get; set; } = false;
 
@@ -32,15 +34,16 @@
     private async void BrowseForFile()
     {
         var modalOptions = new ModalOptions()
-            {
-                Title = ArchiveBrowserTitle,
-                Maximizable = false,
-                DefaultMaximized = true,
-                Closable = true,
-                OkText = "Select File"
-            };
+        {
+            Title = ArchiveBrowserTitle,
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Select File",
+            WrapClassName = "archive-file-picker-dialog"
+        };
 
-        var browserOptions = new ArchiveBrowserOptions()
+        var browserOptions = new ArchiveFilePickerOptions()
         {
             ArchiveId = ArchiveId,
             Select = true,
@@ -48,11 +51,12 @@
             AllowDirectories = AllowDirectories
         };
 
-        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+        var modalRef = await ModalService.CreateModalAsync<ArchiveFilePickerDialog, ArchiveFilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 
         modalRef.OnOk = async (results) =>
         {
-            Value = "{InstallDir}/" + results.FirstOrDefault().FullName;
+            if (!String.IsNullOrWhiteSpace(Prefix))
+                Value = "{InstallDir}/" + results.FirstOrDefault().Path;
 
             if (ValueChanged.HasDelegate)
                 await ValueChanged.InvokeAsync(Value);

@@ -1,6 +1,7 @@
 ﻿@page "/Games/{id:guid}"
 @page "/Games/{id:guid}/{panel}"
 @page "/Games/Add"
+@using LANCommander.Components.FileManagerComponents;
 @using LANCommander.Models;
 @using LANCommander.Pages.Games.Components
 @using System.IO.Compression;
@@ -70,7 +71,7 @@
                         <Input @bind-Value="@context.SortTitle" />
                     </FormItem>
                     <FormItem Label="Icon">
-                        <InputArchiveFile @bind-Value="context.Icon" ArchiveId="@LatestArchiveId" AllowDirectories="true" />
+                        <ArchiveFilePicker @bind-Value="context.Icon" ArchiveId="@LatestArchiveId" AllowDirectories="true" />
                     </FormItem>
                     <FormItem Label="Notes">
                         <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
@@ -160,7 +161,7 @@ else
     IEnumerable<Genre> Genres;
     IEnumerable<Data.Models.Tag> Tags;
 
-    ArchiveBrowserDialog ArchiveBrowserDialog;
+    ArchiveFilePickerDialog ArchiveFilePickerDialog;
 
     Modal FileSelectorModal;
 
@@ -250,18 +251,18 @@ else
             OkText = "Select File"
         };
 
-        var browserOptions = new ArchiveBrowserOptions()
+        var browserOptions = new ArchiveFilePickerOptions()
         {
             ArchiveId = Game.Archives.FirstOrDefault().Id,
             Select = true,
             Multiple = false
         };
 
-        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+        var modalRef = await ModalService.CreateModalAsync<ArchiveFilePickerDialog, ArchiveFilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 
         modalRef.OnOk = (results) =>
         {
-            Game.Icon = results.FirstOrDefault().FullName;
+            Game.Icon = results.FirstOrDefault().Path;
             StateHasChanged();
             return Task.CompletedTask;
         };

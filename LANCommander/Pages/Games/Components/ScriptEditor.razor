@@ -1,4 +1,5 @@
-﻿@using LANCommander.Data.Enums;
+﻿@using LANCommander.Components.FileManagerComponents;
+@using LANCommander.Data.Enums;
 @using LANCommander.Extensions;
 @using LANCommander.Models
 @using LANCommander.Services
@@ -213,18 +214,18 @@
                 OkText = "Insert File Path"
             };
 
-        var browserOptions = new ArchiveBrowserOptions()
+        var browserOptions = new ArchiveFilePickerOptions()
             {
                 ArchiveId = ArchiveId,
                 Select = true,
                 Multiple = false
             };
 
-        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+        var modalRef = await ModalService.CreateModalAsync<ArchiveFilePickerDialog, ArchiveFilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 
         modalRef.OnOk = (results) =>
         {
-            var path = results.FirstOrDefault().FullName;
+            var path = results.FirstOrDefault().Path;
 
             Editor.Trigger("keyboard", "type", new
             {

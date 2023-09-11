@@ -287,18 +287,21 @@
 
     async Task ExpandTree(TreeEventArgs<FileManagerDirectory> args)
     {
-        var directory = (FileManagerDirectory)args.Node.DataItem;
-
-        foreach (var child in directory.Children)
+        if (Source == FileManagerSource.FileSystem)
         {
-            var paths = Directory.EnumerateDirectories(child.Path, "*", new EnumerationOptions
-            {
-                IgnoreInaccessible = true,
-                RecurseSubdirectories = true,
-                MaxRecursionDepth = 1
-            });
+            var directory = (FileManagerDirectory)args.Node.DataItem;
 
-            child.PopulateChildren(paths);
+            foreach (var child in directory.Children)
+            {
+                var paths = Directory.EnumerateDirectories(child.Path, "*", new EnumerationOptions
+                    {
+                        IgnoreInaccessible = true,
+                        RecurseSubdirectories = true,
+                        MaxRecursionDepth = 1
+                    });
+
+                child.PopulateChildren(paths);
+            }
         }
     }
 

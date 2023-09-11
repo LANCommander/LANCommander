@@ -79,10 +79,10 @@
                     <Tooltip Title="Delete" MouseEnterDelay="2">
                         <Popconfirm OnConfirm="Delete">
                             <TitleTemplate>
-                                Are you sure you want to delete the selected file@(Selected.Count() == 1 ? "" : "s")?
+                                Are you sure you want to delete the selected file@(Selected?.Count() == 1 ? "" : "s")?
                             </TitleTemplate>
                             <ChildContent>
-                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Delete" Disabled="@(Selected.Count() == 0)" />
+                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Delete" Disabled="@(Selected?.Count() == 0)" />
                             </ChildContent>
                         </Popconfirm>
                     </Tooltip>
@@ -166,7 +166,7 @@
 
     FileManagerSource Source = FileManagerSource.FileSystem;
 
-    FileManagerDirectory Path { get; set; }
+    FileManagerDirectory Path { get; set; } = new FileManagerDirectory();
 
     List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
     List<FileManagerDirectory> Future { get; set; } = new List<FileManagerDirectory>();

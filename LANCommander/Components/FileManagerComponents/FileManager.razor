@@ -312,7 +312,7 @@
         switch (Source)
         {
             case FileManagerSource.FileSystem:
-                UpdateFileSystemEntries();
+                await Task.Run(UpdateFileSystemEntries);
                 break;
 
             case FileManagerSource.Archive:

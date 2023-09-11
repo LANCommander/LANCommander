@@ -365,7 +365,7 @@
         var entries = await ArchiveService.GetContents(ArchiveId);
         var separator = '/';
 
-        foreach (var entry in entries)
+        foreach (var entry in entries.Where(e => e.FullName != Path.Path && e.FullName.StartsWith(Path.Path) && !e.FullName.Substring(Path.Path.Length).TrimEnd(separator).Contains(separator)))
         {
             if (entry.FullName.EndsWith(separator))
             {

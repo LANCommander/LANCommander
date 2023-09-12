@@ -2,6 +2,7 @@
 @page "/Servers/{id:guid}/{panel}"
 @page "/Servers/{id:guid}/{panel}/{logId}"
 @page "/Servers/Add"
+@using LANCommander.Components.FileManagerComponents;
 @using LANCommander.Pages.Servers.Components
 @inject GameService GameService
 @inject ServerService ServerService
@@ -72,13 +73,13 @@
                         </Select>
                     </FormItem>
                     <FormItem Label="Path">
-                        <Input @bind-Value="@context.Path" />
+                        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" />
                     </FormItem>
                     <FormItem Label="Arguments">
                         <Input @bind-Value="@context.Arguments" />
                     </FormItem>
                     <FormItem Label="Working Directory">
-                        <Input @bind-Value="@context.WorkingDirectory" />
+                        <FilePicker Root="@RootPath" Title="Choose Working Directory" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.WorkingDirectory" />
                     </FormItem>
                     <FormItem>
                         <LabelTemplate>
@@ -147,6 +148,8 @@
 
     IEnumerable<Game> Games = new List<Game>();
 
+    string RootPath;
+
     Server Server;
     Guid GameId;
 
@@ -157,8 +160,7 @@
         else
             Server = await ServerService.Get(Id);
 
-        if (String.IsNullOrWhiteSpace(Server.WorkingDirectory))
-            Server.WorkingDirectory = "C:\\";
+        RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
         if (Server.GameId.HasValue)
             GameId = Server.GameId.Value;

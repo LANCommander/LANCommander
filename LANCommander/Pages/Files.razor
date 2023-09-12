@@ -1,8 +1,8 @@
 ﻿@page "/Files"
 @using LANCommander.Components.FileManagerComponents
 
-<FileManager WorkingDirectory="C:\Games" />
+<FileManager WorkingDirectory="@RootPath" />
 
 @code {
-
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 }

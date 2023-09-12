@@ -271,7 +271,7 @@
 
     async Task ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
     {
-        if (Path != null && directory.Path != Path.Path)
+        if (Path != null && !String.IsNullOrWhiteSpace(Path.Path) && directory.Path != Path.Path && Past.LastOrDefault()?.Path != directory.Path)
             Past.Add(Path);
 
         Path = directory;

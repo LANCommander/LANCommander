@@ -1,5 +1,6 @@
 ﻿@page "/Files"
 @using LANCommander.Components.FileManagerComponents
+@attribute [Authorize(Roles = "Administrator")]
 
 <FileManager WorkingDirectory="@RootPath" />
 

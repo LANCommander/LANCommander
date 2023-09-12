@@ -29,6 +29,8 @@
     [Parameter] public bool AllowDirectories { get; set; } = false;
     [Parameter] public string Prefix { get; set; }
     [Parameter] public string Root { get; set; }
+    [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
+    [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
     bool ArchiveExists { get; set; } = false;
 
@@ -56,7 +58,8 @@
             Root = Root,
             Select = true,
             Multiple = false,
-            AllowDirectories = AllowDirectories
+            EntrySelectable = EntrySelectable,
+            EntryVisible = EntryVisible
         };
 
         var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);

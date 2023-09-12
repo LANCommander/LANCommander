@@ -29,24 +29,29 @@
         </main>
     </section>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/antv/g2plot/dist/g2plot.js"></script>
     <script src="~/_content/AntDesign/js/ant-design-blazor.js"></script>
     <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
     <script src="~/js/site.js"></script>
 
     <script>
-        $('input[type="checkbox"]').on('change', function() {
-            var checked = $(this).prop('checked');
+        var checkboxes = document.querySelectorAll('.ant-checkbox-input');
 
-            if (checked) {
-                $(this).parents('.ant-checkbox-wrapper').addClass('ant-checkbox-wrapper-checked');
-                $(this).parents('.ant-checkbox').addClass('ant-checkbox-checked');
+        function handleCheckboxChange(event) {
+            var checkbox = event.target;
+            var parentWrapper = checkbox.closest('.ant-checkbox-wrapper');
+
+            if (checkbox.checked) {
+                parentWrapper.classList.add('ant-checkbox-wrapper-checked');
+                parentWrapper.querySelector('.ant-checkbox').classList.add('ant-checkbox-checked');
+            } else {
+                parentWrapper.classList.remove('ant-checkbox-wrapper-checked');
+                parentWrapper.querySelector('.ant-checkbox').classList.remove('ant-checkbox-checked');
             }
-            else {
-                $(this).parents('.ant-checkbox-wrapper').removeClass('ant-checkbox-wrapper-checked');
-                $(this).parents('.ant-checkbox').removeClass('ant-checkbox-checked');
-            }
+        }
+
+        checkboxes.forEach(function (checkbox) {
+            checkbox.addEventListener('change', handleCheckboxChange);
         });
     </script>
 

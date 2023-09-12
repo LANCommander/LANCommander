@@ -166,6 +166,13 @@
     background: #141414;
 }
 
+[data-theme="Dark"] .file-manager .ant-tree-treenode:hover,
+[data-theme="Dark"] .file-manager .ant-tree-treenode:active,
+[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:hover,
+[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:active {
+    background: rgba(255, 255, 255, 0.03);
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

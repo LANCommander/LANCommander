@@ -148,7 +148,7 @@
 
     IEnumerable<Game> Games = new List<Game>();
 
-    string RootPath;
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     Server Server;
     Guid GameId;
@@ -159,8 +159,6 @@
             Server = new Server();
         else
             Server = await ServerService.Get(Id);
-
-        RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
         if (Server.GameId.HasValue)
             GameId = Server.GameId.Value;

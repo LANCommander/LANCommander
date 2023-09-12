@@ -1,0 +1,16 @@
+﻿@inherits FeedbackComponent<FilePickerOptions, IEnumerable<IFileManagerEntry>>
+@using System.IO.Compression;
+@using LANCommander.Components.FileManagerComponents;
+@using LANCommander.Models;
+
+<FileManager ArchiveId="@Options.ArchiveId" WorkingDirectory="@Options.Root" @bind-Selected="SelectedFiles" EntrySelectable="Options.EntrySelectable" EntryVisible="Options.EntryVisible" SelectMultiple="Options.Multiple" Features="@(FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Breadcrumbs)" />
+
+@code {
+
+    private IEnumerable<IFileManagerEntry> SelectedFiles { get; set; }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await base.OkCancelRefWithResult!.OnOk(SelectedFiles);
+    }
+}

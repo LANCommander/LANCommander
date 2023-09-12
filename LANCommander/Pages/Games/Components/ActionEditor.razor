@@ -1,4 +1,5 @@
-﻿@using LANCommander.Data.Models
+﻿@using LANCommander.Components.FileManagerComponents;
+@using LANCommander.Data.Models
 @using LANCommander.Extensions
 @using LANCommander.Models;
 @using System.IO.Compression;
@@ -11,7 +12,7 @@
                 <Input Type="text" @bind-Value="context.Name" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Path">
-                <InputArchiveFile @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
+                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Arguments">
                 <Input Type="text" @bind-Value="context.Arguments" />
@@ -100,18 +101,18 @@
                 OkText = "Select File"
             };
 
-        var browserOptions = new ArchiveBrowserOptions()
+        var browserOptions = new FilePickerOptions()
         {
             ArchiveId = ArchiveId,
             Select = true,
             Multiple = false
         };
 
-        var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, ArchiveBrowserOptions, IEnumerable<ZipArchiveEntry>>(modalOptions, browserOptions);
+        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 
         modalRef.OnOk = (results) =>
         {
-            action.Path = results.FirstOrDefault().FullName;
+            action.Path = results.FirstOrDefault().Path;
 
             var parts = action.Path.Split('/');
 

@@ -1,0 +1,34 @@
+﻿<Modal Title="New Folder" Visible="@Visible" Draggable="true" DragInViewport="false" OnOk="OnOk" OnCancel="Close">
+    <Input @bind-Value="@Name" />
+</Modal>
+
+@code {
+    [Parameter] public EventCallback<string> OnFolderNameEntered { get; set; }
+
+    bool Visible { get; set; } = false;
+    string Name { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Name = "";
+    }
+
+    public void Open()
+    {
+        Name = "";
+        Visible = true;
+    }
+
+    public void Close()
+    {
+        Visible = false;
+    }
+
+    async Task OnOk(MouseEventArgs e)
+    {
+        if (OnFolderNameEntered.HasDelegate)
+            await OnFolderNameEntered.InvokeAsync(Name);
+
+        Close();
+    }
+}

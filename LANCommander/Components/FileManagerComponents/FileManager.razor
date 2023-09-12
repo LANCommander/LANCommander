@@ -342,6 +342,7 @@
                             Name = entry.Substring(Path.Path.Length).TrimStart(separator),
                             ModifiedOn = info.LastWriteTime,
                             CreatedOn = info.CreationTime,
+                            Parent = Path
                         };
 
                     if (EntryVisible.Invoke(directory))
@@ -360,7 +361,8 @@
                             Name = System.IO.Path.GetFileName(entry),
                             ModifiedOn = info.LastWriteTime,
                             CreatedOn = info.CreationTime,
-                            Size = info.Length
+                            Size = info.Length,
+                            Parent = Path
                         };
 
                     if (EntryVisible.Invoke(file))
@@ -386,7 +388,8 @@
                     Name = entry.Name,
                     ModifiedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
                     CreatedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                    Size = entry.Length
+                    Size = entry.Length,
+                    Parent = Path
                 };
 
                 if (EntryVisible.Invoke(directory))
@@ -400,7 +403,8 @@
                     Name = entry.Name,
                     ModifiedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
                     CreatedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                    Size = entry.Length
+                    Size = entry.Length,
+                    Parent = Path
                 };
 
                 if (EntryVisible.Invoke(file))

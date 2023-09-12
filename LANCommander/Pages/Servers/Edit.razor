@@ -73,7 +73,7 @@
                         </Select>
                     </FormItem>
                     <FormItem Label="Path">
-                        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" />
+                        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="OnPathSelected" />
                     </FormItem>
                     <FormItem Label="Arguments">
                         <Input @bind-Value="@context.Arguments" />
@@ -191,6 +191,11 @@
         {
             await MessageService.Error("Could not save!");
         }
+    }
+
+    private void OnPathSelected(string path)
+    {
+        Server.WorkingDirectory = Path.GetDirectoryName(path);
     }
 
     private void NotifyServerAdded(object? sender, LocationChangedEventArgs e)

@@ -150,6 +150,10 @@
     height: calc(100vh - 55px - 53px);
 }
 
+.file-manager-selector-hidden .ant-radio-wrapper {
+    display: none;
+}
+
 [data-theme="Dark"] .file-manager,
 [data-theme="Dark"] .file-manager-list,
 [data-theme="Dark"] .file-picker-dialog .file-manager tbody tr {

@@ -128,7 +128,7 @@
                    SelectedRowsChanged="SelectedChanged"
                    RowSelectable="EntrySelectable"
                    Size="@TableSize.Small">
-                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" />
+                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
                 <Column TData="string" Width="32">
                     @if (context is FileManagerFile)
                     {

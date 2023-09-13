@@ -23,7 +23,9 @@ namespace LANCommander.Services
 
         public static string GetArchiveFileLocation(string objectKey)
         {
-            return $"Upload/{objectKey}".ToPath();
+            var settings = SettingService.GetSettings();
+
+            return Path.Combine(settings.Archives.StoragePath, objectKey);
         }
 
         public override Task Delete(Archive archive)

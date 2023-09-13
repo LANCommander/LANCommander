@@ -1,0 +1,90 @@
+﻿@page "/Settings/DHCP"
+@page "/Settings/DHCP/Configuration"
+@using LANCommander.Models;
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject DHCPService DHCPService
+@inject IMessageService MessageService
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="DHCP Server" />
+
+<div style="padding: 0 24px;">
+    <Form @ref="Form" Model="Settings" Layout="@FormLayout.Vertical" ValidateMode="FormValidateMode.Rules" ValidateOnChange="true">
+        <FormItem Label="Enable">
+            <Switch @bind-Checked="context.DHCPServer.Enabled" />
+        </FormItem>
+
+        <FormItem Label="Network Interface">
+            <NetworkInterfacePicker @bind-Value="context.DHCPServer.NetworkInterface" />
+        </FormItem>
+
+        <FormItem Label="Subnet Mask" Rules="@(new FormValidationRule[] { IPAddressValidationRule })">
+            <Input @bind-Value="Settings.DHCPServer.SubnetMask" />
+        </FormItem>
+
+        <FormItem Label="Range Start" Rules="@(new FormValidationRule[] { IPAddressValidationRule })">
+            <Input @bind-Value="Settings.DHCPServer.Network" />
+        </FormItem>
+
+        <FormItem Label="Range Start" Rules="@(new FormValidationRule[] { IPAddressValidationRule })">
+            <Input @bind-Value="Settings.DHCPServer.RangeStart" />
+        </FormItem>
+
+        <FormItem Label="Range End" Rules="@(new FormValidationRule[] { IPAddressValidationRule })">
+            <Input @bind-Value="Settings.DHCPServer.RangeEnd" />
+        </FormItem>
+
+        <FormItem Label="Default Gateway" Rules="@(new FormValidationRule[] { IPAddressValidationRule })">
+            <Input @bind-Value="Settings.DHCPServer.DefaultGateway" />
+        </FormItem>
+
+        <FormItem Label="Server Identifier" Rules="@(new FormValidationRule[] { IPAddressValidationRule })">
+            <Input @bind-Value="Settings.DHCPServer.ServerIdentifier" />
+        </FormItem>
+
+        <FormItem Label="Domain">
+            <Input @bind-Value="Settings.DHCPServer.Domain" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    LANCommanderSettings Settings;
+
+    Form<LANCommanderSettings> Form;
+
+    FormValidationRule IPAddressValidationRule = new FormValidationRule
+    {
+        Type = FormFieldType.Regexp,
+        Pattern = "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$",
+        Message = "Not a valid IP address"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    private void Save()
+    {
+        try
+        {
+            if (Form.Validate())
+            {
+                SettingService.SaveSettings(Settings);
+                MessageService.Success("Settings saved!");
+
+                DHCPService.Init();
+            }
+        }
+        catch
+        {
+            MessageService.Error("An unknown error occurred.");
+        }
+    }
+}

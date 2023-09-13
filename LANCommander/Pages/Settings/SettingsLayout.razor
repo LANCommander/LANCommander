@@ -10,6 +10,10 @@
             <MenuItem RouterLink="/Settings/Authentication">Authentication</MenuItem>
             <MenuItem RouterLink="/Settings/Archives">Archives</MenuItem>
             <MenuItem RouterLink="/Settings/IPXRelay">IPX Relay</MenuItem>
+            <SubMenu Key="DHCP" Title="DHCP">
+                <MenuItem RouterLink="/Settings/DHCP/Configuration">Configuration</MenuItem>
+                <MenuItem RouterLink="/Settings/DHCP/Leases">Leases</MenuItem>
+            </SubMenu>
             <MenuItem RouterLink="/Settings/Tools" RouterMatch="@NavLinkMatch.Prefix">Tools</MenuItem>
         </Menu>
     </Sider>

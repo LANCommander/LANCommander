@@ -173,6 +173,33 @@
     background: rgba(255, 255, 255, 0.03);
 }
 
+.network-interfaces.ant-radio-group {
+    width: 100%;
+}
+
+.network-interfaces .ant-collapse-header .anticon {
+    font-size: 32px;
+    margin-right: 8px;
+}
+
+.vertical-table {
+    display: table;
+}
+
+.vertical-table-row {
+    display: table-row;
+}
+
+.vertical-table-th {
+    display: table-cell;
+    font-weight: bold;
+    padding-right: 16px;
+}
+
+.vertical-table-td {
+    display: table-cell;
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

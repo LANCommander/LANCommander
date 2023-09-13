@@ -1,4 +1,6 @@
-﻿namespace LANCommander.Models
+﻿using DotNetProjects.DhcpServer;
+
+namespace LANCommander.Models
 {
     public enum LANCommanderTheme
     {
@@ -18,6 +20,7 @@
         public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
+        public LANCommanderDHCPServerSettings DHCPServer { get; set; } = new LANCommanderDHCPServerSettings();
     }
 
     public class LANCommanderAuthenticationSettings
@@ -43,5 +46,20 @@
         public bool Enabled { get; set; } = false;
         public int Port { get; set; } = 213;
         public bool Logging { get; set; } = false;
+    }
+
+    public class LANCommanderDHCPServerSettings
+    {
+        public bool Enabled { get; set; } = false;
+        public string NetworkInterface { get; set; }
+        public string SubnetMask { get; set; } = "255.255.255.0";
+        public string Network { get; set; } = "10.0.0.0";
+        public string RangeStart { get; set; } = "10.0.0.30";
+        public string RangeEnd { get; set; } = "10.0.0.254";
+        public string Domain { get; set; } = "LANCommander";
+        public string ServerIdentifier { get; set; } = "10.0.0.1";
+        public string DefaultGateway = "10.0.0.1";
+        public string[] DnsServers = new string[] { "10.0.0.1" };
+        public NetworkRoute[] StaticRoutes;
     }
 }

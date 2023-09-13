@@ -123,5 +123,7 @@ namespace LANCommander.Data
         public DbSet<Server>? Servers { get; set; }
 
         public DbSet<ServerConsole>? ServerConsoles { get; set; }
+
+        public DbSet<DHCPLease>? DHCPLeases { get; set; }
     }
 }

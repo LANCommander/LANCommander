@@ -1,0 +1,70 @@
+﻿@using System.Net.NetworkInformation
+
+<RadioGroup @bind-Value="Value" Class="network-interfaces" OnChange="ValueChanged">
+    <Collapse Accordion="true">
+        @foreach (var nic in NetworkInterfaces)
+        {
+            <Panel Key="@nic.Id" ShowArrow="false">
+                <HeaderTemplate>
+                    <Space>
+                        <SpaceItem>
+                            <Radio Value="@nic.Id" Checked="Value == nic.Id" />
+                        </SpaceItem>
+                        <SpaceItem>
+                            @switch (nic.NetworkInterfaceType)
+                            {
+                                case NetworkInterfaceType.Wireless80211:
+                                case NetworkInterfaceType.Wwanpp:
+                                case NetworkInterfaceType.Wwanpp2:
+                                case NetworkInterfaceType.Wman:
+                                    <Icon Type="@IconType.Outline.Wifi" />
+                                    break;
+
+                                case NetworkInterfaceType.Loopback:
+                                    <Icon Type="@IconType.Outline.Api" />
+                                    break;
+
+                                default:
+                                    <Icon Type="@IconType.Outline.Partition" />
+                                    break;
+                            }
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Text Strong>@nic.Name</Text>
+                            <br />
+                            <Text>@nic.Description</Text>
+                        </SpaceItem>
+                    </Space>
+
+                </HeaderTemplate>
+                <ChildContent>
+                    <div class="vertical-table">
+                        <div class="vertical-table-row">
+                            <div class="vertical-table-th">Media state:</div>
+                            <div class="vertical-table-td">@nic.OperationalStatus</div>
+                        </div>
+                        <div class="vertical-table-row">
+                            <div class="vertical-table-th">Bytes sent:</div>
+                            <div class="vertical-table-td">@ByteSizeLib.ByteSize.FromBytes(nic.GetIPStatistics().BytesSent).ToString()</div>
+                        </div>
+                        <div class="vertical-table-row">
+                            <div class="vertical-table-th">Bytes received:</div>
+                            <div class="vertical-table-td">@ByteSizeLib.ByteSize.FromBytes(nic.GetIPStatistics().BytesReceived).ToString()</div>
+                        </div>
+                        <div class="vertical-table-row">
+                            <div class="vertical-table-th">Link speed:</div>
+                            <div class="vertical-table-td">@(nic.Speed / 1000000) (Mbps)</div>
+                        </div>
+                    </div>
+                </ChildContent>
+            </Panel>
+        }
+    </Collapse>
+</RadioGroup>
+
+@code {
+    [Parameter] public string Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    IEnumerable<NetworkInterface> NetworkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+}

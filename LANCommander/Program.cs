@@ -127,6 +127,7 @@ builder.Services.AddScoped<GameSaveService>();
 
 builder.Services.AddSingleton<ServerProcessService>();
 builder.Services.AddSingleton<IPXRelayService>();
+builder.Services.AddSingleton<DHCPService>();
 
 if (settings.Beacon)
 {

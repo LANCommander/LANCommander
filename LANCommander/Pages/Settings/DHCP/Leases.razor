@@ -1,0 +1,43 @@
+﻿@page "/Settings/DHCP/Leases"
+@using LANCommander.Models;
+@using System.Net;
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject DHCPService DHCPService
+@inject IMessageService MessageService
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="DHCP Leases" />
+
+<div style="padding: 0 24px;">
+    <Table TItem="DHCPLease" DataSource="@DHCPLeases" Loading="@Loading" PageSize="50">
+        <PropertyColumn Property="l => l.IPAddress">
+            @(new IPAddress(context.IPAddress))
+        </PropertyColumn>
+        <PropertyColumn Property="l => l.MACAddress">
+            @Convert.ToHexString(context.MACAddress)
+        </PropertyColumn>
+        <PropertyColumn Property="l => l.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    </Table>
+</div>
+
+ @code {
+    ICollection<DHCPLease> DHCPLeases;
+
+    bool Loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //DHCPLeases = await DHCPService.Get();
+        Loading = false;
+    }
+
+    async Task Release(DHCPLease lease)
+    {
+        //await DHCPService.Delete(lease);
+
+        DHCPLeases.Remove(lease);
+
+        StateHasChanged();
+    }
+}

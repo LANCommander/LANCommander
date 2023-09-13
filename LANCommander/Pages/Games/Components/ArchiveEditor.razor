@@ -95,7 +95,9 @@
 
         await LoadData();
 
-        if (lastArchive != null)
+        var settings = SettingService.GetSettings();
+
+        if (lastArchive != null && settings.Archives.EnablePatching)
             BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
     }
 

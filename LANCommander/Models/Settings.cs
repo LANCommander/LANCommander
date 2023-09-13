@@ -16,6 +16,7 @@
         public LANCommanderTheme Theme { get; set; } = LANCommanderTheme.Light;
 
         public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();
+        public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
     }
 
@@ -29,6 +30,11 @@
         public bool PasswordRequireUppercase { get; set; } = false;
         public bool PasswordRequireDigit { get; set; } = true;
         public int PasswordRequiredLength { get; set; } = 8;
+    }
+
+    public class LANCommanderArchiveSettings
+    {
+        public bool EnablePatching { get; set; } = false;
     }
 
     public class LANCommanderIPXRelaySettings

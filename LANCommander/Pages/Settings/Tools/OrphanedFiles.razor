@@ -34,6 +34,8 @@
     ICollection<OrphanedFile> Orphans = new List<OrphanedFile>();
     bool Loading = true;
 
+    private readonly LANCommanderSettings Settings = SettingService.GetSettings();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -47,7 +49,7 @@
 
         var archives = await ArchiveService.Get();
         var archiveFiles = archives.Select(a => ArchiveService.GetArchiveFileLocation(a));
-        var files = Directory.GetFiles("Upload");
+        var files = Directory.GetFiles(Settings.Archives.StoragePath);
 
         foreach (var file in files.Where(f => !archiveFiles.Contains(f)))
         {

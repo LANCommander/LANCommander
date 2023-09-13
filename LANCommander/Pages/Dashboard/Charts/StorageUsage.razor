@@ -32,12 +32,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var settings = SettingService.GetSettings();
         var drives = DriveInfo.GetDrives();
         var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
         var totalStorageSize = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.TotalSize);
         var totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
-        var totalUploadDirectorySize = new DirectoryInfo("Upload").EnumerateFiles().Sum(f => f.Length);
+        var totalUploadDirectorySize = new DirectoryInfo(settings.Archives.StoragePath).EnumerateFiles().Sum(f => f.Length);
         var totalSaveDirectorySize = new DirectoryInfo("Saves").EnumerateFiles().Sum(f => f.Length);
 
         Data = new object[]

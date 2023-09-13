@@ -15,6 +15,7 @@ namespace LANCommander.Controllers.Api
     public class GamesController : ControllerBase
     {
         private readonly GameService GameService;
+        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public GamesController(GameService gameService)
         {
@@ -59,7 +60,7 @@ namespace LANCommander.Controllers.Api
 
             var archive = game.Archives.OrderByDescending(a => a.CreatedOn).First();
 
-            var filename = Path.Combine("Upload", archive.ObjectKey);
+            var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
 
             if (!System.IO.File.Exists(filename))
                 return NotFound();

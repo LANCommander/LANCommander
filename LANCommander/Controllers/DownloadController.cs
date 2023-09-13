@@ -12,6 +12,7 @@ namespace LANCommander.Controllers
     public class DownloadController : Controller
     {
         private readonly ArchiveService ArchiveService;
+        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public DownloadController(ArchiveService archiveService)
         {
@@ -25,7 +26,7 @@ namespace LANCommander.Controllers
             if (archive == null)
                 return NotFound();
 
-            var filename = Path.Combine("Upload", archive.ObjectKey);
+            var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
 
             if (!System.IO.File.Exists(filename))
                 return NotFound();

@@ -184,8 +184,8 @@ app.UseEndpoints(endpoints =>
 });
 
 Logger.Debug("Ensuring required directories exist");
-if (!Directory.Exists("Upload"))
-    Directory.CreateDirectory("Upload");
+if (!Directory.Exists(settings.Archives.StoragePath))
+    Directory.CreateDirectory(settings.Archives.StoragePath);
 
 if (!Directory.Exists("Icon"))
     Directory.CreateDirectory("Icon");

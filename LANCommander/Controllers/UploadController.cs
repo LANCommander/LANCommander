@@ -1,4 +1,5 @@
 ﻿using LANCommander.Models;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -10,20 +11,19 @@ namespace LANCommander.Controllers
     public class UploadController : Controller
     {
         protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
-        private const string UploadDirectory = "Upload";
+        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public JsonResult Init()
         {
             var key = Guid.NewGuid().ToString();
 
-            if (!Directory.Exists(UploadDirectory))
-                Directory.CreateDirectory(UploadDirectory);
+            if (!Directory.Exists(Settings.Archives.StoragePath))
+                Directory.CreateDirectory(Settings.Archives.StoragePath);
 
-            if (!System.IO.File.Exists(Path.Combine(UploadDirectory, key)))
-                System.IO.File.Create(Path.Combine(UploadDirectory, key)).Close();
+            if (!System.IO.File.Exists(Path.Combine(Settings.Archives.StoragePath, key)))
+                System.IO.File.Create(Path.Combine(Settings.Archives.StoragePath, key)).Close();
             else
-                System.IO.File.Delete(Path.Combine(UploadDirectory, key));
+                System.IO.File.Delete(Path.Combine(Settings.Archives.StoragePath, key));
 
             return Json(new
             {
@@ -33,7 +33,7 @@ namespace LANCommander.Controllers
 
         public async Task<IActionResult> Chunk([FromForm] ChunkUpload chunk)
         {
-            var filePath = Path.Combine(UploadDirectory, chunk.Key.ToString());
+            var filePath = Path.Combine(Settings.Archives.StoragePath, chunk.Key.ToString());
 
             if (!System.IO.File.Exists(filePath))
                 return BadRequest("Destination file not initialized.");

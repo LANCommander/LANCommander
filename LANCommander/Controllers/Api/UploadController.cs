@@ -1,4 +1,5 @@
 ﻿using LANCommander.Models;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,18 +9,18 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class UploadController : ControllerBase
     {
-        private const string UploadDirectory = "Upload";
+        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         [HttpPost("Init")]
         public string Init()
         {
             var key = Guid.NewGuid().ToString();
 
-            if (!Directory.Exists(UploadDirectory))
-                Directory.CreateDirectory(UploadDirectory);
+            if (!Directory.Exists(Settings.Archives.StoragePath))
+                Directory.CreateDirectory(Settings.Archives.StoragePath);
 
-            if (!System.IO.File.Exists(Path.Combine(UploadDirectory, key)))
-                System.IO.File.Create(Path.Combine(UploadDirectory, key)).Close();
+            if (!System.IO.File.Exists(Path.Combine(Settings.Archives.StoragePath, key)))
+                System.IO.File.Create(Path.Combine(Settings.Archives.StoragePath, key)).Close();
 
             return key;
         }
@@ -27,7 +28,7 @@ namespace LANCommander.Controllers.Api
         [HttpPost("Chunk")]
         public async Task Chunk([FromForm] ChunkUpload chunk)
         {
-            var filePath = Path.Combine(UploadDirectory, chunk.Key.ToString());
+            var filePath = Path.Combine(Settings.Archives.StoragePath, chunk.Key.ToString());
 
             if (!System.IO.File.Exists(filePath))
                 throw new Exception("Destination file not initialized.");

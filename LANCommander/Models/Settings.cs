@@ -35,6 +35,7 @@
     public class LANCommanderArchiveSettings
     {
         public bool EnablePatching { get; set; } = false;
+        public string StoragePath { get; set; } = "Uploads";
     }
 
     public class LANCommanderIPXRelaySettings

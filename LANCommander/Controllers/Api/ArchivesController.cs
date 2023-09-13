@@ -1,6 +1,8 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
+using LANCommander.Models;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +14,8 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class ArchivesController : ControllerBase
     {
-        private DatabaseContext Context;
+        private readonly DatabaseContext Context;
+        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public ArchivesController(DatabaseContext context)
         {
@@ -47,7 +50,7 @@ namespace LANCommander.Controllers.Api
                 if (archive == null)
                     return NotFound();
 
-                var filename = Path.Combine("Upload", archive.ObjectKey);
+                var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
 
                 if (!System.IO.File.Exists(filename))
                     return NotFound();

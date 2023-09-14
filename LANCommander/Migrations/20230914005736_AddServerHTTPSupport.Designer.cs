@@ -3,6 +3,7 @@ using System;
 using LANCommander.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230914005736_AddServerHTTPSupport")]
+    partial class AddServerHTTPSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -266,41 +269,6 @@ namespace LANCommander.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("Companies");
-                });
-
-            modelBuilder.Entity("LANCommander.Data.Models.DHCPLease", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("CreatedById")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedOn")
-                        .HasColumnType("TEXT");
-
-                    b.Property<byte[]>("IPAddress")
-                        .IsRequired()
-                        .HasColumnType("BLOB");
-
-                    b.Property<byte[]>("MACAddress")
-                        .IsRequired()
-                        .HasColumnType("BLOB");
-
-                    b.Property<Guid?>("UpdatedById")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedOn")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedById");
-
-                    b.HasIndex("UpdatedById");
-
-                    b.ToTable("DHCPLeases");
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Game", b =>
@@ -1148,21 +1116,6 @@ namespace LANCommander.Migrations
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Company", b =>
-                {
-                    b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById");
-
-                    b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
-                        .WithMany()
-                        .HasForeignKey("UpdatedById");
-
-                    b.Navigation("CreatedBy");
-
-                    b.Navigation("UpdatedBy");
-                });
-
-            modelBuilder.Entity("LANCommander.Data.Models.DHCPLease", b =>
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()

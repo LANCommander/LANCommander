@@ -14,7 +14,7 @@
     <Sider Width="200">
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
             <MenuItem RouterLink="@($"/Servers/{Server.Id}/General")">General</MenuItem>
-
+            <MenuItem RouterLink="@($"/Servers/{Server.Id}/HTTP")">HTTP</MenuItem>
             @if (Server != null && Server.Id != Guid.Empty)
             {
                 <MenuItem RouterLink="@($"/Servers/{Server.Id}/Consoles")">Consoles</MenuItem>
@@ -109,6 +109,23 @@
                             }
                         </GridCol>
                     </GridRow>
+
+                    <FormItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+                    </FormItem>
+                </Form>
+            }
+
+            @if (Panel == "HTTP")
+            {
+                <Form Model="@Server" Layout="@FormLayout.Vertical">
+                    <FormItem Label="Enable HTTP">
+                        <Switch @bind-Checked="context.EnableHTTP" />
+                    </FormItem>
+
+                    <FormItem Label="Root Path">
+                        <FilePicker Root="@RootPath" Title="Choose Root Path" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.HTTPRootPath" />
+                    </FormItem>
 
                     <FormItem>
                         <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>

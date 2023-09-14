@@ -191,8 +191,8 @@ if (!Directory.Exists(settings.Archives.StoragePath))
 if (!Directory.Exists("Icon"))
     Directory.CreateDirectory("Icon");
 
-if (!Directory.Exists("Saves"))
-    Directory.CreateDirectory("Saves");
+if (!Directory.Exists(settings.UserSaves.StoragePath))
+    Directory.CreateDirectory(settings.UserSaves.StoragePath);
 
 if (!Directory.Exists("Snippets"))
     Directory.CreateDirectory("Snippets");

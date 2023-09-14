@@ -18,6 +18,7 @@ namespace LANCommander.Models
         public LANCommanderTheme Theme { get; set; } = LANCommanderTheme.Light;
 
         public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();
+        public LANCommanderUserSaveSettings UserSaves { get; set; } = new LANCommanderUserSaveSettings();
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
         public LANCommanderDHCPServerSettings DHCPServer { get; set; } = new LANCommanderDHCPServerSettings();
@@ -33,6 +34,12 @@ namespace LANCommander.Models
         public bool PasswordRequireUppercase { get; set; } = false;
         public bool PasswordRequireDigit { get; set; } = true;
         public int PasswordRequiredLength { get; set; } = 8;
+    }
+
+    public class LANCommanderUserSaveSettings
+    {
+        public string StoragePath { get; set; } = "Saves";
+        public int MaxSize { get; set; } = 25;
     }
 
     public class LANCommanderArchiveSettings

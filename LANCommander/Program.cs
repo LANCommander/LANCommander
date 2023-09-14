@@ -22,6 +22,17 @@ Logger.Debug("Loading settings");
 var settings = SettingService.GetSettings(true);
 Logger.Debug("Loaded!");
 
+#region Validate Settings
+Logger.Debug("Validating settings");
+if (settings?.Authentication?.TokenSecret?.Length < 16)
+{
+    Logger.Debug("JWT token secret is too short. Regenerating...");
+    settings.Authentication.TokenSecret = Guid.NewGuid().ToString();
+    SettingService.SaveSettings(settings);
+}
+Logger.Debug("Done validating settings");
+#endregion
+
 Logger.Debug("Configuring MVC and Blazor");
 builder.Services.AddMvc(options => options.EnableEndpointRouting = false);
 builder.Services.AddRazorPages();

@@ -18,12 +18,14 @@ namespace LANCommander.Controllers.Api
         private readonly GameSaveService GameSaveService;
         private readonly GameService GameService;
         private readonly UserManager<User> UserManager;
+        private readonly LANCommanderSettings Settings;
 
         public GameSavesController(GameSaveService gameSaveService, GameService gameService, UserManager<User> userManager)
         {
             GameSaveService = gameSaveService;
             GameService = gameService;
             UserManager = userManager;
+            Settings = SettingService.GetSettings();
         }
 
         [HttpGet("{id}")]
@@ -65,7 +67,7 @@ namespace LANCommander.Controllers.Api
         public async Task<IActionResult> Upload(Guid id, [FromForm] SaveUpload save)
         {
             // Arbitrary file size limit of 25MB
-            if (save.File.Length > (ByteSizeLib.ByteSize.BytesInMebiByte * 25))
+            if (save.File.Length > (ByteSizeLib.ByteSize.BytesInMebiByte * Settings.UserSaves.MaxSize))
                 return BadRequest("Save file archive is too large");
 
             var game = await GameService.Get(id);

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using LANCommander.Services;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace LANCommander.Data.Models
@@ -19,7 +20,9 @@ namespace LANCommander.Data.Models
 
         public string GetUploadPath()
         {
-            return Path.Combine("Saves", UserId.ToString(), GameId.ToString(), Id.ToString());
+            var settings = SettingService.GetSettings();
+
+            return Path.Combine(settings.UserSaves.StoragePath, UserId.ToString(), GameId.ToString(), Id.ToString());
         }
     }
 }

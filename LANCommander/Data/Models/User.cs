@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using LANCommander.Services;
+using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
@@ -53,7 +54,9 @@ namespace LANCommander.Data.Models
 
         public string GetGameSaveUploadPath()
         {
-            return Path.Combine("Saves", Id.ToString());
+            var settings = SettingService.GetSettings();
+
+            return Path.Combine(settings.UserSaves.StoragePath, Id.ToString());
         }
     }
 }

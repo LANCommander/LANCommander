@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using NLog;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -35,6 +36,8 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class AuthController : ControllerBase
     {
+        protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
         private readonly UserManager<User> UserManager;
         private readonly IUserStore<User> UserStore;
         private readonly RoleManager<Role> RoleManager;
@@ -57,10 +60,14 @@ namespace LANCommander.Controllers.Api
             {
                 var token = await Login(user, model.Password);
 
+                Logger.Debug("Successfully logged in user {UserName}", user.UserName);
+
                 return Ok(token);
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Error(ex, "An error occurred while trying to log in {UserName}", model.UserName);
+
                 return Unauthorized();
             }
         }
@@ -80,6 +87,7 @@ namespace LANCommander.Controllers.Api
         {
             if (token == null)
             {
+                Logger.Debug("Null token passed when trying to refresh");
                 return BadRequest("Invalid client request");
             }
 
@@ -87,6 +95,7 @@ namespace LANCommander.Controllers.Api
 
             if (principal == null)
             {
+                Logger.Debug("Invalid access token or refresh token");
                 return BadRequest("Invalid access token or refresh token");
             }
 
@@ -94,6 +103,7 @@ namespace LANCommander.Controllers.Api
 
             if (user == null || user.RefreshToken != token.RefreshToken || user.RefreshTokenExpiration <= DateTime.Now)
             {
+                Logger.Debug("Invalid access token or refresh token for user {UserName}", principal.Identity.Name);
                 return BadRequest("Invalid access token or refresh token");
             }
 
@@ -103,6 +113,8 @@ namespace LANCommander.Controllers.Api
             user.RefreshToken = newRefreshToken;
 
             await UserManager.UpdateAsync(user);
+
+            Logger.Debug("Successfully refreshed token for user {UserName}", user.UserName);
 
             return Ok(new
             {
@@ -118,10 +130,14 @@ namespace LANCommander.Controllers.Api
             var user = await UserManager.FindByNameAsync(model.UserName);
 
             if (user != null)
+            {
+                Logger.Debug("Cannot register user with username {UserName}, already exists", model.UserName);
+
                 return Unauthorized(new
                 {
                     Message = "Username is unavailable"
                 });
+            }
 
             user = new User();
 
@@ -135,10 +151,13 @@ namespace LANCommander.Controllers.Api
                 {
                     var token = await Login(user, model.Password);
 
+                    Logger.Debug("Successfully registered user {UserName}", user.UserName);
+
                     return Ok(token);
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Logger.Error(ex, "Could not register user {UserName}", user.UserName);
                     return BadRequest(new
                     {
                         Message = "An unknown error occurred"
@@ -156,6 +175,8 @@ namespace LANCommander.Controllers.Api
         {
             if (user != null && await UserManager.CheckPasswordAsync(user, password))
             {
+                Logger.Debug("Password check for user {UserName} was successful", user.UserName);
+
                 if (Settings.Authentication.RequireApproval && !user.Approved)
                     throw new Exception("Account must be approved by an administrator");
 
@@ -171,6 +192,8 @@ namespace LANCommander.Controllers.Api
                 {
                     authClaims.Add(new Claim(ClaimTypes.Role, userRole));
                 }
+
+                Logger.Debug("Generating authentication token for user {UserName}", user.UserName);
 
                 var token = GetToken(authClaims);
                 var refreshToken = GenerateRefreshToken();

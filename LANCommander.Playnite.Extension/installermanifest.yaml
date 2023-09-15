@@ -1,8 +1,8 @@
 AddonId: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc
 Packages:
-  - Version: 0.1.1
+  - Version: 0.1.2
     RequiredApiVersion: 6.0.0
-    ReleaseDate: 2023-09-14
-    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.1.1/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc-v0.1.1.pext
+    ReleaseDate: 2023-09-15
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.1.2/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc-v0.1.2.pext
     Changelog:
       - Initial submission to Playnite addon database

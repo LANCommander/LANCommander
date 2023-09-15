@@ -87,10 +87,17 @@ namespace LANCommander.PlaynitePlugin
         {
             var gameMetadata = new List<GameMetadata>();
 
-            while (!ValidateConnection())
+            if (!ValidateConnection())
             {
                 Logger.Trace("Authentication invalid, showing auth window...");
                 ShowAuthenticationWindow();
+
+                if (!ValidateConnection())
+                {
+                    Logger.Trace("User cancelled authentication.");
+
+                    throw new Exception("You must set up a valid connection to a LANCommander server.");
+                }
             }
 
             var games = LANCommander

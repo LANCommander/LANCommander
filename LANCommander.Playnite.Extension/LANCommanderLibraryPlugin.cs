@@ -78,15 +78,6 @@ namespace LANCommander.PlaynitePlugin
             });
         }
 
-        public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
-        {
-            if (LANCommander.Token == null || LANCommander.Client == null || !LANCommander.ValidateToken(LANCommander.Token))
-            {
-                Logger.Trace("No valid authentication token exists. Showing auth window...");
-                ShowAuthenticationWindow();
-            }
-        }
-
         public bool ValidateConnection()
         {
             return LANCommander.ValidateToken(LANCommander.Token);

@@ -104,7 +104,6 @@
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
     <Compile Include="LANCommanderClient.cs" />
-    <Compile Include="LANCommanderLibraryClient.cs" />
     <Compile Include="LANCommanderLibraryPlugin.cs" />
     <Compile Include="ViewModels\LANCommanderSettingsViewModel.cs" />
     <Compile Include="Views\LANCommanderSettingsView.xaml.cs">

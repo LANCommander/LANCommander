@@ -47,21 +47,23 @@ namespace LANCommander.PlaynitePlugin
 
             Logger.Trace($"Installing game {game.Title} ({game.Id})...");
 
-            var installDirectory = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(500), "", () =>
+            var result = RetryHelper.RetryOnException<ExtractionResult>(10, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
             {
                 Logger.Trace("Attempting to download and extract game...");
                 return DownloadAndExtract(game);
             });
 
-            if (installDirectory == "")
+            if (!result.Success && !result.Canceled)
                 throw new Exception("Could not extract the install archive. Retry the install or check your connection.");
+            else if (result.Canceled)
+                throw new Exception("Install was canceled");
 
             var installInfo = new GameInstallationData()
             {
-                InstallDirectory = installDirectory
+                InstallDirectory = result.Directory
             };
 
-            PlayniteGame.InstallDirectory = installDirectory;
+            PlayniteGame.InstallDirectory = result.Directory;
 
             SDK.GameManifest manifest = null;
 
@@ -71,7 +73,7 @@ namespace LANCommander.PlaynitePlugin
 
                 manifest = Plugin.LANCommander.GetGameManifest(gameId);
 
-                WriteManifest(manifest, installDirectory);
+                WriteManifest(manifest, result.Directory);
 
                 return true;
             });
@@ -81,10 +83,10 @@ namespace LANCommander.PlaynitePlugin
 
             Logger.Trace("Saving scripts...");
 
-            SaveScript(game, installDirectory, ScriptType.Install);
-            SaveScript(game, installDirectory, ScriptType.Uninstall);
-            SaveScript(game, installDirectory, ScriptType.NameChange);
-            SaveScript(game, installDirectory, ScriptType.KeyChange);
+            SaveScript(game, result.Directory, ScriptType.Install);
+            SaveScript(game, result.Directory, ScriptType.Uninstall);
+            SaveScript(game, result.Directory, ScriptType.NameChange);
+            SaveScript(game, result.Directory, ScriptType.KeyChange);
 
             try
             {
@@ -104,7 +106,7 @@ namespace LANCommander.PlaynitePlugin
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
         }
 
-        private string DownloadAndExtract(LANCommander.SDK.Models.Game game)
+        private ExtractionResult DownloadAndExtract(LANCommander.SDK.Models.Game game)
         {
             if (game == null)
             {
@@ -116,8 +118,7 @@ namespace LANCommander.PlaynitePlugin
             var destination = Path.Combine(Plugin.Settings.InstallDirectory, game.Title.SanitizeFilename());
 
             Logger.Trace($"Downloading and extracting \"{game.Title}\" to path {destination}");
-
-            Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
+            var result = Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
                 try
                 {
@@ -135,6 +136,18 @@ namespace LANCommander.PlaynitePlugin
                             progress.CurrentProgressValue = pos;
                         };
 
+                        reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>
+                        {
+                            if (progress.CancelToken != null && progress.CancelToken.IsCancellationRequested)
+                            {
+                                reader.Cancel();
+                                progress.IsIndeterminate = true;
+
+                                reader.Dispose();
+                                gameStream.Dispose();
+                            }
+                        };
+
                         reader.WriteAllToDirectory(destination, new ExtractionOptions()
                         {
                             ExtractFullPath = true,
@@ -144,27 +157,51 @@ namespace LANCommander.PlaynitePlugin
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, $"Could not extract to path {destination}");
-
-                    if (Directory.Exists(destination))
+                    if (progress.CancelToken != null && progress.CancelToken.IsCancellationRequested)
                     {
-                        Logger.Trace("Cleaning up orphaned install files after bad install...");
+                        Logger.Trace("User cancelled the download");
 
-                        Directory.Delete(destination, true);
+                        if (Directory.Exists(destination))
+                        {
+                            Logger.Trace("Cleaning up orphaned install files after cancelled install...");
+
+                            Directory.Delete(destination, true);
+                        }
                     }
+                    else
+                    {
+                        Logger.Error(ex, $"Could not extract to path {destination}");
 
-                    throw new Exception("The game archive could not be extracted. Please try again or fix the archive!");
+                        if (Directory.Exists(destination))
+                        {
+                            Logger.Trace("Cleaning up orphaned install files after bad install...");
+
+                            Directory.Delete(destination, true);
+                        }
+
+                        throw new Exception("The game archive could not be extracted. Please try again or fix the archive!");
+                    }
                 }
             },
             new GlobalProgressOptions($"Downloading {game.Title}...")
             {
                 IsIndeterminate = false,
-                Cancelable = false,
+                Cancelable = true,
             });
 
-            Logger.Trace($"Game successfully downloaded and extracted to {destination}");
+            var extractionResult = new ExtractionResult
+            {
+                Canceled = result.Canceled
+            };
 
-            return destination;
+            if (!result.Canceled)
+            {
+                extractionResult.Success = true;
+                extractionResult.Directory = destination;
+                Logger.Trace($"Game successfully downloaded and extracted to {destination}");
+            }
+
+            return extractionResult;
         }
 
         private string Download(LANCommander.SDK.Models.Game game)

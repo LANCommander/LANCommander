@@ -96,6 +96,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ExtractionResult.cs" />
     <Compile Include="TrackableStream.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
     <Compile Include="Helpers\RetryHelper.cs" />

@@ -30,19 +30,21 @@
         ColorField = "type",
     };
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var settings = SettingService.GetSettings();
-        var drives = DriveInfo.GetDrives();
-        var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
-        var totalStorageSize = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.TotalSize);
-        var totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
-        var totalUploadDirectorySize = new DirectoryInfo(settings.Archives.StoragePath).EnumerateFiles().Sum(f => f.Length);
-        var totalSaveDirectorySize = new DirectoryInfo(settings.UserSaves.StoragePath).EnumerateFiles().Sum(f => f.Length);
-
-        Data = new object[]
+        if (firstRender)
         {
+            var settings = SettingService.GetSettings();
+            var drives = DriveInfo.GetDrives();
+            var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
+            var totalStorageSize = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.TotalSize);
+            var totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
+            var totalUploadDirectorySize = new DirectoryInfo(settings.Archives.StoragePath).EnumerateFiles().Sum(f => f.Length);
+            var totalSaveDirectorySize = new DirectoryInfo(settings.UserSaves.StoragePath).EnumerateFiles().Sum(f => f.Length);
+
+            Data = new object[]
+            {
             new {
                 type = "Free",
                 value = totalAvailableFreeSpace
@@ -61,10 +63,11 @@
                 type = "Other",
                 value = totalStorageSize - totalAvailableFreeSpace - totalUploadDirectorySize - totalSaveDirectorySize
             }
-        };
+            };
 
-        Loading = false;
+            Loading = false;
 
-        StateHasChanged();
+            StateHasChanged();
+        }
     }
 }

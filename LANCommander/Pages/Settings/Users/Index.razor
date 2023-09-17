@@ -4,6 +4,7 @@
 @inject UserManager<User> UserManager
 @inject RoleManager<Role> RoleManager
 @inject IMessageService MessageService
+@inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Users" />
@@ -35,6 +36,12 @@
                     {
                         <Button OnClick="() => DemoteUser(context)" Danger>Demote</Button>
                     }
+                </SpaceItem>
+
+                <SpaceItem>
+                    <Tooltip Title="Change Password">
+                        <Button Icon="@IconType.Outline.Key" Type="@ButtonType.Text" OnClick="() => ChangePassword(context)" />
+                    </Tooltip>
                 </SpaceItem>
 
                 <SpaceItem>
@@ -150,5 +157,10 @@
 
             await MessageService.Success($"Deleted {user.UserName}!");
         }
+    }
+
+    private void ChangePassword(UserViewModel user)
+    {
+        NavigationManager.NavigateTo($"/Settings/Users/{user.Id}/ChangePassword", true);
     }
 }

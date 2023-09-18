@@ -1,15 +1,34 @@
 ﻿@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization;
+@using System.Security.Claims;
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <Layout Class="layout">
     <MainMenu>
         <MenuItem RouterLink="/Dashboard">Dashboard</MenuItem>
-        <MenuItem RouterLink="/Games">Games</MenuItem>
-        <MenuItem RouterLink="/Servers">Servers</MenuItem>
-        <MenuItem RouterLink="/Files">Files</MenuItem>
-        <MenuItem RouterLink="/Settings">Settings</MenuItem>
+        @if (User != null && User.IsInRole("Administrator"))
+        {
+            <MenuItem RouterLink="/Games">Games</MenuItem>
+            <MenuItem RouterLink="/Servers">Servers</MenuItem>
+            <MenuItem RouterLink="/Files">Files</MenuItem>
+            <MenuItem RouterLink="/Settings">Settings</MenuItem>
+        }
+        <MenuItem RouterLink="/Profile">Profile</MenuItem>
     </MainMenu>
 
     <Content Style="padding: 24px; min-height: 100vh;">
         @Body
     </Content>
 </Layout>
+
+@code {
+    ClaimsPrincipal User;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity.IsAuthenticated)
+            User = authState.User;
+    }
+}

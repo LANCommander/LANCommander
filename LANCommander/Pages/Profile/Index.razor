@@ -1,0 +1,60 @@
+﻿@page "/Profile"
+@using Microsoft.AspNetCore.Components.Authorization;
+@layout ProfileLayout
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+@inject IMessageService MessageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageHeader Title="Profile" />
+
+<div style="padding: 0 24px;">
+    <p>Changing your username or email will force you to log out.</p>
+    <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" OnFinish="Save" ValidateOnChange="true">
+        <FormItem Label="Username">
+            <Input @bind-Value="context.UserName" />
+        </FormItem>
+
+        <FormItem Label="Email Address">
+            <Input @bind-Value="context.Email" />
+        </FormItem>
+
+        <FormItem>
+            <Button HtmlType="submit" Type="@ButtonType.Primary" Disabled="!Form.IsModified">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    User User = new User();
+    Form<User> Form;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity.IsAuthenticated)
+            User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Form.IsModified)
+            {
+                await UserManager.UpdateAsync(User);
+
+                MessageService.Success("Profile updated!");
+
+                NavigationManager.NavigateTo("/Identity/Account/Logout?force=true", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error("An unknown error occurred.");
+        }
+    }
+}

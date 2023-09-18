@@ -1,0 +1,69 @@
+﻿@page "/Profile/Saves"
+@using LANCommander.Models;
+@using Microsoft.AspNetCore.Components.Authorization;
+@using Microsoft.EntityFrameworkCore;
+@layout ProfileLayout
+@inject UserManager<User> UserManager
+@inject IMessageService MessageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject GameSaveService GameSaveService
+@inject IJSRuntime JSRuntime
+
+<PageHeader Title="Game Saves" />
+
+<div style="padding: 0 24px;">
+    <Table TItem="GameSave" DataSource="@GameSaves">
+        <PropertyColumn Property="s => s.Game.Title" Sortable />
+        <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <ActionColumn Title="">
+            <Space Direction="DirectionVHType.Horizontal">
+                <SpaceItem>
+                    <Button Icon="@IconType.Outline.Download" Type="@ButtonType.Text" OnClick="() => Download(context.Id)" />
+                </SpaceItem>
+                <SpaceItem>
+                     <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game save?">
+                         <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                     </Popconfirm>
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </Table>
+</div>
+
+ @code {
+    User User;
+    ICollection<GameSave> GameSaves = new List<GameSave>();
+
+    bool Loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity.IsAuthenticated)
+            User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
+
+        if (User != null)
+            GameSaves = User.GameSaves.OrderBy(s => s.Game.Title).ThenBy(s => s.CreatedOn).ToList();
+
+        Loading = false;
+    }
+
+    private async Task Download(Guid id)
+    {
+        await JSRuntime.InvokeAsync<object>("open", $"/Saves/Download/{id}", "_blank");
+    }
+
+    private async Task Delete(GameSave gameSave)
+    {
+        GameSaves = new List<GameSave>();
+
+        Loading = true;
+
+        await GameSaveService.Delete(gameSave);
+
+        GameSaves = await GameSaveService.Get(gs => gs.UserId == User.Id).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToListAsync();
+
+        Loading = false;
+    }
+}

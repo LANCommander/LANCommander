@@ -6,3 +6,9 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.1.2/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc-v0.1.2.pext
     Changelog:
       - Initial submission to Playnite addon database
+  - Version: 0.1.3
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2023-09-21
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.1.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_v0.1.3.pext
+    Changelog:
+      - Added the ability to cancel installs

@@ -1,0 +1,86 @@
+﻿@inject IMessageService MessageService
+
+<Modal Visible="Visible" OkText="@("Insert")" OnOk="Parse" OnCancel="Close" Width="800" Title="Paste Export File Contents">
+    <StandaloneCodeEditor @ref="Editor" ConstructionOptions="EditorConstructionOptions" />
+</Modal>
+
+@code {
+    [Parameter] public EventCallback<string> OnParsed { get; set; }
+
+    bool Visible = false;
+    string Contents = "";
+
+    StandaloneCodeEditor? Editor;
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "ini",
+            Value = Contents,
+            Theme = "vs-dark",
+        };
+    }
+
+    private async Task Parse()
+    {
+        Contents = await Editor.GetValue();
+
+        var parser = new RegParserDotNet.RegParser();
+        var lines = new List<string>();
+
+        try
+        {
+            var keys = parser.Parse(Contents);
+
+            foreach (var key in keys)
+            {
+                switch (key.Type)
+                {
+                    case RegParserDotNet.RegistryValueType.REG_KEY:
+                        if (lines.Count > 0)
+                            lines.Add("");
+
+                        lines.Add($"New-Item -Path \"registry::\\{key.Path}\"");
+                        break;
+
+                    case RegParserDotNet.RegistryValueType.REG_SZ:
+                        lines.Add($"New-ItemProperty -Path \"registry::\\{key.Path}\" -Name \"{key.Property}\" -Value \"{(string)key.Value}\" -Force");
+                        break;
+
+                    case RegParserDotNet.RegistryValueType.REG_DWORD:
+                        lines.Add($"New-ItemProperty -Path \"registry::\\{key.Path}\" -Name \"{key.Property}\" -Value {(int)key.Value} -Force");
+                        break;
+
+                    case RegParserDotNet.RegistryValueType.REG_BINARY:
+                        var bytes = key.Value as byte[];
+                        var convertedBytes = String.Join("\\\n", bytes.Chunk(32).Select(c => String.Join(", ", c.Select(b => "0x" + b.ToString("X2")))));
+                        lines.Add($"New-ItemProperty -Path \"registry::\\{key.Path}\" -Name \"{key.Property}\" -PropertyType Binary -Value [byte[]]({convertedBytes}) -Force");
+                        break;
+                }
+            }
+
+            if (OnParsed.HasDelegate)
+                await OnParsed.InvokeAsync(String.Join('\n', lines));
+
+            Close();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(ex.Message);
+        }
+    }
+
+    public void Open()
+    {
+        Visible = true;
+    }
+
+    public void Close()
+    {
+        Visible = false;
+    }
+}

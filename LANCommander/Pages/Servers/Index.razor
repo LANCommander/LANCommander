@@ -46,7 +46,7 @@
     <PropertyColumn Property="g => g.UpdatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))">
         @context.UpdatedBy?.UserName
     </PropertyColumn>
-    <ActionColumn Title="" Style="text-align: right">
+    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
         <TitleTemplate>
             <div style="text-align: right">
                 <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />

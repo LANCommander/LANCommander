@@ -15,7 +15,7 @@
     <Table TItem="GameSave" DataSource="@GameSaves">
         <PropertyColumn Property="s => s.Game.Title" Sortable />
         <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-        <ActionColumn Title="">
+         <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
             <Space Direction="DirectionVHType.Horizontal">
                 <SpaceItem>
                     <Button Icon="@IconType.Outline.Download" Type="@ButtonType.Text" OnClick="() => Download(context.Id)" />

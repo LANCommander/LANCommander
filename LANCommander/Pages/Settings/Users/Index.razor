@@ -20,7 +20,7 @@
         </PropertyColumn>
         <ActionColumn>
             <Space Style="display: flex; justify-content: end">
-                @if (!context.Approved)
+                @if (Settings.Authentication.RequireApproval && !context.Approved)
                 {
                     <SpaceItem>
                         <Button OnClick="() => ApproveUser(context)" Type="@ButtonType.Primary">Approve</Button>
@@ -66,6 +66,7 @@
 @code {
     ICollection<UserViewModel> UserList { get; set; }
 
+    LANCommanderSettings Settings = SettingService.GetSettings();
     bool Loading = true;
 
     protected override async Task OnInitializedAsync()

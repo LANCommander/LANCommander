@@ -107,13 +107,16 @@ namespace LANCommander.PlaynitePlugin.Views
                 Plugin.Settings.ServerAddress = Context.ServerAddress;
                 Plugin.Settings.AccessToken = response.AccessToken;
                 Plugin.Settings.RefreshToken = response.RefreshToken;
-                Plugin.Settings.PlayerName = Context.UserName;
 
                 Plugin.LANCommander.Token = new AuthToken()
                 {
                     AccessToken = response.AccessToken,
                     RefreshToken = response.RefreshToken,
                 };
+
+                var profile = Plugin.LANCommander.GetProfile();
+
+                Plugin.Settings.PlayerName = String.IsNullOrWhiteSpace(profile.Alias) ? profile.UserName : profile.Alias;
 
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;

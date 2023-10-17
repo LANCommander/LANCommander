@@ -223,7 +223,10 @@ namespace LANCommander.PlaynitePlugin
                             var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", Settings.PlayerName);
 
                             if (result.Result == true)
+                            {
                                 PowerShellRuntime.RunScript(nameChangeArgs.Games.First(), SDK.Enums.ScriptType.NameChange, $@"""{result.SelectedString}"" ""{oldName}""");
+                                LANCommander.ChangeAlias(result.SelectedString);
+                            }
                         }
                     };
                 }
@@ -379,6 +382,8 @@ namespace LANCommander.PlaynitePlugin
                     SavePluginSettings(Settings);
 
                     var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
+
+                    LANCommander.ChangeAlias(result.SelectedString);
 
                     Logger.Trace($"Running name change scripts across {games.Count} installed game(s)");
 

@@ -52,6 +52,8 @@ namespace LANCommander.Data.Models
         [JsonIgnore]
         public DateTime? ApprovedOn { get; set; }
 
+        public string? Alias { get; set; }
+
         public string GetGameSaveUploadPath()
         {
             var settings = SettingService.GetSettings();

@@ -293,6 +293,22 @@ namespace LANCommander.PlaynitePlugin
             return response.Value;
         }
 
+        public User GetProfile()
+        {
+            Logger.Trace("Requesting player's profile...");
+
+            return GetRequest<User>("/api/Profile");
+        }
+
+        public string ChangeAlias(string alias)
+        {
+            Logger.Trace("Requesting to change player alias...");
+
+            var response = PostRequest<object>("/api/Profile/ChangeAlias", alias);
+
+            return alias;
+        }
+
         private string GetMacAddress()
         {
             return NetworkInterface.GetAllNetworkInterfaces()

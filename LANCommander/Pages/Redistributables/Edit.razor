@@ -1,0 +1,115 @@
+﻿@page "/Redistributables/{id:guid}"
+@page "/Redistributables/{id:guid}/{panel}"
+@page "/Redistributables/Add"
+@inject RedistributableService RedistributableService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+
+<Layout Class="panel-layout" Style="padding: 24px 0;">
+    <Sider Width="200">
+        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+            <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/General")">General</MenuItem>
+
+            @if (Redistributable.Id != Guid.Empty)
+            {
+                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
+            }
+        </Menu>
+    </Sider>
+
+    <Content>
+        <PageHeader>
+            <PageHeaderTitle>@Panel</PageHeaderTitle>
+        </PageHeader>
+
+
+        <div class="panel-layout-content">
+            @if (Panel == "General" || String.IsNullOrWhiteSpace(Panel))
+            {
+                <Form Model="@Redistributable" Layout="@FormLayout.Vertical">
+                    <FormItem Label="Name">
+                        <Input @bind-Value="@context.Name" />
+                    </FormItem>
+                    <FormItem Label="Notes">
+                        <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+                    </FormItem>
+                    <FormItem Label="Description">
+                        <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                    </FormItem>
+
+                    <FormItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+                    </FormItem>
+                </Form>
+            }
+
+            @if (Panel == "Scripts")
+            {
+                <ScriptEditor @bind-Scripts="Redistributable.Scripts" RedistributableId="Redistributable.Id" ArchiveId="@LatestArchiveId" />
+            }
+
+            @if (Panel == "Archives")
+            {
+                <ArchiveEditor @bind-Archives="Redistributable.Archives" RedistributableId="Redistributable.Id" />
+            }
+        </div>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Panel { get; set; }
+
+    Redistributable Redistributable;
+
+    private Guid LatestArchiveId
+    {
+        get
+        {
+            if (Redistributable != null && Redistributable.Archives != null && Redistributable.Archives.Count > 0)
+                return Redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
+            else
+                return Guid.Empty;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+            Redistributable = new Redistributable();
+        else
+            Redistributable = await RedistributableService.Get(Id);
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Redistributable.Id != Guid.Empty)
+            {
+                Redistributable = await RedistributableService.Update(Redistributable);
+
+                await MessageService.Success("Redistributable updated!");
+            }
+            else
+            {
+                Redistributable = await RedistributableService.Add(Redistributable);
+
+                NavigationManager.LocationChanged += NotifyRedistributableAdded;
+
+                NavigationManager.NavigateTo($"/Redistributables/{Redistributable.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error("Could not save!");
+        }
+    }
+
+    private void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyRedistributableAdded;
+
+        MessageService.Success("Redistributable added!");
+    }
+}

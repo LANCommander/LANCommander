@@ -37,13 +37,13 @@ namespace LANCommander.Data
             builder.Entity<Game>()
                 .HasMany(g => g.Archives)
                 .WithOne(g => g.Game)
-                .IsRequired(true)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
                 .HasMany(g => g.Scripts)
                 .WithOne(s => s.Game)
-                .IsRequired(true)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
@@ -104,6 +104,18 @@ namespace LANCommander.Data
                 .WithOne(sl => sl.Server)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Redistributable>()
+                .HasMany(r => r.Archives)
+                .WithOne(a => a.Redistributable)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Redistributable>()
+                .HasMany(r => r.Scripts)
+                .WithOne(s => s.Redistributable)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         public DbSet<Game>? Games { get; set; }
@@ -123,5 +135,7 @@ namespace LANCommander.Data
         public DbSet<Server>? Servers { get; set; }
 
         public DbSet<ServerConsole>? ServerConsoles { get; set; }
+
+        public DbSet<Redistributable>? Redistributables { get; set; }
     }
 }

@@ -13,11 +13,17 @@ namespace LANCommander.Data.Models
         [Required]
         public string Version { get; set; }
 
-        public Guid GameId { get; set; }
+        public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Archives")]
         public virtual Game? Game { get; set; }
+
+        public Guid? RedistributableId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(RedistributableId))]
+        [InverseProperty("Archives")]
+        public virtual Redistributable? Redistributable { get; set; }
 
         [Display(Name = "Last Version")]
         public virtual Archive? LastVersion { get; set; }

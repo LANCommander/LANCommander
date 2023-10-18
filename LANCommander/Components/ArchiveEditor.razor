@@ -23,7 +23,7 @@
             <ActionColumn Title="">
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>
-                        <a href="/Download/Game/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                        <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                             <Icon Type="@IconType.Outline.Download" />
                         </a>
                     </SpaceItem>
@@ -50,6 +50,7 @@
 
  @code {
     [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid RedistributableId { get; set; }
     [Parameter] public ICollection<Archive> Archives { get; set; }
     [Parameter] public EventCallback<ICollection<Archive>> ArchivesChanged { get; set; }
 
@@ -77,11 +78,11 @@
 
     private async Task UploadArchive()
     {
-        Archive = new Archive()
-        {
-            GameId = GameId,
-            Id = Guid.NewGuid()
-        };
+        if (GameId != Guid.Empty)
+            Archive = new Archive() { GameId = GameId, Id = Guid.NewGuid() };
+
+        if (RedistributableId != Guid.Empty)
+            Archive = new Archive() { RedistributableId = RedistributableId, Id = Guid.NewGuid() };
 
         await Uploader.Open(Archive);
     }

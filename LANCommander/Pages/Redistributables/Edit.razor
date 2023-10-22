@@ -13,6 +13,7 @@
             @if (Redistributable.Id != Guid.Empty)
             {
                 <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Archives")">Archives</MenuItem>
             }
         </Menu>
     </Sider>

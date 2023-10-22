@@ -1,0 +1,37 @@
+﻿@typeparam TItem where TItem : BaseModel
+
+<Transfer DataSource="TransferItems" TargetKeys="TargetKeys" OnChange="OnChange" Titles="new string[] { LeftTitle, RightTitle }" />
+
+@code {
+    [Parameter] public string LeftTitle { get; set; } = "";
+    [Parameter] public string RightTitle { get; set; } = "";
+    [Parameter] public Func<TItem, string> TitleSelector { get; set; }
+    [Parameter] public IEnumerable<TItem> DataSource { get; set; }
+    [Parameter] public ICollection<TItem> Values { get; set; } = new List<TItem>();
+    [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
+
+    IEnumerable<TransferItem> TransferItems { get; set; } = new List<TransferItem>();
+    List<string> TargetKeys { get; set; } = new List<string>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            TransferItems = DataSource.Select(i => new TransferItem()
+            {
+                Key = i.Id.ToString(),
+                Title = TitleSelector.Invoke(i)
+            });
+
+            TargetKeys = Values.Select(i => i.Id.ToString()).ToList();
+        }
+    }
+
+    async Task OnChange(TransferChangeArgs e)
+    {
+        Values = DataSource.Where(i => e.TargetKeys.Contains(i.Id.ToString())).ToList();
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Values);
+    }
+}

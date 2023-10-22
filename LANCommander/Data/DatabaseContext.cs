@@ -81,6 +81,15 @@ namespace LANCommander.Data
                     g => g.HasOne<Game>().WithMany().HasForeignKey("GameId")
                 );
 
+            builder.Entity<Game>()
+                .HasMany(g => g.Redistributables)
+                .WithMany(r => r.Games)
+                .UsingEntity<Dictionary<string, object>>(
+                    "GameRedistributable",
+                    gr => gr.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId"),
+                    gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId")
+                );
+
             builder.Entity<User>()
                 .HasMany(u => u.GameSaves)
                 .WithOne(gs => gs.User)

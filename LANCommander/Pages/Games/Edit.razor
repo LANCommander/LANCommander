@@ -12,6 +12,7 @@
 @inject TagService TagService
 @inject ArchiveService ArchiveService
 @inject ScriptService ScriptService
+@inject RedistributableService RedistributableService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
@@ -97,6 +98,9 @@
                     <FormItem Label="Tags">
                         <TagsInput Entities="Tags" @bind-Values="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
                     </FormItem>
+                    <FormItem Label="Redistributables">
+                        <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Redistributables" TitleSelector="r => r.Name" @bind-Values="Game.Redistributables" />
+                    </FormItem>
                 </Form>
             </div>
 
@@ -160,6 +164,9 @@ else
     IEnumerable<Company> Companies;
     IEnumerable<Genre> Genres;
     IEnumerable<Data.Models.Tag> Tags;
+    IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
+    IEnumerable<TransferItem> RedistributableTargetItems = new List<TransferItem>();
+    IEnumerable<string> TargetRedistributables = new List<string>();
 
     FilePickerDialog ArchiveFilePickerDialog;
 
@@ -206,6 +213,13 @@ else
         Companies = await CompanyService.Get();
         Genres = await GenreService.Get();
         Tags = await TagService.Get();
+        Redistributables = await RedistributableService.Get();
+        RedistributableTargetItems = Redistributables.Select(r => new TransferItem
+        {
+            Title = r.Name,
+            Description = r.Description,
+            Key = r.Id.ToString()
+        });
     }
 
     private async Task Save()

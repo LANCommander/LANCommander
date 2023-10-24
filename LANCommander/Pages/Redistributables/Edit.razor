@@ -1,6 +1,7 @@
 ﻿@page "/Redistributables/{id:guid}"
 @page "/Redistributables/{id:guid}/{panel}"
 @page "/Redistributables/Add"
+@using LANCommander.Data.Enums;
 @inject RedistributableService RedistributableService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -46,7 +47,7 @@
 
             @if (Panel == "Scripts")
             {
-                <ScriptEditor @bind-Scripts="Redistributable.Scripts" RedistributableId="Redistributable.Id" ArchiveId="@LatestArchiveId" />
+                <ScriptEditor @bind-Scripts="Redistributable.Scripts" RedistributableId="Redistributable.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.DetectInstall }" />
             }
 
             @if (Panel == "Archives")

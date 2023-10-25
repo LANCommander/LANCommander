@@ -4,7 +4,15 @@
     {
         Install,
         Uninstall,
+        [Display(Name = "Name Change")]
         NameChange,
-        KeyChange
+        [Display(Name = "Key Change")]
+        KeyChange,
+        [Display(Name = "Save Upload")]
+        SaveUpload,
+        [Display(Name = "Save Download")]
+        SaveDownload,
+        [Display(Name = "Detect Install")]
+        DetectInstall
     }
 }

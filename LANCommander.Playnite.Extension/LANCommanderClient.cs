@@ -206,6 +206,11 @@ namespace LANCommander.PlaynitePlugin
             return DownloadRequest($"/api/Archives/Download/{id}", progressHandler, completeHandler);
         }
 
+        public TrackableStream StreamRedistributable(Guid id)
+        {
+            return StreamRequest($"/api/Redistributables/{id}/Download");
+        }
+
         public string DownloadSave(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);

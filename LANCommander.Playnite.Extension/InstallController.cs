@@ -228,7 +228,8 @@ namespace LANCommander.PlaynitePlugin
 
                     var detectionResult = PowerShellRuntime.RunScript(detectionScriptTempFile, detectionScript.RequiresAdmin);
 
-                    if (!detectionResult == 0)
+                    // Redistributable is not installed
+                    if (detectionResult == 0)
                     {
                         var extractionResult = DownloadAndExtractRedistributable(redistributable);
                         

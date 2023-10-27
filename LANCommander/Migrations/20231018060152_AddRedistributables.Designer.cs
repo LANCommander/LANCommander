@@ -3,6 +3,7 @@ using System;
 using LANCommander.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20231018060152_AddRedistributables")]
+    partial class AddRedistributables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -79,21 +82,6 @@ namespace LANCommander.Migrations
                     b.HasIndex("PublisherId");
 
                     b.ToTable("GamePublisher");
-                });
-
-            modelBuilder.Entity("GameRedistributable", b =>
-                {
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("RedistributableId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("GameId", "RedistributableId");
-
-                    b.HasIndex("RedistributableId");
-
-                    b.ToTable("GameRedistributable");
                 });
 
             modelBuilder.Entity("GameTag", b =>
@@ -1084,21 +1072,6 @@ namespace LANCommander.Migrations
                     b.HasOne("LANCommander.Data.Models.Company", null)
                         .WithMany()
                         .HasForeignKey("PublisherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("GameRedistributable", b =>
-                {
-                    b.HasOne("LANCommander.Data.Models.Game", null)
-                        .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LANCommander.Data.Models.Redistributable", null)
-                        .WithMany()
-                        .HasForeignKey("RedistributableId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

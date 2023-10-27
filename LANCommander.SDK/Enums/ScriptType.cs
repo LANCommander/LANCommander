@@ -5,6 +5,9 @@
         Install,
         Uninstall,
         NameChange,
-        KeyChange
+        KeyChange,
+        SaveUpload,
+        SaveDownload,
+        DetectInstall
     }
 }

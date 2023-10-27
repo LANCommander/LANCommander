@@ -141,6 +141,7 @@ namespace LANCommander
             builder.Services.AddScoped<ServerService>();
             builder.Services.AddScoped<ServerConsoleService>();
             builder.Services.AddScoped<GameSaveService>();
+            builder.Services.AddScoped<RedistributableService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();

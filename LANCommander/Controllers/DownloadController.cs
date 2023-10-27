@@ -19,7 +19,7 @@ namespace LANCommander.Controllers
             ArchiveService = archiveService;
         }
 
-        public async Task<IActionResult> Game(Guid id)
+        public async Task<IActionResult> Archive(Guid id)
         {
             var archive = await ArchiveService.Get(id);
 

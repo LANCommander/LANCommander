@@ -50,7 +50,7 @@ namespace LANCommander.PlaynitePlugin
             var result = RetryHelper.RetryOnException<ExtractionResult>(10, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
             {
                 Logger.Trace("Attempting to download and extract game...");
-                return DownloadAndExtract(game);
+                return DownloadAndExtractGame(game);
             });
 
             if (!result.Success && !result.Canceled)
@@ -88,6 +88,12 @@ namespace LANCommander.PlaynitePlugin
             SaveScript(game, result.Directory, ScriptType.NameChange);
             SaveScript(game, result.Directory, ScriptType.KeyChange);
 
+            if (game.Redistributables != null && game.Redistributables.Count() > 0)
+            {
+                Logger.Trace("Installing required redistributables...");
+                InstallRedistributables(game);
+            }
+
             try
             {
                 PowerShellRuntime.RunScript(PlayniteGame, ScriptType.Install);
@@ -106,7 +112,7 @@ namespace LANCommander.PlaynitePlugin
             InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
         }
 
-        private ExtractionResult DownloadAndExtract(LANCommander.SDK.Models.Game game)
+        private ExtractionResult DownloadAndExtractGame(LANCommander.SDK.Models.Game game)
         {
             if (game == null)
             {
@@ -204,6 +210,153 @@ namespace LANCommander.PlaynitePlugin
             return extractionResult;
         }
 
+        private void InstallRedistributables(LANCommander.SDK.Models.Game game)
+        {
+            foreach (var redistributable in game.Redistributables)
+            {
+                string installScriptTempFile = null;
+                string detectionScriptTempFile = null;
+                string extractTempPath = null;
+
+                try
+                {
+                    var installScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.Install);
+                    installScriptTempFile = SaveTempScript(installScript);
+
+                    var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.DetectInstall);
+                    detectionScriptTempFile = SaveTempScript(detectionScript);
+
+                    var detectionResult = PowerShellRuntime.RunScript(detectionScriptTempFile, detectionScript.RequiresAdmin);
+
+                    // Redistributable is not installed
+                    if (detectionResult == 0)
+                    {
+                        var extractionResult = DownloadAndExtractRedistributable(redistributable);
+                        
+                        if (extractionResult.Success)
+                        {
+                            extractTempPath = extractionResult.Directory;
+
+                            PowerShellRuntime.RunScript(installScriptTempFile, installScript.RequiresAdmin, null, extractTempPath);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, $"Redistributable {redistributable.Name} failed to install");
+                }
+                finally
+                {
+                    if (File.Exists(installScriptTempFile))
+                        File.Delete(installScriptTempFile);
+
+                    if (File.Exists(detectionScriptTempFile))
+                        File.Delete(detectionScriptTempFile);
+
+                    if (Directory.Exists(extractTempPath))
+                        Directory.Delete(extractTempPath);
+                }
+            }
+        }
+
+        private ExtractionResult DownloadAndExtractRedistributable(LANCommander.SDK.Models.Redistributable redistributable)
+        {
+            if (redistributable == null)
+            {
+                Logger.Trace("Redistributable failed to download! No redistributable was specified!");
+
+                throw new Exception("Redistributable failed to download!");
+            }
+
+            var destination = Path.Combine(Path.GetTempPath(), redistributable.Name.SanitizeFilename());
+
+            Logger.Trace($"Downloading and extracting \"{redistributable.Name}\" to path {destination}");
+            var result = Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
+            {
+                try
+                {
+                    Directory.CreateDirectory(destination);
+                    progress.ProgressMaxValue = 100;
+                    progress.CurrentProgressValue = 0;
+
+                    using (var redistributableStream = Plugin.LANCommander.StreamRedistributable(redistributable.Id))
+                    using (var reader = ReaderFactory.Open(redistributableStream))
+                    {
+                        progress.ProgressMaxValue = redistributableStream.Length;
+
+                        redistributableStream.OnProgress += (pos, len) =>
+                        {
+                            progress.CurrentProgressValue = pos;
+                        };
+
+                        reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>
+                        {
+                            if (progress.CancelToken != null && progress.CancelToken.IsCancellationRequested)
+                            {
+                                reader.Cancel();
+                                progress.IsIndeterminate = true;
+
+                                reader.Dispose();
+                                redistributableStream.Dispose();
+                            }
+                        };
+
+                        reader.WriteAllToDirectory(destination, new ExtractionOptions()
+                        {
+                            ExtractFullPath = true,
+                            Overwrite = true
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (progress.CancelToken != null && progress.CancelToken.IsCancellationRequested)
+                    {
+                        Logger.Trace("User cancelled the download");
+
+                        if (Directory.Exists(destination))
+                        {
+                            Logger.Trace("Cleaning up orphaned install files after cancelled install...");
+
+                            Directory.Delete(destination, true);
+                        }
+                    }
+                    else
+                    {
+                        Logger.Error(ex, $"Could not extract to path {destination}");
+
+                        if (Directory.Exists(destination))
+                        {
+                            Logger.Trace("Cleaning up orphaned install files after bad install...");
+
+                            Directory.Delete(destination, true);
+                        }
+
+                        throw new Exception("The redistributable archive could not be extracted. Please try again or fix the archive!");
+                    }
+                }
+            },
+            new GlobalProgressOptions($"Downloading {redistributable.Name}...")
+            {
+                IsIndeterminate = false,
+                Cancelable = true,
+            });
+
+            var extractionResult = new ExtractionResult
+            {
+                Canceled = result.Canceled
+            };
+
+            if (!result.Canceled)
+            {
+                extractionResult.Success = true;
+                extractionResult.Directory = destination;
+                Logger.Trace($"Redistributable successfully downloaded and extracted to {destination}");
+            }
+
+            return extractionResult;
+        }
+
         private string Download(LANCommander.SDK.Models.Game game)
         {
             string tempFile = String.Empty;
@@ -292,6 +445,21 @@ namespace LANCommander.PlaynitePlugin
 
             Logger.Trace("Writing manifest file...");
             File.WriteAllText(destination, yaml);
+        }
+
+        private string SaveTempScript(LANCommander.SDK.Models.Script script)
+        {
+            var tempPath = Path.GetTempFileName();
+
+            File.Move(tempPath, tempPath + ".ps1");
+
+            tempPath = tempPath + ".ps1";
+
+            Logger.Trace($"Writing script {script.Name} to {tempPath}");
+
+            File.WriteAllText(tempPath, script.Contents);
+
+            return tempPath;
         }
 
         private void SaveScript(LANCommander.SDK.Models.Game game, string installationDirectory, ScriptType type)

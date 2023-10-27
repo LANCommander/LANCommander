@@ -13,6 +13,8 @@ namespace LANCommander.Data.Enums
         [Display(Name = "Save Upload")]
         SaveUpload,
         [Display(Name = "Save Download")]
-        SaveDownload
+        SaveDownload,
+        [Display(Name = "Detect Install")]
+        DetectInstall
     }
 }

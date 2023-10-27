@@ -11,7 +11,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Archive" DataSource="@Game.Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true" Responsive>
+        <Table TItem="Archive" DataSource="@Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true" Responsive>
             <PropertyColumn Property="a => a.Version" />
             <PropertyColumn Property="a => a.CompressedSize">
                 @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
@@ -23,7 +23,7 @@
             <ActionColumn Title="">
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>
-                        <a href="/Download/Game/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                        <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                             <Icon Type="@IconType.Outline.Download" />
                         </a>
                     </SpaceItem>
@@ -49,7 +49,10 @@
 <ArchiveUploader @ref="Uploader" OnArchiveUploaded="AddArchive" />
 
  @code {
-    [Parameter] public Game Game { get; set; }
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid RedistributableId { get; set; }
+    [Parameter] public ICollection<Archive> Archives { get; set; }
+    [Parameter] public EventCallback<ICollection<Archive>> ArchivesChanged { get; set; }
 
     Archive Archive;
     ArchiveUploader Uploader;
@@ -63,10 +66,7 @@
 
     private async Task LoadData()
     {
-        Game.Archives = await ArchiveService.Get(a => a.GameId == Game.Id).OrderByDescending(a => a.CreatedOn).ToListAsync();
-
-        if (Game.Archives == null)
-            Game.Archives = new List<Archive>();
+        Archives = await ArchiveService.Get(a => a.GameId == GameId).OrderByDescending(a => a.CreatedOn).ToListAsync();
     }
 
     private async Task Download(Archive archive)
@@ -78,18 +78,18 @@
 
     private async Task UploadArchive()
     {
-        Archive = new Archive()
-        {
-            GameId = Game.Id,
-            Id = Guid.NewGuid()
-        };
+        if (GameId != Guid.Empty)
+            Archive = new Archive() { GameId = GameId, Id = Guid.NewGuid() };
+
+        if (RedistributableId != Guid.Empty)
+            Archive = new Archive() { RedistributableId = RedistributableId, Id = Guid.NewGuid() };
 
         await Uploader.Open(Archive);
     }
 
     private async Task AddArchive(Archive archive)
     {
-        var lastArchive = Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+        var lastArchive = Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
 
         Archive = await ArchiveService.Add(archive);
 

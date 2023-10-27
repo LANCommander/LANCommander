@@ -34,6 +34,7 @@ namespace LANCommander.Data.Models
         public virtual ICollection<GameSave>? GameSaves { get; set; }
         public virtual ICollection<SavePath>? SavePaths { get; set; }
         public virtual ICollection<Server>? Servers { get; set; }
+        public virtual ICollection<Redistributable>? Redistributables { get; set; }
 
         public string? ValidKeyRegex { get; set; }
         public virtual ICollection<Key>? Keys { get; set; }

@@ -56,7 +56,7 @@
         </FormItem>
 
         <FormItem Label="Type">
-            <Select @bind-Value="context.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>()">
+            <Select @bind-Value="context.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>().Where(st => AllowedTypes == null || AllowedTypes.Contains(st))">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
                 <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
             </Select>
@@ -111,11 +111,13 @@
     }
 </style>
 
-@code {
+ @code {
     [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid RedistributableId { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public ICollection<Script> Scripts { get; set; }
     [Parameter] public EventCallback<ICollection<Script>> ScriptsChanged { get; set; }
+    [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
 
     Script Script;
 
@@ -150,10 +152,11 @@
     private async void Edit(Script script = null)
     {
         if (script == null) {
-            Script = new Script()
-            {
-                GameId = GameId
-            };
+            if (GameId != Guid.Empty)
+                Script = new Script() { GameId = GameId };
+
+            if (RedistributableId != Guid.Empty)
+                Script = new Script() { RedistributableId = RedistributableId };
 
             if (Editor != null)
                 await Editor.SetValue("");

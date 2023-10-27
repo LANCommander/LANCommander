@@ -39,7 +39,7 @@ namespace LANCommander.PlaynitePlugin
             File.Delete(tempScript);
         }
 
-        public void RunScript(string path, bool asAdmin = false, string arguments = null)
+        public int RunScript(string path, bool asAdmin = false, string arguments = null, string workingDirectory = null)
         {
             Logger.Trace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
 
@@ -58,6 +58,9 @@ namespace LANCommander.PlaynitePlugin
             if (arguments != null)
                 process.StartInfo.Arguments += " " + arguments;
 
+            if (workingDirectory != null)
+                process.StartInfo.WorkingDirectory = workingDirectory;
+
             if (asAdmin)
             {
                 process.StartInfo.Verb = "runas";
@@ -68,6 +71,8 @@ namespace LANCommander.PlaynitePlugin
             process.WaitForExit();
 
             Wow64RevertWow64FsRedirection(ref wow64Value);
+
+            return process.ExitCode;
         }
 
         public void RunScript(Game game, ScriptType type, string arguments = null)

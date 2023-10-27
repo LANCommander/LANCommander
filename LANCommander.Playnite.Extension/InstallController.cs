@@ -451,6 +451,10 @@ namespace LANCommander.PlaynitePlugin
         {
             var tempPath = Path.GetTempFileName();
 
+            File.Move(tempPath, tempPath + ".ps1");
+
+            tempPath = tempPath + ".ps1";
+
             Logger.Trace($"Writing script {script.Name} to {tempPath}");
 
             File.WriteAllText(tempPath, script.Contents);

@@ -2,6 +2,7 @@
 @page "/Redistributables/{id:guid}/{panel}"
 @page "/Redistributables/Add"
 @using LANCommander.Data.Enums;
+@attribute [Authorize(Roles = "Administrator")]
 @inject RedistributableService RedistributableService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager

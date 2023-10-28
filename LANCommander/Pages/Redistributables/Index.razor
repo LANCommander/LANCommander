@@ -1,6 +1,6 @@
 ﻿@page "/Redistributables"
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize]
+@attribute [Authorize(Roles = "Administrator")]
 @inject RedistributableService RedistributableService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService

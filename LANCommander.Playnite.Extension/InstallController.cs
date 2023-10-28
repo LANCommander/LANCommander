@@ -231,12 +231,19 @@ namespace LANCommander.PlaynitePlugin
                     // Redistributable is not installed
                     if (detectionResult == 0)
                     {
-                        var extractionResult = DownloadAndExtractRedistributable(redistributable);
-                        
-                        if (extractionResult.Success)
+                        if (redistributable.Archives.Count() > 0)
                         {
-                            extractTempPath = extractionResult.Directory;
+                            var extractionResult = DownloadAndExtractRedistributable(redistributable);
 
+                            if (extractionResult.Success)
+                            {
+                                extractTempPath = extractionResult.Directory;
+
+                                PowerShellRuntime.RunScript(installScriptTempFile, installScript.RequiresAdmin, null, extractTempPath);
+                            }
+                        }
+                        else
+                        {
                             PowerShellRuntime.RunScript(installScriptTempFile, installScript.RequiresAdmin, null, extractTempPath);
                         }
                     }

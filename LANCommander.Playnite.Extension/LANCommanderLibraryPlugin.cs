@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Web;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -72,6 +73,16 @@ namespace LANCommander.PlaynitePlugin
 
                         if (Guid.TryParse(args.Arguments[1], out gameId))
                             PlayniteApi.StartGame(gameId);
+                        break;
+
+                    case "connect":
+                        if (args.Arguments.Length == 1)
+                        {
+                            ShowAuthenticationWindow();
+                            break;
+                        }
+
+                        ShowAuthenticationWindow(HttpUtility.UrlDecode(args.Arguments[1]));
                         break;
                 }
 
@@ -394,7 +405,7 @@ namespace LANCommander.PlaynitePlugin
                 Logger.Trace("Name change was cancelled");
         }
 
-        public Window ShowAuthenticationWindow()
+        public Window ShowAuthenticationWindow(string serverAddress = null)
         {
             Window window = null;
             Application.Current.Dispatcher.Invoke((Action)delegate
@@ -410,7 +421,7 @@ namespace LANCommander.PlaynitePlugin
                 window.Content = new Views.Authentication(this);
                 window.DataContext = new ViewModels.Authentication()
                 {
-                    ServerAddress = Settings?.ServerAddress
+                    ServerAddress = serverAddress ?? Settings?.ServerAddress
                 };
 
                 window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();

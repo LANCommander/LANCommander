@@ -9,16 +9,22 @@
     public class LANCommanderSettings
     {
         public int Port { get; set; } = 1337;
-        public bool Beacon { get; set; } = true;
         public string DatabaseConnectionString { get; set; } = "Data Source=LANCommander.db;Cache=Shared";
         public string IGDBClientId { get; set; } = "";
         public string IGDBClientSecret { get; set; } = "";
         public LANCommanderTheme Theme { get; set; } = LANCommanderTheme.Light;
 
+        public LANCommanderBeaconSettings Beacon { get; set; } = new LANCommanderBeaconSettings();
         public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();
         public LANCommanderUserSaveSettings UserSaves { get; set; } = new LANCommanderUserSaveSettings();
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
+    }
+
+    public class LANCommanderBeaconSettings
+    {
+        public bool Enabled { get; set; } = true;
+        public string Address { get; set; } = "";
     }
 
     public class LANCommanderAuthenticationSettings

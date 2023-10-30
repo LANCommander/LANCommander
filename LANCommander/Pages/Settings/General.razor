@@ -12,12 +12,6 @@
 
 <div style="padding: 0 24px;">
     <Form Model="Settings" Layout="@FormLayout.Vertical">
-        <FormItem Label="Beacon">
-            <Switch @bind-Checked="context.Beacon" />
-        </FormItem>
-
-        <Text Type="@TextElementType.Secondary">Enabling the beacon will allow clients on the same network to auto-discover the LANCommander address.</Text>
-
         <FormItem Label="Theme">
             <Select @bind-Value="context.Theme" TItem="LANCommanderTheme" TItemValue="LANCommanderTheme" DataSource="Enum.GetValues<LANCommanderTheme>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>

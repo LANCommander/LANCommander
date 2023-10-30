@@ -40,7 +40,10 @@ namespace LANCommander.PlaynitePlugin.Views
             {
                 var beacon = beacons.First();
 
-                Context.ServerAddress = $"http://{beacon.Address.Address}:{beacon.Address.Port}";
+                if (!String.IsNullOrWhiteSpace(beacon.Data) && Uri.TryCreate(beacon.Data, UriKind.Absolute, out var beaconUri))
+                    Context.ServerAddress = beaconUri.ToString();
+                else
+                    Context.ServerAddress = $"http://{beacon.Address.Address}:{beacon.Address.Port}";
 
                 this.ServerAddress.Text = Context.ServerAddress;
 

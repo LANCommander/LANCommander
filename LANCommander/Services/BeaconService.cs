@@ -20,7 +20,7 @@ namespace LANCommander.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Beacon.BeaconData = "Acknowledged HQ";
+            Beacon.BeaconData = Settings.Beacon?.Address;
             Beacon.Start();
 
             return Task.CompletedTask;

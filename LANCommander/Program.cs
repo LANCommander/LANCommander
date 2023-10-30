@@ -146,7 +146,7 @@ namespace LANCommander
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
 
-            if (settings.Beacon)
+            if (settings.Beacon?.Enabled ?? false)
             {
                 Logger.Debug("The beacons have been lit! LANCommander calls for players!");
                 builder.Services.AddHostedService<BeaconService>();

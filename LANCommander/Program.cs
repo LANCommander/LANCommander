@@ -10,6 +10,7 @@ using NLog.Web;
 using System.Text;
 using Hangfire;
 using NLog;
+using LANCommander.Services.MediaGrabbers;
 
 namespace LANCommander
 {
@@ -141,7 +142,9 @@ namespace LANCommander
             builder.Services.AddScoped<ServerService>();
             builder.Services.AddScoped<ServerConsoleService>();
             builder.Services.AddScoped<GameSaveService>();
+            builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<RedistributableService>();
+            builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
@@ -210,6 +213,9 @@ namespace LANCommander
 
             if (!Directory.Exists(settings.UserSaves.StoragePath))
                 Directory.CreateDirectory(settings.UserSaves.StoragePath);
+
+            if (!Directory.Exists(settings.Media.StoragePath))
+                Directory.CreateDirectory(settings.Media.StoragePath);
 
             if (!Directory.Exists("Snippets"))
                 Directory.CreateDirectory("Snippets");

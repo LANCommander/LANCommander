@@ -1,0 +1,101 @@
+﻿@using LANCommander.Data.Enums;
+@using LANCommander.Models;
+@inject MediaService MediaService
+@inject ModalService ModalService
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%" Class="media-editor">
+    <SpaceItem>
+        <Table TItem="Media" DataSource="@Values" HidePagination="true" Responsive>
+            <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
+                @if (MediaService.FileExists(context))
+                {
+                    <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download")" />
+                }
+            </PropertyColumn>
+            <PropertyColumn Property="p => p.Type">
+                <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="Enum.GetValues<MediaType>()" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Popconfirm OnConfirm="() => RemoveMedia(context)" Title="Are you sure you want to delete this media?">
+                            <Button Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                        </Popconfirm>
+                     </SpaceItem>
+                 </Space>
+             </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddMedia" Type="@ButtonType.Primary">Add Media</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+ @code {
+    [Parameter] public ICollection<Media> Values { get; set; } = new List<Media>();
+    [Parameter] public EventCallback<ICollection<Media>> ValuesChanged { get; set; }
+
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public string GameTitle { get; set; }
+
+    private async Task AddMedia()
+    {
+        if (Values == null)
+            Values = new List<Media>();
+
+        Values.Add(new Media()
+        {
+            GameId = GameId
+        });
+    }
+
+    private async Task SearchMedia(Media media)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Search Media",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Select",
+        };
+
+        var grabberOptions = new MediaGrabberOptions()
+        {
+            Type = media.Type,
+            Search = GameTitle
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberResult>(modalOptions, grabberOptions);
+
+        modalRef.OnOk = async (result) =>
+        {
+            modalRef.Config.ConfirmLoading = true;
+
+            media.SourceUrl = result.SourceUrl;
+            media.FileId = await MediaService.DownloadMediaAsync(result.SourceUrl);
+
+            await MediaService.Add(media);
+
+            Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
+
+            if (ValuesChanged.HasDelegate)
+                await ValuesChanged.InvokeAsync(Values);
+        };
+    }
+
+    private async Task RemoveMedia(Media media)
+    {
+        Values.Remove(media);
+
+        await MediaService.Delete(media);
+    }
+}

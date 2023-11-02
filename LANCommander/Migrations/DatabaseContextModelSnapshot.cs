@@ -474,6 +474,49 @@ namespace LANCommander.Migrations
                     b.ToTable("Keys");
                 });
 
+            modelBuilder.Entity("LANCommander.Data.Models.Media", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("Media");
+                });
+
             modelBuilder.Entity("LANCommander.Data.Models.MultiplayerMode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1302,6 +1345,29 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Data.Models.Media", b =>
+                {
+                    b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById");
+
+                    b.HasOne("LANCommander.Data.Models.Game", "Game")
+                        .WithMany("Media")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Data.Models.MultiplayerMode", b =>
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
@@ -1519,6 +1585,8 @@ namespace LANCommander.Migrations
                     b.Navigation("GameSaves");
 
                     b.Navigation("Keys");
+
+                    b.Navigation("Media");
 
                     b.Navigation("MultiplayerModes");
 

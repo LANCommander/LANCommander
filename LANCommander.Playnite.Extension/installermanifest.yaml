@@ -20,3 +20,11 @@ Packages:
       - Player name is now persisted across machines and is stored as the user's profile name
       - Added support for servers to bundle redistributables with games
       - Added support for opening authentication window using Playnite API
+  - Version: 0.2.1
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2023-11-03
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.2.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_2_1.pext
+    Changelog:
+      - LANCommander servers can now provide game art to Playnite clients
+      - Added server address to addon settings
+      - Added disconnect button to addon settings

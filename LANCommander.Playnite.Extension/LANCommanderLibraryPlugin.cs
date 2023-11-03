@@ -146,7 +146,6 @@ namespace LANCommander.PlaynitePlugin
                         GameId = game.Id.ToString(),
                         ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
                         //Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
-                        Icon = new MetadataFile($"{Settings.ServerAddress}{manifest.Icon}"),
                         GameActions = game.Actions.OrderBy(a => a.SortOrder).Select(a => new PN.SDK.Models.GameAction()
                         {
                             Name = a.Name,
@@ -453,8 +452,6 @@ namespace LANCommander.PlaynitePlugin
                 game.GameActions = new ObservableCollection<PN.SDK.Models.GameAction>();
             else
                 game.GameActions.Clear();
-
-            game.Icon = $"{Settings.ServerAddress}{manifest.Icon}";
 
             if (manifest.Actions == null)
                 throw new Exception("The game has no actions defined.");

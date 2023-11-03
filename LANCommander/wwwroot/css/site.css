@@ -18,6 +18,12 @@
     background: #141414;
 }
 
+label.ant-btn-icon-only {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .ant-select-selector {
     line-height: 30px;
 }

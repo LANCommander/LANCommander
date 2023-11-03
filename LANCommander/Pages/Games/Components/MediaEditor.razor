@@ -2,6 +2,7 @@
 @using LANCommander.Models;
 @inject MediaService MediaService
 @inject ModalService ModalService
+@inject IMessageService MessageService
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%" Class="media-editor">
     <SpaceItem>
@@ -17,6 +18,15 @@
             </PropertyColumn>
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        @{
+                            var fileInputId = Guid.NewGuid();
+                        }
+                        <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden />
+                        <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
+                            <Icon Type="@IconType.Outline.Upload" />
+                        </label>
+                    </SpaceItem>
                     <SpaceItem>
                         <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
                     </SpaceItem>
@@ -45,6 +55,14 @@
 
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public string GameTitle { get; set; }
+
+    LANCommanderSettings Settings = SettingService.GetSettings();
+
+    string[] ValidMimeTypes = new string[]
+    {
+        "image/png",
+        "image/jpeg"
+    };
 
     private async Task AddMedia()
     {
@@ -102,6 +120,42 @@
             if (ValuesChanged.HasDelegate)
                 await ValuesChanged.InvokeAsync(Values);
         };
+    }
+
+    private async Task UploadMedia(InputFileChangeEventArgs e, Media media)
+    {
+        if (!ValidMimeTypes.Contains(e.File.ContentType))
+        {
+            MessageService.Error("Unsupported file type");
+            return;
+        }
+
+        if ((e.File.Size / 1024 / 1024) > Settings.Media.MaxSize)
+        {
+            MessageService.Error($"File size must be smaller than {Settings.Media.MaxSize}MB");
+            return;
+        }
+
+        media.SourceUrl = "";
+        media.MimeType = e.File.ContentType;
+
+        if (media.Id == Guid.Empty)
+        {
+            media.FileId = await MediaService.UploadMediaAsync(e.File);
+
+            await MediaService.Add(media);
+        }
+        else
+        {
+            MediaService.DeleteLocalMediaFile(media.FileId);
+            media.FileId = await MediaService.UploadMediaAsync(e.File);
+            await MediaService.Update(media);
+        }
+
+        Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Values);
     }
 
     private async Task RemoveMedia(Media media)

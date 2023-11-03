@@ -56,6 +56,7 @@
     {
         public string SteamGridDbApiKey { get; set; } = "";
         public string StoragePath { get; set; } = "Media";
+        public long MaxSize { get; set; } = 25;
     }
 
     public class LANCommanderIPXRelaySettings

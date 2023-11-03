@@ -2,6 +2,7 @@
 using LANCommander.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Models;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace LANCommander.Services
 {
@@ -45,6 +46,20 @@ namespace LANCommander.Services
         public string GetImagePath(Media entity)
         {
             return Path.Combine(Settings.Media.StoragePath, entity.FileId.ToString());
+        }
+
+        public async Task<Guid> UploadMediaAsync(IBrowserFile file)
+        {
+            var fileId = Guid.NewGuid();
+
+            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+
+            using (var fs = new FileStream(path, FileMode.Create))
+            {
+                await file.OpenReadStream().CopyToAsync(fs);
+            }
+
+            return fileId;
         }
 
         public void DeleteLocalMediaFile(Guid fileId)

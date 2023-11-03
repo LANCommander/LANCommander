@@ -8,6 +8,14 @@ namespace LANCommander.Services.MediaGrabbers
     public class SteamGridDBMediaGrabber : IMediaGrabberService
     {
         SteamGridDb SteamGridDb { get; set; }
+
+        private SteamGridDbFormats[] SupportedFormats = new SteamGridDbFormats[]
+        {
+            SteamGridDbFormats.Png,
+            SteamGridDbFormats.Jpeg,
+            SteamGridDbFormats.Webp
+        };
+
         public SteamGridDBMediaGrabber()
         {
             var settings = SettingService.GetSettings();
@@ -45,13 +53,14 @@ namespace LANCommander.Services.MediaGrabbers
         {
             var icons = await SteamGridDb.GetIconsByGameIdAsync(game.Id);
 
-            return icons.Select(i => new MediaGrabberResult()
+            return icons.Where(i => SupportedFormats.Contains(i.Format)).Select(i => new MediaGrabberResult()
             {
                 Id = i.Id.ToString(),
                 Type = MediaType.Icon,
                 SourceUrl = i.FullImageUrl,
                 ThumbnailUrl = i.ThumbnailImageUrl,
-                Group = game.Name
+                Group = game.Name,
+                MimeType = GetMimeType(i.Format)
             });
         }
 
@@ -59,13 +68,14 @@ namespace LANCommander.Services.MediaGrabbers
         {
             var covers = await SteamGridDb.GetGridsByGameIdAsync(game.Id);
 
-            return covers.Select(c => new MediaGrabberResult()
+            return covers.Where(c => SupportedFormats.Contains(c.Format)).Select(c => new MediaGrabberResult()
             {
                 Id = c.Id.ToString(),
                 Type = MediaType.Cover,
                 SourceUrl = c.FullImageUrl,
                 ThumbnailUrl = c.ThumbnailImageUrl,
-                Group = game.Name
+                Group = game.Name,
+                MimeType = GetMimeType(c.Format)
             });
         }
 
@@ -73,14 +83,30 @@ namespace LANCommander.Services.MediaGrabbers
         {
             var backgrounds = await SteamGridDb.GetHeroesByGameIdAsync(game.Id);
 
-            return backgrounds.Select(b => new MediaGrabberResult()
+            return backgrounds.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Background,
                 SourceUrl = b.FullImageUrl,
                 ThumbnailUrl = b.ThumbnailImageUrl,
-                Group = game.Name
+                Group = game.Name,
+                MimeType = GetMimeType(b.Format)
             });
+        }
+
+        private string GetMimeType(SteamGridDbFormats format)
+        {
+            switch (format)
+            {
+                case SteamGridDbFormats.Png:
+                    return "image/png";
+                case SteamGridDbFormats.Jpeg:
+                    return "image/jpg";
+                case SteamGridDbFormats.Webp:
+                    return "image/webp";
+                default:
+                    throw new NotImplementedException("The SteamGridDB grabber currently does not support this format");
+            }
         }
     }
 }

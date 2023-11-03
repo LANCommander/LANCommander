@@ -9,5 +9,6 @@ namespace LANCommander.Models
         public string SourceUrl { get; set; }
         public string ThumbnailUrl { get; set; }
         public string Group { get; set; }
+        public string MimeType { get; set; }
     }
 }

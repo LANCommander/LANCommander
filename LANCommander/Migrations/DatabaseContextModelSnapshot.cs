@@ -492,6 +492,11 @@ namespace LANCommander.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SourceUrl")
                         .IsRequired()
                         .HasMaxLength(2048)

@@ -45,7 +45,7 @@ namespace LANCommander.Controllers.Api
 
                 var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
 
-                return File(fs, "image/png");
+                return File(fs, media.MimeType);
             }
             catch (Exception ex)
             {

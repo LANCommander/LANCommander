@@ -9,7 +9,7 @@
             <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
                 @if (MediaService.FileExists(context))
                 {
-                    <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download")" />
+                    <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")" />
                 }
             </PropertyColumn>
             <PropertyColumn Property="p => p.Type">
@@ -53,7 +53,8 @@
 
         Values.Add(new Media()
         {
-            GameId = GameId
+            GameId = GameId,
+            Type = Enum.GetValues<MediaType>().ToList().FirstOrDefault(t => !Values.Any(v => v.Type == t))
         });
     }
 
@@ -61,7 +62,7 @@
     {
         var modalOptions = new ModalOptions()
         {
-            Title = "Search Media",
+            Title = $"Download {media.Type}",
             Maximizable = false,
             DefaultMaximized = true,
             Closable = true,
@@ -81,9 +82,19 @@
             modalRef.Config.ConfirmLoading = true;
 
             media.SourceUrl = result.SourceUrl;
-            media.FileId = await MediaService.DownloadMediaAsync(result.SourceUrl);
 
-            await MediaService.Add(media);
+            if (media.Id == Guid.Empty)
+            {
+                media.FileId = await MediaService.DownloadMediaAsync(result.SourceUrl);
+
+                await MediaService.Add(media);
+            }
+            else
+            {
+                MediaService.DeleteLocalMediaFile(media.FileId);
+                media.FileId = await MediaService.DownloadMediaAsync(result.SourceUrl);
+                await MediaService.Update(media);
+            }
 
             Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
 

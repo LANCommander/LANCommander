@@ -176,13 +176,11 @@
 .image-picker-images {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-evenly;
     gap: 16px;
 }
 
 .image-picker-image {
     position: relative;
-    aspect-ratio: 1/1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -216,6 +214,19 @@
 .media-editor img {
     max-width: 100px;
     max-height: 100px;
+}
+
+.media-grabber-group {
+    margin-top: 18px;
+}
+
+.media-grabber-group + .media-grabber-group {
+    padding-top: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.85);
+}
+
+[data-theme="Dark"] .media-grabber-group + .media-grabber-group {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 @media screen and (min-width: 768px) {

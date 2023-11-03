@@ -3,28 +3,49 @@
 @using LANCommander.Models;
 @inject IMediaGrabberService MediaGrabberService
 
-<Slider TValue="double" @bind-Value="Size" DefaultValue="200" Min="50" Max="400" />
+<GridRow Justify="space-between">
+    <GridCol Span="6">
+        <Search @bind-Value="Search" OnSearch="(x) => GetResults(Type, x)" DefaultValue="@Search" />
+    </GridCol>
+    <GridCol Span="12"></GridCol>
+    <GridCol Span="6">
+        <Slider TValue="double" @bind-Value="Size" DefaultValue="200" Min="50" Max="400" />
+    </GridCol>
+</GridRow>
 
-<ImagePicker Size="Size" Images="Images" ValueChanged="OnImageSelected" /> 
+@foreach (var group in Results)
+{
+    <div class="media-grabber-group">
+        <h2>@group.First().Group</h2>
+
+        <ImagePicker Size="Size" Images="@group.ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" />
+    </div>
+}
 
 @code {
     [Parameter] public string Search { get; set; }
     [Parameter] public MediaType Type { get; set; }
-    
+
     MediaGrabberResult Media { get; set; }
 
     double Size { get; set; } = 200;
 
-    IEnumerable<MediaGrabberResult> Results = new List<MediaGrabberResult>();
+    IEnumerable<IEnumerable<MediaGrabberResult>> Results = new List<List<MediaGrabberResult>>();
     Dictionary<string, string> Images { get; set; } = new Dictionary<string, string>();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnFirstAfterRenderAsync()
     {
-        if (firstRender)
-        {
-            Results = await MediaGrabberService.SearchAsync(Options.Type, Options.Search);
+        Type = Options.Type;
+        Search = Options.Search;
 
-            Images = Results.ToDictionary(r => r.Id, r => r.ThumbnailUrl);
+        await GetResults(Type, Search);
+    }
+
+    private async Task GetResults(MediaType type, string search)
+    {
+        if (!String.IsNullOrWhiteSpace(search))
+        {
+            Results = (await MediaGrabberService.SearchAsync(type, search)).GroupBy(r => r.Group);
 
             StateHasChanged();
         }
@@ -32,7 +53,7 @@
 
     private void OnImageSelected(string key)
     {
-        Media = Results.FirstOrDefault(r => r.Id == key);
+        Media = Results.SelectMany(g => g).FirstOrDefault(r => r.Id == key);
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)

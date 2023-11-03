@@ -47,9 +47,18 @@ namespace LANCommander.Services
             return Path.Combine(Settings.Media.StoragePath, entity.FileId.ToString());
         }
 
+        public void DeleteLocalMediaFile(Guid fileId)
+        {
+            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+
         public async Task<Guid> DownloadMediaAsync(string sourceUrl)
         {
             var fileId = Guid.NewGuid();
+
             var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
 
             using (var http = new HttpClient())

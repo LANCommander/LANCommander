@@ -8,5 +8,6 @@ namespace LANCommander.Models
         public MediaType Type { get; set; }
         public string SourceUrl { get; set; }
         public string ThumbnailUrl { get; set; }
+        public string Group { get; set; }
     }
 }

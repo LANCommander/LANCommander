@@ -48,5 +48,11 @@ namespace LANCommander.Controllers.Api
                 }
             }
         }
+
+        [HttpPost("Media")]
+        public async Task Media(IFormFile file)
+        {
+
+        }
     }
 }

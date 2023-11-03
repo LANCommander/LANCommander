@@ -1,0 +1,167 @@
+﻿@using LANCommander.Data.Enums;
+@using LANCommander.Models;
+@inject MediaService MediaService
+@inject ModalService ModalService
+@inject IMessageService MessageService
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%" Class="media-editor">
+    <SpaceItem>
+        <Table TItem="Media" DataSource="@Values" HidePagination="true" Responsive>
+            <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
+                @if (MediaService.FileExists(context))
+                {
+                    <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")" />
+                }
+            </PropertyColumn>
+            <PropertyColumn Property="p => p.Type">
+                <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="Enum.GetValues<MediaType>()" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        @{
+                            var fileInputId = Guid.NewGuid();
+                        }
+                        <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden />
+                        <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
+                            <Icon Type="@IconType.Outline.Upload" />
+                        </label>
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Popconfirm OnConfirm="() => RemoveMedia(context)" Title="Are you sure you want to delete this media?">
+                            <Button Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                        </Popconfirm>
+                     </SpaceItem>
+                 </Space>
+             </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddMedia" Type="@ButtonType.Primary">Add Media</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+ @code {
+    [Parameter] public ICollection<Media> Values { get; set; } = new List<Media>();
+    [Parameter] public EventCallback<ICollection<Media>> ValuesChanged { get; set; }
+
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public string GameTitle { get; set; }
+
+    LANCommanderSettings Settings = SettingService.GetSettings();
+
+    string[] ValidMimeTypes = new string[]
+    {
+        "image/png",
+        "image/jpeg"
+    };
+
+    private async Task AddMedia()
+    {
+        if (Values == null)
+            Values = new List<Media>();
+
+        Values.Add(new Media()
+        {
+            GameId = GameId,
+            Type = Enum.GetValues<MediaType>().ToList().FirstOrDefault(t => !Values.Any(v => v.Type == t))
+        });
+    }
+
+    private async Task SearchMedia(Media media)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Download {media.Type}",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Select",
+        };
+
+        var grabberOptions = new MediaGrabberOptions()
+        {
+            Type = media.Type,
+            Search = GameTitle
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<MediaGrabberDialog, MediaGrabberOptions, MediaGrabberResult>(modalOptions, grabberOptions);
+
+        modalRef.OnOk = async (result) =>
+        {
+            modalRef.Config.ConfirmLoading = true;
+
+            media.SourceUrl = result.SourceUrl;
+            media.MimeType = result.MimeType; 
+
+            if (media.Id == Guid.Empty)
+            {
+                media.FileId = await MediaService.DownloadMediaAsync(result.SourceUrl);
+
+                await MediaService.Add(media);
+            }
+            else
+            {
+                MediaService.DeleteLocalMediaFile(media.FileId);
+                media.FileId = await MediaService.DownloadMediaAsync(result.SourceUrl);
+                await MediaService.Update(media);
+            }
+
+            Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
+
+            if (ValuesChanged.HasDelegate)
+                await ValuesChanged.InvokeAsync(Values);
+        };
+    }
+
+    private async Task UploadMedia(InputFileChangeEventArgs e, Media media)
+    {
+        if (!ValidMimeTypes.Contains(e.File.ContentType))
+        {
+            MessageService.Error("Unsupported file type");
+            return;
+        }
+
+        if ((e.File.Size / 1024 / 1024) > Settings.Media.MaxSize)
+        {
+            MessageService.Error($"File size must be smaller than {Settings.Media.MaxSize}MB");
+            return;
+        }
+
+        media.SourceUrl = "";
+        media.MimeType = e.File.ContentType;
+
+        if (media.Id == Guid.Empty)
+        {
+            media.FileId = await MediaService.UploadMediaAsync(e.File);
+
+            await MediaService.Add(media);
+        }
+        else
+        {
+            MediaService.DeleteLocalMediaFile(media.FileId);
+            media.FileId = await MediaService.UploadMediaAsync(e.File);
+            await MediaService.Update(media);
+        }
+
+        Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Values);
+    }
+
+    private async Task RemoveMedia(Media media)
+    {
+        Values.Remove(media);
+
+        await MediaService.Delete(media);
+    }
+}

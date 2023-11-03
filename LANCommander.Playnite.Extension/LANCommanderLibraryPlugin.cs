@@ -113,7 +113,7 @@ namespace LANCommander.PlaynitePlugin
 
             var games = LANCommander
                 .GetGames()
-                .Where(g => g.Archives != null && g.Archives.Count() > 0);
+                .Where(g => g != null && g.Archives != null && g.Archives.Count() > 0);
 
             foreach (var game in games)
             {
@@ -182,6 +182,15 @@ namespace LANCommander.PlaynitePlugin
 
                     if (manifest.OnlineMultiplayer != null)
                         metadata.Features.Add(new MetadataNameProperty($"Online Multiplayer {manifest.OnlineMultiplayer.GetPlayerCount()}".Trim()));
+
+                    if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Icon))
+                        metadata.Icon = new MetadataFile(LANCommander.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Icon)));
+
+                    if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
+                        metadata.CoverImage = new MetadataFile(LANCommander.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)));
+
+                    if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
+                        metadata.BackgroundImage = new MetadataFile(LANCommander.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Background)));
 
                     gameMetadata.Add(metadata);
                 }

@@ -18,6 +18,7 @@
         public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();
         public LANCommanderUserSaveSettings UserSaves { get; set; } = new LANCommanderUserSaveSettings();
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
+        public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
     }
 
@@ -49,6 +50,13 @@
     {
         public bool EnablePatching { get; set; } = false;
         public string StoragePath { get; set; } = "Uploads";
+    }
+
+    public class LANCommanderMediaSettings
+    {
+        public string SteamGridDbApiKey { get; set; } = "";
+        public string StoragePath { get; set; } = "Media";
+        public long MaxSize { get; set; } = 25;
     }
 
     public class LANCommanderIPXRelaySettings

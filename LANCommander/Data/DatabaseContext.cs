@@ -90,6 +90,11 @@ namespace LANCommander.Data
                     gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId")
                 );
 
+            builder.Entity<Game>()
+                .HasMany(g => g.Media)
+                .WithOne(m => m.Game)
+                .OnDelete(DeleteBehavior.Cascade);
+
             builder.Entity<User>()
                 .HasMany(u => u.GameSaves)
                 .WithOne(gs => gs.User)
@@ -146,5 +151,7 @@ namespace LANCommander.Data
         public DbSet<ServerConsole>? ServerConsoles { get; set; }
 
         public DbSet<Redistributable>? Redistributables { get; set; }
+
+        public DbSet<Media>? Media { get; set; }
     }
 }

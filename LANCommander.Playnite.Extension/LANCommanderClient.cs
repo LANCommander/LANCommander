@@ -235,6 +235,11 @@ namespace LANCommander.PlaynitePlugin
             return response.Data;
         }
 
+        public string GetMediaUrl(Media media)
+        {
+            return (new Uri(Client.BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
+        }
+
         public string GetKey(Guid id)
         {
             Logger.Trace("Requesting key allocation...");

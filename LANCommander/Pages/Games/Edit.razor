@@ -25,6 +25,7 @@
 
             @if (Game != null && Game.Id != Guid.Empty)
             {
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Media")">Media</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Actions")">Actions</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Multiplayer")">Multiplayer</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/SavePaths")">Save Paths</MenuItem>
@@ -107,6 +108,10 @@
 
             @if (Game != null && Game.Id != Guid.Empty)
             {
+                <div data-panel="Media">
+                    <MediaEditor @bind-Values="Game.Media" GameId="Game.Id" GameTitle="@Game.Title" />
+                </div>
+
                 <div data-panel="Actions">
                     <ActionEditor @bind-Actions="Game.Actions" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
                 </div>

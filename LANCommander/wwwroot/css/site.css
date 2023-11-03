@@ -214,6 +214,7 @@
 .media-editor img {
     max-width: 100px;
     max-height: 100px;
+    width: auto;
 }
 
 .media-grabber-group {

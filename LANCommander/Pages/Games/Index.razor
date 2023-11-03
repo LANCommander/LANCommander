@@ -145,7 +145,12 @@
 
     private string GetIcon(Game game)
     {
-        return $"/api/Games/{game.Id}/Icon.png";
+        var media = game?.Media?.FirstOrDefault(m => m.Type == Data.Enums.MediaType.Icon);
+
+        if (media != null)
+            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        else
+            return "/favicon.ico";
     }
 
     private void Add()

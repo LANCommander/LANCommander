@@ -10,7 +10,6 @@ namespace LANCommander.Data.Models
         public string Title { get; set; }
         [Display(Name = "Sort Title")]
         public string? SortTitle { get; set; }
-        public string? Icon { get; set; }
         [Display(Name = "Directory Name")]
         public string? DirectoryName { get; set; }
         public string? Description { get; set; }

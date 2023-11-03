@@ -73,9 +73,6 @@
                     <FormItem Label="Sort Title">
                         <Input @bind-Value="@context.SortTitle" />
                     </FormItem>
-                    <FormItem Label="Icon">
-                        <FilePicker @bind-Value="context.Icon" ArchiveId="@LatestArchiveId" AllowDirectories="true" />
-                    </FormItem>
                     <FormItem Label="Notes">
                         <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
                      </FormItem>
@@ -258,34 +255,6 @@ else
         NavigationManager.LocationChanged -= NotifyGameAdded;
 
         MessageService.Success("Game added!");
-    }
-
-    private async Task BrowseForIcon()
-    {
-        var modalOptions = new ModalOptions()
-        {
-            Title = "Choose Icon",
-            Maximizable = false,
-            DefaultMaximized = true,
-            Closable = true,
-            OkText = "Select File"
-        };
-
-        var browserOptions = new FilePickerOptions()
-        {
-            ArchiveId = Game.Archives.FirstOrDefault().Id,
-            Select = true,
-            Multiple = false
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
-
-        modalRef.OnOk = (results) =>
-        {
-            Game.Icon = results.FirstOrDefault().Path;
-            StateHasChanged();
-            return Task.CompletedTask;
-        };
     }
 
     private async Task OnGameLookupResultSelected(GameLookupResult result)

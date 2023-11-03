@@ -12,10 +12,12 @@ namespace LANCommander.Services
     public class GameService : BaseDatabaseService<Game>
     {
         private readonly ArchiveService ArchiveService;
+        private readonly MediaService MediaService;
 
-        public GameService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, ArchiveService archiveService) : base(dbContext, httpContextAccessor)
+        public GameService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, ArchiveService archiveService, MediaService mediaService) : base(dbContext, httpContextAccessor)
         {
             ArchiveService = archiveService;
+            MediaService = mediaService;
         }
 
         public override async Task Delete(Game game)
@@ -23,8 +25,11 @@ namespace LANCommander.Services
             foreach (var archive in game.Archives.OrderByDescending(a => a.CreatedOn))
             {
                 await ArchiveService.Delete(archive);
+            }
 
-                FileHelpers.DeleteIfExists($"Icon/{game.Id}.png".ToPath());
+            foreach (var media in game.Media)
+            {
+                await MediaService.Delete(media);
             }
 
             await base.Delete(game);
@@ -44,7 +49,6 @@ namespace LANCommander.Services
                 Description = game.Description,
                 ReleasedOn = game.ReleasedOn.GetValueOrDefault(),
                 Singleplayer = game.Singleplayer,
-                Icon = game.Icon
             };
 
             if (game.Genres != null && game.Genres.Count > 0)
@@ -114,82 +118,6 @@ namespace LANCommander.Services
             }
 
             return manifest;
-        }
-
-        public byte[] GetIcon(Game game)
-        {
-            var cachedPath = $"Icon/{game.Id}.png";
-
-            if (File.Exists(cachedPath))
-                return File.ReadAllBytes(cachedPath);
-            else
-            {
-                #if WINDOWS
-                try
-                {
-                    if (game.Archives == null || game.Archives.Count == 0)
-                        throw new FileNotFoundException();
-
-                    var archive = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-
-                    Bitmap bitmap = null;
-
-                    var iconReference = ArchiveService.ReadFile(archive.ObjectKey, game.Icon);
-
-                    if (IsWinPEFile(iconReference))
-                    {
-                        var tmp = System.IO.Path.GetTempFileName();
-
-                        System.IO.File.WriteAllBytes(tmp, iconReference);
-
-                        var icon = System.Drawing.Icon.ExtractAssociatedIcon(tmp);
-
-                        bitmap = icon.ToBitmap();
-                    }
-                    else
-                    {
-                        using (var ms = new MemoryStream(iconReference))
-                        {
-                            bitmap = (Bitmap)Bitmap.FromStream(ms);
-                        }
-                    }
-
-                    var iconPng = ConvertToPng(bitmap);
-
-                    File.WriteAllBytes(cachedPath, iconPng);
-
-                    return iconPng;
-                }
-                catch (Exception ex)
-                {
-
-                }
-                #endif
-
-                return File.ReadAllBytes("favicon.png");
-            }
-        }
-
-        private static bool IsWinPEFile(byte[] file)
-        {
-            var mz = new byte[2];
-
-            using (var ms = new MemoryStream(file))
-            {
-                ms.Read(mz, 0, 2);
-            }
-
-            return System.Text.Encoding.UTF8.GetString(mz) == "MZ";
-        }
-
-        private static byte[] ConvertToPng(Image img)
-        {
-            using (var stream = new MemoryStream())
-            {
-                img.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-
-                return stream.ToArray();
-            }
         }
     }
 }

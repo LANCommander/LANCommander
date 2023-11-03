@@ -15,7 +15,6 @@ namespace LANCommander.SDK
         public IEnumerable<string> Publishers { get; set; }
         public IEnumerable<string> Developers { get; set; }
         public string Version { get; set; }
-        public string Icon { get; set; }
         public IEnumerable<GameAction> Actions { get; set; }
         public bool Singleplayer { get; set; }
         public MultiplayerInfo LocalMultiplayer { get; set; }

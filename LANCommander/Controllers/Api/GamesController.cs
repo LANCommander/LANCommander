@@ -42,8 +42,6 @@ namespace LANCommander.Controllers.Api
         {
             var manifest = await GameService.GetManifest(id);
 
-            manifest.Icon = Url.Action(nameof(GetIcon), new { id = id });
-
             return manifest;
         }
 
@@ -66,22 +64,6 @@ namespace LANCommander.Controllers.Api
                 return NotFound();
 
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{game.Title.SanitizeFilename()}.zip");
-        }
-
-        [AllowAnonymous]
-        [HttpGet("{id}/Icon.png")]
-        public async Task<IActionResult> GetIcon(Guid id)
-        {
-            try
-            {
-                var game = await GameService.Get(id);
-
-                return File(GameService.GetIcon(game), "image/png");
-            }
-            catch (FileNotFoundException ex)
-            {
-                return NotFound();
-            }
         }
     }
 }

@@ -14,30 +14,45 @@
     <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="auto" />
-            <RowDefinition Height="auto" />
+			<RowDefinition Height="auto" />
+			<RowDefinition Height="auto" />
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="100" />
                 <ColumnDefinition Width="10" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="10" />
-                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="75" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Install Directory" />
             <TextBox Name="PART_InstallDirectory" Grid.Column="2" Text="{Binding InstallDirectory}" />
             <Button Grid.Column="4" Content="Browse" Click="SelectInstallDirectory_Click" VerticalAlignment="Center" Grid.ColumnSpan="2" />
         </Grid>
+		
+		<Grid Grid.Row="1" Margin="0,10,0,0">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="100" />
+				<ColumnDefinition Width="10" />
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="10" />
+				<ColumnDefinition Width="75" />
+			</Grid.ColumnDefinitions>
 
-        <Grid Height="40" Grid.Row="1">
+			<Label Grid.Column="0" Content="Server Address" />
+			<TextBox Name="PART_ServerAddress" Grid.Column="2" Text="{Binding ServerAddress}" IsEnabled="false" />
+		</Grid>
+
+        <Grid Grid.Row="2" Margin="0,10,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <Button Name="PART_AuthenticationButton" Content="Authenticate" Grid.Column="0" Click="AuthenticateButton_Click" VerticalAlignment="Center" />
-            <Label Name="PART_AuthenticateLabel" Margin="20,0,0,0" VerticalAlignment="Center" Grid.Column="1" />
+			<Button Name="PART_DisconnectButton" Content="Disconnect" Grid.Column="0" Click="DisconnectButton_Click" VerticalAlignment="Center" />
+            <Label Name="PART_AuthenticateLabel" Margin="20,0,0,0" VerticalAlignment="Center" Grid.Column="3" />
         </Grid>
     </Grid>
 </UserControl>

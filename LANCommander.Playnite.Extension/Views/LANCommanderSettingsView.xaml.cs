@@ -39,6 +39,7 @@ namespace LANCommander.PlaynitePlugin
             PART_AuthenticateLabel.Content = "Checking authentication status...";
             PART_AuthenticationButton.IsEnabled = false;
             PART_InstallDirectory.Text = Settings.InstallDirectory;
+            PART_ServerAddress.Text = Settings.ServerAddress;
 
             var token = new AuthToken()
             {
@@ -57,11 +58,17 @@ namespace LANCommander.PlaynitePlugin
                             {
                                 PART_AuthenticateLabel.Content = "Authentication failed!";
                                 PART_AuthenticationButton.IsEnabled = true;
+                                PART_AuthenticationButton.Visibility = Visibility.Visible;
+                                PART_DisconnectButton.IsEnabled = false;
+                                PART_DisconnectButton.Visibility = Visibility.Hidden;
                             }
                             else
                             {
                                 PART_AuthenticateLabel.Content = "Connection established!";
                                 PART_AuthenticationButton.IsEnabled = false;
+                                PART_AuthenticationButton.Visibility = Visibility.Hidden;
+                                PART_DisconnectButton.IsEnabled = true;
+                                PART_DisconnectButton.Visibility = Visibility.Visible;
                             }
                         }));
                     }
@@ -77,6 +84,21 @@ namespace LANCommander.PlaynitePlugin
             var authWindow = Plugin.ShowAuthenticationWindow();
 
             authWindow.Closed += AuthWindow_Closed;
+        }
+
+        private void DisconnectButton_Click(object sender, RoutedEventArgs e)
+        {
+            Plugin.Settings.AccessToken = String.Empty;
+            Plugin.Settings.RefreshToken = String.Empty;
+            Plugin.LANCommander.Token = null;
+
+            Plugin.SavePluginSettings(Plugin.Settings);
+
+            PART_AuthenticateLabel.Content = "Not Authenticated";
+            PART_AuthenticationButton.IsEnabled = true;
+            PART_AuthenticationButton.Visibility = Visibility.Visible;
+            PART_DisconnectButton.IsEnabled = false;
+            PART_DisconnectButton.Visibility = Visibility.Hidden;
         }
 
         private void AuthWindow_Closed(object sender, EventArgs e)

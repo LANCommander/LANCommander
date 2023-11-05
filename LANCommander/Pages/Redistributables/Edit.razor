@@ -22,13 +22,24 @@
 
     <Content>
         <PageHeader>
-            <PageHeaderTitle>@Panel</PageHeaderTitle>
+            <PageHeaderTitle>
+                @if (Panel == null)
+                {
+                    <Text>Add New Redistributable</Text>
+                }
+                else
+                {
+                    @Panel
+                }
+            </PageHeaderTitle>
+            <PageHeaderExtra>
+                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+            </PageHeaderExtra>
         </PageHeader>
 
 
         <div class="panel-layout-content">
-            @if (Panel == "General" || String.IsNullOrWhiteSpace(Panel))
-            {
+            <div data-panel="General">
                 <Form Model="@Redistributable" Layout="@FormLayout.Vertical">
                     <FormItem Label="Name">
                         <Input @bind-Value="@context.Name" />
@@ -39,25 +50,39 @@
                     <FormItem Label="Description">
                         <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
                     </FormItem>
-
-                    <FormItem>
-                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
-                    </FormItem>
                 </Form>
-            }
+             </div>
 
-            @if (Panel == "Scripts")
+            @if (Redistributable != null && Redistributable.Id != Guid.Empty)
             {
-                <ScriptEditor @bind-Scripts="Redistributable.Scripts" RedistributableId="Redistributable.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.DetectInstall }" />
-            }
+                <div data-panel="Scripts">
+                    <ScriptEditor @bind-Scripts="Redistributable.Scripts" RedistributableId="Redistributable.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.DetectInstall }" />
+                </div>
 
-            @if (Panel == "Archives")
-            {
-                <ArchiveEditor @bind-Archives="Redistributable.Archives" RedistributableId="Redistributable.Id" />
+                <div data-panel="Archives">
+                    <ArchiveEditor @bind-Archives="Redistributable.Archives" RedistributableId="Redistributable.Id" />
+                </div>
             }
         </div>
     </Content>
 </Layout>
+
+@if (!String.IsNullOrWhiteSpace(Panel))
+{
+    <style>
+        .panel-layout [data-panel="@Panel"] {
+            display: block;
+        }
+    </style>
+}
+else
+{
+    <style>
+        .panel-layout [data-panel="General"] {
+            display: block;
+        }
+    </style>
+}
 
 @code {
     [Parameter] public Guid Id { get; set; }

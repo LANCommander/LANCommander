@@ -4,11 +4,6 @@
 @inject NavigationManager NavigationManager
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
-    @if (Values == null || Values.Count == 0)
-    {
-        <Empty />
-    }
-
     <SpaceItem>
         <Table TItem="ServerHttpPath" DataSource="@Values" HidePagination="true" Responsive>
             <PropertyColumn Property="p => p.LocalPath" Title="Local Path">

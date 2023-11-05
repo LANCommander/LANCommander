@@ -9,31 +9,31 @@
         <Empty />
     }
 
-    @foreach (var httpPath in Values)
-    {
-        <SpaceItem>
-            <Table TItem="ServerHttpPath" DataSource="@Values" HidePagination="true" Responsive>
-                <PropertyColumn Property="p => p.LocalPath" Title="Local Path">
-                    <FilePicker @bind-Value="context.LocalPath" AllowDirectories Title="Select Local Path" Root="@WorkingDirectory" />
-                </PropertyColumn>
-                <PropertyColumn Property="p => p.Path">
-                    <Input Type="text" @bind-Value="context.Path" />
-                </PropertyColumn>
-                <ActionColumn>
-                    <Space Style="display: flex; justify-content: end">
-                         <SpaceItem>
+    <SpaceItem>
+        <Table TItem="ServerHttpPath" DataSource="@Values" HidePagination="true" Responsive>
+            <PropertyColumn Property="p => p.LocalPath" Title="Local Path">
+                <FilePicker @bind-Value="context.LocalPath" AllowDirectories Title="Select Local Path" Root="@WorkingDirectory" />
+            </PropertyColumn>
+            <PropertyColumn Property="p => p.Path">
+                <Input Type="text" @bind-Value="context.Path" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    @if (context != null && context.Id != Guid.Empty)
+                    {
+                        <SpaceItem>
                             <a class="ant-btn ant-btn-text ant-btn-icon-only" href="@NavigationManager.ToAbsoluteUri($"Server/{ServerId}/{context.Path.TrimStart('/')}")" target="_blank">
                                 <Icon Type="@IconType.Outline.Eye" />
                             </a>
                         </SpaceItem>
-                        <SpaceItem>
-                            <Button OnClick="() => Remove(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
-                        </SpaceItem>
-                    </Space>
-                </ActionColumn>
-            </Table>
-        </SpaceItem>
-    }
+                    }
+                    <SpaceItem>
+                        <Button OnClick="() => Remove(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
 
     <SpaceItem>
         <GridRow Justify="end">

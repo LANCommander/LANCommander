@@ -35,7 +35,7 @@
     <Selection Key="@(context.Id.ToString())" />
     <PropertyColumn Property="s => s.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
      <PropertyColumn Property="s => s.Game" Hidden="@(Picker.IsColumnHidden("Game"))">
-        <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false" Style="margin-right: 8px"></Image>
+        <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
         @context.Game?.Title
     </PropertyColumn>
     <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />

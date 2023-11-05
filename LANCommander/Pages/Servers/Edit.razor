@@ -124,6 +124,13 @@
                 <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>                
             }
 
+            @if (Panel == "Consoles")
+            {
+                <ServerConsoleEditor @bind-Value="Server.ServerConsoles" ServerId="Id" />
+
+                <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+            }
+
             @if (Panel == "Monitor")
             {
                 @if (LogId == "Console") {

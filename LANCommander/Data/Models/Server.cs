@@ -17,9 +17,6 @@ namespace LANCommander.Data.Models
         public bool Autostart { get; set; }
         public int AutostartDelay { get; set; }
 
-        public bool EnableHTTP { get; set; }
-        public string HTTPRootPath { get; set; }
-
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

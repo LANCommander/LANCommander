@@ -118,6 +118,7 @@
 
             @if (Panel == "HTTP")
             {
+                <Text>HTTP paths are a way to host static files such as maps and other assets. Engines such as Source, id Tech 3, and Unreal can utilize HTTP for faster downloads when connecting to a server.</Text>
                 <ServerHttpPathEditor @bind-Values="Server.HttpPaths" ServerId="Id" WorkingDirectory="@Server.WorkingDirectory" />
 
                 <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>                

@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Data.Enums
 @using LANCommander.Data.Models
 @using LANCommander.Extensions;
+@inject NavigationManager NavigationManager
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     @if (Values == null || Values.Count == 0)
@@ -20,6 +21,11 @@
                 </PropertyColumn>
                 <ActionColumn>
                     <Space Style="display: flex; justify-content: end">
+                         <SpaceItem>
+                            <a class="ant-btn ant-btn-text ant-btn-icon-only" href="@NavigationManager.ToAbsoluteUri($"Server/{ServerId}/{context.Path.TrimStart('/')}")" target="_blank">
+                                <Icon Type="@IconType.Outline.Eye" />
+                            </a>
+                        </SpaceItem>
                         <SpaceItem>
                             <Button OnClick="() => Remove(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
                         </SpaceItem>

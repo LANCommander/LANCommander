@@ -118,19 +118,9 @@
 
             @if (Panel == "HTTP")
             {
-                <Form Model="@Server" Layout="@FormLayout.Vertical">
-                    <FormItem Label="Enable HTTP">
-                        <Switch @bind-Checked="context.EnableHTTP" />
-                    </FormItem>
+                <ServerHttpPathEditor @bind-Values="Server.HttpPaths" ServerId="Id" WorkingDirectory="@Server.WorkingDirectory" />
 
-                    <FormItem Label="Root Path">
-                        <FilePicker Root="@RootPath" Title="Choose Root Path" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.HTTPRootPath" />
-                    </FormItem>
-
-                    <FormItem>
-                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
-                    </FormItem>
-                </Form>
+                <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>                
             }
 
             @if (Panel == "Monitor")
@@ -180,6 +170,9 @@
         if (Server.GameId.HasValue)
             GameId = Server.GameId.Value;
 
+        if (Server.HttpPaths == null)
+            Server.HttpPaths = new List<ServerHttpPath>();
+
         Games = await GameService.Get();
     }
 
@@ -208,6 +201,14 @@
         {
             await MessageService.Error("Could not save!");
         }
+    }
+
+    private async Task AddPath()
+    {
+        Server.HttpPaths.Add(new ServerHttpPath()
+        {
+            ServerId = Server.Id
+        });
     }
 
     private void OnPathSelected(string path)

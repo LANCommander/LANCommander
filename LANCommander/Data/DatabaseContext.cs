@@ -119,6 +119,12 @@ namespace LANCommander.Data
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Entity<Server>()
+                .HasMany<ServerHttpPath>()
+                .WithOne(s => s.Server)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
             builder.Entity<Redistributable>()
                 .HasMany(r => r.Archives)
                 .WithOne(a => a.Redistributable)

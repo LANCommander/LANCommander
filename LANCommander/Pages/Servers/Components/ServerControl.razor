@@ -81,23 +81,21 @@
         if (args?.Server?.Id == ServerId)
         {
             Status = args.Status;
-            StateHasChanged();
 
             if (Status == ServerProcessStatus.Error)
             {
                 NotificationService.Error(new NotificationConfig
-                    {
-                        Message = $"Error starting server {args.Server.Name}",
-                        Description = args.Exception.Message,
-                    }
-                );
+                {
+                    Message = $"Error starting server {args.Server.Name}",
+                    Description = args.Exception.Message,
+                });
             }
         }
     }
 
     private async Task Start()
     {
-        ServerProcessService.StartServerAsync(Server);
+        await ServerProcessService.StartServerAsync(Server);
     }
 
     private void Stop()

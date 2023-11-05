@@ -24,9 +24,9 @@
                         <MenuItem Key="Console" RouterLink="@($"/Servers/{Server.Id}/Monitor/Console")">Console</MenuItem>
                     }
 
-                    @if (Server.ServerConsoles != null)
+                    @if (Server.ServerConsoles != null && Server.ServerConsoles.Any(c => c.Id != Guid.Empty))
                     {
-                        foreach (var log in Server.ServerConsoles)
+                        foreach (var log in Server.ServerConsoles.Where(c => c.Id != Guid.Empty))
                         {
                             <MenuItem Key="@log.Id.ToString()" RouterLink="@($"/Servers/{Server.Id}/Monitor/{log.Id}")">@log.Name</MenuItem>
                         }

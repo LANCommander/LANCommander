@@ -17,6 +17,9 @@
                     <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
                 }
             </PropertyColumn>
+            <PropertyColumn Property="p => p.IsRegex" Title="Regex">
+                <Checkbox @bind-Checked="context.IsRegex" />
+            </PropertyColumn>
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>

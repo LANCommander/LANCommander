@@ -23,7 +23,8 @@
                 Title = TitleSelector.Invoke(i)
             });
 
-            TargetKeys = Values.Select(i => i.Id.ToString()).ToList();
+            if (Values != null)
+                TargetKeys = Values.Select(i => i.Id.ToString()).ToList();
         }
     }
 

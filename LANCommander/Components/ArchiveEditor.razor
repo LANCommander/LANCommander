@@ -11,7 +11,7 @@
 
 <Space Direction="DirectionVHType.Vertical" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Archive" DataSource="@Archives.OrderByDescending(a => a.CreatedOn)" HidePagination="true" Responsive>
+        <Table TItem="Archive" DataSource="@Archives" HidePagination="true" Responsive>
             <PropertyColumn Property="a => a.Version" />
             <PropertyColumn Property="a => a.CompressedSize">
                 @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
@@ -19,7 +19,7 @@
             <PropertyColumn Property="a => a.CreatedBy">
                 @context.CreatedBy?.UserName
             </PropertyColumn>
-            <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />
+            <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="@SortDirection.Descending" />
             <ActionColumn Title="">
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>
@@ -66,7 +66,7 @@
 
     private async Task LoadData()
     {
-        Archives = await ArchiveService.Get(a => a.GameId == GameId).OrderByDescending(a => a.CreatedOn).ToListAsync();
+        Archives = await ArchiveService.Get(a => a.GameId == GameId).ToListAsync();
     }
 
     private async Task Download(Archive archive)

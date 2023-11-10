@@ -47,7 +47,7 @@ namespace LANCommander.PlaynitePlugin
                 RefreshToken = Settings.RefreshToken,
             };
 
-            var task = Task.Run(() => Plugin.LANCommander.ValidateToken(token))
+            var task = Task.Run(() => Plugin.LANCommanderClient.ValidateToken(token))
                 .ContinueWith(antecedent =>
                 {
                     try
@@ -90,7 +90,7 @@ namespace LANCommander.PlaynitePlugin
         {
             Plugin.Settings.AccessToken = String.Empty;
             Plugin.Settings.RefreshToken = String.Empty;
-            Plugin.LANCommander.Token = null;
+            Plugin.LANCommanderClient.UseToken(null);
 
             Plugin.SavePluginSettings(Plugin.Settings);
 

@@ -16,7 +16,7 @@ namespace LANCommander.SDK.Helpers
 
         public static GameManifest Read(string installDirectory)
         {
-            var source = Path.Combine(installDirectory, ManifestFilename);
+            var source = GetPath(installDirectory);
             var yaml = File.ReadAllText(source);
 
             var deserializer = new DeserializerBuilder()
@@ -32,7 +32,7 @@ namespace LANCommander.SDK.Helpers
 
         public static void Write(GameManifest manifest, string installDirectory)
         {
-            var destination = Path.Combine(installDirectory, ManifestFilename);
+            var destination = GetPath(installDirectory);
 
             Logger.LogTrace("Attempting to write manifest to path {Destination}", destination);
 
@@ -47,6 +47,11 @@ namespace LANCommander.SDK.Helpers
             Logger.LogTrace("Writing manifest file");
 
             File.WriteAllText(destination, yaml);
+        }
+
+        public static string GetPath(string installDirectory)
+        {
+            return Path.Combine(installDirectory, ManifestFilename);
         }
     }
 }

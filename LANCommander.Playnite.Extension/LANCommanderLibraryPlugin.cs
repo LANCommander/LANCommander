@@ -1,5 +1,4 @@
 ﻿using LANCommander.PlaynitePlugin.Extensions;
-using LANCommander.PlaynitePlugin.Services;
 using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
@@ -22,7 +21,7 @@ namespace LANCommander.PlaynitePlugin
         public static readonly ILogger Logger = LogManager.GetLogger();
         internal LANCommanderSettingsViewModel Settings { get; set; }
         internal LANCommander.SDK.Client LANCommanderClient { get; set; }
-        internal GameSaveService GameSaveService { get; set; }
+        internal LANCommanderSaveController SaveController { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
@@ -333,12 +332,12 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnGameStarting(OnGameStartingEventArgs args)
         {
-            GameSaveService.DownloadSave(args.Game);
+            SaveController.Download(args.Game);
         }
 
         public override void OnGameStopped(OnGameStoppedEventArgs args)
         {
-            GameSaveService.UploadSave(args.Game);
+            SaveController.Upload(args.Game);
         }
 
         public override IEnumerable<TopPanelItem> GetTopPanelItems()

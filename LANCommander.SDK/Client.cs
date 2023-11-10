@@ -107,7 +107,7 @@ namespace LANCommander.SDK
             }
         }
 
-        public async Task<AuthResponse> RegisterAsync(string username, string password)
+        public async Task<AuthToken> RegisterAsync(string username, string password)
         {
             var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.POST).AddJsonBody(new AuthRequest()
             {
@@ -118,7 +118,14 @@ namespace LANCommander.SDK
             switch (response.StatusCode)
             {
                 case HttpStatusCode.OK:
-                    return response.Data;
+                    Token = new AuthToken
+                    {
+                        AccessToken = response.Data.AccessToken,
+                        RefreshToken = response.Data.RefreshToken,
+                        Expiration = response.Data.Expiration
+                    };
+
+                    return Token;
 
                 case HttpStatusCode.BadRequest:
                 case HttpStatusCode.Forbidden:
@@ -137,7 +144,7 @@ namespace LANCommander.SDK
             return response.StatusCode == HttpStatusCode.OK;
         }
 
-        public AuthResponse RefreshToken(AuthToken token)
+        public AuthToken RefreshToken(AuthToken token)
         {
             Logger.LogTrace("Refreshing token...");
 
@@ -149,7 +156,14 @@ namespace LANCommander.SDK
             if (response.StatusCode != HttpStatusCode.OK)
                 throw new WebException(response.ErrorMessage);
 
-            return response.Data;
+            Token = new AuthToken
+            {
+                AccessToken = response.Data.AccessToken,
+                RefreshToken = response.Data.RefreshToken,
+                Expiration = response.Data.Expiration
+            };
+
+            return Token;
         }
 
         public bool ValidateToken()

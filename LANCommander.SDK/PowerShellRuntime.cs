@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.SDK
 {
-    internal class PowerShellRuntime
+    public static class PowerShellRuntime
     {
         public static readonly ILogger Logger;
 
@@ -22,7 +22,7 @@ namespace LANCommander.SDK
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool Wow64RevertWow64FsRedirection(ref IntPtr ptr);
 
-        public void RunCommand(string command, bool asAdmin = false)
+        public static void RunCommand(string command, bool asAdmin = false)
         {
             Logger.LogTrace($"Executing command `{command}` | Admin: {asAdmin}");
 
@@ -37,7 +37,7 @@ namespace LANCommander.SDK
             File.Delete(tempScript);
         }
 
-        public int RunScript(string path, bool asAdmin = false, string arguments = null, string workingDirectory = null)
+        public static int RunScript(string path, bool asAdmin = false, string arguments = null, string workingDirectory = null)
         {
             Logger.LogTrace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
 
@@ -73,9 +73,14 @@ namespace LANCommander.SDK
             return process.ExitCode;
         }
 
-        public void RunScript(Game game, ScriptType type, string arguments = null)
+        public static void RunScript(Game game, ScriptType type, string arguments = null)
         {
-            var path = GetScriptFilePath(game, type);
+            RunScript(game.InstallDirectory, type, arguments);
+        }
+
+        public static void RunScript(string installDirectory, ScriptType type, string arguments = null)
+        {
+            var path = GetScriptFilePath(installDirectory, type);
 
             if (File.Exists(path))
             {
@@ -88,7 +93,7 @@ namespace LANCommander.SDK
             }
         }
 
-        public void RunScriptsAsAdmin(IEnumerable<string> paths, string arguments = null)
+        public static void RunScriptsAsAdmin(IEnumerable<string> paths, string arguments = null)
         {
             // Concatenate scripts
             var sb = new StringBuilder();
@@ -118,14 +123,14 @@ namespace LANCommander.SDK
             }
         }
 
-        public void RunScripts(IEnumerable<Game> games, ScriptType type, string arguments = null)
+        public static void RunScripts(IEnumerable<string> installDirectories, ScriptType type, string arguments = null)
         {
             List<string> scripts = new List<string>();
             List<string> adminScripts = new List<string>();
 
-            foreach (var game in games)
+            foreach (var installDirectory in installDirectories)
             {
-                var path = GetScriptFilePath(game, type);
+                var path = GetScriptFilePath(installDirectory, type);
 
                 if (!File.Exists(path))
                     continue;
@@ -148,6 +153,11 @@ namespace LANCommander.SDK
 
         public static string GetScriptFilePath(Game game, ScriptType type)
         {
+            return GetScriptFilePath(game.InstallDirectory, type);
+        }
+
+        public static string GetScriptFilePath(string installDirectory, ScriptType type)
+        {
             Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
                 { ScriptType.Install, "_install.ps1" },
                 { ScriptType.Uninstall, "_uninstall.ps1" },
@@ -157,7 +167,7 @@ namespace LANCommander.SDK
 
             var filename = filenames[type];
 
-            return Path.Combine(game.InstallDirectory, filename);
+            return Path.Combine(installDirectory, filename);
         }
     }
 }

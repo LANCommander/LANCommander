@@ -21,8 +21,7 @@ namespace LANCommander.PlaynitePlugin
     {
         public static readonly ILogger Logger = LogManager.GetLogger();
         internal LANCommanderSettingsViewModel Settings { get; set; }
-        internal LANCommander.SDK.LANCommander LANCommander { get; set; }
-        internal PowerShellRuntime PowerShellRuntime { get; set; }
+        internal LANCommander.SDK.Client LANCommanderClient { get; set; }
         internal GameSaveService GameSaveService { get; set; }
 
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
@@ -39,8 +38,8 @@ namespace LANCommander.PlaynitePlugin
 
             Settings = new LANCommanderSettingsViewModel(this);
 
-            LANCommander = new SDK.LANCommander(Settings.ServerAddress);
-            LANCommander.Client.UseToken(new SDK.Models.AuthToken()
+            LANCommanderClient = new SDK.Client(Settings.ServerAddress);
+            LANCommanderClient.UseToken(new SDK.Models.AuthToken()
             {
                 AccessToken = Settings.AccessToken,
                 RefreshToken = Settings.RefreshToken,
@@ -89,7 +88,7 @@ namespace LANCommander.PlaynitePlugin
 
         public bool ValidateConnection()
         {
-            return LANCommander.Client.ValidateToken();
+            return LANCommanderClient.ValidateToken();
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
@@ -109,7 +108,7 @@ namespace LANCommander.PlaynitePlugin
                 }
             }
 
-            var games = LANCommander.Client
+            var games = LANCommanderClient
                 .GetGames()
                 .Where(g => g != null && g.Archives != null && g.Archives.Count() > 0);
 
@@ -119,7 +118,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     Logger.Trace($"Importing/updating metadata for game \"{game.Title}\"...");
 
-                    var manifest = LANCommander.Client.GetGameManifest(game.Id);
+                    var manifest = LANCommanderClient.GetGameManifest(game.Id);
                     Logger.Trace("Successfully grabbed game manifest");
 
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
@@ -128,7 +127,7 @@ namespace LANCommander.PlaynitePlugin
                     {
                         Logger.Trace("Game already exists in library, updating metadata...");
 
-                        UpdateGame(manifest, game.Id);
+                        UpdateGame(manifest);
 
                         continue;
                     }
@@ -181,13 +180,13 @@ namespace LANCommander.PlaynitePlugin
                         metadata.Features.Add(new MetadataNameProperty($"Online Multiplayer {manifest.OnlineMultiplayer.GetPlayerCount()}".Trim()));
 
                     if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Icon))
-                        metadata.Icon = new MetadataFile(LANCommander.Client.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Icon)));
+                        metadata.Icon = new MetadataFile(LANCommanderClient.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Icon)));
 
                     if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
-                        metadata.CoverImage = new MetadataFile(LANCommander.Client.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)));
+                        metadata.CoverImage = new MetadataFile(LANCommanderClient.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)));
 
                     if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
-                        metadata.BackgroundImage = new MetadataFile(LANCommander.Client.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Background)));
+                        metadata.BackgroundImage = new MetadataFile(LANCommanderClient.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Background)));
 
                     gameMetadata.Add(metadata);
                 }
@@ -222,9 +221,9 @@ namespace LANCommander.PlaynitePlugin
 
             if (args.Games.Count == 1 && args.Games.First().IsInstalled && !String.IsNullOrWhiteSpace(args.Games.First().InstallDirectory))
             {
-                var nameChangeScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.NameChange);
-                var keyChangeScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.KeyChange);
-                var installScriptPath = PowerShellRuntime.GetScriptFilePath(args.Games.First(), SDK.Enums.ScriptType.Install);
+                var nameChangeScriptPath = LANCommander.SDK.PowerShellRuntime.GetScriptFilePath(args.Games.First().InstallDirectory, SDK.Enums.ScriptType.NameChange);
+                var keyChangeScriptPath = LANCommander.SDK.PowerShellRuntime.GetScriptFilePath(args.Games.First().InstallDirectory, SDK.Enums.ScriptType.KeyChange);
+                var installScriptPath = LANCommander.SDK.PowerShellRuntime.GetScriptFilePath(args.Games.First().InstallDirectory, SDK.Enums.ScriptType.Install);
 
                 if (File.Exists(nameChangeScriptPath))
                 {
@@ -241,8 +240,10 @@ namespace LANCommander.PlaynitePlugin
 
                             if (result.Result == true)
                             {
-                                PowerShellRuntime.RunScript(nameChangeArgs.Games.First(), SDK.Enums.ScriptType.NameChange, $@"""{result.SelectedString}"" ""{oldName}""");
-                                LANCommander.Client.ChangeAlias(result.SelectedString);
+                                var game = nameChangeArgs.Games.First();
+
+                                LANCommander.SDK.PowerShellRuntime.RunScript(game.InstallDirectory, SDK.Enums.ScriptType.NameChange, $@"""{result.SelectedString}"" ""{oldName}""");
+                                LANCommanderClient.ChangeAlias(result.SelectedString);
                             }
                         }
                     };
@@ -262,12 +263,12 @@ namespace LANCommander.PlaynitePlugin
                             if (Guid.TryParse(keyChangeArgs.Games.First().GameId, out gameId))
                             {
                                 // NUKIEEEE
-                                var newKey = LANCommander.Client.GetNewKey(gameId);
+                                var newKey = LANCommanderClient.GetNewKey(gameId);
 
                                 if (String.IsNullOrEmpty(newKey))
                                     PlayniteApi.Dialogs.ShowErrorMessage("There are no more keys available on the server.", "No Keys Available");
                                 else
-                                    PowerShellRuntime.RunScript(keyChangeArgs.Games.First(), SDK.Enums.ScriptType.KeyChange, $@"""{newKey}""");
+                                    LANCommander.SDK.PowerShellRuntime.RunScript(keyChangeArgs.Games.First().InstallDirectory, SDK.Enums.ScriptType.KeyChange, $@"""{newKey}""");
                             }
                             else
                             {
@@ -290,7 +291,7 @@ namespace LANCommander.PlaynitePlugin
 
                             if (Guid.TryParse(installArgs.Games.First().GameId, out gameId))
                             {
-                                PowerShellRuntime.RunScript(installArgs.Games.First(), SDK.Enums.ScriptType.Install);
+                                LANCommander.SDK.PowerShellRuntime.RunScript(installArgs.Games.First().InstallDirectory, SDK.Enums.ScriptType.Install);
                             }
                             else
                             {
@@ -400,11 +401,11 @@ namespace LANCommander.PlaynitePlugin
 
                     var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
 
-                    LANCommander.Client.ChangeAlias(result.SelectedString);
+                    LANCommanderClient.ChangeAlias(result.SelectedString);
 
                     Logger.Trace($"Running name change scripts across {games.Count} installed game(s)");
 
-                    PowerShellRuntime.RunScripts(games, SDK.Enums.ScriptType.NameChange, Settings.PlayerName);
+                    LANCommander.SDK.PowerShellRuntime.RunScripts(games.Select(g => g.InstallDirectory), SDK.Enums.ScriptType.NameChange, Settings.PlayerName);
                 }
             }
             else
@@ -439,9 +440,9 @@ namespace LANCommander.PlaynitePlugin
             return window;
         }
 
-        public void UpdateGame(SDK.GameManifest manifest, Guid gameId)
+        public void UpdateGame(SDK.GameManifest manifest)
         {
-            var game = PlayniteApi.Database.Games.First(g => g.GameId == gameId.ToString());
+            var game = PlayniteApi.Database.Games.First(g => g.GameId == manifest.Id.ToString());
 
             if (game == null)
                 return;

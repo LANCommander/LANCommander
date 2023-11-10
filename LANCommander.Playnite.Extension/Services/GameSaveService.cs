@@ -17,15 +17,13 @@ namespace LANCommander.PlaynitePlugin.Services
 {
     internal class GameSaveService
     {
-        private readonly LANCommanderClient LANCommander;
+        private readonly LANCommander.SDK.Client LANCommander;
         private readonly IPlayniteAPI PlayniteApi;
-        private readonly PowerShellRuntime PowerShellRuntime;
 
-        internal GameSaveService(LANCommanderClient lanCommander, IPlayniteAPI playniteApi, PowerShellRuntime powerShellRuntime)
+        internal GameSaveService(LANCommander.SDK.Client lanCommander, IPlayniteAPI playniteApi)
         {
             LANCommander = lanCommander;
             PlayniteApi = playniteApi;
-            PowerShellRuntime = powerShellRuntime;
         }
 
         internal void DownloadSave(Game game)

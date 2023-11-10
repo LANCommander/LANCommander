@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 
-namespace LANCommander.PlaynitePlugin
+namespace LANCommander.SDK
 {
-    internal class TrackableStream : MemoryStream, IDisposable
+    public class TrackableStream : MemoryStream, IDisposable
     {
         public delegate void OnProgressDelegate(long Position, long Length);
         public event OnProgressDelegate OnProgress = delegate { };

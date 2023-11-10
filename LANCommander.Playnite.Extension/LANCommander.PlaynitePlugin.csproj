@@ -99,15 +99,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExtractionResult.cs" />
-    <Compile Include="TrackableStream.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
-    <Compile Include="Helpers\RetryHelper.cs" />
-    <Compile Include="PowerShellRuntime.cs" />
     <Compile Include="Services\GameSaveService.cs" />
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
-    <Compile Include="LANCommanderClient.cs" />
     <Compile Include="LANCommanderLibraryPlugin.cs" />
     <Compile Include="ViewModels\LANCommanderSettingsViewModel.cs" />
     <Compile Include="Views\LANCommanderSettingsView.xaml.cs">

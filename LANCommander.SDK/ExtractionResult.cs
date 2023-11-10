@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.PlaynitePlugin
+namespace LANCommander.SDK
 {
     internal class ExtractionResult
     {

@@ -1,22 +1,20 @@
 ﻿using LANCommander.SDK.Enums;
-using Playnite.SDK;
-using Playnite.SDK.Models;
+using LANCommander.SDK.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
 using System.Runtime.InteropServices;
-using System.Security.RightsManagement;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.PlaynitePlugin
+namespace LANCommander.SDK
 {
     internal class PowerShellRuntime
     {
-        public static readonly ILogger Logger = LogManager.GetLogger();
+        public static readonly ILogger Logger;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool Wow64DisableWow64FsRedirection(ref IntPtr ptr);
@@ -26,11 +24,11 @@ namespace LANCommander.PlaynitePlugin
 
         public void RunCommand(string command, bool asAdmin = false)
         {
-            Logger.Trace($"Executing command `{command}` | Admin: {asAdmin}");
+            Logger.LogTrace($"Executing command `{command}` | Admin: {asAdmin}");
 
             var tempScript = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".ps1");
 
-            Logger.Trace($"Creating temp script at path {tempScript}");
+            Logger.LogTrace($"Creating temp script at path {tempScript}");
 
             File.WriteAllText(tempScript, command);
 
@@ -41,7 +39,7 @@ namespace LANCommander.PlaynitePlugin
 
         public int RunScript(string path, bool asAdmin = false, string arguments = null, string workingDirectory = null)
         {
-            Logger.Trace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
+            Logger.LogTrace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
 
             var wow64Value = IntPtr.Zero;
 
@@ -95,7 +93,7 @@ namespace LANCommander.PlaynitePlugin
             // Concatenate scripts
             var sb = new StringBuilder();
 
-            Logger.Trace("Concatenating scripts...");
+            Logger.LogTrace("Concatenating scripts...");
 
             foreach (var path in paths)
             {
@@ -103,16 +101,16 @@ namespace LANCommander.PlaynitePlugin
 
                 sb.AppendLine(contents);
 
-                Logger.Trace($"Added {path}!");
+                Logger.LogTrace($"Added {path}!");
             }
 
-            Logger.Trace("Done concatenating!");
+            Logger.LogTrace("Done concatenating!");
 
             if (sb.Length > 0)
             {
                 var scriptPath = Path.GetTempFileName();
 
-                Logger.Trace($"Creating temp script at path {scriptPath}");
+                Logger.LogTrace($"Creating temp script at path {scriptPath}");
 
                 File.WriteAllText(scriptPath, sb.ToString());
 

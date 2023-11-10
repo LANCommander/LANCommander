@@ -1,15 +1,12 @@
-﻿using Playnite.SDK;
+﻿using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.PlaynitePlugin.Helpers
+namespace LANCommander.SDK.Helpers
 {
     internal static class RetryHelper
     {
-        internal static readonly ILogger Logger = LogManager.GetLogger();
+        internal static readonly ILogger Logger;
 
         internal static T RetryOnException<T>(int maxAttempts, TimeSpan delay, T @default, Func<T> action)
         {
@@ -19,14 +16,14 @@ namespace LANCommander.PlaynitePlugin.Helpers
             {
                 try
                 {
-                    Logger.Trace($"Attempt #{attempts + 1}/{maxAttempts}...");
+                    Logger.LogTrace($"Attempt #{attempts + 1}/{maxAttempts}...");
 
                     attempts++;
                     return action();
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, $"Attempt failed!");
+                    Logger.LogError(ex, $"Attempt failed!");
 
                     if (attempts >= maxAttempts)
                         return @default;

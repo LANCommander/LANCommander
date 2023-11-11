@@ -15,7 +15,7 @@ namespace LANCommander.SDK
 {
     public class RedistributableManager
     {
-        private static readonly ILogger Logger;
+        private readonly ILogger Logger;
         private Client Client { get; set; }
 
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
@@ -27,6 +27,12 @@ namespace LANCommander.SDK
         public RedistributableManager(Client client)
         {
             Client = client;
+        }
+
+        public RedistributableManager(Client client, ILogger logger)
+        {
+            Client = client;
+            Logger = logger;
         }
 
         public void Install(Game game)

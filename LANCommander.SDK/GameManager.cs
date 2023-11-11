@@ -15,7 +15,7 @@ namespace LANCommander.SDK
 {
     public class GameManager
     {
-        private static readonly ILogger Logger;
+        private readonly ILogger Logger;
         private Client Client { get; set; }
         private string DefaultInstallDirectory { get; set; }
 
@@ -28,6 +28,12 @@ namespace LANCommander.SDK
         public GameManager(Client client)
         {
             Client = client;
+        }
+
+        public GameManager(Client client, ILogger logger)
+        {
+            Client = client;
+            Logger = logger;
         }
 
         /// <summary>

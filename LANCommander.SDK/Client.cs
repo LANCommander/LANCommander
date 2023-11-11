@@ -15,7 +15,7 @@ namespace LANCommander.SDK
 {
     public class Client
     {
-        private static readonly ILogger Logger;
+        private readonly ILogger Logger;
 
         private readonly RestClient ApiClient;
         private  AuthToken Token;
@@ -24,6 +24,14 @@ namespace LANCommander.SDK
         {
             if (!String.IsNullOrWhiteSpace(baseUrl))
                 ApiClient = new RestClient(baseUrl);
+        }
+
+        public Client(string baseUrl, ILogger logger)
+        {
+            if (!String.IsNullOrWhiteSpace(baseUrl))
+                ApiClient = new RestClient(baseUrl);
+
+            Logger = logger;
         }
 
         private T PostRequest<T>(string route, object body)

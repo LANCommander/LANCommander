@@ -25,14 +25,16 @@ namespace LANCommander.SDK
         public delegate void OnArchiveExtractionProgressHandler(long position, long length);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
-        public GameManager(Client client)
+        public GameManager(Client client, string defaultInstallDirectory)
         {
             Client = client;
+            DefaultInstallDirectory = defaultInstallDirectory;
         }
 
-        public GameManager(Client client, ILogger logger)
+        public GameManager(Client client, string defaultInstallDirectory, ILogger logger)
         {
             Client = client;
+            DefaultInstallDirectory = DefaultInstallDirectory;
             Logger = logger;
         }
 
@@ -53,7 +55,7 @@ namespace LANCommander.SDK
             {
                 Logger?.LogTrace("Attempting to download and extract game");
 
-                return DownloadAndExtract(game);
+                return DownloadAndExtract(game, DefaultInstallDirectory);
             });
 
             if (!result.Success && !result.Canceled)

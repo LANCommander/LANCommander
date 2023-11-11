@@ -23,7 +23,7 @@ namespace LANCommander.PlaynitePlugin
         {
             try
             {
-                var gameManager = new LANCommander.SDK.GameManager(Plugin.LANCommanderClient);
+                var gameManager = new LANCommander.SDK.GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory);
 
                 gameManager.Uninstall(Game.InstallDirectory);
             }

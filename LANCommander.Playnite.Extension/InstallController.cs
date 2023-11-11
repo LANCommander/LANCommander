@@ -37,7 +37,7 @@ namespace LANCommander.PlaynitePlugin
 
             var result = Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
-                var gameManager = new GameManager(Plugin.LANCommanderClient);
+                var gameManager = new GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory);
 
                 gameManager.OnArchiveExtractionProgress += (long pos, long len) =>
                 {

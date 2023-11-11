@@ -20,7 +20,7 @@ namespace LANCommander.SDK.Helpers
             // PowerShell will only run scripts with the .ps1 file extension
             File.Move(tempPath, tempPath + ".ps1");
 
-            Logger.LogTrace("Writing script {Script} to {Destination}", script.Name, tempPath);
+            Logger?.LogTrace("Writing script {Script} to {Destination}", script.Name, tempPath);
 
             File.WriteAllText(tempPath, script.Contents);
 
@@ -42,7 +42,7 @@ namespace LANCommander.SDK.Helpers
             if (File.Exists(filename))
                 File.Delete(filename);
 
-            Logger.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
+            Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
 
             File.WriteAllText(filename, script.Contents);
         }

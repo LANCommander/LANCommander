@@ -146,7 +146,7 @@ namespace LANCommander.SDK
 
         public AuthToken RefreshToken(AuthToken token)
         {
-            Logger.LogTrace("Refreshing token...");
+            Logger?.LogTrace("Refreshing token...");
 
             var request = new RestRequest("/api/Auth/Refresh")
                 .AddJsonBody(token);
@@ -173,11 +173,11 @@ namespace LANCommander.SDK
 
         public bool ValidateToken(AuthToken token)
         {
-            Logger.LogTrace("Validating token...");
+            Logger?.LogTrace("Validating token...");
 
             if (token == null)
             {
-                Logger.LogTrace("Token is null!");
+                Logger?.LogTrace("Token is null!");
                 return false;
             }
 
@@ -186,7 +186,7 @@ namespace LANCommander.SDK
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {
-                Logger.LogTrace("Token is empty!");
+                Logger?.LogTrace("Token is empty!");
                 return false;
             }
 
@@ -195,9 +195,9 @@ namespace LANCommander.SDK
             var valid = response.StatusCode == HttpStatusCode.OK;
 
             if (valid)
-                Logger.LogTrace("Token is valid!");
+                Logger?.LogTrace("Token is valid!");
             else
-                Logger.LogTrace("Token is invalid!");
+                Logger?.LogTrace("Token is invalid!");
 
             return response.StatusCode == HttpStatusCode.OK;
         }
@@ -254,7 +254,7 @@ namespace LANCommander.SDK
 
         public GameSave UploadSave(string gameId, byte[] data)
         {
-            Logger.LogTrace("Uploading save...");
+            Logger?.LogTrace("Uploading save...");
 
             var request = new RestRequest($"/api/Saves/Upload/{gameId}", Method.POST)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
@@ -273,7 +273,7 @@ namespace LANCommander.SDK
 
         public string GetKey(Guid id)
         {
-            Logger.LogTrace("Requesting key allocation...");
+            Logger?.LogTrace("Requesting key allocation...");
 
             var macAddress = GetMacAddress();
 
@@ -292,7 +292,7 @@ namespace LANCommander.SDK
 
         public string GetAllocatedKey(Guid id)
         {
-            Logger.LogTrace("Requesting allocated key...");
+            Logger?.LogTrace("Requesting allocated key...");
 
             var macAddress = GetMacAddress();
 
@@ -314,7 +314,7 @@ namespace LANCommander.SDK
 
         public string GetNewKey(Guid id)
         {
-            Logger.LogTrace("Requesting new key allocation...");
+            Logger?.LogTrace("Requesting new key allocation...");
 
             var macAddress = GetMacAddress();
 
@@ -336,14 +336,14 @@ namespace LANCommander.SDK
 
         public User GetProfile()
         {
-            Logger.LogTrace("Requesting player's profile...");
+            Logger?.LogTrace("Requesting player's profile...");
 
             return GetRequest<User>("/api/Profile");
         }
 
         public string ChangeAlias(string alias)
         {
-            Logger.LogTrace("Requesting to change player alias...");
+            Logger?.LogTrace("Requesting to change player alias...");
 
             var response = PostRequest<object>("/api/Profile/ChangeAlias", alias);
 

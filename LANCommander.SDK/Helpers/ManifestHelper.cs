@@ -23,7 +23,7 @@ namespace LANCommander.SDK.Helpers
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
                 .Build();
 
-            Logger.LogTrace("Deserializing manifest");
+            Logger?.LogTrace("Deserializing manifest");
 
             var manifest = deserializer.Deserialize<GameManifest>(source);
 
@@ -34,17 +34,17 @@ namespace LANCommander.SDK.Helpers
         {
             var destination = GetPath(installDirectory);
 
-            Logger.LogTrace("Attempting to write manifest to path {Destination}", destination);
+            Logger?.LogTrace("Attempting to write manifest to path {Destination}", destination);
 
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(PascalCaseNamingConvention.Instance)
                 .Build();
 
-            Logger.LogTrace("Serializing manifest");
+            Logger?.LogTrace("Serializing manifest");
 
             var yaml = serializer.Serialize(manifest);
 
-            Logger.LogTrace("Writing manifest file");
+            Logger?.LogTrace("Writing manifest file");
 
             File.WriteAllText(destination, yaml);
         }

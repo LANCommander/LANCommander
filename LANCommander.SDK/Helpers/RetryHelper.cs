@@ -16,14 +16,14 @@ namespace LANCommander.SDK.Helpers
             {
                 try
                 {
-                    Logger.LogTrace($"Attempt #{attempts + 1}/{maxAttempts}...");
+                    Logger?.LogTrace($"Attempt #{attempts + 1}/{maxAttempts}...");
 
                     attempts++;
                     return action();
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, $"Attempt failed!");
+                    Logger?.LogError(ex, $"Attempt failed!");
 
                     if (attempts >= maxAttempts)
                         return @default;

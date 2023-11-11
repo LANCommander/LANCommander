@@ -75,7 +75,7 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Redistributable {Redistributable} failed to install", redistributable.Name);
+                Logger?.LogError(ex, "Redistributable {Redistributable} failed to install", redistributable.Name);
             }
             finally
             {
@@ -94,13 +94,13 @@ namespace LANCommander.SDK
         {
             if (redistributable == null)
             {
-                Logger.LogTrace("Redistributable failed to download! No redistributable was specified");
+                Logger?.LogTrace("Redistributable failed to download! No redistributable was specified");
                 throw new ArgumentNullException("No redistributable was specified");
             }
 
             var destination = Path.Combine(Path.GetTempPath(), redistributable.Name.SanitizeFilename());
 
-            Logger.LogTrace("Downloading and extracting {Redistributable} to path {Destination}", redistributable.Name, destination);
+            Logger?.LogTrace("Downloading and extracting {Redistributable} to path {Destination}", redistributable.Name, destination);
 
             try
             {
@@ -134,11 +134,11 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Could not extract to path {Destination}", destination);
+                Logger?.LogError(ex, "Could not extract to path {Destination}", destination);
 
                 if (Directory.Exists(destination))
                 {
-                    Logger.LogTrace("Cleaning up orphaned files after bad install");
+                    Logger?.LogTrace("Cleaning up orphaned files after bad install");
 
                     Directory.Delete(destination, true);
                 }
@@ -155,7 +155,7 @@ namespace LANCommander.SDK
             {
                 extractionResult.Success = true;
                 extractionResult.Directory = destination;
-                Logger.LogTrace("Redistributable {Redistributable} successfully downloaded and extracted to {Destination}", redistributable.Name, destination);
+                Logger?.LogTrace("Redistributable {Redistributable} successfully downloaded and extracted to {Destination}", redistributable.Name, destination);
             }
 
             return extractionResult;

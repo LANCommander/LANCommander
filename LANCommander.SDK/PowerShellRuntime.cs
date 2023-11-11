@@ -24,11 +24,11 @@ namespace LANCommander.SDK
 
         public static void RunCommand(string command, bool asAdmin = false)
         {
-            Logger.LogTrace($"Executing command `{command}` | Admin: {asAdmin}");
+            Logger?.LogTrace($"Executing command `{command}` | Admin: {asAdmin}");
 
             var tempScript = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".ps1");
 
-            Logger.LogTrace($"Creating temp script at path {tempScript}");
+            Logger?.LogTrace($"Creating temp script at path {tempScript}");
 
             File.WriteAllText(tempScript, command);
 
@@ -39,7 +39,7 @@ namespace LANCommander.SDK
 
         public static int RunScript(string path, bool asAdmin = false, string arguments = null, string workingDirectory = null)
         {
-            Logger.LogTrace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
+            Logger?.LogTrace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
 
             var wow64Value = IntPtr.Zero;
 
@@ -98,7 +98,7 @@ namespace LANCommander.SDK
             // Concatenate scripts
             var sb = new StringBuilder();
 
-            Logger.LogTrace("Concatenating scripts...");
+            Logger?.LogTrace("Concatenating scripts...");
 
             foreach (var path in paths)
             {
@@ -106,16 +106,16 @@ namespace LANCommander.SDK
 
                 sb.AppendLine(contents);
 
-                Logger.LogTrace($"Added {path}!");
+                Logger?.LogTrace($"Added {path}!");
             }
 
-            Logger.LogTrace("Done concatenating!");
+            Logger?.LogTrace("Done concatenating!");
 
             if (sb.Length > 0)
             {
                 var scriptPath = Path.GetTempFileName();
 
-                Logger.LogTrace($"Creating temp script at path {scriptPath}");
+                Logger?.LogTrace($"Creating temp script at path {scriptPath}");
 
                 File.WriteAllText(scriptPath, sb.ToString());
 

@@ -41,11 +41,11 @@ namespace LANCommander.SDK
         {
             var game = Client.GetGame(gameId);
 
-            Logger.LogTrace("Installing game {GameTitle} (GameId)", game.Title, game.Id);
+            Logger?.LogTrace("Installing game {GameTitle} (GameId)", game.Title, game.Id);
 
             var result = RetryHelper.RetryOnException<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
             {
-                Logger.LogTrace("Attempting to download and extract game");
+                Logger?.LogTrace("Attempting to download and extract game");
 
                 return DownloadAndExtract(game);
             });
@@ -61,7 +61,7 @@ namespace LANCommander.SDK
 
             var writeManifestSuccess = RetryHelper.RetryOnException(maxAttempts, TimeSpan.FromSeconds(1), false, () =>
             {
-                Logger.LogTrace("Attempting to get game manifest");
+                Logger?.LogTrace("Attempting to get game manifest");
 
                 manifest = Client.GetGameManifest(game.Id);
 
@@ -73,7 +73,7 @@ namespace LANCommander.SDK
             if (!writeManifestSuccess)
                 throw new Exception("Could not grab the manifest file. Retry the install or check your connection");
 
-            Logger.LogTrace("Saving scripts");
+            Logger?.LogTrace("Saving scripts");
 
             ScriptHelper.SaveScript(game, ScriptType.Install);
             ScriptHelper.SaveScript(game, ScriptType.Uninstall);
@@ -91,7 +91,7 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Could not execute post-install scripts");
+                Logger?.LogError(ex, "Could not execute post-install scripts");
             }
 
             return result.Directory;
@@ -103,27 +103,27 @@ namespace LANCommander.SDK
 
             try
             {
-                Logger.LogTrace("Running uninstall script");
+                Logger?.LogTrace("Running uninstall script");
                 PowerShellRuntime.RunScript(installDirectory, ScriptType.Uninstall);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error running uninstall script");
+                Logger?.LogError(ex, "Error running uninstall script");
             }
 
-            Logger.LogTrace("Attempting to delete the install directory");
+            Logger?.LogTrace("Attempting to delete the install directory");
 
             if (Directory.Exists(installDirectory))
                 Directory.Delete(installDirectory, true);
 
-            Logger.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
+            Logger?.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
         }
 
         private ExtractionResult DownloadAndExtract(Game game, string installDirectory = "")
         {
             if (game == null)
             {
-                Logger.LogTrace("Game failed to download, no game was specified");
+                Logger?.LogTrace("Game failed to download, no game was specified");
 
                 throw new ArgumentNullException("No game was specified");
             }
@@ -133,7 +133,7 @@ namespace LANCommander.SDK
 
             var destination = Path.Combine(installDirectory, game.Title.SanitizeFilename());
 
-            Logger.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
+            Logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
 
             try
             {
@@ -173,11 +173,11 @@ namespace LANCommander.SDK
                 }
                 else
                 {
-                    Logger.LogError(ex, "Could not extract to path {Destination}", destination);
+                    Logger?.LogError(ex, "Could not extract to path {Destination}", destination);
 
                     if (Directory.Exists(destination))
                     {
-                        Logger.LogTrace("Cleaning up orphaned install files after bad install");
+                        Logger?.LogTrace("Cleaning up orphaned install files after bad install");
 
                         Directory.Delete(destination, true);
                     }
@@ -196,7 +196,7 @@ namespace LANCommander.SDK
                 extractionResult.Success = true;
                 extractionResult.Directory = destination;
 
-                Logger.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
+                Logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
             }
 
             return extractionResult;

@@ -25,7 +25,7 @@ namespace LANCommander.SDK.Helpers
 
             Logger?.LogTrace("Deserializing manifest");
 
-            var manifest = deserializer.Deserialize<GameManifest>(source);
+            var manifest = deserializer.Deserialize<GameManifest>(yaml);
 
             return manifest;
         }

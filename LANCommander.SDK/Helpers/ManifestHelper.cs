@@ -20,7 +20,7 @@ namespace LANCommander.SDK.Helpers
             var yaml = File.ReadAllText(source);
 
             var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
             Logger?.LogTrace("Deserializing manifest");
@@ -37,7 +37,7 @@ namespace LANCommander.SDK.Helpers
             Logger?.LogTrace("Attempting to write manifest to path {Destination}", destination);
 
             var serializer = new SerializerBuilder()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
             Logger?.LogTrace("Serializing manifest");

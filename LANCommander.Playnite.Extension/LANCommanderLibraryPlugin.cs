@@ -441,7 +441,7 @@ namespace LANCommander.PlaynitePlugin
 
         public void UpdateGame(SDK.GameManifest manifest)
         {
-            var game = PlayniteApi.Database.Games.First(g => g.GameId == manifest.Id.ToString());
+            var game = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == manifest?.Id.ToString());
 
             if (game == null)
                 return;

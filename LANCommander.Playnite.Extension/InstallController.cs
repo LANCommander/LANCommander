@@ -61,7 +61,7 @@ namespace LANCommander.PlaynitePlugin
             },
             new GlobalProgressOptions($"Downloading {Game.Name}...")
             {
-                IsIndeterminate = true,
+                IsIndeterminate = false,
                 Cancelable = true,
             });
 

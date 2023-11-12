@@ -5,6 +5,7 @@ using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
+using System.Linq;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -66,6 +67,24 @@ namespace LANCommander.PlaynitePlugin
                 Cancelable = true,
             });
 
+            // Install any redistributables
+            var game = Plugin.LANCommanderClient.GetGame(gameId);
+
+            if (game.Redistributables != null && game.Redistributables.Count() > 0)
+            {
+                Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
+                {
+                    var redistributableManager = new RedistributableManager(Plugin.LANCommanderClient);
+
+                    redistributableManager.Install(game);
+                },
+                new GlobalProgressOptions("Installing redistributables...")
+                {
+                    IsIndeterminate = true,
+                    Cancelable = false,
+                });
+            }
+
             if (!result.Canceled && result.Error == null && !String.IsNullOrWhiteSpace(installDirectory))
             {
                 var manifest = ManifestHelper.Read(installDirectory);
@@ -81,12 +100,12 @@ namespace LANCommander.PlaynitePlugin
             }
             else if (result.Canceled)
             {
-                var game = Plugin.PlayniteApi.Database.Games.Get(Game.Id);
+                var dbGame = Plugin.PlayniteApi.Database.Games.Get(Game.Id);
 
-                game.IsInstalling = false;
-                game.IsInstalled = false;
+                dbGame.IsInstalling = false;
+                dbGame.IsInstalled = false;
 
-                Plugin.PlayniteApi.Database.Games.Update(game);
+                Plugin.PlayniteApi.Database.Games.Update(dbGame);
             }
             else if (result.Error != null)
                 throw result.Error;

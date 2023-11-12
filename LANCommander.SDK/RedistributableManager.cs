@@ -126,8 +126,6 @@ namespace LANCommander.SDK
                         {
                             Entry = e.Item,
                             Progress = e.ReaderProgress,
-                            Reader = reader,
-                            Stream = redistributableStream
                         });
                     };
 

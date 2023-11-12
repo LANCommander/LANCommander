@@ -49,9 +49,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     if (progress.CancelToken != null && progress.CancelToken.IsCancellationRequested)
                     {
-                        e.Reader.Cancel();
-                        e.Reader.Dispose();
-                        e.Stream.Dispose();
+                        gameManager.CancelInstall();
 
                         progress.IsIndeterminate = true;
                     }
@@ -78,6 +76,17 @@ namespace LANCommander.PlaynitePlugin
 
                 InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
             }
+            else if (result.Canceled)
+            {
+                var game = Plugin.PlayniteApi.Database.Games.Get(Game.Id);
+
+                game.IsInstalling = false;
+                game.IsInstalled = false;
+
+                Plugin.PlayniteApi.Database.Games.Update(game);
+            }
+            else if (result.Error != null)
+                throw result.Error;
         }
     }
 }

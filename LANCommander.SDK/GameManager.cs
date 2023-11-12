@@ -25,6 +25,9 @@ namespace LANCommander.SDK
         public delegate void OnArchiveExtractionProgressHandler(long position, long length);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
+        private TrackableStream Stream;
+        private IReader Reader;
+
         public GameManager(Client client, string defaultInstallDirectory)
         {
             Client = client;
@@ -61,7 +64,7 @@ namespace LANCommander.SDK
             if (!result.Success && !result.Canceled)
                 throw new Exception("Could not extract the installer. Retry the install or check your connection");
             else if (result.Canceled)
-                throw new Exception("Game install was canceled");
+                return "";
 
             GameManifest manifest = null;
 
@@ -143,41 +146,62 @@ namespace LANCommander.SDK
 
             Logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
 
+            var extractionResult = new ExtractionResult
+            {
+                Canceled = false,
+            };
+
             try
             {
                 Directory.CreateDirectory(destination);
 
-                using (var gameStream = Client.StreamGame(game.Id))
-                using (var reader = ReaderFactory.Open(gameStream))
+                Stream = Client.StreamGame(game.Id);
+                Reader = ReaderFactory.Open(Stream);
+
+                Stream.OnProgress += (pos, len) =>
                 {
-                    gameStream.OnProgress += (pos, len) =>
-                    {
-                        OnArchiveExtractionProgress?.Invoke(pos, len);
-                    };
+                    OnArchiveExtractionProgress?.Invoke(pos, len);
+                };
 
-                    reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>
+                Reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>
+                {
+                    OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
                     {
-                        OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
-                        {
-                            Entry = e.Item,
-                            Progress = e.ReaderProgress,
-                            Reader = reader,
-                            Stream = gameStream
-                        });
-                    };
+                        Entry = e.Item,
+                        Progress = e.ReaderProgress,
+                    });
+                };
 
-                    reader.WriteAllToDirectory(destination, new ExtractionOptions()
+                while (Reader.MoveToNextEntry())
+                {
+                    if (Reader.Cancelled)
+                        break;
+
+                    Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
                     {
                         ExtractFullPath = true,
-                        Overwrite = true
+                        Overwrite = true,
+                        PreserveFileTime = true,
                     });
                 }
+
+                Reader.Dispose();
+                Stream.Dispose();
             }
             catch (Exception ex)
             {
-                if (false)
+                if (Reader.Cancelled)
                 {
+                    Logger?.LogTrace("User cancelled the download");
 
+                    extractionResult.Canceled = true;
+
+                    if (Directory.Exists(destination))
+                    {
+                        Logger?.LogTrace("Cleaning up orphaned files after cancelled install");
+
+                        Directory.Delete(destination, true);
+                    }
                 }
                 else
                 {
@@ -194,11 +218,6 @@ namespace LANCommander.SDK
                 }
             }
 
-            var extractionResult = new ExtractionResult
-            {
-                Canceled = false,
-            };
-
             if (!extractionResult.Canceled)
             {
                 extractionResult.Success = true;
@@ -208,6 +227,13 @@ namespace LANCommander.SDK
             }
 
             return extractionResult;
+        }
+
+        public void CancelInstall()
+        {
+            Reader?.Cancel();
+            // Reader?.Dispose();
+            // Stream?.Dispose();
         }
     }
 }

@@ -14,8 +14,6 @@ namespace LANCommander.SDK
 
     public class ArchiveEntryExtractionProgressArgs : EventArgs
     {
-        public IReader Reader { get; set; }
-        public TrackableStream Stream { get; set; }
         public ReaderProgress Progress { get; set; }
         public IEntry Entry { get; set; }
     }

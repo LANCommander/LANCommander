@@ -1,22 +1,20 @@
 ﻿using LANCommander.SDK.Enums;
-using Playnite.SDK;
-using Playnite.SDK.Models;
+using LANCommander.SDK.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
 using System.Runtime.InteropServices;
-using System.Security.RightsManagement;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.PlaynitePlugin
+namespace LANCommander.SDK
 {
-    internal class PowerShellRuntime
+    public static class PowerShellRuntime
     {
-        public static readonly ILogger Logger = LogManager.GetLogger();
+        public static readonly ILogger Logger;
 
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool Wow64DisableWow64FsRedirection(ref IntPtr ptr);
@@ -24,13 +22,13 @@ namespace LANCommander.PlaynitePlugin
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool Wow64RevertWow64FsRedirection(ref IntPtr ptr);
 
-        public void RunCommand(string command, bool asAdmin = false)
+        public static void RunCommand(string command, bool asAdmin = false)
         {
-            Logger.Trace($"Executing command `{command}` | Admin: {asAdmin}");
+            Logger?.LogTrace($"Executing command `{command}` | Admin: {asAdmin}");
 
             var tempScript = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".ps1");
 
-            Logger.Trace($"Creating temp script at path {tempScript}");
+            Logger?.LogTrace($"Creating temp script at path {tempScript}");
 
             File.WriteAllText(tempScript, command);
 
@@ -39,9 +37,9 @@ namespace LANCommander.PlaynitePlugin
             File.Delete(tempScript);
         }
 
-        public int RunScript(string path, bool asAdmin = false, string arguments = null, string workingDirectory = null)
+        public static int RunScript(string path, bool asAdmin = false, string arguments = null, string workingDirectory = null)
         {
-            Logger.Trace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
+            Logger?.LogTrace($"Executing script at path {path} | Admin: {asAdmin} | Arguments: {arguments}");
 
             var wow64Value = IntPtr.Zero;
 
@@ -75,9 +73,14 @@ namespace LANCommander.PlaynitePlugin
             return process.ExitCode;
         }
 
-        public void RunScript(Game game, ScriptType type, string arguments = null)
+        public static void RunScript(Game game, ScriptType type, string arguments = null)
         {
-            var path = GetScriptFilePath(game, type);
+            RunScript(game.InstallDirectory, type, arguments);
+        }
+
+        public static void RunScript(string installDirectory, ScriptType type, string arguments = null)
+        {
+            var path = GetScriptFilePath(installDirectory, type);
 
             if (File.Exists(path))
             {
@@ -90,12 +93,12 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
-        public void RunScriptsAsAdmin(IEnumerable<string> paths, string arguments = null)
+        public static void RunScriptsAsAdmin(IEnumerable<string> paths, string arguments = null)
         {
             // Concatenate scripts
             var sb = new StringBuilder();
 
-            Logger.Trace("Concatenating scripts...");
+            Logger?.LogTrace("Concatenating scripts...");
 
             foreach (var path in paths)
             {
@@ -103,16 +106,16 @@ namespace LANCommander.PlaynitePlugin
 
                 sb.AppendLine(contents);
 
-                Logger.Trace($"Added {path}!");
+                Logger?.LogTrace($"Added {path}!");
             }
 
-            Logger.Trace("Done concatenating!");
+            Logger?.LogTrace("Done concatenating!");
 
             if (sb.Length > 0)
             {
                 var scriptPath = Path.GetTempFileName();
 
-                Logger.Trace($"Creating temp script at path {scriptPath}");
+                Logger?.LogTrace($"Creating temp script at path {scriptPath}");
 
                 File.WriteAllText(scriptPath, sb.ToString());
 
@@ -120,14 +123,14 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
-        public void RunScripts(IEnumerable<Game> games, ScriptType type, string arguments = null)
+        public static void RunScripts(IEnumerable<string> installDirectories, ScriptType type, string arguments = null)
         {
             List<string> scripts = new List<string>();
             List<string> adminScripts = new List<string>();
 
-            foreach (var game in games)
+            foreach (var installDirectory in installDirectories)
             {
-                var path = GetScriptFilePath(game, type);
+                var path = GetScriptFilePath(installDirectory, type);
 
                 if (!File.Exists(path))
                     continue;
@@ -150,6 +153,11 @@ namespace LANCommander.PlaynitePlugin
 
         public static string GetScriptFilePath(Game game, ScriptType type)
         {
+            return GetScriptFilePath(game.InstallDirectory, type);
+        }
+
+        public static string GetScriptFilePath(string installDirectory, ScriptType type)
+        {
             Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
                 { ScriptType.Install, "_install.ps1" },
                 { ScriptType.Uninstall, "_uninstall.ps1" },
@@ -159,7 +167,7 @@ namespace LANCommander.PlaynitePlugin
 
             var filename = filenames[type];
 
-            return Path.Combine(game.InstallDirectory, filename);
+            return Path.Combine(installDirectory, filename);
         }
     }
 }

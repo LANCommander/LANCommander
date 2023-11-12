@@ -34,6 +34,9 @@
     <Reference Include="BeaconLib, Version=1.0.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\rix0rrr.BeaconLib.1.0.2\lib\net40\BeaconLib.dll</HintPath>
     </Reference>
+    <Reference Include="ByteSize, Version=2.1.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ByteSize.2.1.1\lib\net45\ByteSize.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=7.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.7.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
@@ -42,9 +45,6 @@
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="RestSharp, Version=106.15.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
-      <HintPath>..\packages\RestSharp.106.15.0\lib\net452\RestSharp.dll</HintPath>
-    </Reference>
     <Reference Include="SharpCompress, Version=0.34.1.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\SharpCompress.0.34.1\lib\net462\SharpCompress.dll</HintPath>
     </Reference>
@@ -91,23 +91,15 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
-    <Reference Include="YamlDotNet, Version=5.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\YamlDotNet.5.4.0\lib\net45\YamlDotNet.dll</HintPath>
-    </Reference>
     <Reference Include="ZstdSharp, Version=0.7.2.0, Culture=neutral, PublicKeyToken=8d151af33a4ad5cf, processorArchitecture=MSIL">
       <HintPath>..\packages\ZstdSharp.Port.0.7.2\lib\net461\ZstdSharp.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExtractionResult.cs" />
-    <Compile Include="TrackableStream.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
-    <Compile Include="Helpers\RetryHelper.cs" />
-    <Compile Include="PowerShellRuntime.cs" />
-    <Compile Include="Services\GameSaveService.cs" />
+    <Compile Include="SaveController.cs" />
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
-    <Compile Include="LANCommanderClient.cs" />
     <Compile Include="LANCommanderLibraryPlugin.cs" />
     <Compile Include="ViewModels\LANCommanderSettingsViewModel.cs" />
     <Compile Include="Views\LANCommanderSettingsView.xaml.cs">

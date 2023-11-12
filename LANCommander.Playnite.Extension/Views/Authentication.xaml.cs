@@ -100,24 +100,16 @@ namespace LANCommander.PlaynitePlugin.Views
                     LoginButton.Content = "Logging in...";
                 }));
 
-                if (Plugin.LANCommander == null || Plugin.LANCommander.Client == null)
-                    Plugin.LANCommander = new LANCommanderClient(Context.ServerAddress);
-                else
-                    Plugin.LANCommander.Client.BaseUrl = new Uri(Context.ServerAddress);
+                if (Plugin.LANCommanderClient == null)
+                    Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress);
 
-                var response = await Plugin.LANCommander.AuthenticateAsync(Context.UserName, Context.Password);
+                var response = await Plugin.LANCommanderClient.AuthenticateAsync(Context.UserName, Context.Password);
 
                 Plugin.Settings.ServerAddress = Context.ServerAddress;
                 Plugin.Settings.AccessToken = response.AccessToken;
                 Plugin.Settings.RefreshToken = response.RefreshToken;
 
-                Plugin.LANCommander.Token = new AuthToken()
-                {
-                    AccessToken = response.AccessToken,
-                    RefreshToken = response.RefreshToken,
-                };
-
-                var profile = Plugin.LANCommander.GetProfile();
+                var profile = Plugin.LANCommanderClient.GetProfile();
 
                 Plugin.Settings.PlayerName = String.IsNullOrWhiteSpace(profile.Alias) ? profile.UserName : profile.Alias;
 
@@ -148,23 +140,15 @@ namespace LANCommander.PlaynitePlugin.Views
                 RegisterButton.IsEnabled = false;
                 RegisterButton.Content = "Working...";
 
-                if (Plugin.LANCommander == null || Plugin.LANCommander.Client == null)
-                    Plugin.LANCommander = new LANCommanderClient(Context.ServerAddress);
-                else
-                    Plugin.LANCommander.Client.BaseUrl = new Uri(Context.ServerAddress);
+                if (Plugin.LANCommanderClient == null)
+                    Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress);
 
-                var response = await Plugin.LANCommander.RegisterAsync(Context.UserName, Context.Password);
+                var response = await Plugin.LANCommanderClient.RegisterAsync(Context.UserName, Context.Password);
 
                 Plugin.Settings.ServerAddress = Context.ServerAddress;
                 Plugin.Settings.AccessToken = response.AccessToken;
                 Plugin.Settings.RefreshToken = response.RefreshToken;
                 Plugin.Settings.PlayerName = Context.UserName;
-
-                Plugin.LANCommander.Token = new AuthToken()
-                {
-                    AccessToken = response.AccessToken,
-                    RefreshToken = response.RefreshToken,
-                };
 
                 Context.Password = String.Empty;
 

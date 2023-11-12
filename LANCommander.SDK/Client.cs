@@ -1,6 +1,6 @@
 ﻿using LANCommander.SDK;
 using LANCommander.SDK.Models;
-using Playnite.SDK;
+using Microsoft.Extensions.Logging;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -11,19 +11,27 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 
-namespace LANCommander.PlaynitePlugin
+namespace LANCommander.SDK
 {
-    internal class LANCommanderClient
+    public class Client
     {
-        public static readonly ILogger Logger = LogManager.GetLogger();
+        private readonly ILogger Logger;
 
-        public readonly RestClient Client;
-        public AuthToken Token;
+        private readonly RestClient ApiClient;
+        private  AuthToken Token;
 
-        public LANCommanderClient(string baseUrl)
+        public Client(string baseUrl)
         {
             if (!String.IsNullOrWhiteSpace(baseUrl))
-                Client = new RestClient(baseUrl);
+                ApiClient = new RestClient(baseUrl);
+        }
+
+        public Client(string baseUrl, ILogger logger)
+        {
+            if (!String.IsNullOrWhiteSpace(baseUrl))
+                ApiClient = new RestClient(baseUrl);
+
+            Logger = logger;
         }
 
         private T PostRequest<T>(string route, object body)
@@ -32,7 +40,7 @@ namespace LANCommander.PlaynitePlugin
                 .AddJsonBody(body)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            var response = Client.Post<T>(request);
+            var response = ApiClient.Post<T>(request);
 
             return response.Data;
         }
@@ -42,7 +50,7 @@ namespace LANCommander.PlaynitePlugin
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            var response = Client.Get<T>(request);
+            var response = ApiClient.Get<T>(request);
 
             return response.Data;
         }
@@ -58,7 +66,7 @@ namespace LANCommander.PlaynitePlugin
             client.DownloadProgressChanged += (s, e) => progressHandler(e);
             client.DownloadFileCompleted += (s, e) => completeHandler(e);
 
-            client.DownloadFileAsync(new Uri($"{Client.BaseUrl}{route}"), tempFile);
+            client.DownloadFileAsync(new Uri($"{ApiClient.BaseUrl}{route}"), tempFile);
 
             return tempFile;
         }
@@ -72,14 +80,14 @@ namespace LANCommander.PlaynitePlugin
 
             client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
 
-            var ws = client.OpenRead(new Uri($"{Client.BaseUrl}{route}"));
+            var ws = client.OpenRead(new Uri($"{ApiClient.BaseUrl}{route}"));
 
             return new TrackableStream(ws, true, Convert.ToInt64(client.ResponseHeaders["Content-Length"]));
         }
 
-        public async Task<AuthResponse> AuthenticateAsync(string username, string password)
+        public async Task<AuthToken> AuthenticateAsync(string username, string password)
         {
-            var response = await Client.ExecuteAsync<AuthResponse>(new RestRequest("/api/Auth", Method.POST).AddJsonBody(new AuthRequest()
+            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/Auth", Method.POST).AddJsonBody(new AuthRequest()
             {
                 UserName = username,
                 Password = password
@@ -88,7 +96,14 @@ namespace LANCommander.PlaynitePlugin
             switch (response.StatusCode)
             {
                 case HttpStatusCode.OK:
-                    return response.Data;
+                    Token = new AuthToken
+                    {
+                        AccessToken = response.Data.AccessToken,
+                        RefreshToken = response.Data.RefreshToken,
+                        Expiration = response.Data.Expiration
+                    };
+
+                    return Token;
 
                 case HttpStatusCode.Forbidden:
                 case HttpStatusCode.BadRequest:
@@ -100,9 +115,9 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
-        public async Task<AuthResponse> RegisterAsync(string username, string password)
+        public async Task<AuthToken> RegisterAsync(string username, string password)
         {
-            var response = await Client.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.POST).AddJsonBody(new AuthRequest()
+            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.POST).AddJsonBody(new AuthRequest()
             {
                 UserName = username,
                 Password = password
@@ -111,7 +126,14 @@ namespace LANCommander.PlaynitePlugin
             switch (response.StatusCode)
             {
                 case HttpStatusCode.OK:
-                    return response.Data;
+                    Token = new AuthToken
+                    {
+                        AccessToken = response.Data.AccessToken,
+                        RefreshToken = response.Data.RefreshToken,
+                        Expiration = response.Data.Expiration
+                    };
+
+                    return Token;
 
                 case HttpStatusCode.BadRequest:
                 case HttpStatusCode.Forbidden:
@@ -125,33 +147,45 @@ namespace LANCommander.PlaynitePlugin
 
         public async Task<bool> PingAsync()
         {
-            var response = await Client.ExecuteAsync(new RestRequest("/api/Ping", Method.GET));
+            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.GET));
 
             return response.StatusCode == HttpStatusCode.OK;
         }
 
-        public AuthResponse RefreshToken(AuthToken token)
+        public AuthToken RefreshToken(AuthToken token)
         {
-            Logger.Trace("Refreshing token...");
+            Logger?.LogTrace("Refreshing token...");
 
             var request = new RestRequest("/api/Auth/Refresh")
                 .AddJsonBody(token);
 
-            var response = Client.Post<AuthResponse>(request);
+            var response = ApiClient.Post<AuthResponse>(request);
 
             if (response.StatusCode != HttpStatusCode.OK)
                 throw new WebException(response.ErrorMessage);
 
-            return response.Data;
+            Token = new AuthToken
+            {
+                AccessToken = response.Data.AccessToken,
+                RefreshToken = response.Data.RefreshToken,
+                Expiration = response.Data.Expiration
+            };
+
+            return Token;
+        }
+
+        public bool ValidateToken()
+        {
+            return ValidateToken(Token);
         }
 
         public bool ValidateToken(AuthToken token)
         {
-            Logger.Trace("Validating token...");
+            Logger?.LogTrace("Validating token...");
 
             if (token == null)
             {
-                Logger.Trace("Token is null!");
+                Logger?.LogTrace("Token is null!");
                 return false;
             }
 
@@ -160,20 +194,25 @@ namespace LANCommander.PlaynitePlugin
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {
-                Logger.Trace("Token is empty!");
+                Logger?.LogTrace("Token is empty!");
                 return false;
             }
 
-            var response = Client.Post(request);
+            var response = ApiClient.Post(request);
 
             var valid = response.StatusCode == HttpStatusCode.OK;
 
             if (valid)
-                Logger.Trace("Token is valid!");
+                Logger?.LogTrace("Token is valid!");
             else
-                Logger.Trace("Token is invalid!");
+                Logger?.LogTrace("Token is invalid!");
 
             return response.StatusCode == HttpStatusCode.OK;
+        }
+
+        public void UseToken(AuthToken token)
+        {
+            Token = token;
         }
 
         public IEnumerable<Game> GetGames()
@@ -223,26 +262,26 @@ namespace LANCommander.PlaynitePlugin
 
         public GameSave UploadSave(string gameId, byte[] data)
         {
-            Logger.Trace("Uploading save...");
+            Logger?.LogTrace("Uploading save...");
 
             var request = new RestRequest($"/api/Saves/Upload/{gameId}", Method.POST)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
             request.AddFile(gameId, data, gameId);
 
-            var response = Client.Post<GameSave>(request);
+            var response = ApiClient.Post<GameSave>(request);
 
             return response.Data;
         }
 
         public string GetMediaUrl(Media media)
         {
-            return (new Uri(Client.BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
+            return (new Uri(ApiClient.BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
         }
 
         public string GetKey(Guid id)
         {
-            Logger.Trace("Requesting key allocation...");
+            Logger?.LogTrace("Requesting key allocation...");
 
             var macAddress = GetMacAddress();
 
@@ -261,7 +300,7 @@ namespace LANCommander.PlaynitePlugin
 
         public string GetAllocatedKey(Guid id)
         {
-            Logger.Trace("Requesting allocated key...");
+            Logger?.LogTrace("Requesting allocated key...");
 
             var macAddress = GetMacAddress();
 
@@ -283,7 +322,7 @@ namespace LANCommander.PlaynitePlugin
 
         public string GetNewKey(Guid id)
         {
-            Logger.Trace("Requesting new key allocation...");
+            Logger?.LogTrace("Requesting new key allocation...");
 
             var macAddress = GetMacAddress();
 
@@ -305,14 +344,14 @@ namespace LANCommander.PlaynitePlugin
 
         public User GetProfile()
         {
-            Logger.Trace("Requesting player's profile...");
+            Logger?.LogTrace("Requesting player's profile...");
 
             return GetRequest<User>("/api/Profile");
         }
 
         public string ChangeAlias(string alias)
         {
-            Logger.Trace("Requesting to change player alias...");
+            Logger?.LogTrace("Requesting to change player alias...");
 
             var response = PostRequest<object>("/api/Profile/ChangeAlias", alias);
 

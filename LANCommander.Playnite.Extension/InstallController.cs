@@ -5,6 +5,7 @@ using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 namespace LANCommander.PlaynitePlugin
@@ -40,13 +41,30 @@ namespace LANCommander.PlaynitePlugin
             {
                 var gameManager = new GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory);
 
+                Stopwatch stopwatch = new Stopwatch();
+
+                stopwatch.Start();
+
+                var lastTotalSize = 0d;
+                var speed = 0d;
+
                 gameManager.OnArchiveExtractionProgress += (long pos, long len) =>
                 {
-                    var percent = Math.Ceiling((pos / (decimal)len) * 100);
+                    if (stopwatch.ElapsedMilliseconds > 500)
+                    {
+                        var percent = Math.Ceiling((pos / (decimal)len) * 100);
 
-                    progress.ProgressMaxValue = len;
-                    progress.CurrentProgressValue = pos;
-                    progress.Text = $"Downloading {Game.Name} ({percent}%)";
+                        progress.ProgressMaxValue = len;
+                        progress.CurrentProgressValue = pos;
+
+                        speed = (double)(progress.CurrentProgressValue - lastTotalSize) / (stopwatch.ElapsedMilliseconds / 1000d);
+
+                        progress.Text = $"Downloading {Game.Name} ({percent}%) | {ByteSizeLib.ByteSize.FromBytes(speed).ToString("#.#")}/s";
+
+                        lastTotalSize = pos;
+
+                        stopwatch.Restart();
+                    }
                 };
 
                 gameManager.OnArchiveEntryExtractionProgress += (object sender, ArchiveEntryExtractionProgressArgs e) =>
@@ -60,6 +78,8 @@ namespace LANCommander.PlaynitePlugin
                 };
 
                 installDirectory = gameManager.Install(gameId);
+
+                stopwatch.Stop();
             },
             new GlobalProgressOptions($"Preparing to download {Game.Name}")
             {

@@ -37,7 +37,7 @@ namespace LANCommander.SDK
         public GameManager(Client client, string defaultInstallDirectory, ILogger logger)
         {
             Client = client;
-            DefaultInstallDirectory = DefaultInstallDirectory;
+            DefaultInstallDirectory = defaultInstallDirectory;
             Logger = logger;
         }
 

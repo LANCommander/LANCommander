@@ -41,8 +41,11 @@ namespace LANCommander.PlaynitePlugin
 
                 gameManager.OnArchiveExtractionProgress += (long pos, long len) =>
                 {
+                    var percent = Math.Ceiling((pos / (decimal)len) * 100);
+
                     progress.ProgressMaxValue = len;
                     progress.CurrentProgressValue = pos;
+                    progress.Text = $"Downloading {Game.Name} ({percent}%)";
                 };
 
                 gameManager.OnArchiveEntryExtractionProgress += (object sender, ArchiveEntryExtractionProgressArgs e) =>
@@ -57,7 +60,7 @@ namespace LANCommander.PlaynitePlugin
 
                 installDirectory = gameManager.Install(gameId);
             },
-            new GlobalProgressOptions($"Downloading {Game.Name}...")
+            new GlobalProgressOptions($"Preparing to download {Game.Name}")
             {
                 IsIndeterminate = false,
                 Cancelable = true,

@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.SDK", "LANComm
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.PCGamingWiki", "LANCommander.PCGamingWiki\LANCommander.PCGamingWiki.csproj", "{2436B817-4475-4E70-9BB2-E1E7866DB79F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.PowerShell", "LANCommander.PowerShell\LANCommander.PowerShell.csproj", "{807943BF-0C7D-4ED3-8393-CFEE64E3138C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{2436B817-4475-4E70-9BB2-E1E7866DB79F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2436B817-4475-4E70-9BB2-E1E7866DB79F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2436B817-4475-4E70-9BB2-E1E7866DB79F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{807943BF-0C7D-4ED3-8393-CFEE64E3138C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{807943BF-0C7D-4ED3-8393-CFEE64E3138C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{807943BF-0C7D-4ED3-8393-CFEE64E3138C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{807943BF-0C7D-4ED3-8393-CFEE64E3138C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

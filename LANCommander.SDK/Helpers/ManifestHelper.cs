@@ -30,7 +30,7 @@ namespace LANCommander.SDK.Helpers
             return manifest;
         }
 
-        public static void Write(GameManifest manifest, string installDirectory)
+        public static string Write(GameManifest manifest, string installDirectory)
         {
             var destination = GetPath(installDirectory);
 
@@ -47,6 +47,8 @@ namespace LANCommander.SDK.Helpers
             Logger?.LogTrace("Writing manifest file");
 
             File.WriteAllText(destination, yaml);
+
+            return destination;
         }
 
         public static string GetPath(string installDirectory)

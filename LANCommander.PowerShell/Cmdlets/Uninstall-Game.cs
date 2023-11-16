@@ -14,8 +14,8 @@ namespace LANCommander.PowerShell.Cmdlets
     [OutputType(typeof(string))]
     public class UninstallGameCmdlet : PSCmdlet
     {
-        [Parameter(Mandatory = false)]
-        public string InstallDirectory { get; set; } = "C:\\Games";
+        [Parameter(Mandatory = true)]
+        public string InstallDirectory { get; set; }
 
         protected override void ProcessRecord()
         {

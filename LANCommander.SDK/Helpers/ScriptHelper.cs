@@ -46,7 +46,7 @@ namespace LANCommander.SDK.Helpers
             if (script.RequiresAdmin)
                 script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
 
-            var filename = PowerShellRuntime.GetScriptFilePath(game, type);
+            var filename = GetScriptFilePath(game, type);
 
             if (File.Exists(filename))
                 File.Delete(filename);

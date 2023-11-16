@@ -18,18 +18,21 @@ namespace LANCommander.SDK.PowerShell
         private bool IgnoreWow64 { get; set; }          = false;
         private ICollection<PowerShellVariable> Variables { get; set; }
         private Dictionary<string, string> Arguments { get; set; }
+        private List<string> Modules { get; set; }
         private Process Process { get; set; }
 
         public PowerShellScript()
         {
             Variables = new List<PowerShellVariable>();
             Arguments = new Dictionary<string, string>();
+            Modules = new List<string>();
             Process = new Process();
 
             Process.StartInfo.FileName = "powershell.exe";
             Process.StartInfo.RedirectStandardOutput = false;
 
             AddArgument("ExecutionPolicy", "Unrestricted");
+            AddModule(Path.Combine(Environment.CurrentDirectory, "LANCommander.PowerShell.psd1"));
         }
 
         public PowerShellScript UseFile(string path)
@@ -88,6 +91,13 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
+        public PowerShellScript AddModule(string path)
+        {
+            Modules.Add(path);
+
+            return this;
+        }
+
         public PowerShellScript RunAsAdmin()
         {
             AsAdmin = true;
@@ -111,9 +121,14 @@ namespace LANCommander.SDK.PowerShell
 
             var wow64Value = IntPtr.Zero;
 
+            foreach (var module in Modules)
+            {
+                scriptBuilder.AppendLine($"Import-Module \"{module}\"");
+            }
+
             foreach (var variable in Variables)
             {
-                scriptBuilder.AppendLine($"${variable.Name} = Convert-FromSerializedBase64 \"{Serialize(variable.Value)}\"");
+                scriptBuilder.AppendLine($"${variable.Name} = ConvertFrom-SerializedBase64 \"{Serialize(variable.Value)}\"");
             }
 
             scriptBuilder.AppendLine(Contents);

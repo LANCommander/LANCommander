@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cmdlets\ConvertFrom-SerializedBase64.cs" />
     <Compile Include="Cmdlets\Edit-PatchBinary.cs" />
     <Compile Include="Cmdlets\Uninstall-Game.cs" />
     <Compile Include="Cmdlets\Install-Game.cs" />

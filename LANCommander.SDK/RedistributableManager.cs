@@ -2,6 +2,7 @@
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
 using SharpCompress.Common;
 using SharpCompress.Readers;
@@ -57,7 +58,7 @@ namespace LANCommander.SDK
                 var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.DetectInstall);
                 detectionScriptTempFile = ScriptHelper.SaveTempScript(detectionScript);
 
-                var detectionResult = PowerShellRuntime.RunScript(detectionScriptTempFile, detectionScript.RequiresAdmin);
+                var detectionResult = RunScript(detectionScriptTempFile, redistributable);
 
                 // Redistributable is not installed
                 if (detectionResult == 0)
@@ -70,12 +71,12 @@ namespace LANCommander.SDK
                         {
                             extractTempPath = extractionResult.Directory;
 
-                            PowerShellRuntime.RunScript(installScriptTempFile, installScript.RequiresAdmin, null, extractTempPath);
+                            RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
                         }
                     }
                     else
                     {
-                        PowerShellRuntime.RunScript(installScriptTempFile, installScript.RequiresAdmin, null, extractTempPath);
+                        RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
                     }
                 }
             }
@@ -163,6 +164,21 @@ namespace LANCommander.SDK
             }
 
             return extractionResult;
+        }
+
+        private int RunScript(string path, Redistributable redistributable, bool requiresAdmin = false, string workingDirectory = "")
+        {
+            var script = new PowerShellScript();
+
+            script.AddVariable("Redistributable", redistributable);
+
+            script.UseWorkingDirectory(workingDirectory);
+            script.UseFile(path);
+
+            if (requiresAdmin)
+                script.RunAsAdmin();
+
+            return script.Execute();
         }
     }
 }

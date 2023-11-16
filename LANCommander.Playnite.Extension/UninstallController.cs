@@ -31,7 +31,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, SDK.Enums.ScriptType.Uninstall);
 
-                    if (!String.IsNullOrEmpty(scriptPath))
+                    if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
                     {
                         var manifest = ManifestHelper.Read(Game.InstallDirectory);
                         var script = new PowerShellScript();

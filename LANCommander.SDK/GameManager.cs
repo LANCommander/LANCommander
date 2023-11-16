@@ -101,7 +101,6 @@ namespace LANCommander.SDK
             try
             {
                 Logger?.LogTrace("Running uninstall script");
-                PowerShellRuntime.RunScript(installDirectory, ScriptType.Uninstall);
             }
             catch (Exception ex)
             {

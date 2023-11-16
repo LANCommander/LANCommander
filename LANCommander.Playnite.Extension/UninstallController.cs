@@ -1,4 +1,6 @@
 ﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
+using LANCommander.SDK.PowerShell;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
@@ -25,11 +27,37 @@ namespace LANCommander.PlaynitePlugin
             {
                 var gameManager = new LANCommander.SDK.GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory);
 
+                try
+                {
+                    var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, SDK.Enums.ScriptType.Uninstall);
+
+                    if (!String.IsNullOrEmpty(scriptPath))
+                    {
+                        var manifest = ManifestHelper.Read(Game.InstallDirectory);
+                        var script = new PowerShellScript();
+
+                        var key = Plugin.LANCommanderClient.GetAllocatedKey(manifest.Id);
+
+                        script.AddVariable("InstallDirectory", Game.InstallDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
+                        script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
+
+                        script.UseFile(scriptPath);
+
+                        script.Execute();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "There was an error running the uninstall script");
+                }
+
                 gameManager.Uninstall(Game.InstallDirectory);
             }
             catch (Exception ex)
             {
-
+                Logger.Error(ex, "There was an error uninstalling the game");
             }
 
             InvokeOnUninstalled(new GameUninstalledEventArgs());

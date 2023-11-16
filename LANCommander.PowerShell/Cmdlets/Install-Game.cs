@@ -9,7 +9,7 @@ using System.Windows.Forms;
 
 namespace LANCommander.PowerShell.Cmdlets
 {
-    [Cmdlet(VerbsLifecycle.Install, "PrimaryDisplay")]
+    [Cmdlet(VerbsLifecycle.Install, "Game")]
     [OutputType(typeof(string))]
     public class InstallGameCmdlet : PSCmdlet
     {

@@ -119,6 +119,7 @@ namespace LANCommander.PlaynitePlugin
 
                 RunInstallScript(installDirectory);
                 RunNameChangeScript(installDirectory);
+                RunKeyChangeScript(installDirectory);
 
                 InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
             }
@@ -163,6 +164,24 @@ namespace LANCommander.PlaynitePlugin
             script.AddVariable("NewPlayerAlias", Plugin.Settings.PlayerName);
 
             script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange));
+
+            return script.Execute();
+        }
+
+        private int RunKeyChangeScript(string installDirectory)
+        {
+            var manifest = ManifestHelper.Read(installDirectory);
+            var script = new PowerShellScript();
+
+            var key = Plugin.LANCommanderClient.GetAllocatedKey(manifest.Id);
+
+            script.AddVariable("InstallDirectory", installDirectory);
+            script.AddVariable("GameManifest", manifest);
+            script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
+            script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
+            script.AddVariable("AllocatedKey", key);
+
+            script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.KeyChange));
 
             return script.Execute();
         }

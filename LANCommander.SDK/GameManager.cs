@@ -96,16 +96,6 @@ namespace LANCommander.SDK
 
         public void Uninstall(string installDirectory)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-
-            try
-            {
-                Logger?.LogTrace("Running uninstall script");
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Error running uninstall script");
-            }
 
             Logger?.LogTrace("Attempting to delete the install directory");
 

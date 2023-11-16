@@ -36,8 +36,6 @@ namespace LANCommander.PlaynitePlugin
                         var manifest = ManifestHelper.Read(Game.InstallDirectory);
                         var script = new PowerShellScript();
 
-                        var key = Plugin.LANCommanderClient.GetAllocatedKey(manifest.Id);
-
                         script.AddVariable("InstallDirectory", Game.InstallDirectory);
                         script.AddVariable("GameManifest", manifest);
                         script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);

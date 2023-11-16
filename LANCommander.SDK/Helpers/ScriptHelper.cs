@@ -15,14 +15,23 @@ namespace LANCommander.SDK.Helpers
 
         public static string SaveTempScript(Script script)
         {
+            var tempPath = SaveTempScript(script.Contents);
+
+            Logger?.LogTrace("Wrote script {Script} to {Destination}", script.Name, tempPath);
+
+            return tempPath;
+        }
+
+        public static string SaveTempScript(string contents)
+        {
             var tempPath = Path.GetTempFileName();
 
             // PowerShell will only run scripts with the .ps1 file extension
             File.Move(tempPath, tempPath + ".ps1");
 
-            Logger?.LogTrace("Writing script {Script} to {Destination}", script.Name, tempPath);
+            tempPath = tempPath + ".ps1";
 
-            File.WriteAllText(tempPath, script.Contents);
+            File.WriteAllText(tempPath, contents);
 
             return tempPath;
         }

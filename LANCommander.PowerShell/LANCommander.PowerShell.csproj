@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LANCommander.PowerShell</RootNamespace>
     <AssemblyName>LANCommander.PowerShell</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -46,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cmdlets\Edit-PatchBinary.cs" />
+    <Compile Include="Cmdlets\Uninstall-Game.cs" />
     <Compile Include="Cmdlets\Install-Game.cs" />
     <Compile Include="Cmdlets\Write-ReplaceContentInFile.cs" />
     <Compile Include="Cmdlets\ConvertTo-StringBytes.cs" />
@@ -56,7 +58,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="LANCommander.PowerShell.psd1" />
+    <None Include="LANCommander.PowerShell.psd1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

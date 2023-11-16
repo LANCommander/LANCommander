@@ -7,18 +7,18 @@ using System.Threading.Tasks;
 
 namespace LANCommander.PowerShell.Cmdlets
 {
-    [Cmdlet(VerbsData.ConvertFrom, "SerializedBase64")]
+    [Cmdlet(VerbsData.ConvertTo, "SerializedBase64")]
     [OutputType(typeof(object))]
-    public class ConvertFromSerializedBase64Cmdlet : Cmdlet
+    public class ConvertToSerializedBase64Cmdlet : Cmdlet
     {
         [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
-        public string Input { get; set; }
+        public object Input { get; set; }
 
         protected override void ProcessRecord()
         {
-            var xml = Encoding.UTF8.GetString(Convert.FromBase64String(Input));
+            var output = Convert.ToBase64String(Encoding.UTF8.GetBytes(PSSerializer.Serialize(Input)));
 
-            WriteObject(PSSerializer.Deserialize(xml));
+            WriteObject(output);
         }
     }
 }

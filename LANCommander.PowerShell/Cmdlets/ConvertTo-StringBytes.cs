@@ -6,7 +6,7 @@ namespace LANCommander.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsData.ConvertTo, "StringBytes")]
     [OutputType(typeof(byte[]))]
-    public class ConvertToStringBytesCmdlet : PSCmdlet
+    public class ConvertToStringBytesCmdlet : Cmdlet
     {
         [Parameter(Mandatory = true, Position = 0, ValueFromPipeline = true, ValueFromPipelineByPropertyName = true)]
         public string Input { get; set; }

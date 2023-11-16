@@ -12,7 +12,7 @@ namespace LANCommander.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsLifecycle.Uninstall, "Game")]
     [OutputType(typeof(string))]
-    public class UninstallGameCmdlet : PSCmdlet
+    public class UninstallGameCmdlet : Cmdlet
     {
         [Parameter(Mandatory = true)]
         public string InstallDirectory { get; set; }

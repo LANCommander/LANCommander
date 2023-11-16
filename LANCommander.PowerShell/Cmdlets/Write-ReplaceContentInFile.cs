@@ -7,7 +7,7 @@ namespace LANCommander.PowerShell.Cmdlets
 
     [Cmdlet(VerbsCommunications.Write, "ReplaceContentInFile")]
     [OutputType(typeof(string))]
-    public class ReplaceContentInFileCmdlet : PSCmdlet
+    public class ReplaceContentInFileCmdlet : Cmdlet
     {
         [Parameter(Mandatory = true, Position = 0)]
         public string Pattern { get; set; }

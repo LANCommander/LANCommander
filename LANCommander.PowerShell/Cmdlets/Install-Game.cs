@@ -11,7 +11,7 @@ namespace LANCommander.PowerShell.Cmdlets
 {
     [Cmdlet(VerbsLifecycle.Install, "Game")]
     [OutputType(typeof(string))]
-    public class InstallGameCmdlet : PSCmdlet
+    public class InstallGameCmdlet : Cmdlet
     {
         [Parameter(Mandatory = true)]
         public Client Client { get; set; }

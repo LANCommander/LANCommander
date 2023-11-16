@@ -3,6 +3,7 @@ using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Management.Automation;
 using System.Windows.Forms;
@@ -52,57 +53,80 @@ namespace LANCommander.PowerShell.Cmdlets
             RunInstallScript(installDirectory);
             RunNameChangeScript(installDirectory);
             RunKeyChangeScript(installDirectory);
+
+            WriteObject(installDirectory);
         }
 
         private int RunInstallScript(string installDirectory)
         {
             var manifest = ManifestHelper.Read(installDirectory);
-            var script = new PowerShellScript();
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install);
 
-            script.AddVariable("InstallDirectory", installDirectory);
-            script.AddVariable("GameManifest", manifest);
-            script.AddVariable("DefaultInstallDirectory", InstallDirectory);
-            script.AddVariable("ServerAddress", Client.BaseUrl);
+            if (File.Exists(path))
+            {
+                var script = new PowerShellScript();
 
-            script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install));
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", InstallDirectory);
+                script.AddVariable("ServerAddress", Client.BaseUrl);
 
-            return script.Execute();
+                script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install));
+
+                return script.Execute();
+            }
+
+            return 0;
         }
 
         private int RunNameChangeScript(string installDirectory)
         {
             var user = Client.GetProfile();
             var manifest = ManifestHelper.Read(installDirectory);
-            var script = new PowerShellScript();
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange);
+            
+            if (File.Exists(path))
+            {
+                var script = new PowerShellScript();
 
-            script.AddVariable("InstallDirectory", installDirectory);
-            script.AddVariable("GameManifest", manifest);
-            script.AddVariable("DefaultInstallDirectory", InstallDirectory);
-            script.AddVariable("ServerAddress", Client.BaseUrl);
-            script.AddVariable("OldPlayerAlias", "");
-            script.AddVariable("NewPlayerAlias", user.UserName);
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", InstallDirectory);
+                script.AddVariable("ServerAddress", Client.BaseUrl);
+                script.AddVariable("OldPlayerAlias", "");
+                script.AddVariable("NewPlayerAlias", user.UserName);
 
-            script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange));
+                script.UseFile(path);
 
-            return script.Execute();
+                return script.Execute();
+            }
+
+            return 0;
         }
 
         private int RunKeyChangeScript(string installDirectory)
         {
             var manifest = ManifestHelper.Read(installDirectory);
-            var script = new PowerShellScript();
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.KeyChange);
 
-            var key = Client.GetAllocatedKey(manifest.Id);
+            if (File.Exists(path))
+            {
+                var script = new PowerShellScript();
 
-            script.AddVariable("InstallDirectory", installDirectory);
-            script.AddVariable("GameManifest", manifest);
-            script.AddVariable("DefaultInstallDirectory", InstallDirectory);
-            script.AddVariable("ServerAddress", Client.BaseUrl);
-            script.AddVariable("AllocatedKey", key);
+                var key = Client.GetAllocatedKey(manifest.Id);
 
-            script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.KeyChange));
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", InstallDirectory);
+                script.AddVariable("ServerAddress", Client.BaseUrl);
+                script.AddVariable("AllocatedKey", key);
 
-            return script.Execute();
+                script.UseFile(path);
+
+                return script.Execute();
+            }
+
+            return 0;
         }
     }
 }

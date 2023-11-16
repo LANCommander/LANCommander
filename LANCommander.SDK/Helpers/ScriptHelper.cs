@@ -55,5 +55,24 @@ namespace LANCommander.SDK.Helpers
 
             File.WriteAllText(filename, script.Contents);
         }
+
+        public static string GetScriptFilePath(Game game, ScriptType type)
+        {
+            return GetScriptFilePath(game.InstallDirectory, type);
+        }
+
+        public static string GetScriptFilePath(string installDirectory, ScriptType type)
+        {
+            Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
+                { ScriptType.Install, "_install.ps1" },
+                { ScriptType.Uninstall, "_uninstall.ps1" },
+                { ScriptType.NameChange, "_changename.ps1" },
+                { ScriptType.KeyChange, "_changekey.ps1" }
+            };
+
+            var filename = filenames[type];
+
+            return Path.Combine(installDirectory, filename);
+        }
     }
 }

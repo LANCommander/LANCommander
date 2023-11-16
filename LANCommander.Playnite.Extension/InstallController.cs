@@ -1,6 +1,7 @@
 ﻿using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.PowerShell;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
@@ -116,6 +117,9 @@ namespace LANCommander.PlaynitePlugin
                     InstallDirectory = installDirectory,
                 };
 
+                RunInstallScript(installDirectory);
+                RunNameChangeScript(installDirectory);
+
                 InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
             }
             else if (result.Canceled)
@@ -129,6 +133,38 @@ namespace LANCommander.PlaynitePlugin
             }
             else if (result.Error != null)
                 throw result.Error;
+        }
+
+        private int RunInstallScript(string installDirectory)
+        {
+            var manifest = ManifestHelper.Read(installDirectory);
+            var script = new PowerShellScript();
+
+            script.AddVariable("InstallDirectory", installDirectory);
+            script.AddVariable("GameManifest", manifest);
+            script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
+            script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
+
+            script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install));
+
+            return script.Execute();
+        }
+
+        private int RunNameChangeScript(string installDirectory)
+        {
+            var manifest = ManifestHelper.Read(installDirectory);
+            var script = new PowerShellScript();
+
+            script.AddVariable("InstallDirectory", installDirectory);
+            script.AddVariable("GameManifest", manifest);
+            script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
+            script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
+            script.AddVariable("OldPlayerAlias", "");
+            script.AddVariable("NewPlayerAlias", Plugin.Settings.PlayerName);
+
+            script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange));
+
+            return script.Execute();
         }
     }
 }

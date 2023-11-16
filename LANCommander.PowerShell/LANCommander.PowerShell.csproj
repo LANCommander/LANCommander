@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cmdlets\Edit-PatchBinary.cs" />
+    <Compile Include="Cmdlets\Install-Game.cs" />
     <Compile Include="Cmdlets\Write-ReplaceContentInFile.cs" />
     <Compile Include="Cmdlets\ConvertTo-StringBytes.cs" />
     <Compile Include="Cmdlets\Get-PrimaryDisplay.cs" />

@@ -91,36 +91,11 @@ namespace LANCommander.SDK
             ScriptHelper.SaveScript(game, ScriptType.NameChange);
             ScriptHelper.SaveScript(game, ScriptType.KeyChange);
 
-            try
-            {
-                PowerShellRuntime.RunScript(game, ScriptType.Install);
-                PowerShellRuntime.RunScript(game, ScriptType.NameChange, /* Plugin.Settings.PlayerName */ "");
-
-                var key = Client.GetAllocatedKey(game.Id);
-
-                PowerShellRuntime.RunScript(game, ScriptType.KeyChange, $"\"{key}\"");
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Could not execute post-install scripts");
-            }
-
             return result.Directory;
         }
 
         public void Uninstall(string installDirectory)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-
-            try
-            {
-                Logger?.LogTrace("Running uninstall script");
-                PowerShellRuntime.RunScript(installDirectory, ScriptType.Uninstall);
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Error running uninstall script");
-            }
 
             Logger?.LogTrace("Attempting to delete the install directory");
 

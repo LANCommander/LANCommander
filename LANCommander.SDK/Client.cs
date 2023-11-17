@@ -18,18 +18,24 @@ namespace LANCommander.SDK
         private readonly ILogger Logger;
 
         private readonly RestClient ApiClient;
-        private  AuthToken Token;
+        private AuthToken Token;
+
+        public string BaseUrl;
 
         public Client(string baseUrl)
         {
-            if (!String.IsNullOrWhiteSpace(baseUrl))
-                ApiClient = new RestClient(baseUrl);
+            BaseUrl = baseUrl;
+
+            if (!String.IsNullOrWhiteSpace(BaseUrl))
+                ApiClient = new RestClient(BaseUrl);
         }
 
         public Client(string baseUrl, ILogger logger)
         {
-            if (!String.IsNullOrWhiteSpace(baseUrl))
-                ApiClient = new RestClient(baseUrl);
+            BaseUrl = baseUrl;
+
+            if (!String.IsNullOrWhiteSpace(BaseUrl))
+                ApiClient = new RestClient(BaseUrl);
 
             Logger = logger;
         }

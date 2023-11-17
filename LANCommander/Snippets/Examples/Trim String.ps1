@@ -1,4 +1,4 @@
 ﻿# Trim a string down to a specified amount of characters
-if ($NewName.Length -gt 10) {
-    $NewName = $NewName.Substring(0, 10);
+if ($NewPlayerAlias.Length -gt 10) {
+    $NewPlayerAlias = $NewPlayerAlias.Substring(0, 10);
 }

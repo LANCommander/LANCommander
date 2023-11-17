@@ -1,6 +1,7 @@
 ﻿using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.PowerShell;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
@@ -126,7 +127,14 @@ namespace LANCommander.SDK
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        PowerShellRuntime.RunCommand($"regedit.exe /s \"{registryImportFilePath}\"", registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"));
+                        var script = new PowerShellScript();
+
+                        script.UseInline($"regedit.exe /s \"{registryImportFilePath}\"");
+
+                        if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
+                            script.RunAsAdmin();
+
+                        script.Execute();
                     }
                     #endregion
 
@@ -199,7 +207,11 @@ namespace LANCommander.SDK
                             tempRegFiles.Add(tempRegFile);
                         }
 
-                        PowerShellRuntime.RunCommand(exportCommand.ToString());
+                        var script = new PowerShellScript();
+
+                        script.UseInline(exportCommand.ToString());
+
+                        script.Execute();
 
                         var exportFile = new StringBuilder();
 

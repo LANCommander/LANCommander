@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+    <PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
     <PackageReference Include="RestSharp" Version="106.15.0" />
     <PackageReference Include="SharpCompress" Version="0.34.1" />
     <PackageReference Include="YamlDotNet" Version="5.4.0" />

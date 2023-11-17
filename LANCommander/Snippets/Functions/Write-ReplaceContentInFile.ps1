@@ -1,5 +1,2 @@
-﻿function Write-ReplaceContentInFile([string]$Regex, [string]$Replacement, [string]$FilePath)
-{
-    $content = (Get-Content $FilePath) -replace $Regex, $Replacement
-    [IO.File]::WriteAllLines($FilePath, $content)
-}
+﻿# Use regex to replace text within a file. Quotes are escaped by double quoting ("")
+Write-ReplaceContentInFile -Regex '^game.setPlayerName "(.+)"' -Replacement "game.setPlayerName ""$NewName""" -FilePath "$InstallDir\<File Path>"

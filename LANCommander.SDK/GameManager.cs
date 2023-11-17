@@ -50,25 +50,39 @@ namespace LANCommander.SDK
         /// <exception cref="Exception"></exception>
         public string Install(Guid gameId, int maxAttempts = 10)
         {
-            var game = Client.GetGame(gameId);
-
-            Logger?.LogTrace("Installing game {GameTitle} (GameId)", game.Title, game.Id);
-
-            var result = RetryHelper.RetryOnException<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
-            {
-                Logger?.LogTrace("Attempting to download and extract game");
-
-                return DownloadAndExtract(game, DefaultInstallDirectory);
-            });
-
-            if (!result.Success && !result.Canceled)
-                throw new Exception("Could not extract the installer. Retry the install or check your connection");
-            else if (result.Canceled)
-                return "";
-
             GameManifest manifest = null;
 
-            game.InstallDirectory = result.Directory;
+            var game = Client.GetGame(gameId);
+
+            var destination = Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
+
+            if (ManifestHelper.Exists(destination))
+                manifest = ManifestHelper.Read(destination);
+
+            if (manifest == null || manifest.Id != gameId)
+            {
+                Logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
+
+                var result = RetryHelper.RetryOnException<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
+                {
+                    Logger?.LogTrace("Attempting to download and extract game");
+
+                    return DownloadAndExtract(game, destination);
+                });
+
+                if (!result.Success && !result.Canceled)
+                    throw new Exception("Could not extract the installer. Retry the install or check your connection");
+                else if (result.Canceled)
+                    return "";
+
+                game.InstallDirectory = result.Directory;
+            }
+            else
+            {
+                Logger?.LogTrace("Game {GameTitle} ({GameId}) is already installed to {InstallDirectory}", game.Title, game.Id, destination);
+
+                game.InstallDirectory = destination;
+            }
 
             var writeManifestSuccess = RetryHelper.RetryOnException(maxAttempts, TimeSpan.FromSeconds(1), false, () =>
             {
@@ -91,7 +105,7 @@ namespace LANCommander.SDK
             ScriptHelper.SaveScript(game, ScriptType.NameChange);
             ScriptHelper.SaveScript(game, ScriptType.KeyChange);
 
-            return result.Directory;
+            return game.InstallDirectory;
         }
 
         public void Uninstall(string installDirectory)
@@ -105,7 +119,7 @@ namespace LANCommander.SDK
             Logger?.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
         }
 
-        private ExtractionResult DownloadAndExtract(Game game, string installDirectory = "")
+        private ExtractionResult DownloadAndExtract(Game game, string destination)
         {
             if (game == null)
             {
@@ -113,11 +127,6 @@ namespace LANCommander.SDK
 
                 throw new ArgumentNullException("No game was specified");
             }
-
-            if (String.IsNullOrWhiteSpace(installDirectory))
-                installDirectory = DefaultInstallDirectory;
-
-            var destination = Path.Combine(installDirectory, game.Title.SanitizeFilename());
 
             Logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
 

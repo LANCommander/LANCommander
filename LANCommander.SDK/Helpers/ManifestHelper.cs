@@ -14,6 +14,13 @@ namespace LANCommander.SDK.Helpers
 
         public const string ManifestFilename = "_manifest.yml";
 
+        public static bool Exists(string installDirectory)
+        {
+            var path = GetPath(installDirectory);
+
+            return File.Exists(path);
+        }
+
         public static GameManifest Read(string installDirectory)
         {
             var source = GetPath(installDirectory);

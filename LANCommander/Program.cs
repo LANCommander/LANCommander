@@ -228,17 +228,16 @@ namespace LANCommander
             // Migrate
             Logger.Debug("Migrating database if required");
             await using var scope = app.Services.CreateAsyncScope();
-            using (var db = scope.ServiceProvider.GetService<DatabaseContext>())
+            using var db = scope.ServiceProvider.GetService<DatabaseContext>();
+
+            if ((await db.Database.GetPendingMigrationsAsync()).Any())
             {
-                if ((await db.Database.GetPendingMigrationsAsync()).Any())
-                {
-                    var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
+                var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
 
-                    if (File.Exists(dataSource))
-                        File.Copy(dataSource, Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}"));
+                if (File.Exists(dataSource))
+                    File.Copy(dataSource, Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}"));
 
-                    await db.Database.MigrateAsync();
-                }
+                await db.Database.MigrateAsync();
             }
 
             // Autostart any server processes

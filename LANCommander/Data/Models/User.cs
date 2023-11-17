@@ -47,6 +47,9 @@ namespace LANCommander.Data.Models
         public virtual ICollection<GameSave>? GameSaves { get; set; }
 
         [JsonIgnore]
+        public virtual ICollection<PlaySession>? PlaySessions { get; set; }
+
+        [JsonIgnore]
         public bool Approved { get; set; }
 
         [JsonIgnore]

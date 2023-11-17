@@ -142,6 +142,7 @@ namespace LANCommander
             builder.Services.AddScoped<ServerService>();
             builder.Services.AddScoped<ServerConsoleService>();
             builder.Services.AddScoped<GameSaveService>();
+            builder.Services.AddScoped<PlaySessionService>();
             builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<RedistributableService>();
             builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();

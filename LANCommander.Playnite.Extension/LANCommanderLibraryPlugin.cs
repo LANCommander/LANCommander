@@ -331,12 +331,26 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnGameStarting(OnGameStartingEventArgs args)
         {
-            SaveController.Download(args.Game);
+            if (args.Game.PluginId == Id)
+            {
+                SaveController.Download(args.Game);
+
+                var gameId = Guid.Parse(args.Game.GameId);
+
+                LANCommanderClient.StartPlaySession(gameId);
+            }
         }
 
         public override void OnGameStopped(OnGameStoppedEventArgs args)
         {
-            SaveController.Upload(args.Game);
+            if (args.Game.PluginId == Id)
+            {
+                SaveController.Upload(args.Game);
+
+                var gameId = Guid.Parse(args.Game.GameId);
+
+                LANCommanderClient.EndPlaySession(gameId);
+            }
         }
 
         public override IEnumerable<TopPanelItem> GetTopPanelItems()

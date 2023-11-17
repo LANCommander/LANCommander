@@ -51,6 +51,16 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
+        private T PostRequest<T>(string route)
+        {
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            var response = ApiClient.Post<T>(request);
+
+            return response.Data;
+        }
+
         private T GetRequest<T>(string route)
         {
             var request = new RestRequest(route)
@@ -362,6 +372,20 @@ namespace LANCommander.SDK
             var response = PostRequest<object>("/api/Profile/ChangeAlias", alias);
 
             return alias;
+        }
+
+        public void StartPlaySession(Guid gameId)
+        {
+            Logger?.LogTrace("Starting a game session...");
+
+            PostRequest<object>($"/api/PlaySession/Start/{gameId}");
+        }
+
+        public void EndPlaySession(Guid gameId)
+        {
+            Logger?.LogTrace("Ending a game session...");
+
+            PostRequest<object>($"/api/PlaySession/End/{gameId}");
         }
 
         private string GetMacAddress()

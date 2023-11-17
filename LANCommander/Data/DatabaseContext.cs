@@ -107,6 +107,18 @@ namespace LANCommander.Data
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            builder.Entity<User>()
+                .HasMany(u => u.PlaySessions)
+                .WithOne(ps => ps.User)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.PlaySessions)
+                .WithOne(ps => ps.Game)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.NoAction);
+
             builder.Entity<Server>()
                 .HasOne(s => s.Game)
                 .WithMany(g => g.Servers)
@@ -151,6 +163,8 @@ namespace LANCommander.Data
         public DbSet<Key>? Keys { get; set; }
 
         public DbSet<GameSave>? GameSaves { get; set; }
+
+        public DbSet<PlaySession>? PlaySessions { get; set; }
 
         public DbSet<Server>? Servers { get; set; }
 

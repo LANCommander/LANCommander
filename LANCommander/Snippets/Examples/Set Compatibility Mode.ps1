@@ -9,4 +9,4 @@
 # WIN7RTM
 # WIN8RTM
 # See: https://ss64.com/nt/syntax-compatibility.html
-New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" -Name "$InstallDir\<Executable>" -Value "~ WINXPSP2 HIGHDPIAWARE" -Force
+New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers" -Name "$InstallDirectory\<Executable>" -Value "~ WINXPSP2 HIGHDPIAWARE" -Force

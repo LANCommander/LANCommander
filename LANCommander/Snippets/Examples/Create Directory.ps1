@@ -1,1 +1,1 @@
-﻿New-Item -ItemType Directory -Force -Path "$InstallDir\<Path>"
+﻿New-Item -ItemType Directory -Force -Path "$InstallDirectory\<Path>"

@@ -1,1 +1,1 @@
-﻿Remove-Item "$InstallDir\<DirectoryPath>" -Recurse -ErrorAction Ignore
+﻿Remove-Item "$InstallDirectory\<DirectoryPath>" -Recurse -ErrorAction Ignore

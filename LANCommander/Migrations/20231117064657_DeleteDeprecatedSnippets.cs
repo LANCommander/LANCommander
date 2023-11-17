@@ -32,6 +32,14 @@ namespace LANCommander.Migrations
                 if (File.Exists(path))
                     File.Delete(path);
             }
+
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$NewName = $args[0]' || char(13) || char(10), '')");
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$OldName = \"\"' || char(13) || char(10) || 'if ($args[1]) {' || char(13) || char(10) || char(9) || '$OldName = $args[1]' || char(13) || char(10) || '}' || char(13) || char(10), '')");
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$InstallDir = $PSScriptRoot' || char(13) || char(10), '')");
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$InstallDir', '$InstallDirectory')");
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$NewName', '$NewPlayerAlias')");
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$OldName', '$OldPlayerAlias')");
+
         }
 
         /// <inheritdoc />

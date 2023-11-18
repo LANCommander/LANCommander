@@ -17,7 +17,7 @@ namespace LANCommander.SDK
     {
         private readonly ILogger Logger;
 
-        private readonly RestClient ApiClient;
+        private RestClient ApiClient;
         private AuthToken Token;
 
         public string BaseUrl;
@@ -229,6 +229,12 @@ namespace LANCommander.SDK
         public void UseToken(AuthToken token)
         {
             Token = token;
+        }
+
+        public void UseServerAddress(string address)
+        {
+            BaseUrl = address;
+            ApiClient = new RestClient(BaseUrl);
         }
 
         public IEnumerable<Game> GetGames()

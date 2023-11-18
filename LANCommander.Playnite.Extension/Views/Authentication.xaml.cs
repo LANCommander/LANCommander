@@ -102,6 +102,8 @@ namespace LANCommander.PlaynitePlugin.Views
 
                 if (Plugin.LANCommanderClient == null)
                     Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress);
+                else
+                    Plugin.LANCommanderClient.UseServerAddress(Context.ServerAddress);
 
                 var response = await Plugin.LANCommanderClient.AuthenticateAsync(Context.UserName, Context.Password);
 
@@ -122,6 +124,8 @@ namespace LANCommander.PlaynitePlugin.Views
             }
             catch (Exception ex)
             {
+                Logger.Error(ex, ex.Message);
+
                 Plugin.PlayniteApi.Dialogs.ShowErrorMessage(ex.Message);
 
                 LoginButton.Dispatcher.Invoke(new System.Action(() =>

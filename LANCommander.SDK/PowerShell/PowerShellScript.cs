@@ -33,6 +33,8 @@ namespace LANCommander.SDK.PowerShell
 
             AddArgument("ExecutionPolicy", "Unrestricted");
             AddModule(Path.Combine(Environment.CurrentDirectory, "LANCommander.PowerShell.psd1"));
+
+            IgnoreWow64Redirection();
         }
 
         public PowerShellScript UseFile(string path)

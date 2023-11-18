@@ -1,1 +1,1 @@
-﻿$manifest = Get-GameManifest "C:\\Games\\<Game Directory>"
+﻿$manifest = Get-GameManifest "C:\Games\<Game Directory>"

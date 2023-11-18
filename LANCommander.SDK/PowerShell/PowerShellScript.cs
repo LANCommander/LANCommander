@@ -145,10 +145,10 @@ namespace LANCommander.SDK.PowerShell
             if (IgnoreWow64)
                 Wow64DisableWow64FsRedirection(ref wow64Value);
 
-            Process.StartInfo.Arguments = String.Join(" ", Arguments.Select((name, value) =>
+            foreach (var argument in Arguments)
             {
-                return $"-{name} {value}";
-            }));
+                Process.StartInfo.Arguments += $" -{argument.Key} {argument.Value}";
+            }
 
             if (!String.IsNullOrEmpty(WorkingDirectory))
                 Process.StartInfo.WorkingDirectory = WorkingDirectory;

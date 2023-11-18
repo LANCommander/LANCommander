@@ -123,6 +123,9 @@ namespace LANCommander.SDK.PowerShell
 
             var wow64Value = IntPtr.Zero;
 
+            if (Contents.StartsWith("# Requires Admin"))
+                RunAsAdmin();
+
             foreach (var module in Modules)
             {
                 scriptBuilder.AppendLine($"Import-Module \"{module}\"");

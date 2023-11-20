@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using LANCommander.Data.Enums;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -39,7 +40,11 @@ namespace LANCommander.Migrations
             migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$InstallDir', '$InstallDirectory')");
             migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$NewName', '$NewPlayerAlias')");
             migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$OldName', '$OldPlayerAlias')");
-
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, 'function Write-ReplaceContentInFile', 'function Write-ReplaceContentInFile-Old')");
+            migrationBuilder.Sql($"UPDATE Scripts SET Contents = REPLACE(Contents, '$args[0]', '$AllocatedKey' WHERE Type = {(int)ScriptType.Install}");
+            migrationBuilder.Sql($"UPDATE Scripts SET Contents = REPLACE(Contents, '$args[0]', '$AllocatedKey' WHERE Type = {(int)ScriptType.KeyChange}");
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, 'Add-Type -AssemblyName System.Windows.Forms' || char(13) || char(10), '')");
+            migrationBuilder.Sql("UPDATE Scripts SET Contents = REPLACE(Contents, '$Display = [System.Windows.Forms.Screen]::AllScreens | Where-Object Primary | Select Bounds', '$Display = Get-PrimaryDisplay')");
         }
 
         /// <inheritdoc />

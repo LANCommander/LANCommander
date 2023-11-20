@@ -436,7 +436,7 @@ namespace LANCommander.PlaynitePlugin
                 Logger.Trace("Name change was cancelled");
         }
 
-        public Window ShowAuthenticationWindow(string serverAddress = null)
+        public Window ShowAuthenticationWindow(string serverAddress = null, EventHandler onClose = null)
         {
             Window window = null;
             Application.Current.Dispatcher.Invoke((Action)delegate
@@ -458,6 +458,10 @@ namespace LANCommander.PlaynitePlugin
                 window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
                 window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
                 window.ResizeMode = ResizeMode.NoResize;
+
+                if (onClose != null)
+                    window.Closed += onClose;
+
                 window.ShowDialog();
             });
 

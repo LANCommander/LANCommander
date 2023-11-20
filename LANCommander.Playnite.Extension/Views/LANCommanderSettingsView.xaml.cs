@@ -81,9 +81,7 @@ namespace LANCommander.PlaynitePlugin
 
         private void AuthenticateButton_Click(object sender, RoutedEventArgs e)
         {
-            var authWindow = Plugin.ShowAuthenticationWindow();
-
-            authWindow.Closed += AuthWindow_Closed;
+            var authWindow = Plugin.ShowAuthenticationWindow(Settings.ServerAddress, AuthWindow_Closed);
         }
 
         private void DisconnectButton_Click(object sender, RoutedEventArgs e)

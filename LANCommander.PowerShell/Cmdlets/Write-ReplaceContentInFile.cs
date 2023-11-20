@@ -20,12 +20,17 @@ namespace LANCommander.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            var contents = File.ReadAllText(FilePath);
-            var regex = new Regex(Pattern, RegexOptions.Multiline);
+            if (File.Exists(FilePath))
+            {
+                var contents = File.ReadAllText(FilePath);
+                var regex = new Regex(Pattern, RegexOptions.Multiline);
 
-            var result = regex.Replace(contents, Substitution);
+                contents = regex.Replace(contents, Substitution);
 
-            WriteObject(result);
+                File.WriteAllText(FilePath, contents);
+
+                WriteObject(contents);
+            }
         }
     }
 }

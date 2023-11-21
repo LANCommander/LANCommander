@@ -56,8 +56,15 @@ namespace LANCommander.SDK
 
             var destination = Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
 
-            if (ManifestHelper.Exists(destination))
-                manifest = ManifestHelper.Read(destination);
+            try
+            {
+                if (ManifestHelper.Exists(destination))
+                    manifest = ManifestHelper.Read(destination);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogTrace(ex, "Error reading manifest before install");
+            }
 
             if (manifest == null || manifest.Id != gameId)
             {

@@ -28,3 +28,13 @@ Packages:
       - LANCommander servers can now provide game art to Playnite clients
       - Added server address to addon settings
       - Added disconnect button to addon settings
+  - Version: 0.2.2
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2023-11-20
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.2.2/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_2_2.pext
+    Changelog:
+      - _manifest.yml files in the game's install directory now includes the game's ID
+      - Installation progress dialog now shows the download percentage and transfer speed
+      - Full game download will be skipped if the game files already exist, see full release notes for more details
+      - Play sessions are now recorded to the server with user ID, start time, and end time
+      - Connection status now updates correctly when authenticating through addon settings

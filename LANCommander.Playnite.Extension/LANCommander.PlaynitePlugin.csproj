@@ -41,6 +41,9 @@
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=7.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.7.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions, Version=7.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Logging.Abstractions.7.0.0\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+    </Reference>
     <Reference Include="Playnite.SDK, Version=6.10.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\PlayniteSDK.6.10.0\lib\net462\Playnite.SDK.dll</HintPath>
     </Reference>
@@ -104,6 +107,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
+    <Compile Include="PlayniteLogger.cs" />
     <Compile Include="SaveController.cs" />
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />

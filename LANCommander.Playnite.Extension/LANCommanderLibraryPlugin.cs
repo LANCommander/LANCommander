@@ -39,7 +39,7 @@ namespace LANCommander.PlaynitePlugin
 
             Settings = new LANCommanderSettingsViewModel(this);
 
-            LANCommanderClient = new SDK.Client(Settings.ServerAddress);
+            LANCommanderClient = new SDK.Client(Settings.ServerAddress, new PlayniteLogger(Logger));
             LANCommanderClient.UseToken(new SDK.Models.AuthToken()
             {
                 AccessToken = Settings.AccessToken,

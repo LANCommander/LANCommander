@@ -384,14 +384,14 @@ namespace LANCommander.SDK
         {
             Logger?.LogTrace("Starting a game session...");
 
-            PostRequest<object>($"/api/PlaySession/Start/{gameId}");
+            PostRequest<object>($"/api/PlaySessions/Start/{gameId}");
         }
 
         public void EndPlaySession(Guid gameId)
         {
             Logger?.LogTrace("Ending a game session...");
 
-            PostRequest<object>($"/api/PlaySession/End/{gameId}");
+            PostRequest<object>($"/api/PlaySessions/End/{gameId}");
         }
 
         private string GetMacAddress()

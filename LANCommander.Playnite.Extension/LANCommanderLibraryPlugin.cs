@@ -333,11 +333,18 @@ namespace LANCommander.PlaynitePlugin
         {
             if (args.Game.PluginId == Id)
             {
-                SaveController.Download(args.Game);
-
                 var gameId = Guid.Parse(args.Game.GameId);
 
                 LANCommanderClient.StartPlaySession(gameId);
+
+                try
+                {
+                    SaveController.Download(args.Game);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not download save");
+                }
             }
         }
 
@@ -345,11 +352,18 @@ namespace LANCommander.PlaynitePlugin
         {
             if (args.Game.PluginId == Id)
             {
-                SaveController.Upload(args.Game);
-
                 var gameId = Guid.Parse(args.Game.GameId);
 
                 LANCommanderClient.EndPlaySession(gameId);
+
+                try
+                {
+                    SaveController.Upload(args.Game);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not upload save");
+                }
             }
         }
 

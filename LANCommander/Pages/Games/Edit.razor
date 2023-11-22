@@ -269,7 +269,7 @@ else
         Game.Tags = new List<Data.Models.Tag>();
 
         if (result.IGDBMetadata.GameModes != null && result.IGDBMetadata.GameModes.Values != null)
-            Game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Singleplayer");
+            Game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Single player");
 
         if (result.IGDBMetadata.InvolvedCompanies != null && result.IGDBMetadata.InvolvedCompanies.Values != null)
         {

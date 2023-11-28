@@ -14,7 +14,7 @@
 
 <div style="padding: 0 24px;">
     <Table TItem="GameSave" DataSource="@GameSaves">
-        <PropertyColumn Property="s => s.Game.Title" Sortable />
+        <PropertyColumn Property="s => (s.Game == null ? String.Empty : s.Game.Title)" Sortable Title="Game" />
         <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
          <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
             <Space Direction="DirectionVHType.Horizontal">
@@ -45,7 +45,7 @@
             User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
 
         if (User != null)
-            GameSaves = User.GameSaves.OrderBy(s => s.Game.Title).ThenBy(s => s.CreatedOn).ToList();
+            GameSaves = User.GameSaves.OrderBy(s => s.Game?.Title).ThenBy(s => s.CreatedOn).ToList();
 
         Loading = false;
     }

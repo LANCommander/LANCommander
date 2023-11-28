@@ -7,6 +7,7 @@
 @attribute [Authorize]
 @inject GameService GameService
 @inject NavigationManager NavigationManager
+@inject IMessageService MessageService
 
 <PageHeader Title="Games">
     <PageHeaderExtra>
@@ -174,7 +175,14 @@
 
         Loading = true;
 
-        await GameService.Delete(game);
+        try
+        {
+            await GameService.Delete(game);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete the game!");
+        }
 
         Games = await GameService.Get(x => true).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToListAsync();
 

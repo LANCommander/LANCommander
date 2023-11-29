@@ -23,7 +23,8 @@
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>
                         <Button OnClick="() => Edit(context.Id)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
-
+                    </SpaceItem>
+                    <SpaceItem>
                         <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this script?">
                             <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
                         </Popconfirm>

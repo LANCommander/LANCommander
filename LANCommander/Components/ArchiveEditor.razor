@@ -66,7 +66,13 @@
 
     private async Task LoadData()
     {
-        Archives = await ArchiveService.Get(a => a.GameId == GameId).ToListAsync();
+        if (GameId != Guid.Empty)
+            Archives = await ArchiveService.Get(a => a.GameId == GameId).ToListAsync();
+        else if (RedistributableId != Guid.Empty)
+            Archives = await ArchiveService.Get(a => a.RedistributableId == RedistributableId).ToListAsync();
+
+        if (ArchivesChanged.HasDelegate)
+            await ArchivesChanged.InvokeAsync(Archives);
     }
 
     private async Task Download(Archive archive)

@@ -58,7 +58,7 @@ namespace LANCommander.SDK
                 var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.DetectInstall);
                 detectionScriptTempFile = ScriptHelper.SaveTempScript(detectionScript);
 
-                var detectionResult = RunScript(detectionScriptTempFile, redistributable);
+                var detectionResult = RunScript(detectionScriptTempFile, redistributable, detectionScript.RequiresAdmin);
 
                 // Redistributable is not installed
                 if (detectionResult == 0)

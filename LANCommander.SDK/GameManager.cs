@@ -179,34 +179,31 @@ namespace LANCommander.SDK
                 Reader.Dispose();
                 Stream.Dispose();
             }
+            catch (ReaderCancelledException ex)
+            {
+                Logger?.LogTrace("User cancelled the download");
+
+                extractionResult.Canceled = true;
+
+                if (Directory.Exists(destination))
+                {
+                    Logger?.LogTrace("Cleaning up orphaned files after cancelled install");
+
+                    Directory.Delete(destination, true);
+                }
+            }
             catch (Exception ex)
             {
-                if (Reader.Cancelled)
+                Logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+
+                if (Directory.Exists(destination))
                 {
-                    Logger?.LogTrace("User cancelled the download");
+                    Logger?.LogTrace("Cleaning up orphaned install files after bad install");
 
-                    extractionResult.Canceled = true;
-
-                    if (Directory.Exists(destination))
-                    {
-                        Logger?.LogTrace("Cleaning up orphaned files after cancelled install");
-
-                        Directory.Delete(destination, true);
-                    }
+                    Directory.Delete(destination, true);
                 }
-                else
-                {
-                    Logger?.LogError(ex, "Could not extract to path {Destination}", destination);
 
-                    if (Directory.Exists(destination))
-                    {
-                        Logger?.LogTrace("Cleaning up orphaned install files after bad install");
-
-                        Directory.Delete(destination, true);
-                    }
-
-                    throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
-                }
+                throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
             }
 
             if (!extractionResult.Canceled)

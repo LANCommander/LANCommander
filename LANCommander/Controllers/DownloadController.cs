@@ -31,7 +31,14 @@ namespace LANCommander.Controllers
             if (!System.IO.File.Exists(filename))
                 return NotFound();
 
-            return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{archive.Game.Title.SanitizeFilename()}.zip");
+            string name = "";
+
+            if (archive.GameId != null && archive.GameId != Guid.Empty)
+                name = $"{archive.Game.Title.SanitizeFilename()}.zip";
+            else if (archive.RedistributableId != null && archive.RedistributableId != Guid.Empty)
+                name = $"{archive.Redistributable.Name.SanitizeFilename()}.zip";
+
+            return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", name);
         }
     }
 }

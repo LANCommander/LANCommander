@@ -239,24 +239,37 @@
 
     async Task<HashSet<FileManagerDirectory>> GetArchiveDirectoriesAsync(Guid archiveId)
     {
-        var entries = await ArchiveService.GetContents(archiveId);
-        var directories = new HashSet<FileManagerDirectory>();
-
-        var root = new FileManagerDirectory
+        try
         {
-            Name = "Root",
-            Path = "",
-            IsExpanded = true
-        };
+            var entries = await ArchiveService.GetContents(archiveId);
+            var directories = new HashSet<FileManagerDirectory>();
 
-        root.PopulateChildren(entries);
+            var root = new FileManagerDirectory
+                {
+                    Name = "Root",
+                    Path = "",
+                    IsExpanded = true
+                };
 
-        await ChangeDirectory(root, true);
+            root.PopulateChildren(entries);
 
-        return new HashSet<FileManagerDirectory>
+            await ChangeDirectory(root, true);
+
+            return new HashSet<FileManagerDirectory>
+            {
+                root
+            };
+        }
+        catch (FileNotFoundException ex)
         {
-            root
-        };
+            MessageService.Error("Could not open archive! Is it missing?");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred trying to open the archive");
+        }
+
+        return new HashSet<FileManagerDirectory>();
     }
 
     string GetEntryName(IFileManagerEntry entry)

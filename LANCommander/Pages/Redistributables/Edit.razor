@@ -56,7 +56,7 @@
             @if (Redistributable != null && Redistributable.Id != Guid.Empty)
             {
                 <div data-panel="Scripts">
-                    <ScriptEditor @bind-Scripts="Redistributable.Scripts" RedistributableId="Redistributable.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.DetectInstall }" />
+                    <ScriptEditor RedistributableId="Redistributable.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.DetectInstall }" />
                 </div>
 
                 <div data-panel="Archives">

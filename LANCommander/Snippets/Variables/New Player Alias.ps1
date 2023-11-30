@@ -1,1 +1,1 @@
-﻿$NewName = $args[0]
+﻿$NewPlayerAlias

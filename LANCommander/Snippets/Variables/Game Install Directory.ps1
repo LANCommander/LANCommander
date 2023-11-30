@@ -1,1 +1,1 @@
-﻿$OldPlayerAlias
+﻿$InstallDirectory

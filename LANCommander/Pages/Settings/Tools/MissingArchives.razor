@@ -34,7 +34,7 @@
         </ActionColumn>
     </Table>
 
-    <ArchiveUploader @ref="Uploader" OnArchiveUploaded="OnArchiveUploaded" />
+    <ArchiveUploader @ref="Uploader" OnArchiveUploaded="LoadData" />
 </div>
 
 
@@ -78,21 +78,7 @@
 
         System.IO.File.Create(archiveFilePath).Close();
 
-        await Uploader.Open(archive);
-    }
-
-    async Task OnArchiveUploaded(Archive archive)
-    {
-        try
-        {
-            await ArchiveService.Update(archive);
-
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            await MessageService.Error("Archive could not be updated.");
-        }
+        await Uploader.Open(archive.Id);
     }
 
     async Task Delete(Archive archive)

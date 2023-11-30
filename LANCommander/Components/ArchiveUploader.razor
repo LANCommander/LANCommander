@@ -2,6 +2,7 @@
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Jobs.Background;
+@using Microsoft.EntityFrameworkCore;
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ArchiveService ArchiveService
@@ -62,7 +63,9 @@
 </Modal>
 
 @code {
-    [Parameter] public EventCallback<Archive> OnArchiveUploaded { get; set; }
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid RedistributableId { get; set; }
+    [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
 
     Archive Archive;
 
@@ -113,9 +116,21 @@
         File = args.File;
     }
 
-    public async Task Open(Archive archive)
+    public async Task Open(Guid? archiveId = null)
     {
-        Archive = archive;
+        if (archiveId.HasValue && archiveId != Guid.Empty)
+        {
+            Archive = await ArchiveService.Get(archiveId.Value);
+        }
+        else
+        {
+            Archive = new Archive();
+
+            if (GameId != Guid.Empty)
+                Archive.GameId = GameId;
+            else if (RedistributableId != Guid.Empty)
+                Archive.RedistributableId = RedistributableId;
+        }
 
         Visible = true;
 
@@ -128,8 +143,8 @@
         {
             if (FileInput != null)
             {
-                if (!String.IsNullOrWhiteSpace(archive.ObjectKey) && archive.ObjectKey != Guid.Empty.ToString())
-                    await JS.InvokeVoidAsync("Uploader.Init", "FileInput", archive.ObjectKey.ToString());
+                if (!String.IsNullOrWhiteSpace(Archive.ObjectKey) && Archive.ObjectKey != Guid.Empty.ToString())
+                    await JS.InvokeVoidAsync("Uploader.Init", "FileInput", Archive.ObjectKey.ToString());
                 else
                     await JS.InvokeVoidAsync("Uploader.Init", "FileInput", "");
 
@@ -163,12 +178,32 @@
             Archive.ObjectKey = objectKey.ToString();
             Archive.CompressedSize = File.Size;
 
+            if (Archive.Id != Guid.Empty)
+                Archive = await ArchiveService.Update(Archive);
+            else
+                Archive = await ArchiveService.Add(Archive);
+
             Visible = false;
 
             await InvokeAsync(StateHasChanged);
 
+            Archive? lastArchive = null;
+
+            var settings = SettingService.GetSettings();
+
+            if (settings.Archives.EnablePatching)
+            {
+                if (Archive.GameId != Guid.Empty)
+                    lastArchive = await ArchiveService.Get(a => a.Id != Archive.Id && a.GameId == Archive.GameId).OrderByDescending(a => a.CreatedOn).FirstOrDefaultAsync();
+                else if (Archive.RedistributableId != Guid.Empty)
+                    lastArchive = await ArchiveService.Get(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId).OrderByDescending(a => a.CreatedOn).FirstOrDefaultAsync();
+
+                if (lastArchive != null && settings.Archives.EnablePatching)
+                    BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
+            }
+
             if (OnArchiveUploaded.HasDelegate)
-                await OnArchiveUploaded.InvokeAsync(Archive);
+                await OnArchiveUploaded.InvokeAsync(Archive.Id);
 
             await MessageService.Success("Archive uploaded!");
         }

@@ -46,15 +46,14 @@
     </SpaceItem>
 </Space>
 
-<ArchiveUploader @ref="Uploader" OnArchiveUploaded="AddArchive" />
+<ArchiveUploader @ref="Uploader" GameId="GameId" RedistributableId="RedistributableId" OnArchiveUploaded="LoadData" />
 
  @code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
-    [Parameter] public ICollection<Archive> Archives { get; set; }
-    [Parameter] public EventCallback<ICollection<Archive>> ArchivesChanged { get; set; }
 
-    Archive Archive;
+    ICollection<Archive> Archives { get; set; }
+
     ArchiveUploader Uploader;
 
     protected override async Task OnInitializedAsync()
@@ -66,7 +65,10 @@
 
     private async Task LoadData()
     {
-        Archives = await ArchiveService.Get(a => a.GameId == GameId).ToListAsync();
+        if (GameId != Guid.Empty)
+            Archives = await ArchiveService.Get(a => a.GameId == GameId).ToListAsync();
+        else if (RedistributableId != Guid.Empty)
+            Archives = await ArchiveService.Get(a => a.RedistributableId == RedistributableId).ToListAsync();
     }
 
     private async Task Download(Archive archive)
@@ -78,27 +80,7 @@
 
     private async Task UploadArchive()
     {
-        if (GameId != Guid.Empty)
-            Archive = new Archive() { GameId = GameId, Id = Guid.NewGuid() };
-
-        if (RedistributableId != Guid.Empty)
-            Archive = new Archive() { RedistributableId = RedistributableId, Id = Guid.NewGuid() };
-
-        await Uploader.Open(Archive);
-    }
-
-    private async Task AddArchive(Archive archive)
-    {
-        var lastArchive = Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
-
-        Archive = await ArchiveService.Add(archive);
-
-        await LoadData();
-
-        var settings = SettingService.GetSettings();
-
-        if (lastArchive != null && settings.Archives.EnablePatching)
-            BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
+        await Uploader.Open();
     }
 
     private async Task Delete(Archive archive)
@@ -106,6 +88,8 @@
         try
         {
             await ArchiveService.Delete(archive);
+
+            await LoadData();
 
             await MessageService.Success("Archive deleted!");
         }

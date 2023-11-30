@@ -1,1 +1,0 @@
-﻿$InstallDir = $PSScriptRoot

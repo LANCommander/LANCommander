@@ -1,0 +1,176 @@
+﻿@using LANCommander.Components.FileManagerComponents;
+@using LANCommander.Extensions;
+@using LANCommander.Data.Enums;
+@using LANCommander.Models;
+@inherits FeedbackComponent<ScriptEditorOptions, Script>
+@inject ScriptService ScriptService
+@inject ModalService ModalService
+@inject IMessageService MessageService
+
+<Form Model="@Script" Layout="@FormLayout.Vertical">
+    <FormItem>
+        @foreach (var group in Snippets.Select(s => s.Group).Distinct())
+        {
+            <Dropdown>
+                <Overlay>
+                    <Menu>
+                        @foreach (var snippet in Snippets.Where(s => s.Group == group))
+                        {
+                            <MenuItem OnClick="() => InsertSnippet(snippet)">
+                                @snippet.Name
+                            </MenuItem>
+                        }
+                    </Menu>
+                </Overlay>
+
+                <ChildContent>
+                    <Button Type="@ButtonType.Primary">@group</Button>
+                </ChildContent>
+            </Dropdown>
+        }
+
+        @if (Options.ArchiveId != Guid.Empty)
+        {
+            <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
+        }
+
+        <Button Icon="@IconType.Outline.Build" OnClick="() => RegToPowerShell.Open()" Type="@ButtonType.Text">Import .reg</Button>
+    </FormItem>
+
+    <FormItem>
+        <StandaloneCodeEditor @ref="Editor" Id="@("editor-" + Id.ToString())" ConstructionOptions="EditorConstructionOptions" />
+    </FormItem>
+
+    <FormItem Label="Name">
+        <Input @bind-Value="@context.Name" />
+    </FormItem>
+
+    <FormItem Label="Type">
+        <Select @bind-Value="context.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>().Where(st => Options.AllowedTypes == null || Options.AllowedTypes.Contains(st))">
+            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+        </Select>
+    </FormItem>
+
+    <FormItem>
+        <Checkbox @bind-Checked="context.RequiresAdmin">Requires Admin</Checkbox>
+    </FormItem>
+
+    <FormItem Label="Description">
+        <TextArea @bind-Value="context.Description" MaxLength=500 ShowCount />
+     </FormItem>
+ </Form>
+
+ <RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
+
+ @code {
+    Guid Id = Guid.NewGuid();
+    Script Script;
+    StandaloneCodeEditor? Editor;
+    RegToPowerShell RegToPowerShell;
+    IEnumerable<Snippet> Snippets { get; set; }
+
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "powershell",
+            Value = Script.Contents,
+            Theme = "vs-dark",
+        };
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Options.ScriptId != Guid.Empty)
+            Script = await ScriptService.Get(Options.ScriptId);
+
+        Snippets = ScriptService.GetSnippets();
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await Save();
+
+        Editor.Dispose();
+
+        await base.OkCancelRefWithResult!.OnOk(Script);
+    }
+
+    public override async Task CancelAsync(ModalClosingEventArgs args)
+    {
+        Editor.Dispose();
+        
+        await base.CancelAsync(args);
+    }
+
+    private async void BrowseForPath()
+    {
+        
+        var modalOptions = new ModalOptions()
+            {
+                Title = "Choose Reference",
+                Maximizable = false,
+                DefaultMaximized = true,
+                Closable = true,
+                OkText = "Insert File Path"
+            };
+
+        var browserOptions = new FilePickerOptions()
+            {
+                ArchiveId = Options.ArchiveId,
+                Select = true,
+                Multiple = false
+            };
+
+        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
+
+        modalRef.OnOk = (results) =>
+        {
+            var path = results.FirstOrDefault().Path;
+
+            InsertText($"$InstallDir\\{path.Replace('/', '\\')}");
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+    }
+
+    private async Task InsertText(string text)
+    {
+        var line = await Editor.GetPosition();
+        var range = new BlazorMonaco.Range(line.LineNumber, 1, line.LineNumber, 1);
+
+        var currentSelections = await Editor.GetSelections();
+
+        await Editor.ExecuteEdits("ScriptEditor", new List<IdentifiedSingleEditOperation>()
+        {
+            new IdentifiedSingleEditOperation
+            {
+                Range = range,
+                Text = text,
+                ForceMoveMarkers = true
+            }
+        }, currentSelections);
+    }
+
+    private async Task InsertSnippet(Snippet snippet)
+    {
+        await InsertText(snippet.Content);
+    }
+
+    private async Task Save()
+    {
+        var value = await Editor.GetValue();
+
+        Script.Contents = value;
+
+        if (Script.Id == Guid.Empty)
+            Script = await ScriptService.Add(Script);
+        else
+            Script = await ScriptService.Update(Script);
+
+        await MessageService.Success("Script saved!");
+    }
+}

@@ -355,7 +355,7 @@ namespace LANCommander.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("GameId")
+                    b.Property<Guid?>("GameId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("UpdatedById")
@@ -568,6 +568,49 @@ namespace LANCommander.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("MultiplayerModes");
+                });
+
+            modelBuilder.Entity("LANCommander.Data.Models.PlaySession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("End")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("Start")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PlaySessions");
                 });
 
             modelBuilder.Entity("LANCommander.Data.Models.Redistributable", b =>
@@ -1208,7 +1251,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Actions")
@@ -1218,7 +1262,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1231,7 +1276,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Archives")
@@ -1249,7 +1295,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1266,7 +1313,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Category", "Parent")
                         .WithMany("Children")
@@ -1274,7 +1322,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1287,11 +1336,13 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1302,11 +1353,13 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1317,17 +1370,18 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("GameSaves")
                         .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "User")
                         .WithMany("GameSaves")
@@ -1348,11 +1402,13 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1367,7 +1423,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Keys")
@@ -1377,7 +1434,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("ClaimedByUser");
 
@@ -1392,7 +1450,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Media")
@@ -1402,7 +1461,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1415,7 +1475,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("MultiplayerModes")
@@ -1425,7 +1486,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1434,15 +1496,49 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Data.Models.PlaySession", b =>
+                {
+                    b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Data.Models.Game", "Game")
+                        .WithMany("PlaySessions")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Data.Models.User", "User")
+                        .WithMany("PlaySessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LANCommander.Data.Models.Redistributable", b =>
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1453,15 +1549,18 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("SavePaths")
-                        .HasForeignKey("GameId");
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1474,7 +1573,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Scripts")
@@ -1488,7 +1588,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1503,16 +1604,18 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Game", "Game")
                         .WithMany("Servers")
                         .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1525,7 +1628,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Server", "Server")
                         .WithMany()
@@ -1539,7 +1643,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1552,7 +1657,8 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.Server", "Server")
                         .WithMany()
@@ -1566,7 +1672,8 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1579,11 +1686,13 @@ namespace LANCommander.Migrations
                 {
                     b.HasOne("LANCommander.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
 
@@ -1660,6 +1769,8 @@ namespace LANCommander.Migrations
 
                     b.Navigation("MultiplayerModes");
 
+                    b.Navigation("PlaySessions");
+
                     b.Navigation("SavePaths");
 
                     b.Navigation("Scripts");
@@ -1684,6 +1795,8 @@ namespace LANCommander.Migrations
             modelBuilder.Entity("LANCommander.Data.Models.User", b =>
                 {
                     b.Navigation("GameSaves");
+
+                    b.Navigation("PlaySessions");
                 });
 #pragma warning restore 612, 618
         }

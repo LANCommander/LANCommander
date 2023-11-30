@@ -17,6 +17,25 @@ namespace LANCommander.Data
         {
             base.OnModelCreating(builder);
 
+            builder.ConfigureBaseRelationships<Data.Models.Action>();
+            builder.ConfigureBaseRelationships<Archive>();
+            builder.ConfigureBaseRelationships<Category>();
+            builder.ConfigureBaseRelationships<Company>();
+            builder.ConfigureBaseRelationships<Game>();
+            builder.ConfigureBaseRelationships<GameSave>();
+            builder.ConfigureBaseRelationships<Genre>();
+            builder.ConfigureBaseRelationships<Key>();
+            builder.ConfigureBaseRelationships<Media>();
+            builder.ConfigureBaseRelationships<MultiplayerMode>();
+            builder.ConfigureBaseRelationships<PlaySession>();
+            builder.ConfigureBaseRelationships<Redistributable>();
+            builder.ConfigureBaseRelationships<SavePath>();
+            builder.ConfigureBaseRelationships<Script>();
+            builder.ConfigureBaseRelationships<Server>();
+            builder.ConfigureBaseRelationships<ServerConsole>();
+            builder.ConfigureBaseRelationships<ServerHttpPath>();
+            builder.ConfigureBaseRelationships<Tag>();
+
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
                 .WithMany(g => g.Genres);
@@ -34,6 +53,7 @@ namespace LANCommander.Data
                 .HasMany(t => t.Games)
                 .WithMany(g => g.Tags);
 
+            #region Game Relationships
             builder.Entity<Game>()
                 .HasMany(g => g.Archives)
                 .WithOne(g => g.Game)
@@ -64,6 +84,28 @@ namespace LANCommander.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
+                .HasMany(g => g.Media)
+                .WithOne(m => m.Game)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.SavePaths)
+                .WithOne(p => p.Game)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.PlaySessions)
+                .WithOne(ps => ps.Game)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Game>()
+                .HasMany(g => g.GameSaves)
+                .WithOne(gs => gs.Game)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Game>()
                 .HasMany(g => g.Developers)
                 .WithMany(c => c.DevelopedGames)
                 .UsingEntity<Dictionary<string, object>>(
@@ -89,29 +131,28 @@ namespace LANCommander.Data
                     gr => gr.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId"),
                     gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId")
                 );
+            #endregion
 
-            builder.Entity<Game>()
-                .HasMany(g => g.Media)
-                .WithOne(m => m.Game)
-                .OnDelete(DeleteBehavior.Cascade);
-
+            #region User Relationships
             builder.Entity<User>()
                 .HasMany(u => u.GameSaves)
                 .WithOne(gs => gs.User)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<Game>()
-                .HasMany(g => g.GameSaves)
-                .WithOne(gs => gs.Game)
+            builder.Entity<User>()
+                .HasMany(u => u.PlaySessions)
+                .WithOne(ps => ps.User)
                 .IsRequired(true)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.Cascade);
+            #endregion
 
+            #region Server Relationships
             builder.Entity<Server>()
                 .HasOne(s => s.Game)
                 .WithMany(g => g.Servers)
                 .IsRequired(false)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<Server>()
                 .HasMany<ServerConsole>()
@@ -124,7 +165,9 @@ namespace LANCommander.Data
                 .WithOne(s => s.Server)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
+            #endregion
 
+            #region Redistributable Relationships
             builder.Entity<Redistributable>()
                 .HasMany(r => r.Archives)
                 .WithOne(a => a.Redistributable)
@@ -136,6 +179,7 @@ namespace LANCommander.Data
                 .WithOne(s => s.Redistributable)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+            #endregion
         }
 
         public DbSet<Game>? Games { get; set; }
@@ -151,6 +195,8 @@ namespace LANCommander.Data
         public DbSet<Key>? Keys { get; set; }
 
         public DbSet<GameSave>? GameSaves { get; set; }
+
+        public DbSet<PlaySession>? PlaySessions { get; set; }
 
         public DbSet<Server>? Servers { get; set; }
 

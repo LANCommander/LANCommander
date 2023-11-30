@@ -7,7 +7,7 @@ namespace LANCommander.Data.Models
     [Table("GameSaves")]
     public class GameSave : BaseModel
     {
-        public Guid GameId { get; set; }
+        public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("GameSaves")]

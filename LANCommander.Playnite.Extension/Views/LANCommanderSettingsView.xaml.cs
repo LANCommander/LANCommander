@@ -47,7 +47,7 @@ namespace LANCommander.PlaynitePlugin
                 RefreshToken = Settings.RefreshToken,
             };
 
-            var task = Task.Run(() => Plugin.LANCommander.ValidateToken(token))
+            var task = Task.Run(() => Plugin.LANCommanderClient.ValidateToken(token))
                 .ContinueWith(antecedent =>
                 {
                     try
@@ -81,16 +81,14 @@ namespace LANCommander.PlaynitePlugin
 
         private void AuthenticateButton_Click(object sender, RoutedEventArgs e)
         {
-            var authWindow = Plugin.ShowAuthenticationWindow();
-
-            authWindow.Closed += AuthWindow_Closed;
+            var authWindow = Plugin.ShowAuthenticationWindow(Settings.ServerAddress, AuthWindow_Closed);
         }
 
         private void DisconnectButton_Click(object sender, RoutedEventArgs e)
         {
             Plugin.Settings.AccessToken = String.Empty;
             Plugin.Settings.RefreshToken = String.Empty;
-            Plugin.LANCommander.Token = null;
+            Plugin.LANCommanderClient.UseToken(null);
 
             Plugin.SavePluginSettings(Plugin.Settings);
 

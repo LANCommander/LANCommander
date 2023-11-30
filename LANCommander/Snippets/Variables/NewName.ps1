@@ -1,1 +1,0 @@
-﻿$NewName = $args[0]

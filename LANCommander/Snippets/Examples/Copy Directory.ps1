@@ -1,1 +1,1 @@
-﻿Copy-Item -Path "$InstallDir\<Source Path>" -Destination "$InstallDir\<Destination Path>" -Recurse
+﻿Copy-Item -Path "$InstallDirectory\<Source Path>" -Destination "$InstallDirectory\<Destination Path>" -Recurse

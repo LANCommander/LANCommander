@@ -183,6 +183,14 @@ label.ant-btn-icon-only {
     background: rgba(255, 255, 255, 0.03);
 }
 
+.game-metadata-lookup-modal .ant-modal-body {
+    padding: 0;
+}
+
+.game-metadata-lookup-modal tbody tr {
+    cursor: pointer;
+}
+
 .image-picker-images {
     display: flex;
     flex-wrap: wrap;

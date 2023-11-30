@@ -2,6 +2,7 @@
 @page "/Servers/{id:guid}/{panel}"
 @page "/Servers/{id:guid}/{panel}/{logId}"
 @page "/Servers/Add"
+@attribute [Authorize(Roles = "Administrator")]
 @using LANCommander.Components.FileManagerComponents;
 @using LANCommander.Pages.Servers.Components
 @inject GameService GameService

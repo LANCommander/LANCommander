@@ -12,6 +12,7 @@
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,8 +35,14 @@
     <Reference Include="BeaconLib, Version=1.0.2.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\rix0rrr.BeaconLib.1.0.2\lib\net40\BeaconLib.dll</HintPath>
     </Reference>
+    <Reference Include="ByteSize, Version=2.1.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\ByteSize.2.1.1\lib\net45\ByteSize.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=7.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.7.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions, Version=7.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Logging.Abstractions.7.0.0\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
     </Reference>
     <Reference Include="Playnite.SDK, Version=6.10.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\PlayniteSDK.6.10.0\lib\net462\Playnite.SDK.dll</HintPath>
@@ -45,8 +52,8 @@
     <Reference Include="RestSharp, Version=106.15.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
       <HintPath>..\packages\RestSharp.106.15.0\lib\net452\RestSharp.dll</HintPath>
     </Reference>
-    <Reference Include="SharpCompress, Version=0.34.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpCompress.0.34.1\lib\net462\SharpCompress.dll</HintPath>
+    <Reference Include="SharpCompress, Version=0.34.2.0, Culture=neutral, PublicKeyToken=afb0a02973931d96, processorArchitecture=MSIL">
+      <HintPath>..\packages\SharpCompress.0.34.2\lib\net462\SharpCompress.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -93,21 +100,18 @@
     <Reference Include="WindowsBase" />
     <Reference Include="YamlDotNet, Version=5.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\YamlDotNet.5.4.0\lib\net45\YamlDotNet.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="ZstdSharp, Version=0.7.2.0, Culture=neutral, PublicKeyToken=8d151af33a4ad5cf, processorArchitecture=MSIL">
       <HintPath>..\packages\ZstdSharp.Port.0.7.2\lib\net461\ZstdSharp.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ExtractionResult.cs" />
-    <Compile Include="TrackableStream.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
-    <Compile Include="Helpers\RetryHelper.cs" />
-    <Compile Include="PowerShellRuntime.cs" />
-    <Compile Include="Services\GameSaveService.cs" />
+    <Compile Include="PlayniteLogger.cs" />
+    <Compile Include="SaveController.cs" />
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
-    <Compile Include="LANCommanderClient.cs" />
     <Compile Include="LANCommanderLibraryPlugin.cs" />
     <Compile Include="ViewModels\LANCommanderSettingsViewModel.cs" />
     <Compile Include="Views\LANCommanderSettingsView.xaml.cs">
@@ -148,6 +152,10 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LANCommander.PowerShell\LANCommander.PowerShell.csproj">
+      <Project>{807943bf-0c7d-4ed3-8393-cfee64e3138c}</Project>
+      <Name>LANCommander.PowerShell</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj">
       <Project>{4c2a71fd-a30b-4d62-888a-4ef843d8e506}</Project>
       <Name>LANCommander.SDK</Name>

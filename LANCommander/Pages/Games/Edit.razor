@@ -128,11 +128,11 @@
                 </div>
 
                 <div data-panel="Scripts">
-                    <ScriptEditor @bind-Scripts="Game.Scripts" GameId="Game.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange }" />
+                    <ScriptEditor GameId="Game.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange }" />
                 </div>
 
                 <div data-panel="Archives">
-                    <ArchiveEditor @bind-Archives="Game.Archives" GameId="Game.Id" />
+                    <ArchiveEditor GameId="Game.Id" />
                 </div>
             }
 
@@ -269,7 +269,7 @@ else
         Game.Tags = new List<Data.Models.Tag>();
 
         if (result.IGDBMetadata.GameModes != null && result.IGDBMetadata.GameModes.Values != null)
-            Game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Singleplayer");
+            Game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Single player");
 
         if (result.IGDBMetadata.InvolvedCompanies != null && result.IGDBMetadata.InvolvedCompanies.Values != null)
         {

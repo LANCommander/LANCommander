@@ -44,6 +44,7 @@ namespace LANCommander.Services
 
             var manifest = new GameManifest()
             {
+                Id = game.Id,
                 Title = game.Title,
                 SortTitle = game.SortTitle,
                 Description = game.Description,

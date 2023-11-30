@@ -1,4 +1,6 @@
 ﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
+using LANCommander.SDK.PowerShell;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
@@ -12,29 +14,49 @@ namespace LANCommander.PlaynitePlugin
         public static readonly ILogger Logger = LogManager.GetLogger();
 
         private LANCommanderLibraryPlugin Plugin;
-        private PowerShellRuntime PowerShellRuntime;
 
         public LANCommanderUninstallController(LANCommanderLibraryPlugin plugin, Game game) : base(game)
         {
             Name = "Uninstall LANCommander Game";
             Plugin = plugin;
-            PowerShellRuntime = new PowerShellRuntime();
         }
 
         public override void Uninstall(UninstallActionArgs args)
         {
             try
             {
-                PowerShellRuntime.RunScript(Game, ScriptType.Uninstall);
+                var gameManager = new LANCommander.SDK.GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory);
+
+                try
+                {
+                    var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, SDK.Enums.ScriptType.Uninstall);
+
+                    if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
+                    {
+                        var manifest = ManifestHelper.Read(Game.InstallDirectory);
+                        var script = new PowerShellScript();
+
+                        script.AddVariable("InstallDirectory", Game.InstallDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
+                        script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
+
+                        script.UseFile(scriptPath);
+
+                        script.Execute();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error(ex, "There was an error running the uninstall script");
+                }
+
+                gameManager.Uninstall(Game.InstallDirectory);
             }
-            catch { }
-
-            Logger.Trace("Attempting to delete install directory...");
-
-            if (!String.IsNullOrWhiteSpace(Game.InstallDirectory) && Directory.Exists(Game.InstallDirectory))
-                Directory.Delete(Game.InstallDirectory, true);
-
-            Logger.Trace("Deleted!");
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "There was an error uninstalling the game");
+            }
 
             InvokeOnUninstalled(new GameUninstalledEventArgs());
         }

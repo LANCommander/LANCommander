@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -60,40 +61,35 @@ namespace LANCommander.SDK
 
                     ExtractFilesFromZip(tempFile, tempLocation);
 
-                    var deserializer = new DeserializerBuilder()
-                        .WithNamingConvention(new PascalCaseNamingConvention())
-                        .Build();
-
                     #region Move files
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
                         bool inInstallDir = savePath.Path.StartsWith("{InstallDir}");
                         string tempSavePath = Path.Combine(tempLocation, savePath.Id.ToString());
 
-                        var tempSavePathFile = Path.Combine(tempSavePath, savePath.Path.Replace('/', '\\').Replace("{InstallDir}\\", ""));
-
-                        destination = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory));
-
-                        if (File.Exists(tempSavePathFile))
+                        foreach (var entry in savePath.Entries)
                         {
-                            // Is file, move file
-                            if (File.Exists(destination))
-                                File.Delete(destination);
+                            var tempSavePathFile = Path.Combine(tempSavePath, entry.ArchivePath);
 
-                            File.Move(tempSavePathFile, destination);
-                        }
-                        else if (Directory.Exists(tempSavePath))
-                        {
-                            var files = Directory.GetFiles(tempSavePath, "*", SearchOption.AllDirectories);
+                            destination = Environment.ExpandEnvironmentVariables(entry.ActualPath).Replace("{InstallDir}", installDirectory);
 
-                            if (inInstallDir)
+                            if (File.Exists(tempSavePathFile))
                             {
+                                if (File.Exists(destination))
+                                    File.Delete(destination);
+
+                                File.Move(tempSavePathFile, destination);
+                            }
+                            else if (Directory.Exists(tempSavePath))
+                            {
+                                var files = Directory.GetFiles(tempSavePath, "*", SearchOption.AllDirectories);
+
                                 foreach (var file in files)
                                 {
                                     if (inInstallDir)
                                     {
                                         // Files are in the game's install directory. Move them there from the save path.
-                                        destination = file.Replace(tempSavePath, savePath.Path.Replace('/', '\\').TrimEnd('\\').Replace("{InstallDir}", installDirectory));
+                                        destination = file.Replace(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
 
                                         if (File.Exists(destination))
                                             File.Delete(destination);
@@ -103,7 +99,7 @@ namespace LANCommander.SDK
                                     else
                                     {
                                         // Specified path is probably an absolute path, maybe with environment variables.
-                                        destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', '\\')));
+                                        destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', Path.DirectorySeparatorChar)));
 
                                         if (File.Exists(destination))
                                             File.Delete(destination);
@@ -111,10 +107,6 @@ namespace LANCommander.SDK
                                         File.Move(file, destination);
                                     }
                                 }
-                            }
-                            else
-                            {
-
                             }
                         }
                     }
@@ -163,31 +155,42 @@ namespace LANCommander.SDK
                     #region Add files from defined paths
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
-                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory));
+                        IEnumerable<string> localPaths;
 
-                        if (Directory.Exists(localPath))
+                        if (savePath.IsRegex)
                         {
-                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
+                            var regex = new Regex(Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory)));
+                            
+                            localPaths = Directory.GetFiles(installDirectory, "*", SearchOption.AllDirectories)
+                                .Where(p => regex.IsMatch(p))
+                                .ToList();
                         }
-                        else if (File.Exists(localPath))
-                        {
-                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
-                        }
-                    }
-                    #endregion
+                        else
+                            localPaths = new string[] { savePath.Path };
 
-                    #region Add files from defined paths
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
-                    {
-                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory));
+                        var entries = new List<SavePathEntry>();
 
-                        if (Directory.Exists(localPath))
+                        foreach (var localPath in localPaths)
                         {
-                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
-                        }
-                        else if (File.Exists(localPath))
-                        {
-                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
+                            var actualPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
+                            var relativePath = actualPath.Replace(installDirectory + Path.DirectorySeparatorChar, "");
+
+                            if (Directory.Exists(actualPath))
+                            {
+                                AddDirectoryToZip(archive, relativePath, actualPath, savePath.Id);
+                            }
+                            else if (File.Exists(actualPath))
+                            {
+                                archive.AddEntry(Path.Combine(savePath.Id.ToString(), relativePath), actualPath);
+                            }
+
+                            entries.Add(new SavePathEntry
+                            {
+                                ArchivePath = relativePath,
+                                ActualPath = actualPath.Replace(installDirectory, "{InstallDir}")
+                            });
+
+                            savePath.Entries = entries;
                         }
                     }
                     #endregion
@@ -225,7 +228,11 @@ namespace LANCommander.SDK
                     }
                     #endregion
 
-                    archive.AddEntry("_manifest.yml", ManifestHelper.GetPath(installDirectory));
+                    var tempManifest = Path.GetTempFileName();
+
+                    File.WriteAllText(tempManifest, ManifestHelper.Serialize(manifest));
+
+                    archive.AddEntry("_manifest.yml", tempManifest);
 
                     using (var ms = new MemoryStream())
                     {

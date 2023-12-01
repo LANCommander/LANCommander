@@ -111,13 +111,13 @@
     public override async Task CancelAsync(ModalClosingEventArgs args)
     {
         Editor.Dispose();
-        
+
         await base.CancelAsync(args);
     }
 
     private async void BrowseForPath()
     {
-        
+
         var modalOptions = new ModalOptions()
             {
                 Title = "Choose Reference",
@@ -172,15 +172,24 @@
 
     private async Task Save()
     {
-        var value = await Editor.GetValue();
+        try
+        {
+            var value = await Editor.GetValue();
 
-        Script.Contents = value;
+            Script.Contents = value;
 
-        if (Script.Id == Guid.Empty)
-            Script = await ScriptService.Add(Script);
-        else
-            Script = await ScriptService.Update(Script);
+            if (Script.Id == Guid.Empty)
+                Script = await ScriptService.Add(Script);
+            else
+                Script = await ScriptService.Update(Script);
 
-        await MessageService.Success("Script saved!");
+            MessageService.Success("Script saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Script could not be saved!");
+
+            throw ex;
+        }
     }
 }

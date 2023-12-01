@@ -61,19 +61,15 @@ namespace LANCommander.SDK
 
                     ExtractFilesFromZip(tempFile, tempLocation);
 
-                    var deserializer = new DeserializerBuilder()
-                        .WithNamingConvention(new PascalCaseNamingConvention())
-                        .Build();
-
                     #region Move files
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
                         bool inInstallDir = savePath.Path.StartsWith("{InstallDir}");
                         string tempSavePath = Path.Combine(tempLocation, savePath.Id.ToString());
 
-                        var tempSavePathFile = Path.Combine(tempSavePath, savePath.Path.Replace('/', '\\').Replace("{InstallDir}\\", ""));
+                        var tempSavePathFile = Path.Combine(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}\\", ""));
 
-                        destination = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory));
+                        destination = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
 
                         if (File.Exists(tempSavePathFile))
                         {
@@ -94,7 +90,7 @@ namespace LANCommander.SDK
                                     if (inInstallDir)
                                     {
                                         // Files are in the game's install directory. Move them there from the save path.
-                                        destination = file.Replace(tempSavePath, savePath.Path.Replace('/', '\\').TrimEnd('\\').Replace("{InstallDir}", installDirectory));
+                                        destination = file.Replace(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
 
                                         if (File.Exists(destination))
                                             File.Delete(destination);

@@ -67,7 +67,7 @@ namespace LANCommander.SDK
                         bool inInstallDir = savePath.Path.StartsWith("{InstallDir}");
                         string tempSavePath = Path.Combine(tempLocation, savePath.Id.ToString());
 
-                        var tempSavePathFile = Path.Combine(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}\\", ""));
+                        var tempSavePathFile = Path.Combine(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}" + Path.DirectorySeparatorChar, ""));
 
                         destination = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
 
@@ -98,7 +98,7 @@ namespace LANCommander.SDK
                                 else
                                 {
                                     // Specified path is probably an absolute path, maybe with environment variables.
-                                    destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', '\\')));
+                                    destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', Path.DirectorySeparatorChar)));
 
                                     if (File.Exists(destination))
                                         File.Delete(destination);

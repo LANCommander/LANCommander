@@ -1,2 +1,2 @@
 ﻿# Use regex to replace text within a file. Quotes are escaped by double quoting ("")
-Write-ReplaceContentInFile -Regex '^game.setPlayerName "(.+)"' -Replacement "game.setPlayerName ""$NewName""" -FilePath "$InstallDir\<File Path>"
+Write-ReplaceContentInFile -Pattern '^game.setPlayerName "(.+)"' -Substitution "game.setPlayerName ""$NewPlayerAlias""" -FilePath "$InstallDirectory\<File Path>"

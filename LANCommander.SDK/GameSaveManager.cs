@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -163,31 +164,42 @@ namespace LANCommander.SDK
                     #region Add files from defined paths
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
-                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory));
+                        IEnumerable<string> localPaths;
 
-                        if (Directory.Exists(localPath))
+                        if (savePath.IsRegex)
                         {
-                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
+                            var regex = new Regex(Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory)));
+                            
+                            localPaths = Directory.GetFiles(installDirectory, "*", SearchOption.AllDirectories)
+                                .Where(p => regex.IsMatch(p))
+                                .ToList();
                         }
-                        else if (File.Exists(localPath))
-                        {
-                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
-                        }
-                    }
-                    #endregion
+                        else
+                            localPaths = new string[] { savePath.Path };
 
-                    #region Add files from defined paths
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
-                    {
-                        var localPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory));
+                        var entries = new List<SavePathEntry>();
 
-                        if (Directory.Exists(localPath))
+                        foreach (var localPath in localPaths)
                         {
-                            AddDirectoryToZip(archive, localPath, localPath, savePath.Id);
-                        }
-                        else if (File.Exists(localPath))
-                        {
-                            archive.AddEntry(Path.Combine(savePath.Id.ToString(), savePath.Path.Replace("{InstallDir}/", "")), localPath);
+                            var actualPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
+                            var relativePath = actualPath.Replace(installDirectory + Path.DirectorySeparatorChar, "");
+
+                            if (Directory.Exists(actualPath))
+                            {
+                                AddDirectoryToZip(archive, relativePath, actualPath, savePath.Id);
+                            }
+                            else if (File.Exists(actualPath))
+                            {
+                                archive.AddEntry(Path.Combine(savePath.Id.ToString(), relativePath), actualPath);
+                            }
+
+                            entries.Add(new SavePathEntry
+                            {
+                                ArchivePath = relativePath,
+                                ActualPath = actualPath.Replace(installDirectory, "{InstallDir}")
+                            });
+
+                            savePath.Entries = entries;
                         }
                     }
                     #endregion
@@ -225,7 +237,11 @@ namespace LANCommander.SDK
                     }
                     #endregion
 
-                    archive.AddEntry("_manifest.yml", ManifestHelper.GetPath(installDirectory));
+                    var tempManifest = Path.GetTempFileName();
+
+                    File.WriteAllText(tempManifest, ManifestHelper.Serialize(manifest));
+
+                    archive.AddEntry("_manifest.yml", tempManifest);
 
                     using (var ms = new MemoryStream())
                     {

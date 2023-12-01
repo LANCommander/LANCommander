@@ -48,5 +48,12 @@ namespace LANCommander.SDK
         public string Type { get; set; }
         public string Path { get; set; }
         public bool IsRegex { get; set; }
+        public IEnumerable<SavePathEntry> Entries { get; set; }
+    }
+
+    public class SavePathEntry
+    {
+        public string ArchivePath { get; set; }
+        public string ActualPath { get; set; }
     }
 }

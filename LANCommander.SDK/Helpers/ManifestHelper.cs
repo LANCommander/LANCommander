@@ -43,6 +43,17 @@ namespace LANCommander.SDK.Helpers
 
             Logger?.LogTrace("Attempting to write manifest to path {Destination}", destination);
 
+            var yaml = Serialize(manifest);
+
+            Logger?.LogTrace("Writing manifest file");
+
+            File.WriteAllText(destination, yaml);
+
+            return destination;
+        }
+
+        public static string Serialize(GameManifest manifest)
+        {
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
@@ -51,11 +62,7 @@ namespace LANCommander.SDK.Helpers
 
             var yaml = serializer.Serialize(manifest);
 
-            Logger?.LogTrace("Writing manifest file");
-
-            File.WriteAllText(destination, yaml);
-
-            return destination;
+            return yaml;
         }
 
         public static string GetPath(string installDirectory)

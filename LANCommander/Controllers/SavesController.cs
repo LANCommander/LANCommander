@@ -30,7 +30,7 @@ namespace LANCommander.Controllers
             if (!System.IO.File.Exists(filename))
                 return NotFound();
 
-            return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/zip", $"{save.User?.UserName} - {save.Game?.Title} - {save.CreatedOn.ToString("MM-dd-yyyy.hh-mm")}");
+            return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/zip", $"{save.User?.UserName} - {(save.Game == null ? "Unknown" : save.Game?.Title)} - {save.CreatedOn.ToString("MM-dd-yyyy.hh-mm")}.zip");
         }
     }
 }

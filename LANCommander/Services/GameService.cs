@@ -114,6 +114,7 @@ namespace LANCommander.Services
                 {
                     Id = p.Id,
                     Path = p.Path,
+                    IsRegex = p.IsRegex,
                     Type = p.Type.ToString()
                 });
             }

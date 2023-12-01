@@ -67,43 +67,45 @@ namespace LANCommander.SDK
                         bool inInstallDir = savePath.Path.StartsWith("{InstallDir}");
                         string tempSavePath = Path.Combine(tempLocation, savePath.Id.ToString());
 
-                        var tempSavePathFile = Path.Combine(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}" + Path.DirectorySeparatorChar, ""));
-
-                        destination = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
-
-                        if (File.Exists(tempSavePathFile))
+                        foreach (var entry in savePath.Entries)
                         {
-                            // Is file, move file
-                            if (File.Exists(destination))
-                                File.Delete(destination);
+                            var tempSavePathFile = Path.Combine(tempSavePath, entry.ArchivePath);
 
-                            File.Move(tempSavePathFile, destination);
-                        }
-                        else if (Directory.Exists(tempSavePath))
-                        {
-                            var files = Directory.GetFiles(tempSavePath, "*", SearchOption.AllDirectories);
+                            destination = Environment.ExpandEnvironmentVariables(entry.ActualPath).Replace("{InstallDir}", installDirectory);
 
-                            foreach (var file in files)
+                            if (File.Exists(tempSavePathFile))
                             {
-                                if (inInstallDir)
+                                if (File.Exists(destination))
+                                    File.Delete(destination);
+
+                                File.Move(tempSavePathFile, destination);
+                            }
+                            else if (Directory.Exists(tempSavePath))
+                            {
+                                var files = Directory.GetFiles(tempSavePath, "*", SearchOption.AllDirectories);
+
+                                foreach (var file in files)
                                 {
-                                    // Files are in the game's install directory. Move them there from the save path.
-                                    destination = file.Replace(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
+                                    if (inInstallDir)
+                                    {
+                                        // Files are in the game's install directory. Move them there from the save path.
+                                        destination = file.Replace(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
 
-                                    if (File.Exists(destination))
-                                        File.Delete(destination);
+                                        if (File.Exists(destination))
+                                            File.Delete(destination);
 
-                                    File.Move(file, destination);
-                                }
-                                else
-                                {
-                                    // Specified path is probably an absolute path, maybe with environment variables.
-                                    destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', Path.DirectorySeparatorChar)));
+                                        File.Move(file, destination);
+                                    }
+                                    else
+                                    {
+                                        // Specified path is probably an absolute path, maybe with environment variables.
+                                        destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', Path.DirectorySeparatorChar)));
 
-                                    if (File.Exists(destination))
-                                        File.Delete(destination);
+                                        if (File.Exists(destination))
+                                            File.Delete(destination);
 
-                                    File.Move(file, destination);
+                                        File.Move(file, destination);
+                                    }
                                 }
                             }
                         }

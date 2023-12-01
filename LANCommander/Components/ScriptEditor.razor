@@ -59,10 +59,17 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
         if (GameId != Guid.Empty)
             Scripts = await ScriptService.Get(s => s.GameId == GameId).ToListAsync();
         else if (RedistributableId != Guid.Empty)
             Scripts = await ScriptService.Get(s => s.RedistributableId == RedistributableId).ToListAsync();
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async void Edit(Guid? scriptId = null)
@@ -89,10 +96,8 @@
 
         modalRef.OnOk = async (script) =>
         {
-            
+            await LoadData();
         };
-
-        StateHasChanged();
     }
 
     private async void Delete(Script script = null)

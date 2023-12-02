@@ -4,6 +4,7 @@
 @using System.ComponentModel.DataAnnotations;
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 @using Microsoft.EntityFrameworkCore;
+@using System.Web
 @attribute [Authorize]
 @inject GameService GameService
 @inject NavigationManager NavigationManager
@@ -13,7 +14,7 @@
     <PageHeaderExtra>
         <Space Direction="DirectionVHType.Horizontal">
             <SpaceItem>
-                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
+                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250" OnChange="SearchChanged" />
             </SpaceItem>
             <SpaceItem>
                 <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
@@ -24,7 +25,7 @@
 
 <TableColumnPicker @ref="Picker" Key="Games" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Game" DataSource="@Games" Loading="@Loading" PageSize="25" Responsive>
+<Table TItem="Game" DataSource="@Games" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
     <Column TData="string" Title="Icon" Hidden="@(Picker.IsColumnHidden("Icon"))">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
     </Column>
@@ -121,27 +122,67 @@
     bool Loading = true;
 
     string Search = "";
+    string Url;
 
     bool Visibility = false;
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    int PageIndex = 1;
+    int PageSize = 25;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
     private async Task LoadData()
     {
         Games = await GameService.Get(g => g.Title.ToLower().Contains(Search.ToLower().Trim()) || g.SortTitle.ToLower().Contains(Search.ToLower().Trim())).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToListAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    private void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 25 : 25;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    private void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"Games?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    private void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"Games?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    private void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"Games?Search={Search}");
     }
 
     private string GetIcon(Game game)
@@ -197,5 +238,10 @@
     private async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

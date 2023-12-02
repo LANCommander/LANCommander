@@ -65,8 +65,6 @@ jobs:
         propertyPath: "Version"
         value: "${{ steps.trim_tag_ref.outputs.replaced }}"
         commitChange: false
-    - name: Run Playnite Toolbox
-      run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
     - name: Upload Artifact
       uses: actions/upload-artifact@v3.1.2
       with:

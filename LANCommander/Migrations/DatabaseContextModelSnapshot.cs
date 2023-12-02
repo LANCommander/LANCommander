@@ -692,9 +692,6 @@ namespace LANCommander.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsRegex")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Path")
                         .IsRequired()
                         .HasColumnType("TEXT");

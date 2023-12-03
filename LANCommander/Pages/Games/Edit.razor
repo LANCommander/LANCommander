@@ -161,6 +161,7 @@ else
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Panel { get; set; }
 
+    bool Loaded = false;
     bool Success;
     string[] Errors = { };
 
@@ -206,8 +207,13 @@ else
             });
         } }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        if (!Loaded)
+            await LoadData();
+    }
+
+    private async Task LoadData() {
         if (Id == Guid.Empty)
             Game = new Game();
         else
@@ -223,6 +229,8 @@ else
             Description = r.Description,
             Key = r.Id.ToString()
         });
+
+        Loaded = true;
     }
 
     private async Task Save()

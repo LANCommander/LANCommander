@@ -45,7 +45,7 @@
         }
 
         if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync();
+            await ValuesChanged.InvokeAsync(Values);
 
         StateHasChanged();
     }

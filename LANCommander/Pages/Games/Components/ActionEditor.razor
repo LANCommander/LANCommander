@@ -12,7 +12,7 @@
                 <Input Type="text" @bind-Value="context.Name" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Path">
-                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
+                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" Prefix="{InstallDir}\" Title="Select Action Executable" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Arguments">
                 <Input Type="text" @bind-Value="context.Arguments" />
@@ -88,43 +88,6 @@
     {
         if (action.SortOrder < Actions.Count + 1)
             Move(action.SortOrder, action.SortOrder + 1);
-    }
-
-    private async void BrowseForActionPath(Data.Models.Action action)
-    {
-        var modalOptions = new ModalOptions()
-            {
-                Title = "Choose Action Executable",
-                Maximizable = false,
-                DefaultMaximized = true,
-                Closable = true,
-                OkText = "Select File"
-            };
-
-        var browserOptions = new FilePickerOptions()
-        {
-            ArchiveId = ArchiveId,
-            Select = true,
-            Multiple = false
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
-
-        modalRef.OnOk = (results) =>
-        {
-            action.Path = results.FirstOrDefault().Path;
-
-            var parts = action.Path.Split('/');
-
-            if (parts.Length > 1)
-            {
-                action.Path = parts.Last();
-                action.WorkingDirectory = "{InstallDir}/" + String.Join('/', parts.Take(parts.Length - 1));
-            }
-
-            StateHasChanged();
-            return Task.CompletedTask;
-        };
     }
 
     private void Move(int oldIndex, int newIndex)

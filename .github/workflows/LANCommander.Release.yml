@@ -58,6 +58,14 @@ jobs:
         certificate: "${{ secrets.CERTIFICATE }}"
         cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
         filepath: "./LANCommander.Playnite.Extension/Build/LANCommander.PlaynitePlugin.dll"
+    - name: Download Playnite Release
+      uses: robinraju/release-downloader@v1.7
+      with:
+        repository: JosefNemec/Playnite
+        tag: 10.18
+        fileName: Playnite1018.zip
+    - name: Extract Playnite
+      run: Expand-Archive -Path Playnite1018.zip -DestinationPath Playnite
     - name: Update Manifest Versioning
       uses: fjogeleit/yaml-update-action@main
       with:
@@ -70,7 +78,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v3.1.2
       with:
-        name: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_${{ steps.trim_tag_ref.outputs.replaced }}.pext
-        path: LANCommander.Playnite.Extension/Build/*
+        name: LANCommander.PlaynitePlugin-v${{ steps.trim_tag_ref.outputs.replaced }}
+        path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
     # Release
     

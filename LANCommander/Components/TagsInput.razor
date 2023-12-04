@@ -2,7 +2,7 @@
 
 <Select Mode="tags" TItem="Guid" TItemValue="Guid" @bind-Values="@SelectedValues" OnSelectedItemsChanged="OnSelectedItemsChanged" EnableSearch>
     <SelectOptions>
-        @foreach (var entity in Entities)
+        @foreach (var entity in Entities.OrderBy(OptionLabelSelector))
         {
             <SelectOption TItemValue="Guid" TItem="Guid" Value="@entity.Id" Label="@OptionLabelSelector.Invoke(entity)" />
         }

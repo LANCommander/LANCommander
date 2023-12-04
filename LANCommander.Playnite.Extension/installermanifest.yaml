@@ -38,3 +38,13 @@ Packages:
       - Full game download will be skipped if the game files already exist, see full release notes for more details
       - Play sessions are now recorded to the server with user ID, start time, and end time
       - Connection status now updates correctly when authenticating through addon settings
+  - Version: 0.3.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2023-12-03
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.3.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_3_0.pext
+    Changelog:
+      - Save paths now support regex patterns (experimental)
+      - Fixed redistributable archive downloading
+      - Fixed redistributable scripts not being able to run as admin if marked as such
+      - Fixed game save downloading
+      - Fixed addon loading of YamlDotNet library

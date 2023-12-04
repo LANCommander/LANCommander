@@ -16,6 +16,7 @@
 
         public LANCommanderBeaconSettings Beacon { get; set; } = new LANCommanderBeaconSettings();
         public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();
+        public LANCommanderRoleSettings Roles { get; set; } = new LANCommanderRoleSettings();
         public LANCommanderUserSaveSettings UserSaves { get; set; } = new LANCommanderUserSaveSettings();
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
@@ -38,6 +39,12 @@
         public bool PasswordRequireUppercase { get; set; } = false;
         public bool PasswordRequireDigit { get; set; } = true;
         public int PasswordRequiredLength { get; set; } = 8;
+    }
+
+    public class LANCommanderRoleSettings
+    {
+        public Guid DefaultRoleId { get; set; }
+        public bool RestrictGamesByCollection { get; set; } = false;
     }
 
     public class LANCommanderUserSaveSettings

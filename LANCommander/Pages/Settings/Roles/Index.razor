@@ -10,6 +10,9 @@
 <PageHeader Title="Roles">
     <PageHeaderExtra>
         <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+            </SpaceItem>
              <SpaceItem>
                  <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
              </SpaceItem>
@@ -18,6 +21,24 @@
  </PageHeader>
 
 <div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Restrict Games by Collection">
+            <Switch @bind-Checked="context.Roles.RestrictGamesByCollection" />
+        </FormItem>
+        <FormItem Label="Default Role">
+            <Select
+                TItem="RoleViewModel"
+                TItemValue="Guid"
+                DataSource="Roles"
+                @bind-Value="context.Roles.DefaultRoleId"
+                LabelName="@nameof(RoleViewModel.Name)"
+                ValueName="@nameof(RoleViewModel.Id)"
+                Placeholder="Select a role"
+                DefaultActiveFirstOption="false"
+                EnableSearch />
+        </FormItem>
+    </Form>
+
     <Table TItem="RoleViewModel" DataSource="@Roles" Loading="@(Loading)" Responsive>
         <PropertyColumn Property="r => r.Name" Title="Name" />
         <PropertyColumn Property="r => r.Collections" Title="Collections" />
@@ -143,6 +164,18 @@
         {
             MessageService.Error("Could not added role!");
         }
+    }
 
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch
+        {
+            MessageService.Error("An unknown error occurred.");
+        }
     }
 }

@@ -17,7 +17,7 @@ namespace LANCommander.Services
 
             return files.Select(f =>
             {
-                var split = f.Split('\\');
+                var split = f.Split(Path.DirectorySeparatorChar);
 
                 return new Snippet()
                 {

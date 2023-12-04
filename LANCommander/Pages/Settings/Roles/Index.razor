@@ -7,7 +7,7 @@
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Administrator")]
 
-<PageHeader Title="Roles" Subtitle="@Roles.Count().ToString()">
+<PageHeader Title="Roles">
     <PageHeaderExtra>
         <Space Direction="DirectionVHType.Horizontal">
              <SpaceItem>
@@ -24,6 +24,9 @@
         <PropertyColumn Property="r => r.Users" Title="Users" />
         <ActionColumn>
             <Space Style="display: flex; justify-content: end">
+                <SpaceItem>
+                    <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+                </SpaceItem>
                 <SpaceItem>
                     @if (context.Name != "Administrator")
                     {
@@ -81,6 +84,7 @@
 
             Roles.Add(new RoleViewModel()
             {
+                Id = role.Id,
                 Name = role.Name,
                 Collections = role.Collections != null ? role.Collections.Count : 0,
                 Users = users != null ? users.Count : 0

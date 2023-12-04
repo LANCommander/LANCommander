@@ -1,0 +1,110 @@
+﻿@page "/Collections"
+@using Microsoft.EntityFrameworkCore;
+@attribute [Authorize(Roles = "Administrator")]
+@inject CollectionService CollectionService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+
+<PageHeader Title="Collections">
+    <PageHeaderExtra>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
+            </SpaceItem>
+        </Space>
+    </PageHeaderExtra>
+</PageHeader>
+
+<TableColumnPicker @ref="Picker" Key="Collections" @bind-Visible="ColumnPickerVisible" />
+
+<Table TItem="Collection" DataSource="@Collections" Loading="@Loading" PageSize="25" Responsive>
+    <PropertyColumn Property="r => r.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
+    <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
+    <PropertyColumn Property="s => s.CreatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))">
+        @context.CreatedBy?.UserName
+    </PropertyColumn>
+    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On"))" />
+    <PropertyColumn Property="g => g.UpdatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))">
+        @context.UpdatedBy?.UserName
+    </PropertyColumn>
+    <Column Title="Games" TData="int">
+        @context.Games.Count
+    </Column>
+    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
+        <TitleTemplate>
+            <div style="text-align: right">
+                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
+            </div>
+        </TitleTemplate>
+        <ChildContent>
+            <Space Direction="DirectionVHType.Horizontal">
+                <SpaceItem>
+                    <a href="/Collections/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+                </SpaceItem>
+                <SpaceItem>
+                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this Collection?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                    </Popconfirm>
+                </SpaceItem>
+            </Space>
+        </ChildContent>
+    </ActionColumn>
+</Table>
+
+ @code {
+    IEnumerable<Collection> Collections { get; set; } = new List<Collection>();
+
+    bool Loading = true;
+
+    string Search = "";
+
+    TableColumnPicker Picker;
+    bool ColumnPickerVisible = false;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            LoadData();
+
+            Loading = false;
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        var fuzzySearch = Search.ToLower().Trim();
+
+        Collections = await CollectionService.Get(r => r.Name.ToLower().Contains(fuzzySearch)).OrderBy(r => r.Name).ToListAsync();
+    }
+
+    private void Add()
+    {
+        NavigationManager.NavigateTo("/Collections/Add");
+    }
+
+    private async Task Delete(Collection Collection)
+    {
+        Collections = new List<Collection>();
+
+        Loading = true;
+
+        await CollectionService.Delete(Collection);
+
+        Collections = await CollectionService.Get(x => true).OrderBy(r => r.Name).ToListAsync();
+
+        Loading = false;
+    }
+
+    private async Task OpenColumnPicker()
+    {
+        ColumnPickerVisible = true;
+    }
+
+    private async Task CloseColumnPicker()
+    {
+        ColumnPickerVisible = false;
+    }
+}

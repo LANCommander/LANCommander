@@ -1,0 +1,107 @@
+﻿@using LANCommander.Models
+@inherits FeedbackComponent<AddToCollectionOptions, Collection>
+@inject CollectionService CollectionService
+@inject GameService GameService
+@inject IMessageService MessageService
+
+<Select
+    TItem="Collection"
+    TItemValue="Guid"
+    DataSource="@Collections"
+    @bind-Value="SelectedCollection"
+    LabelName="@nameof(Collection.Name)"
+    ValueName="@nameof(Collection.Id)"
+    Placeholder="Select a Collection"
+    DropdownRender="@DropdownRender"
+    OnSelectedItemChanged="OnSelectedItemChanged" />
+
+@code {
+    ICollection<Collection> Collections = new List<Collection>();
+
+    Guid SelectedCollection;
+
+    string NewCollectionName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        Collections = (await CollectionService.Get()).OrderBy(c => c.Name).ToList();
+    }
+
+    private RenderFragment DropdownRender(RenderFragment originNode)
+    {
+        RenderFragment customDropdownRender =
+            @<Template>
+                <div>
+                    @originNode
+                    <Divider Style="margin: 4px 0"></Divider>
+                    <div style="display: flex; flex-wrap: nowrap; padding: 8px">
+                        <Input Style="flex: auto" @bind-Value="@NewCollectionName" />
+                        <a style="flex: none; padding: 8px; display: block; cursor: pointer" @onclick="AddCollection">
+                            <Icon Type="plus" Theme="outline"></Icon>
+                            Add New Collection
+                        </a>
+                    </div>
+                </div>
+            </Template>
+    ;
+
+        return customDropdownRender;
+    }
+
+    private async Task AddCollection(MouseEventArgs args)
+    {
+        try
+        {
+            if (!String.IsNullOrWhiteSpace(NewCollectionName))
+            {
+                await CollectionService.Add(new Collection()
+                    {
+                        Name = NewCollectionName
+                    });
+
+                await LoadData();
+
+                MessageService.Success("Collection added!");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not add a new collection!");
+        }
+    }
+
+    private void OnSelectedItemChanged(Collection collection)
+    {
+        SelectedCollection = collection.Id;
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        var collection = await CollectionService.Get(SelectedCollection);
+
+        try
+        {
+            foreach (var gameId in Options.GameIds.Where(gid => collection.Games != null && !collection.Games.Any(g => g.Id == gid)))
+            {
+                var game = await GameService.Get(gameId);
+
+                collection.Games.Add(game);
+            }
+
+            await CollectionService.Update(collection);
+
+            MessageService.Success("Added to collection!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not add to collection!");
+        }
+
+        await base.OkCancelRefWithResult!.OnOk(collection);
+    }
+}

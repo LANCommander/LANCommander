@@ -2,18 +2,26 @@
 @using AntDesign.TableModels;
 @using LANCommander.Extensions;
 @using System.ComponentModel.DataAnnotations;
+@using LANCommander.Models
+@using LANCommander.Pages.Games.Components
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 @using Microsoft.EntityFrameworkCore;
 @using System.Web
 @attribute [Authorize]
 @inject GameService GameService
 @inject NavigationManager NavigationManager
+@inject ModalService ModalService
 @inject IMessageService MessageService
 
 <PageHeader Title="Games" Subtitle="@Games.Count().ToString()">
     <PageHeaderExtra>
         <Space Direction="DirectionVHType.Horizontal">
-
+            @if (Selected != null && Selected.Count() > 0)
+            {
+                <SpaceItem>
+                    <Button OnClick="() => AddToCollection()" Type="@ButtonType.Primary">Add to Collection</Button>
+                </SpaceItem>
+            }
             <SpaceItem>
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250" OnChange="SearchChanged" />
             </SpaceItem>
@@ -26,7 +34,8 @@
 
 <TableColumnPicker @ref="Picker" Key="Games" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Game" DataSource="@Games" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
+<Table TItem="Game" DataSource="@Games" @bind-SelectedRows="Selected" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
+    <Selection Key="@(context.Id.ToString())" />
     <Column TData="string" Title="Icon" Hidden="@(Picker.IsColumnHidden("Icon"))">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
     </Column>
@@ -126,6 +135,8 @@
     string Url;
 
     bool Visibility = false;
+
+    IEnumerable<Game> Selected;
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
@@ -229,6 +240,31 @@
         Games = await GameService.Get(x => true).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToListAsync();
 
         Loading = false;
+    }
+
+    private async void AddToCollection()
+    {
+        var modalOptions = new ModalOptions()
+            {
+                Title = "Add to Collection",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = "Add"
+            };
+
+        var options = new AddToCollectionOptions()
+        {
+            GameIds = Selected.Select(g => g.Id)
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<AddToCollectionDialog, AddToCollectionOptions, Collection>(modalOptions, options);
+
+        modalRef.OnOk = async (collection) =>
+        {
+            Selected = null;
+            await LoadData();
+        };
     }
 
     private async Task OpenColumnPicker()

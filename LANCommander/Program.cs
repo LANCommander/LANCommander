@@ -133,6 +133,7 @@ namespace LANCommander
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();
             builder.Services.AddScoped<CategoryService>();
+            builder.Services.AddScoped<CollectionService>();
             builder.Services.AddScoped<GameService>();
             builder.Services.AddScoped<ScriptService>();
             builder.Services.AddScoped<GenreService>();

@@ -1,0 +1,145 @@
+﻿@page "/Collections/{id:guid}"
+@page "/Collections/Add"
+@using LANCommander.Data.Enums;
+@using LANCommander.Extensions
+@attribute [Authorize(Roles = "Administrator")]
+@inject CollectionService CollectionService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+
+<PageHeader>
+    <PageHeaderTitle>
+        <Input Size="@InputSize.Large" @bind-Value="@Collection.Name" />
+    </PageHeaderTitle>
+    <PageHeaderExtra>
+        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<Table TItem="Game" DataSource="@Collection.Games" Responsive>
+    <Column TData="string" Title="Icon">
+        <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
+    </Column>
+    
+    <PropertyColumn Property="g => g.Title" Sortable Filterable />
+    
+    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
+    
+    <PropertyColumn Property="g => g.Singleplayer" Sortable Filterable>
+        <Checkbox Disabled="true" Checked="context.Singleplayer" />
+    </PropertyColumn>
+    
+    <Column TData="bool" Title="Multiplayer">
+        <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
+    </Column>
+
+    <Column TData="string[]" Title="Developers">
+        @foreach (var dev in context.Developers)
+        {
+            <Tag>@dev.Name</Tag>
+        }
+    </Column>
+
+    <Column TData="string[]" Title="Publishers">
+        @foreach (var pub in context.Publishers)
+        {
+            <Tag>@pub.Name</Tag>
+        }
+    </Column>
+
+    <Column TData="string[]" Title="Genres">
+        @foreach (var genre in context.Genres)
+        {
+            <Tag>@genre.Name</Tag>
+        }
+    </Column>
+
+    <Column TData="Data.Enums.MultiplayerType[]" Title="Multiplayer Modes">
+        @foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
+        {
+            <Tag>@mode.GetDisplayName()</Tag>
+        }
+    </Column>
+
+    <ActionColumn Title="" Style="text-align: right">
+        <ChildContent>
+            <Space Direction="DirectionVHType.Horizontal">
+                <SpaceItem>
+                    <Popconfirm OnConfirm="() => RemoveGame(context)" Title="Are you sure you want to remove this game from the collection?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                    </Popconfirm>
+                </SpaceItem>
+            </Space>
+        </ChildContent>
+    </ActionColumn>
+</Table>
+
+ @code {
+    [Parameter] public Guid Id { get; set; }
+
+    Collection Collection;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+            Collection = new Collection();
+        else
+            Collection = await CollectionService.Get(Id);
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Collection.Id != Guid.Empty)
+            {
+                Collection = await CollectionService.Update(Collection);
+
+                await MessageService.Success("Collection updated!");
+            }
+            else
+            {
+                Collection = await CollectionService.Add(Collection);
+
+                NavigationManager.LocationChanged += NotifyCollectionAdded;
+
+                NavigationManager.NavigateTo($"/Collections/{Collection.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await MessageService.Error("Could not save!");
+        }
+    }
+
+    private void NotifyCollectionAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyCollectionAdded;
+
+        MessageService.Success("Collection added!");
+    }
+
+    private async Task RemoveGame(Game game)
+    {
+        try
+        {
+            Collection.Games.Remove(game);
+
+            await CollectionService.Update(Collection);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Game could not be removed from the collection!");
+        }
+    }
+
+    private string GetIcon(Game game)
+    {
+        var media = game?.Media?.FirstOrDefault(m => m.Type == Data.Enums.MediaType.Icon);
+
+        if (media != null)
+            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        else
+            return "/favicon.ico";
+    }
+}

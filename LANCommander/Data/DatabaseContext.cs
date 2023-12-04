@@ -20,6 +20,7 @@ namespace LANCommander.Data
             builder.ConfigureBaseRelationships<Data.Models.Action>();
             builder.ConfigureBaseRelationships<Archive>();
             builder.ConfigureBaseRelationships<Category>();
+            builder.ConfigureBaseRelationships<Collection>();
             builder.ConfigureBaseRelationships<Company>();
             builder.ConfigureBaseRelationships<Game>();
             builder.ConfigureBaseRelationships<GameSave>();
@@ -179,6 +180,28 @@ namespace LANCommander.Data
                 .WithOne(s => s.Redistributable)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+            #endregion
+
+            #region Collection Relationships
+            builder.Entity<Collection>()
+                .HasMany(c => c.Games)
+                .WithMany(g => g.Collections)
+                .UsingEntity<Dictionary<string, object>>(
+                    "CollectionGame",
+                    cg => cg.HasOne<Game>().WithMany().HasForeignKey("GameId"),
+                    cg => cg.HasOne<Collection>().WithMany().HasForeignKey("CollectionId")
+                );
+            #endregion
+
+            #region Role Relationships
+            builder.Entity<Role>()
+                .HasMany(r => r.Collections)
+                .WithMany(c => c.Roles)
+                .UsingEntity<Dictionary<string, object>>(
+                    "RoleCollection",
+                    rc => rc.HasOne<Collection>().WithMany().HasForeignKey("CollectionId"),
+                    rc => rc.HasOne<Role>().WithMany().HasForeignKey("RoleId")
+                );
             #endregion
         }
 

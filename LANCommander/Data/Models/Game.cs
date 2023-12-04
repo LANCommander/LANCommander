@@ -39,5 +39,6 @@ namespace LANCommander.Data.Models
 
         public string? ValidKeyRegex { get; set; }
         public virtual ICollection<Key>? Keys { get; set; }
+        public virtual ICollection<Collection> Collections { get; set; }
     }
 }

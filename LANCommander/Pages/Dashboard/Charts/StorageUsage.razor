@@ -38,31 +38,31 @@
             var drives = DriveInfo.GetDrives();
             var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-            var totalStorageSize = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.TotalSize);
             var totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
             var totalUploadDirectorySize = new DirectoryInfo(settings.Archives.StoragePath).EnumerateFiles().Sum(f => f.Length);
             var totalSaveDirectorySize = new DirectoryInfo(settings.UserSaves.StoragePath).EnumerateFiles().Sum(f => f.Length);
+            var totalMediaDirectorySize = new DirectoryInfo(settings.Media.StoragePath).EnumerateFiles().Sum(f => f.Length);
 
             Data = new object[]
             {
-            new {
-                type = "Free",
-                value = totalAvailableFreeSpace
-            },
-            new {
-                type = "Games",
-                value = totalUploadDirectorySize
-            },
-            new
-            {
-                type = "Saves",
-                value = totalSaveDirectorySize
-            },
-            new
-            {
-                type = "Other",
-                value = totalStorageSize - totalAvailableFreeSpace - totalUploadDirectorySize - totalSaveDirectorySize
-            }
+                new {
+                    type = "Free",
+                    value = totalAvailableFreeSpace
+                },
+                new {
+                    type = "Games",
+                    value = totalUploadDirectorySize
+                },
+                new
+                {
+                    type = "Saves",
+                    value = totalSaveDirectorySize
+                },
+                new
+                {
+                    type = "Media",
+                    value = totalMediaDirectorySize
+                }
             };
 
             Loading = false;

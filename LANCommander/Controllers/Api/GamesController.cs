@@ -5,6 +5,7 @@ using LANCommander.Models;
 using LANCommander.SDK;
 using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Controllers.Api
@@ -15,17 +16,37 @@ namespace LANCommander.Controllers.Api
     public class GamesController : ControllerBase
     {
         private readonly GameService GameService;
+        private readonly UserManager<User> UserManager;
+        private readonly RoleManager<Role> RoleManager;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public GamesController(GameService gameService)
+        public GamesController(GameService gameService, UserManager<User> userManager)
         {
            
             GameService = gameService;
+            UserManager = userManager;
         }
 
         [HttpGet]
         public async Task<IEnumerable<Game>> Get()
         {
+            if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole("Administrator"))
+            {
+                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var roles = await UserManager.GetRolesAsync(user);
+
+                var games = new List<Game>();
+
+                foreach (var roleName in roles)
+                {
+                    var role = await RoleManager.FindByNameAsync(roleName);
+
+                    games.AddRange(role.Collections.SelectMany(c => c.Games).DistinctBy(g => g.Id).ToList());
+                }
+
+                return games.DistinctBy(g => g.Id).ToList();
+            }
+
             return await GameService.Get();
         }
 
@@ -34,8 +55,6 @@ namespace LANCommander.Controllers.Api
         {
             return await GameService.Get(id);
         }
-
-
 
         [HttpGet("{id}/Manifest")]
         public async Task<GameManifest> GetManifest(Guid id)

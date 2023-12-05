@@ -1,8 +1,10 @@
 ﻿@page "/Settings/Users"
 @using LANCommander.Models;
+@using LANCommander.Pages.Settings.Users.Components
 @layout SettingsLayout
 @inject UserManager<User> UserManager
 @inject RoleManager<Role> RoleManager
+@inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @attribute [Authorize(Roles = "Administrator")]
@@ -28,14 +30,7 @@
                 }
 
                 <SpaceItem>
-                    @if (!context.Roles.Any(r => r == "Administrator"))
-                    {
-                        <Button OnClick="() => PromoteUser(context)" Type="@ButtonType.Primary">Promote</Button>
-                    }
-                    else
-                    {
-                        <Button OnClick="() => DemoteUser(context)" Danger>Demote</Button>
-                    }
+                    <Button OnClick="() => ManageRoles(context)" Type="@ButtonType.Primary">Roles</Button>
                 </SpaceItem>
 
                 <SpaceItem>
@@ -163,5 +158,25 @@
     private void ChangePassword(UserViewModel user)
     {
         NavigationManager.NavigateTo($"/Settings/Users/{user.Id}/ChangePassword", true);
+    }
+
+    private async Task ManageRoles(UserViewModel user)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "ManageRoles",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            OkText = "Update Roles"
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ManageRolesDialog, Guid, Guid>(modalOptions, user.Id);
+
+        modalRef.OnOk = async (Guid) =>
+        {
+            await RefreshUserList();
+        };
     }
 }

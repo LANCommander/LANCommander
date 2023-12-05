@@ -21,7 +21,7 @@
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
     </Column>
     
-    <PropertyColumn Property="g => g.Title" Sortable Filterable />
+    <PropertyColumn Property="g => g.Title" Sortable Filterable DefaultSortOrder="SortDirection.Ascending" />
     
     <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
     

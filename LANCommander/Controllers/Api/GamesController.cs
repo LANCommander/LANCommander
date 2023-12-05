@@ -20,11 +20,12 @@ namespace LANCommander.Controllers.Api
         private readonly RoleManager<Role> RoleManager;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public GamesController(GameService gameService, UserManager<User> userManager)
+        public GamesController(GameService gameService, UserManager<User> userManager, RoleManager<Role> roleManager)
         {
            
             GameService = gameService;
             UserManager = userManager;
+            RoleManager = roleManager;
         }
 
         [HttpGet]

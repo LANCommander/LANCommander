@@ -197,6 +197,11 @@ namespace LANCommander.PlaynitePlugin
                 }
             };
 
+            // Clean up any games we don't have access to
+            var gamesToRemove = PlayniteApi.Database.Games.Where(g => g.PluginId == Id && !games.Any(lg => lg.Id.ToString() == g.GameId)).ToList();
+
+            PlayniteApi.Database.Games.Remove(gamesToRemove);
+
             return gameMetadata;
         }
 

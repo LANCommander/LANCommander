@@ -149,6 +149,14 @@ namespace LANCommander.Controllers.Api
             {
                 try
                 {
+                    if (Settings.Roles.DefaultRoleId != Guid.Empty)
+                    {
+                        var defaultRole = await RoleManager.FindByIdAsync(Settings.Roles.DefaultRoleId.ToString());
+
+                        if (defaultRole != null)
+                            await UserManager.AddToRoleAsync(user, defaultRole.Name);
+                    }
+
                     var token = await Login(user, model.Password);
 
                     Logger.Debug("Successfully registered user {UserName}", user.UserName);

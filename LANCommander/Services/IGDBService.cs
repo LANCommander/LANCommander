@@ -1,5 +1,6 @@
 ﻿using IGDB;
 using IGDB.Models;
+using System.Text;
 
 namespace LANCommander.Services
 {
@@ -56,13 +57,28 @@ namespace LANCommander.Services
             return games.FirstOrDefault();
         }
 
-        public async Task<IEnumerable<Game>> Search(string query, params string[] additionalFields)
+        public async Task<IEnumerable<Game>> Search(string input, int limit = 10, int offset = 0, params string[] additionalFields)
         {
             var fields = DefaultFields.Split(',').ToList();
 
             fields.AddRange(additionalFields);
 
-            var games = await Client.QueryAsync<Game>(IGDBClient.Endpoints.Games, $"search \"{query}\"; fields {String.Join(',', fields)};");
+            int[] categories = new int[]
+            {
+                (int)Category.MainGame,
+                (int)Category.Port,
+                (int)Category.StandaloneExpansion,
+            };
+
+            var sb = new StringBuilder();
+
+            sb.Append($"search \"{input}\";");
+            sb.Append($"fields {String.Join(',', fields)};");
+            sb.Append($"limit {limit};");
+            sb.Append($"offset {offset};");
+            sb.Append($"where category = ({String.Join(',', categories)});");
+
+            var games = await Client.QueryAsync<Game>(IGDBClient.Endpoints.Games, sb.ToString());
 
             return games.AsEnumerable();
         }

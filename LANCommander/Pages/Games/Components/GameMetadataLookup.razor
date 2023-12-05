@@ -16,7 +16,7 @@
     </Template>;
 }
 
-<Modal Visible="ModalVisible" Title="Game Metadata Lookup" Footer="@Footer" Class="game-metadata-lookup-modal">
+<Modal Visible="ModalVisible" Title="Game Metadata Lookup" Footer="@Footer" Class="game-metadata-lookup-modal" OnCancel="Close">
     <Table
         @ref="ResultsTable"
         TItem="Game"
@@ -35,6 +35,11 @@
             @String.Join(", ", context.Developers?.Select(d => d.Name))
         </PropertyColumn>
     </Table>
+
+    @if (MoreResults && IGDBService.Authenticated)
+    {
+        <Button Type="@ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
+    }
 </Modal>
 
 @if (IGDBService.Authenticated)
@@ -55,11 +60,13 @@ else
 
     ITable? ResultsTable;
 
-    IEnumerable<Game> Results { get; set; }
+    List<Game> Results { get; set; } = new List<Game>();
     IEnumerable<Game> SelectedResults { get; set; }
     PCGamingWikiClient PCGamingWikiClient { get; set; }
     bool ModalVisible { get; set; } = false;
     bool Loading = true;
+    bool MoreResults = false;
+    int Offset = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,9 +82,19 @@ else
     {
         Loading = true;
         ModalVisible = true;
-        Results = null;
 
-        var results = await IGDBService.Search(title, "involved_companies.*", "involved_companies.company.*");
+        int limit = 10;
+
+        string[] fields = new string[]
+        {
+            "involved_companies.developer",
+            "involved_companies.publisher",
+            "involved_companies.company.name"
+        };
+
+        var results = await IGDBService.Search(title, limit, Offset, fields);
+
+        MoreResults = results.Count() == limit;
 
         Loading = false;
 
@@ -85,7 +102,7 @@ else
             Results = new List<Game>();
         else
         {
-            Results = results.Select(r =>
+            Results.AddRange(results.Select(r =>
             {
                 var result = new Game()
                 {
@@ -104,7 +121,7 @@ else
                 }
 
                 return result;
-            });
+            }));
         }
     }
 
@@ -114,12 +131,42 @@ else
 
         var result = new GameLookupResult();
 
-        result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), "genres.*", "game_modes.*", "multiplayer_modes.*", "release_dates.*", "platforms.*", "keywords.*", "involved_companies.*", "involved_companies.company.*", "cover.*");
+        string[] fields = new string[]
+        {
+            "genres.*",
+            "game_modes.*",
+            "multiplayer_modes.*",
+            "release_dates.*",
+            "platforms.*",
+            "keywords.*",
+            "involved_companies.developer",
+            "involved_companies.publisher",
+            "involved_companies.company.name",
+            "cover.*"
+        };
+
+        result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), fields);
         result.MultiplayerModes = await GetMultiplayerModes(result.IGDBMetadata.Name);
 
         await OnResultSelected.InvokeAsync(result);
 
+        Close();
+    }
+
+    private void Close()
+    {
+        Results = new List<Game>();
+        MoreResults = false;
+        Offset = 0;
         ModalVisible = false;
+    }
+
+    private async Task ShowMore()
+    {
+        MoreResults = false;
+        Offset += Results.Count;
+
+        await SearchForGame(GameTitle);
     }
 
     private async Task<ICollection<MultiplayerMode>> GetMultiplayerModes(string gameTitle)

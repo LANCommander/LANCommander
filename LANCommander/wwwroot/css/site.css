@@ -253,6 +253,14 @@ label.ant-btn-icon-only {
     border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
+.ant-transfer {
+    display: flex;
+}
+
+.ant-transfer-list {
+    flex-grow: 1;
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

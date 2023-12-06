@@ -38,7 +38,7 @@
     </FormItem>
 
     <FormItem>
-        <StandaloneCodeEditor @ref="Editor" Id="@("editor-" + Id.ToString())" ConstructionOptions="EditorConstructionOptions" />
+        <StandaloneCodeEditor @ref="Editor" Id="@("editor-" + Id.ToString())" ConstructionOptions="EditorConstructionOptions" OnDidInit="InitEditor" />
     </FormItem>
 
     <FormItem Label="Name">
@@ -97,6 +97,22 @@
             };
 
         Snippets = ScriptService.GetSnippets();
+    }
+
+    async Task InitEditor()
+    {
+        if (Editor != null)
+        {
+            await Editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async (editor) =>
+            {
+                await Save();
+            }, null);
+
+            await Editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyQ, async (editor) =>
+            {
+                await this.CloseFeedbackAsync();
+            }, null);
+        }
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)

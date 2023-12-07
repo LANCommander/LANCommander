@@ -55,8 +55,8 @@
 
                     case RegParserDotNet.RegistryValueType.REG_BINARY:
                         var bytes = key.Value as byte[];
-                        var convertedBytes = String.Join("\\\n", bytes.Chunk(32).Select(c => String.Join(", ", c.Select(b => "0x" + b.ToString("X2")))));
-                        lines.Add($"New-ItemProperty -Path \"registry::\\{key.Path}\" -Name \"{key.Property}\" -PropertyType Binary -Value [byte[]]({convertedBytes}) -Force");
+                        var convertedBytes = String.Join("\n\t", bytes.Chunk(32).Select(c => String.Join(", ", c.Select(b => "0x" + b.ToString("X2")))));
+                        lines.Add($"New-ItemProperty -Path \"registry::\\{key.Path}\" -Name \"{key.Property}\" -PropertyType Binary -Value @([byte[]]\n\t{convertedBytes}\n) -Force");
                         break;
                 }
             }

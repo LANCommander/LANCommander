@@ -110,6 +110,7 @@
 
             await Editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyQ, async (editor) =>
             {
+                await OkCancelRefWithResult!.OnOk(Script);
                 await this.CloseFeedbackAsync();
             }, null);
         }

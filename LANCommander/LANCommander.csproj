@@ -53,7 +53,7 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.0" />
     <PackageReference Include="NLog" Version="5.2.5" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.5" />
-    <PackageReference Include="RegParserDotNet" Version="1.1.0" />
+    <PackageReference Include="RegParserDotNet" Version="1.1.1" />
     <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
     <PackageReference Include="swashbuckle" Version="5.6.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />

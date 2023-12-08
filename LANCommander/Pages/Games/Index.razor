@@ -46,17 +46,13 @@
     
     <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Released On"))" />
     
-    <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
+    <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable SorterCompare="@((a, b) => a.CompareTo(b))" Hidden="@(Picker.IsColumnHidden("Created On"))" />
     
-    <PropertyColumn Property="g => g.CreatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))">
-        @context.CreatedBy?.UserName
-    </PropertyColumn>
+    <PropertyColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
     
     <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
     
-    <PropertyColumn Property="g => g.UpdatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Updated By", false))">
-        @context.UpdatedBy?.UserName
-    </PropertyColumn>
+    <PropertyColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
     
     <PropertyColumn Property="g => g.Singleplayer" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Singleplayer", false))">
         <Checkbox Disabled="true" Checked="context.Singleplayer" />

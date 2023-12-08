@@ -34,18 +34,14 @@
 <Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25" @bind-SelectedRows="SelectedServers" Responsive>
     <Selection Key="@(context.Id.ToString())" />
     <PropertyColumn Property="s => s.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
-     <PropertyColumn Property="s => s.Game" Hidden="@(Picker.IsColumnHidden("Game"))">
+    <PropertyColumn Property="s => s.Game" Hidden="@(Picker.IsColumnHidden("Game"))">
         <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
         @context.Game?.Title
     </PropertyColumn>
     <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
-    <PropertyColumn Property="s => s.CreatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))">
-        @context.CreatedBy?.UserName
-    </PropertyColumn>
-    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On"))" />
-    <PropertyColumn Property="g => g.UpdatedBy" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))">
-        @context.UpdatedBy?.UserName
-    </PropertyColumn>
+    <PropertyColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
+    <PropertyColumn Property="s => s.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
+    <PropertyColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
     <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
         <TitleTemplate>
             <div style="text-align: right">

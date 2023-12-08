@@ -7,9 +7,25 @@
 
 <GridRow Gutter="(16, 16)">
     <GridCol Xs="24" Md="12">
-        <Card Title="Overall Playtime">
+        <Card Title="Top 10 Total Playtime (By Player)">
             <Body>
-                <OverallPlaytime />
+                <TopPlayersPlaytime />
+            </Body>
+        </Card>
+    </GridCol>
+
+    <GridCol Xs="24" Md="12">
+        <Card Title="Top Average Session Length (By Game)">
+            <Body>
+                <TopGamesAverageSessionPlaytime />
+            </Body>
+        </Card>
+    </GridCol>
+
+    <GridCol Xs="24" Md="12">
+        <Card Title="Top 10 Total Playtime (By Game)">
+            <Body>
+                <TopGamesPlaytime />
             </Body>
         </Card>
     </GridCol>

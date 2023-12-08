@@ -3,7 +3,7 @@
 @inject PlaySessionService PlaySessionService
 
 <Spin Spinning="Loading">
-    <Pie Data="Data" Config="Config" JsConfig="@JsConfig" />
+    <Bar Data="Data" Config="Config" JsConfig="@JsConfig" />
 </Spin>
 
 @code {
@@ -13,8 +13,8 @@
 
     string JsConfig = @"{
         meta: {
-            value: {
-                alias: 'Overall Playtime',
+            playtime: {
+                alias: 'Total Playtime',
                 formatter: (v) => new Date(v * 1000).toISOString().slice(11, 19)
             }
         },
@@ -24,11 +24,16 @@
         }
     }";
 
-    PieConfig Config = new PieConfig
+    BarConfig Config = new BarConfig
     {
-        Radius = 0.8,
-        AngleField = "value",
-        ColorField = "type",
+        YField = "player",
+        XField = "playtime",
+        ColorField = "player",
+        ForceFit = true,
+        Label = new BarViewConfigLabel
+        {
+            Visible = false
+        }
     };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -39,7 +44,7 @@
 
             var sessions = await PlaySessionService.Get();
 
-            foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
+            foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.UserId))
             {
                 var total = new TimeSpan();
 
@@ -48,13 +53,13 @@
                     total = total.Add(session.End.Value.Subtract(session.Start.Value));
                 }
 
-                playtimes[gameSessions.First().Game.Title] = total;
+                playtimes[gameSessions.First().User.UserName] = total;
             }
 
-            Data = playtimes.Select(pt => new
+            Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
             {
-                type = pt.Key,
-                value = (int)pt.Value.TotalSeconds
+                Player = pt.Key,
+                Playtime = (int)pt.Value.TotalSeconds
             }).ToArray();
 
             Loading = false;

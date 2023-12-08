@@ -39,13 +39,14 @@
                 <div>
                     @originNode
                     <Divider Style="margin: 4px 0"></Divider>
-                    <div style="display: flex; flex-wrap: nowrap; padding: 8px">
-                        <Input Style="flex: auto" @bind-Value="@NewCollectionName" />
-                        <a style="flex: none; padding: 8px; display: block; cursor: pointer" @onclick="AddCollection">
-                            <Icon Type="plus" Theme="outline"></Icon>
-                            Add New Collection
-                        </a>
-                    </div>
+                    <Space Direction="@DirectionVHType.Horizontal" Style="padding: 4px 8px; width: 100%;">
+                        <SpaceItem Style="flex-grow: 1;">
+                            <Input Style="flex: auto;" @bind-Value="@NewCollectionName" BindOnInput="true" />
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(NewCollectionName))" OnClick="AddCollection">Add New Collection</Button>
+                        </SpaceItem>
+                    </Space>
                 </div>
             </Template>
     ;

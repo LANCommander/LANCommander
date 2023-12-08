@@ -74,6 +74,13 @@
         @context.Keys?.Count(k => k.ClaimedOn.HasValue)
     </Column>
 
+    <Column TData="string[]" Title="Collections" Hidden="@(Picker.IsColumnHidden("Collections"))">
+        @foreach (var collection in context.Collections)
+        {
+            <Tag>@collection.Name</Tag>
+        }
+    </Column>
+
     <Column TData="string[]" Title="Developers" Hidden="@(Picker.IsColumnHidden("Developers", false))">
         @foreach (var dev in context.Developers)
         {

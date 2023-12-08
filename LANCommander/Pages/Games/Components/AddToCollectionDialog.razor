@@ -85,9 +85,12 @@
     {
         var collection = await CollectionService.Get(SelectedCollection);
 
+        if (collection.Games == null)
+            collection.Games = new List<Game>();
+
         try
         {
-            foreach (var gameId in Options.GameIds.Where(gid => collection.Games != null && !collection.Games.Any(g => g.Id == gid)))
+            foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
             {
                 var game = await GameService.Get(gameId);
 

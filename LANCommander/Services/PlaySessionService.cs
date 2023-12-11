@@ -1,13 +1,20 @@
 ﻿using LANCommander.Data;
+using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Services
 {
     public class PlaySessionService : BaseDatabaseService<PlaySession>
     {
-        public PlaySessionService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor) { }
+        private ServerService ServerService { get; set; }
+        private ServerProcessService ServerProcessService;
+
+        public PlaySessionService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, ServerService serverService, ServerProcessService serverProcessService) : base(dbContext, httpContextAccessor) {
+            ServerProcessService = serverProcessService;
+        }
 
         public async Task StartSession(Guid gameId, Guid userId)
         {
@@ -24,6 +31,13 @@ namespace LANCommander.Services
             };
 
             await Add(session);
+
+            var servers = ServerService.Get(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+
+            foreach (var server in servers)
+            {
+                await ServerProcessService.StartServerAsync(server);
+            }
         }
 
         public async Task EndSession(Guid gameId, Guid userId)
@@ -35,6 +49,18 @@ namespace LANCommander.Services
                 existingSession.End = DateTime.UtcNow;
 
                 await Update(existingSession);
+            }
+
+            var activeSessions = await Get(ps => ps.GameId == gameId && ps.End != null).AnyAsync();
+
+            if (!activeSessions)
+            {
+                var servers = ServerService.Get(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+
+                foreach (var server in servers)
+                {
+                    await ServerProcessService.StartServerAsync(server);
+                }
             }
         }
     }

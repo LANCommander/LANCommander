@@ -4,6 +4,8 @@
 @page "/Servers/Add"
 @attribute [Authorize(Roles = "Administrator")]
 @using LANCommander.Components.FileManagerComponents;
+@using LANCommander.Data.Enums
+@using LANCommander.Extensions
 @using LANCommander.Pages.Servers.Components
 @inject GameService GameService
 @inject ServerService ServerService
@@ -15,6 +17,7 @@
     <Sider Width="200">
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
             <MenuItem RouterLink="@($"/Servers/{Server.Id}/General")">General</MenuItem>
+            <MenuItem RouterLink="@($"/Servers/{Server.Id}/Autostart")">Autostart</MenuItem>
             <MenuItem RouterLink="@($"/Servers/{Server.Id}/HTTP")">HTTP</MenuItem>
             @if (Server != null && Server.Id != Guid.Empty)
             {
@@ -100,6 +103,14 @@
                             </FormItem>
                         </GridCol>
                         <GridCol Flex="@("auto")">
+                            <FormItem Label="Method">
+                                <Select @bind-Value="context.AutostartMethod" TItem="ServerAutostartMethod" TItemValue="ServerAutostartMethod" DataSource="Enum.GetValues<ServerAutostartMethod>()">
+                                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                                </Select>
+                            </FormItem>
+                        </GridCol>
+                        <GridCol Flex="@("auto")">
                             @if (context.Autostart)
                             {
                                 <FormItem Label="Delay">
@@ -110,6 +121,32 @@
                             }
                         </GridCol>
                     </GridRow>
+
+                    <FormItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+                    </FormItem>
+                </Form>
+            }
+
+            @if (Panel == "Autostart")
+            {
+                <Form Model="@Server" Layout="@FormLayout.Vertical">
+                    <FormItem Label="Enable">
+                        <Switch @bind-Checked="context.Autostart" />
+                    </FormItem>
+
+                    <FormItem Label="Method">
+                        <Select @bind-Value="context.AutostartMethod" TItem="ServerAutostartMethod" TItemValue="ServerAutostartMethod" DataSource="Enum.GetValues<ServerAutostartMethod>()">
+                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                        </Select>
+                    </FormItem>
+
+                    <FormItem Label="Delay">
+                        <AntDesign.Input @bind-Value="context.AutostartDelay" Placeholder="0">
+                            <Suffix>Seconds</Suffix>
+                        </AntDesign.Input>
+                    </FormItem>
 
                     <FormItem>
                         <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>

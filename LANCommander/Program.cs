@@ -246,7 +246,7 @@ namespace LANCommander
             var serverService = scope.ServiceProvider.GetService<ServerService>();
             var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
 
-            foreach (var server in await serverService.Get(s => s.Autostart).ToListAsync())
+            foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == Data.Enums.ServerAutostartMethod.OnApplicationStart).ToListAsync())
             {
                 try
                 {

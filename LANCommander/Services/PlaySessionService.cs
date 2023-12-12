@@ -37,7 +37,7 @@ namespace LANCommander.Services
 
             foreach (var server in servers)
             {
-                await ServerProcessService.StartServerAsync(server);
+                ServerProcessService.StartServerAsync(server);
             }
         }
 
@@ -60,7 +60,7 @@ namespace LANCommander.Services
 
                 foreach (var server in servers)
                 {
-                    await ServerProcessService.StartServerAsync(server);
+                    ServerProcessService.StartServerAsync(server);
                 }
             }
         }

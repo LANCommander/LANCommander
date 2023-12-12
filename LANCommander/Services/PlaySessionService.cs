@@ -60,7 +60,7 @@ namespace LANCommander.Services
 
                 foreach (var server in servers)
                 {
-                    ServerProcessService.StartServerAsync(server);
+                    ServerProcessService.StopServer(server);
                 }
             }
         }

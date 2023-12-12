@@ -13,6 +13,7 @@ namespace LANCommander.Services
         private ServerProcessService ServerProcessService;
 
         public PlaySessionService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, ServerService serverService, ServerProcessService serverProcessService) : base(dbContext, httpContextAccessor) {
+            ServerService = serverService;
             ServerProcessService = serverProcessService;
         }
 

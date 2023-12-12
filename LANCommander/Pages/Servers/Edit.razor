@@ -96,32 +96,6 @@
                             <Switch @bind-Checked="context.UseShellExecute" />
                         </ChildContent>
                     </FormItem>
-                    <GridRow Wrap="false" Gutter="16">
-                        <GridCol Flex="@("none")">
-                            <FormItem Label="Autostart">
-                                <Switch @bind-Checked="context.Autostart" />
-                            </FormItem>
-                        </GridCol>
-                        <GridCol Flex="@("auto")">
-                            <FormItem Label="Method">
-                                <Select @bind-Value="context.AutostartMethod" TItem="ServerAutostartMethod" TItemValue="ServerAutostartMethod" DataSource="Enum.GetValues<ServerAutostartMethod>()">
-                                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                                </Select>
-                            </FormItem>
-                        </GridCol>
-                        <GridCol Flex="@("auto")">
-                            @if (context.Autostart)
-                            {
-                                <FormItem Label="Delay">
-                                    <AntDesign.Input @bind-Value="context.AutostartDelay" Placeholder="0">
-                                        <Suffix>Seconds</Suffix>
-                                    </AntDesign.Input>
-                                </FormItem>
-                            }
-                        </GridCol>
-                    </GridRow>
-
                     <FormItem>
                         <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
                     </FormItem>

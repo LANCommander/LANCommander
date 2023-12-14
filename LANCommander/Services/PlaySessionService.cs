@@ -52,7 +52,7 @@ namespace LANCommander.Services
                 await Update(existingSession);
             }
 
-            var activeSessions = await Get(ps => ps.GameId == gameId && ps.End != null).AnyAsync();
+            var activeSessions = await Get(ps => ps.GameId == gameId && ps.End == null).AnyAsync();
 
             if (!activeSessions)
             {

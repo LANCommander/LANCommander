@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -33,7 +34,7 @@ namespace LANCommander.SDK.PowerShell
 
             AddArgument("ExecutionPolicy", "Unrestricted");
 
-            var moduleManifests = Directory.EnumerateFiles(Environment.CurrentDirectory, "LANCommander.PowerShell.psd1", SearchOption.AllDirectories);
+            var moduleManifests = Directory.EnumerateFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LANCommander.PowerShell.psd1", SearchOption.AllDirectories);
 
             if (moduleManifests.Any())
                 AddModule(moduleManifests.First());

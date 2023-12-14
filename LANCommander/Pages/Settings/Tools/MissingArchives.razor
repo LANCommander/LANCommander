@@ -15,7 +15,7 @@
 
     <Table TItem="Archive" DataSource="@Archives" Loading="@Loading" Responsive>
         <PropertyColumn Property="a => a.Version" Sortable />
-        <PropertyColumn Property="a => a.Game.Title" />
+        <PropertyColumn Property="a => a.Game.Title" Title="Game" />
         <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
         <PropertyColumn Property="a => a.CreatedBy" Sortable>
             @context.CreatedBy?.UserName

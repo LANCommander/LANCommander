@@ -54,3 +54,9 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.3.1/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_3_1.pext
     Changelog:
       - Games can now be restricted based on user role
+  - Version: 0.3.3
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2023-12-14
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.3.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_3_3.pext
+    Changelog:
+      - PowerShell module/cmdlets now properly import on non-portable Playnite installs

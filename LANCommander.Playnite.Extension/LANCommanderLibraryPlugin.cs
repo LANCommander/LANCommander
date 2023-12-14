@@ -46,8 +46,6 @@ namespace LANCommander.PlaynitePlugin
                 RefreshToken = Settings.RefreshToken,
             });
 
-            // GameSaveService = new GameSaveService(LANCommander, PlayniteApi, PowerShellRuntime);
-
             api.UriHandler.RegisterSource("lancommander", args =>
             {
                 if (args.Arguments.Length == 0)

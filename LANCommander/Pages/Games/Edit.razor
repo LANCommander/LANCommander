@@ -53,7 +53,17 @@
                 }
             </PageHeaderTitle>
             <PageHeaderExtra>
-                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                <Space Direction="DirectionVHType.Horizontal">
+                    @if (Game != null && Game.Id != Guid.Empty)
+                    {
+                        <SpaceItem>
+                            <a href="/Games/Export/@(Id)" class="ant-btn ant-btn-default">Export</a>
+                        </SpaceItem>
+                    }
+                    <SpaceItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                    </SpaceItem>
+                </Space>
             </PageHeaderExtra>
         </PageHeader>
 

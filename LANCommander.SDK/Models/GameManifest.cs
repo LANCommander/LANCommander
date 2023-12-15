@@ -1,4 +1,5 @@
 ﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Models;
 using System;
 using System.Collections.Generic;
 
@@ -22,6 +23,7 @@ namespace LANCommander.SDK
         public MultiplayerInfo LanMultiplayer { get; set; }
         public MultiplayerInfo OnlineMultiplayer { get; set; }
         public IEnumerable<SavePath> SavePaths { get; set; }
+        public IEnumerable<Script> Scripts { get; set; }
 
         public GameManifest() { }
     }
@@ -40,6 +42,7 @@ namespace LANCommander.SDK
     {
         public int MinPlayers { get; set; }
         public int MaxPlayers { get; set; }
+        public string Description { get; set; }
     }
 
     public class SavePath

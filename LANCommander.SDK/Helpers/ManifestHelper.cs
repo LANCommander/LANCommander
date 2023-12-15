@@ -26,13 +26,9 @@ namespace LANCommander.SDK.Helpers
             var source = GetPath(installDirectory);
             var yaml = File.ReadAllText(source);
 
-            var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(new PascalCaseNamingConvention())
-                .Build();
-
             Logger?.LogTrace("Deserializing manifest");
 
-            var manifest = deserializer.Deserialize<GameManifest>(yaml);
+            var manifest = Deserialize(yaml);
 
             return manifest;
         }
@@ -50,6 +46,15 @@ namespace LANCommander.SDK.Helpers
             File.WriteAllText(destination, yaml);
 
             return destination;
+        }
+
+        public static GameManifest Deserialize(string serializedManifest)
+        {
+            var deserializer = new DeserializerBuilder()
+                .WithNamingConvention(new PascalCaseNamingConvention())
+                .Build();
+
+            return deserializer.Deserialize<GameManifest>(serializedManifest);
         }
 
         public static string Serialize(GameManifest manifest)

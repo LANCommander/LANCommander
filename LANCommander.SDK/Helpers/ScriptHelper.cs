@@ -38,13 +38,7 @@ namespace LANCommander.SDK.Helpers
 
         public static void SaveScript(Game game, ScriptType type)
         {
-            var script = game.Scripts.FirstOrDefault(s => s.Type == type);
-
-            if (script == null)
-                return;
-
-            if (script.RequiresAdmin)
-                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+            var scriptContents = GetScriptContents(game, type);
 
             var filename = GetScriptFilePath(game, type);
 
@@ -53,7 +47,20 @@ namespace LANCommander.SDK.Helpers
 
             Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
 
-            File.WriteAllText(filename, script.Contents);
+            File.WriteAllText(filename, scriptContents);
+        }
+
+        public static string GetScriptContents(Game game, ScriptType type)
+        {
+            var script = game.Scripts.FirstOrDefault(s => s.Type == type);
+
+            if (script == null)
+                return String.Empty;
+
+            if (script.RequiresAdmin)
+                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+
+            return script.Contents;
         }
 
         public static string GetScriptFilePath(Game game, ScriptType type)
@@ -63,6 +70,13 @@ namespace LANCommander.SDK.Helpers
 
         public static string GetScriptFilePath(string installDirectory, ScriptType type)
         {
+            var filename = GetScriptFileName(type);
+
+            return Path.Combine(installDirectory, filename);
+        }
+
+        public static string GetScriptFileName(ScriptType type)
+        {
             Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
                 { ScriptType.Install, "_install.ps1" },
                 { ScriptType.Uninstall, "_uninstall.ps1" },
@@ -70,9 +84,7 @@ namespace LANCommander.SDK.Helpers
                 { ScriptType.KeyChange, "_changekey.ps1" }
             };
 
-            var filename = filenames[type];
-
-            return Path.Combine(installDirectory, filename);
+            return filenames[type];
         }
     }
 }

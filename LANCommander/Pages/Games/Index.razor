@@ -26,6 +26,11 @@
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250" OnChange="SearchChanged" />
             </SpaceItem>
             <SpaceItem>
+                <Upload @ref="ImporterUpload" Action="/Games/Import" Name="Files" OnSingleCompleted="OnImportUploadCompleted" ShowUploadList="false" Accept=".yml,.yaml">
+                    <Button Type="@ButtonType.Default">Import</Button>
+                </Upload>
+            </SpaceItem>
+            <SpaceItem>
                 <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
             </SpaceItem>
         </Space>
@@ -141,6 +146,7 @@
 
     IEnumerable<Game> Selected;
 
+    Upload ImporterUpload;
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
 
@@ -208,6 +214,22 @@
             return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
         else
             return "/favicon.ico";
+    }
+
+    private async Task OnImportUploadCompleted(UploadInfo fileInfo)
+    {
+        if (fileInfo.File.State == UploadState.Fail)
+        {
+            ImporterUpload.FileList = new List<UploadFileItem>();
+            await ImporterUpload.FileListChanged.InvokeAsync(ImporterUpload.FileList);
+            StateHasChanged();
+            MessageService.Error($"Could not import game: {fileInfo.File.Response}");
+        }        
+        else
+        {
+            MessageService.Success($"Game imported!");
+            await LoadData();
+        }
     }
 
     private void Add()

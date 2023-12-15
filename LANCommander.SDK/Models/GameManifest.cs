@@ -11,6 +11,7 @@ namespace LANCommander.SDK
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string Description { get; set; }
+        public string Notes { get; set; }
         public DateTime ReleasedOn { get; set; }
         public IEnumerable<string> Genre { get; set; }
         public IEnumerable<string> Tags { get; set; }

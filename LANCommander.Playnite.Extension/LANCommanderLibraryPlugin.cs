@@ -569,6 +569,9 @@ namespace LANCommander.PlaynitePlugin
             }
             #endregion
 
+            if (game.Notes != manifest.Notes)
+                game.Notes = manifest.Notes;
+
             PlayniteApi.Database.Games.Update(game);
         }
 

@@ -60,6 +60,7 @@ namespace LANCommander.Services
                 Title = game.Title,
                 SortTitle = game.SortTitle,
                 Description = game.Description,
+                Notes = game.Notes,
                 ReleasedOn = game.ReleasedOn.GetValueOrDefault(),
                 Singleplayer = game.Singleplayer,
             };
@@ -174,7 +175,7 @@ namespace LANCommander.Services
 
             game.Id = manifest.Id;
             game.Description = manifest.Description;
-            // game.Notes = manifest.Notes;
+            game.Notes = manifest.Notes;
             game.ReleasedOn = manifest.ReleasedOn;
             game.Singleplayer = manifest.Singleplayer;
             game.SortTitle = manifest.SortTitle;

@@ -23,6 +23,7 @@ namespace LANCommander.SDK
         public MultiplayerInfo LanMultiplayer { get; set; }
         public MultiplayerInfo OnlineMultiplayer { get; set; }
         public IEnumerable<SavePath> SavePaths { get; set; }
+        public IEnumerable<string> Keys { get; set; }
         public IEnumerable<Script> Scripts { get; set; }
 
         public GameManifest() { }

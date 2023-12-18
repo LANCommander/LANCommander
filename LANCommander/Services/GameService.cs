@@ -133,6 +133,30 @@ namespace LANCommander.Services
                 });
             }
 
+            if (game.Media != null && game.Media.Count > 0)
+            {
+                manifest.Media = game.Media.Select(m => new SDK.Models.Media()
+                {
+                    Id = m.Id,
+                    FileId = m.FileId,
+                    MimeType = m.MimeType,
+                    SourceUrl = m.SourceUrl,
+                    Type = (SDK.Enums.MediaType)(int)m.Type
+                });
+            }
+
+            if (game.Archives != null && game.Archives.Count > 0)
+            {
+                manifest.Archives = game.Archives.Select(a => new SDK.Models.Archive()
+                {
+                    Id = a.Id,
+                    Changelog = a.Changelog,
+                    Version = a.Version,
+                    CreatedOn = a.CreatedOn,
+                    ObjectKey = a.ObjectKey,
+                });
+            }
+
             return manifest;
         }
 

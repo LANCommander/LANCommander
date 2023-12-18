@@ -26,6 +26,8 @@ namespace LANCommander.SDK
         public IEnumerable<SavePath> SavePaths { get; set; }
         public IEnumerable<string> Keys { get; set; }
         public IEnumerable<Script> Scripts { get; set; }
+        public IEnumerable<Media> Media { get; set; }
+        public IEnumerable<Archive> Archives { get; set; }
 
         public GameManifest() { }
     }

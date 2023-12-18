@@ -11,6 +11,7 @@ namespace LANCommander.Services.MediaGrabbers
 
         private SteamGridDbFormats[] SupportedFormats = new SteamGridDbFormats[]
         {
+            SteamGridDbFormats.Ico,
             SteamGridDbFormats.Png,
             SteamGridDbFormats.Jpeg,
             SteamGridDbFormats.Webp
@@ -57,7 +58,7 @@ namespace LANCommander.Services.MediaGrabbers
             {
                 Id = i.Id.ToString(),
                 Type = MediaType.Icon,
-                SourceUrl = i.FullImageUrl,
+                SourceUrl = i.Format == SteamGridDbFormats.Ico ? i.ThumbnailImageUrl : i.FullImageUrl,
                 ThumbnailUrl = i.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(i.Format)
@@ -99,6 +100,7 @@ namespace LANCommander.Services.MediaGrabbers
             switch (format)
             {
                 case SteamGridDbFormats.Png:
+                case SteamGridDbFormats.Ico:
                     return "image/png";
                 case SteamGridDbFormats.Jpeg:
                     return "image/jpg";

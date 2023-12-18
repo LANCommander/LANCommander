@@ -232,7 +232,7 @@ namespace LANCommander.SDK
 
                     File.WriteAllText(tempManifest, ManifestHelper.Serialize(manifest));
 
-                    archive.AddEntry("_manifest.yml", tempManifest);
+                    archive.AddEntry(ManifestHelper.ManifestFilename, tempManifest);
 
                     using (var ms = new MemoryStream())
                     {

@@ -10,12 +10,12 @@ namespace LANCommander.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class RedistributableController : ControllerBase
+    public class RedistributablesController : ControllerBase
     {
         private readonly RedistributableService RedistributableService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public RedistributableController(RedistributableService redistributableService)
+        public RedistributablesController(RedistributableService redistributableService)
         {
 
             RedistributableService = redistributableService;

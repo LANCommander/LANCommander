@@ -26,9 +26,7 @@
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250" OnChange="SearchChanged" />
             </SpaceItem>
             <SpaceItem>
-                <Upload @ref="ImporterUpload" Action="/Games/Import" Name="Files" OnSingleCompleted="OnImportUploadCompleted" ShowUploadList="false" Accept=".yml,.yaml">
-                    <Button Type="@ButtonType.Default">Import</Button>
-                </Upload>
+                <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
             </SpaceItem>
             <SpaceItem>
                 <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
@@ -134,6 +132,8 @@
     </ActionColumn>
 </Table>
 
+<ImportUploadDialog @ref="ImportUploadDialog" OnGameImported="LoadData" />
+
  @code {
     IEnumerable<Game> Games { get; set; } = new List<Game>();
 
@@ -146,7 +146,7 @@
 
     IEnumerable<Game> Selected;
 
-    Upload ImporterUpload;
+    ImportUploadDialog ImportUploadDialog;
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
 
@@ -214,22 +214,6 @@
             return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
         else
             return "/favicon.ico";
-    }
-
-    private async Task OnImportUploadCompleted(UploadInfo fileInfo)
-    {
-        if (fileInfo.File.State == UploadState.Fail)
-        {
-            ImporterUpload.FileList = new List<UploadFileItem>();
-            await ImporterUpload.FileListChanged.InvokeAsync(ImporterUpload.FileList);
-            StateHasChanged();
-            MessageService.Error($"Could not import game: {fileInfo.File.Response}");
-        }        
-        else
-        {
-            MessageService.Success($"Game imported!");
-            await LoadData();
-        }
     }
 
     private void Add()

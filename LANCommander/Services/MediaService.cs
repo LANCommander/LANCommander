@@ -43,9 +43,11 @@ namespace LANCommander.Services
             return GetImagePath(entity);
         }
 
-        public string GetImagePath(Media entity)
+        public static string GetImagePath(Media entity)
         {
-            return Path.Combine(Settings.Media.StoragePath, entity.FileId.ToString());
+            var settings = SettingService.GetSettings();
+
+            return Path.Combine(settings.Media.StoragePath, entity.FileId.ToString());
         }
 
         public async Task<Guid> UploadMediaAsync(IBrowserFile file)

@@ -1,10 +1,12 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
+using LANCommander.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using NuGet.Packaging;
+using System.IO.Compression;
 
 namespace LANCommander.Services
 {
@@ -133,6 +135,14 @@ namespace LANCommander.Services
                 });
             }
 
+            return manifest;
+        }
+
+        public async Task<string> Export(Guid id)
+        {
+            var game = await Get(id);
+            var manifest = await GetManifest(id);
+
             if (game.Media != null && game.Media.Count > 0)
             {
                 manifest.Media = game.Media.Select(m => new SDK.Models.Media()
@@ -141,7 +151,22 @@ namespace LANCommander.Services
                     FileId = m.FileId,
                     MimeType = m.MimeType,
                     SourceUrl = m.SourceUrl,
-                    Type = (SDK.Enums.MediaType)(int)m.Type
+                    Type = (SDK.Enums.MediaType)(int)m.Type,
+                    CreatedOn = m.CreatedOn,
+                }).ToList();
+            }
+
+            if (game.Scripts != null && game.Scripts.Count > 0)
+            {
+                manifest.Scripts = game.Scripts.Select(s => new SDK.Models.Script()
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description,
+                    RequiresAdmin = s.RequiresAdmin,
+                    Type = (SDK.Enums.ScriptType)(int)s.Type,
+                    CreatedOn = s.CreatedOn,
+                    UpdatedOn = s.UpdatedOn,
                 });
             }
 
@@ -154,263 +179,329 @@ namespace LANCommander.Services
                     Version = a.Version,
                     CreatedOn = a.CreatedOn,
                     ObjectKey = a.ObjectKey,
-                });
-            }
-
-            return manifest;
-        }
-
-        public async Task<string> Export(Guid id)
-        {
-            var game = await Get(id);
-            var manifest = await GetManifest(id);
-
-            if (game.Scripts != null && game.Scripts.Count > 0)
-            {
-                manifest.Scripts = game.Scripts.Select(s => new SDK.Models.Script()
-                {
-                    Id = s.Id,
-                    Contents = s.Contents,
-                    Description = s.Description,
-                    Name = s.Name,
-                    RequiresAdmin = s.RequiresAdmin,
-                    Type = (SDK.Enums.ScriptType)(int)s.Type
-                });
+                }).ToList();
             }
 
             if (game.Keys != null && game.Keys.Count > 0)
-                manifest.Keys = game.Keys.Select(k => k.Value);
+                manifest.Keys = game.Keys.Select(k => k.Value).ToList();
 
             var serializedManifest = ManifestHelper.Serialize(manifest);
 
             return serializedManifest;
         }
 
-        public async Task<Game> Import(string serializedManifest)
+        public async Task<Game> Import(Guid objectKey)
         {
-            var manifest = ManifestHelper.Deserialize(serializedManifest);
+            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
 
-            Game game = await Get(manifest.Id);
-
-            var exists = game != null;
-
-            if (!exists)
-                game = new Game();
-
-            game.Id = manifest.Id;
-            game.Description = manifest.Description;
-            game.Notes = manifest.Notes;
-            game.ReleasedOn = manifest.ReleasedOn;
-            game.Singleplayer = manifest.Singleplayer;
-            game.SortTitle = manifest.SortTitle;
-            game.Title = manifest.Title;
-
-            #region Actions
-            if (game.Actions == null)
-                game.Actions = new List<Data.Models.Action>();
-
-            foreach (var action in game.Actions)
-                game.Actions.Remove(action);
-
-            if (manifest.Actions != null && manifest.Actions.Count() > 0)
-                game.Actions.AddRange(manifest.Actions.Select(a => new Data.Models.Action()
-                {
-                    Name = a.Name,
-                    Arguments = a.Arguments,
-                    Path = a.Path,
-                    WorkingDirectory = a.WorkingDirectory,
-                    PrimaryAction = a.IsPrimaryAction,
-                    SortOrder = a.SortOrder,
-                }));
-            #endregion
-
-            #region Tags
-            if (game.Tags == null)
-                game.Tags = new List<Data.Models.Tag>();
-
-            foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
+            using (var importArchive = ZipFile.OpenRead(importArchivePath))
             {
-                game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Tag()
-                {
-                    Name = tag
-                }));
-            }
+                // Read manifest
+                GameManifest manifest = ManifestHelper.Deserialize(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-            foreach (var tag in game.Tags.Where(c => !manifest.Tags.Any(t => c.Name == t)))
-                game.Tags.Remove(tag);
-            #endregion
+                Game game = await Get(manifest.Id);
 
-            #region Genres
-            if (game.Genres == null)
-                game.Genres = new List<Data.Models.Genre>();
+                var exists = game != null;
 
-            foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
-            {
-                game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre()
-                {
-                    Name = genre
-                }));
-            }
+                if (!exists)
+                    game = new Game();
 
-            foreach (var genre in game.Genres.Where(c => !manifest.Genre.Any(g => c.Name == g)))
-                game.Genres.Remove(genre);
-            #endregion
+                game.Id = manifest.Id;
+                game.Description = manifest.Description;
+                game.Notes = manifest.Notes;
+                game.ReleasedOn = manifest.ReleasedOn;
+                game.Singleplayer = manifest.Singleplayer;
+                game.SortTitle = manifest.SortTitle;
+                game.Title = manifest.Title;
 
-            #region Developers
-            if (game.Developers == null)
-                game.Developers = new List<Data.Models.Company>();
+                #region Actions
+                if (game.Actions == null)
+                    game.Actions = new List<Data.Models.Action>();
 
-            foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
-            {
-                game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company()
-                {
-                    Name = developer
-                }));
-            }
+                foreach (var action in game.Actions)
+                    game.Actions.Remove(action);
 
-            foreach (var developer in game.Developers.Where(c => !manifest.Developers.Any(d => c.Name == d)))
-                game.Developers.Remove(developer);
-            #endregion
-
-            #region Publishers
-            if (game.Publishers == null)
-                game.Publishers = new List<Data.Models.Company>();
-
-            foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
-            {
-                game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company()
-                {
-                    Name = publisher
-                }));
-            }
-
-            foreach (var publisher in game.Publishers.Where(c => !manifest.Publishers.Any(p => c.Name == p)))
-                game.Publishers.Remove(publisher);
-            #endregion
-
-            #region Multiplayer Modes
-            if (game.MultiplayerModes == null)
-                game.MultiplayerModes = new List<Data.Models.MultiplayerMode>();
-
-            foreach (var multiplayerMode in game.MultiplayerModes)
-                game.MultiplayerModes.Remove(multiplayerMode);
-
-            if (manifest.LanMultiplayer != null)
-                game.MultiplayerModes.Add(new MultiplayerMode()
-                {
-                    Type = MultiplayerType.Lan,
-                    MinPlayers = manifest.LanMultiplayer.MinPlayers,
-                    MaxPlayers = manifest.LanMultiplayer.MaxPlayers,
-                    Description = manifest.LanMultiplayer.Description,
-                });
-
-            if (manifest.LocalMultiplayer != null)
-                game.MultiplayerModes.Add(new MultiplayerMode()
-                {
-                    Type = MultiplayerType.Local,
-                    MinPlayers = manifest.LocalMultiplayer.MinPlayers,
-                    MaxPlayers = manifest.LocalMultiplayer.MaxPlayers,
-                    Description = manifest.LocalMultiplayer.Description,
-                });
-
-            if (manifest.OnlineMultiplayer != null)
-                game.MultiplayerModes.Add(new MultiplayerMode()
-                {
-                    Type = MultiplayerType.Online,
-                    MinPlayers = manifest.OnlineMultiplayer.MinPlayers,
-                    MaxPlayers= manifest.OnlineMultiplayer.MaxPlayers,
-                    Description = manifest.OnlineMultiplayer.Description,
-                });
-            #endregion
-
-            #region Save Paths
-            if (game.SavePaths == null)
-                game.SavePaths = new List<Data.Models.SavePath>();
-
-            foreach (var path in game.SavePaths)
-            {
-                var manifestSavePath = manifest.SavePaths.FirstOrDefault(sp => sp.Id == path.Id);
-
-                if (manifestSavePath != null)
-                {
-                    path.Path = manifestSavePath.Path;
-                    path.IsRegex = manifestSavePath.IsRegex;
-                    path.Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type);
-                }
-                else
-                    game.SavePaths.Remove(path);
-            }
-
-            foreach (var manifestSavePath in manifest.SavePaths.Where(msp => !game.SavePaths.Any(sp => sp.Id == msp.Id)))
-            {
-                game.SavePaths.Add(new Data.Models.SavePath()
-                {
-                    Path = manifestSavePath.Path,
-                    IsRegex = manifestSavePath.IsRegex,
-                    Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type)
-                });
-            }
-            #endregion
-
-            #region Keys
-            if (game.Keys == null)
-                game.Keys = new List<Data.Models.Key>();
-
-            foreach (var key in game.Keys)
-            {
-                if (!manifest.Keys.Contains(key.Value))
-                    game.Keys.Remove(key);
-            }
-
-            foreach (var key in manifest.Keys)
-            {
-                if (!game.Keys.Any(k => k.Value == key))
-                    game.Keys.Add(new Key()
+                if (manifest.Actions != null && manifest.Actions.Count() > 0)
+                    game.Actions.AddRange(manifest.Actions.Select(a => new Data.Models.Action()
                     {
-                        Value = key
-                    });
-            }
-            #endregion
+                        Name = a.Name,
+                        Arguments = a.Arguments,
+                        Path = a.Path,
+                        WorkingDirectory = a.WorkingDirectory,
+                        PrimaryAction = a.IsPrimaryAction,
+                        SortOrder = a.SortOrder,
+                    }));
+                #endregion
 
-            #region Scripts
-            if (game.Scripts == null)
-                game.Scripts = new List<Data.Models.Script>();
+                #region Tags
+                if (game.Tags == null)
+                    game.Tags = new List<Data.Models.Tag>();
 
-            foreach (var script in game.Scripts)
-            {
-                var manifestScript = manifest.Scripts.FirstOrDefault(s => s.Id == script.Id);
-
-                if (manifestScript != null)
+                foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
                 {
-                    script.Contents = manifestScript.Contents;
-                    script.Description = manifestScript.Description;
-                    script.Name = manifestScript.Name;
-                    script.RequiresAdmin = manifestScript.RequiresAdmin;
-                    script.Type = (Data.Enums.ScriptType)(int)manifestScript.Type;
+                    game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Tag()
+                    {
+                        Name = tag
+                    }));
                 }
-                else
-                    game.Scripts.Remove(script);
-            }
 
-            foreach (var manifestScript in manifest.Scripts.Where(ms => !game.Scripts.Any(s => s.Id == ms.Id)))
-            {
-                game.Scripts.Add(new Script()
+                foreach (var tag in game.Tags.Where(c => !manifest.Tags.Any(t => c.Name == t)))
+                    game.Tags.Remove(tag);
+                #endregion
+
+                #region Genres
+                if (game.Genres == null)
+                    game.Genres = new List<Data.Models.Genre>();
+
+                foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
                 {
-                    Contents = manifestScript.Contents,
-                    Description = manifestScript.Description,
-                    Name = manifestScript.Name,
-                    RequiresAdmin = manifestScript.RequiresAdmin,
-                    Type = (Data.Enums.ScriptType)(int)manifestScript.Type
-                });
+                    game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre()
+                    {
+                        Name = genre
+                    }));
+                }
+
+                foreach (var genre in game.Genres.Where(c => !manifest.Genre.Any(g => c.Name == g)))
+                    game.Genres.Remove(genre);
+                #endregion
+
+                #region Developers
+                if (game.Developers == null)
+                    game.Developers = new List<Data.Models.Company>();
+
+                foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
+                {
+                    game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company()
+                    {
+                        Name = developer
+                    }));
+                }
+
+                foreach (var developer in game.Developers.Where(c => !manifest.Developers.Any(d => c.Name == d)))
+                    game.Developers.Remove(developer);
+                #endregion
+
+                #region Publishers
+                if (game.Publishers == null)
+                    game.Publishers = new List<Data.Models.Company>();
+
+                foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
+                {
+                    game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company()
+                    {
+                        Name = publisher
+                    }));
+                }
+
+                foreach (var publisher in game.Publishers.Where(c => !manifest.Publishers.Any(p => c.Name == p)))
+                    game.Publishers.Remove(publisher);
+                #endregion
+
+                #region Multiplayer Modes
+                if (game.MultiplayerModes == null)
+                    game.MultiplayerModes = new List<Data.Models.MultiplayerMode>();
+
+                foreach (var multiplayerMode in game.MultiplayerModes)
+                    game.MultiplayerModes.Remove(multiplayerMode);
+
+                if (manifest.LanMultiplayer != null)
+                    game.MultiplayerModes.Add(new MultiplayerMode()
+                    {
+                        Type = MultiplayerType.Lan,
+                        MinPlayers = manifest.LanMultiplayer.MinPlayers,
+                        MaxPlayers = manifest.LanMultiplayer.MaxPlayers,
+                        Description = manifest.LanMultiplayer.Description,
+                    });
+
+                if (manifest.LocalMultiplayer != null)
+                    game.MultiplayerModes.Add(new MultiplayerMode()
+                    {
+                        Type = MultiplayerType.Local,
+                        MinPlayers = manifest.LocalMultiplayer.MinPlayers,
+                        MaxPlayers = manifest.LocalMultiplayer.MaxPlayers,
+                        Description = manifest.LocalMultiplayer.Description,
+                    });
+
+                if (manifest.OnlineMultiplayer != null)
+                    game.MultiplayerModes.Add(new MultiplayerMode()
+                    {
+                        Type = MultiplayerType.Online,
+                        MinPlayers = manifest.OnlineMultiplayer.MinPlayers,
+                        MaxPlayers = manifest.OnlineMultiplayer.MaxPlayers,
+                        Description = manifest.OnlineMultiplayer.Description,
+                    });
+                #endregion
+
+                #region Save Paths
+                if (game.SavePaths == null)
+                    game.SavePaths = new List<Data.Models.SavePath>();
+
+                foreach (var path in game.SavePaths)
+                {
+                    var manifestSavePath = manifest.SavePaths.FirstOrDefault(sp => sp.Id == path.Id);
+
+                    if (manifestSavePath != null)
+                    {
+                        path.Path = manifestSavePath.Path;
+                        path.IsRegex = manifestSavePath.IsRegex;
+                        path.Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type);
+                    }
+                    else
+                        game.SavePaths.Remove(path);
+                }
+
+                if (manifest.SavePaths != null)
+                    foreach (var manifestSavePath in manifest.SavePaths.Where(msp => !game.SavePaths.Any(sp => sp.Id == msp.Id)))
+                    {
+                        game.SavePaths.Add(new Data.Models.SavePath()
+                        {
+                            Path = manifestSavePath.Path,
+                            IsRegex = manifestSavePath.IsRegex,
+                            Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type)
+                        });
+                    }
+                #endregion
+
+                #region Keys
+                if (game.Keys == null)
+                    game.Keys = new List<Data.Models.Key>();
+
+                foreach (var key in game.Keys)
+                {
+                    if (!manifest.Keys.Contains(key.Value))
+                        game.Keys.Remove(key);
+                }
+
+                if (manifest.Keys != null)
+                    foreach (var key in manifest.Keys)
+                    {
+                        if (!game.Keys.Any(k => k.Value == key))
+                            game.Keys.Add(new Key()
+                            {
+                                Value = key
+                            });
+                    }
+                #endregion
+
+                #region Scripts
+                if (game.Scripts == null)
+                    game.Scripts = new List<Data.Models.Script>();
+
+                foreach (var script in game.Scripts)
+                {
+                    var manifestScript = manifest.Scripts.FirstOrDefault(s => s.Id == script.Id);
+
+                    if (manifestScript != null)
+                    {
+                        script.Contents = await importArchive.ReadAllTextAsync($"Scripts/{script.Id}");
+                        script.Description = manifestScript.Description;
+                        script.Name = manifestScript.Name;
+                        script.RequiresAdmin = manifestScript.RequiresAdmin;
+                        script.Type = (Data.Enums.ScriptType)(int)manifestScript.Type;
+                    }
+                    else
+                        game.Scripts.Remove(script);
+                }
+
+                if (manifest.Scripts != null)
+                    foreach (var manifestScript in manifest.Scripts.Where(ms => !game.Scripts.Any(s => s.Id == ms.Id)))
+                    {
+                        game.Scripts.Add(new Script()
+                        {
+                            Id = manifestScript.Id,
+                            Contents = await importArchive.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
+                            Description = manifestScript.Description,
+                            Name = manifestScript.Name,
+                            RequiresAdmin = manifestScript.RequiresAdmin,
+                            Type = (Data.Enums.ScriptType)(int)manifestScript.Type,
+                            CreatedOn = manifestScript.CreatedOn,
+                        });
+                    }
+                #endregion
+
+                #region Media
+                if (game.Media == null)
+                    game.Media = new List<Data.Models.Media>();
+
+                foreach (var media in game.Media)
+                {
+                    var manifestMedia = manifest.Media.FirstOrDefault(s => s.Id == media.Id);
+
+                    if (manifestMedia != null)
+                    {
+                        media.SourceUrl = manifestMedia.SourceUrl;
+                        media.FileId = manifestMedia.FileId;
+                        media.Type = (Data.Enums.MediaType)(int)manifestMedia.Type;
+                        media.MimeType = manifestMedia.MimeType;
+                        media.CreatedOn = manifestMedia.CreatedOn;
+
+                        importArchive.ExtractEntry($"Media/{media.FileId}", MediaService.GetImagePath(media), true);
+                    }
+                }
+
+                if (manifest.Media != null)
+                    foreach (var manifestMedia in manifest.Media.Where(mm => !game.Media.Any(m => m.Id != mm.Id)))
+                    {
+                        var media = new Media()
+                        {
+                            Id = manifestMedia.Id,
+                            FileId = manifestMedia.FileId,
+                            MimeType = manifestMedia.MimeType,
+                            SourceUrl = manifestMedia.SourceUrl,
+                            Type = (Data.Enums.MediaType)(int)manifestMedia.Type,
+                            CreatedOn = manifestMedia.CreatedOn,
+                        };
+
+                        game.Media.Add(media);
+
+                        importArchive.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetImagePath(media), true);
+                    }
+                #endregion
+
+                #region Archives
+                if (game.Archives == null)
+                    game.Archives = new List<Data.Models.Archive>();
+
+                foreach (var archive in game.Archives)
+                {
+                    var manifestArchive = manifest.Archives.FirstOrDefault(a => a.Id == archive.Id);
+
+                    if (manifestArchive != null)
+                    {
+                        archive.Changelog = manifestArchive.Changelog;
+                        archive.ObjectKey = manifestArchive.ObjectKey;
+                        archive.Version = manifestArchive.Version;
+                        archive.CreatedOn = manifestArchive.CreatedOn;
+
+                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
+                    }
+                }
+
+                if (manifest.Archives != null)
+                    foreach (var manifestArchive in manifest.Archives.Where(ma => !game.Archives.Any(a => a.Id == ma.Id)))
+                    {
+                        var archive = new Archive()
+                        {
+                            Id = manifestArchive.Id,
+                            ObjectKey = manifestArchive.ObjectKey,
+                            Changelog = manifestArchive.Changelog,
+                            Version = manifestArchive.Version,
+                            CreatedOn = manifestArchive.CreatedOn,
+                        };
+
+                        game.Archives.Add(archive);
+
+                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
+                    }
+                #endregion
+
+                if (exists)
+                    game = await Update(game);
+                else
+                    game = await Add(game);
+
+                return game;
             }
-            #endregion
-
-            if (exists)
-                game = await Update(game);
-            else
-                game = await Add(game);
-
-            return game;
         }
     }
 }

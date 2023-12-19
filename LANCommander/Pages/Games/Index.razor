@@ -74,38 +74,43 @@
     </Column>
 
     <Column TData="string[]" Title="Collections" Hidden="@(Picker.IsColumnHidden("Collections"))">
-        @foreach (var collection in context.Collections)
-        {
-            <Tag>@collection.Name</Tag>
-        }
+        @if (context.Collections != null)
+            foreach (var collection in context.Collections)
+            {
+                <Tag>@collection.Name</Tag>
+            }
     </Column>
 
     <Column TData="string[]" Title="Developers" Hidden="@(Picker.IsColumnHidden("Developers", false))">
-        @foreach (var dev in context.Developers)
-        {
-            <Tag>@dev.Name</Tag>
-        }
+        @if (context.Developers != null)
+            foreach (var dev in context.Developers)
+            {
+                <Tag>@dev.Name</Tag>
+            }
     </Column>
 
     <Column TData="string[]" Title="Publishers" Hidden="@(Picker.IsColumnHidden("Publishers", false))">
-        @foreach (var pub in context.Publishers)
-        {
-            <Tag>@pub.Name</Tag>
-        }
+        @if (context.Publishers != null)
+            foreach (var pub in context.Publishers)
+            {
+                <Tag>@pub.Name</Tag>
+            }
     </Column>
 
     <Column TData="string[]" Title="Genres" Hidden="@(Picker.IsColumnHidden("Genres", false))">
-        @foreach (var genre in context.Genres)
-        {
-            <Tag>@genre.Name</Tag>
-        }
+        @if (context.Genres != null)
+            foreach (var genre in context.Genres)
+            {
+                <Tag>@genre.Name</Tag>
+            }
     </Column>
 
     <Column TData="Data.Enums.MultiplayerType[]" Title="Multiplayer Modes" Hidden="@(Picker.IsColumnHidden("Multiplayer Modes"))">
-        @foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
-        {
-            <Tag>@mode.GetDisplayName()</Tag>
-        }
+        @if (context.MultiplayerModes != null)
+            foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
+            {
+                <Tag>@mode.GetDisplayName()</Tag>
+            }
     </Column>
 
     <ActionColumn Title="" Style="text-align: right">

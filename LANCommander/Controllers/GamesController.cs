@@ -29,7 +29,7 @@ namespace LANCommander.Controllers
             }
 
             Response.ContentType = "application/octet-stream";
-            Response.Headers.Append("Content-Disposition", @$"attachment; filename=""{game.Title}.Export.zip""");
+            Response.Headers.Append("Content-Disposition", @$"attachment; filename=""{game.Title}.lcx""");
 
             using (ZipArchive export = new ZipArchive(Response.BodyWriter.AsStream(), ZipArchiveMode.Create))
             {

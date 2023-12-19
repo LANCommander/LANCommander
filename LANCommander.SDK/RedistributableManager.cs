@@ -93,7 +93,7 @@ namespace LANCommander.SDK
                     File.Delete(detectionScriptTempFile);
 
                 if (Directory.Exists(extractTempPath))
-                    Directory.Delete(extractTempPath);
+                    Directory.Delete(extractTempPath, true);
             }
         }
 

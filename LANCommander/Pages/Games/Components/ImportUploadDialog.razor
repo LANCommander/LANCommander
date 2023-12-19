@@ -22,7 +22,7 @@
     <Space Direction="DirectionVHType.Horizontal">
         <SpaceItem>
             <InputFile @ref="FileInput" id="FileInput" OnChange="FileSelected" hidden />
-            <Upload Name="files" FileList="FileList" Accept=".lcx">
+            <Upload Name="files" FileList="FileList">
                 <label class="ant-btn" for="FileInput">
                     <Icon Type="upload" />
                     @if (File == null)

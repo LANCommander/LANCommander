@@ -237,13 +237,14 @@ namespace LANCommander.Services
                 if (game.Tags == null)
                     game.Tags = new List<Data.Models.Tag>();
 
-                foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
-                {
-                    game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Tag()
+                if (manifest.Tags != null)
+                    foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
                     {
-                        Name = tag
-                    }));
-                }
+                        game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Tag()
+                        {
+                            Name = tag
+                        }));
+                    }
 
                 foreach (var tag in game.Tags.Where(c => !manifest.Tags.Any(t => c.Name == t)))
                     game.Tags.Remove(tag);
@@ -253,13 +254,14 @@ namespace LANCommander.Services
                 if (game.Genres == null)
                     game.Genres = new List<Data.Models.Genre>();
 
-                foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
-                {
-                    game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre()
+                if (manifest.Genre != null)
+                    foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
                     {
-                        Name = genre
-                    }));
-                }
+                        game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre()
+                        {
+                            Name = genre
+                        }));
+                    }
 
                 foreach (var genre in game.Genres.Where(c => !manifest.Genre.Any(g => c.Name == g)))
                     game.Genres.Remove(genre);
@@ -269,13 +271,14 @@ namespace LANCommander.Services
                 if (game.Developers == null)
                     game.Developers = new List<Data.Models.Company>();
 
-                foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
-                {
-                    game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company()
+                if (manifest.Developers != null)
+                    foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
                     {
-                        Name = developer
-                    }));
-                }
+                        game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company()
+                        {
+                            Name = developer
+                        }));
+                    }
 
                 foreach (var developer in game.Developers.Where(c => !manifest.Developers.Any(d => c.Name == d)))
                     game.Developers.Remove(developer);
@@ -285,13 +288,14 @@ namespace LANCommander.Services
                 if (game.Publishers == null)
                     game.Publishers = new List<Data.Models.Company>();
 
-                foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
-                {
-                    game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company()
+                if (manifest.Publishers != null)
+                    foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
                     {
-                        Name = publisher
-                    }));
-                }
+                        game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company()
+                        {
+                            Name = publisher
+                        }));
+                    }
 
                 foreach (var publisher in game.Publishers.Where(c => !manifest.Publishers.Any(p => c.Name == p)))
                     game.Publishers.Remove(publisher);

@@ -21,6 +21,15 @@
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
+
+        private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
+        public DriveInfo[] GetDrives()
+        {
+            if (Drives == null || Drives.Length == 0)
+                Drives = DriveInfo.GetDrives();
+
+            return Drives;
+        }
     }
 
     public class LANCommanderBeaconSettings

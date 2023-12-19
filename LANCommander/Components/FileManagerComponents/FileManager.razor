@@ -1,5 +1,6 @@
 ﻿@using AntDesign.TableModels;
 @using LANCommander.Components.FileManagerComponents
+@using LANCommander.Components.FileManagerComponents.Sources
 @inject ArchiveService ArchiveService
 @inject IMessageService MessageService
 @namespace LANCommander.Components
@@ -165,6 +166,7 @@
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
     FileManagerSource Source = FileManagerSource.FileSystem;
+    IFileManagerSource FileSource;
 
     FileManagerDirectory Path { get; set; } = new FileManagerDirectory();
 
@@ -191,11 +193,17 @@
     protected override async Task OnInitializedAsync()
     {
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
+        {
+            FileSource = new FileManagerLocalDiskSource(WorkingDirectory);
             Source = FileManagerSource.FileSystem;
+        }
         else if (ArchiveId != Guid.Empty)
             Source = FileManagerSource.Archive;
 
-        Directories = await GetDirectoriesAsync();
+        Directories = FileSource.GetDirectoryTree().ToHashSet();
+        // Directories = await GetDirectoriesAsync();
+
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task<HashSet<FileManagerDirectory>> GetDirectoriesAsync()
@@ -284,10 +292,12 @@
 
     async Task ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
     {
-        if (Path != null && !String.IsNullOrWhiteSpace(Path.Path) && directory.Path != Path.Path && Past.LastOrDefault()?.Path != directory.Path)
-            Past.Add(Path);
+        var currentPath = FileSource.GetCurrentPath();
 
-        Path = directory;
+        if (currentPath != null && !String.IsNullOrWhiteSpace(currentPath.Path) && directory.Path != currentPath.Path && Past.LastOrDefault()?.Path != directory.Path)
+            Past.Add(currentPath);
+
+        FileSource.SetCurrentPath(directory);
 
         await UpdateEntries();
         UpdateBreadcrumbs();
@@ -300,30 +310,15 @@
 
     async Task ExpandTree(TreeEventArgs<FileManagerDirectory> args)
     {
-        if (Source == FileManagerSource.FileSystem)
-        {
-            var directory = (FileManagerDirectory)args.Node.DataItem;
+        var directory = (FileManagerDirectory)args.Node.DataItem;
 
-            foreach (var child in directory.Children)
-            {
-                await Task.Run(() =>
-                {
-                    var paths = Directory.EnumerateDirectories(child.Path, "*", new EnumerationOptions
-                        {
-                            IgnoreInaccessible = true,
-                            RecurseSubdirectories = true,
-                            MaxRecursionDepth = 1
-                        });
-
-                    child.PopulateChildren(paths);
-                });
-            }
-        }
+        directory = FileSource.ExpandNode(directory);
     }
 
     async Task UpdateEntries()
     {
-        Entries.Clear();
+        Entries = FileSource.GetEntries().ToList();
+        /*Entries.Clear();
 
         switch (Source)
         {
@@ -334,7 +329,7 @@
             case FileManagerSource.Archive:
                 await UpdateArchiveEntries();
                 break;
-        }
+        }*/
     }
 
     void UpdateFileSystemEntries()

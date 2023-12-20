@@ -132,6 +132,10 @@ label.ant-btn-icon-only {
     padding-left: 4px;
 }
 
+.file-manager .ant-tree-title {
+    white-space: nowrap;
+}
+
 .file-manager .ant-tree-treenode:hover,
 .file-manager .ant-tree-treenode:active {
     background: rgba(0, 0, 0, 0.018);

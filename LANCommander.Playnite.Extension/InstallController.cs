@@ -41,7 +41,7 @@ namespace LANCommander.PlaynitePlugin
 
             var result = Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
-                var gameManager = new GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory);
+                var gameManager = new GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory, new PlayniteLogger(Logger));
 
                 Stopwatch stopwatch = new Stopwatch();
 
@@ -96,7 +96,7 @@ namespace LANCommander.PlaynitePlugin
             {
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
-                    var redistributableManager = new RedistributableManager(Plugin.LANCommanderClient);
+                    var redistributableManager = new RedistributableManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
 
                     redistributableManager.Install(game);
                 },

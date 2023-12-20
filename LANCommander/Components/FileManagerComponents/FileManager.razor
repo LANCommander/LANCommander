@@ -307,11 +307,11 @@
 
             await Refresh();
 
-            await MessageService.Success("Folder created!");
+            MessageService.Success("Folder created!");
         }
         catch
         {
-            await MessageService.Error("Error creating folder!");
+            MessageService.Error("Error creating folder!");
         }
     }
 

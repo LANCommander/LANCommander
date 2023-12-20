@@ -14,8 +14,9 @@
 
     private Guid PaneId = Guid.NewGuid();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await JS.InvokeVoidAsync("SplitPane.Init", PaneId);
+        if (firstRender)
+            await JS.InvokeVoidAsync("SplitPane.Init", PaneId);
     }
 }

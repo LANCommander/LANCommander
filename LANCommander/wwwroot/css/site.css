@@ -166,8 +166,25 @@ label.ant-btn-icon-only {
     flex-direction: row;
 }
 
+.split-pane .pane {
+    overflow-x: scroll;
+}
+
 .gutter {
     cursor: e-resize;
+    margin-left: -4px;
+    margin-right: -5px;
+    position: relative;
+}
+
+.gutter::before {
+    content: '';
+    width: 1px;
+    background-color: #303030;
+    position: absolute;
+    top: 0;
+    left: 4px;
+    bottom: 0;
 }
 
 .file-picker-dialog .ant-modal-body {

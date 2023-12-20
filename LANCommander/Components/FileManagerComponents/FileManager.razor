@@ -150,15 +150,6 @@
              </Table>
         </Pane>
     </SplitPane>
-    <div class="file-manager-body split-pane">
-        <div class="file-manager-tree pane">
-
-        </div>
-
-        <div class="file-manager-list pane">
-
-         </div>
-     </div>
 </div>
 
 <NewFolderModal @ref="NewFolderModal" OnFolderNameEntered="AddFolder" />
@@ -175,7 +166,6 @@
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
-    FileManagerSource Source = FileManagerSource.FileSystem;
     IFileManagerSource FileSource;
 
     List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
@@ -201,19 +191,12 @@
     protected override async Task OnInitializedAsync()
     {
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
-        {
             FileSource = new FileManagerLocalDiskSource(WorkingDirectory);
-            Source = FileManagerSource.FileSystem;
-        }
         else if (ArchiveId != Guid.Empty)
-        {
             FileSource = new FileManagerArchiveSource(ArchiveService, ArchiveId);
-            Source = FileManagerSource.Archive;
-        }
 
         Directories = FileSource.GetDirectoryTree().ToHashSet();
 
-        await JS.InvokeVoidAsync("SplitPane.Init");
 
         await InvokeAsync(StateHasChanged);
     }

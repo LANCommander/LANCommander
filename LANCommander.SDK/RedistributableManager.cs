@@ -54,29 +54,46 @@ namespace LANCommander.SDK
             {
                 var installScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.Install);
                 installScriptTempFile = ScriptHelper.SaveTempScript(installScript);
+                Logger?.LogTrace("Redistributable install script saved to {Path}", installScriptTempFile);
 
                 var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.DetectInstall);
                 detectionScriptTempFile = ScriptHelper.SaveTempScript(detectionScript);
+                Logger?.LogTrace("Redistributable install detection script saved to {Path}", detectionScriptTempFile);
 
                 var detectionResult = RunScript(detectionScriptTempFile, redistributable, detectionScript.RequiresAdmin);
+
+                Logger?.LogTrace("Redistributable install detection returned error code {ErrorCode}", detectionResult);
 
                 // Redistributable is not installed
                 if (detectionResult == 0)
                 {
+                    Logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
+
                     if (redistributable.Archives.Count() > 0)
                     {
+                        Logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
+
                         var extractionResult = DownloadAndExtract(redistributable);
 
                         if (extractionResult.Success)
                         {
                             extractTempPath = extractionResult.Directory;
 
+                            Logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
+                            Logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
+
                             RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
+                        }
+                        else
+                        {
+                            Logger?.LogError("There was an issue downloading and extracting the archive for redistributable {RedistributableName}", redistributable.Name);
                         }
                     }
                     else
                     {
-                        RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
+                        Logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
+
+                        RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin);
                     }
                 }
             }

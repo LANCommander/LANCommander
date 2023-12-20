@@ -197,6 +197,10 @@
 
         Directories = FileSource.GetDirectoryTree().ToHashSet();
 
+        if (FileSource is FileManagerLocalDiskSource)
+            ChangeDirectory(FileSource.GetDirectory(WorkingDirectory), true);
+        else if (FileSource is FileManagerArchiveSource)
+            ChangeDirectory(Directories.First(), true);
 
         await InvokeAsync(StateHasChanged);
     }

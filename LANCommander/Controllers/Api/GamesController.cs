@@ -65,9 +65,13 @@ namespace LANCommander.Controllers.Api
             return manifest;
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}/Download")]
         public async Task<IActionResult> Download(Guid id)
         {
+            if (!Settings.Archives.AllowInsecureDownloads && (User == null || User.Identity == null || !User.Identity.IsAuthenticated))
+                return Unauthorized();
+
             var game = await GameService.Get(id);
 
             if (game == null)

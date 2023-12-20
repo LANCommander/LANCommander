@@ -65,6 +65,7 @@
     public class LANCommanderArchiveSettings
     {
         public bool EnablePatching { get; set; } = false;
+        public bool AllowInsecureDownloads { get; set; } = false;
         public string StoragePath { get; set; } = "Uploads";
     }
 

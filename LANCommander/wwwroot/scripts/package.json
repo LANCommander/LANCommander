@@ -5,5 +5,8 @@
     "typescript": "^5.2.2",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "split.js": "^1.6.5"
   }
 }

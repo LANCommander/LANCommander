@@ -3,7 +3,8 @@
     "target": "ES6",
     "module": "ESNext",
     "outDir": "./dist",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true
   },
   "include": [ "wwwroot/scripts/**/*.ts" ],
   "exclude": [ "node_modules" ]

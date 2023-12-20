@@ -3,6 +3,7 @@
 @using LANCommander.Components.FileManagerComponents.Sources
 @inject ArchiveService ArchiveService
 @inject IMessageService MessageService
+@inject IJSRuntime JS
 @namespace LANCommander.Components
 
 <div class="file-manager">
@@ -30,7 +31,7 @@
             {
                 <SpaceItem>
                     <Tooltip Title="Up a Level" MouseEnterDelay="2">
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(Path.Parent == null)" />
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(FileSource.GetCurrentPath().Parent == null)" />
                     </Tooltip>
                 </SpaceItem>
             }
@@ -92,8 +93,8 @@
         </Space>
     </GridRow>
 
-    <GridRow Class="file-manager-body">
-        <GridCol Span="6" Class="file-manager-tree">
+    <SplitPane>
+        <Pane Size="25%">
             <Tree TItem="FileManagerDirectory"
                   DataSource="Directories"
                   SwitcherIcon="@IconType.Outline.Down"
@@ -118,9 +119,8 @@
                     }
                 </TitleIconTemplate>
             </Tree>
-        </GridCol>
-
-        <GridCol Span="18" Class="file-manager-list">
+        </Pane>
+        <Pane Size="75%">
             <Table TItem="IFileManagerEntry"
                    DataSource="Entries"
                    HidePagination="true"
@@ -141,24 +141,34 @@
                     }
                 </Column>
                 <PropertyColumn Property="e => e.Path" Sortable Title="Name">
-                    @GetEntryName(context)
+                     @FileSource.GetEntryName(context)
                 </PropertyColumn>
                 <PropertyColumn Property="e => e.Size" Sortable Title="Size">
-                    @ByteSizeLib.ByteSize.FromBytes(context.Size)
+                     @ByteSizeLib.ByteSize.FromBytes(context.Size)
                 </PropertyColumn>
                 <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
              </Table>
-         </GridCol>
-     </GridRow>
+        </Pane>
+    </SplitPane>
+    <div class="file-manager-body split-pane">
+        <div class="file-manager-tree pane">
+
+        </div>
+
+        <div class="file-manager-list pane">
+
+         </div>
+     </div>
 </div>
 
 <NewFolderModal @ref="NewFolderModal" OnFolderNameEntered="AddFolder" />
-<UploadModal @ref="UploadModal" Path="@Path.Path" OnUploadCompleted="() => Refresh()" />
+<UploadModal @ref="UploadModal" Path="@FileSource.GetCurrentPath().Path" OnUploadCompleted="() => Refresh()" />
 
  @code {
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public string WorkingDirectory { get; set; }
     [Parameter] public bool SelectMultiple { get; set; } = true;
+    [Parameter] public bool IncludeDirectories { get; set; } = true;
     [Parameter] public FileManagerFeatures Features { get; set; } = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete;
     [Parameter] public IEnumerable<IFileManagerEntry> Selected { get; set; } = new List<IFileManagerEntry>();
     [Parameter] public EventCallback<IEnumerable<IFileManagerEntry>> SelectedChanged { get; set; }
@@ -167,8 +177,6 @@
 
     FileManagerSource Source = FileManagerSource.FileSystem;
     IFileManagerSource FileSource;
-
-    FileManagerDirectory Path { get; set; } = new FileManagerDirectory();
 
     List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
     List<FileManagerDirectory> Future { get; set; } = new List<FileManagerDirectory>();
@@ -198,96 +206,16 @@
             Source = FileManagerSource.FileSystem;
         }
         else if (ArchiveId != Guid.Empty)
+        {
+            FileSource = new FileManagerArchiveSource(ArchiveService, ArchiveId);
             Source = FileManagerSource.Archive;
+        }
 
         Directories = FileSource.GetDirectoryTree().ToHashSet();
-        // Directories = await GetDirectoriesAsync();
+
+        await JS.InvokeVoidAsync("SplitPane.Init");
 
         await InvokeAsync(StateHasChanged);
-    }
-
-    async Task<HashSet<FileManagerDirectory>> GetDirectoriesAsync()
-    {
-        switch (Source)
-        {
-            case FileManagerSource.FileSystem:
-                return await GetFileSystemDirectoriesAsync(WorkingDirectory);
-            case FileManagerSource.Archive:
-                return await GetArchiveDirectoriesAsync(ArchiveId);
-        }
-
-        return new HashSet<FileManagerDirectory>();
-    }
-
-    async Task<HashSet<FileManagerDirectory>> GetFileSystemDirectoriesAsync(string path)
-    {
-        var paths = Directory.EnumerateDirectories(path, "*", new EnumerationOptions
-        {
-            IgnoreInaccessible = true,
-            RecurseSubdirectories = true,
-            MaxRecursionDepth = 1
-        });
-
-        var root = new FileManagerDirectory
-        {
-            Name = path,
-            Path = path,
-            IsExpanded = true
-        };
-
-        root.PopulateChildren(paths);
-
-        await ChangeDirectory(root, true);
-
-        return new HashSet<FileManagerDirectory>
-        {
-            root
-        };
-    }
-
-    async Task<HashSet<FileManagerDirectory>> GetArchiveDirectoriesAsync(Guid archiveId)
-    {
-        try
-        {
-            var entries = await ArchiveService.GetContents(archiveId);
-            var directories = new HashSet<FileManagerDirectory>();
-
-            var root = new FileManagerDirectory
-                {
-                    Name = "Root",
-                    Path = "",
-                    IsExpanded = true
-                };
-
-            root.PopulateChildren(entries);
-
-            await ChangeDirectory(root, true);
-
-            return new HashSet<FileManagerDirectory>
-            {
-                root
-            };
-        }
-        catch (FileNotFoundException ex)
-        {
-            MessageService.Error("Could not open archive! Is it missing?");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("An unknown error occurred trying to open the archive");
-        }
-
-        return new HashSet<FileManagerDirectory>();
-    }
-
-    string GetEntryName(IFileManagerEntry entry)
-    {
-        if (String.IsNullOrWhiteSpace(entry.Name) && entry.Size == 0)
-        {
-            return entry.Path.TrimEnd('/').Split('/').Last();
-        }
-        else
-            return entry.Name;
     }
 
     async Task ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
@@ -318,114 +246,13 @@
     async Task UpdateEntries()
     {
         Entries = FileSource.GetEntries().ToList();
-        /*Entries.Clear();
-
-        switch (Source)
-        {
-            case FileManagerSource.FileSystem:
-                await Task.Run(UpdateFileSystemEntries);
-                break;
-
-            case FileManagerSource.Archive:
-                await UpdateArchiveEntries();
-                break;
-        }*/
-    }
-
-    void UpdateFileSystemEntries()
-    {
-        var entries = Directory.EnumerateFileSystemEntries(Path.Path);
-        var separator = System.IO.Path.DirectorySeparatorChar;
-
-        foreach (var entry in entries)
-        {
-            if (Directory.Exists(entry))
-            {
-                try
-                {
-                    var info = new DirectoryInfo(entry);
-                    var directory = new FileManagerDirectory
-                        {
-                            Path = entry,
-                            Name = entry.Substring(Path.Path.Length).TrimStart(separator),
-                            ModifiedOn = info.LastWriteTime,
-                            CreatedOn = info.CreationTime,
-                            Parent = Path
-                        };
-
-                    if (EntryVisible.Invoke(directory))
-                        Entries.Add(directory);
-                }
-                catch { }
-            }
-            else
-            {
-                try
-                {
-                    var info = new FileInfo(entry);
-                    var file = new FileManagerFile
-                        {
-                            Path = entry,
-                            Name = System.IO.Path.GetFileName(entry),
-                            ModifiedOn = info.LastWriteTime,
-                            CreatedOn = info.CreationTime,
-                            Size = info.Length,
-                            Parent = Path
-                        };
-
-                    if (EntryVisible.Invoke(file))
-                        Entries.Add(file);
-                }
-                catch { }
-            }
-        }
-    }
-
-    async Task UpdateArchiveEntries()
-    {
-        var entries = await ArchiveService.GetContents(ArchiveId);
-        var separator = '/';
-
-        foreach (var entry in entries.Where(e => e.FullName != Path.Path && e.FullName.StartsWith(Path.Path) && !e.FullName.Substring(Path.Path.Length).TrimEnd(separator).Contains(separator)))
-        {
-            if (entry.FullName.EndsWith(separator))
-            {
-                var directory = new FileManagerDirectory
-                {
-                    Path = entry.FullName,
-                    Name = entry.Name,
-                    ModifiedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                    CreatedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                    Size = entry.Length,
-                    Parent = Path
-                };
-
-                if (EntryVisible.Invoke(directory))
-                    Entries.Add(directory);
-            }
-            else
-            {
-                var file = new FileManagerFile
-                {
-                    Path = entry.FullName,
-                    Name = entry.Name,
-                    ModifiedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                    CreatedOn = entry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                    Size = entry.Length,
-                    Parent = Path
-                };
-
-                if (EntryVisible.Invoke(file))
-                    Entries.Add(file);
-            }
-        }
     }
 
     void UpdateBreadcrumbs()
     {
         Breadcrumbs.Clear();
 
-        var currentPath = Path;
+        var currentPath = FileSource.GetCurrentPath();
 
         while (currentPath != null)
         {
@@ -441,7 +268,7 @@
     {
         if (Past.Count > 0)
         {
-            Future.Add(Path);
+            Future.Add(FileSource.GetCurrentPath());
             await ChangeDirectory(Past.Last(), false);
             Past = Past.Take(Past.Count - 1).ToList();
         }
@@ -451,7 +278,7 @@
     {
         if (Future.Count > 0)
         {
-            Past.Add(Path);
+            Past.Add(FileSource.GetCurrentPath());
             await ChangeDirectory(Future.First(), false);
             Future = Future.Skip(1).ToList();
         }
@@ -459,25 +286,24 @@
 
     async Task NavigateUp()
     {
-        if (Path.Parent != null)
-            await ChangeDirectory(Path.Parent, true);
+        var currentPath = FileSource.GetCurrentPath();
+
+        if (currentPath.Parent != null)
+            await ChangeDirectory(currentPath.Parent, true);
     }
 
     async Task Refresh()
     {
-        await ChangeDirectory(Path, false);
+        await ChangeDirectory(FileSource.GetCurrentPath(), false);
 
         StateHasChanged();
     }
 
     async Task AddFolder(string name)
     {
-        if (Source == FileManagerSource.Archive)
-            throw new NotImplementedException();
-
         try
         {
-            Directory.CreateDirectory(System.IO.Path.Combine(Path.Path, name));
+            FileSource.CreateDirectory(System.IO.Path.Combine(FileSource.GetCurrentPath().Path, name));
 
             await Refresh();
 
@@ -491,17 +317,11 @@
 
     async Task Delete()
     {
-        if (Source == FileManagerSource.Archive)
-            throw new NotImplementedException();
-
         try
         {
             foreach (var entry in Selected)
             {
-                if (entry is FileManagerDirectory)
-                    Directory.Delete(entry.Path);
-                else if (entry is FileManagerFile)
-                    File.Delete(entry.Path);
+                FileSource.DeleteEntry(entry);
             }
 
             Selected = new List<IFileManagerEntry>();

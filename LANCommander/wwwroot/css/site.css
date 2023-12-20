@@ -157,6 +157,19 @@ label.ant-btn-icon-only {
     margin-top: 4px;
 }
 
+.file-manager .ant-tree-treenode-selected {
+    background-color: #11263c;
+}
+
+.split-pane {
+    display: flex;
+    flex-direction: row;
+}
+
+.gutter {
+    cursor: e-resize;
+}
+
 .file-picker-dialog .ant-modal-body {
     padding: 0;
 }

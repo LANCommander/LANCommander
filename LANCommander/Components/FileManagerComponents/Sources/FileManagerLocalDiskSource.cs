@@ -8,8 +8,6 @@ namespace LANCommander.Components.FileManagerComponents.Sources
     public class FileManagerLocalDiskSource : IFileManagerSource
     {
         private FileManagerDirectory CurrentPath { get; set; }
-        private FileManagerDirectory Root { get; set; }
-        private Dictionary<string, IFileManagerEntry> Entries { get; set; }
 
         public FileManagerLocalDiskSource(string path) {
             SetCurrentPath(GetDirectory(path));
@@ -65,29 +63,13 @@ namespace LANCommander.Components.FileManagerComponents.Sources
             });
         }
 
-        private void CollapseNode(FileManagerDirectory node)
-        {
-            /*foreach (var entry in Entries.Values.Where(e => IsDirectChild(node, e)))
-            {
-                if (entry is FileManagerDirectory && (entry as FileManagerDirectory).IsExpanded)
-                    CollapseNode(entry as FileManagerDirectory);
-
-                Entries.Remove(entry.Path);
-            }*/
-        }
-
-        private bool IsDirectChild(FileManagerDirectory parent, IFileManagerEntry entry)
-        {
-            return entry.Path.StartsWith(parent.Path) && entry.Path.TrimEnd(Path.DirectorySeparatorChar).Substring(parent.Path.Length).Split(Path.DirectorySeparatorChar).Length == 1;
-        }
-
         public IEnumerable<IFileManagerEntry> GetEntries()
         {
             var entries = new List<IFileManagerEntry>();
 
             if (CurrentPath != null && !String.IsNullOrWhiteSpace(CurrentPath.Path))
             {
-                var filePaths = Directory.EnumerateFiles(CurrentPath.Path);
+                var filePaths = Directory.EnumerateFileSystemEntries(CurrentPath.Path);
 
                 foreach (var filePath in filePaths)
                 {
@@ -204,11 +186,9 @@ namespace LANCommander.Components.FileManagerComponents.Sources
             }));
             #else
             roots.Add(new FileManagerDirectory {
-                new FileManagerDirectory {
-                    Name = "/",
-                    Path = "/",
-                    IsExpanded = true"
-                }
+                Name = "/",
+                Path = "/",
+                IsExpanded = true
             });
             #endif
 

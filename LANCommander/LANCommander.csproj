@@ -20,6 +20,12 @@
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))">
 	    <DefineConstants>MACOS</DefineConstants>
     </PropertyGroup>
+    <ItemGroup>
+      <TypeScriptCompile Remove="wwwroot\scripts\SplitPane.ts" />
+    </ItemGroup>
+    <ItemGroup>
+      <Content Include="wwwroot\scripts\SplitPane.ts" />
+    </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AntDesign" Version="0.16.1" />

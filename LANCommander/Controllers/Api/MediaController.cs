@@ -1,4 +1,5 @@
-﻿using LANCommander.Data;
+﻿using AutoMapper;
+using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Models;
@@ -14,25 +15,26 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class MediaController : ControllerBase
     {
+        private readonly IMapper Mapper;
         private readonly MediaService MediaService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public MediaController(MediaService mediaService)
+        public MediaController(IMapper mapper, MediaService mediaService)
         {
-           
+            Mapper = mapper;
             MediaService = mediaService;
         }
 
         [HttpGet]
-        public async Task<IEnumerable<Media>> Get()
+        public async Task<IEnumerable<SDK.Models.Media>> Get()
         {
-            return await MediaService.Get();
+            return Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.Get());
         }
 
         [HttpGet("{id}")]
-        public async Task<Media> Get(Guid id)
+        public async Task<SDK.Models.Media> Get(Guid id)
         {
-            return await MediaService.Get(id);
+            return Mapper.Map<SDK.Models.Media>(await MediaService.Get(id));
         }
 
         [AllowAnonymous]

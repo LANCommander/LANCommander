@@ -13,8 +13,8 @@ namespace LANCommander.SDK.Models
         public string InstallDirectory { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Tag> Tags { get; set; }
-        public virtual Company Publisher { get; set; }
-        public virtual Company Developer { get; set; }
+        public virtual IEnumerable<Company> Publishers { get; set; }
+        public virtual IEnumerable<Company> Developers { get; set; }
         public virtual IEnumerable<Archive> Archives { get; set; }
         public virtual IEnumerable<Script> Scripts { get; set; }
         public virtual IEnumerable<Media> Media { get; set; }

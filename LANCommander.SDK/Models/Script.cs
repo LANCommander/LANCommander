@@ -12,6 +12,5 @@ namespace LANCommander.SDK.Models
         public string Description { get; set; }
         public bool RequiresAdmin { get; set; }
         public string Contents { get; set; }
-        public virtual Game Game { get; set; }
     }
 }

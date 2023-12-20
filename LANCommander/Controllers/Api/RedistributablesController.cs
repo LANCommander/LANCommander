@@ -1,4 +1,5 @@
-﻿using LANCommander.Data.Models;
+﻿using AutoMapper;
+using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Models;
 using LANCommander.Services;
@@ -12,25 +13,26 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class RedistributablesController : ControllerBase
     {
+        private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public RedistributablesController(RedistributableService redistributableService)
+        public RedistributablesController(IMapper mapper, RedistributableService redistributableService)
         {
-
+            Mapper = mapper;
             RedistributableService = redistributableService;
         }
 
         [HttpGet]
-        public async Task<IEnumerable<Redistributable>> Get()
+        public async Task<IEnumerable<SDK.Models.Redistributable>> Get()
         {
-            return await RedistributableService.Get();
+            return Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.Get());
         }
 
         [HttpGet("{id}")]
-        public async Task<Redistributable> Get(Guid id)
+        public async Task<SDK.Models.Redistributable> Get(Guid id)
         {
-            return await RedistributableService.Get(id);
+            return Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.Get(id));
         }
 
         [HttpGet("{id}/Download")]

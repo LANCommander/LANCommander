@@ -1,4 +1,5 @@
-﻿using LANCommander.Data;
+﻿using AutoMapper;
+using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Models;
@@ -15,21 +16,22 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class GamesController : ControllerBase
     {
+        private readonly IMapper Mapper;
         private readonly GameService GameService;
         private readonly UserManager<User> UserManager;
         private readonly RoleManager<Role> RoleManager;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public GamesController(GameService gameService, UserManager<User> userManager, RoleManager<Role> roleManager)
+        public GamesController(IMapper mapper, GameService gameService, UserManager<User> userManager, RoleManager<Role> roleManager)
         {
-           
+            Mapper = mapper;
             GameService = gameService;
             UserManager = userManager;
             RoleManager = roleManager;
         }
 
         [HttpGet]
-        public async Task<IEnumerable<Game>> Get()
+        public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole("Administrator"))
             {
@@ -45,16 +47,16 @@ namespace LANCommander.Controllers.Api
                     games.AddRange(role.Collections.SelectMany(c => c.Games).DistinctBy(g => g.Id).ToList());
                 }
 
-                return games.DistinctBy(g => g.Id).ToList();
+                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games.DistinctBy(g => g.Id).ToList());
             }
 
-            return await GameService.Get();
+            return Mapper.Map<IEnumerable<SDK.Models.Game>>(await GameService.Get());
         }
 
         [HttpGet("{id}")]
-        public async Task<Game> Get(Guid id)
+        public async Task<SDK.Models.Game> Get(Guid id)
         {
-            return await GameService.Get(id);
+            return Mapper.Map<SDK.Models.Game>(await GameService.Get(id));
         }
 
         [HttpGet("{id}/Manifest")]

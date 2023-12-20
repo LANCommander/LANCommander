@@ -10,6 +10,5 @@ namespace LANCommander.SDK.Models
         public SavePathType Type { get; set; }
         public string Path { get; set; }
         public bool IsRegex { get; set; }
-        public virtual Game Game { get; set; }
     }
 }

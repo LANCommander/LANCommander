@@ -53,6 +53,8 @@ namespace LANCommander
                 option.DisableImplicitFromServicesParameters = true;
             });
 
+            builder.Services.AddAutoMapper(typeof(AutoMapper));
+
             Logger.Debug("Starting web server on port {Port}", settings.Port);
             builder.WebHost.ConfigureKestrel(options =>
             {

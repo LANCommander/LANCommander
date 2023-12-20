@@ -1,4 +1,5 @@
-﻿using LANCommander.Data;
+﻿using AutoMapper;
+using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Models;
@@ -17,27 +18,29 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class SavesController : ControllerBase
     {
+        private readonly IMapper Mapper;
         private readonly GameService GameService;
         private readonly GameSaveService GameSaveService;
         private readonly UserManager<User> UserManager;
 
-        public SavesController(GameService gameService, GameSaveService gameSaveService, UserManager<User> userManager)
+        public SavesController(IMapper mapper, GameService gameService, GameSaveService gameSaveService, UserManager<User> userManager)
         {
+            Mapper = mapper;
             GameService = gameService;
             GameSaveService = gameSaveService;
             UserManager = userManager;
         }
 
         [HttpGet]
-        public async Task<IEnumerable<GameSave>> Get()
+        public async Task<IEnumerable<SDK.Models.GameSave>> Get()
         {
-            return await GameSaveService.Get();
+            return Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.Get());
         }
 
         [HttpGet("{id}")]
-        public async Task<GameSave> Get(Guid id)
+        public async Task<SDK.Models.GameSave> Get(Guid id)
         {
-            return await GameSaveService.Get(id);
+            return Mapper.Map<SDK.Models.GameSave>(await GameSaveService.Get(id));
         }
 
         [HttpGet("DownloadLatest/{gameId}")]

@@ -36,6 +36,7 @@
                         }
                     }
                 </SubMenu>
+                <MenuItem RouterLink="@($"/Servers/{Server.Id}/Scripts")">Scripts</MenuItem>
                 <MenuItem RouterLink="@($"/Servers/{Server.Id}/Files")">Files</MenuItem>
             }
         </Menu>
@@ -158,6 +159,11 @@
 
                     <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
                 }
+            }
+
+            @if (Panel == "Scripts")
+            {
+                <ScriptEditor ServerId="@Server.Id" AllowedTypes="new ScriptType[] { ScriptType.BeforeStart, ScriptType.AfterStop }" />
             }
 
             @if (Panel == "Files")

@@ -15,6 +15,10 @@ namespace LANCommander.Data.Enums
         [Display(Name = "Save Download")]
         SaveDownload,
         [Display(Name = "Detect Install")]
-        DetectInstall
+        DetectInstall,
+        [Display(Name = "Before Start")]
+        BeforeStart,
+        [Display(Name = "After Stop")]
+        AfterStop,
     }
 }

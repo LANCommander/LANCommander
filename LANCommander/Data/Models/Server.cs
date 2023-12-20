@@ -27,5 +27,6 @@ namespace LANCommander.Data.Models
 
         public virtual ICollection<ServerConsole>? ServerConsoles { get; set; }
         public virtual ICollection<ServerHttpPath>? HttpPaths { get; set; }
+        public virtual ICollection<Script>? Scripts { get; set; }
     }
 }

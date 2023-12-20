@@ -166,6 +166,12 @@ namespace LANCommander.Data
                 .WithOne(s => s.Server)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Server>()
+                .HasMany(s => s.Scripts)
+                .WithOne(s => s.Server)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
             #region Redistributable Relationships

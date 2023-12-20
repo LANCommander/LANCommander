@@ -24,5 +24,11 @@ namespace LANCommander.Data.Models
         [ForeignKey(nameof(RedistributableId))]
         [InverseProperty("Scripts")]
         public virtual Redistributable? Redistributable { get; set; }
+
+        public Guid? ServerId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(ServerId))]
+        [InverseProperty("Scripts")]
+        public virtual Server? Server { get; set; }
     }
 }

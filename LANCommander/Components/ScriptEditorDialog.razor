@@ -87,14 +87,19 @@
             Script = await ScriptService.Get(Options.ScriptId);
         else if (Options.GameId != Guid.Empty)
             Script = new Script()
-            {
-                GameId = Options.GameId
-            };
+                {
+                    GameId = Options.GameId
+                };
         else if (Options.RedistributableId != Guid.Empty)
             Script = new Script()
-            {
-                RedistributableId = Options.RedistributableId
-            };
+                {
+                    RedistributableId = Options.RedistributableId
+                };
+        else if (Options.ServerId != Guid.Empty)
+            Script = new Script()
+                {
+                    ServerId = Options.ServerId
+                };
 
         Snippets = ScriptService.GetSnippets();
     }

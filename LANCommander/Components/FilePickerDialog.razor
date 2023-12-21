@@ -3,14 +3,17 @@
 @using LANCommander.Components.FileManagerComponents;
 @using LANCommander.Models;
 
-<FileManager ArchiveId="@Options.ArchiveId" WorkingDirectory="@Options.Root" @bind-Selected="SelectedFiles" EntrySelectable="Options.EntrySelectable" EntryVisible="Options.EntryVisible" SelectMultiple="Options.Multiple" Features="@(FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Breadcrumbs)" />
+<FileManager ArchiveId="@Options.ArchiveId" WorkingDirectory="@Options.Root" @bind-CurrentPath="CurrentPath" @bind-Selected="SelectedFiles" EntrySelectable="Options.EntrySelectable" EntryVisible="Options.EntryVisible" SelectMultiple="Options.Multiple" Features="@(FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Breadcrumbs)" />
 
 @code {
-
+    private FileManagerDirectory CurrentPath { get; set; }
     private IEnumerable<IFileManagerEntry> SelectedFiles { get; set; }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        await base.OkCancelRefWithResult!.OnOk(SelectedFiles);
+        if (SelectedFiles == null || SelectedFiles.Count() == 0)
+            await base.OkCancelRefWithResult!.OnOk(new List<IFileManagerEntry>() { CurrentPath });
+        else
+            await base.OkCancelRefWithResult!.OnOk(SelectedFiles);
     }
 }

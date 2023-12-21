@@ -160,6 +160,8 @@
     [Parameter] public string WorkingDirectory { get; set; }
     [Parameter] public bool SelectMultiple { get; set; } = true;
     [Parameter] public bool IncludeDirectories { get; set; } = true;
+    [Parameter] public FileManagerDirectory CurrentPath { get; set; }
+    [Parameter] public EventCallback<FileManagerDirectory> CurrentPathChanged { get; set; }
     [Parameter] public FileManagerFeatures Features { get; set; } = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete;
     [Parameter] public IEnumerable<IFileManagerEntry> Selected { get; set; } = new List<IFileManagerEntry>();
     [Parameter] public EventCallback<IEnumerable<IFileManagerEntry>> SelectedChanged { get; set; }
@@ -198,9 +200,9 @@
         Directories = FileSource.GetDirectoryTree().ToHashSet();
 
         if (FileSource is FileManagerLocalDiskSource)
-            ChangeDirectory(FileSource.GetDirectory(WorkingDirectory), true);
+            await ChangeDirectory(FileSource.GetDirectory(WorkingDirectory), true);
         else if (FileSource is FileManagerArchiveSource)
-            ChangeDirectory(Directories.First(), true);
+            await ChangeDirectory(Directories.First(), true);
 
         await InvokeAsync(StateHasChanged);
     }
@@ -211,6 +213,11 @@
 
         if (currentPath != null && !String.IsNullOrWhiteSpace(currentPath.Path) && directory.Path != currentPath.Path && Past.LastOrDefault()?.Path != directory.Path)
             Past.Add(currentPath);
+
+        CurrentPath = directory;
+
+        if (CurrentPathChanged.HasDelegate)
+            await CurrentPathChanged.InvokeAsync(CurrentPath);
 
         FileSource.SetCurrentPath(directory);
 

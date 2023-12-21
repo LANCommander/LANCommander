@@ -1,7 +1,9 @@
-﻿using CoreRCON;
+﻿using AutoMapper;
+using CoreRCON;
 using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
 using LANCommander.Hubs;
+using LANCommander.SDK.PowerShell;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using NLog;
@@ -143,15 +145,46 @@ namespace LANCommander.Services
         public delegate void OnStatusUpdateHandler(object sender, ServerStatusUpdateEventArgs e);
         public event OnStatusUpdateHandler OnStatusUpdate;
 
-        private IHubContext<GameServerHub> HubContext;
+        private readonly IMapper Mapper;
+        private readonly IHubContext<GameServerHub> HubContext;
 
-        public ServerProcessService(IHubContext<GameServerHub> hubContext)
+        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext)
         {
+            Mapper = mapper;
             HubContext = hubContext;
         }
 
         public async Task StartServerAsync(Server server)
         {
+            OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
+
+            Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+
+            await Task.Run(() =>
+            {
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+                {
+                    try
+                    {
+                        var script = new PowerShellScript();
+
+                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+
+                        script.UseWorkingDirectory(server.WorkingDirectory);
+                        script.UseInline(serverScript.Contents);
+                        script.UseShellExecute();
+
+                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+
+                        script.Execute();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                    }
+                }
+            });
+
             var process = new Process();
 
             process.StartInfo.FileName = server.Path;
@@ -180,8 +213,6 @@ namespace LANCommander.Services
 
             try
             {
-                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
-
                 process.Start();
 
                 if (!process.StartInfo.UseShellExecute)
@@ -210,8 +241,10 @@ namespace LANCommander.Services
         }
 
 
-        public void StopServer(Server server)
+        public async void StopServer(Server server)
         {
+            Logger.Info("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+
             OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
 
             if (Processes.ContainsKey(server.Id))
@@ -226,6 +259,31 @@ namespace LANCommander.Services
                 LogFileMonitors[server.Id].Dispose();
                 LogFileMonitors.Remove(server.Id);
             }
+
+            await Task.Run(() =>
+            {
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+                {
+                    try
+                    {
+                        var script = new PowerShellScript();
+
+                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+
+                        script.UseWorkingDirectory(server.WorkingDirectory);
+                        script.UseInline(serverScript.Contents);
+                        script.UseShellExecute();
+
+                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+
+                        script.Execute();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                    }
+                }
+            });
 
             OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
         }

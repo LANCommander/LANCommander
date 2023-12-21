@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.53" />
-    <PackageReference Include="System.Text.Json" Version="7.0.3" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.55" />
+    <PackageReference Include="System.Text.Json" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -59,7 +59,7 @@ namespace LANCommander.Services
 
             var deserializer = new DeserializerBuilder()
                 .IgnoreUnmatchedProperties()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
             var manifest = deserializer.Deserialize<GameManifest>(manifestContents);

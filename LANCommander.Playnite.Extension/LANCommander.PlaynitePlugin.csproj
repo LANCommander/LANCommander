@@ -166,4 +166,7 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>PowerShell -Command "(Get-Content '$(TargetDir)LANCommander.PowerShell.psd1') -replace 'YamlDotNet.dll', '..\..\YamlDotNet.dll' | Out-File '$(TargetDir)LANCommander.PowerShell.psd1'"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

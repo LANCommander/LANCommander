@@ -18,7 +18,7 @@ namespace LANCommander.Services
 
                 var deserializer = new DeserializerBuilder()
                     .IgnoreUnmatchedProperties()
-                    .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                    .WithNamingConvention(new PascalCaseNamingConvention())
                     .Build();
 
                 Settings = deserializer.Deserialize<LANCommanderSettings>(contents);
@@ -44,7 +44,7 @@ namespace LANCommander.Services
         public static void SaveSettings(LANCommanderSettings settings)
         {
             var serializer = new SerializerBuilder()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
             File.WriteAllText(SettingsFilename, serializer.Serialize(settings));

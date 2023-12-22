@@ -3,7 +3,6 @@
 @using Hangfire;
 @using LANCommander.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
-@inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject GameService GameService
 @inject IMessageService MessageService
@@ -12,91 +11,43 @@
 @{
     RenderFragment Footer =
     @<Template>
-        <Button OnClick="UploadImportJS" Disabled="@(File == null || Uploading)" Type="@ButtonType.Primary">Upload</Button>
-        <Button OnClick="Clear" Disabled="File == null || Uploading" Danger>Clear</Button>
+        <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="Clear" Disabled="@(File == null || Status != "")" Danger>Clear</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
 }
 
-<Modal Visible="@Visible" Title="Import Game" OnOk="UploadImportJS" OnCancel="Cancel" Footer="@Footer">
-    <Space Direction="DirectionVHType.Horizontal">
-        <SpaceItem>
-            <InputFile @ref="FileInput" id="FileInput" OnChange="FileSelected" hidden />
-            <Upload Name="files" FileList="FileList" Accept=".lcx">
-                <label class="ant-btn" for="FileInput">
-                    <Icon Type="upload" />
-                    @if (File == null)
-                    {
-                        <Text>Select File</Text>
-                    }
-                    else
-                    {
-                        <Text>Change File</Text>
-                    }
-                </label>
-            </Upload>
-        </SpaceItem>
-        <SpaceItem>
-            @if (File != null)
-            {
-                <Text>@File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))</Text>
-            }
-        </SpaceItem>
-    </Space>
-
-    <Progress Percent="Progress" Status="@CurrentProgressStatus" Class="uploader-progress" />
-    <Text Class="uploader-progress-rate"></Text>
+<Modal Visible="@Visible" Title="Import Game" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
+    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" />
 </Modal>
 
 @code {
     [Parameter] public EventCallback<Guid> OnGameImported { get; set; }
 
-    InputFile FileInput;
-    IBrowserFile File { get; set; }
-    List<UploadFileItem> FileList = new List<UploadFileItem>();
+    IBrowserFile File;
+    ChunkUploader ChunkUploader;
 
     bool IsValid = false;
     bool Visible = false;
 
-    int Progress = 0;
-    bool Uploading = false;
-    bool Finished = false;
-    double Speed = 0;
-
     string Filename;
 
-    ProgressStatus CurrentProgressStatus
+    string Status;
+
+    private async Task Start()
     {
-        get
-        {
-            if (Finished)
-                return ProgressStatus.Success;
-            else if (Uploading)
-                return ProgressStatus.Active;
-            else
-                return ProgressStatus.Normal;
-        }
+        await ChunkUploader.Start();
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task Clear()
     {
-        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+        await ChunkUploader.Clear();
     }
 
-    private void Clear()
+    private async Task Cancel()
     {
-        File = null;
-    }
-
-    private void Cancel()
-    {
-        File = null;
+        await ChunkUploader.Clear();
         Visible = false;
-    }
-
-    private async void FileSelected(InputFileChangeEventArgs args)
-    {
-        File = args.File;
     }
 
     public async Task Open()
@@ -104,45 +55,14 @@
         Visible = true;
 
         await InvokeAsync(StateHasChanged);
-
-        var i = 0;
-
-        // Check every 10 seconds to see if the file input is available
-        while (i < 20)
-        {
-            if (FileInput != null)
-            {
-                await JS.InvokeVoidAsync("Uploader.Init", "FileInput", "");
-
-                break;
-            }
-
-            i++;
-            await Task.Delay(500);
-        }
     }
 
-    private async Task UploadImportJS()
-    {
-        Uploading = true;
-
-        var dotNetReference = DotNetObjectReference.Create(this);
-
-        await JS.InvokeVoidAsync("Uploader.Upload", dotNetReference);
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    [JSInvokable]
-    public async void OnUploadComplete(string data)
+    public async void OnUploadCompleted(string data)
     {
         if (Guid.TryParse(data, out var objectKey))
         {
             try
             {
-                Uploading = false;
-                Finished = true;
-
                 var game = await GameService.Import(objectKey);
 
                 Visible = false;

@@ -926,7 +926,7 @@ class Uploader {
                 console.error(`Could not chunk upload: ${ex}`);
             }
             finally {
-                dotNetObject.invokeMethodAsync('OnUploadComplete', this.Key);
+                dotNetObject.invokeMethodAsync('JSOnUploadComplete', this.Key);
             }
         });
     }

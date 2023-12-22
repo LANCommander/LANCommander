@@ -1,0 +1,148 @@
+﻿@inject HttpClient HttpClient
+@inject NavigationManager Navigator
+@inject IJSRuntime JS
+
+<InputFile @ref="FileInput" id="ChunkFileInput" OnChange="OnFileSelected" accept="@Accept" hidden />
+<Upload Name="files" FileList="FileList" Accept="@Accept">
+    <label class="ant-btn" for="ChunkFileInput">
+        <Icon Type="upload" />
+
+        @if (File == null)
+        {
+            <Text>Select File</Text>
+        }
+        else
+        {
+            <Text>Change File</Text>
+        }
+    </label>
+</Upload>
+
+@if (File != null)
+{
+    <Text>@File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))</Text>
+}
+
+<Progress Percent="Progress" Status="@CurrentProgressStatus" Class="uploader-progress" />
+<Text Class="uploader-progress-rate"></Text>
+
+@code {
+    [Parameter] public string Accept { get; set; }
+    [Parameter] public string ObjectKey { get; set; }
+    [Parameter] public EventCallback<string> OnUploadCompleted { get; set; }
+    [Parameter] public string Status { get; set; }
+    [Parameter] public EventCallback<string> StatusChanged { get; set; }
+    [Parameter] public IBrowserFile File { get; set; }
+    [Parameter] public EventCallback<IBrowserFile> FileChanged { get; set; }
+    [Parameter] public long FileSize { get; set; }
+    [Parameter] public EventCallback<long> FileSizeChanged { get; set; }
+
+    InputFile FileInput;
+    List<UploadFileItem> FileList = new List<UploadFileItem>();
+
+    int Progress = 0;
+    bool Uploading = false;
+    bool Finished = false;
+    double Speed = 0;
+
+    ProgressStatus CurrentProgressStatus
+    {
+        get
+        {
+            ProgressStatus progressStatus;
+
+            switch (Status)
+            {
+                case "Complete":
+                    return ProgressStatus.Success;
+                case "Uploading":
+                    return ProgressStatus.Active;
+                default:
+                    return ProgressStatus.Normal;
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+
+        ushort i = 0;
+
+        while (i < 20)
+        {
+            if (FileInput != null)
+            {
+                if (!String.IsNullOrWhiteSpace(ObjectKey) && ObjectKey != Guid.Empty.ToString())
+                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", ObjectKey);
+                else
+                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", "");
+
+                break;
+            }
+
+            i++;
+
+            await Task.Delay(500);
+        }
+    }
+
+    public async Task Start()
+    {
+        Uploading = true;
+        await ChangeStatus("Uploading");
+
+        var dotNetReference = DotNetObjectReference.Create(this);
+
+        await JS.InvokeVoidAsync("Uploader.Upload", dotNetReference);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Clear()
+    {
+        File = null;
+        await ChangeStatus("");
+    }
+
+    private async void OnFileSelected(InputFileChangeEventArgs args)
+    {
+        File = args.File;
+
+        if (FileChanged.HasDelegate)
+            await FileChanged.InvokeAsync(File);
+
+        await ChangeStatus("");
+    }
+
+    private async Task UploadArchiveJS()
+    {
+        Uploading = true;
+        await ChangeStatus("Uploading");
+
+        var dotNetReference = DotNetObjectReference.Create(this);
+
+        await JS.InvokeVoidAsync("Uploader.Upload", dotNetReference);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ChangeStatus(string status)
+    {
+        Status = status;
+
+        if (StatusChanged.HasDelegate)
+            await StatusChanged.InvokeAsync(Status);
+    }
+
+    [JSInvokable]
+    public async void JSOnUploadComplete(string objectKey)
+    {
+        Uploading = false;
+        Finished = true;
+        await ChangeStatus("Complete");
+
+        if (OnUploadCompleted.HasDelegate)
+            await OnUploadCompleted.InvokeAsync(objectKey);
+    }
+}

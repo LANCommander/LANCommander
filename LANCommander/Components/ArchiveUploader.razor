@@ -12,13 +12,13 @@
 @{
     RenderFragment Footer =
     @<Template>
-        <Button OnClick="UploadArchiveJS" Disabled="@(File == null || Uploading)" Type="@ButtonType.Primary">Upload</Button>
-        <Button OnClick="Clear" Disabled="File == null || Uploading" Danger>Clear</Button>
+        <Button OnClick="Start" Disabled="@(File == null || Status != "" || String.IsNullOrWhiteSpace(Archive.Version))" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="Clear" Disabled="@(File == null || Status != "")" Danger>Clear</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
 }
 
-<Modal Visible="@Visible" Title="Upload Archive" OnOk="UploadArchiveJS" OnCancel="Cancel" Footer="@Footer">
+<Modal Visible="@Visible" Title="Upload Archive" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
     <Form Model="@Archive" Layout="@FormLayout.Vertical">
         <FormItem Label="Version">
             <Input @bind-Value="@context.Version" /> 
@@ -29,91 +29,42 @@
         </FormItem>
 
         <FormItem>
-            <Space Direction="DirectionVHType.Horizontal">
-                <SpaceItem>
-                     <InputFile @ref="FileInput" id="FileInput" OnChange="FileSelected" hidden />
-                     <Upload Name="files" FileList="FileList" Accept=".zip">
-                         <label class="ant-btn" for="FileInput">
-                             <Icon Type="upload" />
-                            @if (File == null)
-                            {
-                                <Text>Select File</Text>
-                            }
-                            else
-                            {
-                                <Text>Change File</Text>
-                            }
-                        </label>
-                     </Upload>
-                </SpaceItem>
-                <SpaceItem>
-                    @if (File != null)
-                    {
-                        <Text>@File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))</Text>
-                    }
-                </SpaceItem>
-            </Space>
-        </FormItem>
-
-        <FormItem>
-            <Progress Percent="Progress" Status="@CurrentProgressStatus" Class="uploader-progress" />
-            <Text Class="uploader-progress-rate"></Text>
+            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" />
         </FormItem>
     </Form>
 </Modal>
 
-@code {
+ @code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
     [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
 
     Archive Archive;
 
-    InputFile FileInput;
-    IBrowserFile File { get; set; }
-    List<UploadFileItem> FileList = new List<UploadFileItem>();
+    IBrowserFile File;
+    ChunkUploader ChunkUploader;
 
     bool IsValid = false;
     bool Visible = false;
 
-    int Progress = 0;
-    bool Uploading = false;
-    bool Finished = false;
-    double Speed = 0;
-
     string Filename;
 
-    ProgressStatus CurrentProgressStatus {
-        get
-        {
-            if (Finished)
-                return ProgressStatus.Success;
-            else if (Uploading)
-                return ProgressStatus.Active;
-            else
-                return ProgressStatus.Normal;
-        }
+    string Status;
+
+    private async Task Start()
+    {
+        await ChunkUploader.Start();
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task Clear()
     {
-        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+        await ChunkUploader.Clear();
     }
 
-    private void Clear()
+    private async Task Cancel()
     {
-        File = null;
-    }
-
-    private void Cancel()
-    {
-        File = null;
+        await ChunkUploader.Clear();
         Visible = false;
-    }
-
-    private async void FileSelected(InputFileChangeEventArgs args)
-    {
-        File = args.File;
     }
 
     public async Task Open(Guid? archiveId = null)
@@ -135,46 +86,12 @@
         Visible = true;
 
         await InvokeAsync(StateHasChanged);
-
-        var i = 0;
-
-        // Check every 10 seconds to see if the file input is available
-        while (i < 20)
-        {
-            if (FileInput != null)
-            {
-                if (!String.IsNullOrWhiteSpace(Archive.ObjectKey) && Archive.ObjectKey != Guid.Empty.ToString())
-                    await JS.InvokeVoidAsync("Uploader.Init", "FileInput", Archive.ObjectKey.ToString());
-                else
-                    await JS.InvokeVoidAsync("Uploader.Init", "FileInput", "");
-
-                break;
-            }
-
-            i++;
-            await Task.Delay(500);
-        }
     }
 
-    private async Task UploadArchiveJS()
-    {
-        Uploading = true;
-
-        var dotNetReference = DotNetObjectReference.Create(this);
-
-        await JS.InvokeVoidAsync("Uploader.Upload", dotNetReference);
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    [JSInvokable]
-    public async void OnUploadComplete(string data)
+    public async void OnUploadCompleted(string data)
     {
         if (Guid.TryParse(data, out var objectKey))
         {
-            Uploading = false;
-            Finished = true;
-
             Archive.ObjectKey = objectKey.ToString();
             Archive.CompressedSize = File.Size;
 

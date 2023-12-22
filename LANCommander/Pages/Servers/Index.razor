@@ -137,7 +137,7 @@
 
                 if (status == ServerProcessStatus.Stopped || status == ServerProcessStatus.Error)
                 {
-                    ServerProcessService.StartServerAsync(server);
+                    ServerProcessService.StartServerAsync(server.Id);
                 }
             }
             catch { }
@@ -149,7 +149,7 @@
         foreach (var server in SelectedServers)
         {
             if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                ServerProcessService.StopServer(server);
+                ServerProcessService.StopServer(server.Id);
         }
     }
 

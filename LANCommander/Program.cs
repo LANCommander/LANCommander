@@ -257,7 +257,7 @@ namespace LANCommander
                     if (server.AutostartDelay > 0)
                         await Task.Delay(server.AutostartDelay);
 
-                    serverProcessService.StartServerAsync(server);
+                    serverProcessService.StartServerAsync(server.Id);
                 }
                 catch (Exception ex)
                 {

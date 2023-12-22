@@ -95,12 +95,12 @@
 
     private async Task Start()
     {
-        await ServerProcessService.StartServerAsync(Server);
+        await ServerProcessService.StartServerAsync(Server.Id);
     }
 
     private void Stop()
     {
-        ServerProcessService.StopServer(Server);
+        ServerProcessService.StopServer(Server.Id);
     }
 
     public async ValueTask DisposeAsync()

@@ -53,19 +53,14 @@ export default class Uploader {
         try {
             this.GetChunks();
 
-            try {
-                for (let chunk of this.Chunks) {
-                    await this.UploadChunk(chunk);
-                }
+            for (let chunk of this.Chunks) {
+                await this.UploadChunk(chunk);
             }
-            catch (ex) {
-                if (this.OnError != null)
-                    this.OnError();
-            }
-        } catch (ex) {
-            console.error(`Could not chunk upload: ${ex}`);
-        } finally {
+
             dotNetObject.invokeMethodAsync('JSOnUploadComplete', this.Key);
+        } catch (ex) {
+            dotNetObject.invokeMethodAsync('JSOnUploadError', ex.message);
+            console.error(`Could not chunk upload: ${ex}`);
         }
     }
 

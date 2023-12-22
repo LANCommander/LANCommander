@@ -18,7 +18,7 @@
 }
 
 <Modal Visible="@Visible" Title="Import Game" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
-    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" />
+    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError" />
 </Modal>
 
 @code {
@@ -57,7 +57,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    public async void OnUploadCompleted(string data)
+    public async Task OnUploadCompleted(string data)
     {
         if (Guid.TryParse(data, out var objectKey))
         {
@@ -87,5 +87,14 @@
 
             MessageService.Error("Import file failed to upload!");
         }
+    }
+
+    public async Task OnUploadError(string message)
+    {
+        Visible = false;
+
+        await InvokeAsync(StateHasChanged);
+
+        MessageService.Error("An error occurred while trying to import");
     }
 }

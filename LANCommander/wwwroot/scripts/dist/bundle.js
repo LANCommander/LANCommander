@@ -912,21 +912,14 @@ class Uploader {
             this.TotalChunks = Math.ceil(this.File.size / this.MaxChunkSize);
             try {
                 this.GetChunks();
-                try {
-                    for (let chunk of this.Chunks) {
-                        yield this.UploadChunk(chunk);
-                    }
+                for (let chunk of this.Chunks) {
+                    yield this.UploadChunk(chunk);
                 }
-                catch (ex) {
-                    if (this.OnError != null)
-                        this.OnError();
-                }
+                dotNetObject.invokeMethodAsync('JSOnUploadComplete', this.Key);
             }
             catch (ex) {
+                dotNetObject.invokeMethodAsync('JSOnUploadError', ex.message);
                 console.error(`Could not chunk upload: ${ex}`);
-            }
-            finally {
-                dotNetObject.invokeMethodAsync('JSOnUploadComplete', this.Key);
             }
         });
     }

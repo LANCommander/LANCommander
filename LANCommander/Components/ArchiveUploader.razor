@@ -29,7 +29,7 @@
         </FormItem>
 
         <FormItem>
-            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" />
+            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError" />
         </FormItem>
     </Form>
 </Modal>
@@ -88,7 +88,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    public async void OnUploadCompleted(string data)
+    public async Task OnUploadCompleted(string data)
     {
         if (Guid.TryParse(data, out var objectKey))
         {
@@ -132,5 +132,14 @@
 
             await MessageService.Error("Archive failed to upload!");
         }
+    }
+
+    public async Task OnUploadError(string message)
+    {
+        Visible = false;
+
+        await InvokeAsync(StateHasChanged);
+
+        await MessageService.Error("Archive failed to upload!");
     }
 }

@@ -30,12 +30,11 @@
     [Parameter] public string Accept { get; set; }
     [Parameter] public string ObjectKey { get; set; }
     [Parameter] public EventCallback<string> OnUploadCompleted { get; set; }
+    [Parameter] public EventCallback<string> OnUploadError { get; set; }
     [Parameter] public string Status { get; set; }
     [Parameter] public EventCallback<string> StatusChanged { get; set; }
     [Parameter] public IBrowserFile File { get; set; }
     [Parameter] public EventCallback<IBrowserFile> FileChanged { get; set; }
-    [Parameter] public long FileSize { get; set; }
-    [Parameter] public EventCallback<long> FileSizeChanged { get; set; }
 
     InputFile FileInput;
     List<UploadFileItem> FileList = new List<UploadFileItem>();
@@ -136,7 +135,7 @@
     }
 
     [JSInvokable]
-    public async void JSOnUploadComplete(string objectKey)
+    public async Task JSOnUploadComplete(string objectKey)
     {
         Uploading = false;
         Finished = true;
@@ -144,5 +143,12 @@
 
         if (OnUploadCompleted.HasDelegate)
             await OnUploadCompleted.InvokeAsync(objectKey);
+    }
+
+    [JSInvokable]
+    public async Task JSOnUploadError(string message)
+    {
+        if (OnUploadError.HasDelegate)
+            await OnUploadError.InvokeAsync(message);
     }
 }

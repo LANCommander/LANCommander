@@ -54,6 +54,7 @@ namespace LANCommander.SDK
         public Guid Id { get; set; }
         public string Type { get; set; }
         public string Path { get; set; }
+        public string WorkingDirectory { get; set; }
         public bool IsRegex { get; set; }
         public IEnumerable<SavePathEntry> Entries { get; set; }
     }

@@ -159,9 +159,21 @@ namespace LANCommander.SDK
 
                         if (savePath.IsRegex)
                         {
-                            var regex = new Regex(Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', '\\').Replace("{InstallDir}", installDirectory)));
+                            var workingDirectory = Environment.ExpandEnvironmentVariables(savePath.WorkingDirectory.Replace("{InstallDir}", installDirectory));
+                            var pattern = savePath.Path;
+
+                            if (String.IsNullOrWhiteSpace(workingDirectory))
+                                workingDirectory = installDirectory;
+
+                            if (Path.DirectorySeparatorChar == '\\')
+                            {
+                                pattern = pattern.Replace("\\", "\\\\");
+                                pattern = pattern.Replace("/", "\\\\");
+                            }
+
+                            var regex = new Regex(pattern);
                             
-                            localPaths = Directory.GetFiles(installDirectory, "*", SearchOption.AllDirectories)
+                            localPaths = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories)
                                 .Where(p => regex.IsMatch(p))
                                 .ToList();
                         }

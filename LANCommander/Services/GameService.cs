@@ -131,6 +131,7 @@ namespace LANCommander.Services
                     Id = p.Id,
                     Path = p.Path,
                     IsRegex = p.IsRegex,
+                    WorkingDirectory = p.WorkingDirectory,
                     Type = p.Type.ToString()
                 });
             }

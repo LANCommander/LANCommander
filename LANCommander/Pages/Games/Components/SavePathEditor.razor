@@ -17,8 +17,11 @@
                     <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
                 }
             </PropertyColumn>
+            <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
+                <Input @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" />
+            </PropertyColumn>
             <PropertyColumn Property="p => p.IsRegex" Title="Regex">
-                <Checkbox @bind-Checked="context.IsRegex" />
+                <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
             </PropertyColumn>
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
@@ -59,7 +62,8 @@
 
         Value.Add(new SavePath()
         {
-            GameId = GameId
+            GameId = GameId,
+            WorkingDirectory = "{InstallDir}"
         });
     }
 

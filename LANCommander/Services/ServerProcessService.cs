@@ -147,43 +147,54 @@ namespace LANCommander.Services
 
         private readonly IMapper Mapper;
         private readonly IHubContext<GameServerHub> HubContext;
+        private readonly IServiceProvider ServiceProvider;
 
-        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext)
+        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext, IServiceProvider serviceProvider)
         {
             Mapper = mapper;
             HubContext = hubContext;
+            ServiceProvider = serviceProvider;
         }
 
-        public async Task StartServerAsync(Server server)
+        public async Task StartServerAsync(Guid serverId)
         {
-            OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
+            Server server;
 
-            Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
-
-            await Task.Run(() =>
+            using (var scope = ServiceProvider.CreateScope())
             {
-                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+                var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+
+                server = await serverService.Get(serverId);
+
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
+
+                Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+
+                await Task.Run(() =>
                 {
-                    try
+                    foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
                     {
-                        var script = new PowerShellScript();
+                        try
+                        {
+                            var script = new PowerShellScript();
 
-                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+                            // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
 
-                        script.UseWorkingDirectory(server.WorkingDirectory);
-                        script.UseInline(serverScript.Contents);
-                        script.UseShellExecute();
+                            script.UseWorkingDirectory(server.WorkingDirectory);
+                            script.UseInline(serverScript.Contents);
+                            script.UseShellExecute();
 
-                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+                            Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                        script.Execute();
+                            script.Execute();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
-                    }
-                }
-            });
+                });
+            }
 
             var process = new Process();
 
@@ -241,51 +252,58 @@ namespace LANCommander.Services
         }
 
 
-        public async void StopServer(Server server)
+        public async void StopServer(Guid serverId)
         {
-            Logger.Info("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
-
-            OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
-
-            if (Processes.ContainsKey(server.Id))
+            using (var scope = ServiceProvider.CreateScope())
             {
-                var process = Processes[server.Id];
+                var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
 
-                process.Kill();
-            }
+                var server = await serverService.Get(serverId);
 
-            if (LogFileMonitors.ContainsKey(server.Id))
-            {
-                LogFileMonitors[server.Id].Dispose();
-                LogFileMonitors.Remove(server.Id);
-            }
+                Logger.Info("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-            await Task.Run(() =>
-            {
-                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
+
+                if (Processes.ContainsKey(server.Id))
                 {
-                    try
-                    {
-                        var script = new PowerShellScript();
+                    var process = Processes[server.Id];
 
-                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
-
-                        script.UseWorkingDirectory(server.WorkingDirectory);
-                        script.UseInline(serverScript.Contents);
-                        script.UseShellExecute();
-
-                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
-
-                        script.Execute();
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
-                    }
+                    process.Kill();
                 }
-            });
 
-            OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
+                if (LogFileMonitors.ContainsKey(server.Id))
+                {
+                    LogFileMonitors[server.Id].Dispose();
+                    LogFileMonitors.Remove(server.Id);
+                }
+
+                await Task.Run(() =>
+                {
+                    foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+                    {
+                        try
+                        {
+                            var script = new PowerShellScript();
+
+                            // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+
+                            script.UseWorkingDirectory(server.WorkingDirectory);
+                            script.UseInline(serverScript.Contents);
+                            script.UseShellExecute();
+
+                            Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+
+                            script.Execute();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                        }
+                    }
+                });
+
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
+            }
         }
 
         private void StartMonitoringLog(ServerConsole log, Server server)

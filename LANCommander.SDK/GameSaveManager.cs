@@ -18,6 +18,14 @@ using System.Text.RegularExpressions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
+// Some terms for this file since they're probabably going to be needed in the future:
+// Local path - The full path of the file/directory on the local disk. No variables used, just the raw path for current machine
+// Actual path - The path where the entries should be extracted to, before expanding environemnt variables.
+// Archive path - The path of where the entries are located in the ZIP
+//
+// Other notes:
+// - Entries in the ZIP are separated by save path ID to avoid collision
+
 namespace LANCommander.SDK
 {
     public class GameSaveManager
@@ -160,11 +168,13 @@ namespace LANCommander.SDK
 
                         foreach (var entry in savePath.Entries)
                         {
-                            if (Directory.Exists(entry.ActualPath))
-                                AddDirectoryToZip(archive, entry.ArchivePath, savePath.WorkingDirectory, savePath.Id);
-                            else if (File.Exists(GetLocalPath(entry.ActualPath, installDirectory)))
+                            var localPath = GetLocalPath(entry.ActualPath, installDirectory);
+
+                            if (Directory.Exists(localPath))
+                                AddDirectoryToZip(archive, entry.ArchivePath, localPath, savePath.Id);
+                            else if (File.Exists(localPath))
                             {
-                                archive.AddEntry(entry.ArchivePath, GetLocalPath(entry.ActualPath, installDirectory));
+                                archive.AddEntry($"Saves/{savePath.Id}/{entry.ArchivePath}", localPath);
                             }
                         }
                     }
@@ -276,7 +286,7 @@ namespace LANCommander.SDK
 
         public string GetLocalPath(string path, string installDirectory)
         {
-            var localPath = Environment.ExpandEnvironmentVariables(path.Replace("{InstallDir}", installDirectory));
+            var localPath = path.ExpandEnvironmentVariables(installDirectory);
 
             if (Path.DirectorySeparatorChar == '/')
                 localPath = localPath.Replace('\\', Path.DirectorySeparatorChar);
@@ -286,35 +296,36 @@ namespace LANCommander.SDK
             return localPath;
         }
 
-        public string GetArchivePath(string path, string installDirectory)
+        public string GetActualPath(string path, string installDirectory)
         {
-            var archivePath = path.DeflateEnvironmentVariables(installDirectory);
+            var actualPath = path.DeflateEnvironmentVariables(installDirectory);
 
             if (Path.DirectorySeparatorChar == '\\')
-                archivePath.Replace(Path.DirectorySeparatorChar, '/');
+                actualPath.Replace(Path.DirectorySeparatorChar, '/');
+
+            return actualPath;
+        }
+
+        public string GetArchivePath(string path, string workingDirectory, string installDirectory)
+        {
+            path = GetLocalPath(path, installDirectory);
+            workingDirectory = GetLocalPath(workingDirectory, installDirectory);
+
+            var archivePath = path.Replace(workingDirectory, "").Trim(Path.DirectorySeparatorChar);
+
+            if (Path.DirectorySeparatorChar == '\\')
+                archivePath = archivePath.Replace(Path.DirectorySeparatorChar, '/');
 
             return archivePath;
         }
 
-        private void AddDirectoryToZip(ZipArchive zipArchive, string path, string workingDirectory, Guid pathId)
+        private void AddDirectoryToZip(ZipArchive zipArchive, string archivePath, string localPath, Guid pathId)
         {
-            foreach (var file in Directory.GetFiles(path))
+            foreach (var file in Directory.GetFiles(localPath, "*", SearchOption.AllDirectories))
             {
-                // Oh man is this a hack. We should be removing only the working directory from the start,
-                // but we're making the assumption that the working dir put in actually prefixes the path.
-                // Also wtf, that Path.Combine is stripping the pathId out?
-                zipArchive.AddEntry(Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(file)), file);
-            }
+                var fileArchivePath = file.Substring(localPath.Length).Replace(Path.DirectorySeparatorChar, '/').Trim('/');
 
-            foreach (var child in Directory.GetDirectories(path))
-            {
-                // See above
-                //ZipEntry entry = new ZipEntry(Path.Combine(pathId.ToString(), path.Substring(workingDirectory.Length), Path.GetFileName(path)));
-
-                //zipStream.PutNextEntry(entry);
-                //zipStream.CloseEntry();
-
-                AddDirectoryToZip(zipArchive, child, workingDirectory, pathId);
+                zipArchive.AddEntry($"Saves/{pathId}/{archivePath}/{fileArchivePath}", file);
             }
         }
 

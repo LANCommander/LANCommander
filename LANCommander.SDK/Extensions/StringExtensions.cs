@@ -2,6 +2,8 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using YamlDotNet.Core.Tokens;
+using static System.Environment;
 
 namespace LANCommander.SDK.Extensions
 {
@@ -23,9 +25,70 @@ namespace LANCommander.SDK.Extensions
             return input.IndexOf(search, StringComparison.OrdinalIgnoreCase) != -1;
         }
 
+        internal static string ExpandEnvironmentVariables(this string path, string installDirectory)
+        {
+            path = path.Replace("{InstallDir}", installDirectory);
+
+            SpecialFolder[] supportedSpecialFolders = new SpecialFolder[]
+            {
+                SpecialFolder.CommonApplicationData,
+                SpecialFolder.CommonDesktopDirectory,
+                SpecialFolder.CommonDocuments,
+                SpecialFolder.CommonMusic,
+                SpecialFolder.CommonPictures,
+                SpecialFolder.CommonPrograms,
+                SpecialFolder.CommonStartMenu,
+                SpecialFolder.CommonStartup,
+                SpecialFolder.CommonVideos,
+                SpecialFolder.Desktop,
+                SpecialFolder.Fonts,
+                SpecialFolder.MyDocuments,
+                SpecialFolder.MyMusic,
+                SpecialFolder.MyPictures,
+                SpecialFolder.MyVideos,
+                SpecialFolder.StartMenu
+            };
+
+            foreach (SpecialFolder folder in supportedSpecialFolders)
+            {
+                path = Regex.Replace(path, $"%{folder}%", Environment.GetFolderPath(folder));
+            }
+
+            path = Environment.ExpandEnvironmentVariables(path);
+
+            return path;
+        }
+
         internal static string DeflateEnvironmentVariables(this string path, string installDirectory)
         {
             path = path.Replace(installDirectory.TrimEnd(Path.DirectorySeparatorChar), "{InstallDir}");
+
+            SpecialFolder[] supportedSpecialFolders = new SpecialFolder[]
+            {
+                SpecialFolder.CommonApplicationData,
+                SpecialFolder.CommonDesktopDirectory,
+                SpecialFolder.CommonDocuments,
+                SpecialFolder.CommonMusic,
+                SpecialFolder.CommonPictures,
+                SpecialFolder.CommonPrograms,
+                SpecialFolder.CommonStartMenu,
+                SpecialFolder.CommonStartup,
+                SpecialFolder.CommonVideos,
+                SpecialFolder.Desktop,
+                SpecialFolder.Fonts,
+                SpecialFolder.MyDocuments,
+                SpecialFolder.MyMusic,
+                SpecialFolder.MyPictures,
+                SpecialFolder.MyVideos,
+                SpecialFolder.StartMenu
+            };
+
+            foreach (SpecialFolder folder in supportedSpecialFolders)
+            {
+                var value = (string)(Environment.GetFolderPath(folder));
+
+                path = Regex.Replace(path, Regex.Escape(value), $"%{folder}%", RegexOptions.IgnoreCase);
+            }
 
             // These are the ones we're going to support. They are ordered in likeliness they'll be used.
             // These paths get complicated, but we'll do our best.
@@ -53,19 +116,6 @@ namespace LANCommander.SDK.Extensions
                 var value = (string)(Environment.GetEnvironmentVariable(variable));
 
                 path = Regex.Replace(path, Regex.Escape(value), $"%{variable}%", RegexOptions.IgnoreCase);
-            }
-
-            DictionaryEntry currentEntry = new DictionaryEntry("", "");
-
-            foreach (object key in Environment.GetEnvironmentVariables().Keys)
-            {
-                string value = (string)Environment.GetEnvironmentVariables()[key];
-
-                if (path.Contains(value) && value.Length > ((string)currentEntry.Value).Length)
-                {
-                    currentEntry.Key = (string)key;
-                    currentEntry.Value = value;
-                }
             }
 
             return path;

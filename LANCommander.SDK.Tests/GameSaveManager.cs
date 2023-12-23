@@ -1,4 +1,5 @@
 using LANCommander.SDK.Models;
+using System.Management.Automation.Language;
 
 namespace LANCommander.SDK.Tests
 {
@@ -41,15 +42,28 @@ namespace LANCommander.SDK.Tests
         [InlineData("C:\\Games\\Quake 3\\baseq3\\autoexec.cfg", "{InstallDir}\\baseq3\\autoexec.cfg", "C:\\Games\\Quake 3")]
         [InlineData("C:\\Users\\{UserName}\\AppData\\Roaming\\.nfs2e", "%APPDATA%\\.nfs2e", "C:\\Games")]
         [InlineData("C:\\Users\\{UserName}\\AppData\\Local\\.minecraft", "%LOCALAPPDATA%\\.minecraft", "C:\\Games")]
+        [InlineData("C:\\Users\\{UserName}\\Documents\\My Games\\Praetorians", "%MyDocuments%\\My Games\\Praetorians", "C:\\Games")]
 
-        public void GetArchivePathBasicsShouldWork(string input, string expected, string installDirectory)
+        public void GetActualPathBasicsShouldWork(string input, string expected, string installDirectory)
         {
             input = input.Replace("{UserName}", Environment.UserName);
 
-            var result = Manager.GetArchivePath(input, installDirectory);
+            var result = Manager.GetActualPath(input, installDirectory);
 
-            // To test anything that might have the username in the expected string
-            expected = expected.Replace("{UserName}", Environment.UserName);
+            Assert.Equal(expected, result);
+        }
+
+        [Theory]
+        [InlineData("C:\\Games\\Quake 3\\baseq3\\autoexec.cfg", "{InstallDir}", "baseq3/autoexec.cfg", "C:\\Games\\Quake 3")]
+        [InlineData("C:\\Games\\Quake 3\\baseq3\\autoexec.cfg", "{InstallDir}", "baseq3/autoexec.cfg", "C:\\Games\\Quake 3\\")]
+        [InlineData("C:\\Games\\Age of Empires 2\\player.nfz", "{InstallDir}", "player.nfz", "C:\\Games\\Age of Empires 2\\")]
+        [InlineData("C:\\Users\\{UserName}\\AppData\\Roaming\\.nfs2e\\Profiles\\Player1", "%APPDATA%\\.nfs2e", "Profiles/Player1", "C:\\Games\\Need for Speed 2\\")]
+        [InlineData("C:\\Users\\{UserName}\\Documents\\My Games\\.nfs2e\\Profiles\\Player1", "%USERPROFILE%\\Documents\\My Games\\.nfs2e", "Profiles/Player1", "C:\\Games\\Need for Speed 2\\")]
+        public void GetArchivePathBasicsShouldWork(string path, string workingDirectory, string expected, string installDirectory)
+        {
+            path = path.Replace("{UserName}", Environment.UserName);
+
+            var result = Manager.GetArchivePath(path, workingDirectory, installDirectory);
 
             Assert.Equal(expected, result);
         }

@@ -1,4 +1,5 @@
 ﻿using LANCommander.SDK;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
@@ -155,54 +156,16 @@ namespace LANCommander.SDK
                     #region Add files from defined paths
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
-                        IEnumerable<string> localPaths;
+                        savePath.Entries = GetFileSavePathEntries(savePath, installDirectory);
 
-                        if (savePath.IsRegex)
+                        foreach (var entry in savePath.Entries)
                         {
-                            var workingDirectory = Environment.ExpandEnvironmentVariables(savePath.WorkingDirectory.Replace("{InstallDir}", installDirectory));
-                            var pattern = savePath.Path;
-
-                            if (String.IsNullOrWhiteSpace(workingDirectory))
-                                workingDirectory = installDirectory;
-
-                            if (Path.DirectorySeparatorChar == '\\')
+                            if (Directory.Exists(entry.ActualPath))
+                                AddDirectoryToZip(archive, entry.ArchivePath, savePath.WorkingDirectory, savePath.Id);
+                            else if (File.Exists(GetLocalPath(entry.ActualPath, installDirectory)))
                             {
-                                pattern = pattern.Replace("\\", "\\\\");
-                                pattern = pattern.Replace("/", "\\\\");
+                                archive.AddEntry(entry.ArchivePath, GetLocalPath(entry.ActualPath, installDirectory));
                             }
-
-                            var regex = new Regex(pattern);
-                            
-                            localPaths = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories)
-                                .Where(p => regex.IsMatch(p))
-                                .ToList();
-                        }
-                        else
-                            localPaths = new string[] { savePath.Path };
-
-                        var entries = new List<SavePathEntry>();
-
-                        foreach (var localPath in localPaths)
-                        {
-                            var actualPath = Environment.ExpandEnvironmentVariables(savePath.Path.Replace('/', Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
-                            var relativePath = actualPath.Replace(installDirectory + Path.DirectorySeparatorChar, "");
-
-                            if (Directory.Exists(actualPath))
-                            {
-                                AddDirectoryToZip(archive, relativePath, actualPath, savePath.Id);
-                            }
-                            else if (File.Exists(actualPath))
-                            {
-                                archive.AddEntry(Path.Combine(savePath.Id.ToString(), relativePath), actualPath);
-                            }
-
-                            entries.Add(new SavePathEntry
-                            {
-                                ArchivePath = relativePath,
-                                ActualPath = actualPath.Replace(installDirectory, "{InstallDir}")
-                            });
-
-                            savePath.Entries = entries;
                         }
                     }
                     #endregion
@@ -256,6 +219,59 @@ namespace LANCommander.SDK
                     }
                 }
             }
+        }
+
+        public IEnumerable<SavePathEntry> GetFileSavePathEntries(SavePath savePath, string installDirectory)
+        {
+            IEnumerable<string> localPaths;
+
+            if (savePath.IsRegex)
+            {
+                var workingDirectory = GetLocalPath(savePath.WorkingDirectory, installDirectory);
+                var pattern = savePath.Path;
+
+                if (String.IsNullOrWhiteSpace(workingDirectory))
+                    workingDirectory = installDirectory;
+
+                if (Path.DirectorySeparatorChar == '\\')
+                {
+                    pattern = pattern.Replace("\\", "\\\\");
+                    pattern = pattern.Replace("/", "\\\\");
+                }
+
+                var regex = new Regex(pattern);
+
+                localPaths = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories)
+                    .Where(p => regex.IsMatch(p.Substring(workingDirectory.Length).TrimStart(Path.DirectorySeparatorChar)))
+                    .ToList();
+            }
+            else
+            {
+                var workingDirectory = GetLocalPath(savePath.WorkingDirectory, installDirectory);
+
+                var localPath = Path.Combine(workingDirectory, GetLocalPath(savePath.Path, installDirectory));
+
+                localPaths = new string[] { localPath };
+            }
+
+            var entries = new List<SavePathEntry>();
+
+            foreach (var localPath in localPaths)
+            {
+                var actualPath = localPath.DeflateEnvironmentVariables(installDirectory);
+                var workingDirectory = savePath.WorkingDirectory.DeflateEnvironmentVariables(installDirectory);
+                var archivePath = actualPath.Replace(workingDirectory, "").TrimStart(Path.DirectorySeparatorChar);
+
+                entries.Add(new SavePathEntry
+                {
+                    ArchivePath = archivePath.Replace(Path.DirectorySeparatorChar, '/'),
+                    ActualPath = actualPath.Replace(Path.DirectorySeparatorChar, '/')
+                });
+
+                savePath.Entries = entries;
+            }
+
+            return entries;
         }
 
         public string GetLocalPath(string path, string installDirectory)

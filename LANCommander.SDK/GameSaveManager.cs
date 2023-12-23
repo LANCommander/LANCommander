@@ -258,6 +258,28 @@ namespace LANCommander.SDK
             }
         }
 
+        public string GetLocalPath(string path, string installDirectory)
+        {
+            var localPath = Environment.ExpandEnvironmentVariables(path.Replace("{InstallDir}", installDirectory));
+
+            if (Path.DirectorySeparatorChar == '/')
+                localPath = localPath.Replace('\\', Path.DirectorySeparatorChar);
+            else
+                localPath = localPath.Replace('/', Path.DirectorySeparatorChar);
+
+            return localPath;
+        }
+
+        public string GetArchivePath(string path, string installDirectory)
+        {
+            var archivePath = path.DeflateEnvironmentVariables(installDirectory);
+
+            if (Path.DirectorySeparatorChar == '\\')
+                archivePath.Replace(Path.DirectorySeparatorChar, '/');
+
+            return archivePath;
+        }
+
         private void AddDirectoryToZip(ZipArchive zipArchive, string path, string workingDirectory, Guid pathId)
         {
             foreach (var file in Directory.GetFiles(path))

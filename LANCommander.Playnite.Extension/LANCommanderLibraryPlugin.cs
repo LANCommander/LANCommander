@@ -1,6 +1,7 @@
 ﻿using LANCommander.PlaynitePlugin.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
+using LANCommander.SDK.Extensions;
 using Playnite.SDK;
 using Playnite.SDK.Events;
 using Playnite.SDK.Models;
@@ -510,8 +511,8 @@ namespace LANCommander.PlaynitePlugin
                 {
                     Name = action.Name,
                     Arguments = action.Arguments,
-                    Path = PlayniteApi.ExpandGameVariables(game, action.Path?.Replace('/', Path.DirectorySeparatorChar)),
-                    WorkingDir = PlayniteApi.ExpandGameVariables(game, action.WorkingDirectory?.Replace('/', Path.DirectorySeparatorChar) ?? game.InstallDirectory),
+                    Path = action.Path?.ExpandEnvironmentVariables(game.InstallDirectory),
+                    WorkingDir = action.WorkingDirectory?.ExpandEnvironmentVariables(game.InstallDirectory),
                     IsPlayAction = action.IsPrimaryAction || isFirstAction
                 });
             }

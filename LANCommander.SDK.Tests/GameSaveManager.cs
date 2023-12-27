@@ -38,7 +38,7 @@ namespace LANCommander.SDK.Tests
 
         [Theory]
         [InlineData("C:\\Games\\Age of Empires", "{InstallDir}", "C:\\Games\\Age of Empires")]
-        [InlineData("C:\\", "%SystemDrive%\\", "C:\\Games\\")]
+        [InlineData("C:\\", "%SystemDrive%", "C:\\Games\\")]
         [InlineData("C:\\Games\\Quake 3\\baseq3\\autoexec.cfg", "{InstallDir}\\baseq3\\autoexec.cfg", "C:\\Games\\Quake 3")]
         [InlineData("C:\\Users\\{UserName}\\AppData\\Roaming\\.nfs2e", "%APPDATA%\\.nfs2e", "C:\\Games")]
         [InlineData("C:\\Users\\{UserName}\\AppData\\Local\\.minecraft", "%LOCALAPPDATA%\\.minecraft", "C:\\Games")]

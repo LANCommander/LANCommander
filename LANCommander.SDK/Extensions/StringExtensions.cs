@@ -25,9 +25,10 @@ namespace LANCommander.SDK.Extensions
             return input.IndexOf(search, StringComparison.OrdinalIgnoreCase) != -1;
         }
 
-        internal static string ExpandEnvironmentVariables(this string path, string installDirectory)
+        public static string ExpandEnvironmentVariables(this string path, string installDirectory)
         {
             path = path.Replace("{InstallDir}", installDirectory);
+            path = path.Replace('/', Path.DirectorySeparatorChar);
 
             SpecialFolder[] supportedSpecialFolders = new SpecialFolder[]
             {
@@ -56,10 +57,10 @@ namespace LANCommander.SDK.Extensions
 
             path = Environment.ExpandEnvironmentVariables(path);
 
-            return path;
+            return path.Trim(Path.DirectorySeparatorChar);
         }
 
-        internal static string DeflateEnvironmentVariables(this string path, string installDirectory)
+        public static string DeflateEnvironmentVariables(this string path, string installDirectory)
         {
             path = path.Replace(installDirectory.TrimEnd(Path.DirectorySeparatorChar), "{InstallDir}");
 

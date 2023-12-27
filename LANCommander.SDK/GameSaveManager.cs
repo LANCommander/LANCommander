@@ -16,6 +16,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -57,6 +58,7 @@ namespace LANCommander.SDK
             var manifest = ManifestHelper.Read(installDirectory);
 
             string tempFile = String.Empty;
+            string tempLocation = String.Empty;
 
             if (manifest != null)
             {
@@ -68,62 +70,60 @@ namespace LANCommander.SDK
                     OnDownloadComplete?.Invoke(complete);
                 });
 
+                Logger?.LogTrace("Game save archive downloaded to {SaveTempLocation}", destination);
+
                 tempFile = destination;
 
                 // Go into the archive and extract the files to the correct locations
                 try
                 {
-                    var tempLocation = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                    tempLocation = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
                     Directory.CreateDirectory(tempLocation);
 
-                    ExtractFilesFromZip(tempFile, tempLocation);
+                    bool success = RetryHelper.RetryOnException<bool>(10, TimeSpan.FromMilliseconds(200), false, () =>
+                    {
+                        Logger?.LogTrace("Attempting to extracting save entries to the temporary location {TempPath}");
+
+                        ExtractFilesFromZip(tempFile, tempLocation);
+
+                        return true;
+                    });
+
+                    if (!success)
+                        throw new ExtractionException("Could not extract the save archive. Is the file locked?");
+
+                    manifest = ManifestHelper.Read(tempLocation);
 
                     #region Move files
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
-                        bool inInstallDir = savePath.Path.StartsWith("{InstallDir}");
-                        string tempSavePath = Path.Combine(tempLocation, savePath.Id.ToString());
-
                         foreach (var entry in savePath.Entries)
                         {
-                            var tempSavePathFile = Path.Combine(tempSavePath, entry.ArchivePath);
+                            var entryPath = Path.Combine(tempLocation, "Saves", savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
+                            var destinationPath = entry.ActualPath.ExpandEnvironmentVariables(installDirectory);
 
-                            destination = Environment.ExpandEnvironmentVariables(entry.ActualPath).Replace("{InstallDir}", installDirectory);
-
-                            if (File.Exists(tempSavePathFile))
+                            if (File.Exists(entryPath))
                             {
-                                if (File.Exists(destination))
-                                    File.Delete(destination);
+                                // Handle individual files that were saved as an entry in the path
+                                if (File.Exists(destinationPath))
+                                    File.Delete(destinationPath);
 
-                                File.Move(tempSavePathFile, destination);
+                                File.Move(entryPath, destinationPath);
                             }
-                            else if (Directory.Exists(tempSavePath))
+                            else if (Directory.Exists(entryPath))
                             {
-                                var files = Directory.GetFiles(tempSavePath, "*", SearchOption.AllDirectories);
+                                // Handle directories that were saved as an entry in the path
+                                var entryFiles = Directory.GetFiles(entryPath, "*", SearchOption.AllDirectories);
 
-                                foreach (var file in files)
+                                foreach (var entryFile in entryFiles)
                                 {
-                                    if (inInstallDir)
-                                    {
-                                        // Files are in the game's install directory. Move them there from the save path.
-                                        destination = file.Replace(tempSavePath, savePath.Path.Replace('/', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar).Replace("{InstallDir}", installDirectory));
+                                    var fileDestination = entryFile.Replace(entryPath, destinationPath);
 
-                                        if (File.Exists(destination))
-                                            File.Delete(destination);
+                                    if (File.Exists(fileDestination))
+                                        File.Delete(fileDestination);
 
-                                        File.Move(file, destination);
-                                    }
-                                    else
-                                    {
-                                        // Specified path is probably an absolute path, maybe with environment variables.
-                                        destination = Environment.ExpandEnvironmentVariables(file.Replace(tempSavePathFile, savePath.Path.Replace('/', Path.DirectorySeparatorChar)));
-
-                                        if (File.Exists(destination))
-                                            File.Delete(destination);
-
-                                        File.Move(file, destination);
-                                    }
+                                    File.Move(entryFile, fileDestination);
                                 }
                             }
                         }
@@ -153,7 +153,12 @@ namespace LANCommander.SDK
                 }
                 catch (Exception ex)
                 {
-
+                    Logger?.LogError(ex, "The files in a save could not be extracted to their destination");
+                }
+                finally
+                {
+                    if (Directory.Exists(tempLocation))
+                        Directory.Delete(tempLocation, true);
                 }
             }
         }

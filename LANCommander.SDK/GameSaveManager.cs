@@ -3,6 +3,7 @@ using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
+using Microsoft.Extensions.Logging;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
@@ -30,6 +31,8 @@ namespace LANCommander.SDK
 {
     public class GameSaveManager
     {
+        private readonly ILogger Logger;
+
         private readonly Client Client;
 
         public delegate void OnDownloadProgressHandler(DownloadProgressChangedEventArgs e);
@@ -41,6 +44,12 @@ namespace LANCommander.SDK
         public GameSaveManager(Client client)
         {
             Client = client;
+        }
+
+        public GameSaveManager(Client client, ILogger logger)
+        {
+            Client = client;
+            Logger = logger;
         }
 
         public void Download(string installDirectory)

@@ -7,7 +7,7 @@ namespace LANCommander.PlaynitePlugin
 {
     public class LANCommanderSaveController : ControllerBase
     {
-        private static readonly ILogger Logger;
+        public static readonly ILogger Logger = LogManager.GetLogger();
 
         private LANCommanderLibraryPlugin Plugin;
 
@@ -21,12 +21,12 @@ namespace LANCommander.PlaynitePlugin
         {
             if (game != null)
             {
+                var saveManager = new GameSaveManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
+
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
                     progress.ProgressMaxValue = 100;
                     progress.CurrentProgressValue = 0;
-
-                    var saveManager = new GameSaveManager(Plugin.LANCommanderClient);
 
                     saveManager.OnDownloadProgress += (downloadProgress) =>
                     {
@@ -53,7 +53,7 @@ namespace LANCommander.PlaynitePlugin
 
         public void Upload(Game game)
         {
-            var saveManager = new GameSaveManager(Plugin.LANCommanderClient);
+            var saveManager = new GameSaveManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
 
             saveManager.Upload(game.InstallDirectory);
         }

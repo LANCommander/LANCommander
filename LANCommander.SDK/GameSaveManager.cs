@@ -100,7 +100,7 @@ namespace LANCommander.SDK
                     {
                         foreach (var entry in savePath.Entries)
                         {
-                            var entryPath = Path.Combine(tempLocation, "Saves", savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
+                            var entryPath = Path.Combine(tempLocation, "Files", savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
                             var destinationPath = entry.ActualPath.ExpandEnvironmentVariables(installDirectory);
 
                             if (File.Exists(entryPath))
@@ -188,7 +188,7 @@ namespace LANCommander.SDK
                                 AddDirectoryToZip(archive, entry.ArchivePath, localPath, savePath.Id);
                             else if (File.Exists(localPath))
                             {
-                                archive.AddEntry($"Saves/{savePath.Id}/{entry.ArchivePath}", localPath);
+                                archive.AddEntry($"Files/{savePath.Id}/{entry.ArchivePath}", localPath);
                             }
                         }
                     }

@@ -70,6 +70,9 @@ namespace LANCommander.SDK
                     OnDownloadComplete?.Invoke(complete);
                 });
 
+                if (String.IsNullOrWhiteSpace(destination))
+                    return;
+
                 Logger?.LogTrace("Game save archive downloaded to {SaveTempLocation}", destination);
 
                 tempFile = destination;

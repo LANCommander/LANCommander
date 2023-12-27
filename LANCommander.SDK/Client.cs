@@ -82,7 +82,17 @@ namespace LANCommander.SDK
             client.DownloadProgressChanged += (s, e) => progressHandler(e);
             client.DownloadFileCompleted += (s, e) => completeHandler(e);
 
-            client.DownloadFileAsync(new Uri($"{ApiClient.BaseUrl}{route}"), tempFile);
+            try
+            {
+                client.DownloadFileTaskAsync(new Uri($"{ApiClient.BaseUrl}{route}"), tempFile).Wait();
+            }
+            catch (Exception ex)
+            {
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+
+                tempFile = String.Empty;
+            }
 
             return tempFile;
         }

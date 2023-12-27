@@ -111,7 +111,7 @@ namespace LANCommander.PlaynitePlugin
             {
                 var manifest = ManifestHelper.Read(installDirectory);
 
-                Plugin.UpdateGame(manifest);
+                Plugin.UpdateGame(manifest, installDirectory);
 
                 var installInfo = new GameInstallationData
                 {

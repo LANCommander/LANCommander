@@ -127,7 +127,7 @@ namespace LANCommander.PlaynitePlugin
                     {
                         Logger.Trace("Game already exists in library, updating metadata...");
 
-                        UpdateGame(manifest);
+                        UpdateGame(manifest, existingGame.InstallDirectory);
 
                         continue;
                     }
@@ -488,7 +488,7 @@ namespace LANCommander.PlaynitePlugin
             return window;
         }
 
-        public void UpdateGame(SDK.GameManifest manifest)
+        public void UpdateGame(SDK.GameManifest manifest, string installDirectory)
         {
             var game = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == manifest?.Id.ToString());
 
@@ -508,8 +508,8 @@ namespace LANCommander.PlaynitePlugin
                 {
                     bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;
 
-                    var actionPath = action.Path?.ExpandEnvironmentVariables(game.InstallDirectory);
-                    var actionWorkingDir = String.IsNullOrWhiteSpace(action.WorkingDirectory) ? game.InstallDirectory : action.WorkingDirectory.ExpandEnvironmentVariables(game.InstallDirectory);
+                    var actionPath = action.Path?.ExpandEnvironmentVariables(installDirectory);
+                    var actionWorkingDir = String.IsNullOrWhiteSpace(action.WorkingDirectory) ? installDirectory : action.WorkingDirectory.ExpandEnvironmentVariables(installDirectory);
 
                     if (actionPath.StartsWith(actionWorkingDir))
                         actionPath = actionPath.Substring(actionWorkingDir.Length).TrimStart(Path.DirectorySeparatorChar);

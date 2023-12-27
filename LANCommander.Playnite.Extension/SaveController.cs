@@ -2,6 +2,8 @@
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
+using System;
+using System.Linq;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -17,8 +19,10 @@ namespace LANCommander.PlaynitePlugin
             Plugin = plugin;
         }
 
-        public void Download(Game game)
+        public void Download(Guid gameId)
         {
+            var game = Plugin.PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == gameId.ToString());
+
             if (game != null)
             {
                 var saveManager = new GameSaveManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
@@ -51,11 +55,16 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
-        public void Upload(Game game)
+        public void Upload(Guid gameId)
         {
-            var saveManager = new GameSaveManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
+            var game = Plugin.PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == gameId.ToString());
 
-            saveManager.Upload(game.InstallDirectory);
+            if (game != null)
+            {
+                var saveManager = new GameSaveManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
+
+                saveManager.Upload(game.InstallDirectory);
+            }
         }
     }
 }

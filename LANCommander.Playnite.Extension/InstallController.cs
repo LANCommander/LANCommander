@@ -118,6 +118,8 @@ namespace LANCommander.PlaynitePlugin
                     InstallDirectory = installDirectory,
                 };
 
+                Plugin.SaveController.Download(manifest.Id);
+
                 RunInstallScript(installDirectory);
                 RunNameChangeScript(installDirectory);
                 RunKeyChangeScript(installDirectory);

@@ -344,7 +344,7 @@ namespace LANCommander.PlaynitePlugin
                 try
                 {
                     SaveController = new LANCommanderSaveController(this, args.Game);
-                    SaveController.Download(args.Game);
+                    SaveController.Download(gameId);
                 }
                 catch (Exception ex)
                 {
@@ -364,7 +364,7 @@ namespace LANCommander.PlaynitePlugin
                 try
                 {
                     SaveController = new LANCommanderSaveController(this, args.Game);
-                    SaveController.Upload(args.Game);
+                    SaveController.Upload(gameId);
                 }
                 catch (Exception ex)
                 {

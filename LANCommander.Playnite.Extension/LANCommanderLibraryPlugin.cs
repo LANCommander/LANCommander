@@ -503,19 +503,26 @@ namespace LANCommander.PlaynitePlugin
             if (manifest.Actions == null)
                 throw new Exception("The game has no actions defined.");
 
-            foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder))
-            {
-                bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;
-
-                game.GameActions.Add(new PN.SDK.Models.GameAction()
+            if (game.IsInstalled || game.IsInstalling)
+                foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder))
                 {
-                    Name = action.Name,
-                    Arguments = action.Arguments,
-                    Path = action.Path?.ExpandEnvironmentVariables(game.InstallDirectory),
-                    WorkingDir = action.WorkingDirectory?.ExpandEnvironmentVariables(game.InstallDirectory),
-                    IsPlayAction = action.IsPrimaryAction || isFirstAction
-                });
-            }
+                    bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;
+
+                    var actionPath = action.Path?.ExpandEnvironmentVariables(game.InstallDirectory);
+                    var actionWorkingDir = String.IsNullOrWhiteSpace(action.WorkingDirectory) ? game.InstallDirectory : action.WorkingDirectory.ExpandEnvironmentVariables(game.InstallDirectory);
+
+                    if (actionPath.StartsWith(actionWorkingDir))
+                        actionPath = actionPath.Substring(actionWorkingDir.Length).TrimStart(Path.DirectorySeparatorChar);
+
+                    game.GameActions.Add(new PN.SDK.Models.GameAction()
+                    {
+                        Name = action.Name,
+                        Arguments = action.Arguments,
+                        Path = actionPath,
+                        WorkingDir = actionWorkingDir,
+                        IsPlayAction = action.IsPrimaryAction || isFirstAction
+                    });
+                }
 
             #region Features
             var singlePlayerFeature = PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == "Single Player");

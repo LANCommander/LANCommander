@@ -60,3 +60,13 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.3.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_3_3.pext
     Changelog:
       - PowerShell module/cmdlets now properly import on non-portable Playnite installs
+  - Version: 0.4.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2023-12-27
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.4.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_4_0.pext
+    Changelog:
+      - Redistributable installation has been fixed
+      - Added more logging for game/redistributable installs
+      - Added support for expanding environment variables and special folders in actions
+      - Fixed packaging and unpackaging of saves
+      - Latest game save is now downloaded after install

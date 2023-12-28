@@ -118,13 +118,14 @@ namespace LANCommander.PlaynitePlugin
                     InstallDirectory = installDirectory,
                 };
 
+                InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
+
+                Plugin.SaveController = new LANCommanderSaveController(Plugin, null);
                 Plugin.SaveController.Download(manifest.Id);
 
                 RunInstallScript(installDirectory);
                 RunNameChangeScript(installDirectory);
                 RunKeyChangeScript(installDirectory);
-
-                InvokeOnInstalled(new GameInstalledEventArgs(installInfo));
             }
             else if (result.Canceled)
             {

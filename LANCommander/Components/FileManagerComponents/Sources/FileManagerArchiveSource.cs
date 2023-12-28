@@ -131,9 +131,7 @@ namespace LANCommander.Components.FileManagerComponents.Sources
 
         public string GetEntryName(IFileManagerEntry entry)
         {
-            var zipArchiveEntry = ZipArchiveEntries.FirstOrDefault(e => e.FullName == entry.Path);
-
-            return zipArchiveEntry.Name;
+            return GetName(entry.Path);
         }
 
         public FileManagerDirectory GetDirectory(string path)

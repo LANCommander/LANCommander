@@ -194,60 +194,61 @@ namespace LANCommander.Services
                         }
                     }
                 });
-            }
 
-            var process = new Process();
 
-            process.StartInfo.FileName = server.Path;
-            process.StartInfo.WorkingDirectory = server.WorkingDirectory;
-            process.StartInfo.Arguments = server.Arguments;
-            process.StartInfo.UseShellExecute = server.UseShellExecute;
-            process.EnableRaisingEvents = true;
+                var process = new Process();
 
-            if (!process.StartInfo.UseShellExecute)
-            {
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.RedirectStandardError = true;
-
-                process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
-                {
-                    HubContext.Clients.All.SendAsync("Log", e.Data);
-                    Logger.Info("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
-                });
-
-                process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
-                {
-                    HubContext.Clients.All.SendAsync("Log", e.Data);
-                    Logger.Error("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
-                });
-            }
-
-            try
-            {
-                process.Start();
+                process.StartInfo.FileName = server.Path;
+                process.StartInfo.WorkingDirectory = server.WorkingDirectory;
+                process.StartInfo.Arguments = server.Arguments;
+                process.StartInfo.UseShellExecute = server.UseShellExecute;
+                process.EnableRaisingEvents = true;
 
                 if (!process.StartInfo.UseShellExecute)
                 {
-                    process.BeginErrorReadLine();
-                    process.BeginOutputReadLine();
+                    process.StartInfo.RedirectStandardOutput = true;
+                    process.StartInfo.RedirectStandardError = true;
+
+                    process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+                    {
+                        HubContext.Clients.All.SendAsync("Log", e.Data);
+                        Logger.Info("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
+                    });
+
+                    process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+                    {
+                        HubContext.Clients.All.SendAsync("Log", e.Data);
+                        Logger.Error("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
+                    });
                 }
 
-                Processes[server.Id] = process;
-
-                foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
+                try
                 {
-                    StartMonitoringLog(logFile, server);
+                    process.Start();
+
+                    if (!process.StartInfo.UseShellExecute)
+                    {
+                        process.BeginErrorReadLine();
+                        process.BeginOutputReadLine();
+                    }
+
+                    Processes[server.Id] = process;
+
+                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
+                    {
+                        StartMonitoringLog(logFile, server);
+                    }
+
+                    OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Running));
+
+                    await process.WaitForExitAsync();
                 }
+                catch (Exception ex)
+                {
+                    OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
 
-                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Running));
-
-                await process.WaitForExitAsync();
-            }
-            catch (Exception ex)
-            {
-                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
-
-                Logger.Error(ex, "Could not start server process");
+                    Logger.Error(ex, "Could not start server process");
+                }
             }
         }
 

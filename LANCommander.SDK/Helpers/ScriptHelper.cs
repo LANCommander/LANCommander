@@ -40,14 +40,17 @@ namespace LANCommander.SDK.Helpers
         {
             var scriptContents = GetScriptContents(game, type);
 
-            var filename = GetScriptFilePath(game, type);
+            if (!String.IsNullOrWhiteSpace(scriptContents))
+            {
+                var filename = GetScriptFilePath(game, type);
 
-            if (File.Exists(filename))
-                File.Delete(filename);
+                if (File.Exists(filename))
+                    File.Delete(filename);
 
-            Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
+                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
 
-            File.WriteAllText(filename, scriptContents);
+                File.WriteAllText(filename, scriptContents);
+            }
         }
 
         public static string GetScriptContents(Game game, ScriptType type)

@@ -162,7 +162,7 @@
         {
             var path = results.FirstOrDefault().Path;
 
-            InsertText($"$InstallDir\\{path.Replace('/', '\\')}");
+            InsertText($"$InstallDirectory\\{path.Replace('/', '\\')}");
 
             StateHasChanged();
             return Task.CompletedTask;

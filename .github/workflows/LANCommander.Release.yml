@@ -28,7 +28,7 @@ jobs:
       uses: actions/setup-node@v3.8.1
     - run: cd LANCommander/wwwroot/scripts; npm install
     - name: Build
-      run: dotnet build "./LANCommander/LANCommander.csproj" --no-restore /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet build "./LANCommander/LANCommander.csproj" --no-restore /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Publish
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build --self-contained --os win -p:PublishSingleFile=true
     - name: Sign Windows Binary
@@ -51,7 +51,7 @@ jobs:
     - name: Restore NuGet packages
       run: nuget restore LANCommander.sln
     - name: Build and Publish Library
-      run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Sign Windows Binary
       uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
       with:

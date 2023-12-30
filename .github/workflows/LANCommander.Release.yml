@@ -70,7 +70,7 @@ jobs:
         tag: 10.32
         fileName: Playnite1032.zip
     - name: Extract Playnite
-      run: Expand-Archive -Path Playnite1018.zip -DestinationPath Playnite
+      run: Expand-Archive -Path Playnite1032.zip -DestinationPath Playnite
     - name: Update Manifest Versioning
       uses: fjogeleit/yaml-update-action@main
       with:

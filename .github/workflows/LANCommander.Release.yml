@@ -21,27 +21,32 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 8.0.x
     - name: Restore dependencies
       run: dotnet restore
     - name: Setup Node.js environment
       uses: actions/setup-node@v3.8.1
     - run: cd LANCommander/wwwroot/scripts; npm install
-    - name: Build
-      run: dotnet build "./LANCommander/LANCommander.csproj" --no-restore /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Publish
-      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build --self-contained --os win -p:PublishSingleFile=true
+    - name: Publish Windows
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Publish Linux
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Sign Windows Binary
       uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
       with:
         certificate: "${{ secrets.CERTIFICATE }}"
         cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
-        filepath: "./_Build/LANCommander.exe"
-    - name: Upload Artifacts
+        filepath: "./_Build_Windows/LANCommander.exe"
+    - name: Upload Artifacts (Windows)
       uses: actions/upload-artifact@v2
       with:
-        name: LANCommander-v${{ steps.trim_tag_ref.outputs.replaced }}
-        path: "./_Build"
+        name: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}
+        path: "./_Build_Windows"
+    - name: Upload Artifacts (Linux)
+      uses: actions/upload-artifact@v2
+      with:
+        name: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}
+        path: "./_Build_Linux"
     # Client
     - uses: actions/checkout@v3
     - name: Setup MSBuild
@@ -62,8 +67,8 @@ jobs:
       uses: robinraju/release-downloader@v1.7
       with:
         repository: JosefNemec/Playnite
-        tag: 10.18
-        fileName: Playnite1018.zip
+        tag: 10.32
+        fileName: Playnite1032.zip
     - name: Extract Playnite
       run: Expand-Archive -Path Playnite1018.zip -DestinationPath Playnite
     - name: Update Manifest Versioning

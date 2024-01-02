@@ -25,24 +25,22 @@ namespace LANCommander.PlaynitePlugin
 
             if (game != null)
             {
-                var saveManager = new GameSaveManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
-
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
                     progress.ProgressMaxValue = 100;
                     progress.CurrentProgressValue = 0;
 
-                    saveManager.OnDownloadProgress += (downloadProgress) =>
+                    Plugin.LANCommanderClient.Saves.OnDownloadProgress += (downloadProgress) =>
                     {
                         progress.CurrentProgressValue = downloadProgress.ProgressPercentage;
                     };
 
-                    saveManager.OnDownloadComplete += (downloadComplete) =>
+                    Plugin.LANCommanderClient.Saves.OnDownloadComplete += (downloadComplete) =>
                     {
                         progress.CurrentProgressValue = 100;
                     };
 
-                    saveManager.Download(game.InstallDirectory);
+                    Plugin.LANCommanderClient.Saves.Download(game.InstallDirectory);
 
                     // Lock the thread until the download is done
                     while (progress.CurrentProgressValue != 100) { }
@@ -61,9 +59,7 @@ namespace LANCommander.PlaynitePlugin
 
             if (game != null)
             {
-                var saveManager = new GameSaveManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
-
-                saveManager.Upload(game.InstallDirectory);
+                Plugin.LANCommanderClient.Saves.Upload(game.InstallDirectory);
             }
         }
     }

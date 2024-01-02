@@ -6,12 +6,10 @@ namespace LANCommander.SDK.Tests
     public class GameSaveManager
     {
         Guid SaveId;
-        SDK.GameSaveManager Manager;
+        Client Client;
 
         public GameSaveManager() {
-            var client = new Client("http://localhost:1337");
-
-            Manager = new SDK.GameSaveManager(client);
+            Client = new Client("http://localhost:1337", "C:\\Games");
         }
 
         [Theory]
@@ -28,7 +26,7 @@ namespace LANCommander.SDK.Tests
         {
             // Tests to make sure GetLocalPath gets the correct local paths for a given input.
             // Useful to make sure that the full path to the file is returned properly.
-            var result = Manager.GetLocalPath(input, installDirectory);
+            var result = Client.Saves.GetLocalPath(input, installDirectory);
 
             // To test anything that might have the username in the expected string
             expected = expected.Replace("{UserName}", Environment.UserName);
@@ -48,7 +46,7 @@ namespace LANCommander.SDK.Tests
         {
             input = input.Replace("{UserName}", Environment.UserName);
 
-            var result = Manager.GetActualPath(input, installDirectory);
+            var result = Client.Saves.GetActualPath(input, installDirectory);
 
             Assert.Equal(expected, result);
         }
@@ -63,7 +61,7 @@ namespace LANCommander.SDK.Tests
         {
             path = path.Replace("{UserName}", Environment.UserName);
 
-            var result = Manager.GetArchivePath(path, workingDirectory, installDirectory);
+            var result = Client.Saves.GetArchivePath(path, workingDirectory, installDirectory);
 
             Assert.Equal(expected, result);
         }
@@ -83,7 +81,7 @@ namespace LANCommander.SDK.Tests
             };
 
             // Act
-            var entries = Manager.GetFileSavePathEntries(savePath, installDirectory);
+            var entries = Client.Saves.GetFileSavePathEntries(savePath, installDirectory);
 
             // Assert
             Assert.Single(entries);
@@ -114,7 +112,7 @@ namespace LANCommander.SDK.Tests
             File.WriteAllText(Path.Combine(installDirectory, "base", "player.cfg"), savePath.Id.ToString());
 
             // Act
-            var entries = Manager.GetFileSavePathEntries(savePath, installDirectory);
+            var entries = Client.Saves.GetFileSavePathEntries(savePath, installDirectory);
 
             // Assert
             Assert.Equal(2, entries.Count());

@@ -40,7 +40,7 @@ namespace LANCommander.PlaynitePlugin
 
             Settings = new LANCommanderSettingsViewModel(this);
 
-            LANCommanderClient = new SDK.Client(Settings.ServerAddress, new PlayniteLogger(Logger));
+            LANCommanderClient = new SDK.Client(Settings.ServerAddress, Settings.InstallDirectory, new PlayniteLogger(Logger));
             LANCommanderClient.UseToken(new SDK.Models.AuthToken()
             {
                 AccessToken = Settings.AccessToken,
@@ -108,8 +108,7 @@ namespace LANCommander.PlaynitePlugin
                 }
             }
 
-            var games = LANCommanderClient
-                .GetGames()
+            var games = LANCommanderClient.Games.Get()
                 .Where(g => g != null && g.Archives != null && g.Archives.Count() > 0);
 
             foreach (var game in games)
@@ -118,7 +117,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     Logger.Trace($"Importing/updating metadata for game \"{game.Title}\"...");
 
-                    var manifest = LANCommanderClient.GetGameManifest(game.Id);
+                    var manifest = LANCommanderClient.Games.GetManifest(game.Id);
                     Logger.Trace("Successfully grabbed game manifest");
 
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
@@ -249,7 +248,7 @@ namespace LANCommander.PlaynitePlugin
 
                                 RunNameChangeScript(game.InstallDirectory, oldName, result.SelectedString);
 
-                                LANCommanderClient.ChangeAlias(result.SelectedString);
+                                LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
                             }
                         }
                     };
@@ -269,7 +268,7 @@ namespace LANCommander.PlaynitePlugin
                             if (Guid.TryParse(keyChangeArgs.Games.First().GameId, out gameId))
                             {
                                 // NUKIEEEE
-                                var newKey = LANCommanderClient.GetNewKey(gameId);
+                                var newKey = LANCommanderClient.Games.GetNewKey(gameId);
 
                                 if (String.IsNullOrEmpty(newKey))
                                     PlayniteApi.Dialogs.ShowErrorMessage("There are no more keys available on the server.", "No Keys Available");
@@ -339,7 +338,7 @@ namespace LANCommander.PlaynitePlugin
             {
                 var gameId = Guid.Parse(args.Game.GameId);
 
-                LANCommanderClient.StartPlaySession(gameId);
+                LANCommanderClient.Games.StartPlaySession(gameId);
 
                 try
                 {
@@ -359,7 +358,7 @@ namespace LANCommander.PlaynitePlugin
             {
                 var gameId = Guid.Parse(args.Game.GameId);
 
-                LANCommanderClient.EndPlaySession(gameId);
+                LANCommanderClient.Games.EndPlaySession(gameId);
 
                 try
                 {
@@ -435,7 +434,7 @@ namespace LANCommander.PlaynitePlugin
 
                     var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
 
-                    LANCommanderClient.ChangeAlias(result.SelectedString);
+                    LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
 
                     Logger.Trace($"Running name change scripts across {games.Count} installed game(s)");
 
@@ -639,7 +638,7 @@ namespace LANCommander.PlaynitePlugin
                 var script = new PowerShellScript();
 
                 if (String.IsNullOrEmpty(key))
-                    key = LANCommanderClient.GetAllocatedKey(manifest.Id);
+                    key = LANCommanderClient.Games.GetAllocatedKey(manifest.Id);
 
                 script.AddVariable("InstallDirectory", installDirectory);
                 script.AddVariable("GameManifest", manifest);

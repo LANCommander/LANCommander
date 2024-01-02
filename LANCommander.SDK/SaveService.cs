@@ -4,6 +4,7 @@ using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
+using RestSharp;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
@@ -17,6 +18,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -30,7 +32,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.SDK
 {
-    public class GameSaveManager
+    public class SaveService
     {
         private readonly ILogger Logger;
 
@@ -42,15 +44,31 @@ namespace LANCommander.SDK
         public delegate void OnDownloadCompleteHandler(AsyncCompletedEventArgs e);
         public event OnDownloadCompleteHandler OnDownloadComplete;
 
-        public GameSaveManager(Client client)
+        public SaveService(Client client)
         {
             Client = client;
         }
 
-        public GameSaveManager(Client client, ILogger logger)
+        public SaveService(Client client, ILogger logger)
         {
             Client = client;
             Logger = logger;
+        }
+
+        private string Download(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        {
+            return Client.DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);
+        }
+        public string DownloadLatest(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        {
+            return Client.DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
+        }
+
+        public GameSave Upload(Guid gameId, byte[] data)
+        {
+            Logger?.LogTrace("Uploading save...");
+
+            return Client.UploadRequest<GameSave>($"/api/Saves/Upload/{gameId}", gameId.ToString(), data);
         }
 
         public void Download(string installDirectory)
@@ -62,7 +80,7 @@ namespace LANCommander.SDK
 
             if (manifest != null)
             {
-                var destination = Client.DownloadLatestSave(manifest.Id, (changed) =>
+                var destination = DownloadLatest(manifest.Id, (changed) =>
                 {
                     OnDownloadProgress?.Invoke(changed);
                 }, (complete) =>
@@ -242,7 +260,7 @@ namespace LANCommander.SDK
 
                         ms.Seek(0, SeekOrigin.Begin);
 
-                        var save = Client.UploadSave(manifest.Id.ToString(), ms.ToArray());
+                        var save = Upload(manifest.Id, ms.ToArray());
                     }
                 }
             }

@@ -13,7 +13,7 @@ using System.Text;
 
 namespace LANCommander.SDK
 {
-    public class GameManager
+    public class GameService
     {
         private readonly ILogger Logger;
         private Client Client { get; set; }
@@ -25,20 +25,98 @@ namespace LANCommander.SDK
         public delegate void OnArchiveExtractionProgressHandler(long position, long length);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
-        private TrackableStream Stream;
+        private TrackableStream DownloadStream;
         private IReader Reader;
 
-        public GameManager(Client client, string defaultInstallDirectory)
+        public GameService(Client client, string defaultInstallDirectory)
         {
             Client = client;
             DefaultInstallDirectory = defaultInstallDirectory;
         }
 
-        public GameManager(Client client, string defaultInstallDirectory, ILogger logger)
+        public GameService(Client client, string defaultInstallDirectory, ILogger logger)
         {
             Client = client;
             DefaultInstallDirectory = defaultInstallDirectory;
             Logger = logger;
+        }
+
+        public IEnumerable<Game> Get()
+        {
+            return Client.GetRequest<IEnumerable<Game>>("/api/Games");
+        }
+
+        public Game Get(Guid id)
+        {
+            return Client.GetRequest<Game>($"/api/Games/{id}");
+        }
+
+        public GameManifest GetManifest(Guid id)
+        {
+            return Client.GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
+        }
+
+        private TrackableStream Stream(Guid id)
+        {
+            return Client.StreamRequest($"/api/Games/{id}/Download");
+        }
+
+        public void StartPlaySession(Guid id)
+        {
+            Logger?.LogTrace("Starting a game session...");
+
+            Client.PostRequest<object>($"/api/PlaySessions/Start/{id}");
+        }
+
+        public void EndPlaySession(Guid id)
+        {
+            Logger?.LogTrace("Ending a game session...");
+
+            Client.PostRequest<object>($"/api/PlaySessions/End/{id}");
+        }
+
+        public string GetAllocatedKey(Guid id)
+        {
+            Logger?.LogTrace("Requesting allocated key...");
+
+            var macAddress = Client.GetMacAddress();
+
+            var request = new KeyRequest()
+            {
+                GameId = id,
+                MacAddress = macAddress,
+                ComputerName = Environment.MachineName,
+                IpAddress = Client.GetIpAddress(),
+            };
+
+            var response = Client.PostRequest<Key>($"/api/Keys/GetAllocated/{id}", request);
+
+            if (response == null)
+                return String.Empty;
+
+            return response.Value;
+        }
+
+        public string GetNewKey(Guid id)
+        {
+            Logger?.LogTrace("Requesting new key allocation...");
+
+            var macAddress = Client.GetMacAddress();
+
+            var request = new KeyRequest()
+            {
+                GameId = id,
+                MacAddress = macAddress,
+                ComputerName = Environment.MachineName,
+                IpAddress = Client.GetIpAddress(),
+            };
+
+            var response = Client.PostRequest<Key>($"/api/Keys/Allocate/{id}", request);
+
+            if (response == null)
+                return String.Empty;
+
+            return response.Value;
         }
 
         /// <summary>
@@ -52,7 +130,7 @@ namespace LANCommander.SDK
         {
             GameManifest manifest = null;
 
-            var game = Client.GetGame(gameId);
+            var game = Get(gameId);
 
             var destination = Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
 
@@ -95,7 +173,7 @@ namespace LANCommander.SDK
             {
                 Logger?.LogTrace("Attempting to get game manifest");
 
-                manifest = Client.GetGameManifest(game.Id);
+                manifest = GetManifest(game.Id);
 
                 ManifestHelper.Write(manifest, game.InstallDirectory);
 
@@ -146,10 +224,10 @@ namespace LANCommander.SDK
             {
                 Directory.CreateDirectory(destination);
 
-                Stream = Client.StreamGame(game.Id);
-                Reader = ReaderFactory.Open(Stream);
+                DownloadStream = Stream(game.Id);
+                Reader = ReaderFactory.Open(DownloadStream);
 
-                Stream.OnProgress += (pos, len) =>
+                DownloadStream.OnProgress += (pos, len) =>
                 {
                     OnArchiveExtractionProgress?.Invoke(pos, len);
                 };
@@ -177,7 +255,7 @@ namespace LANCommander.SDK
                 }
 
                 Reader.Dispose();
-                Stream.Dispose();
+                DownloadStream.Dispose();
             }
             catch (ReaderCancelledException ex)
             {
@@ -220,8 +298,6 @@ namespace LANCommander.SDK
         public void CancelInstall()
         {
             Reader?.Cancel();
-            // Reader?.Dispose();
-            // Stream?.Dispose();
         }
     }
 }

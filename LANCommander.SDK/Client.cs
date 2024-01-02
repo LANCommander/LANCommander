@@ -21,18 +21,36 @@ namespace LANCommander.SDK
         private AuthToken Token;
 
         public string BaseUrl;
+        public string DefaultInstallDirectory;
 
-        public Client(string baseUrl)
+        public readonly GameService Games;
+        public readonly SaveService Saves;
+        public readonly RedistributableService Redistributables;
+        public readonly ProfileService Profile;
+
+        public Client(string baseUrl, string defaultInstallDirectory)
         {
             BaseUrl = baseUrl;
+            DefaultInstallDirectory = defaultInstallDirectory;
+
+            Games = new GameService(this, DefaultInstallDirectory);
+            Saves = new SaveService(this);
+            Redistributables = new RedistributableService(this);
+            Profile = new ProfileService(this);
 
             if (!String.IsNullOrWhiteSpace(BaseUrl))
                 ApiClient = new RestClient(BaseUrl);
         }
 
-        public Client(string baseUrl, ILogger logger)
+        public Client(string baseUrl, string defaultInstallDirectory, ILogger logger)
         {
             BaseUrl = baseUrl;
+            DefaultInstallDirectory = defaultInstallDirectory;
+
+            Games = new GameService(this, DefaultInstallDirectory, logger);
+            Saves = new SaveService(this, logger);
+            Redistributables = new RedistributableService(this, logger);
+            Profile = new ProfileService(this, logger);
 
             if (!String.IsNullOrWhiteSpace(BaseUrl))
                 ApiClient = new RestClient(BaseUrl);
@@ -40,7 +58,7 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        private T PostRequest<T>(string route, object body)
+        internal T PostRequest<T>(string route, object body)
         {
             var request = new RestRequest(route)
                 .AddJsonBody(body)
@@ -51,7 +69,7 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
-        private T PostRequest<T>(string route)
+        internal T PostRequest<T>(string route)
         {
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
@@ -61,7 +79,7 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
-        private T GetRequest<T>(string route)
+        internal T GetRequest<T>(string route)
         {
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
@@ -71,7 +89,7 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
-        private string DownloadRequest(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        internal string DownloadRequest(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             route = route.TrimStart('/');
 
@@ -97,18 +115,29 @@ namespace LANCommander.SDK
             return tempFile;
         }
 
-        private TrackableStream StreamRequest(string route)
+        internal TrackableStream StreamRequest(string route)
         {
             route = route.TrimStart('/');
 
             var client = new WebClient();
-            var tempFile = Path.GetTempFileName();
 
             client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
 
             var ws = client.OpenRead(new Uri($"{ApiClient.BaseUrl}{route}"));
 
             return new TrackableStream(ws, true, Convert.ToInt64(client.ResponseHeaders["Content-Length"]));
+        }
+
+        internal T UploadRequest<T>(string route, string fileName, byte[] data)
+        {
+            var request = new RestRequest(route, Method.POST)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.AddFile(fileName, data, fileName);
+
+            var response = ApiClient.Post<T>(request);
+
+            return response.Data;
         }
 
         public async Task<AuthToken> AuthenticateAsync(string username, string password)
@@ -122,14 +151,16 @@ namespace LANCommander.SDK
             switch (response.StatusCode)
             {
                 case HttpStatusCode.OK:
-                    Token = new AuthToken
+                    var token = new AuthToken
                     {
                         AccessToken = response.Data.AccessToken,
                         RefreshToken = response.Data.RefreshToken,
                         Expiration = response.Data.Expiration
                     };
 
-                    return Token;
+                    UseToken(token);
+
+                    return token;
 
                 case HttpStatusCode.Forbidden:
                 case HttpStatusCode.BadRequest:
@@ -247,164 +278,12 @@ namespace LANCommander.SDK
             ApiClient = new RestClient(BaseUrl);
         }
 
-        public IEnumerable<Game> GetGames()
-        {
-            return GetRequest<IEnumerable<Game>>("/api/Games");
-        }
-
-        public Game GetGame(Guid id)
-        {
-            return GetRequest<Game>($"/api/Games/{id}");
-        }
-
-        public GameManifest GetGameManifest(Guid id)
-        {
-            return GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
-        }
-
-        public string DownloadGame(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
-        {
-            return DownloadRequest($"/api/Games/{id}/Download", progressHandler, completeHandler);
-        }
-
-        public TrackableStream StreamGame(Guid id)
-        {
-            return StreamRequest($"/api/Games/{id}/Download");
-        }
-
-        public string DownloadArchive(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
-        {
-            return DownloadRequest($"/api/Archives/Download/{id}", progressHandler, completeHandler);
-        }
-
-        public TrackableStream StreamRedistributable(Guid id)
-        {
-            return StreamRequest($"/api/Redistributables/{id}/Download");
-        }
-
-        public string DownloadSave(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
-        {
-            return DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);
-        }
-
-        public string DownloadLatestSave(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
-        {
-            return DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
-        }
-
-        public GameSave UploadSave(string gameId, byte[] data)
-        {
-            Logger?.LogTrace("Uploading save...");
-
-            var request = new RestRequest($"/api/Saves/Upload/{gameId}", Method.POST)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
-
-            request.AddFile(gameId, data, gameId);
-
-            var response = ApiClient.Post<GameSave>(request);
-
-            return response.Data;
-        }
-
         public string GetMediaUrl(Media media)
         {
             return (new Uri(ApiClient.BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
         }
 
-        public string GetKey(Guid id)
-        {
-            Logger?.LogTrace("Requesting key allocation...");
-
-            var macAddress = GetMacAddress();
-
-            var request = new KeyRequest()
-            {
-                GameId = id,
-                MacAddress = macAddress,
-                ComputerName = Environment.MachineName,
-                IpAddress = GetIpAddress(),
-            };
-
-            var response = PostRequest<Key>($"/api/Keys/Get", request);
-
-            return response.Value;
-        }
-
-        public string GetAllocatedKey(Guid id)
-        {
-            Logger?.LogTrace("Requesting allocated key...");
-
-            var macAddress = GetMacAddress();
-
-            var request = new KeyRequest()
-            {
-                GameId = id,
-                MacAddress = macAddress,
-                ComputerName = Environment.MachineName,
-                IpAddress = GetIpAddress(),
-            };
-
-            var response = PostRequest<Key>($"/api/Keys/GetAllocated/{id}", request);
-
-            if (response == null)
-                return String.Empty;
-
-            return response.Value;
-        }
-
-        public string GetNewKey(Guid id)
-        {
-            Logger?.LogTrace("Requesting new key allocation...");
-
-            var macAddress = GetMacAddress();
-
-            var request = new KeyRequest()
-            {
-                GameId = id,
-                MacAddress = macAddress,
-                ComputerName = Environment.MachineName,
-                IpAddress = GetIpAddress(),
-            };
-
-            var response = PostRequest<Key>($"/api/Keys/Allocate/{id}", request);
-
-            if (response == null)
-                return String.Empty;
-
-            return response.Value;
-        }
-
-        public User GetProfile()
-        {
-            Logger?.LogTrace("Requesting player's profile...");
-
-            return GetRequest<User>("/api/Profile");
-        }
-
-        public string ChangeAlias(string alias)
-        {
-            Logger?.LogTrace("Requesting to change player alias...");
-
-            var response = PostRequest<object>("/api/Profile/ChangeAlias", alias);
-
-            return alias;
-        }
-
-        public void StartPlaySession(Guid gameId)
-        {
-            Logger?.LogTrace("Starting a game session...");
-
-            PostRequest<object>($"/api/PlaySessions/Start/{gameId}");
-        }
-
-        public void EndPlaySession(Guid gameId)
-        {
-            Logger?.LogTrace("Ending a game session...");
-
-            PostRequest<object>($"/api/PlaySessions/End/{gameId}");
-        }
-
-        private string GetMacAddress()
+        internal string GetMacAddress()
         {
             return NetworkInterface.GetAllNetworkInterfaces()
                 .Where(nic => nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
@@ -412,7 +291,7 @@ namespace LANCommander.SDK
                 .FirstOrDefault();
         }
 
-        private string GetIpAddress()
+        internal string GetIpAddress()
         {
             return Dns.GetHostEntry(Dns.GetHostName()).AddressList[0].ToString();
         }

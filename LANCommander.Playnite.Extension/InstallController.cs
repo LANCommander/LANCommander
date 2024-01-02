@@ -41,8 +41,6 @@ namespace LANCommander.PlaynitePlugin
 
             var result = Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
             {
-                var gameManager = new GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory, new PlayniteLogger(Logger));
-
                 Stopwatch stopwatch = new Stopwatch();
 
                 stopwatch.Start();
@@ -50,7 +48,7 @@ namespace LANCommander.PlaynitePlugin
                 var lastTotalSize = 0d;
                 var speed = 0d;
 
-                gameManager.OnArchiveExtractionProgress += (long pos, long len) =>
+                Plugin.LANCommanderClient.Games.OnArchiveExtractionProgress += (long pos, long len) =>
                 {
                     if (stopwatch.ElapsedMilliseconds > 500)
                     {
@@ -69,17 +67,17 @@ namespace LANCommander.PlaynitePlugin
                     }
                 };
 
-                gameManager.OnArchiveEntryExtractionProgress += (object sender, ArchiveEntryExtractionProgressArgs e) =>
+                Plugin.LANCommanderClient.Games.OnArchiveEntryExtractionProgress += (object sender, ArchiveEntryExtractionProgressArgs e) =>
                 {
                     if (progress.CancelToken != null && progress.CancelToken.IsCancellationRequested)
                     {
-                        gameManager.CancelInstall();
+                        Plugin.LANCommanderClient.Games.CancelInstall();
 
                         progress.IsIndeterminate = true;
                     }
                 };
 
-                installDirectory = gameManager.Install(gameId);
+                installDirectory = Plugin.LANCommanderClient.Games.Install(gameId);
 
                 stopwatch.Stop();
             },
@@ -90,15 +88,13 @@ namespace LANCommander.PlaynitePlugin
             });
 
             // Install any redistributables
-            var game = Plugin.LANCommanderClient.GetGame(gameId);
+            var game = Plugin.LANCommanderClient.Games.Get(gameId);
 
             if (game.Redistributables != null && game.Redistributables.Count() > 0)
             {
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
-                    var redistributableManager = new RedistributableManager(Plugin.LANCommanderClient, new PlayniteLogger(Logger));
-
-                    redistributableManager.Install(game);
+                    Plugin.LANCommanderClient.Redistributables.Install(game);
                 },
                 new GlobalProgressOptions("Installing redistributables...")
                 {
@@ -195,7 +191,7 @@ namespace LANCommander.PlaynitePlugin
             {
                 var script = new PowerShellScript();
 
-                var key = Plugin.LANCommanderClient.GetAllocatedKey(manifest.Id);
+                var key = Plugin.LANCommanderClient.Games.GetAllocatedKey(manifest.Id);
 
                 script.AddVariable("InstallDirectory", installDirectory);
                 script.AddVariable("GameManifest", manifest);

@@ -14,7 +14,7 @@ using System.Text;
 
 namespace LANCommander.SDK
 {
-    public class RedistributableManager
+    public class RedistributableService
     {
         private readonly ILogger Logger;
         private Client Client { get; set; }
@@ -25,15 +25,20 @@ namespace LANCommander.SDK
         public delegate void OnArchiveExtractionProgressHandler(long position, long length);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
-        public RedistributableManager(Client client)
+        public RedistributableService(Client client)
         {
             Client = client;
         }
 
-        public RedistributableManager(Client client, ILogger logger)
+        public RedistributableService(Client client, ILogger logger)
         {
             Client = client;
             Logger = logger;
+        }
+
+        public TrackableStream Stream(Guid id)
+        {
+            return Client.StreamRequest($"/api/Redistributables/{id}/Download");
         }
 
         public void Install(Game game)
@@ -130,7 +135,7 @@ namespace LANCommander.SDK
             {
                 Directory.CreateDirectory(destination);
 
-                using (var redistributableStream = Client.StreamRedistributable(redistributable.Id))
+                using (var redistributableStream = Stream(redistributable.Id))
                 using (var reader = ReaderFactory.Open(redistributableStream))
                 {
                     redistributableStream.OnProgress += (pos, len) =>

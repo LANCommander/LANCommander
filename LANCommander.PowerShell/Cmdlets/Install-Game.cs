@@ -25,15 +25,14 @@ namespace LANCommander.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            var gameManager = new GameManager(Client, InstallDirectory);
-            var game = Client.GetGame(Id);
+            var game = Client.Games.Get(Id);
 
             var progress = new ProgressRecord(1, $"Installing {game.Title}", "Progress:");
 
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            gameManager.OnArchiveExtractionProgress += (long position, long length) =>
+            Client.Games.OnArchiveExtractionProgress += (long position, long length) =>
             {
                 // Only update a max of every 500ms
                 if (stopwatch.ElapsedMilliseconds > 500)
@@ -46,7 +45,7 @@ namespace LANCommander.PowerShell.Cmdlets
                 }
             };
 
-            var installDirectory = gameManager.Install(Id);
+            var installDirectory = Client.Games.Install(Id);
 
             stopwatch.Stop();
 
@@ -81,7 +80,7 @@ namespace LANCommander.PowerShell.Cmdlets
 
         private int RunNameChangeScript(string installDirectory)
         {
-            var user = Client.GetProfile();
+            var user = Client.Profile.Get();
             var manifest = ManifestHelper.Read(installDirectory);
             var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange);
             
@@ -113,7 +112,7 @@ namespace LANCommander.PowerShell.Cmdlets
             {
                 var script = new PowerShellScript();
 
-                var key = Client.GetAllocatedKey(manifest.Id);
+                var key = Client.Games.GetAllocatedKey(manifest.Id);
 
                 script.AddVariable("InstallDirectory", installDirectory);
                 script.AddVariable("GameManifest", manifest);

@@ -101,7 +101,7 @@ namespace LANCommander.PlaynitePlugin.Views
                 }));
 
                 if (Plugin.LANCommanderClient == null)
-                    Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress);
+                    Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress, Plugin.Settings.InstallDirectory);
                 else
                     Plugin.LANCommanderClient.UseServerAddress(Context.ServerAddress);
 
@@ -111,7 +111,7 @@ namespace LANCommander.PlaynitePlugin.Views
                 Plugin.Settings.AccessToken = response.AccessToken;
                 Plugin.Settings.RefreshToken = response.RefreshToken;
 
-                var profile = Plugin.LANCommanderClient.GetProfile();
+                var profile = Plugin.LANCommanderClient.Profile.Get();
 
                 Plugin.Settings.PlayerName = String.IsNullOrWhiteSpace(profile.Alias) ? profile.UserName : profile.Alias;
 
@@ -145,7 +145,7 @@ namespace LANCommander.PlaynitePlugin.Views
                 RegisterButton.Content = "Working...";
 
                 if (Plugin.LANCommanderClient == null)
-                    Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress);
+                    Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress, Plugin.Settings.InstallDirectory);
 
                 var response = await Plugin.LANCommanderClient.RegisterAsync(Context.UserName, Context.Password);
 

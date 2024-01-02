@@ -25,8 +25,6 @@ namespace LANCommander.PlaynitePlugin
         {
             try
             {
-                var gameManager = new LANCommander.SDK.GameManager(Plugin.LANCommanderClient, Plugin.Settings.InstallDirectory, new PlayniteLogger(Logger));
-
                 try
                 {
                     var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, SDK.Enums.ScriptType.Uninstall);
@@ -51,7 +49,7 @@ namespace LANCommander.PlaynitePlugin
                     Logger.Error(ex, "There was an error running the uninstall script");
                 }
 
-                gameManager.Uninstall(Game.InstallDirectory);
+                Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory);
             }
             catch (Exception ex)
             {

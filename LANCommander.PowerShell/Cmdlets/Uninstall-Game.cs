@@ -15,6 +15,9 @@ namespace LANCommander.PowerShell.Cmdlets
     public class UninstallGameCmdlet : Cmdlet
     {
         [Parameter(Mandatory = true)]
+        public Client Client { get; set; }
+
+        [Parameter(Mandatory = true)]
         public string InstallDirectory { get; set; }
 
         protected override void ProcessRecord()
@@ -34,9 +37,7 @@ namespace LANCommander.PowerShell.Cmdlets
                 script.Execute();
             }
 
-            var gameManager = new GameManager(null, InstallDirectory);
-
-            gameManager.Uninstall(InstallDirectory);
+            Client.Games.Uninstall(InstallDirectory);
         }
     }
 }

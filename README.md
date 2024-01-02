@@ -33,15 +33,11 @@ The LANCommander dev team is currently spearheaded by one developer in their fre
 A separate assembly called `LANCommander.SDK` has been created for use in client applications. The offical Playnite add-on utilizes this assembly to handle the authentication, download, install, and uninstall of entries from a LANCommander server. Here is a quick example of how one can authenticate to a LANCommander server and install a game to `C:\Games`:
 
 ```csharp
-var client = new LANCommander.SDK.Client();
+var client = new LANCommander.SDK.Client("http://localhost:1337", "C:\\Games");
 
 await client.AuthenticateAsync("username", "password");
 
-var gameManager = new LANCommander.SDK.GameManager(client, "C:\\Games");
-
-var gameId = "114f653d-ea91-484b-8fe9-8e9bb58bde81";
-
-gameManager.Install(gameId);
+client.Games.Install("114f653d-ea91-484b-8fe9-8e9bb58bde81")
 ```
 
 ## To Do

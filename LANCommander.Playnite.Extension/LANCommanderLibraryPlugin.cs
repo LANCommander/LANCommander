@@ -16,7 +16,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using PN = Playnite;
-using System.Windows.Forms;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -223,7 +222,7 @@ namespace LANCommander.PlaynitePlugin
         public override IEnumerable<PlayController> GetPlayActions(GetPlayActionsArgs args)
         {
             var manifest = ManifestHelper.Read(args.Game.InstallDirectory);
-            var primaryDisplay = Screen.AllScreens.FirstOrDefault(s => s.Primary);
+            var primaryDisplay = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s => s.Primary);
 
             LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
             LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
@@ -481,7 +480,7 @@ namespace LANCommander.PlaynitePlugin
         public Window ShowAuthenticationWindow(string serverAddress = null, EventHandler onClose = null)
         {
             Window window = null;
-            System.Windows.Application.Current.Dispatcher.Invoke((Action)delegate
+            Application.Current.Dispatcher.Invoke((Action)delegate
             {
                 window = PlayniteApi.Dialogs.CreateWindow(new WindowCreationOptions()
                 {

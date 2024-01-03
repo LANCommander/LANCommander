@@ -16,6 +16,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using PN = Playnite;
+using System.Windows.Forms;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -222,6 +223,10 @@ namespace LANCommander.PlaynitePlugin
         public override IEnumerable<PlayController> GetPlayActions(GetPlayActionsArgs args)
         {
             var manifest = ManifestHelper.Read(args.Game.InstallDirectory);
+            var primaryDisplay = Screen.AllScreens.FirstOrDefault(s => s.Primary);
+
+            LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
+            LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
 
             foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
             {

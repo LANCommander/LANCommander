@@ -5,7 +5,6 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Windows.Forms;
 
 namespace LANCommander.SDK
 {
@@ -46,22 +45,6 @@ namespace LANCommander.SDK
                 return Client.Settings.IPXRelayPort;
             }
         }
-
-        public int DisplayWidth
-        {
-            get
-            {
-                return Screen.AllScreens.FirstOrDefault(s => s.Primary).Bounds.Width;
-            }
-        }
-
-        public int DisplayHeight
-        {
-            get
-            {
-                return Screen.AllScreens.FirstOrDefault(s => s.Primary).Bounds.Height;
-            }
-        }
     }
 
     public class ActionService
@@ -69,10 +52,18 @@ namespace LANCommander.SDK
         private readonly Client Client;
         private readonly ActionVariables ActionVariables;
 
+        private Dictionary<string, string> AdditionalVariables { get; set; }
+
         public ActionService(Client client)
         {
             Client = client;
             ActionVariables = new ActionVariables(Client);
+            AdditionalVariables = new Dictionary<string, string>();
+        }
+
+        public void AddVariable(string key, string value)
+        {
+            AdditionalVariables[key] = value;
         }
 
         public string ExpandVariables(string input, string installDirectory)
@@ -86,6 +77,11 @@ namespace LANCommander.SDK
             {
                 if (input.Contains($"{{{variable.Name}}}"))
                     input = input.Replace($"{{{variable.Name}}}", $"{variable.GetValue(ActionVariables)}");
+            }
+
+            foreach (var variable in AdditionalVariables)
+            {
+                input = input.Replace($"{{{variable.Key}}}", variable.Value);
             }
 
             return input.ExpandEnvironmentVariables(installDirectory);

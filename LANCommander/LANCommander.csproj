@@ -106,10 +106,10 @@
     <None Update="Snippets\Examples\Get User Registry Virtual Store.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Snippets\Examples\Patch Binary.ps1">
+    <None Update="Snippets\Examples\Remove Directory.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="Snippets\Examples\Remove Directory.ps1">
+    <None Update="Snippets\Examples\Remove Registry Key.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Examples\Rename File.ps1">
@@ -125,6 +125,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Examples\Trim String.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Snippets\Examples\Write ASCII File.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Examples\Write to File.ps1">
@@ -146,6 +149,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Functions\Write-ReplaceContentInFile.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Snippets\Paths\AppData.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Snippets\Paths\Documents.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Snippets\Paths\LocalAppData.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Snippets\Paths\Registry VirtualStore.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Variables\Allocated Key.ps1">

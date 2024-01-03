@@ -481,7 +481,7 @@ namespace LANCommander.PlaynitePlugin
         public Window ShowAuthenticationWindow(string serverAddress = null, EventHandler onClose = null)
         {
             Window window = null;
-            Application.Current.Dispatcher.Invoke((Action)delegate
+            System.Windows.Application.Current.Dispatcher.Invoke((Action)delegate
             {
                 window = PlayniteApi.Dialogs.CreateWindow(new WindowCreationOptions()
                 {

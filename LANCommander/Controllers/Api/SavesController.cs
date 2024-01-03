@@ -3,7 +3,6 @@ using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Models;
-using LANCommander.SDK;
 using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -111,8 +110,8 @@ namespace LANCommander.Controllers.Api
             {
                 await file.CopyToAsync(stream);
             }
-            
-            return Ok(save);
+
+            return Ok(Mapper.Map<SDK.Models.GameSave>(save));
         }
     }
 }

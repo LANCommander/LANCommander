@@ -3,7 +3,6 @@ using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Models;
-using LANCommander.SDK;
 using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -60,7 +59,7 @@ namespace LANCommander.Controllers.Api
         }
 
         [HttpGet("{id}/Manifest")]
-        public async Task<GameManifest> GetManifest(Guid id)
+        public async Task<SDK.GameManifest> GetManifest(Guid id)
         {
             var manifest = await GameService.GetManifest(id);
 

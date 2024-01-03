@@ -26,7 +26,20 @@ namespace LANCommander.SDK
         public readonly GameService Games;
         public readonly SaveService Saves;
         public readonly RedistributableService Redistributables;
+        public readonly ActionService Actions;
         public readonly ProfileService Profile;
+
+        private Settings _Settings { get; set; }
+        public Settings Settings
+        {
+            get
+            {
+                if (_Settings == null)
+                    _Settings = GetSettings();
+
+                return _Settings;
+            }
+        }
 
         public Client(string baseUrl, string defaultInstallDirectory)
         {
@@ -36,6 +49,7 @@ namespace LANCommander.SDK
             Games = new GameService(this, DefaultInstallDirectory);
             Saves = new SaveService(this);
             Redistributables = new RedistributableService(this);
+            Actions = new ActionService(this);
             Profile = new ProfileService(this);
 
             if (!String.IsNullOrWhiteSpace(BaseUrl))
@@ -50,6 +64,7 @@ namespace LANCommander.SDK
             Games = new GameService(this, DefaultInstallDirectory, logger);
             Saves = new SaveService(this, logger);
             Redistributables = new RedistributableService(this, logger);
+            Actions = new ActionService(this);
             Profile = new ProfileService(this, logger);
 
             if (!String.IsNullOrWhiteSpace(BaseUrl))
@@ -278,9 +293,19 @@ namespace LANCommander.SDK
             ApiClient = new RestClient(BaseUrl);
         }
 
+        public string GetServerAddress()
+        {
+            return BaseUrl;
+        }
+
         public string GetMediaUrl(Media media)
         {
             return (new Uri(ApiClient.BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
+        }
+
+        public Settings GetSettings()
+        {
+            return GetRequest<Settings>($"/api/Settings");
         }
 
         internal string GetMacAddress()

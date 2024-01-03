@@ -142,7 +142,7 @@ namespace LANCommander.PlaynitePlugin
                         GameId = game.Id.ToString(),
                         ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
                         //Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
-                        GameActions = game.Actions.OrderBy(a => a.SortOrder).Select(a => new PN.SDK.Models.GameAction()
+                        GameActions = game.Actions.Where(a => !a.PrimaryAction).OrderBy(a => a.SortOrder).Select(a => new PN.SDK.Models.GameAction()
                         {
                             Name = a.Name,
                             Arguments = a.Arguments,
@@ -217,6 +217,24 @@ namespace LANCommander.PlaynitePlugin
                 yield break;
 
             yield return new LANCommanderUninstallController(this, args.Game);
+        }
+
+        public override IEnumerable<PlayController> GetPlayActions(GetPlayActionsArgs args)
+        {
+            var manifest = ManifestHelper.Read(args.Game.InstallDirectory);
+
+            foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+            {
+                yield return new AutomaticPlayController(args.Game)
+                {
+                    Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory),
+                    Name = action.Name,
+                    Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
+                    TrackingMode = TrackingMode.Default,
+                    Type = AutomaticPlayActionType.File,
+                    WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
+                };
+            }
         }
 
         public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
@@ -502,13 +520,15 @@ namespace LANCommander.PlaynitePlugin
             if (manifest.Actions == null)
                 throw new Exception("The game has no actions defined.");
 
-            if (game.IsInstalled || game.IsInstalling)
-                foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder))
-                {
-                    bool isFirstAction = !manifest.Actions.Any(a => a.IsPrimaryAction) && manifest.Actions.First().Name == action.Name;
+            foreach (var action in game.GameActions.Where(a => a.IsPlayAction))
+                game.GameActions.Remove(action);
 
+            if (game.IsInstalled || game.IsInstalling)
+                foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder).Where(a => !a.IsPrimaryAction))
+                {
                     var actionPath = action.Path?.ExpandEnvironmentVariables(installDirectory);
                     var actionWorkingDir = String.IsNullOrWhiteSpace(action.WorkingDirectory) ? installDirectory : action.WorkingDirectory.ExpandEnvironmentVariables(installDirectory);
+                    var actionArguments = action.Arguments?.ExpandEnvironmentVariables(installDirectory);
 
                     if (actionPath.StartsWith(actionWorkingDir))
                         actionPath = actionPath.Substring(actionWorkingDir.Length).TrimStart(Path.DirectorySeparatorChar);
@@ -518,8 +538,8 @@ namespace LANCommander.PlaynitePlugin
                         Name = action.Name,
                         Arguments = action.Arguments,
                         Path = actionPath,
-                        WorkingDir = actionWorkingDir,
-                        IsPlayAction = action.IsPrimaryAction || isFirstAction
+                        WorkingDir = actionArguments,
+                        IsPlayAction = false
                     });
                 }
 

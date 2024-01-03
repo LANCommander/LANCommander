@@ -37,7 +37,7 @@ var client = new LANCommander.SDK.Client("http://localhost:1337", "C:\\Games");
 
 await client.AuthenticateAsync("username", "password");
 
-client.Games.Install("114f653d-ea91-484b-8fe9-8e9bb58bde81")
+client.Games.Install("114f653d-ea91-484b-8fe9-8e9bb58bde81");
 ```
 
 ## To Do

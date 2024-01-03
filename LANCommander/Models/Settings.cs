@@ -79,6 +79,7 @@
     public class LANCommanderIPXRelaySettings
     {
         public bool Enabled { get; set; } = false;
+        public string Host { get; set; } = "";
         public int Port { get; set; } = 213;
         public bool Logging { get; set; } = false;
     }

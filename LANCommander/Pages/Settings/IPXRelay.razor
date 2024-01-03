@@ -14,6 +14,11 @@
             <Switch @bind-Checked="context.IPXRelay.Enabled" />
         </FormItem>
 
+        <FormItem Label="Host">
+            <Text Type="@TextElementType.Secondary">Use this to customize the host that is broadcasted to clients.</Text>
+                <Input @bind-Value="Settings.IPXRelay.Host" />
+        </FormItem>
+
         <FormItem Label="Port">
             <AntDesign.InputNumber @bind-Value="Settings.IPXRelay.Port" Max="65535" />
         </FormItem>

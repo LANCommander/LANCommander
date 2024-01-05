@@ -1,0 +1,182 @@
+﻿@page "/Settings/Users"
+@using LANCommander.Models;
+@using LANCommander.UI.Pages.Settings.Users.Components
+@layout SettingsLayout
+@inject UserManager<User> UserManager
+@inject RoleManager<Role> RoleManager
+@inject ModalService ModalService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Users" />
+
+<div style="padding: 0 24px;">
+    <Table TItem="UserViewModel" DataSource="@UserList" Loading="@(Loading)" Responsive>
+        <PropertyColumn Property="u => u.UserName" Title="Username" />
+        <PropertyColumn Property="u => u.Roles">
+            @String.Join(", ", context.Roles)
+        </PropertyColumn>
+        <PropertyColumn Property="u => u.SavesSize" Title="Saves">
+            @ByteSizeLib.ByteSize.FromBytes(context.SavesSize)
+        </PropertyColumn>
+        <ActionColumn>
+            <Space Style="display: flex; justify-content: end">
+                @if (Settings.Authentication.RequireApproval && !context.Approved)
+                {
+                    <SpaceItem>
+                        <Button OnClick="() => ApproveUser(context)" Type="@ButtonType.Primary">Approve</Button>
+                    </SpaceItem>
+                }
+
+                <SpaceItem>
+                    <Button OnClick="() => ManageRoles(context)" Type="@ButtonType.Primary">Roles</Button>
+                </SpaceItem>
+
+                <SpaceItem>
+                    <Tooltip Title="Change Password">
+                        <Button Icon="@IconType.Outline.Lock" Type="@ButtonType.Text" OnClick="() => ChangePassword(context)" />
+                    </Tooltip>
+                </SpaceItem>
+
+                <SpaceItem>
+                    @if (!context.Roles.Any(r => r == "Administrator"))
+                    {
+                        <Popconfirm OnConfirm="() => DeleteUser(context)" Title="Are you sure you want to delete this user?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    }
+                    else
+                    {
+                        <Tooltip Title="Admins cannot be deleted. They must be demoted first.">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
+                        </Tooltip>
+                    }
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </Table>
+</div>
+
+@code {
+    ICollection<UserViewModel> UserList { get; set; }
+
+    LANCommanderSettings Settings = SettingService.GetSettings();
+    bool Loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserList = new List<UserViewModel>();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await RefreshUserList();
+    }
+
+    private async Task RefreshUserList()
+    {
+        UserList = new List<UserViewModel>();
+
+        foreach (var user in UserManager.Users)
+        {
+            var savePath = user.GetGameSaveUploadPath();
+
+            long saveSize = 0;
+
+            if (Directory.Exists(savePath))
+                saveSize = new DirectoryInfo(savePath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
+
+            UserList.Add(new UserViewModel()
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                Roles = await UserManager.GetRolesAsync(user),
+                SavesSize = saveSize,
+                Approved = user.Approved
+            });
+        }
+
+        Loading = false;
+        StateHasChanged();
+    }
+
+    private async Task ApproveUser(UserViewModel user)
+    {
+        var dbUser = await UserManager.FindByIdAsync(user.Id.ToString());
+
+        if (dbUser != null)
+        {
+            dbUser.Approved = true;
+            dbUser.ApprovedOn = DateTime.Now;
+
+            await UserManager.UpdateAsync(dbUser);
+
+            user.Approved = true;
+
+            await MessageService.Success($"Approved {user.UserName}!");
+        }
+    }
+
+    private async Task PromoteUser(UserViewModel user)
+    {
+        await UserManager.AddToRoleAsync(UserManager.Users.First(u => u.UserName == user.UserName), "Administrator");
+        await RefreshUserList();
+
+        await MessageService.Success($"Promoted {user.UserName}!");
+    }
+
+    private async Task DemoteUser(UserViewModel user)
+    {
+        if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
+        {
+            await MessageService.Error("Cannot demote the only administrator!");
+        }
+        else
+        {
+            await UserManager.RemoveFromRoleAsync(UserManager.Users.First(u => u.UserName == user.UserName), "Administrator");
+            await RefreshUserList();
+        }
+    }
+
+    private async Task DeleteUser(UserViewModel user)
+    {
+        if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
+        {
+            await MessageService.Error("Cannot delete the only administrator!");
+        }
+        else
+        {
+            await UserManager.DeleteAsync(UserManager.Users.First(u => u.UserName == user.UserName));
+            await RefreshUserList();
+
+            await MessageService.Success($"Deleted {user.UserName}!");
+        }
+    }
+
+    private void ChangePassword(UserViewModel user)
+    {
+        NavigationManager.NavigateTo($"/Settings/Users/{user.Id}/ChangePassword", true);
+    }
+
+    private async Task ManageRoles(UserViewModel user)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "ManageRoles",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            OkText = "Update Roles"
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ManageRolesDialog, Guid, Guid>(modalOptions, user.Id);
+
+        modalRef.OnOk = async (Guid) =>
+        {
+            await RefreshUserList();
+        };
+    }
+}

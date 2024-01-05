@@ -1,0 +1,330 @@
+﻿@using AntDesign.TableModels;
+@using LANCommander.UI.Components.FileManagerComponents.Sources
+@inject ArchiveService ArchiveService
+@inject IMessageService MessageService
+@inject IJSRuntime JS
+@namespace LANCommander.UI.Components
+
+<div class="file-manager">
+    <GridRow Class="file-manager-nav">
+        <Space>
+            @if (Features.HasFlag(FileManagerFeatures.NavigationBack))
+            {
+                <SpaceItem>
+                    <Tooltip Title="Back" MouseEnterDelay="2">
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" Disabled="@(Past.Count == 0)" />
+                    </Tooltip>
+                </SpaceItem>
+            }
+
+            @if (Features.HasFlag(FileManagerFeatures.NavigationForward))
+            {
+                <SpaceItem>
+                    <Tooltip Title="Forward" MouseEnterDelay="2">
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" Disabled="@(Future.Count == 0)" />
+                    </Tooltip>
+                </SpaceItem>
+            }
+
+            @if (Features.HasFlag(FileManagerFeatures.UpALevel))
+            {
+                <SpaceItem>
+                    <Tooltip Title="Up a Level" MouseEnterDelay="2">
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(FileSource.GetCurrentPath().Parent == null)" />
+                    </Tooltip>
+                </SpaceItem>
+            }
+
+            @if (Features.HasFlag(FileManagerFeatures.Refresh))
+            {
+                <SpaceItem>
+                    <Tooltip Title="Refresh" MouseEnterDelay="2">
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Reload" OnClick="Refresh" />
+                    </Tooltip>
+                </SpaceItem>
+            }
+
+            @if (Features.HasFlag(FileManagerFeatures.Breadcrumbs))
+            {
+                <SpaceItem Class="file-manager-nav-breadcrumbs">
+                    <Breadcrumb>
+                        @foreach (var breadcrumb in Breadcrumbs)
+                        {
+                            <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>
+                        }
+                    </Breadcrumb>
+                </SpaceItem>
+            }
+
+            @if (Features.HasFlag(FileManagerFeatures.NewFolder))
+            {
+                <SpaceItem>
+                    <Tooltip Title="New Folder" MouseEnterDelay="2">
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.FolderAdd" OnClick="() => NewFolderModal.Open()" />
+                    </Tooltip>
+                </SpaceItem>
+            }
+            
+            @if (Features.HasFlag(FileManagerFeatures.UploadFile))
+            {
+                <SpaceItem>
+                    <Tooltip Title="Upload File" MouseEnterDelay="2">
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Upload" OnClick="() => UploadModal.Open()" />
+                    </Tooltip>
+                </SpaceItem>
+            }
+            
+            @if (Features.HasFlag(FileManagerFeatures.Delete))
+            {
+                <SpaceItem>
+                    <Tooltip Title="Delete" MouseEnterDelay="2">
+                        <Popconfirm OnConfirm="Delete">
+                            <TitleTemplate>
+                                Are you sure you want to delete the selected file@(Selected?.Count() == 1 ? "" : "s")?
+                            </TitleTemplate>
+                            <ChildContent>
+                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Delete" Disabled="@(Selected?.Count() == 0)" />
+                            </ChildContent>
+                        </Popconfirm>
+                    </Tooltip>
+                </SpaceItem>
+            }
+        </Space>
+    </GridRow>
+
+    <SplitPane>
+        <Pane Size="25%">
+            <Tree TItem="FileManagerDirectory"
+                  DataSource="Directories"
+                  SwitcherIcon="@IconType.Outline.Down"
+                  TitleExpression="x => x.DataItem.Name"
+                  ChildrenExpression="x => x.DataItem.Children"
+                  IsLeafExpression="x => !x.DataItem.HasChildren"
+                  IconExpression="x => x.Expanded ? IconType.Outline.FolderOpen : IconType.Outline.Folder"
+                  DefaultExpandParent="true"
+                  OnClick="(args) => ChangeDirectory(args.Node.DataItem, false)"
+                  OnNodeLoadDelayAsync="ExpandTree">
+                <SwitcherIconTemplate>
+                    <Icon Type="@IconType.Outline.Down" />
+                </SwitcherIconTemplate>
+                <TitleIconTemplate>
+                    @if (context.Expanded)
+                    {
+                        <Icon Type="@IconType.Outline.FolderOpen" />
+                    }
+                    else
+                    {
+                        <Icon Type="@IconType.Outline.Folder" />
+                    }
+                </TitleIconTemplate>
+            </Tree>
+        </Pane>
+        <Pane Size="75%">
+            <Table TItem="IFileManagerEntry"
+                   DataSource="Entries"
+                   HidePagination="true"
+                   Loading="Entries == null"
+                   OnRow="OnRow"
+                   SelectedRowsChanged="SelectedChanged"
+                   RowSelectable="EntrySelectable"
+                   Size="@TableSize.Small">
+                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
+                <Column TData="string" Width="32">
+                    @if (context is FileManagerFile)
+                    {
+                        <Icon Type="@(((FileManagerFile)context).GetIcon())" Theme="outline" />
+                    }
+                    else if (context is FileManagerDirectory)
+                    {
+                        <Icon Type="@IconType.Outline.Folder" />
+                    }
+                </Column>
+                <PropertyColumn Property="e => e.Path" Sortable Title="Name">
+                     @FileSource.GetEntryName(context)
+                </PropertyColumn>
+                <PropertyColumn Property="e => e.Size" Sortable Title="Size">
+                     @ByteSizeLib.ByteSize.FromBytes(context.Size)
+                </PropertyColumn>
+                <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
+             </Table>
+        </Pane>
+    </SplitPane>
+</div>
+
+<NewFolderModal @ref="NewFolderModal" OnFolderNameEntered="AddFolder" />
+<UploadModal @ref="UploadModal" Path="@FileSource.GetCurrentPath().Path" OnUploadCompleted="() => Refresh()" />
+
+ @code {
+    [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public string WorkingDirectory { get; set; }
+    [Parameter] public bool SelectMultiple { get; set; } = true;
+    [Parameter] public bool IncludeDirectories { get; set; } = true;
+    [Parameter] public FileManagerDirectory CurrentPath { get; set; }
+    [Parameter] public EventCallback<FileManagerDirectory> CurrentPathChanged { get; set; }
+    [Parameter] public FileManagerFeatures Features { get; set; } = FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete;
+    [Parameter] public IEnumerable<IFileManagerEntry> Selected { get; set; } = new List<IFileManagerEntry>();
+    [Parameter] public EventCallback<IEnumerable<IFileManagerEntry>> SelectedChanged { get; set; }
+    [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
+    [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
+
+    IFileManagerSource FileSource;
+
+    List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
+    List<FileManagerDirectory> Future { get; set; } = new List<FileManagerDirectory>();
+    List<FileManagerDirectory> Breadcrumbs = new List<FileManagerDirectory>();
+
+    List<IFileManagerEntry> Entries { get; set; } = new List<IFileManagerEntry>();
+    HashSet<FileManagerDirectory> Directories { get; set; } = new HashSet<FileManagerDirectory>();
+
+    NewFolderModal NewFolderModal;
+    UploadModal UploadModal;
+
+    Dictionary<string, object> OnRow(RowData<IFileManagerEntry> row) => new()
+    {
+        ["data-path"] = row.Data.Path,
+        ["ondblclick"] = ((System.Action)delegate
+        {
+            if (row.Data is FileManagerDirectory)
+                ChangeDirectory((FileManagerDirectory)row.Data, true);
+        })
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!String.IsNullOrWhiteSpace(WorkingDirectory))
+            FileSource = new FileManagerLocalDiskSource(WorkingDirectory);
+        else if (ArchiveId != Guid.Empty)
+            FileSource = new FileManagerArchiveSource(ArchiveService, ArchiveId);
+
+        Directories = FileSource.GetDirectoryTree().ToHashSet();
+
+        if (FileSource is FileManagerLocalDiskSource)
+            await ChangeDirectory(FileSource.GetDirectory(WorkingDirectory), true);
+        else if (FileSource is FileManagerArchiveSource)
+            await ChangeDirectory(Directories.First(), true);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task ChangeDirectory(FileManagerDirectory directory, bool clearFuture)
+    {
+        var currentPath = FileSource.GetCurrentPath();
+
+        if (currentPath != null && !String.IsNullOrWhiteSpace(currentPath.Path) && directory.Path != currentPath.Path && Past.LastOrDefault()?.Path != directory.Path)
+            Past.Add(currentPath);
+
+        CurrentPath = directory;
+
+        if (CurrentPathChanged.HasDelegate)
+            await CurrentPathChanged.InvokeAsync(CurrentPath);
+
+        FileSource.SetCurrentPath(directory);
+
+        await UpdateEntries();
+        UpdateBreadcrumbs();
+
+        if (clearFuture)
+            Future.Clear();
+
+        StateHasChanged();
+    }
+
+    async Task ExpandTree(TreeEventArgs<FileManagerDirectory> args)
+    {
+        var directory = (FileManagerDirectory)args.Node.DataItem;
+
+        directory = FileSource.ExpandNode(directory);
+    }
+
+    async Task UpdateEntries()
+    {
+        Entries = FileSource.GetEntries().ToList();
+    }
+
+    void UpdateBreadcrumbs()
+    {
+        Breadcrumbs.Clear();
+
+        var currentPath = FileSource.GetCurrentPath();
+
+        while (currentPath != null)
+        {
+            Breadcrumbs.Add(currentPath);
+
+            currentPath = currentPath.Parent;
+        }
+
+        Breadcrumbs.Reverse();
+    }
+
+    async Task NavigateBack()
+    {
+        if (Past.Count > 0)
+        {
+            Future.Add(FileSource.GetCurrentPath());
+            await ChangeDirectory(Past.Last(), false);
+            Past = Past.Take(Past.Count - 1).ToList();
+        }
+    }
+
+    async Task NavigateForward()
+    {
+        if (Future.Count > 0)
+        {
+            Past.Add(FileSource.GetCurrentPath());
+            await ChangeDirectory(Future.First(), false);
+            Future = Future.Skip(1).ToList();
+        }
+    }
+
+    async Task NavigateUp()
+    {
+        var currentPath = FileSource.GetCurrentPath();
+
+        if (currentPath.Parent != null)
+            await ChangeDirectory(currentPath.Parent, true);
+    }
+
+    async Task Refresh()
+    {
+        await ChangeDirectory(FileSource.GetCurrentPath(), false);
+
+        StateHasChanged();
+    }
+
+    async Task AddFolder(string name)
+    {
+        try
+        {
+            FileSource.CreateDirectory(System.IO.Path.Combine(FileSource.GetCurrentPath().Path, name));
+
+            await Refresh();
+
+            MessageService.Success("Folder created!");
+        }
+        catch
+        {
+            MessageService.Error("Error creating folder!");
+        }
+    }
+
+    async Task Delete()
+    {
+        try
+        {
+            foreach (var entry in Selected)
+            {
+                FileSource.DeleteEntry(entry);
+            }
+
+            Selected = new List<IFileManagerEntry>();
+            MessageService.Success("Deleted!");
+        }
+        catch
+        {
+            MessageService.Error("Error deleting!");
+        }
+
+        await Refresh();
+    }
+}

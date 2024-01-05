@@ -1,0 +1,58 @@
+﻿@page "/Settings/UserSaves"
+@using LANCommander.Models;
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject IMessageService MessageService
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="User Saves" />
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Storage Path">
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.UserSaves.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+        </FormItem>
+
+        <FormItem Label="Max Size (MB)">
+            <AntDesign.InputNumber @bind-Value="context.UserSaves.MaxSize" Min="1" DefaultValue="25" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    LANCommanderSettings Settings;
+
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch
+        {
+            MessageService.Error("An unknown error occurred.");
+        }
+    }
+
+    private void OnPathSelected(string path)
+    {
+        var appPath = Directory.GetCurrentDirectory();
+
+        if (path != null && path.StartsWith(appPath))
+            path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+
+        Settings.UserSaves.StoragePath = path;
+    }
+}

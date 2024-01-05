@@ -42,8 +42,38 @@ namespace LANCommander
             #endregion
 
             Logger.Debug("Configuring MVC and Blazor");
-            builder.Services.AddMvc(options => options.EnableEndpointRouting = false);
-            builder.Services.AddRazorPages();
+            builder.Services
+                .AddMvc(options => options.EnableEndpointRouting = false)
+                .AddRazorOptions(options =>
+                {
+                    options.ViewLocationFormats.Clear();
+                    options.ViewLocationFormats.Add("/UI/Views/{1}/{0}.cshtml");
+                    options.ViewLocationFormats.Add("/UI/Views/Shared/{0}.cshtml");
+                    options.ViewLocationFormats.Add("/UI/Pages/Shared/{0}.cshtml");
+
+                    options.AreaViewLocationFormats.Clear();
+                    options.AreaViewLocationFormats.Add("/Areas/{2}/Views/{1}/{0}.cshtml");
+                    options.AreaViewLocationFormats.Add("/Areas/{2}/Views/Shared/{0}.cshtml");
+                    options.AreaViewLocationFormats.Add("/UI/Views/Shared/{0}.cshtml");
+                    options.AreaViewLocationFormats.Add("/UI/Pages/Shared/{0}.cshtml");
+
+                    options.PageViewLocationFormats.Clear();
+                    options.PageViewLocationFormats.Add("/UI/Pages/{1}/{0}.cshtml");
+                    options.PageViewLocationFormats.Add("/UI/Pages/Shared/{0}.cshtml");
+                    options.PageViewLocationFormats.Add("/UI/Views/Shared/{0}.cshtml");
+
+                    options.AreaPageViewLocationFormats.Clear();
+                    options.AreaPageViewLocationFormats.Add("/Areas/{2}/Pages/{1}/{0}.cshtml");
+                    options.AreaPageViewLocationFormats.Add("/Areas/{2}/Pages/Shared/{0}.cshtml");
+                    options.AreaPageViewLocationFormats.Add("/Areas/{2}/Views/Shared/{0}.cshtml");
+                    options.AreaPageViewLocationFormats.Add("/UI/Pages/Shared/{0}.cshtml");
+                    options.AreaPageViewLocationFormats.Add("/UI/Views/Shared/{0}.cshtml");
+                });
+            builder.Services.AddRazorPages(options =>
+            {
+                options.RootDirectory = "/UI/Pages";
+            });
+
             builder.Services.AddServerSideBlazor().AddCircuitOptions(option =>
             {
                 option.DetailedErrors = true;

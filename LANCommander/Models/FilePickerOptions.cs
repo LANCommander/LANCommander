@@ -1,4 +1,4 @@
-﻿using LANCommander.Components.FileManagerComponents;
+﻿using LANCommander.UI.Components.FileManagerComponents;
 
 namespace LANCommander.Models
 {

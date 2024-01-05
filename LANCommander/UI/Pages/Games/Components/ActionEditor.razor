@@ -1,0 +1,124 @@
+﻿@using LANCommander.Data.Models
+@using LANCommander.Extensions
+@using LANCommander.Models;
+@using System.IO.Compression;
+@using System.Collections.ObjectModel
+@inject ModalService ModalService
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Data.Models.Action" DataSource="@Actions.OrderBy(a => a.SortOrder)" HidePagination="true" Style="border: 1px solid #f0f0f0" Responsive>
+            <PropertyColumn Property="a => a.Name">
+                <Input Type="text" @bind-Value="context.Name" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.Path">
+                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" Prefix="{InstallDir}\" Title="Select Action Executable" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.Arguments">
+                <Input Type="text" @bind-Value="context.Arguments" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.WorkingDirectory" Title="Working Dir">
+                <Input Type="text" @bind-Value="context.WorkingDirectory" />
+            </PropertyColumn>
+            <PropertyColumn Property="a => a.PrimaryAction" Title="Primary" Style="text-align: center">
+                <Checkbox @bind-Checked="context.PrimaryAction" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => MoveUp(context)" Icon="@IconType.Outline.Up" Type="@ButtonType.Text" />
+                        <Button OnClick="() => MoveDown(context)" Icon="@IconType.Outline.Down" Type="@ButtonType.Text" />
+
+                        <Popconfirm OnConfirm="() => RemoveAction(context)" Title="Are you sure you want to remove this action?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddAction" Type="@ButtonType.Primary">Add Action</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+@code {
+    [Parameter] public ICollection<Data.Models.Action> Actions { get; set; }
+    [Parameter] public EventCallback<ICollection<Data.Models.Action>> ActionsChanged { get; set; }
+
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid ArchiveId { get; set; }
+
+    ObservableCollection<Data.Models.Action> SortedActions = new ObservableCollection<Data.Models.Action>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Actions == null)
+            Actions = new List<Data.Models.Action>();
+
+        if (SortedActions.Count != Actions.Count)
+        {
+            SortedActions.Clear();
+
+            foreach (var action in Actions.OrderBy(a => a.SortOrder))
+                SortedActions.Add(action);
+        }
+    }
+
+    private async Task AddAction()
+    {
+        SortedActions.Add(new Data.Models.Action()
+        {
+            PrimaryAction = Actions.Count == 0,
+            SortOrder = Actions.Count,
+            GameId = GameId
+        });
+
+        await UpdateOrder();
+    }
+
+    private async Task RemoveAction(Data.Models.Action action)
+    {
+        SortedActions.Remove(action);
+
+        await UpdateOrder();
+    }
+
+    private async Task MoveUp(Data.Models.Action action)
+    {
+        var index = SortedActions.IndexOf(action);
+
+        if (index > 0)
+            SortedActions.Move(index, index - 1);
+
+        await UpdateOrder();
+    }
+
+    private async Task MoveDown(Data.Models.Action action)
+    {
+        var index = SortedActions.IndexOf(action);
+
+        if (index < SortedActions.Count - 1)
+            SortedActions.Move(index, index + 1);
+
+        await UpdateOrder();
+    }
+
+    private async Task UpdateOrder()
+    {
+        foreach (var action in SortedActions)
+        {
+            action.SortOrder = SortedActions.IndexOf(action);
+        }
+
+        Actions = SortedActions;
+
+        if (ActionsChanged.HasDelegate)
+            await ActionsChanged.InvokeAsync(Actions);
+    }
+}

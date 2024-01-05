@@ -1,0 +1,111 @@
+﻿@using LANCommander.Data.Enums;
+@using LANCommander.Extensions;
+@using LANCommander.Models
+@using LANCommander.Services
+@using System.IO.Compression;
+@using Microsoft.EntityFrameworkCore;
+@inject ScriptService ScriptService
+@inject ModalService ModalService
+@inject IMessageService MessageService
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="Script" DataSource="@Scripts" HidePagination="true" Responsive>
+            <PropertyColumn Property="s => s.Type">@context.Type.GetDisplayName()</PropertyColumn>
+            <PropertyColumn Property="s => s.CreatedBy">
+                @context.CreatedBy?.UserName
+            </PropertyColumn>
+            <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />
+            <ActionColumn Title="">
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => Edit(context.Id)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this script?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        </Popconfirm>
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="() => Edit()" Type="@ButtonType.Primary">Add Script</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+<style>
+    .monaco-editor-container {
+        height: 600px;
+    }
+</style>
+
+ @code {
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid RedistributableId { get; set; }
+    [Parameter] public Guid ServerId { get; set; }
+    [Parameter] public Guid ArchiveId { get; set; }
+    [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
+
+    ICollection<Script> Scripts { get; set; } = new List<Script>();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (GameId != Guid.Empty)
+            Scripts = await ScriptService.Get(s => s.GameId == GameId).ToListAsync();
+        else if (RedistributableId != Guid.Empty)
+            Scripts = await ScriptService.Get(s => s.RedistributableId == RedistributableId).ToListAsync();
+        else if (ServerId != Guid.Empty)
+            Scripts = await ScriptService.Get(s => s.ServerId == ServerId).ToListAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void Edit(Guid? scriptId = null)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = scriptId == null ? "Add Script" : "Edit Script",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Save"
+        };
+
+        var options = new ScriptEditorOptions()
+        {
+            ScriptId = scriptId ?? default,
+            AllowedTypes = AllowedTypes,
+            ArchiveId = ArchiveId,
+            GameId = GameId,
+            RedistributableId = RedistributableId,
+            ServerId = ServerId
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ScriptEditorDialog, ScriptEditorOptions, Script>(modalOptions, options);
+
+        modalRef.OnOk = async (script) =>
+        {
+            await LoadData();
+        };
+    }
+
+    private async void Delete(Script script = null)
+    {
+        if (script != null)
+            await ScriptService.Delete(script);
+
+        await MessageService.Success("Script deleted!");
+    }
+}

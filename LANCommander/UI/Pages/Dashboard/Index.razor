@@ -1,0 +1,40 @@
+﻿@page "/"
+@page "/Dashboard"
+@attribute [Authorize]
+@using LANCommander.UI.Pages.Dashboard.Charts
+
+<PageHeader Title="Dashboard" Style="margin-bottom: 24px" />
+
+<GridRow Gutter="(16, 16)">
+    <GridCol Xs="24" Md="12">
+        <Card Title="Top 10 Total Playtime (By Player)">
+            <Body>
+                <TopPlayersPlaytime />
+            </Body>
+        </Card>
+    </GridCol>
+
+    <GridCol Xs="24" Md="12">
+        <Card Title="Top Average Session Length (By Game)">
+            <Body>
+                <TopGamesAverageSessionPlaytime />
+            </Body>
+        </Card>
+    </GridCol>
+
+    <GridCol Xs="24" Md="12">
+        <Card Title="Top 10 Total Playtime (By Game)">
+            <Body>
+                <TopGamesPlaytime />
+            </Body>
+        </Card>
+    </GridCol>
+
+    <GridCol Xs="24" Md="12">
+        <Card Title="Storage Usage">
+            <Body>
+                <StorageUsage />
+            </Body>
+        </Card>
+    </GridCol>
+</GridRow>

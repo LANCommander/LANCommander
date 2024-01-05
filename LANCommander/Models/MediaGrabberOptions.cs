@@ -1,5 +1,4 @@
-﻿using LANCommander.Components.FileManagerComponents;
-using LANCommander.Data.Enums;
+﻿using LANCommander.Data.Enums;
 
 namespace LANCommander.Models
 {

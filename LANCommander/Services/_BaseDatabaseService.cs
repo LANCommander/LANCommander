@@ -10,7 +10,8 @@ namespace LANCommander.Services
         public DatabaseContext Context { get; set; }
         public HttpContext HttpContext { get; set; }
 
-        public BaseDatabaseService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) {
+        public BaseDatabaseService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base()
+        {
             Context = dbContext;
             HttpContext = httpContextAccessor.HttpContext;
         }

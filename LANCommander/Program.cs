@@ -237,11 +237,18 @@ namespace LANCommander
             {
                 var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
 
+                var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+
                 if (File.Exists(dataSource))
-                    File.Copy(dataSource, Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}"));
+                {
+                    Logger.Info("Migrations pending, database will be backed up to {BackupName}", backupName);
+                    File.Copy(dataSource, backupName);
+                }
 
                 await db.Database.MigrateAsync();
             }
+            else
+                Logger.Debug("No pending migrations are available. Skipping database migration.");
 
             // Autostart any server processes
             Logger.Debug("Autostarting Servers");

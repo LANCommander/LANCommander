@@ -149,7 +149,7 @@ namespace LANCommander.Services
         private readonly IHubContext<GameServerHub> HubContext;
         private readonly IServiceProvider ServiceProvider;
 
-        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext, IServiceProvider serviceProvider)
+        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext, IServiceProvider serviceProvider) : base()
         {
             Mapper = mapper;
             HubContext = hubContext;
@@ -247,7 +247,7 @@ namespace LANCommander.Services
                 {
                     OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
 
-                    Logger.Error(ex, "Could not start server process");
+                    Logger.Error(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
                 }
             }
         }

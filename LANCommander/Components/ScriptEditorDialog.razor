@@ -6,6 +6,7 @@
 @inject ScriptService ScriptService
 @inject ModalService ModalService
 @inject IMessageService MessageService
+@inject ILogger<ScriptEditorDialog> Logger
 
 <Form Model="@Script" Layout="@FormLayout.Vertical">
     <FormItem>
@@ -210,6 +211,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Script could not be saved!");
+            Logger.LogError(ex, "Script could not be saved!");
         }
     }
 }

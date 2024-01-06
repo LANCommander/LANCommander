@@ -17,6 +17,7 @@ namespace LANCommander.SDK
         public IEnumerable<string> Tags { get; set; }
         public IEnumerable<string> Publishers { get; set; }
         public IEnumerable<string> Developers { get; set; }
+        public IEnumerable<string> Collections { get; set; }
         public string Version { get; set; }
         public IEnumerable<GameAction> Actions { get; set; }
         public bool Singleplayer { get; set; }

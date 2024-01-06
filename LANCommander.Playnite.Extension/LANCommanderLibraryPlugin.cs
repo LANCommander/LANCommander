@@ -164,6 +164,9 @@ namespace LANCommander.PlaynitePlugin
                     if (manifest.Tags != null && manifest.Tags.Count() > 0)
                         metadata.Tags = new HashSet<MetadataProperty>(manifest.Tags.Select(t => new MetadataNameProperty(t)));
 
+                    if (manifest.Collections != null && manifest.Collections.Count() > 0)
+                        metadata.Categories = new HashSet<MetadataProperty>(manifest.Collections.Select(c => new MetadataNameProperty(c)));
+
                     metadata.Features = new HashSet<MetadataProperty>();
 
                     if (manifest.Singleplayer)

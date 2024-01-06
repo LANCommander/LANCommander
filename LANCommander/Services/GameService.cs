@@ -79,6 +79,9 @@ namespace LANCommander.Services
             if (game.Developers != null && game.Developers.Count > 0)
                 manifest.Developers = game.Developers.Select(g => g.Name).ToArray();
 
+            if (game.Collections != null && game.Collections.Count > 0)
+                manifest.Collections = game.Collections.Select(c => c.Name).ToArray();
+
             if (game.Archives != null && game.Archives.Count > 0)
                 manifest.Version = game.Archives.OrderByDescending(a => a.CreatedOn).First().Version;
 

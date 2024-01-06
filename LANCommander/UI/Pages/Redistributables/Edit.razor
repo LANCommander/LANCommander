@@ -2,6 +2,7 @@
 @page "/Redistributables/{id:guid}/{panel}"
 @page "/Redistributables/Add"
 @using LANCommander.Data.Enums;
+@using LANCommander.Models
 @attribute [Authorize(Roles = "Administrator")]
 @inject RedistributableService RedistributableService
 @inject IMessageService MessageService
@@ -16,6 +17,11 @@
             {
                 <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
                 <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Archives")">Archives</MenuItem>
+
+                if (Settings.Wiki.Enabled)
+                {
+                    <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Wiki")">Wiki</MenuItem>
+                }
             }
         </Menu>
     </Sider>
@@ -62,6 +68,13 @@
                 <div data-panel="Archives">
                     <ArchiveEditor RedistributableId="Redistributable.Id" />
                 </div>
+
+                @if (Settings.Wiki.Enabled)
+                {
+                    <div data-panel="Wiki">
+                        <WikiEditor RedistributableId="Redistributable.Id" />
+                    </div>
+                }
             }
         </div>
     </Content>
@@ -89,6 +102,8 @@ else
     [Parameter] public string Panel { get; set; }
 
     Redistributable Redistributable;
+
+    LANCommanderSettings Settings = SettingService.GetSettings();
 
     private Guid LatestArchiveId
     {

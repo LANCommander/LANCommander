@@ -31,6 +31,11 @@
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Keys")">Keys</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Scripts")">Scripts</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Archives")">Archives</MenuItem>
+
+                if (Settings.Wiki.Enabled)
+                {
+                    <MenuItem RouterLink="@($"/Games/{Game.Id}/Wiki")">Wiki</MenuItem>
+                }
             }
         </Menu>
     </Sider>
@@ -143,6 +148,13 @@
                 <div data-panel="Archives">
                     <ArchiveEditor GameId="Game.Id" />
                 </div>
+
+                @if (Settings.Wiki.Enabled)
+                {
+                    <div data-panel="Wiki">
+                        <WikiEditor GameId="Game.Id" />
+                    </div>
+                }
             }
 
         </div>
@@ -190,6 +202,8 @@ else
     private Game Game;
     private KeysEditor? KeysEditor;
     private GameMetadataLookup? GameMetadataLookup;
+
+    private LANCommanderSettings Settings = SettingService.GetSettings();
 
     private Dictionary<string, string> PanelDisplayNames = new Dictionary<string, string>
     {

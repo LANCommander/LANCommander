@@ -21,6 +21,7 @@
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
+        public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
         public DriveInfo[] GetDrives()
@@ -82,5 +83,12 @@
         public string Host { get; set; } = "";
         public int Port { get; set; } = 213;
         public bool Logging { get; set; } = false;
+    }
+
+    public class LANCommanderWikiSettings
+    {
+        public bool Enabled { get; set; } = false;
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
     }
 }

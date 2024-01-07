@@ -46,7 +46,11 @@
                         break;
 
                     case RegParserDotNet.RegistryValueType.REG_SZ:
-                        lines.Add($"New-ItemProperty -Path \"registry::\\{key.Path}\" -Name \"{key.Property}\" -Value \"{(string)key.Value}\" -Force");
+                        var value = (string)key.Value;
+
+                        value = value.Replace("\"", @"""""");
+
+                        lines.Add($"New-ItemProperty -Path \"registry::\\{key.Path}\" -Name \"{key.Property}\" -Value \"{value}\" -Force");
                         break;
 
                     case RegParserDotNet.RegistryValueType.REG_DWORD:

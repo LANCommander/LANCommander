@@ -20,7 +20,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using LANCommander.Services;
-using LANCommander.Components;
 
 namespace LANCommander.Areas.Identity.Pages.Account
 {

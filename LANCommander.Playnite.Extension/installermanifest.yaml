@@ -70,3 +70,10 @@ Packages:
       - Added support for expanding environment variables and special folders in actions
       - Fixed packaging and unpackaging of saves
       - Latest game save is now downloaded after install
+  - Version: 0.4.1
+    ReleaseDate: 2024-01-07
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.4.1/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_4_1.pext
+    Changelog:
+      - Fixed empty scripts being created/executed on game install
+      - Categories are now created/synced from collections
+      - Added the ability for primary actions to use some variables. More details over at the wiki

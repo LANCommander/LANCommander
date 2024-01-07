@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using YamlDotNet.Core.Tokens;
 using static System.Environment;
+using System.Collections.Generic;
 
 namespace LANCommander.SDK.Extensions
 {

@@ -132,6 +132,12 @@ namespace LANCommander.Data
                     gr => gr.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId"),
                     gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId")
                 );
+
+            builder.Entity<Game>()
+                .HasMany(g => g.DependentGames)
+                .WithOne(g => g.BaseGame)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
             #endregion
 
             #region User Relationships

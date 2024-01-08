@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using LANCommander.Data.Enums;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LANCommander.Data.Models
@@ -20,6 +21,11 @@ namespace LANCommander.Data.Models
 
         public virtual ICollection<Action>? Actions { get; set; }
 
+        public GameType Type { get; set; }
+        public Guid? BaseGameId { get; set; }
+        [ForeignKey(nameof(BaseGameId))]
+        public virtual Game? BaseGame { get; set; }
+
         public bool Singleplayer { get; set; } = false;
 
         public virtual ICollection<MultiplayerMode>? MultiplayerModes { get; set; }
@@ -40,5 +46,7 @@ namespace LANCommander.Data.Models
         public string? ValidKeyRegex { get; set; }
         public virtual ICollection<Key>? Keys { get; set; }
         public virtual ICollection<Collection> Collections { get; set; }
+
+        public virtual ICollection<Game> DependentGames { get; set; }
     }
 }

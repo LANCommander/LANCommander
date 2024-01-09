@@ -131,8 +131,15 @@ namespace LANCommander.SDK
             GameManifest manifest = null;
 
             var game = Get(gameId);
+            var destination = GetInstallDirectory(game);
 
-            var destination = Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
+            if ((game.Type == GameType.StandaloneExpansion || game.Type == GameType.StandaloneMod) && game.BaseGame != null)
+            {
+                destination = GetInstallDirectory(game.BaseGame);
+
+                if (!Directory.Exists(destination))
+                    destination = Install(game.BaseGame.Id, maxAttempts);
+            }
 
             try
             {
@@ -293,6 +300,11 @@ namespace LANCommander.SDK
             }
 
             return extractionResult;
+        }
+
+        private string GetInstallDirectory(Game game)
+        {
+            return Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
         }
 
         public void CancelInstall()

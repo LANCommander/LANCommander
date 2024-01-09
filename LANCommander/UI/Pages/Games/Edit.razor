@@ -73,7 +73,22 @@
                     @if (Game != null && Game.Id != Guid.Empty)
                     {
                         <SpaceItem>
-                            <a href="/Games/Export/@(Id)" class="ant-btn ant-btn-default">Export</a>
+                            <Dropdown Trigger="@(new Trigger[] { Trigger.Click })" OnClick='e => { Console.WriteLine("Dropdown button clicked."); }'>
+                                <Overlay>
+                                    <Menu>
+                                        <MenuItem>
+                                            <a href="/Games/@(Id)/Export/Full">Full</a>
+                                        </MenuItem>
+                                        <MenuItem>
+                                            <a href="/Games/@(Id)/Export/Metadata">Metadata</a>
+                                        </MenuItem>
+                                    </Menu>
+                                </Overlay>
+                                <ChildContent>
+                                    <Button>Export</Button>
+                                </ChildContent>
+                            </Dropdown>
+                            
                         </SpaceItem>
                     }
                     <SpaceItem>

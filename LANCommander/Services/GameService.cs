@@ -142,7 +142,7 @@ namespace LANCommander.Services
             return manifest;
         }
 
-        public async Task<string> Export(Guid id)
+        public async Task<GameManifest> Export(Guid id)
         {
             var game = await Get(id);
             var manifest = await GetManifest(id);
@@ -189,9 +189,7 @@ namespace LANCommander.Services
             if (game.Keys != null && game.Keys.Count > 0)
                 manifest.Keys = game.Keys.Select(k => k.Value).ToList();
 
-            var serializedManifest = ManifestHelper.Serialize(manifest);
-
-            return serializedManifest;
+            return manifest;
         }
 
         public async Task<Game> Import(Guid objectKey)

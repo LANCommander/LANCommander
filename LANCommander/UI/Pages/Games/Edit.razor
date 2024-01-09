@@ -318,6 +318,7 @@ else
 
     private async Task OnGameLookupResultSelected(GameLookupResult result)
     {
+        Game.IGDBId = result.IGDBMetadata.Id.GetValueOrDefault();
         Game.Title = result.IGDBMetadata.Name;
         Game.Description = result.IGDBMetadata.Summary;
         Game.ReleasedOn = result.IGDBMetadata.FirstReleaseDate.GetValueOrDefault().UtcDateTime;

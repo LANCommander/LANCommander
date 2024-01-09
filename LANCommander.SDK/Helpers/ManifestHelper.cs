@@ -12,18 +12,18 @@ namespace LANCommander.SDK.Helpers
     {
         public static readonly ILogger Logger;
 
-        public const string ManifestFilename = "_manifest.yml";
+        public const string ManifestFilename = "Manifest.yml";
 
-        public static bool Exists(string installDirectory)
+        public static bool Exists(string installDirectory, Guid gameId)
         {
-            var path = GetPath(installDirectory);
+            var path = GetPath(installDirectory, gameId);
 
             return File.Exists(path);
         }
 
-        public static GameManifest Read(string installDirectory)
+        public static GameManifest Read(string installDirectory, Guid gameId)
         {
-            var source = GetPath(installDirectory);
+            var source = GetPath(installDirectory, gameId);
             var yaml = File.ReadAllText(source);
 
             Logger?.LogTrace("Deserializing manifest");
@@ -35,7 +35,10 @@ namespace LANCommander.SDK.Helpers
 
         public static string Write(GameManifest manifest, string installDirectory)
         {
-            var destination = GetPath(installDirectory);
+            var destination = GetPath(installDirectory, manifest.Id);
+
+            if (!Directory.Exists(Path.GetDirectoryName(destination)))
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
 
             Logger?.LogTrace("Attempting to write manifest to path {Destination}", destination);
 
@@ -70,9 +73,9 @@ namespace LANCommander.SDK.Helpers
             return yaml;
         }
 
-        public static string GetPath(string installDirectory)
+        public static string GetPath(string installDirectory, Guid gameId)
         {
-            return Path.Combine(installDirectory, ManifestFilename);
+            return Path.Combine(installDirectory, ".lancommander", gameId.ToString(), ManifestFilename);
         }
     }
 }

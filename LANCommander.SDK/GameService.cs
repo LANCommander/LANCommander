@@ -143,8 +143,8 @@ namespace LANCommander.SDK
 
             try
             {
-                if (ManifestHelper.Exists(destination))
-                    manifest = ManifestHelper.Read(destination);
+                if (ManifestHelper.Exists(destination, game.Id))
+                    manifest = ManifestHelper.Read(destination, game.Id);
             }
             catch (Exception ex)
             {
@@ -302,7 +302,7 @@ namespace LANCommander.SDK
             return extractionResult;
         }
 
-        private string GetInstallDirectory(Game game)
+        public string GetInstallDirectory(Game game)
         {
             return Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
         }

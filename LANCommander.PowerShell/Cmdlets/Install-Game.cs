@@ -58,8 +58,8 @@ namespace LANCommander.PowerShell.Cmdlets
 
         private int RunInstallScript(string installDirectory)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install);
+            var manifest = ManifestHelper.Read(installDirectory, Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, Id, SDK.Enums.ScriptType.Install);
 
             if (File.Exists(path))
             {
@@ -70,7 +70,7 @@ namespace LANCommander.PowerShell.Cmdlets
                 script.AddVariable("DefaultInstallDirectory", InstallDirectory);
                 script.AddVariable("ServerAddress", Client.BaseUrl);
 
-                script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install));
+                script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, Id, SDK.Enums.ScriptType.Install));
 
                 return script.Execute();
             }
@@ -81,8 +81,8 @@ namespace LANCommander.PowerShell.Cmdlets
         private int RunNameChangeScript(string installDirectory)
         {
             var user = Client.Profile.Get();
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange);
+            var manifest = ManifestHelper.Read(installDirectory, Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, Id, SDK.Enums.ScriptType.NameChange);
             
             if (File.Exists(path))
             {
@@ -105,8 +105,8 @@ namespace LANCommander.PowerShell.Cmdlets
 
         private int RunKeyChangeScript(string installDirectory)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.KeyChange);
+            var manifest = ManifestHelper.Read(installDirectory, Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, Id, SDK.Enums.ScriptType.KeyChange);
 
             if (File.Exists(path))
             {

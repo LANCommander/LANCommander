@@ -42,7 +42,10 @@ namespace LANCommander.SDK.Helpers
 
             if (!String.IsNullOrWhiteSpace(scriptContents))
             {
-                var filename = GetScriptFilePath(game, type);
+                var filename = GetScriptFilePath(game.InstallDirectory, game.Id, type);
+
+                if (!Directory.Exists(Path.GetDirectoryName(filename)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(filename));
 
                 if (File.Exists(filename))
                     File.Delete(filename);
@@ -66,25 +69,25 @@ namespace LANCommander.SDK.Helpers
             return script.Contents;
         }
 
-        public static string GetScriptFilePath(Game game, ScriptType type)
+        public static string GetScriptFilePath(string installDirectory, Guid gameId, ScriptType type)
         {
-            return GetScriptFilePath(game.InstallDirectory, type);
+            return GetScriptFilePath(installDirectory, gameId.ToString(), type);
         }
 
-        public static string GetScriptFilePath(string installDirectory, ScriptType type)
+        public static string GetScriptFilePath(string installDirectory, string gameId, ScriptType type)
         {
             var filename = GetScriptFileName(type);
 
-            return Path.Combine(installDirectory, filename);
+            return Path.Combine(installDirectory, ".lancommander", gameId, filename);
         }
 
         public static string GetScriptFileName(ScriptType type)
         {
             Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
-                { ScriptType.Install, "_install.ps1" },
-                { ScriptType.Uninstall, "_uninstall.ps1" },
-                { ScriptType.NameChange, "_changename.ps1" },
-                { ScriptType.KeyChange, "_changekey.ps1" }
+                { ScriptType.Install, "Install.ps1" },
+                { ScriptType.Uninstall, "Uninstall.ps1" },
+                { ScriptType.NameChange, "ChangeName.ps1" },
+                { ScriptType.KeyChange, "ChangeKey.ps1" }
             };
 
             return filenames[type];

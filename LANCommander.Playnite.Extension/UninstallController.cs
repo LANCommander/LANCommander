@@ -27,11 +27,13 @@ namespace LANCommander.PlaynitePlugin
             {
                 try
                 {
-                    var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, SDK.Enums.ScriptType.Uninstall);
+                    var gameId = Guid.Parse(Game.GameId);
+
+                    var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, gameId, SDK.Enums.ScriptType.Uninstall);
 
                     if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
                     {
-                        var manifest = ManifestHelper.Read(Game.InstallDirectory);
+                        var manifest = ManifestHelper.Read(Game.InstallDirectory, gameId);
                         var script = new PowerShellScript();
 
                         script.AddVariable("InstallDirectory", Game.InstallDirectory);

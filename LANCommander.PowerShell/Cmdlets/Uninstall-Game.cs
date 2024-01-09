@@ -20,13 +20,16 @@ namespace LANCommander.PowerShell.Cmdlets
         [Parameter(Mandatory = true)]
         public string InstallDirectory { get; set; }
 
+        [Parameter(Mandatory = true)]
+        public Guid Id { get; set; }
+
         protected override void ProcessRecord()
         {
-            var scriptPath = ScriptHelper.GetScriptFilePath(InstallDirectory, SDK.Enums.ScriptType.Uninstall);
+            var scriptPath = ScriptHelper.GetScriptFilePath(InstallDirectory, Id, SDK.Enums.ScriptType.Uninstall);
 
             if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
             {
-                var manifest = ManifestHelper.Read(InstallDirectory);
+                var manifest = ManifestHelper.Read(InstallDirectory, Id);
                 var script = new PowerShellScript();
 
                 script.AddVariable("InstallDirectory", InstallDirectory);

@@ -105,7 +105,7 @@ namespace LANCommander.PlaynitePlugin
 
             if (!result.Canceled && result.Error == null && !String.IsNullOrWhiteSpace(installDirectory))
             {
-                var manifest = ManifestHelper.Read(installDirectory);
+                var manifest = ManifestHelper.Read(installDirectory, game.Id);
 
                 Plugin.UpdateGame(manifest, installDirectory);
 
@@ -119,9 +119,9 @@ namespace LANCommander.PlaynitePlugin
                 Plugin.SaveController = new LANCommanderSaveController(Plugin, null);
                 Plugin.SaveController.Download(manifest.Id);
 
-                RunInstallScript(installDirectory);
-                RunNameChangeScript(installDirectory);
-                RunKeyChangeScript(installDirectory);
+                RunInstallScript(game);
+                RunNameChangeScript(game);
+                RunKeyChangeScript(game);
             }
             else if (result.Canceled)
             {
@@ -136,10 +136,11 @@ namespace LANCommander.PlaynitePlugin
                 throw result.Error;
         }
 
-        private int RunInstallScript(string installDirectory)
+        private int RunInstallScript(SDK.Models.Game game)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install);
+            var installDirectory = Plugin.LANCommanderClient.Games.GetInstallDirectory(game);
+            var manifest = ManifestHelper.Read(installDirectory, game.Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.Install);
 
             if (File.Exists(path))
             {
@@ -150,7 +151,7 @@ namespace LANCommander.PlaynitePlugin
                 script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
                 script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
 
-                script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install));
+                script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.Install));
 
                 return script.Execute();
             }
@@ -158,10 +159,11 @@ namespace LANCommander.PlaynitePlugin
             return 0;
         }
 
-        private int RunNameChangeScript(string installDirectory)
+        private int RunNameChangeScript(SDK.Models.Game game)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange);
+            var installDirectory = Plugin.LANCommanderClient.Games.GetInstallDirectory(game);
+            var manifest = ManifestHelper.Read(installDirectory, game.Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.NameChange);
 
             if (File.Exists(path))
             {
@@ -182,10 +184,11 @@ namespace LANCommander.PlaynitePlugin
             return 0;
         }
 
-        private int RunKeyChangeScript(string installDirectory)
+        private int RunKeyChangeScript(SDK.Models.Game game)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.KeyChange);
+            var installDirectory = Plugin.LANCommanderClient.Games.GetInstallDirectory(game);
+            var manifest = ManifestHelper.Read(installDirectory, game.Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.KeyChange);
 
             if (File.Exists(path))
             {

@@ -224,23 +224,26 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<PlayController> GetPlayActions(GetPlayActionsArgs args)
         {
-            var manifest = ManifestHelper.Read(args.Game.InstallDirectory);
-            var primaryDisplay = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s => s.Primary);
-
-            LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
-            LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
-
-            foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+            if (Guid.TryParse(args.Game.GameId, out var gameId))
             {
-                yield return new AutomaticPlayController(args.Game)
+                var manifest = ManifestHelper.Read(args.Game.InstallDirectory, gameId);
+                var primaryDisplay = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s => s.Primary);
+
+                LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
+                LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
+
+                foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
                 {
-                    Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory),
-                    Name = action.Name,
-                    Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
-                    TrackingMode = TrackingMode.Default,
-                    Type = AutomaticPlayActionType.File,
-                    WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
-                };
+                    yield return new AutomaticPlayController(args.Game)
+                    {
+                        Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory),
+                        Name = action.Name,
+                        Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
+                        TrackingMode = TrackingMode.Default,
+                        Type = AutomaticPlayActionType.File,
+                        WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
+                    };
+                }
             }
         }
 
@@ -250,9 +253,11 @@ namespace LANCommander.PlaynitePlugin
 
             if (args.Games.Count == 1 && args.Games.First().IsInstalled && !String.IsNullOrWhiteSpace(args.Games.First().InstallDirectory))
             {
-                var nameChangeScriptPath = ScriptHelper.GetScriptFilePath(args.Games.First().InstallDirectory, SDK.Enums.ScriptType.NameChange);
-                var keyChangeScriptPath = ScriptHelper.GetScriptFilePath(args.Games.First().InstallDirectory, SDK.Enums.ScriptType.KeyChange);
-                var installScriptPath = ScriptHelper.GetScriptFilePath(args.Games.First().InstallDirectory, SDK.Enums.ScriptType.Install);
+                var game = args.Games.First();
+
+                var nameChangeScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, Guid.Parse(game.GameId), SDK.Enums.ScriptType.NameChange);
+                var keyChangeScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, Guid.Parse(game.GameId), SDK.Enums.ScriptType.KeyChange);
+                var installScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, Guid.Parse(game.GameId), SDK.Enums.ScriptType.Install);
 
                 if (File.Exists(nameChangeScriptPath))
                 {
@@ -269,11 +274,14 @@ namespace LANCommander.PlaynitePlugin
 
                             if (result.Result == true)
                             {
-                                var game = nameChangeArgs.Games.First();
+                                var nameChangeGame = nameChangeArgs.Games.First();
 
-                                RunNameChangeScript(game.InstallDirectory, oldName, result.SelectedString);
+                                if (Guid.TryParse(nameChangeGame.GameId, out var gameId))
+                                {
+                                    RunNameChangeScript(nameChangeGame.InstallDirectory, gameId, oldName, result.SelectedString);
 
-                                LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
+                                    LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
+                                }
                             }
                         }
                     };
@@ -298,7 +306,7 @@ namespace LANCommander.PlaynitePlugin
                                 if (String.IsNullOrEmpty(newKey))
                                     PlayniteApi.Dialogs.ShowErrorMessage("There are no more keys available on the server.", "No Keys Available");
                                 else
-                                    RunKeyChangeScript(keyChangeArgs.Games.First().InstallDirectory, newKey);
+                                    RunKeyChangeScript(keyChangeArgs.Games.First().InstallDirectory, gameId, newKey);
                             }
                             else
                             {
@@ -320,7 +328,7 @@ namespace LANCommander.PlaynitePlugin
                             Guid gameId;
 
                             if (Guid.TryParse(installArgs.Games.First().GameId, out gameId))
-                                RunInstallScript(installArgs.Games.First().InstallDirectory);
+                                RunInstallScript(installArgs.Games.First().InstallDirectory, gameId);
                             else
                                 PlayniteApi.Dialogs.ShowErrorMessage("This game could not be found on the server. Your game may be corrupted.");
                         }
@@ -470,7 +478,7 @@ namespace LANCommander.PlaynitePlugin
                         script.AddVariable("OldName", oldName);
                         script.AddVariable("NewName", Settings.PlayerName);
 
-                        script.UseFile(ScriptHelper.GetScriptFilePath(game.InstallDirectory, SDK.Enums.ScriptType.NameChange));
+                        script.UseFile(ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.GameId, SDK.Enums.ScriptType.NameChange));
 
                         script.Execute();
                     }
@@ -609,10 +617,10 @@ namespace LANCommander.PlaynitePlugin
             PlayniteApi.Database.Games.Update(game);
         }
 
-        private int RunInstallScript(string installDirectory)
+        private int RunInstallScript(string installDirectory, Guid gameId)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.Install);
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.Install);
 
             if (File.Exists(path))
             {
@@ -631,10 +639,10 @@ namespace LANCommander.PlaynitePlugin
             return 0;
         }
 
-        private int RunNameChangeScript(string installDirectory, string oldPlayerAlias, string newPlayerAlias)
+        private int RunNameChangeScript(string installDirectory, Guid gameId, string oldPlayerAlias, string newPlayerAlias)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.NameChange);
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.NameChange);
 
             if (File.Exists(path))
             {
@@ -655,10 +663,10 @@ namespace LANCommander.PlaynitePlugin
             return 0;
         }
 
-        private int RunKeyChangeScript(string installDirectory, string key = "")
+        private int RunKeyChangeScript(string installDirectory, Guid gameId, string key = "")
         {
-            var manifest = ManifestHelper.Read(installDirectory);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, SDK.Enums.ScriptType.KeyChange);
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.KeyChange);
 
             if (File.Exists(path))
             {

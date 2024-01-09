@@ -70,9 +70,9 @@ namespace LANCommander.SDK
             return Client.UploadRequest<GameSave>($"/api/Saves/Upload/{gameId}", gameId.ToString(), data);
         }
 
-        public void Download(string installDirectory)
+        public void Download(string installDirectory, Guid gameId)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
 
             string tempFile = String.Empty;
             string tempLocation = String.Empty;
@@ -113,7 +113,7 @@ namespace LANCommander.SDK
                     if (!success)
                         throw new ExtractionException("Could not extract the save archive. Is the file locked?");
 
-                    manifest = ManifestHelper.Read(tempLocation);
+                    manifest = ManifestHelper.Read(tempLocation, gameId);
 
                     #region Move files
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
@@ -183,9 +183,9 @@ namespace LANCommander.SDK
             }
         }
 
-        public void Upload(string installDirectory)
+        public void Upload(string installDirectory, Guid gameId)
         {
-            var manifest = ManifestHelper.Read(installDirectory);
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
 
             var temp = Path.GetTempFileName();
 

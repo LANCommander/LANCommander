@@ -40,7 +40,7 @@ namespace LANCommander.PlaynitePlugin
                         progress.CurrentProgressValue = 100;
                     };
 
-                    Plugin.LANCommanderClient.Saves.Download(game.InstallDirectory);
+                    Plugin.LANCommanderClient.Saves.Download(game.InstallDirectory, gameId);
 
                     // Lock the thread until the download is done
                     while (progress.CurrentProgressValue != 100) { }
@@ -59,7 +59,7 @@ namespace LANCommander.PlaynitePlugin
 
             if (game != null)
             {
-                Plugin.LANCommanderClient.Saves.Upload(game.InstallDirectory);
+                Plugin.LANCommanderClient.Saves.Upload(game.InstallDirectory, gameId);
             }
         }
     }

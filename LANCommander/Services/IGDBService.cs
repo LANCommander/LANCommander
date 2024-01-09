@@ -68,6 +68,8 @@ namespace LANCommander.Services
                 (int)Category.MainGame,
                 (int)Category.Port,
                 (int)Category.StandaloneExpansion,
+                (int)Category.Expansion,
+                (int)Category.Mod
             };
 
             var sb = new StringBuilder();

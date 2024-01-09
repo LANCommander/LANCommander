@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LANCommander.SDK.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace LANCommander.SDK.Models
@@ -11,6 +12,7 @@ namespace LANCommander.SDK.Models
         public string Description { get; set; }
         public DateTime ReleasedOn { get; set; }
         public string InstallDirectory { get; set; }
+        public GameType Type { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Tag> Tags { get; set; }
         public virtual IEnumerable<Company> Publishers { get; set; }

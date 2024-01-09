@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using LANCommander.Data;
+using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
 using LANCommander.Models;
@@ -7,6 +8,7 @@ using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Controllers.Api
 {
@@ -46,10 +48,10 @@ namespace LANCommander.Controllers.Api
                     games.AddRange(role.Collections.SelectMany(c => c.Games).DistinctBy(g => g.Id).ToList());
                 }
 
-                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games.DistinctBy(g => g.Id).ToList());
+                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games.Where(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).DistinctBy(g => g.Id).ToList());
             }
 
-            return Mapper.Map<IEnumerable<SDK.Models.Game>>(await GameService.Get());
+            return Mapper.Map<IEnumerable<SDK.Models.Game>>(await GameService.Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).ToListAsync());
         }
 
         [HttpGet("{id}")]

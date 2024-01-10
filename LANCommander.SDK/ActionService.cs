@@ -29,6 +29,14 @@ namespace LANCommander.SDK
             get
             {
                 var host = Client.Settings.IPXRelayHost;
+
+                if (String.IsNullOrWhiteSpace(host))
+                {
+                    var serverAddress = new Uri(Client.GetServerAddress());
+
+                    host = serverAddress.DnsSafeHost;
+                }
+
                 var entry = Dns.GetHostEntry(host);
 
                 if (entry.AddressList.Length > 0)

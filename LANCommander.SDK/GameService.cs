@@ -227,6 +227,8 @@ namespace LANCommander.SDK
                 Canceled = false,
             };
 
+            var fileManifest = new StringBuilder();
+
             try
             {
                 Directory.CreateDirectory(destination);
@@ -252,6 +254,8 @@ namespace LANCommander.SDK
                 {
                     if (Reader.Cancelled)
                         break;
+
+                    fileManifest.AppendLine($"{Reader.Entry.Key} | {Reader.Entry.Crc.ToString("X")}");
 
                     Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
                     {
@@ -295,6 +299,13 @@ namespace LANCommander.SDK
             {
                 extractionResult.Success = true;
                 extractionResult.Directory = destination;
+
+                var fileListDestination = Path.Combine(destination, ".lancommander", game.Id.ToString(), "FileList.txt");
+
+                if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
+
+                File.WriteAllText(fileListDestination, fileManifest.ToString());
 
                 Logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
             }

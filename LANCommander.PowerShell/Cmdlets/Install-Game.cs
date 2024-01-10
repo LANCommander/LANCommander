@@ -32,7 +32,7 @@ namespace LANCommander.PowerShell.Cmdlets
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            Client.Games.OnArchiveExtractionProgress += (long position, long length) =>
+            Client.Games.OnArchiveExtractionProgress += (long position, long length, SDK.Models.Game inProgressGame) =>
             {
                 // Only update a max of every 500ms
                 if (stopwatch.ElapsedMilliseconds > 500)

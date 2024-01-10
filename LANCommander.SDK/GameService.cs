@@ -22,7 +22,7 @@ namespace LANCommander.SDK
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
 
-        public delegate void OnArchiveExtractionProgressHandler(long position, long length);
+        public delegate void OnArchiveExtractionProgressHandler(long position, long length, Game game);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
         private TrackableStream DownloadStream;
@@ -252,7 +252,7 @@ namespace LANCommander.SDK
 
                 DownloadStream.OnProgress += (pos, len) =>
                 {
-                    OnArchiveExtractionProgress?.Invoke(pos, len);
+                    OnArchiveExtractionProgress?.Invoke(pos, len, game);
                 };
 
                 Reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>

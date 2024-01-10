@@ -48,7 +48,7 @@ namespace LANCommander.PlaynitePlugin
                 var lastTotalSize = 0d;
                 var speed = 0d;
 
-                Plugin.LANCommanderClient.Games.OnArchiveExtractionProgress += (long pos, long len) =>
+                Plugin.LANCommanderClient.Games.OnArchiveExtractionProgress += (long pos, long len, SDK.Models.Game inProgressGame) =>
                 {
                     if (stopwatch.ElapsedMilliseconds > 500)
                     {
@@ -59,7 +59,7 @@ namespace LANCommander.PlaynitePlugin
 
                         speed = (double)(progress.CurrentProgressValue - lastTotalSize) / (stopwatch.ElapsedMilliseconds / 1000d);
 
-                        progress.Text = $"Downloading {Game.Name} ({percent}%) | {ByteSizeLib.ByteSize.FromBytes(speed).ToString("#.#")}/s";
+                        progress.Text = $"Downloading {inProgressGame.Title} ({percent}%) | {ByteSizeLib.ByteSize.FromBytes(speed).ToString("#.#")}/s";
 
                         lastTotalSize = pos;
 

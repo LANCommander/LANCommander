@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Enums;
+﻿using Force.Crc32;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
@@ -10,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace LANCommander.SDK
 {
@@ -151,30 +153,21 @@ namespace LANCommander.SDK
                 Logger?.LogTrace(ex, "Error reading manifest before install");
             }
 
-            if (manifest == null || manifest.Id != gameId)
+            Logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
+
+            var result = RetryHelper.RetryOnException<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
             {
-                Logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
+                Logger?.LogTrace("Attempting to download and extract game");
 
-                var result = RetryHelper.RetryOnException<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
-                {
-                    Logger?.LogTrace("Attempting to download and extract game");
+                return DownloadAndExtract(game, destination);
+            });
 
-                    return DownloadAndExtract(game, destination);
-                });
+            if (!result.Success && !result.Canceled)
+                throw new Exception("Could not extract the installer. Retry the install or check your connection");
+            else if (result.Canceled)
+                return "";
 
-                if (!result.Success && !result.Canceled)
-                    throw new Exception("Could not extract the installer. Retry the install or check your connection");
-                else if (result.Canceled)
-                    return "";
-
-                game.InstallDirectory = result.Directory;
-            }
-            else
-            {
-                Logger?.LogTrace("Game {GameTitle} ({GameId}) is already installed to {InstallDirectory}", game.Title, game.Id, destination);
-
-                game.InstallDirectory = destination;
-            }
+            game.InstallDirectory = result.Directory;
 
             var writeManifestSuccess = RetryHelper.RetryOnException(maxAttempts, TimeSpan.FromSeconds(1), false, () =>
             {
@@ -269,14 +262,39 @@ namespace LANCommander.SDK
                     if (Reader.Cancelled)
                         break;
 
+                    var localFile = Path.Combine(destination, Reader.Entry.Key);
+
+                    uint crc = 0;
+
+                    if (File.Exists(localFile))
+                    {
+                        using (FileStream fs = File.Open(localFile, FileMode.Open))
+                        {
+                            var buffer = new byte[65536];
+
+                            while (true)
+                            {
+                                var count = fs.Read(buffer, 0, buffer.Length);
+
+                                if (count == 0)
+                                    break;
+
+                                crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                            }
+                        }
+                    }
+
                     fileManifest.AppendLine($"{Reader.Entry.Key} | {Reader.Entry.Crc.ToString("X")}");
 
-                    Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
-                    {
-                        ExtractFullPath = true,
-                        Overwrite = true,
-                        PreserveFileTime = true,
-                    });
+                    if (crc == 0 || crc != Reader.Entry.Crc)
+                        Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
+                        {
+                            ExtractFullPath = true,
+                            Overwrite = true,
+                            PreserveFileTime = true
+                        });
+                    else
+                        Reader.OpenEntryStream().Dispose();
                 }
 
                 Reader.Dispose();

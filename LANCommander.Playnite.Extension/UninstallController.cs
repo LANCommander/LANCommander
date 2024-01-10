@@ -25,10 +25,10 @@ namespace LANCommander.PlaynitePlugin
         {
             try
             {
+                var gameId = Guid.Parse(Game.GameId);
+
                 try
                 {
-                    var gameId = Guid.Parse(Game.GameId);
-
                     var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, gameId, SDK.Enums.ScriptType.Uninstall);
 
                     if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
@@ -51,7 +51,14 @@ namespace LANCommander.PlaynitePlugin
                     Logger.Error(ex, "There was an error running the uninstall script");
                 }
 
-                Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory);
+                Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory, gameId);
+
+                var metadataPath = SDK.GameService.GetMetadataDirectoryPath(Game.InstallDirectory, gameId);
+
+                if (Directory.Exists(metadataPath))
+                    Directory.Delete(metadataPath, true);
+
+                DirectoryHelper.DeleteEmptyDirectories(Game.InstallDirectory);
             }
             catch (Exception ex)
             {

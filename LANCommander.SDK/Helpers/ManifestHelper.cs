@@ -75,7 +75,7 @@ namespace LANCommander.SDK.Helpers
 
         public static string GetPath(string installDirectory, Guid gameId)
         {
-            return Path.Combine(installDirectory, ".lancommander", gameId.ToString(), ManifestFilename);
+            return GameService.GetMetadataFilePath(installDirectory, gameId, ManifestFilename);
         }
     }
 }

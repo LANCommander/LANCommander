@@ -200,15 +200,29 @@ namespace LANCommander.SDK
             return game.InstallDirectory;
         }
 
-        public void Uninstall(string installDirectory)
+        public void Uninstall(string installDirectory, Guid gameId)
         {
+            var fileList = File.ReadAllLines(GameService.GetMetadataFilePath(installDirectory, gameId, "FileList.txt"));
+            var files = fileList.Select(l => l.Split('|').FirstOrDefault().Trim());
 
-            Logger?.LogTrace("Attempting to delete the install directory");
+            Logger?.LogTrace("Attempting to delete the install files");
 
-            if (Directory.Exists(installDirectory))
-                Directory.Delete(installDirectory, true);
+            foreach (var file in files.Where(f => !f.EndsWith("/")))
+            {
+                var localPath = Path.Combine(installDirectory, file);
 
-            Logger?.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
+                if (File.Exists(localPath))
+                    File.Delete(localPath);
+            }
+
+            Logger?.LogTrace("Attempting to delete any empty directories");
+
+            DirectoryHelper.DeleteEmptyDirectories(installDirectory);
+
+            if (!Directory.Exists(installDirectory))
+                Logger?.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
+            else
+                Logger?.LogTrace("Removed game files for {GameId}", gameId);
         }
 
         private ExtractionResult DownloadAndExtract(Game game, string destination)
@@ -324,6 +338,16 @@ namespace LANCommander.SDK
         public void CancelInstall()
         {
             Reader?.Cancel();
+        }
+
+        public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)
+        {
+            return Path.Combine(installDirectory, ".lancommander", gameId.ToString());
+        }
+
+        public static string GetMetadataFilePath(string installDirectory, Guid gameId, string fileName)
+        {
+            return Path.Combine(GetMetadataDirectoryPath(installDirectory, gameId), fileName);
         }
     }
 }

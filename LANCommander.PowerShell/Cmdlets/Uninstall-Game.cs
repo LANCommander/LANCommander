@@ -40,7 +40,14 @@ namespace LANCommander.PowerShell.Cmdlets
                 script.Execute();
             }
 
-            Client.Games.Uninstall(InstallDirectory);
+            Client.Games.Uninstall(InstallDirectory, Id);
+
+            var metadataPath = GameService.GetMetadataDirectoryPath(InstallDirectory, Id);
+
+            if (Directory.Exists(metadataPath))
+                Directory.Delete(metadataPath, true);
+
+            DirectoryHelper.DeleteEmptyDirectories(InstallDirectory);
         }
     }
 }

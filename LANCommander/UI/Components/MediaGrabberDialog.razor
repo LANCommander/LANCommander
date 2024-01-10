@@ -13,14 +13,21 @@
     </GridCol>
 </GridRow>
 
-@foreach (var group in Results)
-{
-    <div class="media-grabber-group">
-        <h2>@group.First().Group</h2>
+<Spin Spinning="Loading">
+    @foreach (var group in Results)
+    {
+        <div class="media-grabber-group">
+            <h2>@group.First().Group</h2>
 
-        <ImagePicker Size="Size" Images="@group.ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" />
-    </div>
-}
+            <ImagePicker Size="Size" Images="@group.ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" />
+        </div>
+    }
+
+    @if (Results.Count() == 0 && !Loading)
+    {
+        <Empty Description="@($"No results for \"{Search}\"")" />
+    }
+</Spin>
 
 @code {
     [Parameter] public string Search { get; set; }
@@ -29,6 +36,7 @@
     MediaGrabberResult Media { get; set; }
 
     double Size { get; set; } = 200;
+    bool Loading { get; set; } = true;
 
     IEnumerable<IEnumerable<MediaGrabberResult>> Results = new List<List<MediaGrabberResult>>();
     Dictionary<string, string> Images { get; set; } = new Dictionary<string, string>();
@@ -43,11 +51,15 @@
 
     private async Task GetResults(MediaType type, string search)
     {
+        Loading = true;
+
         if (!String.IsNullOrWhiteSpace(search))
         {
             Results = (await MediaGrabberService.SearchAsync(type, search)).GroupBy(r => r.Group);
 
-            StateHasChanged();
+            Loading = false;
+
+            await InvokeAsync(StateHasChanged);
         }
     }
 

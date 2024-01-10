@@ -315,7 +315,10 @@ namespace LANCommander.SDK
 
         public string GetInstallDirectory(Game game)
         {
-            return Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
+            if ((game.Type == GameType.Expansion || game.Type == GameType.StandaloneExpansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGame != null)
+                return GetInstallDirectory(game.BaseGame);
+            else
+                return Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
         }
 
         public void CancelInstall()

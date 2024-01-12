@@ -19,7 +19,7 @@ namespace LANCommander.Data.Models
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }
 
-        public virtual ICollection<Action>? Actions { get; set; }
+        public virtual ICollection<Action>? Actions { get; set; } = new List<Action>();
 
         public GameType Type { get; set; }
         public Guid? BaseGameId { get; set; }
@@ -28,25 +28,24 @@ namespace LANCommander.Data.Models
 
         public bool Singleplayer { get; set; } = false;
 
-        public virtual ICollection<MultiplayerMode>? MultiplayerModes { get; set; }
-        public virtual ICollection<Genre>? Genres { get; set; }
-        public virtual ICollection<Tag>? Tags { get; set; }
-        public virtual ICollection<Category>? Categories { get; set; }
-        public virtual ICollection<Company>? Publishers { get; set; }
-        public virtual ICollection<Company>? Developers { get; set; }
-        public virtual ICollection<Archive>? Archives { get; set; }
-        public virtual ICollection<Script>? Scripts { get; set; }
-        public virtual ICollection<GameSave>? GameSaves { get; set; }
-        public virtual ICollection<PlaySession>? PlaySessions { get; set; }
-        public virtual ICollection<SavePath>? SavePaths { get; set; }
-        public virtual ICollection<Server>? Servers { get; set; }
-        public virtual ICollection<Redistributable>? Redistributables { get; set; }
-        public virtual ICollection<Media>? Media { get; set; }
+        public virtual ICollection<MultiplayerMode>? MultiplayerModes { get; set; } = new List<MultiplayerMode>();
+        public virtual ICollection<Genre>? Genres { get; set; } = new List<Genre>();
+        public virtual ICollection<Tag>? Tags { get; set; } = new List<Tag>();
+        public virtual ICollection<Category>? Categories { get; set; } = new List<Category>();
+        public virtual ICollection<Company>? Publishers { get; set; } = new List<Company>();
+        public virtual ICollection<Company>? Developers { get; set; } = new List<Company>();
+        public virtual ICollection<Archive>? Archives { get; set; } = new List<Archive>();
+        public virtual ICollection<Script>? Scripts { get; set; } = new List<Script>();
+        public virtual ICollection<GameSave>? GameSaves { get; set; } = new List<GameSave>();
+        public virtual ICollection<PlaySession>? PlaySessions { get; set; } = new List<PlaySession>();
+        public virtual ICollection<SavePath>? SavePaths { get; set; } = new List<SavePath>();
+        public virtual ICollection<Server>? Servers { get; set; } = new List<Server>();
+        public virtual ICollection<Redistributable>? Redistributables { get; set; } = new List<Redistributable>();
+        public virtual ICollection<Media>? Media { get; set; } = new List<Media>();
 
         public string? ValidKeyRegex { get; set; }
-        public virtual ICollection<Key>? Keys { get; set; }
-        public virtual ICollection<Collection> Collections { get; set; }
-
-        public virtual ICollection<Game> DependentGames { get; set; }
+        public virtual ICollection<Key>? Keys { get; set; } = new List<Key>();
+        public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
+        public virtual ICollection<Game> DependentGames { get; set; } = new List<Game>();
     }
 }

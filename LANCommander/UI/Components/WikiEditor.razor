@@ -106,24 +106,24 @@
                 Changes.Summary = $"Created new page for {Game.Title}";
 
             Authenticated = true;
+
+            TextModel originalModel = await BlazorMonaco.Editor.Global.CreateModel(JS, OriginalContents, "plaintext", "sample-diff-editor-originalModel");
+            TextModel modifiedModel = await BlazorMonaco.Editor.Global.CreateModel(JS, ModifiedContents, "plaintext", "sample-diff-editor-modifiedModel");
+
+            await DiffEditor.SetModel(new DiffEditorModel
+            {
+                Original = originalModel,
+                Modified = modifiedModel
+            });
         }
         catch (Exception ex)
         {
-            MessageService.Error("Wiki authentication failed!");
+            MessageService.Error("Wiki initialization failed!");
         }
         finally
         {
             Loading = false;
         }
-
-        TextModel originalModel = await BlazorMonaco.Editor.Global.CreateModel(JS, OriginalContents, "plaintext", "sample-diff-editor-originalModel");
-        TextModel modifiedModel = await BlazorMonaco.Editor.Global.CreateModel(JS, ModifiedContents, "plaintext", "sample-diff-editor-modifiedModel");
-
-        await DiffEditor.SetModel(new DiffEditorModel
-        {
-            Original = originalModel,
-            Modified = modifiedModel
-        });
     }
 
     async Task Publish()

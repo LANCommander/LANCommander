@@ -83,8 +83,12 @@ namespace LANCommander.Services
 
         public async void Dispose()
         {
-            await WikiSite.LogoutAsync();
-            WikiClient.Dispose();
+            try
+            {
+                await WikiSite.LogoutAsync();
+                WikiClient.Dispose();
+            }
+            catch { }
         }
     }
 }

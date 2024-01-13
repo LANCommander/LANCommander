@@ -42,6 +42,7 @@
     <PackageReference Include="Hangfire.InMemory" Version="0.6.0" />
     <PackageReference Include="IGDB" Version="3.0.0" />
     <PackageReference Include="IPXRelayDotNet" Version="1.1.0" />
+    <PackageReference Include="Markdig" Version="0.34.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
@@ -61,9 +62,11 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.0" />
     <PackageReference Include="NLog" Version="5.2.8" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.8" />
+    <PackageReference Include="Octokit" Version="9.1.0" />
     <PackageReference Include="Razor.Templating.Core" Version="1.9.0" />
     <PackageReference Include="RegParserDotNet" Version="1.1.1" />
     <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
+    <PackageReference Include="Semver" Version="2.3.0" />
     <PackageReference Include="swashbuckle" Version="5.6.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />

@@ -181,6 +181,7 @@ namespace LANCommander
             builder.Services.AddScoped<RedistributableService>();
             builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
             builder.Services.AddScoped<WikiService>();
+            builder.Services.AddScoped<UpdateService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
@@ -249,6 +250,9 @@ namespace LANCommander
 
             if (!Directory.Exists(settings.Media.StoragePath))
                 Directory.CreateDirectory(settings.Media.StoragePath);
+
+            if (!Directory.Exists(settings.Update.StoragePath))
+                Directory.CreateDirectory(settings.Update.StoragePath);
 
             if (!Directory.Exists("Snippets"))
                 Directory.CreateDirectory("Snippets");

@@ -22,6 +22,7 @@
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
         public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
+        public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
         public DriveInfo[] GetDrives()
@@ -90,5 +91,10 @@
         public bool Enabled { get; set; } = false;
         public string Username { get; set; } = "";
         public string Password { get; set; } = "";
+    }
+
+    public class LANCommanderUpdateSettings
+    {
+        public string StoragePath { get; set; } = "Updates";
     }
 }

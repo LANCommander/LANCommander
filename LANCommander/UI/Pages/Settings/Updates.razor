@@ -1,0 +1,93 @@
+﻿@page "/Settings/Updates"
+@using LANCommander.Models;
+@using Octokit
+@using Semver
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject IMessageService MessageService
+@inject UpdateService UpdateService
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Updates">
+    <PageHeaderExtra>
+        <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="!UpdateAvailable">Update</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<div style="padding: 0 24px;">
+    @if (!Loading && !UpdateAvailable)
+    {
+        <Alert Type="@AlertType.Success" Message="You are on the latest version!" ShowIcon="true" />
+    }
+    else if (!Loading && UpdateAvailable)
+    {
+        <Alert Type="@AlertType.Info" Message="A newer version of LANCommander is available" ShowIcon="true" />
+    }
+    else
+    {
+        <Alert Type="@AlertType.Warning" Message="Loading release information..." ShowIcon="true" />
+    }
+
+    <Space Direction="DirectionVHType.Vertical" Style="width: 100%;">
+        @if (Releases != null && Releases.Count() > 0)
+        {
+            foreach (var release in Releases)
+            {
+                <SpaceItem>
+                    <Card Title="@release.Name">
+                        <TitleTemplate>
+                            @release.Name <span style="font-size: 70%">@release.PublishedAt.GetValueOrDefault().ToString("MMMM d yyyy")</span>
+                        </TitleTemplate>
+                        <Extra>
+                            <a href="@release.Url" target="_blank">View Release</a>
+                        </Extra>
+                        <Body>
+                            @((MarkupString)Markdig.Markdown.ToHtml(release.Body))
+                        </Body>
+                    </Card>
+                </SpaceItem>
+            }
+        }
+        else
+        {
+            for (var i = 0; i < 5; i++)
+            {
+                <Card Loading="true" Style="width: 100%;"></Card>
+            }
+        }
+    </Space>
+</div>
+
+@code {
+    LANCommanderSettings Settings;
+
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+
+    bool Loading { get; set; } = true;
+    bool UpdateAvailable { get; set; } = false;
+    SemVersion LatestVersion { get; set; }
+    IEnumerable<Release> Releases { get; set; } = new List<Release>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        UpdateAvailable = await UpdateService.UpdateAvailable();
+        LatestVersion = await UpdateService.GetLatestVersion();
+        Releases = await UpdateService.GetReleases(5);
+
+        Loading = false;
+    }
+
+    async Task Update()
+    {
+        try {
+            await UpdateService.DownloadRelease(Releases.First());
+        }
+        catch (NotImplementedException ex) {
+            MessageService.Error(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred while updating. Please check the logs");
+        }
+    }
+}

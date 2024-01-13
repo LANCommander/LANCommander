@@ -16,6 +16,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.PowerShell.Tests", "LANCommander.PowerShell.Tests\LANCommander.PowerShell.Tests.csproj", "{D7069A13-F0AA-4CBF-9013-4276F130A6DD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.SDK.Tests", "LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj", "{7EF67B44-C563-4809-9B5A-FDDB90A2E709}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.AutoUpdater", "LANCommander.AutoUpdater\LANCommander.AutoUpdater.csproj", "{C580750D-5F66-4613-979D-67379D8F4170}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +52,10 @@ Global
 		{7EF67B44-C563-4809-9B5A-FDDB90A2E709}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7EF67B44-C563-4809-9B5A-FDDB90A2E709}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7EF67B44-C563-4809-9B5A-FDDB90A2E709}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C580750D-5F66-4613-979D-67379D8F4170}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C580750D-5F66-4613-979D-67379D8F4170}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C580750D-5F66-4613-979D-67379D8F4170}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C580750D-5F66-4613-979D-67379D8F4170}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

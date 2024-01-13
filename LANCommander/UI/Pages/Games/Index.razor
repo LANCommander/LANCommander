@@ -281,9 +281,9 @@
             GameIds = Selected.Select(g => g.Id)
         };
 
-        var modalRef = await ModalService.CreateModalAsync<AddToCollectionDialog, AddToCollectionOptions, Collection>(modalOptions, options);
+        var modalRef = await ModalService.CreateModalAsync<AddToCollectionDialog, AddToCollectionOptions, IEnumerable<Collection>>(modalOptions, options);
 
-        modalRef.OnOk = async (collection) =>
+        modalRef.OnOk = async (collections) =>
         {
             Table.UnselectAll();
             await LoadData();

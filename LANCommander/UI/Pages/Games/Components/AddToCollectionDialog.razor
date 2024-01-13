@@ -1,24 +1,26 @@
 ﻿@using LANCommander.Models
-@inherits FeedbackComponent<AddToCollectionOptions, Collection>
+@using Microsoft.EntityFrameworkCore
+@inherits FeedbackComponent<AddToCollectionOptions, IEnumerable<Collection>>
 @inject CollectionService CollectionService
 @inject GameService GameService
 @inject IMessageService MessageService
 
 <Select
+    AllowClear
+    Mode="multiple"
     TItem="Collection"
     TItemValue="Guid"
     DataSource="@Collections"
-    @bind-Value="SelectedCollection"
+    @bind-Values="SelectedCollections"
     LabelName="@nameof(Collection.Name)"
     ValueName="@nameof(Collection.Id)"
     Placeholder="Select a Collection"
-    DropdownRender="@DropdownRender"
-    OnSelectedItemChanged="OnSelectedItemChanged" />
+    DropdownRender="@DropdownRender" />
 
 @code {
     ICollection<Collection> Collections = new List<Collection>();
 
-    Guid SelectedCollection;
+    IEnumerable<Guid> SelectedCollections;
 
     string NewCollectionName;
 
@@ -76,36 +78,45 @@
         }
     }
 
-    private void OnSelectedItemChanged(Collection collection)
-    {
+    /*private void OnSelectedItemsChanged(Collection collection)
+        {
         SelectedCollection = collection.Id;
-    }
+    }*/
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        var collection = await CollectionService.Get(SelectedCollection);
-
-        if (collection.Games == null)
-            collection.Games = new List<Game>();
+        var collections = await CollectionService.Get(c => SelectedCollections.Contains(c.Id)).ToListAsync();
 
         try
         {
-            foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
+            foreach (var collection in collections)
             {
-                var game = await GameService.Get(gameId);
+                if (collection.Games == null)
+                    collection.Games = new List<Game>();
 
-                collection.Games.Add(game);
+                foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
+                {
+                    var game = await GameService.Get(gameId);
+
+                    collection.Games.Add(game);
+                }
+
+                await CollectionService.Update(collection);
             }
 
-            await CollectionService.Update(collection);
-
-            MessageService.Success("Added to collection!");
+            if (collections.Count > 1)
+                MessageService.Success("Added to collections!");
+            else
+                MessageService.Success("Added to collection!");
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            MessageService.Error("Could not add to collection!");
+            if (collections.Count > 1)
+                MessageService.Error("Could not add to collections!");
+            else
+                MessageService.Error("Could not add to collection!");
         }
 
-        await base.OkCancelRefWithResult!.OnOk(collection);
+        await base.OkCancelRefWithResult!.OnOk(collections);
     }
 }

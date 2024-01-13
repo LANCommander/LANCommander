@@ -244,9 +244,6 @@ namespace LANCommander
             if (!Directory.Exists(settings.Archives.StoragePath))
                 Directory.CreateDirectory(settings.Archives.StoragePath);
 
-            if (!Directory.Exists("Icon"))
-                Directory.CreateDirectory("Icon");
-
             if (!Directory.Exists(settings.UserSaves.StoragePath))
                 Directory.CreateDirectory(settings.UserSaves.StoragePath);
 

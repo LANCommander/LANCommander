@@ -38,7 +38,7 @@
 
 <TableColumnPicker @ref="Picker" Key="Games" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Game" DataSource="@Games" @bind-SelectedRows="Selected" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
+<Table @ref="Table" TItem="Game" DataSource="@Games" @bind-SelectedRows="Selected" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
     <Selection Key="@(context.Id.ToString())" />
     <Column TData="string" Title="Icon" Hidden="@(Picker.IsColumnHidden("Icon"))">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
@@ -152,6 +152,7 @@
 
     IEnumerable<Game> Selected;
 
+    ITable Table;
     ImportUploadDialog ImportUploadDialog;
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
@@ -176,6 +177,9 @@
             .Where(g => g.Title.ToLower().Contains(Search.ToLower().Trim()) || g.SortTitle.ToLower().Contains(Search.ToLower().Trim()))
             .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
             .ToListAsync();
+
+        if (Table != null)
+            Table.ReloadData();
 
         await InvokeAsync(StateHasChanged);
     }
@@ -281,7 +285,7 @@
 
         modalRef.OnOk = async (collection) =>
         {
-            Selected = null;
+            Table.UnselectAll();
             await LoadData();
         };
     }

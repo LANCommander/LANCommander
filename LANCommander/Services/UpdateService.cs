@@ -96,7 +96,14 @@ namespace LANCommander.Services
             Logger?.Info("Update version {Version} has been downloaded", version);
             Logger?.Info("Running auto updater application");
 
-            var process = new ProcessStartInfo("LANCommander.AutoUpdater.exe", $"-Version {version} -Path \"{Settings.Update.StoragePath}\"");
+            string processExecutable = String.Empty;
+
+            if (File.Exists("LANCommander.AutoUpdater.exe"))
+                processExecutable = "LANCommander.AutoUpdater.exe";
+            else if (File.Exists("LANCommander.AutoUpdater"))
+                processExecutable = "LANCommander.AutoUpdater";
+
+            var process = new ProcessStartInfo(processExecutable, $"-Version {version} -Path \"{Settings.Update.StoragePath}\"");
 
             Process.Start(process);
 

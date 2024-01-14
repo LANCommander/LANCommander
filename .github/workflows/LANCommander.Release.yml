@@ -35,16 +35,14 @@ jobs:
     - name: Rename Windows Updater
       run: mv ./_Build_Windows/LANCommander.AutoUpdater.exe ./_Build_Windows/LANCommander.AutoUpdater.exe.Update
     - name: Remove Windows Extra Files
-      run: rm -rf ./_Build_Windows/wwwroot/_content/AntDesign/less
+      run: rm -Recurse -Force ./_Build_Windows/wwwroot/_content/AntDesign/less
     # Linux
     - name: Publish Linux
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Rename Linux Updater
       run: mv ./_Build_Linux/LANCommander.AutoUpdater ./_Build_Linux/LANCommander.AutoUpdater.Update
     - name: Remove Linux Extra Files
-      run: rm -rf ./_Build_Linux/wwwroot/_content/AntDesign/less
-    - name: Set Linux Binary Executable
-      run: chmod +x ./_Build_Linux/LANCommander; chmod +x ./_Build_Linux/LANCommander.AutoUpdater.Update
+      run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
     - name: Tar Linux
       run: tar -cvf LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.tar ./_Build_Linux
     # Sign Windows Binary

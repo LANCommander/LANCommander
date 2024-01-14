@@ -27,10 +27,27 @@ jobs:
     - name: Setup Node.js environment
       uses: actions/setup-node@v3.8.1
     - run: cd LANCommander/wwwroot/scripts; npm install
+    # Windows
     - name: Publish Windows
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Publish Windows Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release -o _Build_Windows --self-contained --os win -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename Windows Updater
+      run: mv ./_Build_Windows/LANCommander.AutoUpdater.exe ./_Build_Windows/LANCommander.AutoUpdater.exe.Update
+    - name: Remove Windows Extra Files
+      run: rm -rf ./_Build_Windows/wwwroot/_content/AntDesign/less
+    # Linux
     - name: Publish Linux
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename Linux Updater
+      run: mv ./_Build_Linux/LANCommander.AutoUpdater ./_Build_Linux/LANCommander.AutoUpdater.Update
+    - name: Remove Linux Extra Files
+      run: rm -rf ./_Build_Linux/wwwroot/_content/AntDesign/less
+    - name: Set Linux Binary Executable
+      run: chmod +x ./_Build_Linux/LANCommander; chmod +x ./_Build_Linux/LANCommander.AutoUpdater.Update
+    - name: Tar Linux
+      run: tar -cvf LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.tar ./_Build_Linux
+    # Sign Windows Binary
     - name: Sign Windows Binary
       uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
       with:
@@ -46,7 +63,7 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}
-        path: "./_Build_Linux"
+        path: "LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.tar"
     # Client
     - uses: actions/checkout@v3
     - name: Setup MSBuild

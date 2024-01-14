@@ -10,7 +10,7 @@
 
 <PageHeader Title="Updates">
     <PageHeaderExtra>
-        <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="!UpdateAvailable">Update</Button>
+        <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="@(!UpdateAvailable || Updating)" Loading="Updating">Update</Button>
     </PageHeaderExtra>
 </PageHeader>
 
@@ -36,7 +36,17 @@
                 <SpaceItem>
                     <Card Title="@release.Name">
                         <TitleTemplate>
-                            @release.Name <span style="font-size: 70%">@release.PublishedAt.GetValueOrDefault().ToString("MMMM d yyyy")</span>
+                            @release.Name <span style="font-size: 70%; margin-right: 6px;">@release.PublishedAt.GetValueOrDefault().ToString("MMMM d yyyy")</span>
+
+                            @if (Releases.First().Equals(release))
+                            {
+                                <Tag Color="@PresetColor.Gold.ToString()">Latest</Tag>
+                            }
+
+                            @if (release.TagName == $"v{CurrentVersion.ToString()}")
+                            {
+                                <Tag Color="@PresetColor.Blue.ToString()">Current</Tag>
+                            }
                         </TitleTemplate>
                         <Extra>
                             <a href="@release.Url" target="_blank">View Release</a>
@@ -64,12 +74,15 @@
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     bool Loading { get; set; } = true;
+    bool Updating { get; set; } = false;
     bool UpdateAvailable { get; set; } = false;
     SemVersion LatestVersion { get; set; }
+    SemVersion CurrentVersion { get; set; }
     IEnumerable<Release> Releases { get; set; } = new List<Release>();
 
     protected override async Task OnInitializedAsync()
     {
+        CurrentVersion = UpdateService.GetCurrentVersion();
         UpdateAvailable = await UpdateService.UpdateAvailable();
         LatestVersion = await UpdateService.GetLatestVersion();
         Releases = await UpdateService.GetReleases(5);
@@ -80,6 +93,8 @@
     async Task Update()
     {
         try {
+            Updating = true;
+
             await UpdateService.DownloadRelease(Releases.First());
         }
         catch (NotImplementedException ex) {

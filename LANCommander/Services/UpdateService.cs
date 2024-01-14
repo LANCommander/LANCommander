@@ -25,6 +25,11 @@ namespace LANCommander.Services
             ServerProcessService = serverProcessService;
         }
 
+        public static SemVersion GetCurrentVersion()
+        {
+            return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
+        }
+
         public async Task<SemVersion> GetLatestVersion()
         {
             var release = await GitHub.Repository.Release.GetLatest("LANCommander", "LANCommander");
@@ -39,9 +44,8 @@ namespace LANCommander.Services
         public async Task<bool> UpdateAvailable()
         {
             var latestVersion = await GetLatestVersion();
-            var assemblyVersion = SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
 
-            var sortOrder = assemblyVersion.ComparePrecedenceTo(latestVersion);
+            var sortOrder = GetCurrentVersion().ComparePrecedenceTo(latestVersion);
 
             return sortOrder > 0;
         }

@@ -39,6 +39,8 @@ jobs:
     # Linux
     - name: Publish Linux
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Publish Linux Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Rename Linux Updater
       run: mv ./_Build_Linux/LANCommander.AutoUpdater ./_Build_Linux/LANCommander.AutoUpdater.Update
     - name: Remove Linux Extra Files

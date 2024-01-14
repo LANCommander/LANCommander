@@ -95,13 +95,15 @@
     <SplitPane>
         <Pane Size="25%">
             <Tree TItem="FileManagerDirectory"
+                  BlockNode="true"
+                  DefaultExpandAll="false"
+                  DefaultExpandParent="false"
                   DataSource="Directories"
                   SwitcherIcon="@IconType.Outline.Down"
                   TitleExpression="x => x.DataItem.Name"
                   ChildrenExpression="x => x.DataItem.Children"
                   IsLeafExpression="x => !x.DataItem.HasChildren"
                   IconExpression="x => x.Expanded ? IconType.Outline.FolderOpen : IconType.Outline.Folder"
-                  DefaultExpandParent="true"
                   OnClick="(args) => ChangeDirectory(args.Node.DataItem, false)"
                   OnNodeLoadDelayAsync="ExpandTree">
                 <SwitcherIconTemplate>

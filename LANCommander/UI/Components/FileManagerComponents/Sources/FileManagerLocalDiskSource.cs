@@ -8,6 +8,7 @@ namespace LANCommander.UI.Components.FileManagerComponents.Sources
     public class FileManagerLocalDiskSource : IFileManagerSource
     {
         private FileManagerDirectory CurrentPath { get; set; }
+        public string DirectorySeparatorCharacter { get; set; } = Path.DirectorySeparatorChar.ToString();
 
         public FileManagerLocalDiskSource(string path) {
             SetCurrentPath(GetDirectory(path));

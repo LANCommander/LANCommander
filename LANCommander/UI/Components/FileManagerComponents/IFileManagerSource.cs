@@ -2,6 +2,7 @@
 {
     public interface IFileManagerSource
     {
+        string DirectorySeparatorCharacter { get; set; }
         FileManagerDirectory GetCurrentPath();
         void SetCurrentPath(FileManagerDirectory path);
         IEnumerable<FileManagerDirectory> GetDirectoryTree();

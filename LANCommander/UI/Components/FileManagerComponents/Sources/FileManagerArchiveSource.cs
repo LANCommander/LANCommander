@@ -12,6 +12,7 @@ namespace LANCommander.UI.Components.FileManagerComponents.Sources
         private Guid ArchiveId { get; set; }
         private FileManagerDirectory CurrentPath { get; set; }
         private IEnumerable<ZipArchiveEntry> ZipArchiveEntries { get; set; }
+        public string DirectorySeparatorCharacter { get; set; } = Separator.ToString();
 
         private const char Separator = '/';
 

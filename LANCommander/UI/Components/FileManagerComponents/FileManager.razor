@@ -47,7 +47,7 @@
             @if (Features.HasFlag(FileManagerFeatures.Breadcrumbs))
             {
                 <SpaceItem Class="file-manager-nav-breadcrumbs">
-                    <Breadcrumb>
+                    <Breadcrumb Separator="@FileSource.DirectorySeparatorCharacter">
                         @foreach (var breadcrumb in Breadcrumbs)
                         {
                             <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>

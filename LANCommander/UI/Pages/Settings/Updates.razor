@@ -49,7 +49,7 @@
                             }
                         </TitleTemplate>
                         <Extra>
-                            <a href="@release.Url" target="_blank">View Release</a>
+                            <a href="@release.HtmlUrl" target="_blank">View Release</a>
                         </Extra>
                         <Body>
                             @((MarkupString)Markdig.Markdown.ToHtml(release.Body))

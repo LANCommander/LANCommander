@@ -38,6 +38,10 @@
     <Content Style="padding: 24px; min-height: 100vh;">
         @Body
     </Content>
+
+    <Footer Style="text-align: center; padding-top: 0;">
+        LANCommander v@(UpdateService.GetCurrentVersion().ToString())
+    </Footer>
 </Layout>
 
 @code {

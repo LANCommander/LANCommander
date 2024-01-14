@@ -291,6 +291,14 @@ namespace LANCommander
                 File.Move("LANCommander.AutoUpdater.exe.Update", "LANCommander.AutoUpdater.exe");
             }
 
+            if (File.Exists("LANCommander.AutoUpdater.Update"))
+            {
+                if (File.Exists("LANCommander.AutoUpdater"))
+                    File.Delete("LANCommander.AutoUpdater");
+
+                File.Move("LANCommander.AutoUpdater.Update", "LANCommander.AutoUpdater");
+            }
+
             // Autostart any server processes
             Logger.Debug("Autostarting Servers");
             var serverService = scope.ServiceProvider.GetService<ServerService>();

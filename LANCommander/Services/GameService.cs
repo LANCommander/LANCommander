@@ -199,7 +199,7 @@ namespace LANCommander.Services
             using (var importArchive = ZipFile.OpenRead(importArchivePath))
             {
                 // Read manifest
-                GameManifest manifest = ManifestHelper.Deserialize(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+                GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
                 Game game = await Get(manifest.Id);
 

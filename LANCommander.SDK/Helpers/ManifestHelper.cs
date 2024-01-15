@@ -28,7 +28,7 @@ namespace LANCommander.SDK.Helpers
 
             Logger?.LogTrace("Deserializing manifest");
 
-            var manifest = Deserialize(yaml);
+            var manifest = Deserialize<GameManifest>(yaml);
 
             return manifest;
         }
@@ -51,16 +51,16 @@ namespace LANCommander.SDK.Helpers
             return destination;
         }
 
-        public static GameManifest Deserialize(string serializedManifest)
+        public static T Deserialize<T>(string serializedManifest)
         {
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
-            return deserializer.Deserialize<GameManifest>(serializedManifest);
+            return deserializer.Deserialize<T>(serializedManifest);
         }
 
-        public static string Serialize(GameManifest manifest)
+        public static string Serialize<T>(T manifest)
         {
             var serializer = new SerializerBuilder()
                 .WithNamingConvention(new PascalCaseNamingConvention())

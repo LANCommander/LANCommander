@@ -195,27 +195,36 @@ namespace LANCommander.SDK
 
         public void Uninstall(string installDirectory, Guid gameId)
         {
-            var fileList = File.ReadAllLines(GameService.GetMetadataFilePath(installDirectory, gameId, "FileList.txt"));
-            var files = fileList.Select(l => l.Split('|').FirstOrDefault().Trim());
+            var fileListPath = GameService.GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
 
-            Logger?.LogTrace("Attempting to delete the install files");
-
-            foreach (var file in files.Where(f => !f.EndsWith("/")))
+            if (File.Exists(fileListPath))
             {
-                var localPath = Path.Combine(installDirectory, file);
+                var fileList = File.ReadAllLines(fileListPath);
+                var files = fileList.Select(l => l.Split('|').FirstOrDefault().Trim());
 
-                if (File.Exists(localPath))
-                    File.Delete(localPath);
+                Logger?.LogTrace("Attempting to delete the install files");
+
+                foreach (var file in files.Where(f => !f.EndsWith("/")))
+                {
+                    var localPath = Path.Combine(installDirectory, file);
+
+                    if (File.Exists(localPath))
+                        File.Delete(localPath);
+                }
+
+                Logger?.LogTrace("Attempting to delete any empty directories");
+
+                DirectoryHelper.DeleteEmptyDirectories(installDirectory);
+
+                if (!Directory.Exists(installDirectory))
+                    Logger?.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
+                else
+                    Logger?.LogTrace("Removed game files for {GameId}", gameId);
             }
-
-            Logger?.LogTrace("Attempting to delete any empty directories");
-
-            DirectoryHelper.DeleteEmptyDirectories(installDirectory);
-
-            if (!Directory.Exists(installDirectory))
-                Logger?.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
             else
-                Logger?.LogTrace("Removed game files for {GameId}", gameId);
+            {
+                Directory.Delete(installDirectory, true);
+            }
         }
 
         private ExtractionResult DownloadAndExtract(Game game, string destination)

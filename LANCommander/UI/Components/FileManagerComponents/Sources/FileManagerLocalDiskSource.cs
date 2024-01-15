@@ -171,7 +171,7 @@ namespace LANCommander.UI.Components.FileManagerComponents.Sources
                 var root = new FileManagerDirectory
                 {
                     Path = d.RootDirectory.FullName,
-                    Name = d.Name,
+                    Name = d.Name.TrimEnd('\\'),
                 };
 
                 var paths = Directory.EnumerateDirectories(root.Path, "*", new EnumerationOptions

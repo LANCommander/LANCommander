@@ -4,6 +4,7 @@
     {
         Icon,
         Cover,
-        Background
+        Background,
+        Avatar
     }
 }

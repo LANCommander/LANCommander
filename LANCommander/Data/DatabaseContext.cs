@@ -87,6 +87,7 @@ namespace LANCommander.Data
             builder.Entity<Game>()
                 .HasMany(g => g.Media)
                 .WithOne(m => m.Game)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
@@ -151,6 +152,12 @@ namespace LANCommander.Data
                 .HasMany(u => u.PlaySessions)
                 .WithOne(ps => ps.User)
                 .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<User>()
+                .HasMany(u => u.Media)
+                .WithOne(m => m.User)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
             #endregion
 

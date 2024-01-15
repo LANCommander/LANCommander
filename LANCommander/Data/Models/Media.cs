@@ -17,10 +17,16 @@ namespace LANCommander.Data.Models
         [MaxLength(255)]
         public string MimeType { get; set; }
 
-        public Guid GameId { get; set; }
+        public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Media")]
         public virtual Game? Game { get; set; }
+
+        public Guid? UserId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(UserId))]
+        [InverseProperty("Media")]
+        public virtual User? User { get; set; }
     }
 }

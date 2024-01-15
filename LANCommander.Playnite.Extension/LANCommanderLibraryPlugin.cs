@@ -16,6 +16,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using PN = Playnite;
+using LANCommander.SDK;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -84,6 +85,11 @@ namespace LANCommander.PlaynitePlugin
                 }
 
             });
+        }
+
+        public override void OnApplicationStarted(OnApplicationStartedEventArgs args)
+        {
+            Migrate();
         }
 
         public bool ValidateConnection()
@@ -687,6 +693,38 @@ namespace LANCommander.PlaynitePlugin
             }
 
             return 0;
+        }
+
+        void Migrate()
+        {  
+            #region Old Manifest Locations
+            var installedGames = PlayniteApi.Database.Games.Where(g => g.IsInstalled && g.PluginId == Id).ToList();
+
+            foreach (var game in installedGames)
+            {
+                var gameId = Guid.Parse(game.GameId);
+
+                if (!Directory.Exists(GameService.GetMetadataDirectoryPath(game.InstallDirectory, gameId)))
+                    Directory.CreateDirectory(GameService.GetMetadataDirectoryPath(game.InstallDirectory, gameId));
+
+                var metaFiles = new Dictionary<string, string>()
+                {
+                    { "_manifest.yml", "Manifest.yml" },
+                    { "_install.ps1", "Install.ps1" },
+                    { "_uninstall.ps1", "Uninstall.ps1" },
+                    { "_changename.ps1", "ChangeName.ps1" },
+                    { "_changekey.ps1", "ChangeKey.ps1" },
+                };
+
+                foreach (var file in metaFiles)
+                {
+                    var originalPath = Path.Combine(game.InstallDirectory, file.Key);
+
+                    if (File.Exists(originalPath))
+                        File.Move(originalPath, GameService.GetMetadataFilePath(game.InstallDirectory, gameId, file.Value));
+                }
+            }
+            #endregion
         }
     }
 }

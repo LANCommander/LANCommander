@@ -39,7 +39,17 @@
                 }
             </PageHeaderTitle>
             <PageHeaderExtra>
-                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                <Space Direction="DirectionVHType.Horizontal">
+                    @if (Redistributable != null && Redistributable.Id != Guid.Empty)
+                    {
+                        <SpaceItem>
+                            <a href="/Redistributables/@(Id)/Export" target="_blank" class="ant-btn ant-btn-default">Export</a>
+                        </SpaceItem>
+                    }
+                    <SpaceItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                    </SpaceItem>
+                </Space>
             </PageHeaderExtra>
         </PageHeader>
 

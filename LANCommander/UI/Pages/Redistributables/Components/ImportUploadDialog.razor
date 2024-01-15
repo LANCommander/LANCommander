@@ -1,0 +1,100 @@
+﻿@using System.Net;
+@using System.Diagnostics;
+@using Hangfire;
+@using LANCommander.Jobs.Background;
+@using Microsoft.EntityFrameworkCore;
+@inject NavigationManager Navigator
+@inject RedistributableService RedistributableService
+@inject IMessageService MessageService
+@inject IJSRuntime JS
+
+@{
+    RenderFragment Footer =
+    @<Template>
+        <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="Clear" Disabled="@(File == null || Status != "")" Danger>Clear</Button>
+        <Button OnClick="Cancel">Cancel</Button>
+    </Template>;
+}
+
+<Modal Visible="@Visible" Title="Import Redistributable" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
+    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError" />
+</Modal>
+
+@code {
+    [Parameter] public EventCallback<Guid> OnRedistributableImported { get; set; }
+
+    IBrowserFile File;
+    ChunkUploader ChunkUploader;
+
+    bool IsValid = false;
+    bool Visible = false;
+
+    string Filename;
+
+    string Status;
+
+    private async Task Start()
+    {
+        await ChunkUploader.Start();
+    }
+
+    private async Task Clear()
+    {
+        await ChunkUploader.Clear();
+    }
+
+    private async Task Cancel()
+    {
+        await ChunkUploader.Clear();
+        Visible = false;
+    }
+
+    public async Task Open()
+    {
+        Visible = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task OnUploadCompleted(string data)
+    {
+        if (Guid.TryParse(data, out var objectKey))
+        {
+            try
+            {
+                var redistributable = await RedistributableService.Import(objectKey);
+
+                Visible = false;
+
+                await InvokeAsync(StateHasChanged);
+
+                if (OnRedistributableImported.HasDelegate)
+                    await OnRedistributableImported.InvokeAsync(redistributable.Id);
+
+                MessageService.Success($"{redistributable.Name} successfully imported!");
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("An unknown error occurred while trying to import");
+            }
+        }
+        else
+        {
+            Visible = false;
+
+            await InvokeAsync(StateHasChanged);
+
+            MessageService.Error("Import file failed to upload!");
+        }
+    }
+
+    public async Task OnUploadError(string message)
+    {
+        Visible = false;
+
+        await InvokeAsync(StateHasChanged);
+
+        MessageService.Error("An error occurred while trying to import");
+    }
+}

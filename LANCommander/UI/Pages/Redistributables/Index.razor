@@ -1,5 +1,6 @@
 ﻿@page "/Redistributables"
 @using Microsoft.EntityFrameworkCore;
+@using LANCommander.UI.Pages.Redistributables.Components
 @attribute [Authorize(Roles = "Administrator")]
 @inject RedistributableService RedistributableService
 @inject NavigationManager NavigationManager
@@ -11,6 +12,9 @@
             <SpaceItem>
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
             </SpaceItem>
+             <SpaceItem>
+                 <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
+             </SpaceItem>
             <SpaceItem>
                  <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Redistributable</Button>
             </SpaceItem>
@@ -47,6 +51,8 @@
     </ActionColumn>
 </Table>
 
+ <ImportUploadDialog @ref="ImportUploadDialog" OnRedistributableImported="LoadData" />
+
  @code {
     IEnumerable<Redistributable> Redistributables { get; set; } = new List<Redistributable>();
 
@@ -55,6 +61,7 @@
     string Search = "";
 
     TableColumnPicker Picker;
+    ImportUploadDialog ImportUploadDialog;
     bool ColumnPickerVisible = false;
 
     protected override void OnAfterRender(bool firstRender)

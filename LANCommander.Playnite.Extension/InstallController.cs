@@ -174,7 +174,7 @@ namespace LANCommander.PlaynitePlugin
                 script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
                 script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
                 script.AddVariable("OldPlayerAlias", "");
-                script.AddVariable("NewPlayerAlias", Plugin.Settings.PlayerName);
+                script.AddVariable("NewPlayerAlias", String.IsNullOrWhiteSpace(Plugin.Settings.PlayerAlias) ? Plugin.Settings.PlayerName : Plugin.Settings.PlayerAlias);
 
                 script.UseFile(path);
 

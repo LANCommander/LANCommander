@@ -113,7 +113,8 @@ namespace LANCommander.PlaynitePlugin.Views
 
                 var profile = Plugin.LANCommanderClient.Profile.Get();
 
-                Plugin.Settings.PlayerName = String.IsNullOrWhiteSpace(profile.Alias) ? profile.UserName : profile.Alias;
+                Plugin.Settings.PlayerName = profile.UserName;
+                Plugin.Settings.PlayerAlias = profile.Alias;
 
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;

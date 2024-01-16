@@ -274,9 +274,9 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Change Player Name",
                         Action = (nameChangeArgs) =>
                         {
-                            var oldName = Settings.PlayerName;
+                            var oldName = String.IsNullOrWhiteSpace(Settings.PlayerAlias) ? Settings.PlayerName : Settings.PlayerAlias;
 
-                            var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", Settings.PlayerName);
+                            var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", oldName);
 
                             if (result.Result == true)
                             {
@@ -286,7 +286,11 @@ namespace LANCommander.PlaynitePlugin
                                 {
                                     RunNameChangeScript(nameChangeGame.InstallDirectory, gameId, oldName, result.SelectedString);
 
-                                    LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
+                                    var alias = LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
+
+                                    Settings.PlayerAlias = alias;
+
+                                    SavePluginSettings(Settings);
                                 }
                             }
                         }
@@ -445,7 +449,9 @@ namespace LANCommander.PlaynitePlugin
         {
             Logger.Trace("Showing name change dialog!");
 
-            var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", Settings.PlayerName);
+            var oldName = String.IsNullOrWhiteSpace(Settings.PlayerAlias) ? Settings.PlayerName : Settings.PlayerAlias;
+
+            var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", oldName);
 
             if (result.Result == true)
             {
@@ -462,8 +468,6 @@ namespace LANCommander.PlaynitePlugin
                 }
                 else
                 {
-                    var oldName = Settings.PlayerName;
-
                     Settings.PlayerName = result.SelectedString;
 
                     Logger.Trace($"New player name of \"{Settings.PlayerName}\" has been set!");

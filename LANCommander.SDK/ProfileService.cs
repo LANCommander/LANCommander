@@ -44,9 +44,12 @@ namespace LANCommander.SDK
         {
             Logger?.LogTrace("Requesting to change player alias...");
 
-            var response = Client.PostRequest<object>("/api/Profile/ChangeAlias", alias);
+            var response = Client.PostRequest<string>("/api/Profile/ChangeAlias", new
+            {
+                Alias = alias
+            });
 
-            return alias;
+            return response;
         }
     }
 }

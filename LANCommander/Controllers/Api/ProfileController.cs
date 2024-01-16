@@ -40,18 +40,18 @@ namespace LANCommander.Controllers.Api
                 return Unauthorized();
         }
 
-        [HttpPost]
-        public async Task<IActionResult> ChangeAlias(string alias)
+        [HttpPost("ChangeAlias")]
+        public async Task<IActionResult> ChangeAlias(ChangeAliasRequest request)
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
                 var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
-                user.Alias = alias;
+                user.Alias = request.Alias;
 
                 await UserManager.UpdateAsync(user);
 
-                return Ok();
+                return Ok(request.Alias);
             }
             else
                 return Unauthorized();

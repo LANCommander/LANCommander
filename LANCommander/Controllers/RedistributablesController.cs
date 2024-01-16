@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Helpers;
+﻿using AutoMapper;
+using LANCommander.SDK.Helpers;
 using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,10 +10,12 @@ namespace LANCommander.Controllers
     [Authorize(Roles = "Administrator")]
     public class RedistributablesController : BaseController
     {
+        private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
 
-        public RedistributablesController(RedistributableService redistributableService)
+        public RedistributablesController(IMapper mapper, RedistributableService redistributableService)
         {
+            Mapper = mapper;
             RedistributableService = redistributableService;
         }
 
@@ -32,7 +35,8 @@ namespace LANCommander.Controllers
 
             using (ZipArchive export = new ZipArchive(Response.BodyWriter.AsStream(), ZipArchiveMode.Create))
             {
-                var manifest = await RedistributableService.Get(redistributable.Id);
+                var manifest = Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.Get(redistributable.Id));
+
                 var serializedManifest = ManifestHelper.Serialize(manifest);
 
                 using (var manistream = new MemoryStream())

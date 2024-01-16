@@ -36,7 +36,7 @@ namespace LANCommander.Services
 
             SemVersion version = null;
 
-            SemVersion.TryParse(release.TagName, SemVersionStyles.Strict, out version);
+            SemVersion.TryParse(release.TagName.TrimStart('v'), SemVersionStyles.Strict, out version);
 
             return version;
         }
@@ -47,7 +47,7 @@ namespace LANCommander.Services
 
             var sortOrder = GetCurrentVersion().ComparePrecedenceTo(latestVersion);
 
-            return sortOrder > 0;
+            return sortOrder < 0;
         }
 
         public async Task<IEnumerable<Release>> GetReleases(int count)

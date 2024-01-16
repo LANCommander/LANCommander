@@ -77,3 +77,11 @@ Packages:
       - Fixed empty scripts being created/executed on game install
       - Categories are now created/synced from collections
       - Added the ability for primary actions to use some variables. More details over at the wiki
+  - Version: 0.5.0
+    ReleaseDate: 2024-01-15
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_0.pext
+    Changelog:
+      - 'Changed: Location of LANCommander metadata files has now changed and will be located under `{InstallDir}\.lancommander\{GameId}`'
+      - 'Changed: Files in ZIP archive are now checked against each file on the local disk and replaced where different'
+      - 'Changed: Default `{IPXRelay}` action variable will resolve to the servers address if not specified in server settings'
+      - 'Fixed: Name changes now correctly update users alias and is stored separately from the username'

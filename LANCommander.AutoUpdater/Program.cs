@@ -24,6 +24,8 @@ for (int i = 0; i < maxAttempts; i++)
         break;
     else if (i == maxAttempts - 1)
         throw new Exception("Cannot update! LANCommander is still running!");
+
+    await Task.Delay(delay);
 }
 
 Console.WriteLine("LANCommander has exited! Updating...");

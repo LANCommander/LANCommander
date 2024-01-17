@@ -107,7 +107,11 @@ namespace LANCommander.Services
             else if (File.Exists("LANCommander.AutoUpdater"))
                 processExecutable = "LANCommander.AutoUpdater";
 
-            var process = new ProcessStartInfo(processExecutable, $"-Version {version} -Path \"{Settings.Update.StoragePath}\"");
+            var process = new ProcessStartInfo();
+
+            process.FileName = processExecutable;
+            process.Arguments = $"-Version {version} -Path \"{Settings.Update.StoragePath}\"";
+            process.UseShellExecute = true;
 
             Process.Start(process);
 

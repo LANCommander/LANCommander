@@ -52,7 +52,7 @@
             <ServerControl ServerId="context.Id" />
             <Space Direction="DirectionVHType.Horizontal">
                 <SpaceItem>
-                    <Button OnClick="() => Edit(context)">Edit</Button>
+                    <a href="/Servers/@(context.Id)" class="ant-btn ant-btn-default">Edit</a>
                 </SpaceItem>
                 <SpaceItem>
                     <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this server?">

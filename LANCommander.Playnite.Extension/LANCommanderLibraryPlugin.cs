@@ -250,6 +250,20 @@ namespace LANCommander.PlaynitePlugin
                         WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
                     };
                 }
+
+                var game = LANCommanderClient.Games.Get(gameId);
+
+                foreach (var server in game.Servers.Where(s => s.Actions != null))
+                    foreach (var action in server.Actions)
+                        yield return new AutomaticPlayController(args.Game)
+                        {
+                            Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory),
+                            Name = action.Name,
+                            Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
+                            TrackingMode = TrackingMode.Default,
+                            Type = AutomaticPlayActionType.File,
+                            WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
+                        };
             }
         }
 

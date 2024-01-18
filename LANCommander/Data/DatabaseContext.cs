@@ -76,6 +76,7 @@ namespace LANCommander.Data
             builder.Entity<Game>()
                 .HasMany(g => g.Actions)
                 .WithOne(g => g.Game)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
@@ -182,6 +183,12 @@ namespace LANCommander.Data
 
             builder.Entity<Server>()
                 .HasMany(s => s.Scripts)
+                .WithOne(s => s.Server)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Server>()
+                .HasMany(s => s.Actions)
                 .WithOne(s => s.Server)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);

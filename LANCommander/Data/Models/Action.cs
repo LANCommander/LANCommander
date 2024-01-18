@@ -13,10 +13,16 @@ namespace LANCommander.Data.Models
         public bool PrimaryAction { get; set; }
         public int SortOrder { get; set; }
 
-        public Guid GameId { get; set; }
+        public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Actions")]
         public virtual Game? Game { get; set; }
+
+        public Guid? ServerId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(ServerId))]
+        [InverseProperty("Actions")]
+        public virtual Server? Server { get; set; }
     }
 }

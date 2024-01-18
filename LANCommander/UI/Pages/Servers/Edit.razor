@@ -16,6 +16,7 @@
     <Sider Width="200">
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
             <MenuItem RouterLink="@($"/Servers/{Server.Id}/General")">General</MenuItem>
+            <MenuItem RouterLink="@($"/Servers/{Server.Id}/Actions")">Actions</MenuItem>
             <MenuItem RouterLink="@($"/Servers/{Server.Id}/Autostart")">Autostart</MenuItem>
             <MenuItem RouterLink="@($"/Servers/{Server.Id}/HTTP")">HTTP</MenuItem>
             @if (Server != null && Server.Id != Guid.Empty)
@@ -76,7 +77,7 @@
                                 </ItemTemplate>
                         </Select>
                     </FormItem>
-                    <FormItem Label="Path">
+                    <FormItem Label="Executable Path">
                         <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="OnPathSelected" />
                     </FormItem>
                     <FormItem Label="Arguments">
@@ -100,6 +101,13 @@
                         <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
                     </FormItem>
                 </Form>
+            }
+
+            @if (Panel == "Actions")
+            {
+                <ActionEditor @bind-Actions="Server.Actions" ServerId="Server.Id" />
+
+                <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
             }
 
             @if (Panel == "Autostart")

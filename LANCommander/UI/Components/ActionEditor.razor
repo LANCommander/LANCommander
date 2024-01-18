@@ -47,11 +47,12 @@
     </SpaceItem>
 </Space>
 
-@code {
+ @code {
     [Parameter] public ICollection<Data.Models.Action> Actions { get; set; }
     [Parameter] public EventCallback<ICollection<Data.Models.Action>> ActionsChanged { get; set; }
 
     [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid ServerId { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
 
     ObservableCollection<Data.Models.Action> SortedActions = new ObservableCollection<Data.Models.Action>();
@@ -76,7 +77,8 @@
         {
             PrimaryAction = Actions.Count == 0,
             SortOrder = Actions.Count,
-            GameId = GameId
+            GameId = GameId,
+            ServerId = ServerId
         });
 
         await UpdateOrder();

@@ -10,6 +10,9 @@ namespace LANCommander.SDK.Models
         public string Arguments { get; set; } = "";
         public string WorkingDirectory { get; set; } = "";
 
+        public string Host { get; set; }
+        public int Port { get; set; }
+
         public bool UseShellExecute { get; set; }
         public bool Autostart { get; set; }
         public ServerAutostartMethod AutostartMethod { get; set; }

@@ -60,21 +60,21 @@ namespace LANCommander.SDK
         private readonly Client Client;
         private readonly ActionVariables ActionVariables;
 
-        private Dictionary<string, string> AdditionalVariables { get; set; }
+        private Dictionary<string, string> CustomVariables { get; set; }
 
         public ActionService(Client client)
         {
             Client = client;
             ActionVariables = new ActionVariables(Client);
-            AdditionalVariables = new Dictionary<string, string>();
+            CustomVariables = new Dictionary<string, string>();
         }
 
         public void AddVariable(string key, string value)
         {
-            AdditionalVariables[key] = value;
+            CustomVariables[key] = value;
         }
 
-        public string ExpandVariables(string input, string installDirectory)
+        public string ExpandVariables(string input, string installDirectory, Dictionary<string, string> additionalVariables = null)
         {
             if (input == null)
                 return input;
@@ -87,7 +87,13 @@ namespace LANCommander.SDK
                     input = input.Replace($"{{{variable.Name}}}", $"{variable.GetValue(ActionVariables)}");
             }
 
-            foreach (var variable in AdditionalVariables)
+            foreach (var variable in CustomVariables)
+            {
+                input = input.Replace($"{{{variable.Key}}}", variable.Value);
+            }
+
+            if (additionalVariables != null)
+            foreach (var variable in additionalVariables)
             {
                 input = input.Replace($"{{{variable.Key}}}", variable.Value);
             }

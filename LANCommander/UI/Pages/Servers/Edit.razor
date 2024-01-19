@@ -86,6 +86,12 @@
                     <FormItem Label="Working Directory">
                         <FilePicker Root="@RootPath" Title="Choose Working Directory" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.WorkingDirectory" />
                     </FormItem>
+                    <FormItem Label="Host">
+                        <Input @bind-Value="@context.Host" />
+                    </FormItem>
+                    <FormItem Label="Port">
+                        <AntDesign.InputNumber @bind-Value="@context.Port" />
+                    </FormItem>
                     <FormItem>
                         <LabelTemplate>
                             Use Shell Execute

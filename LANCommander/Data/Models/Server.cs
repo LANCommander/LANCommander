@@ -14,6 +14,9 @@ namespace LANCommander.Data.Models
         public string OnStartScriptPath { get; set; } = "";
         public string OnStopScriptPath { get; set; } = "";
 
+        public string Host { get; set; } = "";
+        public int Port { get; set; } = 0;
+
         public bool UseShellExecute { get; set; }
         public bool Autostart { get; set; }
         public ServerAutostartMethod AutostartMethod { get; set; }

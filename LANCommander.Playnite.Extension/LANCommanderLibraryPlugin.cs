@@ -255,15 +255,23 @@ namespace LANCommander.PlaynitePlugin
 
                 foreach (var server in game.Servers.Where(s => s.Actions != null))
                     foreach (var action in server.Actions)
+                    {
+                        var variables = new Dictionary<string, string>()
+                        {
+                            { "ServerHost", String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host },
+                            { "ServerPort", server.Port.ToString() }
+                        };
+
                         yield return new AutomaticPlayController(args.Game)
                         {
-                            Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory),
+                            Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables),
                             Name = action.Name,
-                            Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
+                            Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
                             TrackingMode = TrackingMode.Default,
                             Type = AutomaticPlayActionType.File,
-                            WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
+                            WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory, variables)
                         };
+                    }
             }
         }
 

@@ -75,6 +75,9 @@ namespace LANCommander.SDK
 
         internal T PostRequest<T>(string route, object body)
         {
+            if (Token == null)
+                return default;
+
             var request = new RestRequest(route)
                 .AddJsonBody(body)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
@@ -86,6 +89,9 @@ namespace LANCommander.SDK
 
         internal T PostRequest<T>(string route)
         {
+            if (Token == null)
+                return default;
+
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
@@ -96,6 +102,9 @@ namespace LANCommander.SDK
 
         internal T GetRequest<T>(string route)
         {
+            if (Token == null)
+                return default;
+
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 

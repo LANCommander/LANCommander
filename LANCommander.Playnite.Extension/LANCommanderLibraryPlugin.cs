@@ -101,18 +101,24 @@ namespace LANCommander.PlaynitePlugin
         {
             var gameMetadata = new List<GameMetadata>();
 
-            if (!ValidateConnection())
+            if (Settings.OfflineModeEnabled)
+                return gameMetadata;
+
+            if (!ValidateConnection() && !Settings.OfflineModeEnabled)
             {
                 Logger.Trace("Authentication invalid, showing auth window...");
                 ShowAuthenticationWindow();
 
-                if (!ValidateConnection())
+                if (!ValidateConnection() && !Settings.OfflineModeEnabled)
                 {
                     Logger.Trace("User cancelled authentication.");
 
                     throw new Exception("You must set up a valid connection to a LANCommander server.");
                 }
             }
+
+            if (Settings.OfflineModeEnabled)
+                return gameMetadata;
 
             var games = LANCommanderClient.Games.Get()
                 .Where(g => g != null && g.Archives != null && g.Archives.Count() > 0);
@@ -217,6 +223,11 @@ namespace LANCommander.PlaynitePlugin
             if (args.Game.PluginId != Id)
                 yield break;
 
+            if (Settings.OfflineModeEnabled)
+            {
+                PlayniteApi.Dialogs.ShowErrorMessage("You must connect to a LANCommander server to install this game.", "Offline Mode Enabled");
+            }
+
             yield return new LANCommanderInstallController(this, args.Game);
         }
 
@@ -251,27 +262,32 @@ namespace LANCommander.PlaynitePlugin
                     };
                 }
 
-                var game = LANCommanderClient.Games.Get(gameId);
+                if (!Settings.OfflineModeEnabled)
+                {
+                    var game = LANCommanderClient.Games.Get(gameId);
 
-                foreach (var server in game.Servers.Where(s => s.Actions != null))
-                    foreach (var action in server.Actions)
+                    foreach (var server in game.Servers.Where(s => s.Actions != null))
                     {
-                        var variables = new Dictionary<string, string>()
+                        foreach (var action in server.Actions)
                         {
-                            { "ServerHost", String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host },
-                            { "ServerPort", server.Port.ToString() }
-                        };
+                            var variables = new Dictionary<string, string>()
+                            {
+                                { "ServerHost", String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host },
+                                { "ServerPort", server.Port.ToString() }
+                            };
 
-                        yield return new AutomaticPlayController(args.Game)
-                        {
-                            Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables),
-                            Name = action.Name,
-                            Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
-                            TrackingMode = TrackingMode.Default,
-                            Type = AutomaticPlayActionType.File,
-                            WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory, variables)
-                        };
+                            yield return new AutomaticPlayController(args.Game)
+                            {
+                                Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables),
+                                Name = action.Name,
+                                Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
+                                TrackingMode = TrackingMode.Default,
+                                Type = AutomaticPlayActionType.File,
+                                WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory, variables)
+                            };
+                        }
                     }
+                }
             }
         }
 
@@ -384,7 +400,7 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnGameStarting(OnGameStartingEventArgs args)
         {
-            if (args.Game.PluginId == Id)
+            if (args.Game.PluginId == Id && !Settings.OfflineModeEnabled)
             {
                 var gameId = Guid.Parse(args.Game.GameId);
 
@@ -404,7 +420,7 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnGameStopped(OnGameStoppedEventArgs args)
         {
-            if (args.Game.PluginId == Id)
+            if (args.Game.PluginId == Id && !Settings.OfflineModeEnabled)
             {
                 var gameId = Guid.Parse(args.Game.GameId);
 
@@ -424,6 +440,21 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<TopPanelItem> GetTopPanelItems()
         {
+            yield return new TopPanelItem
+            {
+                Title = "Connect to server",
+                Icon = new TextBlock
+                {
+                    Text = char.ConvertFromUtf32(0xef3e),
+                    FontSize = 16,
+                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
+                    Padding = new Thickness(10, 0, 10, 0),
+                },
+                Activated = () =>
+                {
+                    ShowAuthenticationWindow();
+                }
+            };
             yield return new TopPanelItem
             {
                 Title = "Click to change your name (All Games)",

@@ -26,6 +26,18 @@ namespace LANCommander.PlaynitePlugin
 
         public override void Install(InstallActionArgs args)
         {
+            if (Plugin.Settings.OfflineModeEnabled)
+            {
+                var dbGame = Plugin.PlayniteApi.Database.Games.Get(Game.Id);
+
+                dbGame.IsInstalling = false;
+                dbGame.IsInstalled = false;
+
+                Plugin.PlayniteApi.Database.Games.Update(dbGame);
+
+                return;
+            }
+
             Logger.Trace("Game install triggered, checking connection...");
 
             while (!Plugin.ValidateConnection())

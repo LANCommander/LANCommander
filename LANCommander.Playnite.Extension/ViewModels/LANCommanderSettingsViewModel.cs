@@ -18,6 +18,7 @@ namespace LANCommander.PlaynitePlugin
         public string InstallDirectory { get; set; } = String.Empty;
         public string PlayerName { get; set; } = String.Empty;
         public string PlayerAlias { get; set; } = String.Empty;
+        public bool OfflineModeEnabled { get; set; } = false;
 
         public LANCommanderSettingsViewModel() { }
 
@@ -35,6 +36,7 @@ namespace LANCommander.PlaynitePlugin
                 InstallDirectory = settings.InstallDirectory;
                 PlayerName = settings.PlayerName;
                 PlayerAlias = settings.PlayerAlias;
+                OfflineModeEnabled = settings.OfflineModeEnabled;
             }
             else
             {

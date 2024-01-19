@@ -74,6 +74,12 @@ namespace LANCommander.PlaynitePlugin.Views
             Register();
         }
 
+        private void OfflineButton_Click(object sender, RoutedEventArgs e)
+        {
+            Plugin.Settings.OfflineModeEnabled = true;
+            Window.GetWindow(this).Close();
+        }
+
         private void Password_PasswordChanged(object sender, RoutedEventArgs e)
         {
             if (DataContext != null)
@@ -115,6 +121,7 @@ namespace LANCommander.PlaynitePlugin.Views
 
                 Plugin.Settings.PlayerName = profile.UserName;
                 Plugin.Settings.PlayerAlias = profile.Alias;
+                Plugin.Settings.OfflineModeEnabled = false;
 
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;

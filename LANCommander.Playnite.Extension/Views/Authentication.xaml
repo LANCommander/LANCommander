@@ -225,10 +225,12 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Row="0" Grid.Column="0" Click="LoginButton_Click" x:Name="LoginButton">Login</Button>
-            <Button Grid.Row="0" Grid.Column="1" Click="RegisterButton_Click" x:Name="RegisterButton">Register</Button>
+            <Button Grid.Row="0" Grid.Column="0" Margin="5 0" Click="LoginButton_Click" x:Name="LoginButton">Login</Button>
+            <Button Grid.Row="0" Grid.Column="1" Margin="5 0" Click="RegisterButton_Click" x:Name="RegisterButton">Register</Button>
+            <Button Grid.Row="0" Grid.Column="2" Margin="5 0" Click="OfflineButton_Click" x:Name="OfflineButton">Offline</Button>
         </Grid>
     </Grid>
 </UserControl>

@@ -380,21 +380,6 @@ namespace LANCommander.PlaynitePlugin
                     ShowNameChangeWindow();
                 }
             };
-
-            yield return new MainMenuItem
-            {
-                Description = "Clear Download Cache",
-                Action = (args2) =>
-                {
-                    foreach (var gameId in DownloadCache.Keys)
-                    {
-                        File.Delete(DownloadCache[gameId]);
-                        DownloadCache.Remove(gameId);
-                    }
-
-                    PlayniteApi.Dialogs.ShowMessage("The download cache has been cleared and any temporary files have been deleted.", "Cache Cleared!", MessageBoxButton.OK);
-                }
-            };
         }
 
         public override void OnGameStarting(OnGameStartingEventArgs args)

@@ -177,6 +177,9 @@ namespace LANCommander.PlaynitePlugin
             var manifest = ManifestHelper.Read(installDirectory, game.Id);
             var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.NameChange);
 
+            var oldName = GameService.GetPlayerAlias(installDirectory, game.Id);
+            var newName = Plugin.Settings.GetPlayerAlias();
+
             if (File.Exists(path))
             {
                 var script = new PowerShellScript();
@@ -185,10 +188,12 @@ namespace LANCommander.PlaynitePlugin
                 script.AddVariable("GameManifest", manifest);
                 script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
                 script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
-                script.AddVariable("OldPlayerAlias", "");
-                script.AddVariable("NewPlayerAlias", String.IsNullOrWhiteSpace(Plugin.Settings.PlayerAlias) ? Plugin.Settings.PlayerName : Plugin.Settings.PlayerAlias);
+                script.AddVariable("OldPlayerAlias", oldName);
+                script.AddVariable("NewPlayerAlias", newName);
 
                 script.UseFile(path);
+
+                GameService.UpdatePlayerAlias(installDirectory, game.Id, newName);
 
                 return script.Execute();
             }

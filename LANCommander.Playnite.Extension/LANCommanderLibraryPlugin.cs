@@ -312,7 +312,7 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Change Player Name",
                         Action = (nameChangeArgs) =>
                         {
-                            var oldName = String.IsNullOrWhiteSpace(Settings.PlayerAlias) ? Settings.PlayerName : Settings.PlayerAlias;
+                            var oldName = Settings.GetPlayerAlias();
 
                             var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", oldName);
 
@@ -400,22 +400,32 @@ namespace LANCommander.PlaynitePlugin
 
         public override void OnGameStarting(OnGameStartingEventArgs args)
         {
-            if (args.Game.PluginId == Id && !Settings.OfflineModeEnabled)
+            if (args.Game.PluginId == Id)
             {
                 var gameId = Guid.Parse(args.Game.GameId);
+                var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, gameId);
 
-                LANCommanderClient.Games.StartPlaySession(gameId);
-
-                try
+                if (currentGamePlayerAlias != Settings.GetPlayerAlias())
                 {
-                    SaveController = new LANCommanderSaveController(this, args.Game);
-                    SaveController.Download(gameId);
+                    RunNameChangeScript(args.Game.InstallDirectory, gameId, currentGamePlayerAlias, Settings.GetPlayerAlias());
                 }
-                catch (Exception ex)
+
+                if (!Settings.OfflineModeEnabled)
                 {
-                    Logger?.Error(ex, "Could not download save");
+                    LANCommanderClient.Games.StartPlaySession(gameId);
+
+                    try
+                    {
+                        SaveController = new LANCommanderSaveController(this, args.Game);
+                        SaveController.Download(gameId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, "Could not download save");
+                    }
                 }
             }
+
         }
 
         public override void OnGameStopped(OnGameStoppedEventArgs args)
@@ -487,7 +497,7 @@ namespace LANCommander.PlaynitePlugin
         {
             Logger.Trace("Showing name change dialog!");
 
-            var oldName = String.IsNullOrWhiteSpace(Settings.PlayerAlias) ? Settings.PlayerName : Settings.PlayerAlias;
+            var oldName = Settings.GetPlayerAlias();
 
             var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", oldName);
 
@@ -704,6 +714,8 @@ namespace LANCommander.PlaynitePlugin
                 script.AddVariable("NewPlayerAlias", newPlayerAlias);
 
                 script.UseFile(path);
+
+                GameService.UpdatePlayerAlias(installDirectory, gameId, newPlayerAlias);
 
                 return script.Execute();
             }

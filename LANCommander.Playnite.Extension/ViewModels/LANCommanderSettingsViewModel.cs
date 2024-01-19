@@ -68,5 +68,10 @@ namespace LANCommander.PlaynitePlugin
 
             return errors.Count == 0;
         }
+
+        public string GetPlayerAlias()
+        {
+            return String.IsNullOrWhiteSpace(PlayerAlias) ? PlayerName : PlayerAlias;
+        }
     }
 }

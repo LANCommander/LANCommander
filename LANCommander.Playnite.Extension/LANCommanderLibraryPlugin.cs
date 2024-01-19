@@ -33,7 +33,8 @@ namespace LANCommander.PlaynitePlugin
         internal Dictionary<Guid, string> DownloadCache = new Dictionary<Guid, string>();
 
         public TopPanelItem OfflineModeTopPanelItem { get; set; }
-        private TopPanelItem ChangeNameTopPanelItem { get; set; }
+        public TopPanelItem ChangeNameTopPanelItem { get; set; }
+        public TopPanelItem ProfileTopPanelItem { get; set; }
 
         public LANCommanderLibraryPlugin(IPlayniteAPI api) : base(api)
         {
@@ -97,7 +98,19 @@ namespace LANCommander.PlaynitePlugin
 
         public bool ValidateConnection()
         {
-            return LANCommanderClient.ValidateToken();
+            var isConnected = LANCommanderClient.ValidateToken();
+
+            if (isConnected)
+            {
+                OfflineModeTopPanelItem.Visible = false;
+                ProfileTopPanelItem.Visible = true;
+            }
+            else
+            {
+                ProfileTopPanelItem.Visible = false;
+            }
+
+            return isConnected;
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
@@ -487,8 +500,26 @@ namespace LANCommander.PlaynitePlugin
                 }
             };
 
+            ProfileTopPanelItem = new TopPanelItem
+            {
+                Title = "Profile",
+                Icon = new TextBlock
+                {
+                    Text = char.ConvertFromUtf32(0xec8e),
+                    FontSize = 16,
+                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
+                    Padding = new Thickness(10, 0, 10, 0),
+                },
+                Activated = () =>
+                {
+                    var profileUri = new Uri(new Uri(Settings.ServerAddress), "Profile");
+                    System.Diagnostics.Process.Start(profileUri.ToString());
+                }
+            };
+
             yield return OfflineModeTopPanelItem;
             yield return ChangeNameTopPanelItem;
+            yield return ProfileTopPanelItem;
         }
 
         public override ISettings GetSettings(bool firstRunSettings)

@@ -32,6 +32,9 @@ namespace LANCommander.PlaynitePlugin
 
         internal Dictionary<Guid, string> DownloadCache = new Dictionary<Guid, string>();
 
+        public TopPanelItem OfflineModeTopPanelItem { get; set; }
+        private TopPanelItem ChangeNameTopPanelItem { get; set; }
+
         public LANCommanderLibraryPlugin(IPlayniteAPI api) : base(api)
         {
             Properties = new LibraryPluginProperties
@@ -450,37 +453,42 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<TopPanelItem> GetTopPanelItems()
         {
-            yield return new TopPanelItem
+            OfflineModeTopPanelItem = new TopPanelItem
             {
-                Title = "Connect to server",
+                Title = "Go Online",
                 Icon = new TextBlock
                 {
                     Text = char.ConvertFromUtf32(0xef3e),
                     FontSize = 16,
                     FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
                     Padding = new Thickness(10, 0, 10, 0),
+                    Foreground = (SolidColorBrush)new BrushConverter().ConvertFrom("#ff6b6b"),
                 },
+                Visible = Settings.OfflineModeEnabled,
                 Activated = () =>
                 {
                     ShowAuthenticationWindow();
                 }
             };
-            yield return new TopPanelItem
+
+            ChangeNameTopPanelItem = new TopPanelItem
             {
-                Title = "Click to change your name (All Games)",
+                Title = "Change Name",
                 Icon = new TextBlock
                 {
-                    Text = char.ConvertFromUtf32(0xeded),
+                    Text = Settings.GetPlayerAlias(),
                     FontSize = 16,
                     FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
                     Padding = new Thickness(10, 0, 10, 0),
-
                 },
                 Activated = () =>
                 {
                     ShowNameChangeWindow();
                 }
             };
+
+            yield return OfflineModeTopPanelItem;
+            yield return ChangeNameTopPanelItem;
         }
 
         public override ISettings GetSettings(bool firstRunSettings)
@@ -499,7 +507,7 @@ namespace LANCommander.PlaynitePlugin
 
             var oldName = Settings.GetPlayerAlias();
 
-            var result = PlayniteApi.Dialogs.SelectString("Enter your new player name. This will change your name across all installed games!", "Enter Name", oldName);
+            var result = PlayniteApi.Dialogs.SelectString("Enter your new player name", "Enter Name", oldName);
 
             if (result.Result == true)
             {
@@ -516,9 +524,9 @@ namespace LANCommander.PlaynitePlugin
                 }
                 else
                 {
-                    Settings.PlayerName = result.SelectedString;
+                    Settings.PlayerAlias = result.SelectedString;
 
-                    Logger.Trace($"New player name of \"{Settings.PlayerName}\" has been set!");
+                    Logger.Trace($"New player name of \"{Settings.PlayerAlias}\" has been set!");
 
                     Logger.Trace("Saving plugin settings!");
                     SavePluginSettings(Settings);
@@ -527,19 +535,7 @@ namespace LANCommander.PlaynitePlugin
 
                     LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
 
-                    Logger.Trace($"Running name change scripts across {games.Count} installed game(s)");
-
-                    foreach (var game in games)
-                    {
-                        var script = new PowerShellScript();
-
-                        script.AddVariable("OldName", oldName);
-                        script.AddVariable("NewName", Settings.PlayerName);
-
-                        script.UseFile(ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.GameId, SDK.Enums.ScriptType.NameChange));
-
-                        script.Execute();
-                    }
+                    ((TextBlock)ChangeNameTopPanelItem.Icon).Text = Settings.GetPlayerAlias();
                 }
             }
             else

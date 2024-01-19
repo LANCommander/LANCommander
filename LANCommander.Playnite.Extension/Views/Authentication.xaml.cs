@@ -77,6 +77,7 @@ namespace LANCommander.PlaynitePlugin.Views
         private void OfflineButton_Click(object sender, RoutedEventArgs e)
         {
             Plugin.Settings.OfflineModeEnabled = true;
+            Plugin.OfflineModeTopPanelItem.Visible = true;
             Window.GetWindow(this).Close();
         }
 
@@ -122,6 +123,8 @@ namespace LANCommander.PlaynitePlugin.Views
                 Plugin.Settings.PlayerName = profile.UserName;
                 Plugin.Settings.PlayerAlias = profile.Alias;
                 Plugin.Settings.OfflineModeEnabled = false;
+
+                Plugin.OfflineModeTopPanelItem.Visible = false;
 
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;

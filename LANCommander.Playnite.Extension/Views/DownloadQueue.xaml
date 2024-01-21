@@ -71,7 +71,7 @@
 
                                         <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
                                     </Grid>
-                                    <Button Content="X" Grid.Column="2" Height="32" />
+                                    <Button Content="X" Grid.Column="2" Height="32" Click="RemoveItem" />
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

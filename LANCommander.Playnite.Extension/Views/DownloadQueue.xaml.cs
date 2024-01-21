@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LANCommander.PlaynitePlugin.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,9 +21,20 @@ namespace LANCommander.PlaynitePlugin.Views
     /// </summary>
     public partial class DownloadQueue : UserControl
     {
-        public DownloadQueue()
+        private readonly LANCommanderLibraryPlugin Plugin;
+
+        public DownloadQueue(LANCommanderLibraryPlugin plugin)
         {
+            Plugin = plugin;
+
             InitializeComponent();
+        }
+
+        private void RemoveItem(object sender, RoutedEventArgs e)
+        {
+            var button = (Button)sender;
+
+            Plugin.DownloadQueue.Remove(button.DataContext as DownloadQueueItem);
         }
     }
 }

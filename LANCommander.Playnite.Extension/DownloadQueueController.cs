@@ -7,6 +7,7 @@ using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -22,7 +23,7 @@ namespace LANCommander.PlaynitePlugin
     {
         private LANCommanderLibraryPlugin Plugin { get; set; }
         public DownloadQueueItem CurrentItem { get; set; }
-        public ICollection<DownloadQueueItem> Items { get; set; }
+        public ObservableCollection<DownloadQueueItem> Items { get; set; }
 
         private Stopwatch Stopwatch { get; set; }
 
@@ -32,7 +33,7 @@ namespace LANCommander.PlaynitePlugin
         public DownloadQueueController(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
-            Items = new List<DownloadQueueItem>();
+            Items = new ObservableCollection<DownloadQueueItem>();
             Stopwatch = new Stopwatch();
 
             Plugin.LANCommanderClient.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
@@ -78,6 +79,11 @@ namespace LANCommander.PlaynitePlugin
                     QueuedOn = DateTime.Now,
                 });
             }
+        }
+
+        public void Remove(DownloadQueueItem downloadQueueItem)
+        {
+            Items.Remove(downloadQueueItem);
         }
 
         public void ProcessQueue()

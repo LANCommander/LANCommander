@@ -22,9 +22,7 @@ namespace LANCommander.PlaynitePlugin
     public class DownloadQueueController
     {
         private LANCommanderLibraryPlugin Plugin { get; set; }
-        public DownloadQueueItem CurrentItem { get; set; }
-        public ObservableCollection<DownloadQueueItem> Items { get; set; }
-
+        public DownloadQueue DownloadQueue { get; set; }
         private Stopwatch Stopwatch { get; set; }
 
         public delegate void OnInstallCompleteHandler(Game game, string installDirectory);
@@ -33,7 +31,7 @@ namespace LANCommander.PlaynitePlugin
         public DownloadQueueController(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
-            Items = new ObservableCollection<DownloadQueueItem>();
+            DownloadQueue = new DownloadQueue();
             Stopwatch = new Stopwatch();
 
             Plugin.LANCommanderClient.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
@@ -42,7 +40,7 @@ namespace LANCommander.PlaynitePlugin
 
         private void Games_OnArchiveEntryExtractionProgress(object sender, SDK.ArchiveEntryExtractionProgressArgs e)
         {
-            if (CurrentItem.CancellationToken != null && CurrentItem.CancellationToken.IsCancellationRequested)
+            if (DownloadQueue.CurrentItem.CancellationToken != null && DownloadQueue.CurrentItem.CancellationToken.IsCancellationRequested)
             {
                 Plugin.LANCommanderClient.Games.CancelInstall();
             }
@@ -54,9 +52,9 @@ namespace LANCommander.PlaynitePlugin
             {
                 Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
                 {
-                    CurrentItem.Size = length;
-                    CurrentItem.Speed = (double)(position - CurrentItem.TotalDownloaded) / (Stopwatch.ElapsedMilliseconds / 1000d);
-                    CurrentItem.TotalDownloaded = position;
+                    DownloadQueue.CurrentItem.Size = length;
+                    DownloadQueue.CurrentItem.Speed = (double)(position - DownloadQueue.CurrentItem.TotalDownloaded) / (Stopwatch.ElapsedMilliseconds / 1000d);
+                    DownloadQueue.CurrentItem.TotalDownloaded = position;
                     Plugin.DownloadQueueSidebarItem.ProgressMaximum = length;
                     Plugin.DownloadQueueSidebarItem.ProgressValue = position;
                 });
@@ -69,9 +67,9 @@ namespace LANCommander.PlaynitePlugin
         {
             var gameId = Guid.Parse(game.GameId);
 
-            if (!Items.Any(i => i.Game.Id == game.Id))
+            if (!DownloadQueue.Items.Any(i => i.Game.Id == game.Id))
             {
-                Items.Add(new DownloadQueueItem()
+                DownloadQueue.Items.Add(new DownloadQueueItem()
                 {
                     CoverPath = Plugin.PlayniteApi.Database.GetFullFilePath(game.CoverImage),
                     Game = game,
@@ -83,35 +81,41 @@ namespace LANCommander.PlaynitePlugin
 
         public void Remove(DownloadQueueItem downloadQueueItem)
         {
-            Items.Remove(downloadQueueItem);
+            DownloadQueue.Items.Remove(downloadQueueItem);
+        }
+
+        public bool Exists(Game game)
+        {
+            return DownloadQueue.Items.Any(i => i.Game.Id == game.Id);
         }
 
         public void ProcessQueue()
         {
-            CurrentItem = Items.FirstOrDefault(i => !i.CompletedOn.HasValue);
-
-            if (CurrentItem != null)
+            Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {
-                Items.Remove(CurrentItem);
+                DownloadQueue.CurrentItem = DownloadQueue.Items.FirstOrDefault(i => !i.CompletedOn.HasValue);
 
-                Task.Run(() => Install());
-            }
+                if (DownloadQueue.CurrentItem != null)
+                    DownloadQueue.Items.Remove(DownloadQueue.CurrentItem);
+            });
+
+            Task.Run(() => Install());
         }
 
         private void Install()
         {
-            if (CurrentItem == null)
+            if (DownloadQueue.CurrentItem == null)
                 return;
 
-            var gameId = Guid.Parse(CurrentItem.Game.GameId);
+            var gameId = Guid.Parse(DownloadQueue.CurrentItem.Game.GameId);
             var game = Plugin.LANCommanderClient.Games.Get(gameId);
 
             Stopwatch.Restart();
 
-            CurrentItem.InProgress = true;
+            DownloadQueue.CurrentItem.InProgress = true;
 
-            CurrentItem.Game.IsInstalling = true;
-            Plugin.PlayniteApi.Database.Games.Update(CurrentItem.Game);
+            DownloadQueue.CurrentItem.Game.IsInstalling = true;
+            Plugin.PlayniteApi.Database.Games.Update(DownloadQueue.CurrentItem.Game);
 
             var installDirectory = Plugin.LANCommanderClient.Games.Install(game.Id);
 
@@ -119,7 +123,7 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {
-                CurrentItem.ProgressIndeterminate = true;
+                DownloadQueue.CurrentItem.ProgressIndeterminate = true;
                 Plugin.DownloadQueueSidebarItem.ProgressValue = 1;
                 Plugin.DownloadQueueSidebarItem.ProgressMaximum = 1;
             });
@@ -138,8 +142,8 @@ namespace LANCommander.PlaynitePlugin
             RunNameChangeScript(game);
             RunKeyChangeScript(game);
 
-            CurrentItem.CompletedOn = DateTime.Now;
-            CurrentItem.TotalDownloaded = CurrentItem.Size;
+            DownloadQueue.CurrentItem.CompletedOn = DateTime.Now;
+            DownloadQueue.CurrentItem.TotalDownloaded = DownloadQueue.CurrentItem.Size;
 
             var notification = new NotifyIcon()
             {
@@ -153,13 +157,13 @@ namespace LANCommander.PlaynitePlugin
 
             notification.ShowBalloonTip(10000);
 
-            CurrentItem.InProgress = false;
+            DownloadQueue.CurrentItem.InProgress = false;
 
-            OnInstallComplete?.Invoke(CurrentItem.Game, installDirectory);
+            OnInstallComplete?.Invoke(DownloadQueue.CurrentItem.Game, installDirectory);
 
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {
-                CurrentItem.ProgressIndeterminate = false;
+                DownloadQueue.CurrentItem.ProgressIndeterminate = false;
                 Plugin.DownloadQueueSidebarItem.ProgressValue = 0;
                 Plugin.DownloadQueueSidebarItem.ProgressMaximum = 0;
             });

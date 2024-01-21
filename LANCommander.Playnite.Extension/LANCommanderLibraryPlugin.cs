@@ -322,10 +322,7 @@ namespace LANCommander.PlaynitePlugin
                 Action = (args2) =>
                 {
                     foreach (var game in args2.Games)
-                    {
-                        if (!DownloadQueue.Items.Any(i => i.Game.Id == game.Id))
-                            DownloadQueue.Add(game);
-                    }
+                        DownloadQueue.Add(game);
                 }
             };
 
@@ -553,7 +550,7 @@ namespace LANCommander.PlaynitePlugin
                 Type = SiderbarItemType.View,
                 Opened = () =>
                 {
-                    var view = new DownloadQueue(this);
+                    var view = new Views.DownloadQueue(this);
 
                     view.DataContext = DownloadQueue;
 

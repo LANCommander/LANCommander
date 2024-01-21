@@ -112,8 +112,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Converters\NullVisibilityConverter.cs" />
     <Compile Include="DownloadQueueController.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
+    <Compile Include="Models\DownloadQueue.cs" />
     <Compile Include="Models\DownloadQueueItem.cs" />
     <Compile Include="PlayniteLogger.cs" />
     <Compile Include="SaveController.cs" />

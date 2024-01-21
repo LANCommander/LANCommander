@@ -19,9 +19,12 @@ namespace LANCommander.PlaynitePlugin
             Plugin = plugin;
         }
 
-        public void Download(Guid gameId)
+        public void Download(Guid gameId, string installDirectory = "")
         {
             var game = Plugin.PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == gameId.ToString());
+
+            if (installDirectory == "")
+                installDirectory = game.InstallDirectory;
 
             if (game != null)
             {

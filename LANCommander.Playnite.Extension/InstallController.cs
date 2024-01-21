@@ -55,8 +55,23 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.DownloadQueue.Add(Game);
             Plugin.DownloadQueue.ProcessQueue();
+            Plugin.DownloadQueue.OnInstallComplete += MarkInstalled;
+        }
 
-            InvokeOnInstalled(new GameInstalledEventArgs());
+        public void MarkInstalled(Playnite.SDK.Models.Game game, string installDirectory)
+        {
+            if (game.Id == Game.Id)
+            {
+                InvokeOnInstalled(new GameInstalledEventArgs(new GameInstallationData
+                {
+                    InstallDirectory = installDirectory
+                }));
+            }
+        }
+
+        public override void Dispose()
+        {
+            Plugin.DownloadQueue.OnInstallComplete -= MarkInstalled;
         }
     }
 }

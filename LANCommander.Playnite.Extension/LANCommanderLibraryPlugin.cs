@@ -322,7 +322,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     foreach (var game in args2.Games)
                     {
-                        if (!DownloadQueue.Items.Any(i => i.GameId == game.Id))
+                        if (!DownloadQueue.Items.Any(i => i.Game.Id == game.Id))
                             DownloadQueue.Add(game);
                     }
                 }

@@ -7,11 +7,78 @@
              xmlns:Models="clr-namespace:LANCommander.PlaynitePlugin.Models"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800" d:DataContext="{d:DesignInstance Type=local:DownloadQueueController, IsDesignTimeCreatable=True}">
-    <ItemsControl ItemsSource="{Binding Items}">
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <TextBlock Text="{Binding Title}" />
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+    <DockPanel>
+        <StackPanel Orientation="Horizontal" Margin="10,10,0,0" DockPanel.Dock="Top">
+            <TextBlock VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                <Hyperlink Command="{Binding NavigateBackCommand}">
+                    <TextBlock Text="&#xea5c;" FontFamily="{DynamicResource FontIcoFont}" FontSize="26" />
+                </Hyperlink>
+            </TextBlock>
+            <TextBlock Text="Download Queue" VerticalAlignment="Center" Style="{StaticResource BaseTextBlockStyle}" Margin="10,0,0,0" FontSize="18" />
+        </StackPanel>
+
+        <DockPanel>
+            <ItemsControl BorderThickness="0" Margin="10" DockPanel.Dock="Top">
+                <Grid Name="CurrentItemGrid" Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="32" />
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0" Source="{Binding CurrentItem.CoverPath}" Height="100" />
+                    <Grid Grid.Column="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="1*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="{Binding CurrentItem.Title}" VerticalAlignment="Center" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
+
+                        <ProgressBar
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="{Binding CurrentItem.Size}"
+                            Value="{Binding CurrentItem.TotalDownloaded}"
+                            VerticalAlignment="Center"
+                            Height="16"
+                            HorizontalAlignment="Right"
+                            Width="256" />
+                    </Grid>
+                    <Button Content="X" Grid.Column="2" Height="32" />
+                </Grid>
+            </ItemsControl>
+
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <StackPanel Orientation="Vertical">
+                    <TextBlock Text="Up Next" FontSize="24" Style="{StaticResource BaseTextBlockStyle}" />
+
+                    <ItemsControl Name="DownloadQueueList" ItemsSource="{Binding Items}" BorderThickness="0" Margin="10,10,10,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="32" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image Grid.Column="0" Source="{Binding CoverPath}" Height="100" />
+                                    <Grid Grid.Column="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="1*" />
+                                            <ColumnDefinition Width="1*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
+                                    </Grid>
+                                    <Button Content="X" Grid.Column="2" Height="32" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </DockPanel>
+
+
 </UserControl>

@@ -2,7 +2,9 @@
 using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
+using Playnite.SDK;
 using Playnite.SDK.Models;
+using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +12,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -18,14 +21,13 @@ namespace LANCommander.PlaynitePlugin
     public class DownloadQueueController
     {
         private LANCommanderLibraryPlugin Plugin { get; set; }
+        public DownloadQueueItem CurrentItem { get; set; }
         public ICollection<DownloadQueueItem> Items { get; set; }
-        public DownloadQueueItem CurrentItem { get
-            {
-                return Items.FirstOrDefault(i => i.CompletedOn == null);
-            }
-        }
 
         private Stopwatch Stopwatch { get; set; }
+
+        public delegate void OnInstallCompleteHandler(Game game, string installDirectory);
+        public event OnInstallCompleteHandler OnInstallComplete;
 
         public DownloadQueueController(LANCommanderLibraryPlugin plugin)
         {
@@ -39,9 +41,7 @@ namespace LANCommander.PlaynitePlugin
 
         private void Games_OnArchiveEntryExtractionProgress(object sender, SDK.ArchiveEntryExtractionProgressArgs e)
         {
-            var item = Items.FirstOrDefault(i => i.GameId == e.Game.Id);
-
-            if (item.CancellationToken != null && item.CancellationToken.IsCancellationRequested)
+            if (CurrentItem.CancellationToken != null && CurrentItem.CancellationToken.IsCancellationRequested)
             {
                 Plugin.LANCommanderClient.Games.CancelInstall();
             }
@@ -49,86 +49,98 @@ namespace LANCommander.PlaynitePlugin
 
         private void Games_OnArchiveExtractionProgress(long position, long length, SDK.Models.Game game)
         {
-            var item = Items.FirstOrDefault(i => i.GameId == game.Id);
+            if (Stopwatch.ElapsedMilliseconds > 500)
+            {
+                Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
+                {
+                    CurrentItem.Size = length;
+                    CurrentItem.Speed = (double)(position - CurrentItem.TotalDownloaded) / (Stopwatch.ElapsedMilliseconds / 1000d);
+                    CurrentItem.TotalDownloaded = position;
+                });
 
-            item.Progress = position / (decimal)length;
-            item.Speed = (double)(position - item.TotalDownloaded) / (Stopwatch.ElapsedMilliseconds / 1000d);
-
-            item.TotalDownloaded = position;
-
-            Stopwatch.Restart();
+                Stopwatch.Restart();
+            }
         }
 
         public void Add(Game game)
         {
             var gameId = Guid.Parse(game.GameId);
 
-            Items.Add(new DownloadQueueItem()
+            if (!Items.Any(i => i.Game.Id == game.Id))
             {
-                GameId = gameId,
-                Game = Plugin.LANCommanderClient.Games.Get(gameId),
-                PlayniteGame = game,
-                Title = game.Name,
-                QueuedOn = DateTime.Now,
-                Progress = 0,
-            });
+                Items.Add(new DownloadQueueItem()
+                {
+                    CoverPath = Plugin.PlayniteApi.Database.GetFullFilePath(game.CoverImage),
+                    Game = game,
+                    Title = game.Name,
+                    QueuedOn = DateTime.Now,
+                });
+            }
         }
 
-        public async Task ProcessQueue()
+        public void ProcessQueue()
         {
-            if (!Items.Any(i => i.InProgress))
-                await Task.Run(() => Install(CurrentItem));
+            CurrentItem = Items.FirstOrDefault(i => !i.CompletedOn.HasValue);
+
+            if (CurrentItem != null)
+            {
+                Items.Remove(CurrentItem);
+
+                Task.Run(() => Install());
+            }
         }
 
-        private void Install(DownloadQueueItem item)
+        private void Install()
         {
-            if (item == null)
+            if (CurrentItem == null)
                 return;
+
+            var gameId = Guid.Parse(CurrentItem.Game.GameId);
+            var game = Plugin.LANCommanderClient.Games.Get(gameId);
 
             Stopwatch.Restart();
 
-            item.InProgress = true;
+            CurrentItem.InProgress = true;
 
-            item.PlayniteGame.IsInstalling = true;
-            Plugin.PlayniteApi.Database.Games.Update(item.PlayniteGame);
+            CurrentItem.Game.IsInstalling = true;
+            Plugin.PlayniteApi.Database.Games.Update(CurrentItem.Game);
 
-            var installDirectory = Plugin.LANCommanderClient.Games.Install(item.Game.Id);
+            var installDirectory = Plugin.LANCommanderClient.Games.Install(game.Id);
 
             Stopwatch.Stop();
 
-            if (item.Game.Redistributables != null && item.Game.Redistributables.Any())
-                Plugin.LANCommanderClient.Redistributables.Install(item.Game);
+            if (game.Redistributables != null && game.Redistributables.Any())
+                Plugin.LANCommanderClient.Redistributables.Install(game);
 
-            var manifest = ManifestHelper.Read(installDirectory, item.Game.Id);
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
 
             Plugin.UpdateGame(manifest, installDirectory);
 
             Plugin.SaveController = new LANCommanderSaveController(Plugin, null);
-            Plugin.SaveController.Download(item.Game.Id);
+            Plugin.SaveController.Download(gameId, installDirectory);
 
-            RunInstallScript(item.Game);
-            RunNameChangeScript(item.Game);
-            RunKeyChangeScript(item.Game);
+            RunInstallScript(game);
+            RunNameChangeScript(game);
+            RunKeyChangeScript(game);
 
-            item.CompletedOn = DateTime.Now;
-            item.Progress = 1;
+            CurrentItem.CompletedOn = DateTime.Now;
+            CurrentItem.TotalDownloaded = CurrentItem.Size;
 
             var notification = new NotifyIcon()
             {
                 Icon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly().Location),
                 Visible = true,
-                Text = $"{item.Game.Title} has finished installing!",
-                BalloonTipText = $"{item.Game.Title} has finished installing!",
+                Text = $"{game.Title} has finished installing!",
+                BalloonTipText = $"{game.Title} has finished installing!",
                 BalloonTipTitle = "Game Installed",
                 BalloonTipIcon = ToolTipIcon.Info,
             };
 
             notification.ShowBalloonTip(10000);
 
-            item.InProgress = false;
+            CurrentItem.InProgress = false;
 
-            item.PlayniteGame.IsInstalling = false;
-            Plugin.PlayniteApi.Database.Games.Update(item.PlayniteGame);
+            OnInstallComplete?.Invoke(CurrentItem.Game, installDirectory);
 
             ProcessQueue();
         }

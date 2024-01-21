@@ -1,24 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace LANCommander.PlaynitePlugin.Models
 {
-    public class DownloadQueueItem
+    public class DownloadQueueItem : ObservableObject
     {
-        public Guid GameId { get; set; }
-        public SDK.Models.Game Game { get; set; }
-        public Playnite.SDK.Models.Game PlayniteGame { get; set; }
+        public Playnite.SDK.Models.Game Game { get; set; }
         public string Title { get; set; }
+        public string CoverPath { get; set; }
         public DateTime QueuedOn { get; set; }
         public DateTime? CompletedOn { get; set; }
         public bool InProgress { get; set; }
 
-        public long TotalDownloaded { get; set; }
-        public decimal Progress { get; set; }
+        private long totalDownloaded { get; set; }
+        public long TotalDownloaded
+        {
+            get => totalDownloaded;
+            set
+            {
+                totalDownloaded = value;
+                OnPropertyChanged();
+            }
+        }
+        public long Size { get; set; }
         public double Speed { get; set; }
         public CancellationToken CancellationToken { get; set; }
     }

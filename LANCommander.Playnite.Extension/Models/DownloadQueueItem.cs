@@ -13,6 +13,17 @@ namespace LANCommander.PlaynitePlugin.Models
         public DateTime? CompletedOn { get; set; }
         public bool InProgress { get; set; }
 
+        private bool progressIndeterminate { get; set; }
+        public bool ProgressIndeterminate
+        {
+            get => progressIndeterminate;
+            set
+            {
+                progressIndeterminate = value;
+                OnPropertyChanged();
+            }
+        }
+
         private long totalDownloaded { get; set; }
         public long TotalDownloaded
         {

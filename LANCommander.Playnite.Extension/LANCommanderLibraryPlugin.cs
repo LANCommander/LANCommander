@@ -34,6 +34,7 @@ namespace LANCommander.PlaynitePlugin
         public override string Name => "LANCommander";
 
         public DownloadQueueController DownloadQueue { get; set; }
+        public SidebarItem DownloadQueueSidebarItem { get; set; }
 
         public TopPanelItem OfflineModeTopPanelItem { get; set; }
         public TopPanelItem ChangeNameTopPanelItem { get; set; }
@@ -541,7 +542,7 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<SidebarItem> GetSidebarItems()
         {
-            yield return new SidebarItem
+            DownloadQueueSidebarItem = new SidebarItem
             {
                 Title = "Downloads",
                 Icon = new TextBlock
@@ -549,8 +550,6 @@ namespace LANCommander.PlaynitePlugin
                     Text = char.ConvertFromUtf32(0xef08),
                     FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
                 },
-                ProgressMaximum = 100,
-                ProgressValue = 44,
                 Type = SiderbarItemType.View,
                 Opened = () =>
                 {
@@ -561,6 +560,8 @@ namespace LANCommander.PlaynitePlugin
                     return view;
                 }
             };
+
+            yield return DownloadQueueSidebarItem;
         }
 
         public override ISettings GetSettings(bool firstRunSettings)

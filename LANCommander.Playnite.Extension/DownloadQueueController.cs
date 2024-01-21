@@ -56,6 +56,8 @@ namespace LANCommander.PlaynitePlugin
                     CurrentItem.Size = length;
                     CurrentItem.Speed = (double)(position - CurrentItem.TotalDownloaded) / (Stopwatch.ElapsedMilliseconds / 1000d);
                     CurrentItem.TotalDownloaded = position;
+                    Plugin.DownloadQueueSidebarItem.ProgressMaximum = length;
+                    Plugin.DownloadQueueSidebarItem.ProgressValue = position;
                 });
 
                 Stopwatch.Restart();
@@ -109,6 +111,13 @@ namespace LANCommander.PlaynitePlugin
 
             Stopwatch.Stop();
 
+            Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
+            {
+                CurrentItem.ProgressIndeterminate = true;
+                Plugin.DownloadQueueSidebarItem.ProgressValue = 1;
+                Plugin.DownloadQueueSidebarItem.ProgressMaximum = 1;
+            });
+
             if (game.Redistributables != null && game.Redistributables.Any())
                 Plugin.LANCommanderClient.Redistributables.Install(game);
 
@@ -141,6 +150,13 @@ namespace LANCommander.PlaynitePlugin
             CurrentItem.InProgress = false;
 
             OnInstallComplete?.Invoke(CurrentItem.Game, installDirectory);
+
+            Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
+            {
+                CurrentItem.ProgressIndeterminate = false;
+                Plugin.DownloadQueueSidebarItem.ProgressValue = 0;
+                Plugin.DownloadQueueSidebarItem.ProgressMaximum = 0;
+            });
 
             ProcessQueue();
         }

@@ -39,6 +39,7 @@
                             Minimum="0"
                             Maximum="{Binding CurrentItem.Size}"
                             Value="{Binding CurrentItem.TotalDownloaded}"
+                            IsIndeterminate="{Binding CurrentItem.ProgressIndeterminate}"
                             VerticalAlignment="Center"
                             Height="16"
                             HorizontalAlignment="Right"

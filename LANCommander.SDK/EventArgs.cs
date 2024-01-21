@@ -1,4 +1,5 @@
-﻿using SharpCompress.Common;
+﻿using LANCommander.SDK.Models;
+using SharpCompress.Common;
 using SharpCompress.Readers;
 using System;
 using System.Collections.Generic;
@@ -16,5 +17,6 @@ namespace LANCommander.SDK
     {
         public ReaderProgress Progress { get; set; }
         public IEntry Entry { get; set; }
+        public Game Game { get; set; }
     }
 }

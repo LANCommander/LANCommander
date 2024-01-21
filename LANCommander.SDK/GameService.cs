@@ -265,6 +265,7 @@ namespace LANCommander.SDK
                     {
                         Entry = e.Item,
                         Progress = e.ReaderProgress,
+                        Game = game,
                     });
                 };
 

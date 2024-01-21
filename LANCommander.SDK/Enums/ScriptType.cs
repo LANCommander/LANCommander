@@ -8,6 +8,8 @@
         KeyChange,
         SaveUpload,
         SaveDownload,
-        DetectInstall
+        DetectInstall,
+        BeforeStart,
+        AfterStop,
     }
 }

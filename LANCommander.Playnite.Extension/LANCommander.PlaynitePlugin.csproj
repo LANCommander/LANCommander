@@ -112,13 +112,18 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DownloadQueueController.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
+    <Compile Include="Models\DownloadQueueItem.cs" />
     <Compile Include="PlayniteLogger.cs" />
     <Compile Include="SaveController.cs" />
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
     <Compile Include="LANCommanderLibraryPlugin.cs" />
     <Compile Include="ViewModels\LANCommanderSettingsViewModel.cs" />
+    <Compile Include="Views\DownloadQueue.xaml.cs">
+      <DependentUpon>DownloadQueue.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\LANCommanderSettingsView.xaml.cs">
       <DependentUpon>Views\LANCommanderSettingsView.xaml</DependentUpon>
     </Compile>
@@ -144,6 +149,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Localization\en_US.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\DownloadQueue.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

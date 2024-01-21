@@ -17,6 +17,9 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using PN = Playnite;
 using LANCommander.SDK;
+using System.Reflection;
+using LANCommander.PlaynitePlugin.Views;
+using LANCommander.PlaynitePlugin.Models;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -30,7 +33,7 @@ namespace LANCommander.PlaynitePlugin
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
 
-        internal Dictionary<Guid, string> DownloadCache = new Dictionary<Guid, string>();
+        public DownloadQueueController DownloadQueue { get; set; }
 
         public TopPanelItem OfflineModeTopPanelItem { get; set; }
         public TopPanelItem ChangeNameTopPanelItem { get; set; }
@@ -44,13 +47,14 @@ namespace LANCommander.PlaynitePlugin
             };
 
             Settings = new LANCommanderSettingsViewModel(this);
-
             LANCommanderClient = new SDK.Client(Settings.ServerAddress, Settings.InstallDirectory, new PlayniteLogger(Logger));
             LANCommanderClient.UseToken(new SDK.Models.AuthToken()
             {
                 AccessToken = Settings.AccessToken,
                 RefreshToken = Settings.RefreshToken,
             });
+
+            DownloadQueue = new DownloadQueueController(this);
 
             api.UriHandler.RegisterSource("lancommander", args =>
             {
@@ -311,6 +315,19 @@ namespace LANCommander.PlaynitePlugin
         {
             Logger.Trace("Populating game menu items...");
 
+            yield return new GameMenuItem
+            {
+                Description = "Add to Download Queue",
+                Action = (args2) =>
+                {
+                    foreach (var game in args2.Games)
+                    {
+                        if (!DownloadQueue.Items.Any(i => i.GameId == game.Id))
+                            DownloadQueue.Add(game);
+                    }
+                }
+            };
+
             if (args.Games.Count == 1 && args.Games.First().IsInstalled && !String.IsNullOrWhiteSpace(args.Games.First().InstallDirectory))
             {
                 var game = args.Games.First();
@@ -520,6 +537,30 @@ namespace LANCommander.PlaynitePlugin
             yield return OfflineModeTopPanelItem;
             yield return ChangeNameTopPanelItem;
             yield return ProfileTopPanelItem;
+        }
+
+        public override IEnumerable<SidebarItem> GetSidebarItems()
+        {
+            yield return new SidebarItem
+            {
+                Title = "Downloads",
+                Icon = new TextBlock
+                {
+                    Text = char.ConvertFromUtf32(0xef08),
+                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
+                },
+                ProgressMaximum = 100,
+                ProgressValue = 44,
+                Type = SiderbarItemType.View,
+                Opened = () =>
+                {
+                    var view = new DownloadQueue();
+
+                    view.DataContext = DownloadQueue;
+
+                    return view;
+                }
+            };
         }
 
         public override ISettings GetSettings(bool firstRunSettings)
@@ -779,7 +820,7 @@ namespace LANCommander.PlaynitePlugin
         void Migrate()
         {  
             #region Old Manifest Locations
-            var installedGames = PlayniteApi.Database.Games.Where(g => g.IsInstalled && g.PluginId == Id).ToList();
+            var installedGames = PlayniteApi.Database.Games.Where(g => g.IsInstalled && !String.IsNullOrWhiteSpace(g.InstallDirectory) && g.PluginId == Id).ToList();
 
             foreach (var game in installedGames)
             {

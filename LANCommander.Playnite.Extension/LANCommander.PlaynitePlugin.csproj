@@ -112,7 +112,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Converters\IEnumerableEmptyVisibilityConverter.cs" />
+    <Compile Include="Converters\IEnumerableVisibilityConverter.cs" />
     <Compile Include="Converters\NullVisibilityConverter.cs" />
+    <Compile Include="Converters\ByteSizeConverter.cs" />
+    <Compile Include="Converters\RelativeDateConverter.cs" />
     <Compile Include="DownloadQueueController.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
     <Compile Include="Models\DownloadQueue.cs" />

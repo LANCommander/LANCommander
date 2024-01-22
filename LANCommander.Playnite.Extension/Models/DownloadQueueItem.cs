@@ -4,6 +4,15 @@ using System.Threading;
 
 namespace LANCommander.PlaynitePlugin.Models
 {
+    public enum DownloadQueueItemStatus
+    {
+        Idle,
+        Downloading,
+        InstallingRedistributables,
+        RunningScripts,
+        DownloadingSaves
+    }
+
     public class DownloadQueueItem : ObservableObject
     {
         public Playnite.SDK.Models.Game Game { get; set; }
@@ -32,10 +41,85 @@ namespace LANCommander.PlaynitePlugin.Models
             {
                 totalDownloaded = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(StatusText));
             }
         }
-        public long Size { get; set; }
-        public double Speed { get; set; }
+
+        private DownloadQueueItemStatus status { get; set; }
+        public DownloadQueueItemStatus Status
+        {
+            get => status;
+            set
+            {
+                status = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(StatusText));
+            }
+        }
+
+        public string StatusText
+        {
+            get
+            {
+                switch (Status)
+                {
+                    case DownloadQueueItemStatus.Downloading:
+                        var percent = (totalDownloaded / (double)size) * 100;
+                        return $"Downloading ({percent.ToString("0")}%)";
+                    case DownloadQueueItemStatus.InstallingRedistributables:
+                        return "Installing Redistributables";
+                    case DownloadQueueItemStatus.RunningScripts:
+                        return "Running Scripts";
+                    case DownloadQueueItemStatus.DownloadingSaves:
+                        return "Downloading Saves";
+                    case DownloadQueueItemStatus.Idle:
+                    default:
+                        return "Idle";
+                }
+            }
+        }
+
+        private long size { get; set; }
+        public long Size
+        {
+            get => size;
+            set
+            {
+                size = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private double speed { get; set; }
+        public double Speed
+        {
+            get => speed;
+            set
+            {
+                speed = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SpeedText));
+            }
+        }
+        public string SpeedText
+        { 
+            get
+            {
+                return ByteSizeLib.ByteSize.FromBytes(speed).ToString() + "/s";
+            }
+        }
+
+        private string timeRemaining { get; set; }
+        public string TimeRemaining
+        {
+            get => timeRemaining;
+            set
+            {
+                timeRemaining = value;
+                OnPropertyChanged();
+            }
+        }
+
         public CancellationToken CancellationToken { get; set; }
     }
 }

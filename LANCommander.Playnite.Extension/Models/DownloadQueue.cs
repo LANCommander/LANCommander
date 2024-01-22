@@ -19,11 +19,7 @@ namespace LANCommander.PlaynitePlugin.Models
             }
         }
 
-        public ObservableCollection<DownloadQueueItem> Items { get; set; }
-
-        public DownloadQueue()
-        {
-            Items = new ObservableCollection<DownloadQueueItem>();
-        }
+        public ObservableCollection<DownloadQueueItem> Items { get; set; } = new ObservableCollection<DownloadQueueItem>();
+        public ObservableCollection<DownloadQueueItem> Completed { get; set; } = new ObservableCollection<DownloadQueueItem>();
     }
 }

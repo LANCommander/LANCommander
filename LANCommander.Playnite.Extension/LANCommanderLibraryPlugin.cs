@@ -839,9 +839,10 @@ namespace LANCommander.PlaynitePlugin
                 foreach (var file in metaFiles)
                 {
                     var originalPath = Path.Combine(game.InstallDirectory, file.Key);
+                    var destinationPath = GameService.GetMetadataFilePath(game.InstallDirectory, gameId, file.Value);
 
-                    if (File.Exists(originalPath))
-                        File.Move(originalPath, GameService.GetMetadataFilePath(game.InstallDirectory, gameId, file.Value));
+                    if (File.Exists(originalPath) && !File.Exists(destinationPath))
+                        File.Move(originalPath, destinationPath);
                 }
             }
             #endregion

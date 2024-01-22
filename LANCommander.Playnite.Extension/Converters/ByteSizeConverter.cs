@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Windows;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Data;
+using System.Windows;
 
 namespace LANCommander.PlaynitePlugin.Converters
 {
-    public class NullVisibilityConverter : IValueConverter
+    public class ByteSizeConverter : IValueConverter
     {
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
@@ -14,7 +18,9 @@ namespace LANCommander.PlaynitePlugin.Converters
 
         object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value == null ? Visibility.Collapsed : Visibility.Visible;
+            var size = Convert.ToDouble(value);
+
+            return ByteSizeLib.ByteSize.FromBytes(size).ToString();
         }
     }
 }

@@ -30,11 +30,33 @@ namespace LANCommander.PlaynitePlugin.Views
             InitializeComponent();
         }
 
+        private void BackToLibrary(object sender, RoutedEventArgs e)
+        {
+            Plugin.PlayniteApi.MainView.SwitchToLibraryView();
+        }
+
         private void RemoveItem(object sender, RoutedEventArgs e)
         {
-            var button = (Button)sender;
+            var hyperlink = (Hyperlink)sender;
 
-            Plugin.DownloadQueue.Remove(button.DataContext as DownloadQueueItem);
+            Plugin.DownloadQueue.Remove(hyperlink.DataContext as DownloadQueueItem);
+        }
+
+        private void Play(object sender, RoutedEventArgs e)
+        {
+            var button = (Button)sender;
+            var item = button.DataContext as DownloadQueueItem;
+
+            Plugin.PlayniteApi.StartGame(item.Game.Id);
+        }
+
+        private void ViewInLibrary(object sender, RoutedEventArgs e)
+        {
+            var button = (Button)sender;
+            var item = button.DataContext as DownloadQueueItem;
+
+            Plugin.PlayniteApi.MainView.SwitchToLibraryView();
+            Plugin.PlayniteApi.MainView.SelectGame(item.Game.Id);
         }
     }
 }

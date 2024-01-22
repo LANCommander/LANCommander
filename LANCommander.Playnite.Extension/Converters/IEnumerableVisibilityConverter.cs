@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Windows;
 using System.Windows.Data;
 
 namespace LANCommander.PlaynitePlugin.Converters
 {
-    public class NullVisibilityConverter : IValueConverter
+    public class IEnumerableVisibilityConverter : IValueConverter
     {
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
@@ -14,7 +16,10 @@ namespace LANCommander.PlaynitePlugin.Converters
 
         object IValueConverter.Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value == null ? Visibility.Collapsed : Visibility.Visible;
+            if (value is IEnumerable<object>)
+                return ((IEnumerable<object>)value).Count() == 0 ? Visibility.Collapsed : Visibility.Visible;
+            else
+                return Visibility.Collapsed;
         }
     }
 }

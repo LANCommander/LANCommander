@@ -55,12 +55,35 @@ namespace LANCommander.PlaynitePlugin
                     DownloadQueue.CurrentItem.Size = length;
                     DownloadQueue.CurrentItem.Speed = (double)(position - DownloadQueue.CurrentItem.TotalDownloaded) / (Stopwatch.ElapsedMilliseconds / 1000d);
                     DownloadQueue.CurrentItem.TotalDownloaded = position;
+                    DownloadQueue.CurrentItem.TimeRemaining = $"{GetTimeRemaining(DownloadQueue.CurrentItem)} Remaining";
                     Plugin.DownloadQueueSidebarItem.ProgressMaximum = length;
                     Plugin.DownloadQueueSidebarItem.ProgressValue = position;
                 });
 
                 Stopwatch.Restart();
             }
+        }
+
+        private void ChangeCurrentItemStatus(DownloadQueueItemStatus status)
+        {
+            Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() => {
+                DownloadQueue.CurrentItem.Status = status;
+            });
+        }
+
+        private string GetTimeRemaining(DownloadQueueItem item)
+        {
+            if (item.Speed == 0)
+                return "∞";
+
+            var timespan = TimeSpan.FromSeconds((item.Size - item.TotalDownloaded) / item.Speed);
+
+            if (timespan.Days > 0)
+                return timespan.ToString(@"d\:hh\:mm\:ss");
+            if (timespan.Hours > 0)
+                return timespan.ToString(@"h\:mm:\ss");
+            else
+                return timespan.ToString(@"mm\:ss");
         }
 
         public void Add(Game game)
@@ -76,12 +99,20 @@ namespace LANCommander.PlaynitePlugin
                     Title = game.Name,
                     QueuedOn = DateTime.Now,
                 });
+
+                game.IsInstalled = false;
+                game.IsInstalling = true;
+
+                Plugin.PlayniteApi.Database.Games.Update(game);
             }
         }
 
         public void Remove(DownloadQueueItem downloadQueueItem)
         {
-            DownloadQueue.Items.Remove(downloadQueueItem);
+            Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
+            {
+                DownloadQueue.Items.Remove(downloadQueueItem);
+            });
         }
 
         public bool Exists(Game game)
@@ -117,6 +148,8 @@ namespace LANCommander.PlaynitePlugin
             DownloadQueue.CurrentItem.Game.IsInstalling = true;
             Plugin.PlayniteApi.Database.Games.Update(DownloadQueue.CurrentItem.Game);
 
+            ChangeCurrentItemStatus(DownloadQueueItemStatus.Downloading);
+
             var installDirectory = Plugin.LANCommanderClient.Games.Install(game.Id);
 
             Stopwatch.Stop();
@@ -129,21 +162,27 @@ namespace LANCommander.PlaynitePlugin
             });
 
             if (game.Redistributables != null && game.Redistributables.Any())
+            {
+                ChangeCurrentItemStatus(DownloadQueueItemStatus.InstallingRedistributables);
                 Plugin.LANCommanderClient.Redistributables.Install(game);
+            }
 
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
             Plugin.UpdateGame(manifest, installDirectory);
 
+            ChangeCurrentItemStatus(DownloadQueueItemStatus.DownloadingSaves);
             Plugin.SaveController = new LANCommanderSaveController(Plugin, null);
             Plugin.SaveController.Download(gameId, installDirectory);
 
+            ChangeCurrentItemStatus(DownloadQueueItemStatus.RunningScripts);
             RunInstallScript(game);
             RunNameChangeScript(game);
             RunKeyChangeScript(game);
 
             DownloadQueue.CurrentItem.CompletedOn = DateTime.Now;
             DownloadQueue.CurrentItem.TotalDownloaded = DownloadQueue.CurrentItem.Size;
+            ChangeCurrentItemStatus(DownloadQueueItemStatus.Idle);
 
             var notification = new NotifyIcon()
             {
@@ -164,9 +203,15 @@ namespace LANCommander.PlaynitePlugin
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {
                 DownloadQueue.CurrentItem.ProgressIndeterminate = false;
+                DownloadQueue.Completed.Add(DownloadQueue.CurrentItem);
                 Plugin.DownloadQueueSidebarItem.ProgressValue = 0;
-                Plugin.DownloadQueueSidebarItem.ProgressMaximum = 0;
+                Plugin.DownloadQueueSidebarItem.ProgressMaximum = 1;
             });
+
+            DownloadQueue.CurrentItem.Game.IsInstalled = true;
+            DownloadQueue.CurrentItem.Game.IsInstalling = false;
+
+            Plugin.PlayniteApi.Database.Games.Update(DownloadQueue.CurrentItem.Game);
 
             ProcessQueue();
         }

@@ -54,7 +54,6 @@ namespace LANCommander.PlaynitePlugin
             }
 
             Plugin.DownloadQueue.Add(Game);
-            Plugin.DownloadQueue.ProcessQueue();
             Plugin.DownloadQueue.OnInstallComplete += MarkInstalled;
         }
 

@@ -100,6 +100,9 @@ namespace LANCommander.PlaynitePlugin
                     QueuedOn = DateTime.Now,
                 });
 
+                if (DownloadQueue.Items.Count == 1 && DownloadQueue.CurrentItem == null)
+                    ProcessQueue();
+
                 game.IsInstalled = false;
                 game.IsInstalling = true;
 
@@ -124,7 +127,7 @@ namespace LANCommander.PlaynitePlugin
         {
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {
-                DownloadQueue.CurrentItem = DownloadQueue.Items.FirstOrDefault(i => !i.CompletedOn.HasValue);
+                DownloadQueue.CurrentItem = DownloadQueue.Items.FirstOrDefault();
 
                 if (DownloadQueue.CurrentItem != null)
                     DownloadQueue.Items.Remove(DownloadQueue.CurrentItem);

@@ -43,7 +43,7 @@ namespace LANCommander.PlaynitePlugin
                         progress.CurrentProgressValue = 100;
                     };
 
-                    Plugin.LANCommanderClient.Saves.Download(game.InstallDirectory, gameId);
+                    Plugin.LANCommanderClient.Saves.Download(installDirectory, gameId);
 
                     // Lock the thread until the download is done
                     while (progress.CurrentProgressValue != 100) { }

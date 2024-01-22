@@ -114,7 +114,17 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <StackPanel Orientation="Vertical" Visibility="{Binding DownloadQueue.Completed, Converter={StaticResource IEnumerableVisibilityConverter}}">
+                    <StackPanel Name="DownloadQueueCompletedSection" Orientation="Vertical">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Path=DownloadQueue.Completed.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        
                         <Border BorderThickness="0,0,0,2" BorderBrush="{DynamicResource PopupBorderBrush}">
                             <TextBlock Text="Completed" FontSize="24" Style="{StaticResource BaseTextBlockStyle}" Margin="0,0,0,10" />
                         </Border>

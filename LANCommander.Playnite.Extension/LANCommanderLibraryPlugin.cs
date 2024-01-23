@@ -287,6 +287,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     var game = LANCommanderClient.Games.Get(gameId);
 
+                    if (game.Servers != null)
                     foreach (var server in game.Servers.Where(s => s.Actions != null))
                     {
                         foreach (var action in server.Actions)

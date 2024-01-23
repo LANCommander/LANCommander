@@ -2,6 +2,7 @@
 using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
+using Microsoft.Toolkit.Uwp.Notifications;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
@@ -36,6 +37,30 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.LANCommanderClient.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
             Plugin.LANCommanderClient.Games.OnArchiveEntryExtractionProgress += Games_OnArchiveEntryExtractionProgress;
+
+            ToastNotificationManagerCompat.OnActivated += NotificationHandler;
+        }
+
+        private void NotificationHandler(ToastNotificationActivatedEventArgsCompat e)
+        {
+            try
+            {
+                var args = ToastArguments.Parse(e.Argument);
+                var gameId = Guid.Parse(args["gameId"]);
+
+                switch (args["action"])
+                {
+                    case "play":
+                        Plugin.PlayniteApi.StartGame(gameId);
+                        break;
+                    case "viewInLibrary":
+                    default:
+                        Plugin.PlayniteApi.MainView.SwitchToLibraryView();
+                        Plugin.PlayniteApi.MainView.SelectGame(gameId);
+                        break;
+                }
+            }
+            catch { }
         }
 
         private void Games_OnArchiveEntryExtractionProgress(object sender, SDK.ArchiveEntryExtractionProgressArgs e)
@@ -187,17 +212,22 @@ namespace LANCommander.PlaynitePlugin
             DownloadQueue.CurrentItem.TotalDownloaded = DownloadQueue.CurrentItem.Size;
             ChangeCurrentItemStatus(DownloadQueueItemStatus.Idle);
 
-            var notification = new NotifyIcon()
-            {
-                Icon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly().Location),
-                Visible = true,
-                Text = $"{game.Title} has finished installing!",
-                BalloonTipText = $"{game.Title} has finished installing!",
-                BalloonTipTitle = "Game Installed",
-                BalloonTipIcon = ToolTipIcon.Info,
-            };
-
-            notification.ShowBalloonTip(10000);
+            new ToastContentBuilder()
+                .AddText("Game Installed")
+                .AddText($"{game.Title} has finished installing!")
+                .AddArgument("gameId", DownloadQueue.CurrentItem.Game.Id.ToString())
+                .AddButton(
+                    new ToastButton()
+                        .SetContent("Play")
+                        .AddArgument("action", "play")
+                )
+                .AddButton(
+                    new ToastButton()
+                        .SetContent("View in Library")
+                        .AddArgument("action", "viewInLibrary")
+                )
+                .AddAppLogoOverride(new Uri($"file:///{DownloadQueue.CurrentItem.CoverPath}", UriKind.Absolute), ToastGenericAppLogoCrop.None)
+                .Show();
 
             DownloadQueue.CurrentItem.InProgress = false;
 

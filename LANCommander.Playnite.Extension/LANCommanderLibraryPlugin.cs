@@ -146,6 +146,9 @@ namespace LANCommander.PlaynitePlugin
 
             foreach (var game in games)
             {
+                if (args.CancelToken != null && args.CancelToken.IsCancellationRequested)
+                    return new List<GameMetadata>();
+
                 try
                 {
                     Logger.Trace($"Importing/updating metadata for game \"{game.Title}\"...");

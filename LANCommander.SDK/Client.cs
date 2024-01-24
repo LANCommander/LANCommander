@@ -313,7 +313,7 @@ namespace LANCommander.SDK
             else
                 Logger?.LogTrace("Token is invalid!");
 
-            Connected = true;
+            Connected = valid;
 
             return response.StatusCode == HttpStatusCode.OK;
         }

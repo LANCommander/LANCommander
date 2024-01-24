@@ -126,7 +126,6 @@ namespace LANCommander.PlaynitePlugin.Views
                 Plugin.Settings.OfflineModeEnabled = false;
 
                 Plugin.OfflineModeTopPanelItem.Visible = false;
-                Plugin.ProfileTopPanelItem.Visible = true;
 
                 // Probably unneeded, but why not be more secure?
                 Context.Password = String.Empty;

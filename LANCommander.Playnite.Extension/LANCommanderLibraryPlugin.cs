@@ -77,13 +77,11 @@ namespace LANCommander.PlaynitePlugin
 
             ProfileTopPanelItem = new TopPanelItem
             {
-                Icon = new ProfileTopPanelItem(this),
-                Visible = !Settings.OfflineModeEnabled && LANCommanderClient.ValidateToken()
+                Icon = new ProfileTopPanelItem(this)
             };
             #endregion
 
-            if (ValidateConnection())
-                Settings.Load();
+            Settings.Load();
 
             DownloadQueue = new DownloadQueueController(this);
 
@@ -138,11 +136,6 @@ namespace LANCommander.PlaynitePlugin
             if (LANCommanderClient.IsConnected())
             {
                 OfflineModeTopPanelItem.Visible = false;
-                ProfileTopPanelItem.Visible = true;
-            }
-            else
-            {
-                ProfileTopPanelItem.Visible = false;
             }
 
             return LANCommanderClient.IsConnected();

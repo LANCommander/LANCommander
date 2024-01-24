@@ -103,9 +103,9 @@ namespace LANCommander.PlaynitePlugin
 
         public bool ValidateConnection()
         {
-            var isConnected = LANCommanderClient.ValidateToken();
+            LANCommanderClient.ValidateToken();
 
-            if (isConnected)
+            if (LANCommanderClient.IsConnected())
             {
                 OfflineModeTopPanelItem.Visible = false;
                 ProfileTopPanelItem.Visible = true;
@@ -115,7 +115,7 @@ namespace LANCommander.PlaynitePlugin
                 ProfileTopPanelItem.Visible = false;
             }
 
-            return isConnected;
+            return LANCommanderClient.IsConnected();
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
@@ -147,6 +147,9 @@ namespace LANCommander.PlaynitePlugin
             foreach (var game in games)
             {
                 if (args.CancelToken != null && args.CancelToken.IsCancellationRequested)
+                    return new List<GameMetadata>();
+
+                if (!LANCommanderClient.IsConnected())
                     return new List<GameMetadata>();
 
                 try

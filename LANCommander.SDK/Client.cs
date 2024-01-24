@@ -20,6 +20,8 @@ namespace LANCommander.SDK
         private RestClient ApiClient;
         private AuthToken Token;
 
+        private bool Connected = false;
+
         public string BaseUrl;
         public string DefaultInstallDirectory;
 
@@ -71,6 +73,11 @@ namespace LANCommander.SDK
                 ApiClient = new RestClient(BaseUrl);
 
             Logger = logger;
+        }
+
+        public bool IsConnected()
+        {
+            return Connected;
         }
 
         internal T PostRequest<T>(string route, object body)
@@ -184,16 +191,28 @@ namespace LANCommander.SDK
 
                     UseToken(token);
 
+                    Connected = true;
+
                     return token;
 
                 case HttpStatusCode.Forbidden:
                 case HttpStatusCode.BadRequest:
                 case HttpStatusCode.Unauthorized:
+                    Connected = false;
                     throw new WebException("Invalid username or password");
 
                 default:
+                    Connected = false;
                     throw new WebException("Could not communicate with the server");
             }
+        }
+
+        public async Task LogoutAsync()
+        {
+            await ApiClient.ExecuteAsync(new RestRequest("/api/Auth/Logout", Method.POST));
+
+            Connected = false;
+            Token = null;
         }
 
         public async Task<AuthToken> RegisterAsync(string username, string password)
@@ -214,14 +233,18 @@ namespace LANCommander.SDK
                         Expiration = response.Data.Expiration
                     };
 
+                    Connected = true;
+
                     return Token;
 
                 case HttpStatusCode.BadRequest:
                 case HttpStatusCode.Forbidden:
                 case HttpStatusCode.Unauthorized:
+                    Connected = false;
                     throw new WebException(response.Data.Message);
 
                 default:
+                    Connected = false;
                     throw new WebException("Could not communicate with the server");
             }
         }
@@ -251,6 +274,8 @@ namespace LANCommander.SDK
                 RefreshToken = response.Data.RefreshToken,
                 Expiration = response.Data.Expiration
             };
+
+            Connected = true;
 
             return Token;
         }
@@ -287,6 +312,8 @@ namespace LANCommander.SDK
                 Logger?.LogTrace("Token is valid!");
             else
                 Logger?.LogTrace("Token is invalid!");
+
+            Connected = true;
 
             return response.StatusCode == HttpStatusCode.OK;
         }

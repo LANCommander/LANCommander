@@ -84,11 +84,12 @@ namespace LANCommander.PlaynitePlugin
             var authWindow = Plugin.ShowAuthenticationWindow(Settings.ServerAddress, AuthWindow_Closed);
         }
 
-        private void DisconnectButton_Click(object sender, RoutedEventArgs e)
+        private async void DisconnectButton_Click(object sender, RoutedEventArgs e)
         {
             Plugin.Settings.AccessToken = String.Empty;
             Plugin.Settings.RefreshToken = String.Empty;
-            Plugin.LANCommanderClient.UseToken(null);
+
+            await Plugin.LANCommanderClient.LogoutAsync();
 
             Plugin.SavePluginSettings(Plugin.Settings);
 

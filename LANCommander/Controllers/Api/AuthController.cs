@@ -38,13 +38,15 @@ namespace LANCommander.Controllers.Api
     {
         protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        private readonly SignInManager<User> SignInManager;
         private readonly UserManager<User> UserManager;
         private readonly IUserStore<User> UserStore;
         private readonly RoleManager<Role> RoleManager;
         private readonly LANCommanderSettings Settings;
 
-        public AuthController(UserManager<User> userManager, IUserStore<User> userStore, RoleManager<Role> roleManager)
+        public AuthController(SignInManager<User> signInManager, UserManager<User> userManager, IUserStore<User> userStore, RoleManager<Role> roleManager)
         {
+            SignInManager = signInManager;
             UserManager = userManager;
             UserStore = userStore;
             RoleManager = roleManager;
@@ -70,6 +72,15 @@ namespace LANCommander.Controllers.Api
 
                 return Unauthorized();
             }
+        }
+
+        [HttpPost("Logout")]
+        public async Task<IActionResult> Logout()
+        {
+            if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
+                await SignInManager.SignOutAsync();
+
+            return Ok();
         }
 
         [HttpPost("Validate")]

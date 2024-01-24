@@ -39,7 +39,6 @@ namespace LANCommander.PlaynitePlugin
         public SidebarItem DownloadQueueSidebarItem { get; set; }
 
         public TopPanelItem OfflineModeTopPanelItem { get; set; }
-        public TopPanelItem ChangeNameTopPanelItem { get; set; }
         public TopPanelItem ProfileTopPanelItem { get; set; }
 
         public LANCommanderLibraryPlugin(IPlayniteAPI api) : base(api)
@@ -76,28 +75,11 @@ namespace LANCommander.PlaynitePlugin
                 }
             };
 
-            ChangeNameTopPanelItem = new TopPanelItem
+            ProfileTopPanelItem = new TopPanelItem
             {
                 Title = "Change Name",
                 Icon = new ProfileTopPanelItem(this),
                 Visible = !Settings.OfflineModeEnabled && LANCommanderClient.ValidateToken()
-            };
-
-            ProfileTopPanelItem = new TopPanelItem
-            {
-                Title = "Profile",
-                Icon = new TextBlock
-                {
-                    Text = char.ConvertFromUtf32(0xec8e),
-                    FontSize = 16,
-                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
-                    Padding = new Thickness(10, 0, 10, 0),
-                },
-                Activated = () =>
-                {
-                    var profileUri = new Uri(new Uri(Settings.ServerAddress), "Profile");
-                    System.Diagnostics.Process.Start(profileUri.ToString());
-                }
             };
             #endregion
 
@@ -553,7 +535,6 @@ namespace LANCommander.PlaynitePlugin
         public override IEnumerable<TopPanelItem> GetTopPanelItems()
         {
             yield return OfflineModeTopPanelItem;
-            yield return ChangeNameTopPanelItem;
             yield return ProfileTopPanelItem;
         }
 

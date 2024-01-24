@@ -13,7 +13,7 @@
             <MenuItem Header="Log out" Click="LogOut" />
         </ContextMenu>
     </UserControl.Resources>
-    <Button Click="OpenProfileMenu" Padding="0" BorderThickness="0">
+    <Button Click="OpenProfileMenu" Padding="0" BorderThickness="0" Height="32">
         <Button.Style>
             <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                 <Style.Triggers>
@@ -27,7 +27,7 @@
             </Style>
         </Button.Style>
         <StackPanel Orientation="Horizontal">
-            <Image Source="{Binding ElementName=ProfileTopPanelItemControl, Path=DataContext.PlayerAvatarUrl}" Height="28" VerticalAlignment="Center">
+            <Image Source="{Binding ElementName=ProfileTopPanelItemControl, Path=DataContext.PlayerAvatarUrl}" Height="32" VerticalAlignment="Center">
                 <Image.Style>
                     <Style TargetType="Image">
                         <Style.Triggers>

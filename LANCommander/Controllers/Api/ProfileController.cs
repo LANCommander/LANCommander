@@ -56,5 +56,31 @@ namespace LANCommander.Controllers.Api
             else
                 return Unauthorized();
         }
+
+        [AllowAnonymous]
+        [HttpGet("{userName}/Avatar")]
+        public async Task<IActionResult> Avatar(string userName)
+        {
+            try
+            {
+                var user = await UserManager.FindByNameAsync(userName);
+
+                if (user == null)
+                    return NotFound();
+
+                var media = user.Media?.FirstOrDefault(u => u.Type == Data.Enums.MediaType.Avatar);
+
+                if (media == null)
+                    return NotFound();
+
+                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+
+                return File(fs, media.MimeType);
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
     }
 }

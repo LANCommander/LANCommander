@@ -279,7 +279,7 @@ namespace LANCommander.PlaynitePlugin
             var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.NameChange);
 
             var oldName = GameService.GetPlayerAlias(installDirectory, game.Id);
-            var newName = Plugin.Settings.GetPlayerAlias();
+            var newName = Plugin.Settings.PlayerAlias;
 
             if (File.Exists(path))
             {

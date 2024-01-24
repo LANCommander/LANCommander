@@ -122,6 +122,7 @@ namespace LANCommander.PlaynitePlugin.Views
 
                 Plugin.Settings.PlayerName = profile.UserName;
                 Plugin.Settings.PlayerAlias = profile.Alias;
+                Plugin.Settings.PlayerAvatarUrl = new Uri($"{Context.ServerAddress}/api/Profile/{profile.UserName}/Avatar").ToString();
                 Plugin.Settings.OfflineModeEnabled = false;
 
                 Plugin.OfflineModeTopPanelItem.Visible = false;

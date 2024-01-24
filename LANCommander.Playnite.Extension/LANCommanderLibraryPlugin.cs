@@ -20,6 +20,8 @@ using LANCommander.SDK;
 using System.Reflection;
 using LANCommander.PlaynitePlugin.Views;
 using LANCommander.PlaynitePlugin.Models;
+using LANCommander.PlaynitePlugin.Controls;
+using System.Threading.Tasks;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -54,6 +56,53 @@ namespace LANCommander.PlaynitePlugin
                 AccessToken = Settings.AccessToken,
                 RefreshToken = Settings.RefreshToken,
             });
+
+            #region Initialize Top Bar Items
+            OfflineModeTopPanelItem = new TopPanelItem
+            {
+                Title = "Go Online",
+                Icon = new TextBlock
+                {
+                    Text = char.ConvertFromUtf32(0xef3e),
+                    FontSize = 16,
+                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
+                    Padding = new Thickness(10, 0, 10, 0),
+                    Foreground = (SolidColorBrush)new BrushConverter().ConvertFrom("#ff6b6b"),
+                },
+                Visible = Settings.OfflineModeEnabled,
+                Activated = () =>
+                {
+                    ShowAuthenticationWindow();
+                }
+            };
+
+            ChangeNameTopPanelItem = new TopPanelItem
+            {
+                Title = "Change Name",
+                Icon = new ProfileTopPanelItem(this),
+                Visible = !Settings.OfflineModeEnabled && LANCommanderClient.ValidateToken()
+            };
+
+            ProfileTopPanelItem = new TopPanelItem
+            {
+                Title = "Profile",
+                Icon = new TextBlock
+                {
+                    Text = char.ConvertFromUtf32(0xec8e),
+                    FontSize = 16,
+                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
+                    Padding = new Thickness(10, 0, 10, 0),
+                },
+                Activated = () =>
+                {
+                    var profileUri = new Uri(new Uri(Settings.ServerAddress), "Profile");
+                    System.Diagnostics.Process.Start(profileUri.ToString());
+                }
+            };
+            #endregion
+
+            if (ValidateConnection())
+                Settings.Load();
 
             DownloadQueue = new DownloadQueueController(this);
 
@@ -116,6 +165,21 @@ namespace LANCommander.PlaynitePlugin
             }
 
             return LANCommanderClient.IsConnected();
+        }
+
+        public async Task Logout()
+        {
+            await LANCommanderClient.LogoutAsync();
+
+            Settings.AccessToken = null;
+            Settings.RefreshToken = null;
+            Settings.PlayerAlias = null;
+            Settings.PlayerName = null;
+            Settings.PlayerAvatarUrl = null;
+
+            SavePluginSettings(Settings);
+
+            ShowAuthenticationWindow();
         }
 
         public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
@@ -350,7 +414,7 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Change Player Name",
                         Action = (nameChangeArgs) =>
                         {
-                            var oldName = Settings.GetPlayerAlias();
+                            var oldName = Settings.PlayerAlias;
 
                             var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", oldName);
 
@@ -443,9 +507,9 @@ namespace LANCommander.PlaynitePlugin
                 var gameId = Guid.Parse(args.Game.GameId);
                 var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, gameId);
 
-                if (currentGamePlayerAlias != Settings.GetPlayerAlias())
+                if (currentGamePlayerAlias != Settings.PlayerAlias)
                 {
-                    RunNameChangeScript(args.Game.InstallDirectory, gameId, currentGamePlayerAlias, Settings.GetPlayerAlias());
+                    RunNameChangeScript(args.Game.InstallDirectory, gameId, currentGamePlayerAlias, Settings.PlayerAlias);
                 }
 
                 if (!Settings.OfflineModeEnabled)
@@ -488,57 +552,6 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<TopPanelItem> GetTopPanelItems()
         {
-            OfflineModeTopPanelItem = new TopPanelItem
-            {
-                Title = "Go Online",
-                Icon = new TextBlock
-                {
-                    Text = char.ConvertFromUtf32(0xef3e),
-                    FontSize = 16,
-                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
-                    Padding = new Thickness(10, 0, 10, 0),
-                    Foreground = (SolidColorBrush)new BrushConverter().ConvertFrom("#ff6b6b"),
-                },
-                Visible = Settings.OfflineModeEnabled,
-                Activated = () =>
-                {
-                    ShowAuthenticationWindow();
-                }
-            };
-
-            ChangeNameTopPanelItem = new TopPanelItem
-            {
-                Title = "Change Name",
-                Icon = new TextBlock
-                {
-                    Text = Settings.GetPlayerAlias(),
-                    FontSize = 16,
-                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
-                    Padding = new Thickness(10, 0, 10, 0),
-                },
-                Activated = () =>
-                {
-                    ShowNameChangeWindow();
-                }
-            };
-
-            ProfileTopPanelItem = new TopPanelItem
-            {
-                Title = "Profile",
-                Icon = new TextBlock
-                {
-                    Text = char.ConvertFromUtf32(0xec8e),
-                    FontSize = 16,
-                    FontFamily = ResourceProvider.GetResource("FontIcoFont") as FontFamily,
-                    Padding = new Thickness(10, 0, 10, 0),
-                },
-                Activated = () =>
-                {
-                    var profileUri = new Uri(new Uri(Settings.ServerAddress), "Profile");
-                    System.Diagnostics.Process.Start(profileUri.ToString());
-                }
-            };
-
             yield return OfflineModeTopPanelItem;
             yield return ChangeNameTopPanelItem;
             yield return ProfileTopPanelItem;
@@ -582,7 +595,7 @@ namespace LANCommander.PlaynitePlugin
         {
             Logger.Trace("Showing name change dialog!");
 
-            var oldName = Settings.GetPlayerAlias();
+            var oldName = Settings.PlayerAlias;
 
             var result = PlayniteApi.Dialogs.SelectString("Enter your new player name", "Enter Name", oldName);
 
@@ -611,8 +624,6 @@ namespace LANCommander.PlaynitePlugin
                     var games = PlayniteApi.Database.Games.Where(g => g.IsInstalled).ToList();
 
                     LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
-
-                    ((TextBlock)ChangeNameTopPanelItem.Icon).Text = Settings.GetPlayerAlias();
                 }
             }
             else

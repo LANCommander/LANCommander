@@ -86,12 +86,7 @@ namespace LANCommander.PlaynitePlugin
 
         private async void DisconnectButton_Click(object sender, RoutedEventArgs e)
         {
-            Plugin.Settings.AccessToken = String.Empty;
-            Plugin.Settings.RefreshToken = String.Empty;
-
-            await Plugin.LANCommanderClient.LogoutAsync();
-
-            Plugin.SavePluginSettings(Plugin.Settings);
+            await Plugin.Logout();
 
             PART_AuthenticateLabel.Content = "Not Authenticated";
             PART_AuthenticationButton.IsEnabled = true;

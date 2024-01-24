@@ -53,6 +53,9 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controls\ProfileTopPanelItem.xaml.cs">
+      <DependentUpon>ProfileTopPanelItem.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Converters\IEnumerableEmptyVisibilityConverter.cs" />
     <Compile Include="Converters\IEnumerableVisibilityConverter.cs" />
     <Compile Include="Converters\NullVisibilityConverter.cs" />
@@ -91,6 +94,10 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="App.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Controls\ProfileTopPanelItem.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

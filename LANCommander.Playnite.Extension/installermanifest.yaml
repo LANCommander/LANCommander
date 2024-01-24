@@ -71,6 +71,7 @@ Packages:
       - Fixed packaging and unpackaging of saves
       - Latest game save is now downloaded after install
   - Version: 0.4.1
+    RequiredApiVersion: 6.0.0
     ReleaseDate: 2024-01-07
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.4.1/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_4_1.pext
     Changelog:
@@ -78,6 +79,7 @@ Packages:
       - Categories are now created/synced from collections
       - Added the ability for primary actions to use some variables. More details over at the wiki
   - Version: 0.5.0
+    RequiredApiVersion: 6.0.0
     ReleaseDate: 2024-01-15
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_0.pext
     Changelog:
@@ -86,6 +88,7 @@ Packages:
       - 'Changed: Default `{IPXRelay}` action variable will resolve to the servers address if not specified in server settings'
       - 'Fixed: Name changes now correctly update users alias and is stored separately from the username'
   - Version: 0.5.2
+    RequiredApiVersion: 6.0.0
     ReleaseDate: 2024-01-24
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.2/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_2.pext
     Changelog:

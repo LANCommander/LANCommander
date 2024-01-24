@@ -85,3 +85,14 @@ Packages:
       - 'Changed: Files in ZIP archive are now checked against each file on the local disk and replaced where different'
       - 'Changed: Default `{IPXRelay}` action variable will resolve to the servers address if not specified in server settings'
       - 'Fixed: Name changes now correctly update users alias and is stored separately from the username'
+  - Version: 0.5.2
+    ReleaseDate: 2024-01-24
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.2/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_2.pext
+    Changelog:
+      - 'Fixed: Removed unused "Clear Download Cache" button'
+      - 'Fixed: Cancelling library imports now correctly terminates metadata importing without creating excessive logged errors'
+      - 'Changed: Name changes are now tracked on a game-by-game basis'
+      - 'Added: Offline mode! If the client cannot connect to the server, you now have the ability to play games locally without authentication'
+      - 'Added: Download queue!'
+      - 'Added: Profile button at the top panel for easy name changes, profile editing, and logging out'
+      - 'Added: Game servers can now present additional actions to the client for quick connecting to hosts'

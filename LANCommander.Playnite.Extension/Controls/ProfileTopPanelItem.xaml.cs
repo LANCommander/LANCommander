@@ -32,10 +32,17 @@ namespace LANCommander.PlaynitePlugin.Controls
 
         private void OpenProfileMenu(object sender, RoutedEventArgs e)
         {
-            ContextMenu profileMenu = this.FindResource("ProfileMenu") as ContextMenu;
+            if (Plugin.LANCommanderClient.IsConnected())
+            {
+                ContextMenu profileMenu = this.FindResource("ProfileMenu") as ContextMenu;
 
-            profileMenu.PlacementTarget = sender as Button;
-            profileMenu.IsOpen = true;
+                profileMenu.PlacementTarget = sender as Button;
+                profileMenu.IsOpen = true;
+            }
+            else
+            {
+                Plugin.ShowAuthenticationWindow();
+            }
         }
 
         private void ChangeName(object sender, RoutedEventArgs e)

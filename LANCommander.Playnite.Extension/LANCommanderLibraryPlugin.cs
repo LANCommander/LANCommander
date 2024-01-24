@@ -77,7 +77,6 @@ namespace LANCommander.PlaynitePlugin
 
             ProfileTopPanelItem = new TopPanelItem
             {
-                Title = "Change Name",
                 Icon = new ProfileTopPanelItem(this),
                 Visible = !Settings.OfflineModeEnabled && LANCommanderClient.ValidateToken()
             };

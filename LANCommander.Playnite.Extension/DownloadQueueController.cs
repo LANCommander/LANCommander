@@ -114,6 +114,15 @@ namespace LANCommander.PlaynitePlugin
         public void Add(Game game)
         {
             var gameId = Guid.Parse(game.GameId);
+            var gameInfo = Plugin.LANCommanderClient.Games.Get(gameId);
+
+            if (gameInfo.BaseGame != null)
+            {
+                var baseGame = Plugin.PlayniteApi.Database.Games.Where(g => g.GameId == gameInfo.BaseGame.Id.ToString()).FirstOrDefault();
+
+                if (baseGame != null && !baseGame.IsInstalled)
+                    Plugin.PlayniteApi.InstallGame(baseGame.Id);
+            }
 
             if (!DownloadQueue.Items.Any(i => i.Game.Id == game.Id))
             {
@@ -168,6 +177,14 @@ namespace LANCommander.PlaynitePlugin
 
             var gameId = Guid.Parse(DownloadQueue.CurrentItem.Game.GameId);
             var game = Plugin.LANCommanderClient.Games.Get(gameId);
+
+            if (game.BaseGame != null)
+            { 
+                var baseGame = Plugin.PlayniteApi.Database.Games.Where(g => g.GameId == game.BaseGame.Id.ToString()).FirstOrDefault();
+
+                if (baseGame != null && !baseGame.IsInstalled)
+                    Plugin.PlayniteApi.InstallGame(baseGame.Id);
+            }
 
             Stopwatch.Restart();
 

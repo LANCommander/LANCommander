@@ -154,6 +154,8 @@ namespace LANCommander.PlaynitePlugin
 
         public void Remove(DownloadQueueItem downloadQueueItem)
         {
+            Logger?.Trace($"Removing {downloadQueueItem.Title} from the queue");
+
             if (DownloadQueue.Items.Contains(downloadQueueItem))
             {
                 Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
@@ -174,6 +176,8 @@ namespace LANCommander.PlaynitePlugin
 
         public void ProcessQueue()
         {
+            Logger?.Trace("Processing download queue");
+
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {
                 DownloadQueue.CurrentItem = DownloadQueue.Items.FirstOrDefault();
@@ -193,8 +197,12 @@ namespace LANCommander.PlaynitePlugin
             var gameId = Guid.Parse(DownloadQueue.CurrentItem.Game.GameId);
             var game = Plugin.LANCommanderClient.Games.Get(gameId);
 
+            Logger?.Trace($"Initiating install for {game.Title}");
+
             if (game.BaseGame != null)
-            { 
+            {
+                Logger?.Trace("Game is reliant on another game for installation. Installing the base game first...");
+
                 var baseGame = Plugin.PlayniteApi.Database.Games.Where(g => g.GameId == game.BaseGame.Id.ToString()).FirstOrDefault();
 
                 if (baseGame != null && !baseGame.IsInstalled)
@@ -242,6 +250,8 @@ namespace LANCommander.PlaynitePlugin
 
             Stopwatch.Stop();
 
+            Logger?.Trace($"Game successfully installed to {installDirectory}");
+
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {
                 DownloadQueue.CurrentItem.ProgressIndeterminate = true;
@@ -252,6 +262,9 @@ namespace LANCommander.PlaynitePlugin
             if (game.Redistributables != null && game.Redistributables.Any())
             {
                 ChangeCurrentItemStatus(DownloadQueueItemStatus.InstallingRedistributables);
+
+                Logger?.Trace("Installing redistributables");
+
                 Plugin.LANCommanderClient.Redistributables.Install(game);
             }
 
@@ -259,6 +272,7 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.UpdateGame(manifest, installDirectory);
 
+            Logger?.Trace("Attempting to download the latest save");
             ChangeCurrentItemStatus(DownloadQueueItemStatus.DownloadingSaves);
             Plugin.SaveController = new LANCommanderSaveController(Plugin, null);
             Plugin.SaveController.Download(gameId, installDirectory);
@@ -271,6 +285,8 @@ namespace LANCommander.PlaynitePlugin
             DownloadQueue.CurrentItem.CompletedOn = DateTime.Now;
             DownloadQueue.CurrentItem.TotalDownloaded = DownloadQueue.CurrentItem.Size;
             ChangeCurrentItemStatus(DownloadQueueItemStatus.Idle);
+
+            Logger.Trace("Installation process completed successfully. Running final cleanup and marking the game as installed");
 
             ShowCompletedNotification(DownloadQueue.CurrentItem);
 
@@ -337,6 +353,8 @@ namespace LANCommander.PlaynitePlugin
 
             if (File.Exists(path))
             {
+                Logger?.Trace("Running install script");
+
                 var script = new PowerShellScript();
 
                 script.AddVariable("InstallDirectory", installDirectory);
@@ -363,6 +381,8 @@ namespace LANCommander.PlaynitePlugin
 
             if (File.Exists(path))
             {
+                Logger?.Trace("Running name change script");
+
                 var script = new PowerShellScript();
 
                 script.AddVariable("InstallDirectory", installDirectory);
@@ -390,6 +410,8 @@ namespace LANCommander.PlaynitePlugin
 
             if (File.Exists(path))
             {
+                Logger?.Trace("Running key change script");
+
                 var script = new PowerShellScript();
 
                 var key = Plugin.LANCommanderClient.Games.GetAllocatedKey(manifest.Id);

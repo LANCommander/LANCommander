@@ -1,12 +1,12 @@
 
 # LANCommander
-LANCommander is a digital video game distribution system designed for LAN parties. 
+LANCommander is an open-source digital video game distribution system.
 
 The main application is self-hostable and is built on the ASP.NET Blazor web application framework. Instead of reinventing the wheel with yet-another-game-launcher, client-functionality has been implemented via a Playnite extension. The database is implemented using SQLite so there is no complex setup required.
 
 The platform is designed to work on local networks and loads no assets from the internet. It was originally developed to help assist a LAN party where the local network is closed and no internet access is permitted.
 
-Currently only Windows is supported. This may change in the future and a Docker container may be made available for the main web application.
+Currently only Windows is supported, though Linux builds are provided.
 
 ## Community
 * [Discord](https://discord.gg/vDEEWVt8EM)
@@ -42,7 +42,6 @@ client.Games.Install("114f653d-ea91-484b-8fe9-8e9bb58bde81");
 
 ## To Do
 LANCommander is far from complete. The basic implementation that exists will allow you to:
-
  - Manage games
  - Upload archives
  - Manage scripts
@@ -51,14 +50,11 @@ LANCommander is far from complete. The basic implementation that exists will all
  - Basic user management
  - New user registration
  - Local "cloud" user saves
- - Game patching
  - Dedicated server management/administration
  - Redistributable management and distribution
  - IPX Beacon for emulators such as DosBox
  - Game media management and automatic lookup (covers, icons, backgrounds)
 
 The following features are being considered:
-
- - Linux build
  - Some expansion of the dashboard with useful stats
  - Built-in VPN client/server for remote LAN parties

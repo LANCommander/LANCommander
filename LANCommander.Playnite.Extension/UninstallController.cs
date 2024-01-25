@@ -51,18 +51,27 @@ namespace LANCommander.PlaynitePlugin
                     Logger.Error(ex, "There was an error running the uninstall script");
                 }
 
-                Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory, gameId);
+                Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
+                {
+                    Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory, gameId);
 
-                var metadataPath = SDK.GameService.GetMetadataDirectoryPath(Game.InstallDirectory, gameId);
+                    var metadataPath = SDK.GameService.GetMetadataDirectoryPath(Game.InstallDirectory, gameId);
 
-                if (Directory.Exists(metadataPath))
-                    Directory.Delete(metadataPath, true);
+                    if (Directory.Exists(metadataPath))
+                        Directory.Delete(metadataPath, true);
 
-                DirectoryHelper.DeleteEmptyDirectories(Game.InstallDirectory);
+                    DirectoryHelper.DeleteEmptyDirectories(Game.InstallDirectory);
+                },
+                new GlobalProgressOptions("Removing game files...")
+                {
+                    IsIndeterminate = true,
+                    Cancelable = false,
+                });
             }
             catch (Exception ex)
             {
                 Logger.Error(ex, "There was an error uninstalling the game");
+                throw new Exception("There was an error uninstalling the game");
             }
 
             InvokeOnUninstalled(new GameUninstalledEventArgs());

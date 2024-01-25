@@ -109,8 +109,6 @@ namespace LANCommander.PlaynitePlugin
 
             var timespan = TimeSpan.FromSeconds((item.Size - item.TotalDownloaded) / item.Speed);
 
-            timespan = timespan.Add(TimeSpan.FromDays(2));
-
             if (timespan.Days > 0)
                 return timespan.ToString(@"d\:hh\:mm\:ss");
             if (timespan.Hours > 0)

@@ -98,15 +98,17 @@ namespace LANCommander.PlaynitePlugin
 
         private string GetTimeRemaining(DownloadQueueItem item)
         {
-            if (item.Speed == 0)
+            if (item.Speed <= 0)
                 return "∞";
 
             var timespan = TimeSpan.FromSeconds((item.Size - item.TotalDownloaded) / item.Speed);
 
+            timespan = timespan.Add(TimeSpan.FromDays(2));
+
             if (timespan.Days > 0)
                 return timespan.ToString(@"d\:hh\:mm\:ss");
             if (timespan.Hours > 0)
-                return timespan.ToString(@"h\:mm:\ss");
+                return timespan.ToString(@"h\:mm\:ss");
             else
                 return timespan.ToString(@"mm\:ss");
         }

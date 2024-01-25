@@ -1,7 +1,9 @@
 ﻿using LANCommander.PlaynitePlugin.Models;
 using LANCommander.SDK;
+using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
+using Microsoft.Extensions.Logging;
 using Microsoft.Toolkit.Uwp.Notifications;
 using Playnite.SDK;
 using Playnite.SDK.Models;
@@ -22,12 +24,16 @@ namespace LANCommander.PlaynitePlugin
 {
     public class DownloadQueueController
     {
+        public static readonly Playnite.SDK.ILogger Logger = LogManager.GetLogger();
         private LANCommanderLibraryPlugin Plugin { get; set; }
         public DownloadQueue DownloadQueue { get; set; }
         private Stopwatch Stopwatch { get; set; }
 
         public delegate void OnInstallCompleteHandler(Game game, string installDirectory);
         public event OnInstallCompleteHandler OnInstallComplete;
+
+        public delegate void OnInstallFailHandler(Game game);
+        public event OnInstallFailHandler OnInstallFail;
 
         public DownloadQueueController(LANCommanderLibraryPlugin plugin)
         {
@@ -148,10 +154,17 @@ namespace LANCommander.PlaynitePlugin
 
         public void Remove(DownloadQueueItem downloadQueueItem)
         {
-            Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
+            if (DownloadQueue.Items.Contains(downloadQueueItem))
             {
-                DownloadQueue.Items.Remove(downloadQueueItem);
-            });
+                Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
+                {
+                    DownloadQueue.Items.Remove(downloadQueueItem);
+                });
+            }
+            else if (DownloadQueue.CurrentItem.Equals(downloadQueueItem))
+            {
+                DownloadQueue.CurrentItem = null;
+            }
         }
 
         public bool Exists(Game game)
@@ -197,7 +210,35 @@ namespace LANCommander.PlaynitePlugin
 
             ChangeCurrentItemStatus(DownloadQueueItemStatus.Downloading);
 
-            var installDirectory = Plugin.LANCommanderClient.Games.Install(game.Id);
+            string installDirectory;
+
+            try
+            {
+                installDirectory = Plugin.LANCommanderClient.Games.Install(game.Id);
+            }
+            catch (InstallException ex)
+            {
+                Plugin.PlayniteApi.Notifications.Add($"InstallFail-{DownloadQueue.CurrentItem.Game.Id}", ex.Message, NotificationType.Error);
+                ShowFailedNotification(DownloadQueue.CurrentItem);
+                OnInstallFail?.Invoke(DownloadQueue.CurrentItem.Game);
+                Remove(DownloadQueue.CurrentItem);
+
+                Stopwatch.Stop();
+
+                return;
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, $"An unknown error occurred while trying to install {game.Title}");
+                Plugin.PlayniteApi.Notifications.Add($"InstallFail-{DownloadQueue.CurrentItem.Game.Id}", $"An unknown error occurred while trying to install {game.Title}", NotificationType.Error);
+                ShowFailedNotification(DownloadQueue.CurrentItem);
+                OnInstallFail?.Invoke(DownloadQueue.CurrentItem.Game);
+                Remove(DownloadQueue.CurrentItem);
+
+                Stopwatch.Stop();
+
+                return;
+            }
 
             Stopwatch.Stop();
 
@@ -231,22 +272,7 @@ namespace LANCommander.PlaynitePlugin
             DownloadQueue.CurrentItem.TotalDownloaded = DownloadQueue.CurrentItem.Size;
             ChangeCurrentItemStatus(DownloadQueueItemStatus.Idle);
 
-            new ToastContentBuilder()
-                .AddText("Game Installed")
-                .AddText($"{game.Title} has finished installing!")
-                .AddArgument("gameId", DownloadQueue.CurrentItem.Game.Id.ToString())
-                .AddButton(
-                    new ToastButton()
-                        .SetContent("Play")
-                        .AddArgument("action", "play")
-                )
-                .AddButton(
-                    new ToastButton()
-                        .SetContent("View in Library")
-                        .AddArgument("action", "viewInLibrary")
-                )
-                .AddAppLogoOverride(new Uri($"file:///{DownloadQueue.CurrentItem.CoverPath}", UriKind.Absolute), ToastGenericAppLogoCrop.None)
-                .Show();
+            ShowCompletedNotification(DownloadQueue.CurrentItem);
 
             DownloadQueue.CurrentItem.InProgress = false;
 
@@ -266,6 +292,41 @@ namespace LANCommander.PlaynitePlugin
             Plugin.PlayniteApi.Database.Games.Update(DownloadQueue.CurrentItem.Game);
 
             ProcessQueue();
+        }
+
+        private void ShowCompletedNotification(DownloadQueueItem queueItem)
+        {
+            new ToastContentBuilder()
+                .AddText("Game Installed")
+                .AddText($"{queueItem.Title} has finished installing!")
+                .AddArgument("gameId", queueItem.Game.Id.ToString())
+                .AddButton(
+                    new ToastButton()
+                        .SetContent("Play")
+                        .AddArgument("action", "play")
+                )
+                .AddButton(
+                    new ToastButton()
+                        .SetContent("View in Library")
+                        .AddArgument("action", "viewInLibrary")
+                )
+                .AddAppLogoOverride(new Uri($"file:///{queueItem.CoverPath}", UriKind.Absolute), ToastGenericAppLogoCrop.None)
+                .Show();
+        }
+
+        private void ShowFailedNotification(DownloadQueueItem queueItem)
+        {
+            new ToastContentBuilder()
+                .AddText("Install Failed")
+                .AddText($"{queueItem.Title} could not be installed!")
+                .AddArgument("gameId", queueItem.Game.Id.ToString())
+                .AddButton(
+                    new ToastButton()
+                        .SetContent("View in Library")
+                        .AddArgument("action", "viewInLibrary")
+                )
+                .AddAppLogoOverride(new Uri($"file:///{queueItem.CoverPath}", UriKind.Absolute), ToastGenericAppLogoCrop.None)
+                .Show();
         }
 
         private int RunInstallScript(SDK.Models.Game game)

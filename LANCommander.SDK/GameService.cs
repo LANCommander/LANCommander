@@ -1,5 +1,6 @@
 ﻿using Force.Crc32;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
@@ -134,6 +135,8 @@ namespace LANCommander.SDK
         {
             GameManifest manifest = null;
 
+            throw new Exception("Test");
+
             var game = Get(gameId);
             var destination = GetInstallDirectory(game);
 
@@ -165,7 +168,7 @@ namespace LANCommander.SDK
             });
 
             if (!result.Success && !result.Canceled)
-                throw new Exception("Could not extract the installer. Retry the install or check your connection");
+                throw new InstallException("Could not extract the installer. Retry the install or check your connection");
             else if (result.Canceled)
                 return "";
 
@@ -183,7 +186,7 @@ namespace LANCommander.SDK
             });
 
             if (!writeManifestSuccess)
-                throw new Exception("Could not grab the manifest file. Retry the install or check your connection");
+                throw new InstallException("Could not grab the manifest file. Retry the install or check your connection");
 
             Logger?.LogTrace("Saving scripts");
 

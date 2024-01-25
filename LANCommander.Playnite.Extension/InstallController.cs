@@ -55,6 +55,15 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.DownloadQueue.Add(Game);
             Plugin.DownloadQueue.OnInstallComplete += MarkInstalled;
+            Plugin.DownloadQueue.OnInstallFail += OnInstallFail;
+        }
+
+        private void OnInstallFail(Playnite.SDK.Models.Game game)
+        {
+            game.IsInstalling = false;
+            game.IsInstalled = false;
+
+            Plugin.PlayniteApi.Database.Games.Update(game);
         }
 
         public void MarkInstalled(Playnite.SDK.Models.Game game, string installDirectory)

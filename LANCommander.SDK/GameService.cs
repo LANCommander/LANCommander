@@ -135,8 +135,6 @@ namespace LANCommander.SDK
         {
             GameManifest manifest = null;
 
-            throw new Exception("Test");
-
             var game = Get(gameId);
             var destination = GetInstallDirectory(game);
 

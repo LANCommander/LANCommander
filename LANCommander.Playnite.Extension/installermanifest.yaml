@@ -99,3 +99,11 @@ Packages:
       - 'Added: Download queue!'
       - 'Added: Profile button at the top panel for easy name changes, profile editing, and logging out'
       - 'Added: Game servers can now present additional actions to the client for quick connecting to hosts'
+  - Version: 0.5.3
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-01-24
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_3.pext
+    Changelog:
+      - 'Fixed: Uninstalling games no longer hangs Playnite until the uninstall has completed and instead shows indeterminate progress dialog'
+      - 'Added: Standalone mods and expansions that have a base game defined will queue the base game before queuing the mod/expansion'
+

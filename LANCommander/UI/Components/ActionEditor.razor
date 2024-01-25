@@ -73,13 +73,18 @@
 
     private async Task AddAction()
     {
-        SortedActions.Add(new Data.Models.Action()
+        var newAction = new Data.Models.Action()
         {
             PrimaryAction = Actions.Count == 0,
-            SortOrder = Actions.Count,
-            GameId = GameId,
-            ServerId = ServerId
-        });
+            SortOrder = Actions.Count
+        };
+
+        if (GameId != Guid.Empty)
+            newAction.GameId = GameId;
+        if (ServerId != Guid.Empty)
+            newAction.ServerId = ServerId;
+
+        SortedActions.Add(newAction);
 
         await UpdateOrder();
     }

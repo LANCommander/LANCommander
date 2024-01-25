@@ -10,7 +10,8 @@ namespace LANCommander.PlaynitePlugin.Models
         Downloading,
         InstallingRedistributables,
         RunningScripts,
-        DownloadingSaves
+        DownloadingSaves,
+        Canceled
     }
 
     public class DownloadQueueItem : ObservableObject
@@ -72,6 +73,8 @@ namespace LANCommander.PlaynitePlugin.Models
                         return "Running Scripts";
                     case DownloadQueueItemStatus.DownloadingSaves:
                         return "Downloading Saves";
+                    case DownloadQueueItemStatus.Canceled:
+                        return "Canceling";
                     case DownloadQueueItemStatus.Idle:
                     default:
                         return "Idle";

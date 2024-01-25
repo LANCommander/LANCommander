@@ -168,7 +168,7 @@ namespace LANCommander.SDK
             if (!result.Success && !result.Canceled)
                 throw new InstallException("Could not extract the installer. Retry the install or check your connection");
             else if (result.Canceled)
-                return "";
+                throw new InstallCanceledException("Game install was canceled");
 
             game.InstallDirectory = result.Directory;
 

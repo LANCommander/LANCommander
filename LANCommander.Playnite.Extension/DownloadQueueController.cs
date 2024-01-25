@@ -35,6 +35,9 @@ namespace LANCommander.PlaynitePlugin
         public delegate void OnInstallFailHandler(Game game);
         public event OnInstallFailHandler OnInstallFail;
 
+        public delegate void OnInstallCancelledHandler(Game game);
+        public event OnInstallCancelledHandler OnInstallCancelled;
+
         public DownloadQueueController(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
@@ -98,7 +101,17 @@ namespace LANCommander.PlaynitePlugin
         private void ChangeCurrentItemStatus(DownloadQueueItemStatus status)
         {
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() => {
-                DownloadQueue.CurrentItem.Status = status;
+                switch (status)
+                {
+                    case DownloadQueueItemStatus.Downloading:
+                        DownloadQueue.CurrentItem.ProgressIndeterminate = false;
+                        DownloadQueue.CurrentItem.Status = status;
+                        break;
+                    default:
+                        DownloadQueue.CurrentItem.ProgressIndeterminate = true;
+                        DownloadQueue.CurrentItem.Status = status;
+                        break;
+                }
             });
         }
 
@@ -187,6 +200,15 @@ namespace LANCommander.PlaynitePlugin
             Task.Run(() => Install());
         }
 
+        public void CancelInstall()
+        {
+            if (DownloadQueue.CurrentItem.Status == DownloadQueueItemStatus.Downloading)
+            {
+                ChangeCurrentItemStatus(DownloadQueueItemStatus.Canceled);
+                Plugin.LANCommanderClient.Games.CancelInstall();
+            }
+        }
+
         private void Install()
         {
             if (DownloadQueue.CurrentItem == null)
@@ -221,6 +243,15 @@ namespace LANCommander.PlaynitePlugin
             try
             {
                 installDirectory = Plugin.LANCommanderClient.Games.Install(game.Id);
+            }
+            catch (InstallCanceledException ex)
+            {
+                OnInstallCancelled?.Invoke(DownloadQueue.CurrentItem.Game);
+                Remove(DownloadQueue.CurrentItem);
+
+                Stopwatch.Stop();
+
+                return;
             }
             catch (InstallException ex)
             {

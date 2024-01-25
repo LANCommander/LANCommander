@@ -30,6 +30,11 @@ namespace LANCommander.PlaynitePlugin.Views
             InitializeComponent();
         }
 
+        private void CancelDownload(object sender, EventArgs e)
+        {
+            Plugin.DownloadQueue.CancelInstall();
+        }
+
         private void BackToLibrary(object sender, RoutedEventArgs e)
         {
             Plugin.PlayniteApi.MainView.SwitchToLibraryView();

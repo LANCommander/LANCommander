@@ -31,7 +31,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100" />
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="32" />
+                        <ColumnDefinition Width="48" />
                     </Grid.ColumnDefinitions>
                     <Image Grid.Column="0" Source="{Binding DownloadQueue.CurrentItem.CoverPath}" Height="100" />
                     <Grid Grid.Column="1">
@@ -104,6 +104,12 @@
                             </StackPanel>
                         </Grid>
                     </Grid>
+
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <Hyperlink Click="CancelDownload">
+                            <TextBlock Text="&#xec4f;" FontFamily="{DynamicResource FontIcoFont}" FontSize="16" ToolTip="Cancel Download" />
+                        </Hyperlink>
+                    </TextBlock>
                 </Grid>
             </ItemsControl>
 
@@ -133,7 +139,7 @@
 
                                         <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
                                     </Grid>
-                                    <TextBlock Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                                         <Hyperlink Click="RemoveItem">
                                             <TextBlock Text="&#xec4f;" FontFamily="{DynamicResource FontIcoFont}" FontSize="16" ToolTip="Remove from Queue" />
                                         </Hyperlink>

@@ -106,4 +106,14 @@ Packages:
     Changelog:
       - 'Fixed: Uninstalling games no longer hangs Playnite until the uninstall has completed and instead shows indeterminate progress dialog'
       - 'Added: Standalone mods and expansions that have a base game defined will queue the base game before queuing the mod/expansion'
+  - Version: 0.5.4
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-01-26
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.4/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_4.pext
+    Changelog:
+      - 'Fixed: Time remaining on downloads no longer causes the download queue to break when download time extends into hours'
+      - 'Fixed: Added notifications for game install failure from download queue'
+      - 'Fixed: Downloaded saves now get extracted to the correct temporary directory'
+      - 'Fixed: Forward slashes no longer get converted to backslashes in action arguments'
+      - 'Added: More logging for the download queue to assist in troubleshooting'
 

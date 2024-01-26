@@ -113,7 +113,7 @@ namespace LANCommander.SDK
                     if (!success)
                         throw new ExtractionException("Could not extract the save archive. Is the file locked?");
 
-                    manifest = ManifestHelper.Read(tempLocation, gameId);
+                    manifest = ManifestHelper.Read(tempLocation);
 
                     #region Move files
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))

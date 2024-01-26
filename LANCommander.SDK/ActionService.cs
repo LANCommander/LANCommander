@@ -74,7 +74,7 @@ namespace LANCommander.SDK
             CustomVariables[key] = value;
         }
 
-        public string ExpandVariables(string input, string installDirectory, Dictionary<string, string> additionalVariables = null)
+        public string ExpandVariables(string input, string installDirectory, Dictionary<string, string> additionalVariables = null, bool skipSlashes = false)
         {
             if (input == null)
                 return input;
@@ -98,7 +98,7 @@ namespace LANCommander.SDK
                 input = input.Replace($"{{{variable.Key}}}", variable.Value);
             }
 
-            return input.ExpandEnvironmentVariables(installDirectory);
+            return input.ExpandEnvironmentVariables(installDirectory, skipSlashes);
         }
     }
 }

@@ -318,7 +318,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     yield return new AutomaticPlayController(args.Game)
                     {
-                        Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory),
+                        Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, skipSlashes: true),
                         Name = action.Name,
                         Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
                         TrackingMode = TrackingMode.Default,
@@ -344,7 +344,7 @@ namespace LANCommander.PlaynitePlugin
 
                             yield return new AutomaticPlayController(args.Game)
                             {
-                                Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables),
+                                Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables, true),
                                 Name = action.Name,
                                 Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
                                 TrackingMode = TrackingMode.Default,

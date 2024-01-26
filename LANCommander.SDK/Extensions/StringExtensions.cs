@@ -26,10 +26,12 @@ namespace LANCommander.SDK.Extensions
             return input.IndexOf(search, StringComparison.OrdinalIgnoreCase) != -1;
         }
 
-        public static string ExpandEnvironmentVariables(this string path, string installDirectory)
+        public static string ExpandEnvironmentVariables(this string path, string installDirectory, bool skipSlashes = false)
         {
             path = path.Replace("{InstallDir}", installDirectory);
-            path = path.Replace('/', Path.DirectorySeparatorChar);
+
+            if (!skipSlashes)
+                path = path.Replace('/', Path.DirectorySeparatorChar);
 
             SpecialFolder[] supportedSpecialFolders = new SpecialFolder[]
             {

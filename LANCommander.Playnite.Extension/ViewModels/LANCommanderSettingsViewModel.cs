@@ -128,6 +128,7 @@ namespace LANCommander.PlaynitePlugin
                     InstallDirectory = settings.InstallDirectory;
                     PlayerName = settings.PlayerName;
                     PlayerAlias = settings.PlayerAlias;
+                    DisplayName = settings.PlayerAlias;
                     PlayerAvatarUrl = settings.PlayerAvatarUrl;
                     OfflineModeEnabled = settings.OfflineModeEnabled;
                 }

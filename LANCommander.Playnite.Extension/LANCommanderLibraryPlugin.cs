@@ -81,6 +81,8 @@ namespace LANCommander.PlaynitePlugin
             };
             #endregion
 
+            ValidateConnection();
+
             Settings.Load();
 
             DownloadQueue = new DownloadQueueController(this);

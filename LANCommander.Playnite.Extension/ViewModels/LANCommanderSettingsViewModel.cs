@@ -73,6 +73,9 @@ namespace LANCommander.PlaynitePlugin
             }
             set
             {
+                if (PlayerAlias != value)
+                    PlayerAlias = value;
+
                 displayName = value;
                 OnPropertyChanged();
             }

@@ -388,7 +388,7 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Change Player Name",
                         Action = (nameChangeArgs) =>
                         {
-                            var oldName = Settings.PlayerAlias;
+                            var oldName = Settings.DisplayName;
 
                             var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", oldName);
 
@@ -402,7 +402,7 @@ namespace LANCommander.PlaynitePlugin
 
                                     var alias = LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
 
-                                    Settings.PlayerAlias = alias;
+                                    Settings.DisplayName = alias;
 
                                     SavePluginSettings(Settings);
                                 }
@@ -481,9 +481,9 @@ namespace LANCommander.PlaynitePlugin
                 var gameId = Guid.Parse(args.Game.GameId);
                 var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, gameId);
 
-                if (currentGamePlayerAlias != Settings.PlayerAlias)
+                if (currentGamePlayerAlias != Settings.DisplayName)
                 {
-                    RunNameChangeScript(args.Game.InstallDirectory, gameId, currentGamePlayerAlias, Settings.PlayerAlias);
+                    RunNameChangeScript(args.Game.InstallDirectory, gameId, currentGamePlayerAlias, Settings.DisplayName);
                 }
 
                 if (!Settings.OfflineModeEnabled)
@@ -568,7 +568,7 @@ namespace LANCommander.PlaynitePlugin
         {
             Logger.Trace("Showing name change dialog!");
 
-            var oldName = Settings.PlayerAlias;
+            var oldName = Settings.DisplayName;
 
             var result = PlayniteApi.Dialogs.SelectString("Enter your new player name", "Enter Name", oldName);
 
@@ -587,9 +587,9 @@ namespace LANCommander.PlaynitePlugin
                 }
                 else
                 {
-                    Settings.PlayerAlias = result.SelectedString;
+                    Settings.DisplayName = result.SelectedString;
 
-                    Logger.Trace($"New player name of \"{Settings.PlayerAlias}\" has been set!");
+                    Logger.Trace($"New player name of \"{Settings.DisplayName}\" has been set!");
 
                     Logger.Trace("Saving plugin settings!");
                     SavePluginSettings(Settings);

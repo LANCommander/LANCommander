@@ -166,6 +166,10 @@ namespace LANCommander.Services
 
                 server = await serverService.Get(serverId);
 
+                // Don't start the server if it's already started
+                if (GetStatus(server) != ServerProcessStatus.Stopped)
+                    return;
+
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
 
                 Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);

@@ -116,4 +116,11 @@ Packages:
       - 'Fixed: Downloaded saves now get extracted to the correct temporary directory'
       - 'Fixed: Forward slashes no longer get converted to backslashes in action arguments'
       - 'Added: More logging for the download queue to assist in troubleshooting'
+  - Version: 0.5.5
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-01-27
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.5/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_5.pext
+    Changelog:
+      - 'Fixed: Name now loads properly on Playnite start'
+      - 'Fixed: Properly fallback name alias and username'
 

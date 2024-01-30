@@ -1,4 +1,6 @@
-﻿namespace LANCommander.Models
+﻿using NLog.Targets;
+
+namespace LANCommander.Models
 {
     public enum LANCommanderTheme
     {
@@ -23,6 +25,7 @@
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
         public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
         public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
+        public LANCommanderLogSettings Logs { get; set; } = new LANCommanderLogSettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
         public DriveInfo[] GetDrives()
@@ -96,5 +99,12 @@
     public class LANCommanderUpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
+    }
+
+    public class LANCommanderLogSettings
+    {
+        public string StoragePath { get; set; } = "{basedir}/Logs";
+        public FileArchivePeriod ArchiveEvery { get; set; } = FileArchivePeriod.Day;
+        public int MaxArchiveFiles { get; set; } = 10;
     }
 }

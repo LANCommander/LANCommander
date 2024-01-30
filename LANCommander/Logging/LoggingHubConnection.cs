@@ -4,24 +4,24 @@ using NLog;
 
 namespace LANCommander.Logging
 {
-    public class GameServerHubConnection : IAsyncDisposable
+    public class LoggingHubConnection : IAsyncDisposable
     {
         private HubConnection? HubConnection;
         private string HubUrl;
 
-        public GameServerHubConnection(string hubUrl)
+        public LoggingHubConnection(string hubUrl)
         {
             var settings = SettingService.GetSettings();
 
             HubUrl = hubUrl.Replace("${gdc:PortNumber}", settings.Port.ToString());
         }
 
-        public async Task Log(Guid serverId, string message)
+        public async Task Log(string message)
         {
             await EnsureConnection();
 
             if (HubConnection != null)
-                await HubConnection.SendAsync("Log", serverId, message);
+                await HubConnection.SendAsync("Log", message);
         }
 
         public async Task EnsureConnection()
@@ -29,8 +29,8 @@ namespace LANCommander.Logging
             if (HubConnection == null)
             {
                 HubConnection = new HubConnectionBuilder()
-                .WithUrl(HubUrl)
-                .Build();
+                    .WithUrl(HubUrl)
+                    .Build();
 
                 await HubConnection.StartAsync();
             }

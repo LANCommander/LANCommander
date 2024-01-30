@@ -1,0 +1,57 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@using XtermBlazor
+@inject NavigationManager NavigationManager
+
+<Xterm @ref="Console" Options="ConsoleOptions" AddonIds="ConsoleAddons" />
+
+@code {
+    Xterm? Console;
+    HubConnection? HubConnection;
+
+    TerminalOptions ConsoleOptions = new TerminalOptions
+    {
+        CursorBlink = true,
+        CursorStyle = CursorStyle.Block
+    };
+
+    string[] ConsoleAddons = new string[]
+    {
+        "xterm-addon-fit"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Connect();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(100);
+
+            if (Console != null)
+                await Console.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
+        }
+    }
+
+    async Task Connect()
+    {
+        HubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/logging"))
+            .Build();
+
+        HubConnection.On<string>("Log", (message) =>
+        {
+            Console?.WriteLine(message);
+        });
+
+        await HubConnection.StartAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (HubConnection is not null)
+            await HubConnection.DisposeAsync();
+    }
+}

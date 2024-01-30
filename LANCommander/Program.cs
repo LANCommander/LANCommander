@@ -12,6 +12,7 @@ using Hangfire;
 using NLog;
 using LANCommander.Services.MediaGrabbers;
 using Microsoft.Data.Sqlite;
+using LANCommander.Extensions;
 
 namespace LANCommander
 {
@@ -199,7 +200,14 @@ namespace LANCommander
                 options.Limits.MaxRequestBodySize = 1024 * 1024 * 150;
             });
 
+            #region Configure NLog
+            NLog.GlobalDiagnosticsContext.Set("StoragePath", settings.Logs.StoragePath);
+            NLog.GlobalDiagnosticsContext.Set("ArchiveEvery", settings.Logs.ArchiveEvery.GetDisplayName());
+            NLog.GlobalDiagnosticsContext.Set("MaxArchiveFiles", settings.Logs.MaxArchiveFiles.ToString());
+            NLog.GlobalDiagnosticsContext.Set("PortNumber", settings.Port.ToString());
+
             builder.Host.UseNLog();
+            #endregion
 
             Logger.Debug("Building Application");
             var app = builder.Build();
@@ -231,6 +239,7 @@ namespace LANCommander
 
             app.UseMvcWithDefaultRoute();
 
+            app.MapHub<LoggingHub>("/hubs/logging");
             app.MapHub<GameServerHub>("/hubs/gameserver");
 
             Logger.Debug("Registering Endpoints");
@@ -320,6 +329,8 @@ namespace LANCommander
                     Logger.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
                 }
             }
+
+            var targets = NLog.LogManager.Configuration.AllTargets;
 
             app.Run();
         }

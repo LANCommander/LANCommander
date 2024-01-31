@@ -73,6 +73,9 @@ namespace LANCommander.PlaynitePlugin
             }
             set
             {
+                if (PlayerAlias != value)
+                    PlayerAlias = value;
+
                 displayName = value;
                 OnPropertyChanged();
             }
@@ -125,6 +128,7 @@ namespace LANCommander.PlaynitePlugin
                     InstallDirectory = settings.InstallDirectory;
                     PlayerName = settings.PlayerName;
                     PlayerAlias = settings.PlayerAlias;
+                    DisplayName = settings.PlayerAlias;
                     PlayerAvatarUrl = settings.PlayerAvatarUrl;
                     OfflineModeEnabled = settings.OfflineModeEnabled;
                 }

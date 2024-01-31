@@ -38,6 +38,7 @@
         @context.Game?.Title
     </PropertyColumn>
     <PropertyColumn Property="s => s.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
+    <PropertyColumn Property="s => s.Port" Sortable Hidden="@(Picker.IsColumnHidden("Port"))" />
     <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     <PropertyColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
     <PropertyColumn Property="s => s.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />

@@ -28,29 +28,29 @@
     </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AntDesign" Version="0.17.2" />
-    <PackageReference Include="AntDesign.Charts" Version="0.5.0" />
+    <PackageReference Include="AntDesign" Version="0.17.4" />
+    <PackageReference Include="AntDesign.Charts" Version="0.5.1" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
     <PackageReference Include="Blazor-ApexCharts" Version="1.0.1" />
     <PackageReference Include="BlazorMonaco" Version="3.1.0" />
-    <PackageReference Include="ByteSize" Version="2.1.1" />
+    <PackageReference Include="ByteSize" Version="2.1.2" />
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.5" />
     <PackageReference Include="CXuesong.MW.WikiClientLibrary" Version="0.7.5" />
-    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.7" />
-    <PackageReference Include="Hangfire.Core" Version="1.8.7" />
-    <PackageReference Include="Hangfire.InMemory" Version="0.6.0" />
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.9" />
+    <PackageReference Include="Hangfire.Core" Version="1.8.9" />
+    <PackageReference Include="Hangfire.InMemory" Version="0.7.0" />
     <PackageReference Include="IGDB" Version="3.0.0" />
     <PackageReference Include="IPXRelayDotNet" Version="1.1.0" />
     <PackageReference Include="Markdig" Version="0.34.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="8.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -62,7 +62,7 @@
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.0" />
     <PackageReference Include="NLog" Version="5.2.8" />
     <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.8" />
-    <PackageReference Include="Octokit" Version="9.1.0" />
+    <PackageReference Include="Octokit" Version="9.1.1" />
     <PackageReference Include="Razor.Templating.Core" Version="1.9.0" />
     <PackageReference Include="RegParserDotNet" Version="1.1.1" />
     <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
@@ -70,7 +70,7 @@
     <PackageReference Include="swashbuckle" Version="5.6.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
-    <PackageReference Include="XtermBlazor" Version="1.10.0" />
+    <PackageReference Include="XtermBlazor" Version="1.10.1" />
     <PackageReference Include="YamlDotNet" Version="5.4.0" />
   </ItemGroup>
 

@@ -280,6 +280,6 @@
     private async Task OnPortNumberChanged(int value)
     {
         if (value > 0)
-            PortInUse = await ServerService.Get(s => s.Port == value).AnyAsync();
+            PortInUse = await ServerService.Get(s => s.Port == value && s.Id != Id).AnyAsync();
     }
 }

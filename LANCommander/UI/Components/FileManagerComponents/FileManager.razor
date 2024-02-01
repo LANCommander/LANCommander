@@ -129,7 +129,7 @@
                    OnRow="OnRow"
                    SelectedRowsChanged="SelectedChanged"
                    Size="@TableSize.Small">
-                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" Hidden="!EntrySelectable.Invoke(context)" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
+                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" Hidden="EntrySelectable == null" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
                 <Column TData="string" Width="32">
                     @if (context is FileManagerFile)
                     {

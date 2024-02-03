@@ -145,6 +145,9 @@ namespace LANCommander.PlaynitePlugin
 
             if (!DownloadQueue.Items.Any(i => i.Game.Id == game.Id))
             {
+                if (String.IsNullOrWhiteSpace(game.CoverImage))
+                    game.CoverImage = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "default_cover.png");
+
                 DownloadQueue.Items.Add(new DownloadQueueItem()
                 {
                     CoverPath = Plugin.PlayniteApi.Database.GetFullFilePath(game.CoverImage),

@@ -3,18 +3,17 @@
 
 # make our folders for LANCommander
 mkdir -p \
-    /config/LANCommander/{Uploads,Updates,Saves,Media,Logs,Backups,Icon}
+    /config/{Uploads,Updates,Saves,Media,Logs,Backups,Icon}
 
 # files needed by LANCommander
-if [[ ! -f /config/LANCommander/Settings.yml ]]; then
-    cp /defaults/Settings.yml /config/LANCommander/Settings.yml
+if [[ ! -f /config/Settings.yml ]]; then
+    cp /defaults/Settings.yml /config/Settings.yml
 fi
-if [[ ! -f /config/LANCommander/LANCommander.db ]]; then
-    sqlite3 /config/LANCommander/LANCommander.db "VACUUM;"
-    #touch /config/LANCommander/LANCommander.db
+if [[ ! -f /config/LANCommander.db ]]; then
+    sqlite3 /config/LANCommander.db "VACUUM;"
 fi
-if [[ ! -f /config/LANCommander/internal.log ]]; then
-    touch /config/LANCommander/internal.log
+if [[ ! -f /config/internal.log ]]; then
+    touch /config/internal.log
 fi
 
 # permissions

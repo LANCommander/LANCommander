@@ -30,16 +30,16 @@ RUN \
     chmod +x /app/LANCommander/LANCommander && \
     ls -alh /app/LANCommander && \
   echo "**** setup symlinks ****" && \
-    ln -s /config/LANCommander/Uploads/ /app/LANCommander/Uploads && \
-    ln -s /config/LANCommander/Updates/ /app/LANCommander/Updates && \
-    ln -s /config/LANCommander/Saves/ /app/LANCommander/Saves && \
-    ln -s /config/LANCommander/Media/ /app/LANCommander/Media && \
-    ln -s /config/LANCommander/Logs/ /app/LANCommander/Logs && \
-    ln -s /config/LANCommander/Backups/ /app/LANCommander/Backups && \
-    ln -s /config/LANCommander/Icon/ /app/LANCommander/Icon && \
-    ln -s /config/LANCommander/Settings.yml /app/LANCommander/Settings.yml && \
-    ln -s /config/LANCommander/LANCommander.db /app/LANCommander/LANCommander.db && \
-    ln -s /config/LANCommander/internal.log /app/LANCommander/internal.log && \
+    ln -s /config/Uploads/ /app/LANCommander/Uploads && \
+    ln -s /config/Updates/ /app/LANCommander/Updates && \
+    ln -s /config/Saves/ /app/LANCommander/Saves && \
+    ln -s /config/Media/ /app/LANCommander/Media && \
+    ln -s /config/Logs/ /app/LANCommander/Logs && \
+    ln -s /config/Backups/ /app/LANCommander/Backups && \
+    ln -s /config/Icon/ /app/LANCommander/Icon && \
+    ln -s /config/Settings.yml /app/LANCommander/Settings.yml && \
+    ln -s /config/LANCommander.db /app/LANCommander/LANCommander.db && \
+    ln -s /config/internal.log /app/LANCommander/internal.log && \
   echo "**** cleanup ****" && \
   apt-get -y autoremove && \
   apt-get clean && \

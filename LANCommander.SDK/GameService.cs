@@ -211,8 +211,15 @@ namespace LANCommander.SDK
                 {
                     var localPath = Path.Combine(installDirectory, file);
 
-                    if (File.Exists(localPath))
-                        File.Delete(localPath);
+                    try
+                    {
+                        if (File.Exists(localPath))
+                            File.Delete(localPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogWarning(ex, "Could not remove file {LocalPath}", localPath);
+                    }
                 }
 
                 Logger?.LogTrace("Attempting to delete any empty directories");

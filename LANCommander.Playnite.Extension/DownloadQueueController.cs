@@ -307,9 +307,17 @@ namespace LANCommander.PlaynitePlugin
             Plugin.SaveController.Download(gameId, installDirectory);
 
             ChangeCurrentItemStatus(DownloadQueueItemStatus.RunningScripts);
-            RunInstallScript(game);
-            RunNameChangeScript(game);
-            RunKeyChangeScript(game);
+
+            try
+            {
+                RunInstallScript(game);
+                RunNameChangeScript(game);
+                RunKeyChangeScript(game);
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Failed to execute post-install scripts");
+            }
 
             DownloadQueue.CurrentItem.CompletedOn = DateTime.Now;
             DownloadQueue.CurrentItem.TotalDownloaded = DownloadQueue.CurrentItem.Size;

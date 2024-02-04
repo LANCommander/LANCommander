@@ -29,6 +29,7 @@ namespace LANCommander.SDK
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
         public const string PlayerAliasFilename = "PlayerAlias";
+        public const string KeyFilename = "Key";
 
         private TrackableStream DownloadStream;
         private IReader Reader;
@@ -401,6 +402,21 @@ namespace LANCommander.SDK
         public static void UpdatePlayerAlias(string installDirectory, Guid gameId, string newName)
         {
             File.WriteAllText(GameService.GetMetadataFilePath(installDirectory, gameId, GameService.PlayerAliasFilename), newName);
+        }
+
+        public static string GetCurrentKey(string installDirectory, Guid gameId)
+        {
+            var keyFilePath = GameService.GetMetadataFilePath(installDirectory, gameId, GameService.KeyFilename);
+
+            if (File.Exists(keyFilePath))
+                return File.ReadAllText(keyFilePath);
+            else
+                return String.Empty;
+        }
+
+        public static void UpdateCurrentKey(string installDirectory, Guid gameId, string newKey)
+        {
+            File.WriteAllText(GameService.GetMetadataFilePath(installDirectory, gameId, GameService.KeyFilename), newKey);
         }
     }
 }

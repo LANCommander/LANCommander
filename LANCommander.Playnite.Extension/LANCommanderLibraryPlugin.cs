@@ -482,13 +482,22 @@ namespace LANCommander.PlaynitePlugin
             {
                 var gameId = Guid.Parse(args.Game.GameId);
                 var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, gameId);
+                var currentGameKey = GameService.GetCurrentKey(args.Game.InstallDirectory, gameId);
 
                 if (currentGamePlayerAlias != Settings.DisplayName)
                 {
                     RunNameChangeScript(args.Game.InstallDirectory, gameId, currentGamePlayerAlias, Settings.DisplayName);
                 }
 
-                if (!Settings.OfflineModeEnabled)
+                if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
+                {
+                    var allocatedKey = LANCommanderClient.Games.GetAllocatedKey(gameId);
+
+                    if (currentGameKey != allocatedKey)
+                        RunKeyChangeScript(args.Game.InstallDirectory, gameId, allocatedKey);
+                }
+
+                if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
                 {
                     LANCommanderClient.Games.StartPlaySession(gameId);
 
@@ -801,6 +810,8 @@ namespace LANCommander.PlaynitePlugin
                 script.AddVariable("AllocatedKey", key);
 
                 script.UseFile(path);
+
+                GameService.UpdateCurrentKey(installDirectory, gameId, key);
 
                 return script.Execute();
             }

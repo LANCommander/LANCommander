@@ -464,6 +464,8 @@ namespace LANCommander.PlaynitePlugin
 
                 script.UseFile(path);
 
+                GameService.UpdateCurrentKey(installDirectory, game.Id, key);
+
                 return script.Execute();
             }
 

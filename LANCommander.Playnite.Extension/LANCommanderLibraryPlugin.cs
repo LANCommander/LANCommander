@@ -22,6 +22,7 @@ using LANCommander.PlaynitePlugin.Views;
 using LANCommander.PlaynitePlugin.Models;
 using LANCommander.PlaynitePlugin.Controls;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -338,11 +339,17 @@ namespace LANCommander.PlaynitePlugin
                     {
                         foreach (var action in server.Actions)
                         {
+                            var serverHost = String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host;
+                            var serverIp = Dns.GetHostEntry(serverHost).AddressList.FirstOrDefault();
+
                             var variables = new Dictionary<string, string>()
                             {
-                                { "ServerHost", String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host },
+                                { "ServerHost", serverHost },
                                 { "ServerPort", server.Port.ToString() }
                             };
+
+                            if (serverIp != null)
+                                variables["ServerIP"] = serverIp.ToString();
 
                             yield return new AutomaticPlayController(args.Game)
                             {

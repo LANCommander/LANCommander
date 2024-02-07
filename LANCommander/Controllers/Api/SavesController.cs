@@ -21,6 +21,7 @@ namespace LANCommander.Controllers.Api
         private readonly GameService GameService;
         private readonly GameSaveService GameSaveService;
         private readonly UserManager<User> UserManager;
+        private readonly LANCommanderSettings Settings;
 
         public SavesController(IMapper mapper, GameService gameService, GameSaveService gameSaveService, UserManager<User> userManager)
         {
@@ -28,6 +29,7 @@ namespace LANCommander.Controllers.Api
             GameService = gameService;
             GameSaveService = gameSaveService;
             UserManager = userManager;
+            Settings = SettingService.GetSettings();
         }
 
         [HttpGet]
@@ -120,6 +122,14 @@ namespace LANCommander.Controllers.Api
             using (var stream = System.IO.File.Create(save.GetUploadPath()))
             {
                 await file.CopyToAsync(stream);
+            }
+
+            if (Settings.UserSaves.MaxSaves > 0)
+            {
+                var saves = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == game.Id).OrderByDescending(gs => gs.CreatedOn).Skip(Settings.UserSaves.MaxSaves).ToListAsync();
+
+                foreach (var extraSave in saves)
+                    await GameSaveService.Delete(extraSave);
             }
 
             return Ok(Mapper.Map<SDK.Models.GameSave>(save));

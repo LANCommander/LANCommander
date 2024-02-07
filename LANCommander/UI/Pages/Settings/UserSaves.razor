@@ -17,6 +17,10 @@
             <AntDesign.InputNumber @bind-Value="context.UserSaves.MaxSize" Min="1" DefaultValue="25" />
         </FormItem>
 
+        <FormItem Label="Maximum Number of Saves">
+            <AntDesign.InputNumber @bind-Value="context.UserSaves.MaxSize" Min="0" DefaultValue="0" />
+        </FormItem>
+
         <FormItem>
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </FormItem>

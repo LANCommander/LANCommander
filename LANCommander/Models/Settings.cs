@@ -65,6 +65,7 @@ namespace LANCommander.Models
     {
         public string StoragePath { get; set; } = "Saves";
         public int MaxSize { get; set; } = 25;
+        public int MaxSaves { get; set; } = 0;
     }
 
     public class LANCommanderArchiveSettings

@@ -42,6 +42,17 @@ namespace LANCommander.Controllers.Api
             return Mapper.Map<SDK.Models.GameSave>(await GameSaveService.Get(id));
         }
 
+        [HttpGet("Latest/{gameId}")]
+        public async Task<SDK.Models.GameSave> Latest(Guid gameId)
+        {
+            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+            if (user == null)
+                return null;
+
+            return Mapper.Map<SDK.Models.GameSave>(await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).OrderByDescending(gs => gs.CreatedOn).FirstOrDefaultAsync());
+        }
+
         [HttpGet("DownloadLatest/{gameId}")]
         public async Task<IActionResult> DownloadLatest(Guid gameId)
         {

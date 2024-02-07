@@ -510,8 +510,13 @@ namespace LANCommander.PlaynitePlugin
 
                     try
                     {
-                        SaveController = new LANCommanderSaveController(this, args.Game);
-                        SaveController.Download(gameId);
+                        var latestSave = LANCommanderClient.Saves.GetLatest(gameId);
+
+                        if (latestSave != null && latestSave.CreatedOn > args.Game.LastActivity)
+                        {
+                            SaveController = new LANCommanderSaveController(this, args.Game);
+                            SaveController.Download(gameId);
+                        }
                     }
                     catch (Exception ex)
                     {

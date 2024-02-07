@@ -58,9 +58,15 @@ namespace LANCommander.SDK
         {
             return Client.DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);
         }
+
         public string DownloadLatest(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return Client.DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
+        }
+
+        public GameSave GetLatest(Guid gameId)
+        {
+            return Client.GetRequest<GameSave>($"/api/Saves/Latest/{gameId}");
         }
 
         public GameSave Upload(Guid gameId, byte[] data)

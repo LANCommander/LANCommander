@@ -3,6 +3,7 @@ using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Controllers.Api
 {
@@ -30,6 +31,11 @@ namespace LANCommander.Controllers.Api
 
             if (game == null || user == null)
                 return BadRequest();
+
+            var activeSessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.End == null).ToListAsync();
+
+            foreach (var activeSession in activeSessions)
+                await PlaySessionService.EndSession(activeSession.Game.Id, activeSession.UserId);
 
             await PlaySessionService.StartSession(game.Id, user.Id);
 

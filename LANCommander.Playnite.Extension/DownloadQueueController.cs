@@ -344,6 +344,8 @@ namespace LANCommander.PlaynitePlugin
 
             DownloadQueue.CurrentItem.Game.IsInstalled = true;
             DownloadQueue.CurrentItem.Game.IsInstalling = false;
+            DownloadQueue.CurrentItem.Game.LastActivity = DateTime.Now;
+            DownloadQueue.CurrentItem.Game.Added = DateTime.Now;
 
             Plugin.PlayniteApi.Database.Games.Update(DownloadQueue.CurrentItem.Game);
 

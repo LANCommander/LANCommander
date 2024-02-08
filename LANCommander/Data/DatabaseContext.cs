@@ -36,6 +36,8 @@ namespace LANCommander.Data
             builder.ConfigureBaseRelationships<ServerConsole>();
             builder.ConfigureBaseRelationships<ServerHttpPath>();
             builder.ConfigureBaseRelationships<Tag>();
+            builder.ConfigureBaseRelationships<Message>();
+            builder.ConfigureBaseRelationships<Channel>();
 
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
@@ -229,6 +231,23 @@ namespace LANCommander.Data
                     rc => rc.HasOne<Role>().WithMany().HasForeignKey("RoleId")
                 );
             #endregion
+
+            #region Chat Relationships
+            builder.Entity<Channel>()
+                .HasMany(c => c.Messages)
+                .WithOne(m => m.Channel)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Channel>()
+                .HasMany(c => c.Users)
+                .WithMany(u => u.Channels)
+                .UsingEntity<Dictionary<string, object>>(
+                    "ChannelUsers",
+                    cu => cu.HasOne<User>().WithMany().HasForeignKey("UserId"),
+                    cu => cu.HasOne<Channel>().WithMany().HasForeignKey("ChannelId")
+                );
+            #endregion
         }
 
         public DbSet<Game>? Games { get; set; }
@@ -254,5 +273,8 @@ namespace LANCommander.Data
         public DbSet<Redistributable>? Redistributables { get; set; }
 
         public DbSet<Media>? Media { get; set; }
+
+        public DbSet<Message>? Messages { get; set; }
+        public DbSet<Channel>? Channels { get; set; }
     }
 }

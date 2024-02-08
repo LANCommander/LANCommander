@@ -183,6 +183,10 @@ namespace LANCommander
             builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
             builder.Services.AddScoped<WikiService>();
             builder.Services.AddScoped<UpdateService>();
+            builder.Services.AddScoped<MessageService>();
+            builder.Services.AddScoped<ChannelService>();
+
+            builder.Services.AddSingleton<ChatService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
@@ -241,6 +245,7 @@ namespace LANCommander
 
             app.MapHub<LoggingHub>("/hubs/logging");
             app.MapHub<GameServerHub>("/hubs/gameserver");
+            app.MapHub<ChatHub>("/hubs/chat");
 
             Logger.Debug("Registering Endpoints");
             app.UseEndpoints(endpoints =>

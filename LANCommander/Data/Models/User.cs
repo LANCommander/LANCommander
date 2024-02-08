@@ -51,6 +51,10 @@ namespace LANCommander.Data.Models
 
         [JsonIgnore]
         public virtual ICollection<Media>? Media { get; set; }
+        [JsonIgnore]
+        public virtual ICollection<Message>? Messages { get; set; }
+        [JsonIgnore]
+        public virtual ICollection<Channel>? Channels { get; set; }
 
         [JsonIgnore]
         public bool Approved { get; set; }

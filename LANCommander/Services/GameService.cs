@@ -446,7 +446,7 @@ namespace LANCommander.Services
                 }
 
                 if (manifest.Media != null)
-                    foreach (var manifestMedia in manifest.Media.Where(mm => !game.Media.Any(m => m.Id != mm.Id)))
+                    foreach (var manifestMedia in manifest.Media.Where(mm => !game.Media.Any(m => m.Id == mm.Id)))
                     {
                         var media = new Media()
                         {

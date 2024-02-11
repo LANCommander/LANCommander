@@ -6,6 +6,7 @@
             <Style x:Key="BaseTextBlockStyle" TargetType="TextBlock" />
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Localization/en_US.xaml" />
+                <ResourceDictionary Source="Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

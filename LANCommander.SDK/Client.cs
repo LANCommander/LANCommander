@@ -22,7 +22,7 @@ namespace LANCommander.SDK
 
         private bool Connected = false;
 
-        public string BaseUrl;
+        public Uri BaseUrl;
         public string DefaultInstallDirectory;
 
         public readonly GameService Games;
@@ -45,7 +45,7 @@ namespace LANCommander.SDK
 
         public Client(string baseUrl, string defaultInstallDirectory)
         {
-            BaseUrl = baseUrl;
+            BaseUrl = new Uri(baseUrl);
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory);
@@ -54,13 +54,13 @@ namespace LANCommander.SDK
             Actions = new ActionService(this);
             Profile = new ProfileService(this);
 
-            if (!String.IsNullOrWhiteSpace(BaseUrl))
+            if (!String.IsNullOrWhiteSpace(baseUrl))
                 ApiClient = new RestClient(BaseUrl);
         }
 
         public Client(string baseUrl, string defaultInstallDirectory, ILogger logger)
         {
-            BaseUrl = baseUrl;
+            BaseUrl = new Uri(baseUrl);
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory, logger);
@@ -68,8 +68,9 @@ namespace LANCommander.SDK
             Redistributables = new RedistributableService(this, logger);
             Actions = new ActionService(this);
             Profile = new ProfileService(this, logger);
+            Chat = new ChatService(this);
 
-            if (!String.IsNullOrWhiteSpace(BaseUrl))
+            if (!String.IsNullOrWhiteSpace(baseUrl))
                 ApiClient = new RestClient(BaseUrl);
 
             Logger = logger;
@@ -133,7 +134,7 @@ namespace LANCommander.SDK
 
             try
             {
-                client.DownloadFileTaskAsync(new Uri($"{ApiClient.BaseUrl}{route}"), tempFile).Wait();
+                client.DownloadFileTaskAsync(new Uri(BaseUrl, route), tempFile).Wait();
             }
             catch (Exception ex)
             {
@@ -154,7 +155,7 @@ namespace LANCommander.SDK
 
             client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
 
-            var ws = client.OpenRead(new Uri($"{ApiClient.BaseUrl}{route}"));
+            var ws = client.OpenRead(new Uri(BaseUrl, route));
 
             return new TrackableStream(ws, true, Convert.ToInt64(client.ResponseHeaders["Content-Length"]));
         }
@@ -325,18 +326,18 @@ namespace LANCommander.SDK
 
         public void UseServerAddress(string address)
         {
-            BaseUrl = address;
+            BaseUrl = new Uri(address);
             ApiClient = new RestClient(BaseUrl);
         }
 
         public string GetServerAddress()
         {
-            return BaseUrl;
+            return BaseUrl.ToString();
         }
 
         public string GetMediaUrl(Media media)
         {
-            return (new Uri(ApiClient.BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
+            return (new Uri(BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
         }
 
         public Settings GetSettings()

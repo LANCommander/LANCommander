@@ -3,6 +3,7 @@
 @inject MediaService MediaService
 @inject ModalService ModalService
 @inject IMessageService MessageService
+@inject NavigationManager NavigationManager
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%" Class="media-editor">
     <SpaceItem>
@@ -28,7 +29,16 @@
                         </label>
                     </SpaceItem>
                     <SpaceItem>
-                        <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
+                        @if (String.IsNullOrWhiteSpace(Settings.Media.SteamGridDbApiKey))
+                        {
+                            <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
+                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
+                            </Popconfirm>
+                        }
+                        else
+                        {
+                            <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
+                        }
                     </SpaceItem>
                     <SpaceItem>
                         <Popconfirm OnConfirm="() => RemoveMedia(context)" Title="Are you sure you want to delete this media?">
@@ -170,5 +180,10 @@
         Values.Remove(media);
 
         await MediaService.Delete(media);
+    }
+
+    private void NavigateToSettings()
+    {
+        NavigationManager.NavigateTo("/Settings/Media", true);
     }
 }

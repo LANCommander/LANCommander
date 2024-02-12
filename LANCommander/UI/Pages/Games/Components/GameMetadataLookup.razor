@@ -7,6 +7,7 @@
 @inject GenreService GenreService
 @inject TagService TagService
 @inject NavigationManager NavigationManager
+@inject IMessageService MessageService
 
 @{
     RenderFragment Footer =
@@ -80,54 +81,64 @@ else
 
     private async Task SearchForGame(string title)
     {
-        Loading = true;
-        ModalVisible = true;
-
-        int limit = 10;
-
-        string[] fields = new string[]
+        try
         {
+            Loading = true;
+            ModalVisible = true;
+
+            int limit = 10;
+
+            string[] fields = new string[]
+            {
             "involved_companies.developer",
             "involved_companies.publisher",
             "involved_companies.company.name"
-        };
+            };
 
-        var results = await IGDBService.Search(title, limit, Offset, fields);
+            var results = await IGDBService.Search(title, limit, Offset, fields);
 
-        MoreResults = results.Count() == limit;
+            MoreResults = results.Count() == limit;
 
-        Loading = false;
+            Loading = false;
 
-        if (results == null)
-            Results = new List<Game>();
-        else
-        {
-            Results.AddRange(results.Select(r =>
+            if (results == null)
+                Results = new List<Game>();
+            else
             {
-                var result = new Game()
+                Results.AddRange(results.Select(r =>
                 {
-                    IGDBId = r.Id.GetValueOrDefault(),
-                    Title = r.Name,
-                    ReleasedOn = r.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
-                    Developers = new List<Company>(),
-                    Publishers = new List<Company>()
-                };
+                    var result = new Game()
+                        {
+                            IGDBId = r.Id.GetValueOrDefault(),
+                            Title = r.Name,
+                            ReleasedOn = r.FirstReleaseDate.GetValueOrDefault().UtcDateTime,
+                            Developers = new List<Company>(),
+                            Publishers = new List<Company>()
+                        };
 
-                if (r.InvolvedCompanies != null && r.InvolvedCompanies.Values != null)
-                {
-                    result.Developers = r.InvolvedCompanies.Values.Where(c => c.Developer.HasValue && c.Developer.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
+                    if (r.InvolvedCompanies != null && r.InvolvedCompanies.Values != null)
                     {
-                        Name = c.Company.Value.Name
-                    }).ToList();
+                        result.Developers = r.InvolvedCompanies.Values.Where(c => c.Developer.HasValue && c.Developer.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
+                            {
+                                Name = c.Company.Value.Name
+                            }).ToList();
 
-                    result.Publishers = r.InvolvedCompanies.Values.Where(c => c.Publisher.HasValue && c.Publisher.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
-                    {
-                        Name = c.Company.Value.Name
-                    }).ToList();
-                }
+                        result.Publishers = r.InvolvedCompanies.Values.Where(c => c.Publisher.HasValue && c.Publisher.GetValueOrDefault() && c.Company != null && c.Company.Value != null).Select(c => new Company()
+                            {
+                                Name = c.Company.Value.Name
+                            }).ToList();
+                    }
 
-                return result;
-            }));
+                    return result;
+                }));
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred when retrieving IGDB metadata");
+
+            Loading = false;
+            ModalVisible = false;
         }
     }
 

@@ -68,7 +68,6 @@ namespace LANCommander.SDK
             Redistributables = new RedistributableService(this, logger);
             Actions = new ActionService(this);
             Profile = new ProfileService(this, logger);
-            Chat = new ChatService(this);
 
             if (!String.IsNullOrWhiteSpace(baseUrl))
                 ApiClient = new RestClient(BaseUrl);

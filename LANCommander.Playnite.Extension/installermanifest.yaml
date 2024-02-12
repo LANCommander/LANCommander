@@ -123,4 +123,13 @@ Packages:
     Changelog:
       - 'Fixed: Name now loads properly on Playnite start'
       - 'Fixed: Properly fallback name alias and username'
+  - Version: 0.5.6
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-02-11
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.6/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_6.pext
+    Changelog:
+      - 'Changed: Game saves are only pulled before starting a game if the save is newer than the last time the game was played **OR** if the save is newer than when the game was installed.'
+      - 'Fixed: Games with no defined cover media will no longer throw a "Path2" error and will show default cover art'
+      - 'Fixed: Download queue no longer locks up if there is an error in a post-install script. (this was most commonly exhibited by dismissing a UAC prompt when a script asks for elevation)'
+      - 'Added: The Playnite extension now keeps track of what key was allocated last. A check is done with the server on start of a game to validate the correct key is being used. If the key differs, the proper allocated key is grabbed and fed to the key change script.'
 

@@ -22,6 +22,7 @@ namespace LANCommander.PlaynitePlugin.Models
         public DateTime QueuedOn { get; set; }
         public DateTime? CompletedOn { get; set; }
         public bool InProgress { get; set; }
+        public bool IsUpdate { get; set; } = false;
 
         private bool progressIndeterminate { get; set; }
         public bool ProgressIndeterminate

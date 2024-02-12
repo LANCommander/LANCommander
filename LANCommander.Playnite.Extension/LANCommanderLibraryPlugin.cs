@@ -506,6 +506,23 @@ namespace LANCommander.PlaynitePlugin
 
                 if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
                 {
+                    // This would be better served by some metadata
+                    if (args.Game.Name.EndsWith(" - Update Available"))
+                    {
+                        var title = args.Game.Name.Replace(" - Update Available", "");
+                        var updateMessage = $"An update for {title} is available. Would you like to update now?";
+                        var result = PlayniteApi.Dialogs.ShowMessage(updateMessage, "Update Available", MessageBoxButton.YesNo);
+
+                        if (result == MessageBoxResult.Yes)
+                        {
+                            args.CancelStartup = true;
+
+                            PlayniteApi.InstallGame(args.Game.Id);
+
+                            return;
+                        }
+                    }
+
                     LANCommanderClient.Games.StartPlaySession(gameId);
 
                     try
@@ -671,6 +688,14 @@ namespace LANCommander.PlaynitePlugin
             game.Description = manifest.Description;
             game.ReleaseDate = new ReleaseDate(manifest.ReleasedOn);
             game.Notes = manifest.Notes;
+            #endregion
+
+            #region Versioning
+            if (game.IsInstalled && game.Version != manifest.Version)
+                if (!game.Name.EndsWith(" - Update Available"))
+                    game.Name += " - Update Available";
+            else
+                game.Name = manifest.Title;
             #endregion
 
             #region Actions

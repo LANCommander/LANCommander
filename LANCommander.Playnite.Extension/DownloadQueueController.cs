@@ -152,13 +152,15 @@ namespace LANCommander.PlaynitePlugin
                 {
                     CoverPath = Plugin.PlayniteApi.Database.GetFullFilePath(game.CoverImage),
                     Game = game,
-                    Title = game.Name,
+                    Title = gameInfo.Title,
                     QueuedOn = DateTime.Now,
+                    IsUpdate = game.IsInstalled && game.Version != gameInfo.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version
                 });
 
                 if (DownloadQueue.Items.Count == 1 && DownloadQueue.CurrentItem == null)
                     ProcessQueue();
 
+                game.Name = gameInfo.Title;
                 game.IsInstalled = false;
                 game.IsInstalling = true;
 
@@ -346,6 +348,7 @@ namespace LANCommander.PlaynitePlugin
             DownloadQueue.CurrentItem.Game.IsInstalling = false;
             DownloadQueue.CurrentItem.Game.LastActivity = DateTime.Now;
             DownloadQueue.CurrentItem.Game.Added = DateTime.Now;
+            DownloadQueue.CurrentItem.Game.Version = manifest.Version;
 
             Plugin.PlayniteApi.Database.Games.Update(DownloadQueue.CurrentItem.Game);
 
@@ -354,10 +357,20 @@ namespace LANCommander.PlaynitePlugin
 
         private void ShowCompletedNotification(DownloadQueueItem queueItem)
         {
-            new ToastContentBuilder()
-                .AddText("Game Installed")
-                .AddText($"{queueItem.Title} has finished installing!")
-                .AddArgument("gameId", queueItem.Game.Id.ToString())
+            var builder = new ToastContentBuilder();
+
+            if (queueItem.IsUpdate)
+            {
+                builder = builder.AddText("Game Updated")
+                    .AddText($"{queueItem.Title} has finished updating!");
+            }
+            else
+            {
+                builder = builder.AddText("Game Installed")
+                    .AddText($"{queueItem.Title} has finished installing!");
+            }
+
+            builder.AddArgument("gameId", queueItem.Game.Id.ToString())
                 .AddButton(
                     new ToastButton()
                         .SetContent("Play")
@@ -374,10 +387,20 @@ namespace LANCommander.PlaynitePlugin
 
         private void ShowFailedNotification(DownloadQueueItem queueItem)
         {
-            new ToastContentBuilder()
-                .AddText("Install Failed")
-                .AddText($"{queueItem.Title} could not be installed!")
-                .AddArgument("gameId", queueItem.Game.Id.ToString())
+            var builder = new ToastContentBuilder();
+
+            if (queueItem.IsUpdate)
+            {
+                builder = builder.AddText("Update Failed")
+                    .AddText($"{queueItem.Title} could not be updated!");
+            }
+            else
+            {
+                builder = builder.AddText("Install Failed")
+                    .AddText($"{queueItem.Title} could not be installed!");
+            }
+
+            builder.AddArgument("gameId", queueItem.Game.Id.ToString())
                 .AddButton(
                     new ToastButton()
                         .SetContent("View in Library")

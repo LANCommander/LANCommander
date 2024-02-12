@@ -2,6 +2,7 @@
 @using LANCommander.Data.Enums;
 @using LANCommander.Models;
 @inject IMediaGrabberService MediaGrabberService
+@inject IMessageService MessageService
 
 <GridRow Justify="space-between">
     <GridCol Span="6">
@@ -51,15 +52,24 @@
 
     private async Task GetResults(MediaType type, string search)
     {
-        Loading = true;
-
-        if (!String.IsNullOrWhiteSpace(search))
+        try
         {
-            Results = (await MediaGrabberService.SearchAsync(type, search)).GroupBy(r => r.Group);
+            Loading = true;
+
+            if (!String.IsNullOrWhiteSpace(search))
+            {
+                Results = (await MediaGrabberService.SearchAsync(type, search)).GroupBy(r => r.Group);
+
+                Loading = false;
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred when trying to get media results");
 
             Loading = false;
-
-            await InvokeAsync(StateHasChanged);
         }
     }
 

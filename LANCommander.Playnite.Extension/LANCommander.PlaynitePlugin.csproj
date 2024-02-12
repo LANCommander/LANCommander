@@ -75,7 +75,7 @@
       <DependentUpon>DownloadQueue.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\LANCommanderSettingsView.xaml.cs">
-      <DependentUpon>Views\LANCommanderSettingsView.xaml</DependentUpon>
+      <DependentUpon>LANCommanderSettingsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewModels\Authentication.cs" />

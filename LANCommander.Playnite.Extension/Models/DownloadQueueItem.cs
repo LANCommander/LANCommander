@@ -18,6 +18,7 @@ namespace LANCommander.PlaynitePlugin.Models
     {
         public Playnite.SDK.Models.Game Game { get; set; }
         public string Title { get; set; }
+        public string Version { get; set; }
         public string CoverPath { get; set; }
         public DateTime QueuedOn { get; set; }
         public DateTime? CompletedOn { get; set; }

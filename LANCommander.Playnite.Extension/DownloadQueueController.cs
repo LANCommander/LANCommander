@@ -148,13 +148,16 @@ namespace LANCommander.PlaynitePlugin
                 if (String.IsNullOrWhiteSpace(game.CoverImage))
                     game.CoverImage = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "default_cover.png");
 
+                var latestVersion = gameInfo.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version;
+
                 DownloadQueue.Items.Add(new DownloadQueueItem()
                 {
                     CoverPath = Plugin.PlayniteApi.Database.GetFullFilePath(game.CoverImage),
                     Game = game,
                     Title = gameInfo.Title,
+                    Version = latestVersion,
                     QueuedOn = DateTime.Now,
-                    IsUpdate = game.IsInstalled && game.Version != gameInfo.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version
+                    IsUpdate = game.IsInstalled && game.Version != latestVersion
                 });
 
                 if (DownloadQueue.Items.Count == 1 && DownloadQueue.CurrentItem == null)

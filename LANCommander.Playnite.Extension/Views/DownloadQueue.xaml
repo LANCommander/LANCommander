@@ -40,7 +40,10 @@
                             <ColumnDefinition Width="1*" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0" Text="{Binding DownloadQueue.CurrentItem.Title}" VerticalAlignment="Center" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
+                        <StackPanel Orientation="Vertical" Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding DownloadQueue.CurrentItem.Title}" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
+                            <TextBlock Text="{Binding DownloadQueue.CurrentItem.Version}" Margin="0,6,0,0" FontSize="14" Style="{StaticResource BaseTextBlockStyle}" />
+                        </StackPanel>
 
                         <Grid Grid.Column="1" Width="400" VerticalAlignment="Center" HorizontalAlignment="Right">
                             <Grid.ColumnDefinitions>
@@ -137,7 +140,10 @@
                                             <ColumnDefinition Width="1*" />
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock Grid.Column="0" Text="{Binding Title}" VerticalAlignment="Center" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
+                                        <StackPanel Orientation="Vertical" Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
+                                            <TextBlock Text="{Binding Version}" Margin="0,6,0,0" FontSize="14" Style="{StaticResource BaseTextBlockStyle}" />
+                                        </StackPanel>
                                     </Grid>
                                     <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                                         <Hyperlink Click="RemoveItem">
@@ -182,7 +188,8 @@
 
                                             <StackPanel Orientation="Vertical" Grid.Column="0" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Title}" FontSize="20" Style="{StaticResource BaseTextBlockStyle}" />
-                                                <TextBlock Text="{Binding Size, Converter={StaticResource ByteSizeConverter}}" Margin="0,6,0,0" FontSize="14" Style="{StaticResource BaseTextBlockStyle}" />
+                                                <TextBlock Text="{Binding Version}" Margin="0,6,0,0" FontSize="14" Style="{StaticResource BaseTextBlockStyle}" />
+                                                <TextBlock Text="{Binding Size, Converter={StaticResource ByteSizeConverter}}" Margin="0,4,0,0" FontSize="14" Style="{StaticResource BaseTextBlockStyle}" />
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
                                                 <TextBlock Text="{Binding CompletedOn, Converter={StaticResource RelativeDateConverter}, StringFormat='Completed: \{0\}'}" Style="{StaticResource BaseTextBlockStyle}" VerticalAlignment="Center" Margin="0,0,32,0" />

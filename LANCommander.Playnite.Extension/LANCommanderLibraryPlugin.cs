@@ -665,6 +665,15 @@ namespace LANCommander.PlaynitePlugin
             if (game == null)
                 return;
 
+            #region Basic Game Info
+            game.Name = manifest.Title;
+            game.SortingName = manifest.SortTitle;
+            game.Description = manifest.Description;
+            game.ReleaseDate = new ReleaseDate(manifest.ReleasedOn);
+            game.Notes = manifest.Notes;
+            #endregion
+
+            #region Actions
             if (game.GameActions == null)
                 game.GameActions = new ObservableCollection<PN.SDK.Models.GameAction>();
             else
@@ -695,6 +704,7 @@ namespace LANCommander.PlaynitePlugin
                         IsPlayAction = false
                     });
                 }
+            #endregion
 
             #region Features
             var singlePlayerFeature = PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == "Single Player");
@@ -748,9 +758,6 @@ namespace LANCommander.PlaynitePlugin
                 });
             }
             #endregion
-
-            if (game.Notes != manifest.Notes)
-                game.Notes = manifest.Notes;
 
             PlayniteApi.Database.Games.Update(game);
         }

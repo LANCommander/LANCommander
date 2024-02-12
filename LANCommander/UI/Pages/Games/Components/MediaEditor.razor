@@ -14,7 +14,7 @@
                 }
             </PropertyColumn>
             <PropertyColumn Property="p => p.Type">
-                <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="Enum.GetValues<MediaType>()" />
+                <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="AllowedMediaTypes" />
             </PropertyColumn>
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
@@ -57,6 +57,13 @@
     [Parameter] public string GameTitle { get; set; }
 
     LANCommanderSettings Settings = SettingService.GetSettings();
+
+    MediaType[] AllowedMediaTypes = new MediaType[]
+    {
+        MediaType.Icon,
+        MediaType.Cover,
+        MediaType.Background
+    };
 
     string[] ValidMimeTypes = new string[]
     {

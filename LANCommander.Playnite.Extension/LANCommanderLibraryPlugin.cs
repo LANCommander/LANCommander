@@ -654,8 +654,8 @@ namespace LANCommander.PlaynitePlugin
                 });
 
                 window.Title = "Authenticate to LANCommander";
-                window.Width = 400;
-                window.Height = 230;
+                window.SizeToContent = SizeToContent.WidthAndHeight;
+                window.MinWidth = 400;
                 window.Content = new Views.Authentication(this);
                 window.DataContext = new ViewModels.Authentication()
                 {

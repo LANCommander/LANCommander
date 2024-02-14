@@ -51,5 +51,23 @@ namespace LANCommander.SDK
 
             return response;
         }
+
+        public IEnumerable<PlaySession> GetPlaySessions()
+        {
+            Logger?.LogTrace("Requesting all play sessions for user...");
+
+            var response = Client.GetRequest<IEnumerable<PlaySession>>("/api/PlaySessions");
+
+            return response;
+        }
+
+        public IEnumerable<PlaySession> GetPlaySessions(Guid gameId)
+        {
+            Logger?.LogTrace("Requesting play sessions for game {GameId}...", gameId);
+
+            var response = Client.GetRequest<IEnumerable<PlaySession>>($"/api/PlaySessions/{gameId}");
+
+            return response;
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using LANCommander.Data.Models;
+﻿using AutoMapper;
+using LANCommander.Data.Models;
 using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -12,12 +13,14 @@ namespace LANCommander.Controllers.Api
     [ApiController]
     public class PlaySessionsController : ControllerBase
     {
+        private readonly IMapper Mapper;
         private readonly PlaySessionService PlaySessionService;
         private readonly GameService GameService;
         private readonly UserManager<User> UserManager;
 
-        public PlaySessionsController(PlaySessionService playSessionService, GameService gameService, UserManager<User> userManager)
+        public PlaySessionsController(IMapper mapper, PlaySessionService playSessionService, GameService gameService, UserManager<User> userManager)
         {
+            Mapper = mapper;
             PlaySessionService = playSessionService;
             GameService = gameService;
             UserManager = userManager;
@@ -54,6 +57,32 @@ namespace LANCommander.Controllers.Api
             await PlaySessionService.EndSession(game.Id, user.Id);
 
             return Ok();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Get()
+        {
+            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+            if (user == null)
+                return BadRequest();
+
+            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id).ToListAsync();
+
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(Guid id)
+        {
+            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+            if (user == null)
+                return BadRequest();
+
+            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.GameId == id).ToListAsync();
+
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }
     }
 }

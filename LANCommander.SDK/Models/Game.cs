@@ -23,5 +23,6 @@ namespace LANCommander.SDK.Models
         public virtual IEnumerable<Media> Media { get; set; }
         public virtual IEnumerable<Redistributable> Redistributables { get; set; }
         public virtual IEnumerable<Server> Servers { get; set; }
+        public virtual IEnumerable<PlaySession> PlaySessions { get; set; }
     }
 }

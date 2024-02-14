@@ -306,8 +306,9 @@ namespace LANCommander.PlaynitePlugin
             }
 
             var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var playSessions = Plugin.LANCommanderClient.Profile.GetPlaySessions().Where(ps => ps.GameId == gameId);
 
-            Plugin.UpdateGame(manifest, installDirectory);
+            Plugin.UpdateGame(manifest, installDirectory, playSessions);
 
             Logger?.Trace("Attempting to download the latest save");
             ChangeCurrentItemStatus(DownloadQueueItemStatus.DownloadingSaves);
@@ -349,7 +350,6 @@ namespace LANCommander.PlaynitePlugin
 
             DownloadQueue.CurrentItem.Game.IsInstalled = true;
             DownloadQueue.CurrentItem.Game.IsInstalling = false;
-            DownloadQueue.CurrentItem.Game.LastActivity = DateTime.Now;
             DownloadQueue.CurrentItem.Game.Added = DateTime.Now;
             DownloadQueue.CurrentItem.Game.Version = manifest.Version;
 

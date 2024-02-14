@@ -14,6 +14,7 @@ namespace LANCommander
             CreateMap<Data.Models.Genre, SDK.Models.Genre>();
             CreateMap<Data.Models.Key, SDK.Models.Key>();
             CreateMap<Data.Models.Media, SDK.Models.Media>();
+            CreateMap<Data.Models.PlaySession, SDK.Models.PlaySession>();
             CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>();
             CreateMap<Data.Models.Server, SDK.Models.Server>();
             CreateMap<Data.Models.ServerConsole, SDK.Models.ServerConsole>();

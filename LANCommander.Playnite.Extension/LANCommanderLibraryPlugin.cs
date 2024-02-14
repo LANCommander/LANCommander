@@ -185,6 +185,9 @@ namespace LANCommander.PlaynitePlugin
             var games = LANCommanderClient.Games.Get()
                 .Where(g => g != null && g.Archives != null && g.Archives.Count() > 0);
 
+            var playSessions = LANCommanderClient.Profile.GetPlaySessions();
+
+            #region Retrieve Metadata
             foreach (var game in games)
             {
                 if (args.CancelToken != null && args.CancelToken.IsCancellationRequested)
@@ -200,13 +203,15 @@ namespace LANCommander.PlaynitePlugin
                     var manifest = LANCommanderClient.Games.GetManifest(game.Id);
                     Logger.Trace("Successfully grabbed game manifest");
 
+                    var gamePlaySessions = playSessions.Where(ps => ps.GameId == game.Id && ps.End != null).OrderByDescending(ps => ps.End);
+
                     var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
 
                     if (existingGame != null)
                     {
                         Logger.Trace("Game already exists in library, updating metadata...");
 
-                        UpdateGame(manifest, existingGame.InstallDirectory);
+                        UpdateGame(manifest, existingGame.InstallDirectory, gamePlaySessions);
 
                         continue;
                     }
@@ -231,6 +236,13 @@ namespace LANCommander.PlaynitePlugin
                             IsPlayAction = a.PrimaryAction
                         }).ToList()
                     };
+
+                    if (gamePlaySessions.Count() > 0)
+                    {
+                        metadata.LastActivity = gamePlaySessions.First().End;
+                        metadata.PlayCount = (ulong)gamePlaySessions.Count();
+                        metadata.Playtime = (ulong)gamePlaySessions.Sum(ps => ps.End.Value.Subtract(ps.Start.Value).TotalSeconds);
+                    }
 
                     if (manifest.Genre != null && manifest.Genre.Count() > 0)
                         metadata.Genres = new HashSet<MetadataProperty>(manifest.Genre.Select(g => new MetadataNameProperty(g)));
@@ -277,11 +289,14 @@ namespace LANCommander.PlaynitePlugin
                     Logger.Error(ex, $"Could not update game \"{game.Title}\" in library");
                 }
             };
+            #endregion
 
+            #region Cleanup
             // Clean up any games we don't have access to
             var gamesToRemove = PlayniteApi.Database.Games.Where(g => g.PluginId == Id && !games.Any(lg => lg.Id.ToString() == g.GameId)).ToList();
 
             PlayniteApi.Database.Games.Remove(gamesToRemove);
+            #endregion
 
             return gameMetadata;
         }
@@ -675,7 +690,7 @@ namespace LANCommander.PlaynitePlugin
             return window;
         }
 
-        public void UpdateGame(SDK.GameManifest manifest, string installDirectory)
+        public void UpdateGame(SDK.GameManifest manifest, string installDirectory, IEnumerable<SDK.Models.PlaySession> gamePlaySessions)
         {
             var game = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == manifest?.Id.ToString());
 
@@ -696,6 +711,15 @@ namespace LANCommander.PlaynitePlugin
                     game.Name += " - Update Available";
             else
                 game.Name = manifest.Title;
+            #endregion
+
+            #region Play Sessions
+            if (gamePlaySessions.Count() > 0)
+            {
+                game.LastActivity = gamePlaySessions.First().End;
+                game.PlayCount = (ulong)gamePlaySessions.Count();
+                game.Playtime = (ulong)gamePlaySessions.Sum(ps => ps.End.Value.Subtract(ps.Start.Value).TotalSeconds);
+            }
             #endregion
 
             #region Actions

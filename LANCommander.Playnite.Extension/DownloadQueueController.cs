@@ -151,7 +151,7 @@ namespace LANCommander.PlaynitePlugin
 
                 DownloadQueue.Items.Add(new DownloadQueueItem()
                 {
-                    CoverPath = Plugin.PlayniteApi.Database.GetFullFilePath(game.CoverImage),
+                    CoverPath = game.CoverImage,
                     Game = game,
                     Title = gameInfo.Title,
                     Version = latestVersion,

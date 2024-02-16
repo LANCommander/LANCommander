@@ -63,7 +63,7 @@ namespace LANCommander.PlaynitePlugin
 
             #region Cleanup
             // Clean up any games we don't have access to
-            var gamesToRemove = Database.Games.Where(g => g.PluginId == Plugin.Id && !manifests.Any(lg => lg.Id.ToString() == g.GameId)).ToList();
+            var gamesToRemove = Database.Games.Where(g => g.PluginId == Plugin.Id && !manifests.Any(lg => lg.Id == g.Id)).ToList();
 
             Database.Games.Remove(gamesToRemove);
             #endregion

@@ -21,7 +21,7 @@ namespace LANCommander.PlaynitePlugin
 
         public void Download(Guid gameId, string installDirectory = "")
         {
-            var game = Plugin.PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == gameId.ToString());
+            var game = Plugin.PlayniteApi.Database.Games.FirstOrDefault(g => g.Id == gameId);
 
             if (installDirectory == "")
                 installDirectory = game.InstallDirectory;
@@ -58,7 +58,7 @@ namespace LANCommander.PlaynitePlugin
 
         public void Upload(Guid gameId)
         {
-            var game = Plugin.PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == gameId.ToString());
+            var game = Plugin.PlayniteApi.Database.Games.FirstOrDefault(g => g.Id == gameId);
 
             if (game != null)
             {

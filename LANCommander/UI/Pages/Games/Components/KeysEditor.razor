@@ -107,10 +107,10 @@
     private async Task Save()
     {
         var value = await Editor.GetValue();
-        var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k));
+        var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k)).ToList();
 
-        var keysDeleted = Keys.Where(k => !keys.Contains(k.Value));
-        var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k));
+        var keysDeleted = Keys.Where(k => !keys.Contains(k.Value)).ToList();
+        var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k)).ToList();
 
         foreach (var key in keysDeleted)
             KeyService.Delete(key);
@@ -124,6 +124,6 @@
 
         EditModalVisible = false;
 
-        await MessageService.Success("Keys updated!");
+        MessageService.Success("Keys updated!");
     }
 }

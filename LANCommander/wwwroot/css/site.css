@@ -1,3 +1,20 @@
+.ant-header {
+    display: flex;
+}
+
+.ant-menu-left {
+    flex-grow: 1;
+}
+
+.ant-menu-right .ant-menu-title-content {
+    display: inline-block;
+    font-size: 24px;
+}
+
+.ant-menu-right .ant-menu-title-content .anticon {
+    font-size: 24px;
+}
+
 .panel-layout {
     background: #fff;
 }

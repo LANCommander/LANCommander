@@ -1,15 +1,21 @@
 ﻿<Header>
     <div class="logo" style="background: url('/static/logo-dark.svg'); width: 143px; height: 31px; margin: 16px 24px 16px 0; float: left; background-size: contain;" />
 
-    <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal">
-        @ChildContent
+    <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal" Class="ant-menu-left">
+        @LeftContent
+    </Menu>
+
+    <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal" Class="ant-menu-right">
+        @RightContent
     </Menu>
 </Header>
 
 <MobileMenu>
-    @ChildContent
+    @LeftContent
+    @RightContent
 </MobileMenu>
 
 @code {
-    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public RenderFragment LeftContent { get; set; }
+    [Parameter] public RenderFragment RightContent { get; set; }
 }

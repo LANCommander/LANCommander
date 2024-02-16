@@ -5,35 +5,45 @@
 
 <Layout Class="layout">
     <MainMenu>
-        <MenuItem RouterLink="/Dashboard">Dashboard</MenuItem>
-        @if (User != null && User.IsInRole("Administrator"))
-        {
-            <MenuItem RouterLink="/Games">Games</MenuItem>
-            <MenuItem RouterLink="/Collections">Collections</MenuItem>
-            <MenuItem RouterLink="/Redistributables">Redistributables</MenuItem>
-            <MenuItem RouterLink="/Servers">Servers</MenuItem>
-            <MenuItem RouterLink="/Files">Files</MenuItem>
-            <SubMenu Title="Settings">
-                <MenuItem RouterLink="/Settings/General">General</MenuItem>
-                <MenuItem RouterLink="/Settings/Users">Users</MenuItem>
-                <MenuItem RouterLink="/Settings/Roles">Roles</MenuItem>
-                <MenuItem RouterLink="/Settings/Authentication">Authentication</MenuItem>
-                <MenuItem RouterLink="/Settings/UserSaves">User Saves</MenuItem>
-                <MenuItem RouterLink="/Settings/Archives">Archives</MenuItem>
-                <MenuItem RouterLink="/Settings/Media">Media</MenuItem>
-                <MenuItem RouterLink="/Settings/IPXRelay">IPX Relay</MenuItem>
-                <MenuItem RouterLink="/Settings/Beacon">Beacon</MenuItem>
-                <MenuItem RouterLink="/Settings/Tools">Tools</MenuItem>
-                <MenuItem RouterLink="/Settings/Logs">Logs</MenuItem>
-                <MenuItem RouterLink="/Settings/Updates">Updates</MenuItem>
+        <LeftContent>
+            <MenuItem RouterLink="/Dashboard">Dashboard</MenuItem>
+            @if (User != null && User.IsInRole("Administrator"))
+            {
+                <MenuItem RouterLink="/Games">Games</MenuItem>
+                <MenuItem RouterLink="/Collections">Collections</MenuItem>
+                <MenuItem RouterLink="/Redistributables">Redistributables</MenuItem>
+                <MenuItem RouterLink="/Servers">Servers</MenuItem>
+                <MenuItem RouterLink="/Files">Files</MenuItem>
+                <SubMenu Title="Settings">
+                    <MenuItem RouterLink="/Settings/General">General</MenuItem>
+                    <MenuItem RouterLink="/Settings/Users">Users</MenuItem>
+                    <MenuItem RouterLink="/Settings/Roles">Roles</MenuItem>
+                    <MenuItem RouterLink="/Settings/Authentication">Authentication</MenuItem>
+                    <MenuItem RouterLink="/Settings/UserSaves">User Saves</MenuItem>
+                    <MenuItem RouterLink="/Settings/Archives">Archives</MenuItem>
+                    <MenuItem RouterLink="/Settings/Media">Media</MenuItem>
+                    <MenuItem RouterLink="/Settings/IPXRelay">IPX Relay</MenuItem>
+                    <MenuItem RouterLink="/Settings/Beacon">Beacon</MenuItem>
+                    <MenuItem RouterLink="/Settings/Tools">Tools</MenuItem>
+                    <MenuItem RouterLink="/Settings/Logs">Logs</MenuItem>
+                    <MenuItem RouterLink="/Settings/Updates">Updates</MenuItem>
+                </SubMenu>
+            }
+        </LeftContent>
+        <RightContent>
+            <SubMenu Title="Profile" Placement="Placement.BottomRight">
+                <TitleTemplate>
+                    <Icon Type="@IconType.Outline.User" />
+                </TitleTemplate>
+                <ChildContent>
+                    <MenuItem RouterLink="/Profile">General</MenuItem>
+                    <MenuItem RouterLink="/Profile/ChangePassword">Change Password</MenuItem>
+                    <MenuItem RouterLink="/Profile/Saves">Saves</MenuItem>
+                    <MenuItem RouterLink="/Identity/Account/Logout">Logout</MenuItem>
+                </ChildContent>
             </SubMenu>
-        }
-        <SubMenu Title="Profile">
-            <MenuItem RouterLink="/Profile">General</MenuItem>
-            <MenuItem RouterLink="/Profile/ChangePassword">Change Password</MenuItem>
-            <MenuItem RouterLink="/Profile/Saves">Saves</MenuItem>
-            <MenuItem RouterLink="/Identity/Account/Logout">Logout</MenuItem>
-        </SubMenu>
+        </RightContent>
+
     </MainMenu>
 
     <Content Style="padding: 24px; min-height: 100vh;">

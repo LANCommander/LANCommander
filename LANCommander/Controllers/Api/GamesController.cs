@@ -32,14 +32,14 @@ namespace LANCommander.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Game>> Get()
+        public async Task<IEnumerable<SDK.GameManifest>> Get()
         {
+            var games = new List<Game>();
+
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole("Administrator"))
             {
                 var user = await UserManager.FindByNameAsync(User.Identity.Name);
                 var roles = await UserManager.GetRolesAsync(user);
-
-                var games = new List<Game>();
 
                 foreach (var roleName in roles)
                 {
@@ -48,10 +48,14 @@ namespace LANCommander.Controllers.Api
                     games.AddRange(role.Collections.SelectMany(c => c.Games).DistinctBy(g => g.Id).ToList());
                 }
 
-                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games.Where(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).DistinctBy(g => g.Id).ToList());
+                games = games.Where(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).DistinctBy(g => g.Id).ToList();
+            }
+            else
+            {
+                games = await GameService.Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).ToListAsync();
             }
 
-            return Mapper.Map<IEnumerable<SDK.Models.Game>>(await GameService.Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).ToListAsync());
+            return Mapper.Map<IEnumerable<SDK.GameManifest>>(games.Select(g => GameService.GetManifest(g)));
         }
 
         [HttpGet("{id}")]

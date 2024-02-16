@@ -47,9 +47,9 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public IEnumerable<Game> Get()
+        public IEnumerable<GameManifest> Get()
         {
-            return Client.GetRequest<IEnumerable<Game>>("/api/Games");
+            return Client.GetRequest<IEnumerable<GameManifest>>("/api/Games");
         }
 
         public Game Get(Guid id)
@@ -60,6 +60,11 @@ namespace LANCommander.SDK
         public GameManifest GetManifest(Guid id)
         {
             return Client.GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
+        }
+
+        public IEnumerable<GameManifest> GetManifests()
+        {
+            return Client.GetRequest<IEnumerable<GameManifest>>($"/api/Games/Manifests");
         }
 
         private TrackableStream Stream(Guid id)
@@ -139,7 +144,7 @@ namespace LANCommander.SDK
             var game = Get(gameId);
             var destination = GetInstallDirectory(game);
 
-            if ((game.Type == GameType.StandaloneExpansion || game.Type == GameType.StandaloneMod) && game.BaseGame != null)
+            if (game.Type == GameType.StandaloneMod && game.BaseGame != null)
             {
                 destination = GetInstallDirectory(game.BaseGame);
 

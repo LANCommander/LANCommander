@@ -63,6 +63,7 @@
     <Compile Include="Converters\RelativeDateConverter.cs" />
     <Compile Include="DownloadQueueController.cs" />
     <Compile Include="Extensions\MultiplayerInfoExtensions.cs" />
+    <Compile Include="ImportController.cs" />
     <Compile Include="Models\DownloadQueue.cs" />
     <Compile Include="Models\DownloadQueueItem.cs" />
     <Compile Include="PlayniteLogger.cs" />

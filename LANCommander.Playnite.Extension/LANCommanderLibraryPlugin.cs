@@ -23,20 +23,23 @@ using LANCommander.PlaynitePlugin.Models;
 using LANCommander.PlaynitePlugin.Controls;
 using System.Threading.Tasks;
 using System.Net;
+using Windows.Media.Capture;
 
 namespace LANCommander.PlaynitePlugin
 {
     public class LANCommanderLibraryPlugin : LibraryPlugin
     {
-        public static readonly ILogger Logger = LogManager.GetLogger();
-        internal LANCommanderSettingsViewModel Settings { get; set; }
-        internal LANCommander.SDK.Client LANCommanderClient { get; set; }
-        internal LANCommanderSaveController SaveController { get; set; }
-
         public override Guid Id { get; } = Guid.Parse("48e1bac7-e0a0-45d7-ba83-36f5e9e959fc");
         public override string Name => "LANCommander";
 
+        public static readonly ILogger Logger = LogManager.GetLogger();
+        internal LANCommanderSettingsViewModel Settings { get; set; }
+        internal LANCommander.SDK.Client LANCommanderClient { get; set; }
+
+        internal LANCommanderSaveController SaveController { get; set; }
+        internal ImportController ImportController { get; set; }
         public DownloadQueueController DownloadQueue { get; set; }
+
         public SidebarItem DownloadQueueSidebarItem { get; set; }
 
         public TopPanelItem OfflineModeTopPanelItem { get; set; }
@@ -47,6 +50,7 @@ namespace LANCommander.PlaynitePlugin
             Properties = new LibraryPluginProperties
             {
                 HasSettings = true,
+                HasCustomizedGameImport = true,
             };
 
             Settings = new LANCommanderSettingsViewModel(this);
@@ -86,6 +90,7 @@ namespace LANCommander.PlaynitePlugin
 
             Settings.Load();
 
+            ImportController = new ImportController(this);
             DownloadQueue = new DownloadQueueController(this);
 
             api.UriHandler.RegisterSource("lancommander", args =>
@@ -159,13 +164,8 @@ namespace LANCommander.PlaynitePlugin
             ShowAuthenticationWindow();
         }
 
-        public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
+        public override IEnumerable<Game> ImportGames(LibraryImportGamesArgs args)
         {
-            var gameMetadata = new List<GameMetadata>();
-
-            if (Settings.OfflineModeEnabled)
-                return gameMetadata;
-
             if (!ValidateConnection() && !Settings.OfflineModeEnabled)
             {
                 Logger.Trace("Authentication invalid, showing auth window...");
@@ -180,125 +180,9 @@ namespace LANCommander.PlaynitePlugin
             }
 
             if (Settings.OfflineModeEnabled)
-                return gameMetadata;
+                return new List<Game>();
 
-            var games = LANCommanderClient.Games.Get()
-                .Where(g => g != null && g.Archives != null && g.Archives.Count() > 0);
-
-            var playSessions = LANCommanderClient.Profile.GetPlaySessions();
-
-            #region Retrieve Metadata
-            foreach (var game in games)
-            {
-                if (args.CancelToken != null && args.CancelToken.IsCancellationRequested)
-                    return new List<GameMetadata>();
-
-                if (!LANCommanderClient.IsConnected())
-                    return new List<GameMetadata>();
-
-                try
-                {
-                    Logger.Trace($"Importing/updating metadata for game \"{game.Title}\"...");
-
-                    var manifest = LANCommanderClient.Games.GetManifest(game.Id);
-                    Logger.Trace("Successfully grabbed game manifest");
-
-                    var gamePlaySessions = playSessions.Where(ps => ps.GameId == game.Id && ps.End != null).OrderByDescending(ps => ps.End);
-
-                    var existingGame = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == game.Id.ToString() && g.PluginId == Id && g.IsInstalled);
-
-                    if (existingGame != null)
-                    {
-                        Logger.Trace("Game already exists in library, updating metadata...");
-
-                        UpdateGame(manifest, existingGame.InstallDirectory, gamePlaySessions);
-
-                        continue;
-                    }
-
-                    Logger.Trace("Game does not exist in the library, importing metadata...");
-
-                    var metadata = new GameMetadata()
-                    {
-                        IsInstalled = false,
-                        Name = manifest.Title,
-                        SortingName = manifest.SortTitle,
-                        Description = manifest.Description,
-                        GameId = game.Id.ToString(),
-                        ReleaseDate = new ReleaseDate(manifest.ReleasedOn),
-                        //Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Version,
-                        GameActions = game.Actions.Where(a => !a.PrimaryAction).OrderBy(a => a.SortOrder).Select(a => new PN.SDK.Models.GameAction()
-                        {
-                            Name = a.Name,
-                            Arguments = a.Arguments,
-                            Path = a.Path,
-                            WorkingDir = a.WorkingDirectory,
-                            IsPlayAction = a.PrimaryAction
-                        }).ToList()
-                    };
-
-                    if (gamePlaySessions.Count() > 0)
-                    {
-                        metadata.LastActivity = gamePlaySessions.First().End;
-                        metadata.PlayCount = (ulong)gamePlaySessions.Count();
-                        metadata.Playtime = (ulong)gamePlaySessions.Sum(ps => ps.End.Value.Subtract(ps.Start.Value).TotalSeconds);
-                    }
-
-                    if (manifest.Genre != null && manifest.Genre.Count() > 0)
-                        metadata.Genres = new HashSet<MetadataProperty>(manifest.Genre.Select(g => new MetadataNameProperty(g)));
-
-                    if (manifest.Developers != null && manifest.Developers.Count() > 0)
-                        metadata.Developers = new HashSet<MetadataProperty>(manifest.Developers.Select(d => new MetadataNameProperty(d)));
-
-                    if (manifest.Publishers != null && manifest.Publishers.Count() > 0)
-                        metadata.Publishers = new HashSet<MetadataProperty>(manifest.Publishers.Select(p => new MetadataNameProperty(p)));
-
-                    if (manifest.Tags != null && manifest.Tags.Count() > 0)
-                        metadata.Tags = new HashSet<MetadataProperty>(manifest.Tags.Select(t => new MetadataNameProperty(t)));
-
-                    if (manifest.Collections != null && manifest.Collections.Count() > 0)
-                        metadata.Categories = new HashSet<MetadataProperty>(manifest.Collections.Select(c => new MetadataNameProperty(c)));
-
-                    metadata.Features = new HashSet<MetadataProperty>();
-
-                    if (manifest.Singleplayer)
-                        metadata.Features.Add(new MetadataNameProperty("Singleplayer"));
-
-                    if (manifest.LocalMultiplayer != null)
-                        metadata.Features.Add(new MetadataNameProperty($"Local Multiplayer {manifest.LocalMultiplayer.GetPlayerCount()}".Trim()));
-
-                    if (manifest.LanMultiplayer != null)
-                        metadata.Features.Add(new MetadataNameProperty($"LAN Multiplayer {manifest.LanMultiplayer.GetPlayerCount()}".Trim()));
-
-                    if (manifest.OnlineMultiplayer != null)
-                        metadata.Features.Add(new MetadataNameProperty($"Online Multiplayer {manifest.OnlineMultiplayer.GetPlayerCount()}".Trim()));
-
-                    if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Icon))
-                        metadata.Icon = new MetadataFile(LANCommanderClient.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Icon)));
-
-                    if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
-                        metadata.CoverImage = new MetadataFile(LANCommanderClient.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)));
-
-                    if (game.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
-                        metadata.BackgroundImage = new MetadataFile(LANCommanderClient.GetMediaUrl(game.Media.First(m => m.Type == SDK.Enums.MediaType.Background)));
-
-                    gameMetadata.Add(metadata);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex, $"Could not update game \"{game.Title}\" in library");
-                }
-            };
-            #endregion
-
-            #region Cleanup
-            // Clean up any games we don't have access to
-            var gamesToRemove = PlayniteApi.Database.Games.Where(g => g.PluginId == Id && !games.Any(lg => lg.Id.ToString() == g.GameId)).ToList();
-
-            PlayniteApi.Database.Games.Remove(gamesToRemove);
-            #endregion
-
-            return gameMetadata;
+            return ImportController.ImportGames();
         }
 
         public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
@@ -324,58 +208,55 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<PlayController> GetPlayActions(GetPlayActionsArgs args)
         {
-            if (Guid.TryParse(args.Game.GameId, out var gameId))
+            var manifest = ManifestHelper.Read(args.Game.InstallDirectory, args.Game.Id);
+            var primaryDisplay = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s => s.Primary);
+
+            LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
+            LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
+
+            foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
             {
-                var manifest = ManifestHelper.Read(args.Game.InstallDirectory, gameId);
-                var primaryDisplay = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s => s.Primary);
-
-                LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
-                LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
-
-                foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+                yield return new AutomaticPlayController(args.Game)
                 {
-                    yield return new AutomaticPlayController(args.Game)
-                    {
-                        Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, skipSlashes: true),
-                        Name = action.Name,
-                        Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
-                        TrackingMode = TrackingMode.Default,
-                        Type = AutomaticPlayActionType.File,
-                        WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
-                    };
-                }
+                    Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, skipSlashes: true),
+                    Name = action.Name,
+                    Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
+                    TrackingMode = TrackingMode.Default,
+                    Type = AutomaticPlayActionType.File,
+                    WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
+                };
+            }
 
-                if (!Settings.OfflineModeEnabled)
+            if (!Settings.OfflineModeEnabled)
+            {
+                var game = LANCommanderClient.Games.Get(args.Game.Id);
+
+                if (game.Servers != null)
+                foreach (var server in game.Servers.Where(s => s.Actions != null))
                 {
-                    var game = LANCommanderClient.Games.Get(gameId);
-
-                    if (game.Servers != null)
-                    foreach (var server in game.Servers.Where(s => s.Actions != null))
+                    foreach (var action in server.Actions)
                     {
-                        foreach (var action in server.Actions)
+                        var serverHost = String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host;
+                        var serverIp = Dns.GetHostEntry(serverHost).AddressList.FirstOrDefault();
+
+                        var variables = new Dictionary<string, string>()
                         {
-                            var serverHost = String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host;
-                            var serverIp = Dns.GetHostEntry(serverHost).AddressList.FirstOrDefault();
+                            { "ServerHost", serverHost },
+                            { "ServerPort", server.Port.ToString() }
+                        };
 
-                            var variables = new Dictionary<string, string>()
-                            {
-                                { "ServerHost", serverHost },
-                                { "ServerPort", server.Port.ToString() }
-                            };
+                        if (serverIp != null)
+                            variables["ServerIP"] = serverIp.ToString();
 
-                            if (serverIp != null)
-                                variables["ServerIP"] = serverIp.ToString();
-
-                            yield return new AutomaticPlayController(args.Game)
-                            {
-                                Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables, true),
-                                Name = action.Name,
-                                Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
-                                TrackingMode = TrackingMode.Default,
-                                Type = AutomaticPlayActionType.File,
-                                WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory, variables)
-                            };
-                        }
+                        yield return new AutomaticPlayController(args.Game)
+                        {
+                            Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables, true),
+                            Name = action.Name,
+                            Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
+                            TrackingMode = TrackingMode.Default,
+                            Type = AutomaticPlayActionType.File,
+                            WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory, variables)
+                        };
                     }
                 }
             }
@@ -399,9 +280,9 @@ namespace LANCommander.PlaynitePlugin
             {
                 var game = args.Games.First();
 
-                var nameChangeScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, Guid.Parse(game.GameId), SDK.Enums.ScriptType.NameChange);
-                var keyChangeScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, Guid.Parse(game.GameId), SDK.Enums.ScriptType.KeyChange);
-                var installScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, Guid.Parse(game.GameId), SDK.Enums.ScriptType.Install);
+                var nameChangeScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.NameChange);
+                var keyChangeScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.KeyChange);
+                var installScriptPath = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.Install);
 
                 if (File.Exists(nameChangeScriptPath))
                 {
@@ -420,16 +301,13 @@ namespace LANCommander.PlaynitePlugin
                             {
                                 var nameChangeGame = nameChangeArgs.Games.First();
 
-                                if (Guid.TryParse(nameChangeGame.GameId, out var gameId))
-                                {
-                                    RunNameChangeScript(nameChangeGame.InstallDirectory, gameId, oldName, result.SelectedString);
+                                RunNameChangeScript(nameChangeGame.InstallDirectory, game.Id, oldName, result.SelectedString);
 
-                                    var alias = LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
+                                var alias = LANCommanderClient.Profile.ChangeAlias(result.SelectedString);
 
-                                    Settings.DisplayName = alias;
+                                Settings.DisplayName = alias;
 
-                                    SavePluginSettings(Settings);
-                                }
+                                SavePluginSettings(Settings);
                             }
                         }
                     };
@@ -444,22 +322,13 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Change Game Key",
                         Action = (keyChangeArgs) =>
                         {
-                            Guid gameId;
+                            // NUKIEEEE
+                            var newKey = LANCommanderClient.Games.GetNewKey(keyChangeArgs.Games.First().Id);
 
-                            if (Guid.TryParse(keyChangeArgs.Games.First().GameId, out gameId))
-                            {
-                                // NUKIEEEE
-                                var newKey = LANCommanderClient.Games.GetNewKey(gameId);
-
-                                if (String.IsNullOrEmpty(newKey))
-                                    PlayniteApi.Dialogs.ShowErrorMessage("There are no more keys available on the server.", "No Keys Available");
-                                else
-                                    RunKeyChangeScript(keyChangeArgs.Games.First().InstallDirectory, gameId, newKey);
-                            }
+                            if (String.IsNullOrEmpty(newKey))
+                                PlayniteApi.Dialogs.ShowErrorMessage("There are no more keys available on the server.", "No Keys Available");
                             else
-                            {
-                                PlayniteApi.Dialogs.ShowErrorMessage("This game could not be found on the server. Your game may be corrupted.");
-                            }
+                                RunKeyChangeScript(keyChangeArgs.Games.First().InstallDirectory, keyChangeArgs.Games.First().Id, newKey);
                         }
                     };
                 }
@@ -473,12 +342,7 @@ namespace LANCommander.PlaynitePlugin
                         Description = "Run Install Script",
                         Action = (installArgs) =>
                         {
-                            Guid gameId;
-
-                            if (Guid.TryParse(installArgs.Games.First().GameId, out gameId))
-                                RunInstallScript(installArgs.Games.First().InstallDirectory, gameId);
-                            else
-                                PlayniteApi.Dialogs.ShowErrorMessage("This game could not be found on the server. Your game may be corrupted.");
+                            RunInstallScript(installArgs.Games.First().InstallDirectory, installArgs.Games.First().Id);
                         }
                     };
                 }
@@ -502,21 +366,20 @@ namespace LANCommander.PlaynitePlugin
         {
             if (args.Game.PluginId == Id)
             {
-                var gameId = Guid.Parse(args.Game.GameId);
-                var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, gameId);
-                var currentGameKey = GameService.GetCurrentKey(args.Game.InstallDirectory, gameId);
+                var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, args.Game.Id);
+                var currentGameKey = GameService.GetCurrentKey(args.Game.InstallDirectory, args.Game.Id);
 
                 if (currentGamePlayerAlias != Settings.DisplayName)
                 {
-                    RunNameChangeScript(args.Game.InstallDirectory, gameId, currentGamePlayerAlias, Settings.DisplayName);
+                    RunNameChangeScript(args.Game.InstallDirectory, args.Game.Id, currentGamePlayerAlias, Settings.DisplayName);
                 }
 
                 if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
                 {
-                    var allocatedKey = LANCommanderClient.Games.GetAllocatedKey(gameId);
+                    var allocatedKey = LANCommanderClient.Games.GetAllocatedKey(args.Game.Id);
 
                     if (currentGameKey != allocatedKey)
-                        RunKeyChangeScript(args.Game.InstallDirectory, gameId, allocatedKey);
+                        RunKeyChangeScript(args.Game.InstallDirectory, args.Game.Id, allocatedKey);
                 }
 
                 if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
@@ -538,16 +401,16 @@ namespace LANCommander.PlaynitePlugin
                         }
                     }
 
-                    LANCommanderClient.Games.StartPlaySession(gameId);
+                    LANCommanderClient.Games.StartPlaySession(args.Game.Id);
 
                     try
                     {
-                        var latestSave = LANCommanderClient.Saves.GetLatest(gameId);
+                        var latestSave = LANCommanderClient.Saves.GetLatest(args.Game.Id);
 
                         if (latestSave == null || (latestSave.CreatedOn > args.Game.LastActivity && latestSave.CreatedOn > args.Game.Added))
                         {
                             SaveController = new LANCommanderSaveController(this, args.Game);
-                            SaveController.Download(gameId);
+                            SaveController.Download(args.Game.Id);
                         }
                     }
                     catch (Exception ex)
@@ -563,14 +426,12 @@ namespace LANCommander.PlaynitePlugin
         {
             if (args.Game.PluginId == Id && !Settings.OfflineModeEnabled)
             {
-                var gameId = Guid.Parse(args.Game.GameId);
-
-                LANCommanderClient.Games.EndPlaySession(gameId);
+                LANCommanderClient.Games.EndPlaySession(args.Game.Id);
 
                 try
                 {
                     SaveController = new LANCommanderSaveController(this, args.Game);
-                    SaveController.Upload(gameId);
+                    SaveController.Upload(args.Game.Id);
                 }
                 catch (Exception ex)
                 {
@@ -690,127 +551,6 @@ namespace LANCommander.PlaynitePlugin
             return window;
         }
 
-        public void UpdateGame(SDK.GameManifest manifest, string installDirectory, IEnumerable<SDK.Models.PlaySession> gamePlaySessions)
-        {
-            var game = PlayniteApi.Database.Games.FirstOrDefault(g => g.GameId == manifest?.Id.ToString());
-
-            if (game == null)
-                return;
-
-            #region Basic Game Info
-            game.Name = manifest.Title;
-            game.SortingName = manifest.SortTitle;
-            game.Description = manifest.Description;
-            game.ReleaseDate = new ReleaseDate(manifest.ReleasedOn);
-            game.Notes = manifest.Notes;
-            #endregion
-
-            #region Versioning
-            if (game.IsInstalled && game.Version != manifest.Version)
-                if (!game.Name.EndsWith(" - Update Available"))
-                    game.Name += " - Update Available";
-            else
-                game.Name = manifest.Title;
-            #endregion
-
-            #region Play Sessions
-            if (gamePlaySessions.Count() > 0)
-            {
-                game.LastActivity = gamePlaySessions.First().End;
-                game.PlayCount = (ulong)gamePlaySessions.Count();
-                game.Playtime = (ulong)gamePlaySessions.Sum(ps => ps.End.Value.Subtract(ps.Start.Value).TotalSeconds);
-            }
-            #endregion
-
-            #region Actions
-            if (game.GameActions == null)
-                game.GameActions = new ObservableCollection<PN.SDK.Models.GameAction>();
-            else
-                game.GameActions.Clear();
-
-            if (manifest.Actions == null)
-                throw new Exception("The game has no actions defined.");
-
-            foreach (var action in game.GameActions.Where(a => a.IsPlayAction))
-                game.GameActions.Remove(action);
-
-            if (game.IsInstalled || game.IsInstalling)
-                foreach (var action in manifest.Actions.OrderBy(a => a.SortOrder).Where(a => !a.IsPrimaryAction))
-                {
-                    var actionPath = action.Path?.ExpandEnvironmentVariables(installDirectory);
-                    var actionWorkingDir = String.IsNullOrWhiteSpace(action.WorkingDirectory) ? installDirectory : action.WorkingDirectory.ExpandEnvironmentVariables(installDirectory);
-                    var actionArguments = action.Arguments?.ExpandEnvironmentVariables(installDirectory);
-
-                    if (actionPath.StartsWith(actionWorkingDir))
-                        actionPath = actionPath.Substring(actionWorkingDir.Length).TrimStart(Path.DirectorySeparatorChar);
-
-                    game.GameActions.Add(new PN.SDK.Models.GameAction()
-                    {
-                        Name = action.Name,
-                        Arguments = action.Arguments,
-                        Path = actionPath,
-                        WorkingDir = actionArguments,
-                        IsPlayAction = false
-                    });
-                }
-            #endregion
-
-            #region Features
-            var singlePlayerFeature = PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == "Single Player");
-
-            if (manifest.LanMultiplayer != null)
-            {
-                var multiplayerInfo = manifest.LanMultiplayer;
-
-                string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
-                string featureName = $"LAN Multiplayer {playerCount}";
-
-                if (PlayniteApi.Database.Features.Any(f => f.Name == featureName))
-                {
-                    game.Features.Add(PlayniteApi.Database.Features.FirstOrDefault(f => f.Name == featureName));
-                }
-                else
-                {
-                    PlayniteApi.Database.Features.Add(new GameFeature()
-                    {
-                        Name = featureName
-                    });
-
-                    game.Features.Add(new GameFeature()
-                    {
-                        Name = $"LAN Multiplayer {playerCount}"
-                    });
-                }
-            }
-
-            if (manifest.LocalMultiplayer != null)
-            {
-                var multiplayerInfo = manifest.LocalMultiplayer;
-
-                string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
-
-                game.Features.Add(new GameFeature()
-                {
-                    Name = $"Local Multiplayer {playerCount}"
-                });
-            }
-
-            if (manifest.OnlineMultiplayer != null)
-            {
-                var multiplayerInfo = manifest.OnlineMultiplayer;
-
-                string playerCount = multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers ? $"({multiplayerInfo.MinPlayers} players)" : $"({multiplayerInfo.MinPlayers} - {multiplayerInfo.MaxPlayers} players)";
-
-                game.Features.Add(new GameFeature()
-                {
-                    Name = $"Online Multiplayer {playerCount}"
-                });
-            }
-            #endregion
-
-            PlayniteApi.Database.Games.Update(game);
-        }
-
         private int RunInstallScript(string installDirectory, Guid gameId)
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
@@ -894,10 +634,8 @@ namespace LANCommander.PlaynitePlugin
 
             foreach (var game in installedGames)
             {
-                var gameId = Guid.Parse(game.GameId);
-
-                if (!Directory.Exists(GameService.GetMetadataDirectoryPath(game.InstallDirectory, gameId)))
-                    Directory.CreateDirectory(GameService.GetMetadataDirectoryPath(game.InstallDirectory, gameId));
+                if (!Directory.Exists(GameService.GetMetadataDirectoryPath(game.InstallDirectory, game.Id)))
+                    Directory.CreateDirectory(GameService.GetMetadataDirectoryPath(game.InstallDirectory, game.Id));
 
                 var metaFiles = new Dictionary<string, string>()
                 {
@@ -911,7 +649,7 @@ namespace LANCommander.PlaynitePlugin
                 foreach (var file in metaFiles)
                 {
                     var originalPath = Path.Combine(game.InstallDirectory, file.Key);
-                    var destinationPath = GameService.GetMetadataFilePath(game.InstallDirectory, gameId, file.Value);
+                    var destinationPath = GameService.GetMetadataFilePath(game.InstallDirectory, game.Id, file.Value);
 
                     if (File.Exists(originalPath) && !File.Exists(destinationPath))
                         File.Move(originalPath, destinationPath);

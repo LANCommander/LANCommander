@@ -25,15 +25,13 @@ namespace LANCommander.PlaynitePlugin
         {
             try
             {
-                var gameId = Guid.Parse(Game.GameId);
-
                 try
                 {
-                    var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, gameId, SDK.Enums.ScriptType.Uninstall);
+                    var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, Game.Id, SDK.Enums.ScriptType.Uninstall);
 
                     if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
                     {
-                        var manifest = ManifestHelper.Read(Game.InstallDirectory, gameId);
+                        var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
                         var script = new PowerShellScript();
 
                         script.AddVariable("InstallDirectory", Game.InstallDirectory);
@@ -53,9 +51,9 @@ namespace LANCommander.PlaynitePlugin
 
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
-                    Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory, gameId);
+                    Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory, Game.Id);
 
-                    var metadataPath = SDK.GameService.GetMetadataDirectoryPath(Game.InstallDirectory, gameId);
+                    var metadataPath = SDK.GameService.GetMetadataDirectoryPath(Game.InstallDirectory, Game.Id);
 
                     if (Directory.Exists(metadataPath))
                         Directory.Delete(metadataPath, true);

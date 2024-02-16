@@ -132,12 +132,11 @@ namespace LANCommander.PlaynitePlugin
 
         public void Add(Game game)
         {
-            var gameId = Guid.Parse(game.GameId);
-            var gameInfo = Plugin.LANCommanderClient.Games.Get(gameId);
+            var gameInfo = Plugin.LANCommanderClient.Games.Get(game.Id);
 
             if (gameInfo.BaseGame != null)
             {
-                var baseGame = Plugin.PlayniteApi.Database.Games.Where(g => g.GameId == gameInfo.BaseGame.Id.ToString()).FirstOrDefault();
+                var baseGame = Plugin.PlayniteApi.Database.Games.Where(g => g.Id == gameInfo.BaseGame.Id).FirstOrDefault();
 
                 if (baseGame != null && !baseGame.IsInstalled)
                     Plugin.PlayniteApi.InstallGame(baseGame.Id);
@@ -222,8 +221,7 @@ namespace LANCommander.PlaynitePlugin
             if (DownloadQueue.CurrentItem == null)
                 return;
 
-            var gameId = Guid.Parse(DownloadQueue.CurrentItem.Game.GameId);
-            var game = Plugin.LANCommanderClient.Games.Get(gameId);
+            var game = Plugin.LANCommanderClient.Games.Get(DownloadQueue.CurrentItem.Game.Id);
 
             Logger?.Trace($"Initiating install for {game.Title}");
 
@@ -231,7 +229,7 @@ namespace LANCommander.PlaynitePlugin
             {
                 Logger?.Trace("Game is reliant on another game for installation. Installing the base game first...");
 
-                var baseGame = Plugin.PlayniteApi.Database.Games.Where(g => g.GameId == game.BaseGame.Id.ToString()).FirstOrDefault();
+                var baseGame = Plugin.PlayniteApi.Database.Games.Where(g => g.Id == game.BaseGame.Id).FirstOrDefault();
 
                 if (baseGame != null && !baseGame.IsInstalled)
                     Plugin.PlayniteApi.InstallGame(baseGame.Id);
@@ -305,15 +303,12 @@ namespace LANCommander.PlaynitePlugin
                 Plugin.LANCommanderClient.Redistributables.Install(game);
             }
 
-            var manifest = ManifestHelper.Read(installDirectory, gameId);
-            var playSessions = Plugin.LANCommanderClient.Profile.GetPlaySessions().Where(ps => ps.GameId == gameId);
-
-            Plugin.UpdateGame(manifest, installDirectory, playSessions);
+            var manifest = ManifestHelper.Read(installDirectory, game.Id);
 
             Logger?.Trace("Attempting to download the latest save");
             ChangeCurrentItemStatus(DownloadQueueItemStatus.DownloadingSaves);
             Plugin.SaveController = new LANCommanderSaveController(Plugin, null);
-            Plugin.SaveController.Download(gameId, installDirectory);
+            Plugin.SaveController.Download(game.Id, installDirectory);
 
             ChangeCurrentItemStatus(DownloadQueueItemStatus.RunningScripts);
 

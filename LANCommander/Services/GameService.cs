@@ -1,4 +1,5 @@
-﻿using LANCommander.Data;
+﻿using AutoMapper;
+using LANCommander.Data;
 using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
@@ -12,6 +13,7 @@ namespace LANCommander.Services
 {
     public class GameService : BaseDatabaseService<Game>
     {
+        private readonly IMapper Mapper;
         private readonly ArchiveService ArchiveService;
         private readonly MediaService MediaService;
         private readonly TagService TagService;
@@ -21,12 +23,14 @@ namespace LANCommander.Services
         public GameService(
             DatabaseContext dbContext,
             IHttpContextAccessor httpContextAccessor,
+            IMapper mapper,
             ArchiveService archiveService,
             MediaService mediaService,
             TagService tagService,
             CompanyService companyService,
             GenreService genreService) : base(dbContext, httpContextAccessor)
         {
+            Mapper = mapper;
             ArchiveService = archiveService;
             MediaService = mediaService;
             TagService = tagService;
@@ -53,6 +57,11 @@ namespace LANCommander.Services
         {
             var game = await Get(id);
 
+            return GetManifest(game);
+        }
+
+        public GameManifest GetManifest(Game game)
+        {
             if (game == null)
                 return null;
 
@@ -84,6 +93,9 @@ namespace LANCommander.Services
 
             if (game.Archives != null && game.Archives.Count > 0)
                 manifest.Version = game.Archives.OrderByDescending(a => a.CreatedOn).First().Version;
+
+            if (game.Media != null && game.Media.Count > 0)
+                manifest.Media = Mapper.Map<IEnumerable<SDK.Models.Media>>(game.Media);
 
             if (game.Actions != null && game.Actions.Count > 0)
             {

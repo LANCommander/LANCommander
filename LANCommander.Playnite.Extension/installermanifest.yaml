@@ -136,6 +136,6 @@ Packages:
     RequiredApiVersion: 6.0.0
     ReleaseDate: 2024-02-17
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.7/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_7.pext
-    Changelot:
+    Changelog:
       - Fixed initialization error for first-time runs due to missing server address
 

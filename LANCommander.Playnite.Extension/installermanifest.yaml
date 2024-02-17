@@ -132,4 +132,10 @@ Packages:
       - 'Fixed: Games with no defined cover media will no longer throw a "Path2" error and will show default cover art'
       - 'Fixed: Download queue no longer locks up if there is an error in a post-install script. (this was most commonly exhibited by dismissing a UAC prompt when a script asks for elevation)'
       - 'Added: The Playnite extension now keeps track of what key was allocated last. A check is done with the server on start of a game to validate the correct key is being used. If the key differs, the proper allocated key is grabbed and fed to the key change script.'
+  - Version: 0.5.7
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-02-17
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.7/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_7.pext
+    Changelot:
+      - Fixed initialization error for first-time runs due to missing server address
 

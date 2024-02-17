@@ -60,7 +60,12 @@ namespace LANCommander.SDK
 
         public Client(string baseUrl, string defaultInstallDirectory, ILogger logger)
         {
-            BaseUrl = new Uri(baseUrl);
+            if (!String.IsNullOrWhiteSpace(baseUrl))
+            {
+                BaseUrl = new Uri(baseUrl);
+                ApiClient = new RestClient(BaseUrl);
+            }
+
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory, logger);
@@ -68,9 +73,6 @@ namespace LANCommander.SDK
             Redistributables = new RedistributableService(this, logger);
             Actions = new ActionService(this);
             Profile = new ProfileService(this, logger);
-
-            if (!String.IsNullOrWhiteSpace(baseUrl))
-                ApiClient = new RestClient(BaseUrl);
 
             Logger = logger;
         }

@@ -64,6 +64,11 @@ namespace LANCommander.SDK
             return Client.DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
         }
 
+        public IEnumerable<GameSave> Get(Guid gameId)
+        {
+            return Client.GetRequest<IEnumerable<GameSave>>($"/api/Saves/Game/{gameId}");
+        }
+
         public GameSave GetLatest(Guid gameId)
         {
             return Client.GetRequest<GameSave>($"/api/Saves/Latest/{gameId}");
@@ -76,7 +81,7 @@ namespace LANCommander.SDK
             return Client.UploadRequest<GameSave>($"/api/Saves/Upload/{gameId}", gameId.ToString(), data);
         }
 
-        public void Download(string installDirectory, Guid gameId)
+        public void Download(string installDirectory, Guid gameId, Guid? saveId = null)
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
@@ -85,13 +90,29 @@ namespace LANCommander.SDK
 
             if (manifest != null)
             {
-                var destination = DownloadLatest(manifest.Id, (changed) =>
+                string destination;
+
+                if (!saveId.HasValue)
                 {
-                    OnDownloadProgress?.Invoke(changed);
-                }, (complete) =>
+                    destination = DownloadLatest(manifest.Id, (changed) =>
+                    {
+                        OnDownloadProgress?.Invoke(changed);
+                    }, (complete) =>
+                    {
+                        OnDownloadComplete?.Invoke(complete);
+                    });
+                }
+                else
                 {
-                    OnDownloadComplete?.Invoke(complete);
-                });
+                    destination = Download(saveId.Value, (changed) =>
+                    {
+                        OnDownloadProgress?.Invoke(changed);
+                    }, (complete) =>
+                    {
+                        OnDownloadComplete?.Invoke(complete);
+                    });
+                }
+                
 
                 if (String.IsNullOrWhiteSpace(destination))
                     return;
@@ -269,6 +290,11 @@ namespace LANCommander.SDK
                     }
                 }
             }
+        }
+
+        public void Delete(Guid id)
+        {
+            Client.PostRequest<bool>($"/api/Saves/Delete/{id}");
         }
 
         public IEnumerable<SavePathEntry> GetFileSavePathEntries(SavePath savePath, string installDirectory)

@@ -44,6 +44,17 @@ namespace LANCommander.Controllers.Api
             return Mapper.Map<SDK.Models.GameSave>(await GameSaveService.Get(id));
         }
 
+        [HttpGet("Game/{gameId}")]
+        public async Task<IEnumerable<SDK.Models.GameSave>> GetGameSaves(Guid gameId)
+        {
+            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+            if (user == null)
+                return null;
+
+            return Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).ToListAsync());
+        }
+
         [HttpGet("Latest/{gameId}")]
         public async Task<SDK.Models.GameSave> Latest(Guid gameId)
         {
@@ -133,6 +144,23 @@ namespace LANCommander.Controllers.Api
             }
 
             return Ok(Mapper.Map<SDK.Models.GameSave>(save));
+        }
+
+        [HttpPost("Delete/{id}")]
+        public async Task<bool> Delete(Guid id)
+        {
+            try
+            {
+                var save = await GameSaveService.Get(id);
+
+                await GameSaveService.Delete(save);
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

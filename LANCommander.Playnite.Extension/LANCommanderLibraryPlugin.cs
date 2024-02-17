@@ -346,6 +346,15 @@ namespace LANCommander.PlaynitePlugin
                         }
                     };
                 }
+
+                yield return new GameMenuItem
+                {
+                    Description = "Manage Saves",
+                    Action = (args2) =>
+                    {
+                        ShowSaveManagerWindow(game);
+                    }
+                };
             }
         }
 
@@ -544,6 +553,31 @@ namespace LANCommander.PlaynitePlugin
 
                 if (onClose != null)
                     window.Closed += onClose;
+
+                window.ShowDialog();
+            });
+
+            return window;
+        }
+
+        public Window ShowSaveManagerWindow(Game game)
+        {
+            Window window = null;
+
+            Application.Current.Dispatcher.Invoke((Action)delegate
+            {
+                window = PlayniteApi.Dialogs.CreateWindow(new WindowCreationOptions()
+                {
+                    ShowMinimizeButton = false,
+                    ShowMaximizeButton = false
+                });
+
+                window.Title = $"Save Manager - {game.Name}";
+                window.SizeToContent = SizeToContent.WidthAndHeight;
+                window.MinWidth = 300;
+                window.Content = new Views.SaveManager(this, game);
+                window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
+                window.ResizeMode = ResizeMode.CanResizeWithGrip;
 
                 window.ShowDialog();
             });

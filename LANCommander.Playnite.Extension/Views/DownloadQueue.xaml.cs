@@ -19,11 +19,11 @@ namespace LANCommander.PlaynitePlugin.Views
     /// <summary>
     /// Interaction logic for DownloadQueue.xaml
     /// </summary>
-    public partial class DownloadQueue : UserControl
+    public partial class DownloadQueueView : UserControl
     {
         private readonly LANCommanderLibraryPlugin Plugin;
 
-        public DownloadQueue(LANCommanderLibraryPlugin plugin)
+        public DownloadQueueView(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
 

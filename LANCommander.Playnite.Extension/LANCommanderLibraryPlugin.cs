@@ -468,7 +468,7 @@ namespace LANCommander.PlaynitePlugin
                 Type = SiderbarItemType.View,
                 Opened = () =>
                 {
-                    var view = new Views.DownloadQueue(this);
+                    var view = new Views.DownloadQueueView(this);
 
                     view.DataContext = DownloadQueue;
 

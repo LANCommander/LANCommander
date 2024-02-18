@@ -333,7 +333,7 @@ namespace LANCommander.PlaynitePlugin
 
                     yield return new GameMenuItem
                     {
-                        Description = ResourceProvider.GetString("LOCLANCommanderManageRunInstallScriptMenuItem"),
+                        Description = ResourceProvider.GetString("LOCLANCommanderManageRunInstallScriptContextMenuItem"),
                         Action = (installArgs) =>
                         {
                             RunInstallScript(installArgs.Games.First().InstallDirectory, installArgs.Games.First().Id);

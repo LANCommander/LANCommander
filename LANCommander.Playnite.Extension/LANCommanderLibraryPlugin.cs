@@ -486,7 +486,7 @@ namespace LANCommander.PlaynitePlugin
 
         public override UserControl GetSettingsView(bool firstRunView)
         {
-            return new LANCommanderSettingsView(this);
+            return new SettingsView(this);
         }
 
         public void ShowNameChangeWindow()

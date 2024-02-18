@@ -542,7 +542,7 @@ namespace LANCommander.PlaynitePlugin
                 window.SizeToContent = SizeToContent.WidthAndHeight;
                 window.MinWidth = 400;
                 window.Content = new Views.AuthenticationView(this);
-                window.DataContext = new ViewModels.Authentication()
+                window.DataContext = new ViewModels.AuthenticationViewModel()
                 {
                     ServerAddress = serverAddress ?? Settings?.ServerAddress
                 };

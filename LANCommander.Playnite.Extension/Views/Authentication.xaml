@@ -5,7 +5,7 @@
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:ViewModels="clr-namespace:LANCommander.PlaynitePlugin.ViewModels"
 			 mc:Ignorable="d"
-			 d:DesignHeight="300" d:DesignWidth="275" d:DataContext="{d:DesignInstance Type=ViewModels:Authentication, IsDesignTimeCreatable=True}">
+			 d:DesignHeight="300" d:DesignWidth="275" d:DataContext="{d:DesignInstance Type=ViewModels:AuthenticationViewModel, IsDesignTimeCreatable=True}">
     <d:DesignerProperties.DesignStyle>
         <Style TargetType="UserControl">
             <Setter Property="Background" Value="White" />

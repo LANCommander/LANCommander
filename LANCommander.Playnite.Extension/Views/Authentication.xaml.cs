@@ -24,7 +24,7 @@ namespace LANCommander.PlaynitePlugin.Views
         public static readonly ILogger Logger = LogManager.GetLogger();
 
         private LANCommanderLibraryPlugin Plugin;
-        private ViewModels.Authentication Context { get { return (ViewModels.Authentication)DataContext; } }
+        private ViewModels.AuthenticationViewModel Context { get { return (ViewModels.AuthenticationViewModel)DataContext; } }
 
         public AuthenticationView(LANCommanderLibraryPlugin plugin)
         {
@@ -85,7 +85,7 @@ namespace LANCommander.PlaynitePlugin.Views
         {
             if (DataContext != null)
             {
-                ((ViewModels.Authentication)DataContext).Password = ((PasswordBox)sender).Password;
+                ((ViewModels.AuthenticationViewModel)DataContext).Password = ((PasswordBox)sender).Password;
             }
         }
 

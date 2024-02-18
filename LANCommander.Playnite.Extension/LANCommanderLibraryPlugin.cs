@@ -352,19 +352,6 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
-        // To add new main menu items override GetMainMenuItems
-        public override IEnumerable<MainMenuItem> GetMainMenuItems(GetMainMenuItemsArgs args)
-        {
-            yield return new MainMenuItem
-            {
-                Description = "Change Player Name (All Games)",
-                Action = (args2) =>
-                {
-                    ShowNameChangeWindow();
-                }
-            };
-        }
-
         public override void OnGameStarting(OnGameStartingEventArgs args)
         {
             if (args.Game.PluginId == Id)

@@ -19,14 +19,14 @@ using System.Windows.Shapes;
 
 namespace LANCommander.PlaynitePlugin.Views
 {
-    public partial class Authentication : UserControl
+    public partial class AuthenticationView : UserControl
     {
         public static readonly ILogger Logger = LogManager.GetLogger();
 
         private LANCommanderLibraryPlugin Plugin;
         private ViewModels.Authentication Context { get { return (ViewModels.Authentication)DataContext; } }
 
-        public Authentication(LANCommanderLibraryPlugin plugin)
+        public AuthenticationView(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
 

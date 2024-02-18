@@ -33,7 +33,7 @@ namespace LANCommander.PlaynitePlugin
         public override string Name => "LANCommander";
 
         public static readonly ILogger Logger = LogManager.GetLogger();
-        internal LANCommanderSettingsViewModel Settings { get; set; }
+        internal SettingsViewModel Settings { get; set; }
         internal LANCommander.SDK.Client LANCommanderClient { get; set; }
 
         internal LANCommanderSaveController SaveController { get; set; }
@@ -53,7 +53,7 @@ namespace LANCommander.PlaynitePlugin
                 HasCustomizedGameImport = true,
             };
 
-            Settings = new LANCommanderSettingsViewModel(this);
+            Settings = new SettingsViewModel(this);
             LANCommanderClient = new SDK.Client(Settings.ServerAddress, Settings.InstallDirectory, new PlayniteLogger(Logger));
             LANCommanderClient.UseToken(new SDK.Models.AuthToken()
             {

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.PlaynitePlugin
 {
-    public class LANCommanderSettingsViewModel : ObservableObject, ISettings
+    public class SettingsViewModel : ObservableObject, ISettings
     {
         private readonly LANCommanderLibraryPlugin Plugin;
 
@@ -105,9 +105,9 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
-        public LANCommanderSettingsViewModel() { }
+        public SettingsViewModel() { }
 
-        public LANCommanderSettingsViewModel(LANCommanderLibraryPlugin plugin)
+        public SettingsViewModel(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
 
@@ -116,7 +116,7 @@ namespace LANCommander.PlaynitePlugin
 
         public void Load()
         {
-            var settings = Plugin.LoadPluginSettings<LANCommanderSettingsViewModel>();
+            var settings = Plugin.LoadPluginSettings<SettingsViewModel>();
 
             Plugin.PlayniteApi.MainView.UIDispatcher.Invoke(() =>
             {

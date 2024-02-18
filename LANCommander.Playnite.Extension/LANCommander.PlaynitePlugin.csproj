@@ -71,7 +71,7 @@
     <Compile Include="UninstallController.cs" />
     <Compile Include="InstallController.cs" />
     <Compile Include="LANCommanderLibraryPlugin.cs" />
-    <Compile Include="ViewModels\LANCommanderSettingsViewModel.cs" />
+    <Compile Include="ViewModels\SettingsViewModel.cs" />
     <Compile Include="Views\DownloadQueue.xaml.cs">
       <DependentUpon>DownloadQueue.xaml</DependentUpon>
     </Compile>

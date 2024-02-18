@@ -46,7 +46,12 @@ namespace LANCommander.PlaynitePlugin.Views
         {
             var item = SaveList.SelectedItem as GameSave;
 
-            Plugin.LANCommanderClient.Saves.Download(Game.InstallDirectory, Game.Id, item.Id);
+            Plugin.PlayniteApi.MainView.UIDispatcher.InvokeAsync((System.Action)(async () =>
+            {
+                await Plugin.LANCommanderClient.Saves.Download(Game.InstallDirectory, Game.Id, item.Id);
+
+                Window.GetWindow(this).Close();
+            }));
         }
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)

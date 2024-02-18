@@ -122,7 +122,7 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
-        internal string DownloadRequest(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        internal async Task<string> DownloadRequest(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             route = route.TrimStart('/');
 
@@ -135,7 +135,7 @@ namespace LANCommander.SDK
 
             try
             {
-                client.DownloadFileTaskAsync(new Uri(BaseUrl, route), tempFile).Wait();
+                await client.DownloadFileTaskAsync(new Uri(BaseUrl, route), tempFile);
             }
             catch (Exception ex)
             {

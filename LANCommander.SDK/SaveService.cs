@@ -54,14 +54,14 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        private string Download(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        private async Task<string> Download(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return Client.DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);
+            return await Client.DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);
         }
 
-        public string DownloadLatest(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        public async Task<string> DownloadLatest(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return Client.DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
+            return await Client.DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
         }
 
         public IEnumerable<GameSave> Get(Guid gameId)
@@ -81,7 +81,7 @@ namespace LANCommander.SDK
             return Client.UploadRequest<GameSave>($"/api/Saves/Upload/{gameId}", gameId.ToString(), data);
         }
 
-        public void Download(string installDirectory, Guid gameId, Guid? saveId = null)
+        public async Task Download(string installDirectory, Guid gameId, Guid? saveId = null)
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
@@ -94,7 +94,7 @@ namespace LANCommander.SDK
 
                 if (!saveId.HasValue)
                 {
-                    destination = DownloadLatest(manifest.Id, (changed) =>
+                    destination = await DownloadLatest(manifest.Id, (changed) =>
                     {
                         OnDownloadProgress?.Invoke(changed);
                     }, (complete) =>
@@ -104,7 +104,7 @@ namespace LANCommander.SDK
                 }
                 else
                 {
-                    destination = Download(saveId.Value, (changed) =>
+                    destination = await Download(saveId.Value, (changed) =>
                     {
                         OnDownloadProgress?.Invoke(changed);
                     }, (complete) =>

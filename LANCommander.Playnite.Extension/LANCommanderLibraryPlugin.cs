@@ -8,22 +8,16 @@ using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Web;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using PN = Playnite;
 using LANCommander.SDK;
-using System.Reflection;
-using LANCommander.PlaynitePlugin.Views;
-using LANCommander.PlaynitePlugin.Models;
 using LANCommander.PlaynitePlugin.Controls;
 using System.Threading.Tasks;
 using System.Net;
-using Windows.Media.Capture;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -34,7 +28,7 @@ namespace LANCommander.PlaynitePlugin
 
         public static readonly ILogger Logger = LogManager.GetLogger();
         internal SettingsViewModel Settings { get; set; }
-        internal LANCommander.SDK.Client LANCommanderClient { get; set; }
+        internal Client LANCommanderClient { get; set; }
 
         internal LANCommanderSaveController SaveController { get; set; }
         internal ImportController ImportController { get; set; }

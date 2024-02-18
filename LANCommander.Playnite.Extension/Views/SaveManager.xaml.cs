@@ -19,12 +19,12 @@ namespace LANCommander.PlaynitePlugin.Views
     /// <summary>
     /// Interaction logic for SaveManager.xaml
     /// </summary>
-    public partial class SaveManager : UserControl
+    public partial class SaveManagerView : UserControl
     {
         private LANCommanderLibraryPlugin Plugin { get; set; }
         private Playnite.SDK.Models.Game Game { get; set; }
 
-        public SaveManager(LANCommanderLibraryPlugin plugin, Playnite.SDK.Models.Game game)
+        public SaveManagerView(LANCommanderLibraryPlugin plugin, Playnite.SDK.Models.Game game)
         {
             Plugin = plugin;
             Game = game;

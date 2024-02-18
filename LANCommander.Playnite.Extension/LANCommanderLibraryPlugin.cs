@@ -575,7 +575,7 @@ namespace LANCommander.PlaynitePlugin
                 window.Title = $"Save Manager - {game.Name}";
                 window.SizeToContent = SizeToContent.WidthAndHeight;
                 window.MinWidth = 300;
-                window.Content = new Views.SaveManager(this, game);
+                window.Content = new Views.SaveManagerView(this, game);
                 window.Owner = PlayniteApi.Dialogs.GetCurrentAppWindow();
                 window.ResizeMode = ResizeMode.CanResizeWithGrip;
 

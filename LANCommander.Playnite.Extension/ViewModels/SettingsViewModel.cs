@@ -37,7 +37,7 @@ namespace LANCommander.PlaynitePlugin
             }
         }
 
-        public string playerName { get; set; } = String.Empty;
+        private string playerName { get; set; } = String.Empty;
         public string PlayerName
         {
             get => playerName;

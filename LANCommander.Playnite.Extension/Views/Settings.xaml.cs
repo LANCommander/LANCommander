@@ -36,7 +36,7 @@ namespace LANCommander.PlaynitePlugin
 
         private void UpdateAuthenticationButtonVisibility()
         {
-            PART_AuthenticateLabel.Content = "Checking authentication status...";
+            PART_AuthenticateLabel.Content = ResourceProvider.GetString("LOCLANCommanderSettingsCheckingAuthentication");
             PART_AuthenticationButton.IsEnabled = false;
             PART_InstallDirectory.Text = Settings.InstallDirectory;
             PART_ServerAddress.Text = Settings.ServerAddress;
@@ -56,7 +56,7 @@ namespace LANCommander.PlaynitePlugin
                         {
                             if (antecedent.Result == false)
                             {
-                                PART_AuthenticateLabel.Content = "Authentication failed!";
+                                PART_AuthenticateLabel.Content = ResourceProvider.GetString("LOCLANCommanderSettingsAuthenticationFailed");
                                 PART_AuthenticationButton.IsEnabled = true;
                                 PART_AuthenticationButton.Visibility = Visibility.Visible;
                                 PART_DisconnectButton.IsEnabled = false;
@@ -64,7 +64,7 @@ namespace LANCommander.PlaynitePlugin
                             }
                             else
                             {
-                                PART_AuthenticateLabel.Content = "Connection established!";
+                                PART_AuthenticateLabel.Content = ResourceProvider.GetString("LOCLANCommanderSettingsConnectionEstablished");
                                 PART_AuthenticationButton.IsEnabled = false;
                                 PART_AuthenticationButton.Visibility = Visibility.Hidden;
                                 PART_DisconnectButton.IsEnabled = true;
@@ -88,7 +88,7 @@ namespace LANCommander.PlaynitePlugin
         {
             await Plugin.Logout();
 
-            PART_AuthenticateLabel.Content = "Not Authenticated";
+            PART_AuthenticateLabel.Content = ResourceProvider.GetString("LOCLANCommanderSettingsNotAuthenticatedLabel");
             PART_AuthenticationButton.IsEnabled = true;
             PART_AuthenticationButton.Visibility = Visibility.Visible;
             PART_DisconnectButton.IsEnabled = false;

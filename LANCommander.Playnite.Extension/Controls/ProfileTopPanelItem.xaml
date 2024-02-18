@@ -8,9 +8,9 @@
              d:DesignHeight="450" d:DesignWidth="800" Name="ProfileTopPanelItemControl">
     <UserControl.Resources>
         <ContextMenu x:Key="ProfileMenu">
-            <MenuItem Header="Change Name" Click="ChangeName" />
-            <MenuItem Header="View Profile" Click="ViewProfile" />
-            <MenuItem Header="Log out" Click="LogOut" />
+            <MenuItem Header="{DynamicResource LOCLANCommanderProfileMenuChangeName}" Click="ChangeName" />
+            <MenuItem Header="{DynamicResource LOCLANCommanderProfileMenuViewProfile}" Click="ViewProfile" />
+            <MenuItem Header="{DynamicResource LOCLANCommanderProfileMenuLogOut}" Click="LogOut" />
         </ContextMenu>
     </UserControl.Resources>
     <Button Click="OpenProfileMenu" Padding="0" BorderThickness="0" Height="32">

@@ -69,7 +69,7 @@ namespace LANCommander.PlaynitePlugin
                 if (Plugin != null && Plugin.LANCommanderClient.IsConnected())
                     return String.IsNullOrWhiteSpace(playerAlias) ? PlayerName : playerAlias;
                 else
-                    return "Disconnected";
+                    return ResourceProvider.GetString("LOCLANCommanderDisconnected");
             }
             set
             {
@@ -159,7 +159,7 @@ namespace LANCommander.PlaynitePlugin
             errors = new List<string>();
 
             if (String.IsNullOrWhiteSpace(InstallDirectory))
-                errors.Add("An install directory needs to be set!");
+                errors.Add(ResourceProvider.GetString("LOCLANCommanderSettingsBlankInstallDirectoryError"));
 
             return errors.Count == 0;
         }

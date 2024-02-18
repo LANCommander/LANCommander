@@ -22,7 +22,7 @@
                     <TextBlock Text="&#xea5c;" FontFamily="{DynamicResource FontIcoFont}" FontSize="26" />
                 </Hyperlink>
             </TextBlock>
-            <TextBlock Text="Download Queue" VerticalAlignment="Center" Style="{StaticResource BaseTextBlockStyle}" Margin="10,0,0,0" FontSize="18" />
+            <TextBlock Text="{DynamicResource LOCLANCommanderDownloadQueueTitle}" VerticalAlignment="Center" Style="{StaticResource BaseTextBlockStyle}" Margin="10,0,0,0" FontSize="18" />
         </StackPanel>
 
         <DockPanel Margin="20,0,20,0">
@@ -110,7 +110,7 @@
 
                     <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <Hyperlink Click="CancelDownload">
-                            <TextBlock Text="&#xec4f;" FontFamily="{DynamicResource FontIcoFont}" FontSize="16" ToolTip="Cancel Download" />
+                            <TextBlock Text="&#xec4f;" FontFamily="{DynamicResource FontIcoFont}" FontSize="16" ToolTip="{DynamicResource LOCLANCommanderDownloadQueueCancelDownloadTooltip}" />
                         </Hyperlink>
                     </TextBlock>
                 </Grid>
@@ -119,10 +119,10 @@
             <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                 <StackPanel Orientation="Vertical">
                     <Border BorderThickness="0,0,0,2" BorderBrush="{DynamicResource PopupBorderBrush}">
-                        <TextBlock Text="Up Next" FontSize="24" Style="{StaticResource BaseTextBlockStyle}" Margin="0,10,0,10" />
+                        <TextBlock Text="{DynamicResource LOCLANCommanderDownloadQueueUpNextTitle}" FontSize="24" Style="{StaticResource BaseTextBlockStyle}" Margin="0,10,0,10" />
                     </Border>
 
-                    <TextBlock Text="The download queue is empty" FontSize="16" Style="{StaticResource BaseTextBlockStyle}" Visibility="{Binding DownloadQueue.Items, Converter={StaticResource IEnumerableEmptyVisibilityConverter}}" Margin="8,16,0,32" />
+                    <TextBlock Text="{DynamicResource LOCLANCommanderDownloadQueueEmptyMessage}" FontSize="16" Style="{StaticResource BaseTextBlockStyle}" Visibility="{Binding DownloadQueue.Items, Converter={StaticResource IEnumerableEmptyVisibilityConverter}}" Margin="8,16,0,32" />
 
                     <ItemsControl Name="DownloadQueueItemList" ItemsSource="{Binding DownloadQueue.Items}" Visibility="{Binding DownloadQueue.Items, Converter={StaticResource IEnumerableVisibilityConverter}}" BorderThickness="0" Margin="10,10,10,0">
                         <ItemsControl.ItemTemplate>
@@ -147,7 +147,7 @@
                                     </Grid>
                                     <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
                                         <Hyperlink Click="RemoveItem">
-                                            <TextBlock Text="&#xec4f;" FontFamily="{DynamicResource FontIcoFont}" FontSize="16" ToolTip="Remove from Queue" />
+                                            <TextBlock Text="&#xec4f;" FontFamily="{DynamicResource FontIcoFont}" FontSize="16" ToolTip="{DynamicResource LOCLANCommanderDownloadQueueRemoveItemTooltip}" />
                                         </Hyperlink>
                                     </TextBlock>
                                 </Grid>
@@ -167,7 +167,7 @@
                         </StackPanel.Style>
                         
                         <Border BorderThickness="0,0,0,2" BorderBrush="{DynamicResource PopupBorderBrush}">
-                            <TextBlock Text="Completed" FontSize="24" Style="{StaticResource BaseTextBlockStyle}" Margin="0,0,0,10" />
+                            <TextBlock Text="{DynamicResource LOCLANCommanderDownloadQueueCompletedTitle}" FontSize="24" Style="{StaticResource BaseTextBlockStyle}" Margin="0,0,0,10" />
                         </Border>
 
                         <ItemsControl Name="DownloadQueueCompletedList" ItemsSource="{Binding DownloadQueue.Completed}" BorderThickness="0" Margin="10,10,10,0">
@@ -193,8 +193,8 @@
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
                                                 <TextBlock Text="{Binding CompletedOn, Converter={StaticResource RelativeDateConverter}, StringFormat='Completed: \{0\}'}" Style="{StaticResource BaseTextBlockStyle}" VerticalAlignment="Center" Margin="0,0,32,0" />
-                                                <Button Width="150" Height="40" Style="{DynamicResource PlayButton}" Content="Play" VerticalAlignment="Center" Click="Play" />
-                                                <Button Width="40" Height="40" Content="&#xef65;" FontFamily="{DynamicResource FontIcoFont}" VerticalAlignment="Center" Margin="10,0,0,0" ToolTip="View in Library" Click="ViewInLibrary" />
+                                                <Button Width="150" Height="40" Style="{DynamicResource PlayButton}" Content="{DynamicResource LOCLANCommanderDownloadQueueCompletedPlayButtonTooltip}" VerticalAlignment="Center" Click="Play" />
+                                                <Button Width="40" Height="40" Content="&#xef65;" FontFamily="{DynamicResource FontIcoFont}" VerticalAlignment="Center" Margin="10,0,0,0" ToolTip="{DynamicResource LOCLANCommanderDownloadQueueCompletedLibraryButtonTooltip}" Click="ViewInLibrary" />
                                             </StackPanel>
                                         </Grid>
                                     </Grid>

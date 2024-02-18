@@ -22,9 +22,9 @@
 					<ColumnDefinition Width="*" />
 				</Grid.ColumnDefinitions>
 
-				<Button Grid.Column="0" Click="DownloadButton_Click" x:Name="DownloadButton" IsEnabled="{Binding ElementName=SaveList, Path=SelectedItems.Count}" Margin="0,0,5,0">Download</Button>
-				<Button Grid.Column="1" Click="DeleteButton_Click" x:Name="DeleteButton" IsEnabled="{Binding ElementName=SaveList, Path=SelectedItems.Count}" Margin="5,0,0,0">Delete</Button>
-			</Grid>
+                <Button Grid.Column="0" Click="DownloadButton_Click" x:Name="DownloadButton" IsEnabled="{Binding ElementName=SaveList, Path=SelectedItems.Count}" Margin="0,0,5,0" Content="{DynamicResource LOCLANCommanderSaveManagerDownloadButton}" />
+                <Button Grid.Column="1" Click="DeleteButton_Click" x:Name="DeleteButton" IsEnabled="{Binding ElementName=SaveList, Path=SelectedItems.Count}" Margin="5,0,0,0" Content="{DynamicResource LOCLANCommanderSaveManagerDeleteButton}" />
+            </Grid>
 		</StackPanel>
     </Grid>
 </UserControl>

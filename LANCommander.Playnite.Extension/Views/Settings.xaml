@@ -26,9 +26,9 @@
                 <ColumnDefinition Width="10" />
                 <ColumnDefinition Width="75" />
             </Grid.ColumnDefinitions>
-            <Label Grid.Column="0" Content="Install Directory" />
+            <Label Grid.Column="0" Content="{DynamicResource LOCLANCommanderSettingsInstallDirectoryLabel}" />
             <TextBox Name="PART_InstallDirectory" Grid.Column="2" Text="{Binding InstallDirectory}" />
-            <Button Grid.Column="4" Content="Browse" Click="SelectInstallDirectory_Click" VerticalAlignment="Center" Grid.ColumnSpan="2" />
+            <Button Grid.Column="4" Content="{DynamicResource LOCLANCommanderSettingsInstallDirectoryBrowseButton}" Click="SelectInstallDirectory_Click" VerticalAlignment="Center" Grid.ColumnSpan="2" />
         </Grid>
 		
 		<Grid Grid.Row="1" Margin="0,10,0,0">
@@ -40,7 +40,7 @@
 				<ColumnDefinition Width="75" />
 			</Grid.ColumnDefinitions>
 
-			<Label Grid.Column="0" Content="Server Address" />
+            <Label Grid.Column="0" Content="{DynamicResource LOCLANCommanderSettingsServerAddressLabel}" />
 			<TextBox Name="PART_ServerAddress" Grid.Column="2" Text="{Binding ServerAddress}" IsEnabled="false" />
 		</Grid>
 
@@ -50,8 +50,8 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Button Name="PART_AuthenticationButton" Content="Authenticate" Grid.Column="0" Click="AuthenticateButton_Click" VerticalAlignment="Center" />
-			<Button Name="PART_DisconnectButton" Content="Disconnect" Grid.Column="0" Click="DisconnectButton_Click" VerticalAlignment="Center" />
+            <Button Name="PART_AuthenticationButton" Content="{DynamicResource LOCLANCommanderSettingsAuthenticateButton}" Grid.Column="0" Click="AuthenticateButton_Click" VerticalAlignment="Center" />
+            <Button Name="PART_DisconnectButton" Content="{DynamicResource LOCLANCommanderSettingsDisconnectButton}" Grid.Column="0" Click="DisconnectButton_Click" VerticalAlignment="Center" />
             <Label Name="PART_AuthenticateLabel" Margin="20,0,0,0" VerticalAlignment="Center" Grid.Column="3" />
         </Grid>
     </Grid>

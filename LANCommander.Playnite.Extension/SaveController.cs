@@ -48,7 +48,7 @@ namespace LANCommander.PlaynitePlugin
                     // Lock the thread until the download is done
                     while (progress.CurrentProgressValue != 100) { }
                 },
-                new GlobalProgressOptions("Downloading latest save...")
+                new GlobalProgressOptions(ResourceProvider.GetString("LOCLANCommanderSaveDownloadProgressDialogMessage"))
                 {
                     IsIndeterminate = false,
                     Cancelable = false

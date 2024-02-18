@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Playnite.SDK;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -68,18 +69,18 @@ namespace LANCommander.PlaynitePlugin.Models
                 {
                     case DownloadQueueItemStatus.Downloading:
                         var percent = (totalDownloaded / (double)size) * 100;
-                        return $"Downloading ({percent.ToString("0")}%)";
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusDownloading").Replace("{Percentage}", percent.ToString("0"));
                     case DownloadQueueItemStatus.InstallingRedistributables:
-                        return "Installing Redistributables";
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusInstallingRedistributables");
                     case DownloadQueueItemStatus.RunningScripts:
-                        return "Running Scripts";
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusRunningScripts");
                     case DownloadQueueItemStatus.DownloadingSaves:
-                        return "Downloading Saves";
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusDownloadingSaves");
                     case DownloadQueueItemStatus.Canceled:
-                        return "Canceling";
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusCanceled");
                     case DownloadQueueItemStatus.Idle:
                     default:
-                        return "Idle";
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusIdle");
                 }
             }
         }

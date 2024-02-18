@@ -108,10 +108,11 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Localization\en_US.xaml">
+    <None Include="Localization\*.xaml">
+	  <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <Page Include="Styles.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>

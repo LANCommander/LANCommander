@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Data;
 using System.Windows;
+using Playnite.SDK;
 
 namespace LANCommander.PlaynitePlugin.Converters
 {
@@ -25,9 +26,9 @@ namespace LANCommander.PlaynitePlugin.Converters
                 var date = (DateTime)value;
 
                 if (date.Day == today.Day && date.Month == today.Month && date.Year == today.Year)
-                    return $"Today {date.ToString("h:mm tt")}";
+                    return ResourceProvider.GetString("LOCLANCommanderToday") + " " + date.ToString("h:mm tt");
                 else if (date.Day == yesterday.Day && date.Month == yesterday.Month && date.Year == yesterday.Year)
-                    return $"Yesterday {date.ToString("h:mm tt")}";
+                    return ResourceProvider.GetString("LOCLANCommanderYesterday") + " " + date.ToString("h:mm tt");
                 else
                     return date.ToString("MMM d h:mm tt");
             }

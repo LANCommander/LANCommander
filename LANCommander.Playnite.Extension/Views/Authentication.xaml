@@ -34,11 +34,11 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Server Address" />
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource LOCLANCommanderAuthenticationWindowServerAddressLabel}" />
         <TextBox Grid.Row="0" Grid.Column="1" Name="ServerAddress" Text="{Binding ServerAddress}" KeyDown="TextBox_KeyDown" />
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Username"/>
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource LOCLANCommanderAuthenticationWindowUsernameLabel}"/>
         <TextBox Grid.Row="1" Grid.Column="1" Name="Username" Text="{Binding UserName}" KeyDown="TextBox_KeyDown" />
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Password" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource LOCLANCommanderAuthenticationWindowPasswordLabel}" />
         <PasswordBox Grid.Row="2" Grid.Column="1" Name="Password" PasswordChanged="Password_PasswordChanged" KeyDown="TextBox_KeyDown" />
 
         <GridSplitter Grid.Row="4" />
@@ -53,9 +53,9 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Button Grid.Row="0" Grid.Column="0" Margin="5 0" Click="LoginButton_Click" x:Name="LoginButton">Login</Button>
-            <Button Grid.Row="0" Grid.Column="1" Margin="5 0" Click="RegisterButton_Click" x:Name="RegisterButton">Register</Button>
-            <Button Grid.Row="0" Grid.Column="2" Margin="5 0" Click="OfflineButton_Click" x:Name="OfflineButton">Offline</Button>
+            <Button Grid.Row="0" Grid.Column="0" Margin="5 0" Click="LoginButton_Click" x:Name="LoginButton" Content="{DynamicResource LOCLANCommanderAuthenticationWindowLoginButton}" />
+            <Button Grid.Row="0" Grid.Column="1" Margin="5 0" Click="RegisterButton_Click" x:Name="RegisterButton" Content="{DynamicResource LOCLANCommanderAuthenticationWindowRegisterButton}" />
+            <Button Grid.Row="0" Grid.Column="2" Margin="5 0" Click="OfflineButton_Click" x:Name="OfflineButton" Content="{DynamicResource LOCLANCommanderAuthenticationWindowOfflineButton}" />
         </Grid>
     </Grid>
 </UserControl>

@@ -89,7 +89,7 @@ namespace LANCommander.PlaynitePlugin
                     DownloadQueue.CurrentItem.Size = length;
                     DownloadQueue.CurrentItem.Speed = (double)(position - DownloadQueue.CurrentItem.TotalDownloaded) / (Stopwatch.ElapsedMilliseconds / 1000d);
                     DownloadQueue.CurrentItem.TotalDownloaded = position;
-                    DownloadQueue.CurrentItem.TimeRemaining = $"{GetTimeRemaining(DownloadQueue.CurrentItem)} Remaining";
+                    DownloadQueue.CurrentItem.TimeRemaining = GetTimeRemaining(DownloadQueue.CurrentItem) + " " + ResourceProvider.GetString("LOCLANCommanderDownloadQueueTimeRemaining");
                     Plugin.DownloadQueueSidebarItem.ProgressMaximum = length;
                     Plugin.DownloadQueueSidebarItem.ProgressValue = position;
                 });
@@ -273,7 +273,7 @@ namespace LANCommander.PlaynitePlugin
             catch (Exception ex)
             {
                 Logger?.Error(ex, $"An unknown error occurred while trying to install {game.Title}");
-                Plugin.PlayniteApi.Notifications.Add($"InstallFail-{DownloadQueue.CurrentItem.Game.Id}", $"An unknown error occurred while trying to install {game.Title}", NotificationType.Error);
+                Plugin.PlayniteApi.Notifications.Add($"InstallFail-{DownloadQueue.CurrentItem.Game.Id}", ResourceProvider.GetString("LOCLANCommanderDownloadQueueGenericInstallFailedNotification").Replace("{Title}", game.Title), NotificationType.Error);
                 ShowFailedNotification(DownloadQueue.CurrentItem);
                 OnInstallFail?.Invoke(DownloadQueue.CurrentItem.Game);
                 Remove(DownloadQueue.CurrentItem);
@@ -320,7 +320,7 @@ namespace LANCommander.PlaynitePlugin
             }
             catch (Exception ex)
             {
-                Logger?.Error(ex, "Failed to execute post-install scripts");
+                Logger?.Error(ex, ResourceProvider.GetString("LOCLANCommanderDownloadQueuePostInstallScriptError"));
             }
 
             DownloadQueue.CurrentItem.CompletedOn = DateTime.Now;
@@ -359,24 +359,24 @@ namespace LANCommander.PlaynitePlugin
 
             if (queueItem.IsUpdate)
             {
-                builder = builder.AddText("Game Updated")
-                    .AddText($"{queueItem.Title} has finished updating!");
+                builder = builder.AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameUpdatedToastTitle"))
+                    .AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameUpdatedToastMessage").Replace("{Title}", queueItem.Title));
             }
             else
             {
-                builder = builder.AddText("Game Installed")
-                    .AddText($"{queueItem.Title} has finished installing!");
+                builder = builder.AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameInstalledToastTitle"))
+                    .AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameInstalledToastMessage").Replace("{Title}", queueItem.Title));
             }
 
             builder.AddArgument("gameId", queueItem.Game.Id.ToString())
                 .AddButton(
                     new ToastButton()
-                        .SetContent("Play")
+                        .SetContent(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameToastPlayButton"))
                         .AddArgument("action", "play")
                 )
                 .AddButton(
                     new ToastButton()
-                        .SetContent("View in Library")
+                        .SetContent(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameToastLibraryButton"))
                         .AddArgument("action", "viewInLibrary")
                 )
                 .AddAppLogoOverride(new Uri($"file:///{queueItem.CoverPath}", UriKind.Absolute), ToastGenericAppLogoCrop.None)
@@ -389,19 +389,19 @@ namespace LANCommander.PlaynitePlugin
 
             if (queueItem.IsUpdate)
             {
-                builder = builder.AddText("Update Failed")
-                    .AddText($"{queueItem.Title} could not be updated!");
+                builder = builder.AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameToastUpdateFailedTitle"))
+                    .AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameToastUpdateFailedMessage").Replace("{Title}", queueItem.Title));
             }
             else
             {
-                builder = builder.AddText("Install Failed")
-                    .AddText($"{queueItem.Title} could not be installed!");
+                builder = builder.AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameToastInstallFailedTitle"))
+                    .AddText(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameToastInstallFailedMessage").Replace("{Title}", queueItem.Title));
             }
 
             builder.AddArgument("gameId", queueItem.Game.Id.ToString())
                 .AddButton(
                     new ToastButton()
-                        .SetContent("View in Library")
+                        .SetContent(ResourceProvider.GetString("LOCLANCommanderDownloadQueueGameToastLibraryButton"))
                         .AddArgument("action", "viewInLibrary")
                 )
                 .AddAppLogoOverride(new Uri($"file:///{queueItem.CoverPath}", UriKind.Absolute), ToastGenericAppLogoCrop.None)

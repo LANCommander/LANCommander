@@ -46,7 +46,7 @@ namespace LANCommander.PlaynitePlugin
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "There was an error running the uninstall script");
+                    Logger.Error(ex, ResourceProvider.GetString("LOCLANCommanderUninstallScriptError"));
                 }
 
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
@@ -60,7 +60,7 @@ namespace LANCommander.PlaynitePlugin
 
                     DirectoryHelper.DeleteEmptyDirectories(Game.InstallDirectory);
                 },
-                new GlobalProgressOptions("Removing game files...")
+                new GlobalProgressOptions(ResourceProvider.GetString("LOCLANCommanderUninstallRemovingFilesMessage"))
                 {
                     IsIndeterminate = true,
                     Cancelable = false,
@@ -69,7 +69,7 @@ namespace LANCommander.PlaynitePlugin
             catch (Exception ex)
             {
                 Logger.Error(ex, "There was an error uninstalling the game");
-                throw new Exception("There was an error uninstalling the game");
+                throw new Exception(ResourceProvider.GetString("LOCLANCommanderUninstallGenericError"));
             }
 
             InvokeOnUninstalled(new GameUninstalledEventArgs());

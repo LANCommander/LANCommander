@@ -58,7 +58,7 @@ namespace LANCommander.PlaynitePlugin
             #region Initialize Top Bar Items
             OfflineModeTopPanelItem = new TopPanelItem
             {
-                Title = "Go Online",
+                Title = ResourceProvider.GetString("LOCLANCommanderGoOnline"),
                 Icon = new TextBlock
                 {
                     Text = char.ConvertFromUtf32(0xef3e),
@@ -169,7 +169,7 @@ namespace LANCommander.PlaynitePlugin
                 {
                     Logger.Trace("User cancelled authentication.");
 
-                    throw new Exception("You must set up a valid connection to a LANCommander server.");
+                    throw new Exception(ResourceProvider.GetString("LOCLANCommanderImportGamesAuthenticationInvalidNotification"));
                 }
             }
 
@@ -186,7 +186,7 @@ namespace LANCommander.PlaynitePlugin
 
             if (Settings.OfflineModeEnabled)
             {
-                PlayniteApi.Dialogs.ShowErrorMessage("You must connect to a LANCommander server to install this game.", "Offline Mode Enabled");
+                PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCLANCommanderOfflineModeInstallWarningMessage"), ResourceProvider.GetString("LOCLANCommanderOfflineModeInstallWarningCaption"));
             }
 
             yield return new LANCommanderInstallController(this, args.Game);
@@ -262,7 +262,7 @@ namespace LANCommander.PlaynitePlugin
 
             yield return new GameMenuItem
             {
-                Description = "Add to Download Queue",
+                Description = ResourceProvider.GetString("LOCLANCommanderAddToDownloadQueue"),
                 Action = (args2) =>
                 {
                     foreach (var game in args2.Games)
@@ -284,12 +284,12 @@ namespace LANCommander.PlaynitePlugin
 
                     yield return new GameMenuItem
                     {
-                        Description = "Change Player Name",
+                        Description = ResourceProvider.GetString("LOCLANCommanderChangeNameContextMenuItem"),
                         Action = (nameChangeArgs) =>
                         {
                             var oldName = Settings.DisplayName;
 
-                            var result = PlayniteApi.Dialogs.SelectString("Enter your player name", "Change Player Name", oldName);
+                            var result = PlayniteApi.Dialogs.SelectString(ResourceProvider.GetString("LOCLANCommanderChangePlayerNameDialogMessage"), ResourceProvider.GetString("LOCLANCommanderChangePlayerNameDialogCaption"), oldName);
 
                             if (result.Result == true)
                             {
@@ -313,14 +313,14 @@ namespace LANCommander.PlaynitePlugin
 
                     yield return new GameMenuItem
                     {
-                        Description = "Change Game Key",
+                        Description = ResourceProvider.GetString("LOCLANCommanderChangeGameKeyContextMenuItem"),
                         Action = (keyChangeArgs) =>
                         {
                             // NUKIEEEE
                             var newKey = LANCommanderClient.Games.GetNewKey(keyChangeArgs.Games.First().Id);
 
                             if (String.IsNullOrEmpty(newKey))
-                                PlayniteApi.Dialogs.ShowErrorMessage("There are no more keys available on the server.", "No Keys Available");
+                                PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCLANCommanderNoKeysAvailableMessage"), ResourceProvider.GetString("LOCLANCommanderNoKeysAvailableTitle"));
                             else
                                 RunKeyChangeScript(keyChangeArgs.Games.First().InstallDirectory, keyChangeArgs.Games.First().Id, newKey);
                         }
@@ -333,7 +333,7 @@ namespace LANCommander.PlaynitePlugin
 
                     yield return new GameMenuItem
                     {
-                        Description = "Run Install Script",
+                        Description = ResourceProvider.GetString("LOCLANCommanderManageRunInstallScriptMenuItem"),
                         Action = (installArgs) =>
                         {
                             RunInstallScript(installArgs.Games.First().InstallDirectory, installArgs.Games.First().Id);
@@ -343,7 +343,7 @@ namespace LANCommander.PlaynitePlugin
 
                 yield return new GameMenuItem
                 {
-                    Description = "Manage Saves",
+                    Description = ResourceProvider.GetString("LOCLANCommanderManageSavesContextMenuItem"),
                     Action = (args2) =>
                     {
                         ShowSaveManagerWindow(game);
@@ -375,11 +375,11 @@ namespace LANCommander.PlaynitePlugin
                 if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
                 {
                     // This would be better served by some metadata
-                    if (args.Game.Name.EndsWith(" - Update Available"))
+                    if (args.Game.Name.EndsWith(ResourceProvider.GetString("LOCLANCommanderUpdateAvailableSuffix")))
                     {
-                        var title = args.Game.Name.Replace(" - Update Available", "");
-                        var updateMessage = $"An update for {title} is available. Would you like to update now?";
-                        var result = PlayniteApi.Dialogs.ShowMessage(updateMessage, "Update Available", MessageBoxButton.YesNo);
+                        var title = args.Game.Name.Replace(ResourceProvider.GetString("LOCLANCommanderUpdateAvailableSuffix"), "");
+                        var updateMessage = ResourceProvider.GetString("LOCLANCommanderUpdateAvailableMessage").Replace("{Title}", title);
+                        var result = PlayniteApi.Dialogs.ShowMessage(updateMessage, ResourceProvider.GetString("LOCLANCommanderUpdateAvailableCaption"), MessageBoxButton.YesNo);
 
                         if (result == MessageBoxResult.Yes)
                         {
@@ -440,7 +440,7 @@ namespace LANCommander.PlaynitePlugin
         {
             DownloadQueueSidebarItem = new SidebarItem
             {
-                Title = "Downloads",
+                Title = ResourceProvider.GetString("LOCLANCommanderDownloadQueueSidebarTitle"),
                 Icon = new TextBlock
                 {
                     Text = char.ConvertFromUtf32(0xef08),
@@ -476,7 +476,7 @@ namespace LANCommander.PlaynitePlugin
 
             var oldName = Settings.DisplayName;
 
-            var result = PlayniteApi.Dialogs.SelectString("Enter your new player name", "Enter Name", oldName);
+            var result = PlayniteApi.Dialogs.SelectString(ResourceProvider.GetString("LOCLANCommanderChangePlayerNameDialogMessage"), ResourceProvider.GetString("LOCLANCommanderChangePlayerNameDialogCaption"), oldName);
 
             if (result.Result == true)
             {
@@ -485,7 +485,7 @@ namespace LANCommander.PlaynitePlugin
                 // Check to make sure they're staying in ASCII encoding
                 if (String.IsNullOrEmpty(result.SelectedString) || result.SelectedString.Any(c => c > sbyte.MaxValue))
                 {
-                    PlayniteApi.Dialogs.ShowErrorMessage("The name you supplied is invalid. Try again.");
+                    PlayniteApi.Dialogs.ShowErrorMessage(ResourceProvider.GetString("LOCLANCommanderChangePlayerNameDialogInvalidMessage"));
 
                     Logger.Trace("An invalid name was specified. Showing the name dialog again...");
 
@@ -519,7 +519,7 @@ namespace LANCommander.PlaynitePlugin
                     ShowMinimizeButton = false,
                 });
 
-                window.Title = "Authenticate to LANCommander";
+                window.Title = ResourceProvider.GetString("LOCLANCommanderAuthenticationWindowTitle");
                 window.SizeToContent = SizeToContent.WidthAndHeight;
                 window.MinWidth = 400;
                 window.Content = new Views.AuthenticationView(this);
@@ -553,7 +553,7 @@ namespace LANCommander.PlaynitePlugin
                     ShowMaximizeButton = false
                 });
 
-                window.Title = $"Save Manager - {game.Name}";
+                window.Title = ResourceProvider.GetString("LOCLANCommanderSaveManagerWindowTitle") + $" - {game.Name}";
                 window.SizeToContent = SizeToContent.WidthAndHeight;
                 window.MinWidth = 300;
                 window.Content = new Views.SaveManagerView(this, game);

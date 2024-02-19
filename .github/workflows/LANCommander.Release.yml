@@ -72,6 +72,12 @@ jobs:
       uses: NuGet/setup-nuget@v1.1.1
     - name: Restore NuGet packages
       run: nuget restore LANCommander.sln
+    - name: Update Version
+      uses: jacobtomlinson/gha-find-replace@v3
+      with:
+        find: "1.0.0.0"
+        replace: ${{ steps.trim_tag_ref.outputs.replaced }}
+        include: "LANCommander.Playnite.Extension/Properties/AssemblyInfo.cs"
     - name: Build and Publish Library
       run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Sign Windows Binary

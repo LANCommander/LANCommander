@@ -661,6 +661,7 @@ namespace LANCommander.PlaynitePlugin
                     { "_changekey.ps1", "ChangeKey.ps1" },
                 };
 
+                // Move any old file names to the .lancommander metadata directory
                 foreach (var file in metaFiles)
                 {
                     var originalPath = Path.Combine(game.InstallDirectory, file.Key);
@@ -668,6 +669,24 @@ namespace LANCommander.PlaynitePlugin
 
                     if (File.Exists(originalPath) && !File.Exists(destinationPath))
                         File.Move(originalPath, destinationPath);
+                }
+
+                // Change the ID of any game installed pre-0.6.0 to match the GameId
+                if (game.Id.ToString() != game.GameId)
+                {
+                    game.Id = Guid.Parse(game.GameId);
+
+                    PlayniteApi.Database.Games.Update(game);
+                }
+
+                // Set the current version of the game as recorded in the manifest
+                if (String.IsNullOrWhiteSpace(game.Version))
+                {
+                    var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+
+                    game.Version = manifest.Version;
+
+                    PlayniteApi.Database.Games.Update(game);
                 }
             }
             #endregion

@@ -674,9 +674,16 @@ namespace LANCommander.PlaynitePlugin
                 // Change the ID of any game installed pre-0.6.0 to match the GameId
                 if (game.Id.ToString() != game.GameId)
                 {
-                    game.Id = Guid.Parse(game.GameId);
+                    try
+                    {
+                        game.Id = Guid.Parse(game.GameId);
 
-                    PlayniteApi.Database.Games.Update(game);
+                        PlayniteApi.Database.Games.Update(game);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error($"Could not migrate ID for game {game.Name}");
+                    }
                 }
 
                 // Set the current version of the game as recorded in the manifest

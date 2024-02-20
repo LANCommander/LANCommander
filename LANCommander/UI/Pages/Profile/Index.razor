@@ -135,14 +135,14 @@
 
         if (media.Id == Guid.Empty)
         {
-            media.FileId = await MediaService.UploadMediaAsync(e.File);
+            media = await MediaService.UploadMediaAsync(e.File, media);
 
             await MediaService.Add(media);
         }
         else
         {
             MediaService.DeleteLocalMediaFile(media.FileId);
-            media.FileId = await MediaService.UploadMediaAsync(e.File);
+            media = await MediaService.UploadMediaAsync(e.File, media);
             await MediaService.Update(media);
         }
 

@@ -4,10 +4,12 @@ using LANCommander.SDK.Extensions;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -24,10 +26,17 @@ namespace LANCommander.PlaynitePlugin
         private IEnumerable<Company> Developers;
         private IEnumerable<Category> Collections;
 
+        private string ImageCachePath;
+
         public ImportController(LANCommanderLibraryPlugin plugin)
         {
             Plugin = plugin;
             Database = Plugin.PlayniteApi.Database;
+
+            ImageCachePath = Path.Combine(plugin.GetPluginUserDataPath(), "Cache");
+
+            if (!Directory.Exists(ImageCachePath))
+                Directory.CreateDirectory(ImageCachePath);
         }
 
         public IEnumerable<Game> ImportGames()
@@ -42,7 +51,11 @@ namespace LANCommander.PlaynitePlugin
             Developers = ImportCompanies(manifests.Where(m => m.Developers != null).SelectMany(m => m.Developers).Distinct());
             Collections = ImportCollections(manifests.Where(m => m.Collections != null).SelectMany(m => m.Collections).Distinct());
 
-            foreach (var manifest in manifests)
+            var games = new List<Game>();
+
+            Parallel.ForEach(manifests, new ParallelOptions { 
+                MaxDegreeOfParallelism = 8,
+            }, (manifest) =>
             {
                 Game game = null;
 
@@ -58,8 +71,8 @@ namespace LANCommander.PlaynitePlugin
                 }
 
                 if (game != null)
-                    yield return game;
-            }
+                    games.Add(game);
+            });
 
             #region Cleanup
             // Clean up any games we don't have access to
@@ -67,6 +80,8 @@ namespace LANCommander.PlaynitePlugin
 
             Database.Games.Remove(gamesToRemove);
             #endregion
+
+            return games;
         }
 
         private Game ImportGame(GameManifest manifest, IEnumerable<SDK.Models.PlaySession> playSessions)
@@ -160,13 +175,34 @@ namespace LANCommander.PlaynitePlugin
 
             // Media
             if (manifest.Media != null && manifest.Media.Any(m => m.Type == SDK.Enums.MediaType.Icon))
-                game.Icon = Plugin.LANCommanderClient.GetMediaUrl(manifest.Media.First(m => m.Type == SDK.Enums.MediaType.Icon));
+            {
+                var task = ImportMedia(manifest.Media.First(m => m.Type == SDK.Enums.MediaType.Icon));
+
+                task.Wait();
+
+                if (game.Icon != task.Result)
+                    game.Icon = task.Result;
+            }
 
             if (manifest.Media != null && manifest.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
-                game.CoverImage = Plugin.LANCommanderClient.GetMediaUrl(manifest.Media.First(m => m.Type == SDK.Enums.MediaType.Cover));
+            {
+                var task = ImportMedia(manifest.Media.First(m => m.Type == SDK.Enums.MediaType.Cover));
+
+                task.Wait();
+
+                if (game.CoverImage != task.Result)
+                    game.CoverImage = task.Result;
+            }
 
             if (manifest.Media != null && manifest.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
-                game.BackgroundImage = Plugin.LANCommanderClient.GetMediaUrl(manifest.Media.First(m => m.Type == SDK.Enums.MediaType.Background));
+            {
+                var task = ImportMedia(manifest.Media.First(m => m.Type == SDK.Enums.MediaType.Background));
+
+                task.Wait();
+
+                if (game.BackgroundImage != task.Result)
+                    game.BackgroundImage = task.Result;
+            }
 
             // Features
             var features = ImportFeatures(manifest);
@@ -325,6 +361,23 @@ namespace LANCommander.PlaynitePlugin
 
                 yield return feature;
             }
+        }
+
+        private async Task<string> ImportMedia(SDK.Models.Media media)
+        {
+            var cacheFilePath = Path.Combine(ImageCachePath, $"{media.FileId}-{media.Crc32}.cache");
+
+            if (!File.Exists(cacheFilePath))
+            {
+                var staleFiles = Directory.EnumerateFiles(ImageCachePath, $"{media.FileId}-*.cache");
+
+                foreach (var staleFile in staleFiles)
+                    File.Delete(staleFile);
+
+                await Plugin.LANCommanderClient.Media.Download(media, cacheFilePath);
+            }
+
+            return cacheFilePath;
         }
     }
 }

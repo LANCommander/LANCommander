@@ -17,6 +17,9 @@ namespace LANCommander.Data.Models
         [MaxLength(255)]
         public string MimeType { get; set; }
 
+        [MaxLength(8)]
+        public string Crc32 { get; set; }
+
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

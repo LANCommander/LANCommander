@@ -36,6 +36,7 @@
     <PackageReference Include="ByteSize" Version="2.1.2" />
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.5" />
+    <PackageReference Include="Crc32.NET" Version="1.2.0" />
     <PackageReference Include="CXuesong.MW.WikiClientLibrary" Version="0.7.5" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.9" />
     <PackageReference Include="Hangfire.Core" Version="1.8.9" />

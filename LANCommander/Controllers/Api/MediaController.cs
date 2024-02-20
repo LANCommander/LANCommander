@@ -16,10 +16,10 @@ namespace LANCommander.Controllers.Api
     public class MediaController : ControllerBase
     {
         private readonly IMapper Mapper;
-        private readonly MediaService MediaService;
+        private readonly Services.MediaService MediaService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public MediaController(IMapper mapper, MediaService mediaService)
+        public MediaController(IMapper mapper, Services.MediaService mediaService)
         {
             Mapper = mapper;
             MediaService = mediaService;
@@ -45,7 +45,7 @@ namespace LANCommander.Controllers.Api
             {
                 var media = await MediaService.Get(id);
 
-                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(Services.MediaService.GetImagePath(media));
 
                 return File(fs, media.MimeType);
             }

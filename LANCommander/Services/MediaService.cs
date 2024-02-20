@@ -1,4 +1,5 @@
-﻿using LANCommander.Data;
+﻿using Force.Crc32;
+using LANCommander.Data;
 using LANCommander.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Models;
@@ -50,7 +51,7 @@ namespace LANCommander.Services
             return Path.Combine(settings.Media.StoragePath, entity.FileId.ToString());
         }
 
-        public async Task<Guid> UploadMediaAsync(IBrowserFile file)
+        public async Task<Media> UploadMediaAsync(IBrowserFile file, Media media)
         {
             var fileId = Guid.NewGuid();
 
@@ -61,7 +62,27 @@ namespace LANCommander.Services
                 await file.OpenReadStream().CopyToAsync(fs);
             }
 
-            return fileId;
+            uint crc = 0;
+
+            using (FileStream fs = File.Open(path, FileMode.Open))
+            {
+                var buffer = new byte[4096];
+
+                while (true)
+                {
+                    var count = fs.Read(buffer, 0, buffer.Length);
+
+                    if (count == 0)
+                        break;
+
+                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                }
+            }
+
+            media.Crc32 = crc.ToString("X");
+            media.FileId = fileId;
+
+            return media;
         }
 
         public void DeleteLocalMediaFile(Guid fileId)

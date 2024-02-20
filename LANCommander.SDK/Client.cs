@@ -30,6 +30,7 @@ namespace LANCommander.SDK
         public readonly RedistributableService Redistributables;
         public readonly ActionService Actions;
         public readonly ProfileService Profile;
+        public readonly MediaService Media;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -53,6 +54,7 @@ namespace LANCommander.SDK
             Redistributables = new RedistributableService(this);
             Actions = new ActionService(this);
             Profile = new ProfileService(this);
+            Media = new MediaService(this);
 
             if (!String.IsNullOrWhiteSpace(baseUrl))
                 ApiClient = new RestClient(BaseUrl);
@@ -73,6 +75,7 @@ namespace LANCommander.SDK
             Redistributables = new RedistributableService(this, logger);
             Actions = new ActionService(this);
             Profile = new ProfileService(this, logger);
+            Media = new MediaService(this, logger);
 
             Logger = logger;
         }
@@ -146,6 +149,29 @@ namespace LANCommander.SDK
             }
 
             return tempFile;
+        }
+
+        internal async Task<string> DownloadRequest(string route, string destination)
+        {
+            route = route.TrimStart('/');
+
+            var client = new WebClient();
+
+            client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+
+            try
+            {
+                await client.DownloadFileTaskAsync(new Uri(BaseUrl, route), destination);
+            }
+            catch (Exception ex)
+            {
+                if (File.Exists(destination))
+                    File.Delete(destination);
+
+                destination = String.Empty;
+            }
+
+            return destination;
         }
 
         internal TrackableStream StreamRequest(string route)
@@ -334,11 +360,6 @@ namespace LANCommander.SDK
         public string GetServerAddress()
         {
             return BaseUrl.ToString();
-        }
-
-        public string GetMediaUrl(Media media)
-        {
-            return (new Uri(BaseUrl, $"/api/Media/{media.Id}/Download?fileId={media.FileId}").ToString());
         }
 
         public Settings GetSettings()

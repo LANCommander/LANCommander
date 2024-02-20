@@ -11,5 +11,6 @@ namespace LANCommander.SDK.Models
         public MediaType Type { get; set; }
         public string SourceUrl { get; set; }
         public string MimeType { get; set; }
+        public string Crc32 { get; set; }
     }
 }

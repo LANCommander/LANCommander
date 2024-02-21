@@ -138,4 +138,16 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.5.7/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_5_7.pext
     Changelog:
       - Fixed initialization error for first-time runs due to missing server address
+  - Version: 0.6.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-02-20
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.6.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_6_0.pext
+    Changelog:
+      - 'Changed: Game importing has been rebuilt from the ground up. See the header below for more details'
+      - 'Changed: Games marked as "Standalone Expansion" will be installed into their own directory separate from the base game. The base game will still be installed first to ensure proper compatibility with the expansion.'
+      - 'Changed: The addon now utilizes Playnites localization API. Translations are welcome!'
+      - 'Fixed: The authentication dialog should now play nicer with other themes'
+      - 'Added: Games will now prompt to update if a new archive is available from the server'
+      - 'Added: A very basic save manager is now accessible under "More" in the game library when a game is selected. This new view allows you to delete previous saves or download a save created at a specific time.'
+      - 'Removed: The menu option to change your name across all games has been removed. Please use the profile dropdown in the top right instead.'
 

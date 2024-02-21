@@ -10,10 +10,27 @@
 @inject IJSRuntime JSRuntime
 @attribute [Authorize]
 
-<PageHeader Title="Game Saves" />
+<PageHeader Title="Game Saves">
+    <PageHeaderExtra>
+        <Select TItem="Game"
+                TItemValue="Guid"
+                DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                @bind-Value="@GameId"
+                LabelName="Title"
+                ValueName="Id"
+                Placeholder="Select a Game"
+                DefaultActiveFirstOption="false"
+                EnableSearch>
+            <ItemTemplate Context="game">
+                <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
+                @game.Title
+            </ItemTemplate>
+        </Select>
+    </PageHeaderExtra>
+</PageHeader>
 
 <div style="padding: 0 24px;">
-    <Table TItem="GameSave" DataSource="@GameSaves">
+    <Table TItem="GameSave" DataSource="@GameSaves.Where(gs => gs.Game.Id == GameId)">
         <PropertyColumn Property="s => (s.Game == null ? String.Empty : s.Game.Title)" Sortable Title="Game" />
         <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
          <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
@@ -36,8 +53,10 @@
  @code {
     User User;
     ICollection<GameSave> GameSaves = new List<GameSave>();
+    IEnumerable<Game> Games = new List<Game>();
 
     bool Loading = true;
+    Guid GameId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -47,7 +66,10 @@
             User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
 
         if (User != null)
-            GameSaves = User.GameSaves.OrderBy(s => s.Game?.Title).ThenBy(s => s.CreatedOn).ToList();
+            GameSaves = User.GameSaves.OrderBy(s => s.CreatedOn).ToList();
+
+        if (GameSaves != null && GameSaves.Count > 0)
+            Games = GameSaves.Select(gs => gs.Game).DistinctBy(g => g.Id).ToList();
 
         Loading = false;
     }
@@ -68,5 +90,15 @@
         GameSaves = await GameSaveService.Get(gs => gs.UserId == User.Id).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToListAsync();
 
         Loading = false;
+    }
+
+    private string GetIcon(Game game)
+    {
+        var media = game?.Media?.FirstOrDefault(m => m.Type == Data.Enums.MediaType.Icon);
+
+        if (media != null)
+            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        else
+            return "/favicon.ico";
     }
 }

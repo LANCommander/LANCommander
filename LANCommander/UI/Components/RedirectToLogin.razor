@@ -3,6 +3,8 @@
 @code {
     protected override void OnInitialized()
     {
-        NavigationManager.NavigateTo("/Identity/Account/Login", true);
+        var currentUri = new Uri(NavigationManager.Uri);
+
+        NavigationManager.NavigateTo($"/Identity/Account/Login?ReturnUrl={currentUri.AbsolutePath}", true);
     }
 }

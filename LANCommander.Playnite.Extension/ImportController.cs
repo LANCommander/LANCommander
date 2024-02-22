@@ -1,6 +1,7 @@
 ﻿using LANCommander.PlaynitePlugin.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Helpers;
 using Playnite.SDK;
 using Playnite.SDK.Models;
 using System;
@@ -106,6 +107,24 @@ namespace LANCommander.PlaynitePlugin
             {
                 if (!game.Name.EndsWith(" - Update Available"))
                     game.Name += " - Update Available";
+            }
+
+            if (!game.IsInstalled && String.IsNullOrWhiteSpace(game.InstallDirectory))
+            {
+                try
+                {
+                    // Check for existing manifest
+                    var possibleInstallDirectory = Path.Combine(Plugin.Settings.InstallDirectory, game.Name.SanitizeFilename());
+
+                    var existingManifest = ManifestHelper.Read(possibleInstallDirectory, game.Id);
+
+                    if (existingManifest != null)
+                    {
+                        game.IsInstalled = true;
+                        game.InstallDirectory = possibleInstallDirectory;
+                    }
+                }
+                catch { }
             }
 
             #region Play Sessions

@@ -676,9 +676,12 @@ namespace LANCommander.PlaynitePlugin
                 {
                     try
                     {
+                        var originalId = game.Id;
+
                         game.Id = Guid.Parse(game.GameId);
 
-                        PlayniteApi.Database.Games.Update(game);
+                        PlayniteApi.Database.Games.Remove(originalId);
+                        PlayniteApi.Database.Games.Add(game);
                     }
                     catch (Exception ex)
                     {

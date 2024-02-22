@@ -109,24 +109,6 @@ namespace LANCommander.PlaynitePlugin
                     game.Name += " - Update Available";
             }
 
-            if (!game.IsInstalled && String.IsNullOrWhiteSpace(game.InstallDirectory))
-            {
-                try
-                {
-                    // Check for existing manifest
-                    var possibleInstallDirectory = Path.Combine(Plugin.Settings.InstallDirectory, game.Name.SanitizeFilename());
-
-                    var existingManifest = ManifestHelper.Read(possibleInstallDirectory, game.Id);
-
-                    if (existingManifest != null)
-                    {
-                        game.IsInstalled = true;
-                        game.InstallDirectory = possibleInstallDirectory;
-                    }
-                }
-                catch { }
-            }
-
             #region Play Sessions
             if (playSessions.Count() > 0)
             {

@@ -288,39 +288,54 @@ namespace LANCommander.SDK
                     if (Reader.Cancelled)
                         break;
 
-                    var localFile = Path.Combine(destination, Reader.Entry.Key);
-
-                    uint crc = 0;
-
-                    if (File.Exists(localFile))
+                    try
                     {
-                        using (FileStream fs = File.Open(localFile, FileMode.Open))
+                        var localFile = Path.Combine(destination, Reader.Entry.Key);
+
+                        uint crc = 0;
+
+                        if (File.Exists(localFile))
                         {
-                            var buffer = new byte[65536];
-
-                            while (true)
+                            using (FileStream fs = File.Open(localFile, FileMode.Open))
                             {
-                                var count = fs.Read(buffer, 0, buffer.Length);
+                                var buffer = new byte[65536];
 
-                                if (count == 0)
-                                    break;
+                                while (true)
+                                {
+                                    var count = fs.Read(buffer, 0, buffer.Length);
 
-                                crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                                    if (count == 0)
+                                        break;
+
+                                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                                }
                             }
                         }
+
+                        fileManifest.AppendLine($"{Reader.Entry.Key} | {Reader.Entry.Crc.ToString("X")}");
+
+                        if (crc == 0 || crc != Reader.Entry.Crc)
+                            Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
+                            {
+                                ExtractFullPath = true,
+                                Overwrite = true,
+                                PreserveFileTime = true
+                            });
+                        else // Skip to next entry
+                            Reader.OpenEntryStream().Dispose();
                     }
+                    catch (IOException ex)
+                    {
+                        var errorCode = ex.HResult & 0xFFFF;
 
-                    fileManifest.AppendLine($"{Reader.Entry.Key} | {Reader.Entry.Crc.ToString("X")}");
+                        if (errorCode == 87)
+                            throw ex;
+                        else
+                            Logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
 
-                    if (crc == 0 || crc != Reader.Entry.Crc)
-                        Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
-                        {
-                            ExtractFullPath = true,
-                            Overwrite = true,
-                            PreserveFileTime = true
-                        });
-                    else
+                        // Skip to next entry
                         Reader.OpenEntryStream().Dispose();
+                    }
                 }
 
                 Reader.Dispose();

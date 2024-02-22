@@ -4,7 +4,7 @@ FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy
 
 # set version label
 ARG BUILD_DATE
-ARG VERSION="0.5.6"
+ARG VERSION="0.6.0"
 LABEL build_version="LANCommander version:- ${VERSION} Build-date:- ${BUILD_DATE}, container based on github.com/LinuxServer/baseimage-ubuntu"
 LABEL maintainer="bashNinja"
 

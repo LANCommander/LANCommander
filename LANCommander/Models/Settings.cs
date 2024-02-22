@@ -104,7 +104,7 @@ namespace LANCommander.Models
 
     public class LANCommanderLogSettings
     {
-        public string StoragePath { get; set; } = "{basedir}/Logs";
+        public string StoragePath { get; set; } = "Logs";
         public FileArchivePeriod ArchiveEvery { get; set; } = FileArchivePeriod.Day;
         public int MaxArchiveFiles { get; set; } = 10;
     }

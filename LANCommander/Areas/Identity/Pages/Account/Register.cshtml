@@ -5,6 +5,8 @@
 @{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
 @{
     ViewData["Title"] = "Register";
+
+    var errors = ModelState.Where(x => x.Value != null && x.Value.Errors != null && x.Value.Errors.Count > 0).SelectMany(kvp => kvp.Value.Errors.Select(e => e.ErrorMessage)).ToList();
 }
 
 <div class="ant-row ant-row-middle ant-row-space-around" style="min-height: 100vh; margin-top: -24px;">
@@ -30,6 +32,15 @@
                 </div>
             </div>
             <form id="registerForm" method="post" class="ant-card-body" autocomplete="off">
+                @foreach (var error in errors)
+                {
+                    <div data-show="true" class="ant-alert ant-alert-error ant-alert-no-icon" style="margin-bottom: 12px">
+                        <div class="ant-alert-content">
+                            <div class="ant-alert-message">@error</div>
+                        </div>
+                    </div>
+                }
+
                 <div class="ant-form ant-form-vertical">
                     <div class="ant-form-item">
                         <div class="ant-form-item-row ant-row">

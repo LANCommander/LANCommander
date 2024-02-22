@@ -7,6 +7,7 @@ using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using NuGet.Packaging;
+using System.IO;
 using System.IO.Compression;
 
 namespace LANCommander.Services
@@ -486,18 +487,25 @@ namespace LANCommander.Services
 
                     if (manifestArchive != null)
                     {
+                        var extractionLocation = ArchiveService.GetArchiveFileLocation(manifestArchive.ObjectKey);
+
+                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
+
                         archive.Changelog = manifestArchive.Changelog;
                         archive.ObjectKey = manifestArchive.ObjectKey;
                         archive.Version = manifestArchive.Version;
                         archive.CreatedOn = manifestArchive.CreatedOn;
-
-                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
+                        archive.CompressedSize = new FileInfo(extractionLocation).Length;
                     }
                 }
 
                 if (manifest.Archives != null)
                     foreach (var manifestArchive in manifest.Archives.Where(ma => !game.Archives.Any(a => a.Id == ma.Id)))
                     {
+                        var extractionLocation = ArchiveService.GetArchiveFileLocation(manifestArchive.ObjectKey);
+
+                        importArchive.ExtractEntry($"Archives/{manifestArchive.ObjectKey}", extractionLocation, true);
+
                         var archive = new Archive()
                         {
                             Id = manifestArchive.Id,
@@ -505,11 +513,10 @@ namespace LANCommander.Services
                             Changelog = manifestArchive.Changelog,
                             Version = manifestArchive.Version,
                             CreatedOn = manifestArchive.CreatedOn,
+                            CompressedSize = new FileInfo(extractionLocation).Length
                         };
 
                         game.Archives.Add(archive);
-
-                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
                     }
                 #endregion
 

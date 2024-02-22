@@ -525,6 +525,9 @@ namespace LANCommander.Services
                 else
                     game = await Add(game);
 
+                if (File.Exists(importArchivePath))
+                    File.Delete(importArchivePath);
+
                 return game;
             }
         }

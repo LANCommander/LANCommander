@@ -62,6 +62,42 @@ namespace LANCommander.Services
                 await file.OpenReadStream().CopyToAsync(fs);
             }
 
+            media.Crc32 = CalculateChecksum(path);
+            media.FileId = fileId;
+
+            return media;
+        }
+
+        public void DeleteLocalMediaFile(Guid fileId)
+        {
+            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+
+        public async Task<Media> DownloadMediaAsync(string sourceUrl, Media media)
+        {
+            var fileId = Guid.NewGuid();
+
+            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+
+            using (var http = new HttpClient())
+            using (var fs = new FileStream(path, FileMode.Create))
+            {
+                var response = await http.GetStreamAsync(sourceUrl);
+
+                await response.CopyToAsync(fs);
+            }
+
+            media.Crc32 = CalculateChecksum(path);
+            media.FileId = fileId;
+
+            return media;
+        }
+
+        private string CalculateChecksum(string path)
+        {
             uint crc = 0;
 
             using (FileStream fs = File.Open(path, FileMode.Open))
@@ -79,35 +115,7 @@ namespace LANCommander.Services
                 }
             }
 
-            media.Crc32 = crc.ToString("X");
-            media.FileId = fileId;
-
-            return media;
-        }
-
-        public void DeleteLocalMediaFile(Guid fileId)
-        {
-            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
-
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-
-        public async Task<Guid> DownloadMediaAsync(string sourceUrl)
-        {
-            var fileId = Guid.NewGuid();
-
-            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
-
-            using (var http = new HttpClient())
-            using (var fs = new FileStream(path, FileMode.Create))
-            {
-                var response = await http.GetStreamAsync(sourceUrl);
-
-                await response.CopyToAsync(fs);
-            }
-
-            return fileId;
+            return crc.ToString("X");
         }
     }
 }

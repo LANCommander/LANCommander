@@ -12,10 +12,10 @@ namespace LANCommander.Data.Models
         public MediaType Type { get; set; }
 
         [MaxLength(2048)]
-        public string SourceUrl { get; set; }
+        public string? SourceUrl { get; set; }
 
         [MaxLength(255)]
-        public string MimeType { get; set; }
+        public string? MimeType { get; set; }
 
         [MaxLength(8)]
         public string Crc32 { get; set; }

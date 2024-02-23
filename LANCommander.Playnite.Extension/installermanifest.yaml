@@ -150,4 +150,10 @@ Packages:
       - 'Added: Games will now prompt to update if a new archive is available from the server'
       - 'Added: A very basic save manager is now accessible under "More" in the game library when a game is selected. This new view allows you to delete previous saves or download a save created at a specific time.'
       - 'Removed: The menu option to change your name across all games has been removed. Please use the profile dropdown in the top right instead.'
+  - Version: 0.6.1
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-02-22
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.6.1/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_6_1.pext
+    Changelog:
+      - 'Fixed: Migration to new import method no longer creates duplicate entries and maintains install status'
 

@@ -254,6 +254,8 @@
         try
         {
             await GameService.Delete(game);
+
+            MessageService.Success($"{game.Title} was successfully deleted!");
         }
         catch (Exception ex)
         {

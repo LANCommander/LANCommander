@@ -41,12 +41,12 @@ namespace LANCommander.Services
 
         public override async Task Delete(Game game)
         {
-            foreach (var archive in game.Archives.OrderByDescending(a => a.CreatedOn))
+            foreach (var archive in game.Archives.ToList())
             {
                 await ArchiveService.Delete(archive);
             }
 
-            foreach (var media in game.Media)
+            foreach (var media in game.Media.ToList())
             {
                 await MediaService.Delete(media);
             }

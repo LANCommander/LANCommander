@@ -365,7 +365,7 @@ namespace LANCommander.Services
                     {
                         path.Path = manifestSavePath.Path;
                         path.IsRegex = manifestSavePath.IsRegex;
-                        path.Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type);
+                        path.Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type);
                     }
                     else
                         game.SavePaths.Remove(path);
@@ -378,7 +378,7 @@ namespace LANCommander.Services
                         {
                             Path = manifestSavePath.Path,
                             IsRegex = manifestSavePath.IsRegex,
-                            Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type)
+                            Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type)
                         });
                     }
                 #endregion

@@ -1,11 +1,14 @@
-﻿@using LANCommander.Data.Enums
-@using LANCommander.SDK.Enums;
+﻿@using LANCommander.Extensions;
+@using LANCommander.Data.Enums
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
     <SpaceItem>
         <Table TItem="SavePath" DataSource="@Value" HidePagination="true" Responsive>
             <PropertyColumn Property="p => p.Type">
-                <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()" />
+                <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
             </PropertyColumn>
             <PropertyColumn Property="p => p.Path">
                 @if (context.Type == SavePathType.Registry)

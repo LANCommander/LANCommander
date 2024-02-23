@@ -209,12 +209,14 @@ namespace LANCommander.Services
         {
             var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
 
+            Game game;
+
             using (var importArchive = ZipFile.OpenRead(importArchivePath))
             {
                 // Read manifest
                 GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                Game game = await Get(manifest.Id);
+                game = await Get(manifest.Id);
 
                 var exists = game != null;
 
@@ -528,12 +530,12 @@ namespace LANCommander.Services
                     game = await Update(game);
                 else
                     game = await Add(game);
-
-                if (File.Exists(importArchivePath))
-                    File.Delete(importArchivePath);
-
-                return game;
             }
+
+            if (File.Exists(importArchivePath))
+                File.Delete(importArchivePath);
+
+            return game;
         }
     }
 }

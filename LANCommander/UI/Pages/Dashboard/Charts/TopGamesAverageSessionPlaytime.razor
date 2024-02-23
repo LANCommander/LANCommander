@@ -51,7 +51,7 @@
                 playtimes[gameSessions.First().Game.Title] = TimeSpan.FromSeconds(total.TotalSeconds / gameSessions.Count());
             }
 
-            Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
+            Data = playtimes.OrderByDescending(pt => pt.Value).Take(20).Select(pt => new
             {
                 Game = pt.Key,
                 Playtime = (int)pt.Value.TotalSeconds

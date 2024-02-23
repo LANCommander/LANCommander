@@ -455,6 +455,8 @@ namespace LANCommander.Services
                         media.CreatedOn = manifestMedia.CreatedOn;
 
                         importArchive.ExtractEntry($"Media/{media.FileId}", MediaService.GetImagePath(media), true);
+
+                        media.Crc32 = MediaService.CalculateChecksum(MediaService.GetImagePath(media));
                     }
                 }
 
@@ -471,9 +473,11 @@ namespace LANCommander.Services
                             CreatedOn = manifestMedia.CreatedOn,
                         };
 
-                        game.Media.Add(media);
-
                         importArchive.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetImagePath(media), true);
+
+                        media.Crc32 = MediaService.CalculateChecksum(MediaService.GetImagePath(media));
+
+                        game.Media.Add(media);
                     }
                 #endregion
 

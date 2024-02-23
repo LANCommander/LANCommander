@@ -96,7 +96,7 @@ namespace LANCommander.Services
             return media;
         }
 
-        private string CalculateChecksum(string path)
+        public string CalculateChecksum(string path)
         {
             uint crc = 0;
 

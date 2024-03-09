@@ -12,7 +12,7 @@
                 <Input Type="text" @bind-Value="context.Name" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Path">
-                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" Prefix="{InstallDir}\" Title="Select Action Executable" />
+                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" Title="Select Action Executable" OnSelected="(path) => OnPathSelected(path, context)" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Arguments">
                 <Input Type="text" @bind-Value="context.Arguments" />
@@ -47,7 +47,7 @@
     </SpaceItem>
 </Space>
 
- @code {
+@code {
     [Parameter] public ICollection<Data.Models.Action> Actions { get; set; }
     [Parameter] public EventCallback<ICollection<Data.Models.Action>> ActionsChanged { get; set; }
 
@@ -127,5 +127,10 @@
 
         if (ActionsChanged.HasDelegate)
             await ActionsChanged.InvokeAsync(Actions);
+    }
+
+    private void OnPathSelected(string path, Data.Models.Action action)
+    {
+        action.WorkingDirectory = "{InstallDir}";
     }
 }

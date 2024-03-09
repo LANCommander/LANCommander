@@ -145,7 +145,7 @@ label.ant-btn-icon-only {
     flex-grow: 1;
 }
 
-.file-manager .pane {
+[data-theme="Dark"] .file-manager .pane {
     background: #141414;
 }
 

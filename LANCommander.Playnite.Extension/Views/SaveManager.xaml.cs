@@ -32,11 +32,13 @@ namespace LANCommander.PlaynitePlugin.Views
             InitializeComponent();
 
             LoadSaves();
+
+            AddHandler(KeyUpEvent, new KeyEventHandler(DeleteKeyPressed), true);
         }
 
         private void LoadSaves()
         {
-            var saves = Plugin.LANCommanderClient.Saves.Get(Game.Id);
+            var saves = Plugin.LANCommanderClient.Saves.Get(Game.Id).OrderByDescending(s => s.CreatedOn);
 
             DataContext = saves;
             SaveList.ItemsSource = saves;
@@ -56,11 +58,24 @@ namespace LANCommander.PlaynitePlugin.Views
 
         private void DeleteButton_Click(object sender, RoutedEventArgs e)
         {
+            DeleteSelectedSave();
+        }
+
+        private void DeleteKeyPressed(object sender, KeyEventArgs e)
+        {
+            DeleteSelectedSave();
+        }
+
+        private void DeleteSelectedSave()
+        {
             var item = SaveList.SelectedItem as GameSave;
 
-            Plugin.LANCommanderClient.Saves.Delete(item.Id);
+            if (item != null)
+            {
+                Plugin.LANCommanderClient.Saves.Delete(item.Id);
 
-            LoadSaves();
+                LoadSaves();
+            }
         }
     }
 }

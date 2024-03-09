@@ -53,13 +53,15 @@ namespace LANCommander.Services
 
         public async Task<Media> UploadMediaAsync(IBrowserFile file, Media media)
         {
+            var settings = SettingService.GetSettings();
+
             var fileId = Guid.NewGuid();
 
             var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
 
             using (var fs = new FileStream(path, FileMode.Create))
             {
-                await file.OpenReadStream().CopyToAsync(fs);
+                await file.OpenReadStream(maxAllowedSize: settings.Media.MaxSize * 1024 * 1024).CopyToAsync(fs);
             }
 
             media.Crc32 = CalculateChecksum(path);

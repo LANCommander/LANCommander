@@ -14,7 +14,7 @@ namespace LANCommander.Models
         public string DatabaseConnectionString { get; set; } = "Data Source=LANCommander.db;Cache=Shared";
         public string IGDBClientId { get; set; } = "";
         public string IGDBClientSecret { get; set; } = "";
-        public LANCommanderTheme Theme { get; set; } = LANCommanderTheme.Light;
+        public LANCommanderTheme Theme { get; set; } = LANCommanderTheme.Dark;
 
         public LANCommanderBeaconSettings Beacon { get; set; } = new LANCommanderBeaconSettings();
         public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();

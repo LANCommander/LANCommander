@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:LANCommander.PlaynitePlugin"
+             xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
              xmlns:Models="clr-namespace:LANCommander.PlaynitePlugin.Models"
              xmlns:Converters="clr-namespace:LANCommander.PlaynitePlugin.Converters"
              mc:Ignorable="d" 
@@ -165,12 +166,20 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
+
+                        <StackPanel.Resources>
+                            <CollectionViewSource x:Key="CompletedItems" Source="{Binding DownloadQueue.Completed}">
+                                <CollectionViewSource.SortDescriptions>
+                                    <scm:SortDescription PropertyName="CompletedOn" Direction="Descending" />
+                                </CollectionViewSource.SortDescriptions>
+                            </CollectionViewSource>
+                        </StackPanel.Resources>
                         
                         <Border BorderThickness="0,0,0,2" BorderBrush="{DynamicResource PopupBorderBrush}">
                             <TextBlock Text="{DynamicResource LOCLANCommanderDownloadQueueCompletedTitle}" FontSize="24" Style="{StaticResource BaseTextBlockStyle}" Margin="0,0,0,10" />
                         </Border>
 
-                        <ItemsControl Name="DownloadQueueCompletedList" ItemsSource="{Binding DownloadQueue.Completed}" BorderThickness="0" Margin="10,10,10,0">
+                        <ItemsControl Name="DownloadQueueCompletedList" ItemsSource="{Binding Source={StaticResource CompletedItems}}" BorderThickness="0" Margin="10,10,10,0" >
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid Margin="0,0,0,20">

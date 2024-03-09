@@ -148,7 +148,7 @@ namespace LANCommander.PlaynitePlugin
                         Name = action.Name,
                         Arguments = action.Arguments,
                         Path = actionPath,
-                        WorkingDir = actionArguments,
+                        WorkingDir = actionWorkingDir,
                         IsPlayAction = false
                     });
                 }

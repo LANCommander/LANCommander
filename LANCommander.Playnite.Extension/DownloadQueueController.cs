@@ -350,6 +350,10 @@ namespace LANCommander.PlaynitePlugin
 
             Plugin.PlayniteApi.Database.Games.Update(DownloadQueue.CurrentItem.Game);
 
+            var playSessions = Plugin.LANCommanderClient.Profile.GetPlaySessions(game.Id).Where(ps => ps.Start != null && ps.End != null).OrderByDescending(ps => ps.End);
+
+            Plugin.ImportController.ImportGame(manifest, playSessions);
+
             ProcessQueue();
         }
 

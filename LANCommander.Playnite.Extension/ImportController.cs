@@ -85,7 +85,7 @@ namespace LANCommander.PlaynitePlugin
             return games;
         }
 
-        private Game ImportGame(GameManifest manifest, IEnumerable<SDK.Models.PlaySession> playSessions)
+        public Game ImportGame(GameManifest manifest, IEnumerable<SDK.Models.PlaySession> playSessions)
         {
             bool exists = false;
             var game = Database.Games.Get(manifest.Id);

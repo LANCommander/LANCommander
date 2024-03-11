@@ -210,15 +210,27 @@ namespace LANCommander.PlaynitePlugin
 
             foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
             {
-                yield return new AutomaticPlayController(args.Game)
+                AutomaticPlayController automaticPlayController = null;
+
+                try
                 {
-                    Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, skipSlashes: true),
-                    Name = action.Name,
-                    Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
-                    TrackingMode = TrackingMode.Default,
-                    Type = AutomaticPlayActionType.File,
-                    WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
-                };
+                    automaticPlayController = new AutomaticPlayController(args.Game)
+                    {
+                        Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, skipSlashes: true),
+                        Name = action.Name,
+                        Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
+                        TrackingMode = TrackingMode.Default,
+                        Type = AutomaticPlayActionType.File,
+                        WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
+                    };
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not yield primary action");
+                }
+
+                if (automaticPlayController != null)
+                    yield return automaticPlayController;
             }
 
             if (!Settings.OfflineModeEnabled)
@@ -230,27 +242,39 @@ namespace LANCommander.PlaynitePlugin
                 {
                     foreach (var action in server.Actions)
                     {
-                        var serverHost = String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host;
-                        var serverIp = Dns.GetHostEntry(serverHost).AddressList.FirstOrDefault();
+                        AutomaticPlayController automaticPlayController = null;
 
-                        var variables = new Dictionary<string, string>()
+                        try
                         {
-                            { "ServerHost", serverHost },
-                            { "ServerPort", server.Port.ToString() }
-                        };
+                            var serverHost = String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host;
+                            var serverIp = Dns.GetHostEntry(serverHost).AddressList.FirstOrDefault();
 
-                        if (serverIp != null)
-                            variables["ServerIP"] = serverIp.ToString();
+                            var variables = new Dictionary<string, string>()
+                            {
+                                { "ServerHost", serverHost },
+                                { "ServerPort", server.Port.ToString() }
+                            };
 
-                        yield return new AutomaticPlayController(args.Game)
+                            if (serverIp != null)
+                                variables["ServerIP"] = serverIp.ToString();
+
+                            automaticPlayController = new AutomaticPlayController(args.Game)
+                            {
+                                Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables, true),
+                                Name = action.Name,
+                                Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
+                                TrackingMode = TrackingMode.Default,
+                                Type = AutomaticPlayActionType.File,
+                                WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory, variables)
+                            };
+                        }
+                        catch (Exception ex)
                         {
-                            Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, variables, true),
-                            Name = action.Name,
-                            Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory, variables),
-                            TrackingMode = TrackingMode.Default,
-                            Type = AutomaticPlayActionType.File,
-                            WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory, variables)
-                        };
+                            Logger?.Error(ex, "Could not yield server action");
+                        }
+
+                        if (automaticPlayController != null)
+                            yield return automaticPlayController;
                     }
                 }
             }

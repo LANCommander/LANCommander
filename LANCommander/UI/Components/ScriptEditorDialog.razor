@@ -7,7 +7,7 @@
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditorDialog> Logger
 
-<Form Model="@Script" Layout="@FormLayout.Vertical">
+<Form @ref="@Form" Model="@Script" Layout="@FormLayout.Vertical">
     <FormItem>
         @foreach (var group in Snippets.Select(s => s.Group).Distinct())
         {
@@ -41,7 +41,7 @@
         <StandaloneCodeEditor @ref="Editor" Id="@("editor-" + Id.ToString())" ConstructionOptions="EditorConstructionOptions" OnDidInit="InitEditor" />
     </FormItem>
 
-    <FormItem Label="Name">
+    <FormItem Label="Name" Required Rules=@(new FormValidationRule[]{ new FormValidationRule{ Required = true } })>
         <Input @bind-Value="@context.Name" />
     </FormItem>
 
@@ -63,8 +63,9 @@
 
  <RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
 
- @code {
+@code {
     Guid Id = Guid.NewGuid();
+    Form<Script> Form;
     Script Script;
     StandaloneCodeEditor? Editor;
     RegToPowerShell RegToPowerShell;
@@ -123,11 +124,16 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        await Save();
+        var success = await Save();
 
-        Editor.Dispose();
+        if (success)
+        {
+            Editor.Dispose();
 
-        await base.OkCancelRefWithResult!.OnOk(Script);
+            await base.OkCancelRefWithResult!.OnOk(Script);
+        }
+        else
+            args.Reject();
     }
 
     public override async Task CancelAsync(ModalClosingEventArgs args)
@@ -192,25 +198,34 @@
         await InsertText(snippet.Content);
     }
 
-    private async Task Save()
+    private async Task<bool> Save()
     {
-        try
+        if (Form.Validate())
         {
-            var value = await Editor.GetValue();
+            try
+            {
+                var value = await Editor.GetValue();
 
-            Script.Contents = value;
+                Script.Contents = value;
 
-            if (Script.Id == Guid.Empty)
-                Script = await ScriptService.Add(Script);
-            else
-                Script = await ScriptService.Update(Script);
+                if (Script.Id == Guid.Empty)
+                    Script = await ScriptService.Add(Script);
+                else
+                    Script = await ScriptService.Update(Script);
 
-            MessageService.Success("Script saved!");
+                MessageService.Success("Script saved!");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("Script could not be saved!");
+                Logger.LogError(ex, "Script could not be saved!");
+
+                return false;
+            }
         }
-        catch (Exception ex)
-        {
-            MessageService.Error("Script could not be saved!");
-            Logger.LogError(ex, "Script could not be saved!");
-        }
+        else
+            return false;
     }
 }

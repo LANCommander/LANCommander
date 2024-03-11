@@ -133,10 +133,10 @@ namespace LANCommander.Services
                     };
 
                 if (online != null)
-                    manifest.LocalMultiplayer = new MultiplayerInfo()
+                    manifest.OnlineMultiplayer = new MultiplayerInfo()
                     {
-                        MaxPlayers = online.MinPlayers,
-                        MinPlayers = online.MaxPlayers,
+                        MinPlayers = online.MinPlayers,
+                        MaxPlayers = online.MaxPlayers,
                     };
             }
 

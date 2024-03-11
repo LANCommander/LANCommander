@@ -1,12 +1,13 @@
 ﻿@typeparam TItem where TItem : BaseModel
 
-<Select Mode="tags" TItem="Guid" TItemValue="Guid" @bind-Values="@SelectedValues" OnSelectedItemsChanged="OnSelectedItemsChanged" EnableSearch>
-    <SelectOptions>
-        @foreach (var entity in Entities.OrderBy(OptionLabelSelector))
-        {
-            <SelectOption TItemValue="Guid" TItem="Guid" Value="@entity.Id" Label="@OptionLabelSelector.Invoke(entity)" />
-        }
-    </SelectOptions>
+<Select 
+    @ref="@Select"
+    Mode="tags"
+    DataSource="Entities"
+    ValueProperty="e => e.Id"
+    LabelProperty="OptionLabelSelector"
+    @bind-Values="@SelectedValues"
+    EnableSearch>
 </Select>
 
 @code {
@@ -15,6 +16,8 @@
 
     [Parameter] public ICollection<TItem> Values { get; set; }
     [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
+
+    Select<Guid, TItem> Select;
 
     private IEnumerable<Guid> SelectedValues
     {
@@ -27,26 +30,5 @@
             if (value != null)
                 Values = value.ToList() as ICollection<TItem>;
         }
-    }
-
-    private async Task OnSelectedItemsChanged(IEnumerable<Guid> values)
-    {
-        var toAdd = values.Where(v => !Values.Any(e => e.Id == v)).ToList();
-        var toRemove = Values.Where(e => !values.Any(v => v == e.Id)).ToList();
-
-        foreach (var value in toAdd)
-        {
-            Values.Add(Entities.First(e => e.Id == value));
-        }
-
-        foreach (var value in toRemove)
-        {
-            Values.Remove(value);
-        }
-
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Values);
-
-        StateHasChanged();
     }
 }

@@ -100,12 +100,18 @@ else
             await SearchForGame(Value);
     }
 
-    private async Task SearchForGame(string title)
+    private async Task SearchForGame(string title, bool newSearch = true)
     {
         try
         {
             Loading = true;
             ModalVisible = true;
+
+            if (newSearch)
+            {
+                Results = new List<Game>();
+                Offset = 0;
+            }
 
             int limit = 10;
 
@@ -204,7 +210,7 @@ else
         MoreResults = false;
         Offset += Results.Count;
 
-        await SearchForGame(Value);
+        await SearchForGame(Value, false);
     }
 
     private async Task<ICollection<MultiplayerMode>> GetMultiplayerModes(string gameTitle)

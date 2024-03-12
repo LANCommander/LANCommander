@@ -125,11 +125,11 @@
 
             await LoadData();
 
-            await MessageService.Success("Archive deleted!");
+            MessageService.Success("Archive deleted!");
         }
         catch (Exception ex)
         {
-            await MessageService.Error("Archive could not be deleted.");
+            MessageService.Error("Archive could not be deleted.");
         }
     }
 }

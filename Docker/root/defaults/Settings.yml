@@ -28,3 +28,5 @@ Wiki:
   Password: ''
 Update:
   StoragePath: Updates
+Logs:
+  StoragePath: Logs

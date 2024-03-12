@@ -16,6 +16,7 @@ jobs:
         string: '${{ github.ref }}'
         pattern: 'refs/tags/v'
         replace-with: ''
+
     # Server
     - uses: actions/checkout@v3
     - name: Setup .NET
@@ -27,6 +28,7 @@ jobs:
     - name: Setup Node.js environment
       uses: actions/setup-node@v3.8.1
     - run: cd LANCommander/wwwroot/scripts; npm install
+
     # Windows
     - name: Publish Windows
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
@@ -36,17 +38,13 @@ jobs:
       run: mv ./_Build_Windows/LANCommander.AutoUpdater.exe ./_Build_Windows/LANCommander.AutoUpdater.exe.Update
     - name: Remove Windows Extra Files
       run: rm -Recurse -Force ./_Build_Windows/wwwroot/_content/AntDesign/less
+
     # Linux
     - name: Publish Linux
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-#   - name: Publish Linux Updater
-#     run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-#   - name: Rename Linux Updater
-#     run: mv ./_Build_Linux/LANCommander.AutoUpdater ./_Build_Linux/LANCommander.AutoUpdater.Update
     - name: Remove Linux Extra Files
       run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
-    - name: Tar Linux
-      run: tar -cvf LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.tar ./_Build_Linux
+
     # Sign Windows Binary
     - name: Sign Windows Binary
       uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
@@ -63,7 +61,8 @@ jobs:
       uses: actions/upload-artifact@v2
       with:
         name: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}
-        path: "LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.tar"
+        path: "./_Build_Linux"
+
     # Client
     - uses: actions/checkout@v3
     - name: Setup MSBuild
@@ -105,5 +104,35 @@ jobs:
       with:
         name: LANCommander.PlaynitePlugin-v${{ steps.trim_tag_ref.outputs.replaced }}
         path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
-    # Release
-    
+
+      # Create a draft release
+    - name: Create Draft Release
+      run: gh release create ${{ steps.trim_tag_ref.outputs.replaced }} -t "v${{ steps.trim_tag_ref.outputs.replaced }}" -n "v${{ steps.trim_tag_ref.outputs.replaced }}" --notes "Auto-generated release notes based on commits."
+
+      # Create a ZIP archive of Windows artifacts
+    - name: Create Windows ZIP Archive
+      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Windows/* -DestinationPath ${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      # Upload Windows ZIP archive to the draft release
+    - name: Upload Windows ZIP Archive to Draft Release
+      run: gh release upload ${{ steps.trim_tag_ref.outputs.replaced }} --clobber ${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      # Create a ZIP archive of Linux artifacts
+    - name: Create Linux ZIP Archive
+      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Linux/* -DestinationPath ${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      # Upload Linux ZIP archive to the draft release
+    - name: Upload Linux ZIP Archive to Draft Release
+      run: gh release upload ${{ steps.trim_tag_ref.outputs.replaced }} --clobber ${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      # Upload the extracted artifact to the draft release
+    - name: Upload Playnite Plugin to Draft Release
+      run: gh release upload ${{ steps.trim_tag_ref.outputs.replaced }} --clobber ${{ github.workspace }}/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
+
+      # Automatically populate the release notes based on commits
+    - name: Generate Release Notes
+      run: gh release note ${{ steps.trim_tag_ref.outputs.replaced }} --json title -F "$(git log $(git describe --tags --abbrev=0)...HEAD --pretty=format:'%s%n%b')" | jq -r .title > release_notes.txt
+
+      # Update Draft Release with release notes
+    - name: Update Draft Release with Release Notes
+      run: gh release edit ${{ steps.trim_tag_ref.outputs.replaced }} --notes-file release_notes.txt

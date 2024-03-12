@@ -13,7 +13,9 @@
 <Space Direction="DirectionVHType.Vertical" Style="width: 100%">
     <SpaceItem>
         <Table TItem="Archive" DataSource="@Archives" HidePagination="true" Responsive>
-            <PropertyColumn Property="a => a.Version" />
+            <PropertyColumn Property="a => a.Version">
+                <Input Type="text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)" />
+            </PropertyColumn>
             <PropertyColumn Property="a => a.CompressedSize">
                 @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
             </PropertyColumn>
@@ -52,7 +54,7 @@
 
 <ArchiveUploader @ref="Uploader" GameId="GameId" RedistributableId="RedistributableId" OnArchiveUploaded="LoadData" />
 
- @code {
+@code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
 
@@ -99,6 +101,20 @@
         };
 
         var modalRef = await ModalService.CreateModalAsync<ArchiveBrowserDialog, Guid, Guid>(modalOptions, archive.Id);
+    }
+
+    private async Task Update(Archive archive)
+    {
+        try
+        {
+            await ArchiveService.Update(archive);
+
+            MessageService.Success("Archive updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Archive could not be updated.");
+        }
     }
 
     private async Task Delete(Archive archive)

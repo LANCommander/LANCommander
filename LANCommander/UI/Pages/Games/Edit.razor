@@ -452,7 +452,7 @@ else
 
         if (result.IGDBMetadata.Keywords != null && result.IGDBMetadata.Keywords.Values != null)
         {
-            var tags = result.IGDBMetadata.Keywords.Values.Select(t => t.Name).Take(20);
+            var tags = result.IGDBMetadata.Keywords.Values.Select(t => t.Name);
 
             foreach (var tag in tags)
             {

@@ -12,6 +12,7 @@
 @inject CompanyService CompanyService
 @inject GenreService GenreService
 @inject TagService TagService
+@inject CollectionService CollectionService
 @inject ArchiveService ArchiveService
 @inject ScriptService ScriptService
 @inject RedistributableService RedistributableService
@@ -156,6 +157,9 @@
                     <FormItem Label="Tags">
                         <TagsInput Entities="Tags" @bind-Values="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
                     </FormItem>
+                    <FormItem Label="Collections">
+                        <TagsInput Entities="Collections" @bind-Values="Game.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
+                    </FormItem>
                     <FormItem Label="Redistributables">
                         <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Redistributables" TitleSelector="r => r.Name" @bind-Values="Game.Redistributables" />
                     </FormItem>
@@ -282,6 +286,7 @@ else
     IEnumerable<Company> Companies;
     IEnumerable<Genre> Genres;
     IEnumerable<Data.Models.Tag> Tags;
+    IEnumerable<Collection> Collections;
     IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
     IEnumerable<TransferItem> RedistributableTargetItems = new List<TransferItem>();
     IEnumerable<string> TargetRedistributables = new List<string>();
@@ -339,6 +344,7 @@ else
         Companies = await CompanyService.Get();
         Genres = await GenreService.Get();
         Tags = await TagService.Get();
+        Collections = await CollectionService.Get();
         Games = await GameService.Get(g => g.Type == GameType.MainGame).ToListAsync();
         Redistributables = await RedistributableService.Get();
         RedistributableTargetItems = Redistributables.Select(r => new TransferItem

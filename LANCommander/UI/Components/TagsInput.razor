@@ -28,7 +28,12 @@
         set
         {
             if (value != null)
-                Values = value.ToList() as ICollection<TItem>;
+            {
+                Values = Entities.Where(e => value.Contains(e.Id)).ToList();
+
+                if (ValuesChanged.HasDelegate)
+                    ValuesChanged.InvokeAsync(Values);
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -25,6 +26,11 @@ namespace LANCommander.PlaynitePlugin
         {
             try
             {
+                var completedQueueItem = Plugin.DownloadQueue.DownloadQueue.Completed.FirstOrDefault(qi => qi.Game != null && qi.Game.Id == Game.Id);
+
+                if (completedQueueItem != null)
+                    Plugin.DownloadQueue.DownloadQueue.Completed.Remove(completedQueueItem);
+
                 try
                 {
                     var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, Game.Id, SDK.Enums.ScriptType.Uninstall);

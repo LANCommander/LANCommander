@@ -144,6 +144,11 @@ namespace LANCommander.PlaynitePlugin
 
             if (!DownloadQueue.Items.Any(i => i.Game.Id == game.Id))
             {
+                var completedQueueItem = DownloadQueue.Completed.FirstOrDefault(qi => qi.Game != null && qi.Game.Id == game.Id);
+
+                if (completedQueueItem != null)
+                    DownloadQueue.Completed.Remove(completedQueueItem);
+
                 if (String.IsNullOrWhiteSpace(game.CoverImage))
                     game.CoverImage = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "default_cover.png");
 

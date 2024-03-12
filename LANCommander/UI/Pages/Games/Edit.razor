@@ -102,14 +102,7 @@
             <div data-panel="General">
                 <Form Model="@Game" Layout="@FormLayout.Vertical">
                     <FormItem Label="Title">
-                        <Space Style="display: flex">
-                            <SpaceItem Style="flex-grow: 1">
-                                <Input @bind-Value="@context.Title" BindOnInput="true" />
-                            </SpaceItem>
-                            <SpaceItem>
-                                <GameMetadataLookup ButtonText="Lookup" GameTitle="@context.Title" OnResultSelected="OnGameLookupResultSelected" />
-                            </SpaceItem>
-                        </Space>
+                        <GameMetadataLookup ButtonText="Lookup" @bind-Value="context.Title" OnResultSelected="OnGameLookupResultSelected" />
                     </FormItem>
                     <FormItem Label="Sort Title">
                         <Input @bind-Value="@context.SortTitle" />

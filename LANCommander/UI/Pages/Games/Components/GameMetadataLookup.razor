@@ -45,19 +45,34 @@
 
 @if (IGDBService.Authenticated)
 {
-    <Button OnClick="() => SearchForGame(GameTitle)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(GameTitle))">@ButtonText</Button>
+    <Space Style="display: flex">
+        <SpaceItem Style="flex-grow: 1">
+            <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" />
+        </SpaceItem>
+        <SpaceItem>
+            <Button OnClick="() => SearchForGame(Value)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
+        </SpaceItem>
+    </Space>
 }
 else
 {
-    <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
-        <Button Type="@ButtonType.Primary">@ButtonText</Button>
-    </Popconfirm>
+    <Space Style="display: flex">
+        <SpaceItem Style="flex-grow: 1">
+            <Input @bind-Value="Value" BindOnInput="true" />
+        </SpaceItem>
+        <SpaceItem>
+            <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
+                <Button Type="@ButtonType.Primary">@ButtonText</Button>
+            </Popconfirm>
+        </SpaceItem>
+    </Space>
 }
 
 @code {
     [Parameter] public EventCallback<GameLookupResult> OnResultSelected { get; set; }
     [Parameter] public string ButtonText { get; set; }
-    [Parameter] public string GameTitle { get; set; }
+    [Parameter] public string Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
     ITable? ResultsTable;
 
@@ -77,6 +92,12 @@ else
     private void OnRowClicked(RowData<Game> row)
     {
         ResultsTable.SetSelection(new string[] { row.Data.IGDBId.ToString() });
+    }
+
+    private async Task SearchFieldOnKeyDown(KeyboardEventArgs e)
+    {
+        if ((e.Code == "Enter" || e.Code == "NumpadEnter") && !String.IsNullOrWhiteSpace(Value))
+            await SearchForGame(Value);
     }
 
     private async Task SearchForGame(string title)
@@ -183,7 +204,7 @@ else
         MoreResults = false;
         Offset += Results.Count;
 
-        await SearchForGame(GameTitle);
+        await SearchForGame(Value);
     }
 
     private async Task<ICollection<MultiplayerMode>> GetMultiplayerModes(string gameTitle)

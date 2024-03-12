@@ -18,7 +18,7 @@
     </Template>;
 }
 
-<Modal Visible="@Visible" Title="Upload Archive" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
+<Modal Visible="@Visible" Title="Upload Archive" OnOk="Start" OnCancel="Cancel" Footer="@Footer" Closable="@(!Uploading)" MaskClosable="@(!Uploading)">
     <Form Model="@Archive" Layout="@FormLayout.Vertical">
         <FormItem Label="Version">
             <Input @bind-Value="@context.Version" /> 
@@ -34,7 +34,7 @@
     </Form>
 </Modal>
 
- @code {
+@code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
     [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
@@ -46,6 +46,7 @@
 
     bool IsValid = false;
     bool Visible = false;
+    bool Uploading = false;
 
     string Filename;
 
@@ -53,6 +54,7 @@
 
     private async Task Start()
     {
+        Uploading = true;
         await ChunkUploader.Start();
     }
 
@@ -90,6 +92,8 @@
 
     public async Task OnUploadCompleted(string data)
     {
+        Uploading = false;
+
         if (Guid.TryParse(data, out var objectKey))
         {
             Archive.ObjectKey = objectKey.ToString();
@@ -136,6 +140,7 @@
 
     public async Task OnUploadError(string message)
     {
+        Uploading = false;
         Visible = false;
 
         await InvokeAsync(StateHasChanged);

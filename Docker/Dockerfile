@@ -36,7 +36,6 @@ RUN \
     ln -s /config/Media/ /app/LANCommander/Media && \
     ln -s /config/Logs/ /app/LANCommander/Logs && \
     ln -s /config/Backups/ /app/LANCommander/Backups && \
-    ln -s /config/Icon/ /app/LANCommander/Icon && \
     ln -s /config/Settings.yml /app/LANCommander/Settings.yml && \
     ln -s /config/LANCommander.db /app/LANCommander/LANCommander.db && \
     ln -s /config/internal.log /app/LANCommander/internal.log && \

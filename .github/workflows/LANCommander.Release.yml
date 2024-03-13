@@ -99,11 +99,11 @@ jobs:
         
       # Create a ZIP archive of Windows artifacts
     - name: Create Windows ZIP Archive
-      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Windows/* -DestinationPath ${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ${{ github.workspace }}\_Build_Windows\* -DestinationPath ${{ github.workspace }}\LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
       
       # Create a ZIP archive of Linux artifacts
     - name: Create Linux ZIP Archive
-      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Linux/* -DestinationPath ${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ${{ github.workspace }}\_Build_Linux\* -DestinationPath ${{ github.workspace }}\LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
       
     - name: Draft Release
       uses: softprops/action-gh-release@v2

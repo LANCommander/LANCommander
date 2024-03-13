@@ -4,6 +4,10 @@ on:
   push:
     tags:
       - 'v*'
+
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -107,35 +111,22 @@ jobs:
       with:
         name: LANCommander.PlaynitePlugin-v${{ steps.trim_tag_ref.outputs.replaced }}
         path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
-
-      # Create a draft release
-    - name: Create Draft Release
-      run: gh release create ${{ steps.trim_tag_ref.outputs.replaced }} -t "v${{ steps.trim_tag_ref.outputs.replaced }}" -n "v${{ steps.trim_tag_ref.outputs.replaced }}" --notes "Auto-generated release notes based on commits."
-
+        
       # Create a ZIP archive of Windows artifacts
     - name: Create Windows ZIP Archive
-      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Windows/* -DestinationPath ${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-
-      # Upload Windows ZIP archive to the draft release
-    - name: Upload Windows ZIP Archive to Draft Release
-      run: gh release upload ${{ steps.trim_tag_ref.outputs.replaced }} --clobber ${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-
+      run: Compress-Archive -Path _Build_Windows/* -DestinationPath LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      
       # Create a ZIP archive of Linux artifacts
     - name: Create Linux ZIP Archive
-      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Linux/* -DestinationPath ${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-
-      # Upload Linux ZIP archive to the draft release
-    - name: Upload Linux ZIP Archive to Draft Release
-      run: gh release upload ${{ steps.trim_tag_ref.outputs.replaced }} --clobber ${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-
-      # Upload the extracted artifact to the draft release
-    - name: Upload Playnite Plugin to Draft Release
-      run: gh release upload ${{ steps.trim_tag_ref.outputs.replaced }} --clobber ${{ github.workspace }}/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
-
-      # Automatically populate the release notes based on commits
-    - name: Generate Release Notes
-      run: gh release note ${{ steps.trim_tag_ref.outputs.replaced }} --json title -F "$(git log $(git describe --tags --abbrev=0)...HEAD --pretty=format:'%s%n%b')" | jq -r .title > release_notes.txt
-
-      # Update Draft Release with release notes
-    - name: Update Draft Release with Release Notes
-      run: gh release edit ${{ steps.trim_tag_ref.outputs.replaced }} --notes-file release_notes.txt
+      run: Compress-Archive -Path _Build_Linux/* -DestinationPath LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      
+    - name: Draft Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: v${{ steps.trim_tag_ref.outputs.replaced }}
+        generate_release_notes: true
+        draft: true
+        files: |
+          LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

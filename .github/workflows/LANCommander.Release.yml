@@ -46,12 +46,6 @@ jobs:
     - name: Remove Windows Extra Files
       run: rm -Recurse -Force ./_Build_Windows/wwwroot/_content/AntDesign/less
 
-    # Linux
-    - name: Publish Linux
-      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Remove Linux Extra Files
-      run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
-
     # Sign Windows Binary
     - name: Sign Windows Binary
       uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
@@ -59,6 +53,26 @@ jobs:
         certificate: "${{ secrets.CERTIFICATE }}"
         cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
         filepath: "./_Build_Windows/LANCommander.exe"
+
+    # Create Windows ZIP file
+    - name: Package Windows Build
+      uses: papeloto/action-zip@v1
+      with:
+        files: _Build_Windows/*
+        dest: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Linux
+    - name: Publish Linux
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Linux Extra Files
+      run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
+
+    # Create Windows ZIP file
+    - name: Package Linux Build
+      uses: papeloto/action-zip@v1
+      with:
+        files: _Build_Linux/*
+        dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Client
     - uses: actions/checkout@v3
@@ -96,15 +110,7 @@ jobs:
         commitChange: false
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
-        
-      # Create a ZIP archive of Windows artifacts
-    - name: Create Windows ZIP Archive
-      run: Compress-Archive -Path ${{ github.workspace }}\_Build_Windows\* -DestinationPath ${{ github.workspace }}\LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-      
-      # Create a ZIP archive of Linux artifacts
-    - name: Create Linux ZIP Archive
-      run: Compress-Archive -Path ${{ github.workspace }}\_Build_Linux\* -DestinationPath ${{ github.workspace }}\LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-      
+
     - name: Draft Release
       uses: softprops/action-gh-release@v2
       with:

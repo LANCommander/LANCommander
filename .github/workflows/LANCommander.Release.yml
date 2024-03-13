@@ -105,7 +105,6 @@ jobs:
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
 
-    steps:
     - uses: frabert/replace-string-action@v2
       name: Swap Path Backslashes
       id: swap_path_backslashes

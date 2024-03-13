@@ -32,43 +32,33 @@ jobs:
         dotnet-version: 8.0.x
     - name: Restore dependencies
       run: dotnet restore
-#    - name: Setup Node.js environment
-#      uses: actions/setup-node@v3.8.1
-#    - run: cd LANCommander/wwwroot/scripts; npm install
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v3.8.1
+    - run: cd LANCommander/wwwroot/scripts; npm install
 
     # Windows
-#    - name: Publish Windows
-#      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-#    - name: Publish Windows Updater
-#      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release -o _Build_Windows --self-contained --os win -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-#    - name: Rename Windows Updater
-#      run: mv ./_Build_Windows/LANCommander.AutoUpdater.exe ./_Build_Windows/LANCommander.AutoUpdater.exe.Update
-#    - name: Remove Windows Extra Files
-#      run: rm -Recurse -Force ./_Build_Windows/wwwroot/_content/AntDesign/less
+    - name: Publish Windows
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Publish Windows Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release -o _Build_Windows --self-contained --os win -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename Windows Updater
+      run: mv ./_Build_Windows/LANCommander.AutoUpdater.exe ./_Build_Windows/LANCommander.AutoUpdater.exe.Update
+    - name: Remove Windows Extra Files
+      run: rm -Recurse -Force ./_Build_Windows/wwwroot/_content/AntDesign/less
 
     # Linux
-#    - name: Publish Linux
-#      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-#    - name: Remove Linux Extra Files
-#      run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
+    - name: Publish Linux
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Linux Extra Files
+      run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
 
     # Sign Windows Binary
-#    - name: Sign Windows Binary
-#      uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
-#      with:
-#        certificate: "${{ secrets.CERTIFICATE }}"
-#        cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
-#        filepath: "./_Build_Windows/LANCommander.exe"
-#    - name: Upload Artifacts (Windows)
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}
-#        path: "./_Build_Windows"
-#    - name: Upload Artifacts (Linux)
-#      uses: actions/upload-artifact@v2
-#      with:
-#        name: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}
-#        path: "./_Build_Linux"
+    - name: Sign Windows Binary
+      uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
+      with:
+        certificate: "${{ secrets.CERTIFICATE }}"
+        cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
+        filepath: "./_Build_Windows/LANCommander.exe"
 
     # Client
     - uses: actions/checkout@v3
@@ -106,19 +96,14 @@ jobs:
         commitChange: false
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v3.1.2
-      with:
-        name: LANCommander.PlaynitePlugin-v${{ steps.trim_tag_ref.outputs.replaced }}
-        path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
         
       # Create a ZIP archive of Windows artifacts
-#    - name: Create Windows ZIP Archive
-#      run: Compress-Archive -Path _Build_Windows/* -DestinationPath LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+    - name: Create Windows ZIP Archive
+      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Windows/* -DestinationPath ${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
       
       # Create a ZIP archive of Linux artifacts
-#    - name: Create Linux ZIP Archive
-#      run: Compress-Archive -Path _Build_Linux/* -DestinationPath LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+    - name: Create Linux ZIP Archive
+      run: Compress-Archive -Path ${{ github.workspace }}/_Build_Linux/* -DestinationPath ${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
       
     - name: Draft Release
       uses: softprops/action-gh-release@v2
@@ -126,8 +111,7 @@ jobs:
         name: v${{ steps.trim_tag_ref.outputs.replaced }}
         generate_release_notes: true
         draft: true
-        files: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
-#        files: |
-#          LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-#          LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-#          LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
+        files: |
+          LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

@@ -4,7 +4,7 @@ FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy
 
 # set version label
 ARG BUILD_DATE
-ARG VERSION="0.6.2"
+ARG VERSION
 LABEL build_version="LANCommander version:- ${VERSION} Build-date:- ${BUILD_DATE}, container based on github.com/LinuxServer/baseimage-ubuntu"
 LABEL maintainer="bashNinja"
 
@@ -12,7 +12,7 @@ LABEL maintainer="bashNinja"
 COPY root/ /
 
 # grab app
-ADD "https://github.com/LANCommander/LANCommander/releases/download/v${VERSION}/LANCommander-Linux-x64-v${VERSION}.zip" "/tmp"
+ADD "https://github.com/LANCommander/LANCommander/releases/download/${VERSION}/LANCommander-Linux-x64-${VERSION}.zip" "/tmp"
 
 # install app
 RUN \
@@ -24,9 +24,7 @@ RUN \
       sqlite3 \
       unzip && \
   echo "**** setup lancommander ****" && \
-    unzip "/tmp/LANCommander-Linux-x64-v${VERSION}.zip" -d /tmp && \
-    tar -xvf "/tmp/LANCommander-Linux-x64-v${VERSION}.tar" -C /tmp && \
-    mv /tmp/_Build_Linux/ /app/LANCommander && \
+    unzip "/tmp/LANCommander-Linux-x64-${VERSION}.zip" -d /app/LANCommander && \
     chmod +x /app/LANCommander/LANCommander && \
     ls -alh /app/LANCommander && \
   echo "**** setup symlinks ****" && \

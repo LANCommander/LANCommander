@@ -56,7 +56,7 @@ jobs:
 
     # Create Windows ZIP file
     - name: Package Windows Build
-      run: Compress-Archive -Path ./_Build_Windows/* -DestinationPath LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path "./_Build_Windows/*" -DestinationPath "${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip"
 
     # Linux
     - name: Publish Linux
@@ -66,7 +66,7 @@ jobs:
 
     # Create Linux ZIP file
     - name: Package Linux Build
-      run: Compress-Archive -Path ./_Build_Linux/* -DestinationPath LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path "./_Build_Linux/*" -DestinationPath "${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip"
 
     # Client
     - uses: actions/checkout@v3
@@ -112,6 +112,6 @@ jobs:
         generate_release_notes: true
         draft: true
         files: |
-          LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-          LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          ${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          ${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
           LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

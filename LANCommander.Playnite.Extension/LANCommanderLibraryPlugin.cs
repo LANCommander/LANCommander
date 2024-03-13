@@ -432,8 +432,16 @@ namespace LANCommander.PlaynitePlugin
                         Logger?.Error(ex, "Could not download save");
                     }
                 }
-            }
 
+                try
+                {
+                    RunBeforeStartScript(args.Game.InstallDirectory, args.Game.Id);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Ran into an unexpected error when attempting to run an Before Start script");
+                }
+            }
         }
 
         public override void OnGameStopped(OnGameStoppedEventArgs args)
@@ -450,6 +458,15 @@ namespace LANCommander.PlaynitePlugin
                 catch (Exception ex)
                 {
                     Logger?.Error(ex, "Could not upload save");
+                }
+
+                try
+                {
+                    RunAfterStopScript(args.Game.InstallDirectory, args.Game.Id);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Ran into an unexpected error when attempting to run an After Stop script");
                 }
             }
         }
@@ -588,6 +605,52 @@ namespace LANCommander.PlaynitePlugin
             });
 
             return window;
+        }
+
+        private int RunBeforeStartScript(string installDirectory, Guid gameId)
+        {
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.BeforeStart);
+
+            if (File.Exists(path))
+            {
+                var script = new PowerShellScript();
+
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", Settings.InstallDirectory);
+                script.AddVariable("ServerAddress", Settings.ServerAddress);
+                script.AddVariable("PlayerAlias", Settings.DisplayName);
+
+                script.UseFile(path);
+
+                return script.Execute();
+            }
+
+            return 0;
+        }
+
+        private int RunAfterStopScript(string installDirectory, Guid gameId)
+        {
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.AfterStop);
+
+            if (File.Exists(path))
+            {
+                var script = new PowerShellScript();
+
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", Settings.InstallDirectory);
+                script.AddVariable("ServerAddress", Settings.ServerAddress);
+                script.AddVariable("PlayerAlias", Settings.DisplayName);
+
+                script.UseFile(path);
+
+                return script.Execute();
+            }
+
+            return 0;
         }
 
         private int RunInstallScript(string installDirectory, Guid gameId)

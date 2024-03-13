@@ -56,10 +56,7 @@ jobs:
 
     # Create Windows ZIP file
     - name: Package Windows Build
-      uses: papeloto/action-zip@v1
-      with:
-        files: _Build_Windows/*
-        dest: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ./_Build_Windows/* -DestinationPath LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Linux
     - name: Publish Linux
@@ -67,12 +64,9 @@ jobs:
     - name: Remove Linux Extra Files
       run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
 
-    # Create Windows ZIP file
+    # Create Linux ZIP file
     - name: Package Linux Build
-      uses: papeloto/action-zip@v1
-      with:
-        files: _Build_Linux/*
-        dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ./_Build_Linux/* -DestinationPath LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Client
     - uses: actions/checkout@v3

@@ -86,7 +86,6 @@ jobs:
         dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Client
-    - uses: actions/checkout@v3
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1.3.1
     - name: Setup NuGet

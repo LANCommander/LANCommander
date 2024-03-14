@@ -65,7 +65,7 @@ jobs:
 
     # Create Windows ZIP file
     - name: Package Windows Build
-      run: Compress-Archive -Path ./LANCommander/_Build_Windows/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ./_Build_Windows/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Linux
     - name: Publish Linux
@@ -75,7 +75,7 @@ jobs:
 
     # Create Linux ZIP file
     - name: Package Linux Build
-      run: Compress-Archive -Path ./LANCommander/_Build_Linux/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ./_Build_Linux/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Client
     - uses: actions/checkout@v3

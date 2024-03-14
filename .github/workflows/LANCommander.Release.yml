@@ -65,7 +65,7 @@ jobs:
 
     # Create Windows ZIP file
     - name: Package Windows Build
-      run: Compress-Archive -Path ./_Build_Windows/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ./LANCommander/_Build_Windows/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Linux
     - name: Publish Linux
@@ -75,7 +75,7 @@ jobs:
 
     # Create Linux ZIP file
     - name: Package Linux Build
-      run: Compress-Archive -Path ./_Build_Linux/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+      run: Compress-Archive -Path ./LANCommander/_Build_Linux/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Client
     - uses: actions/checkout@v3
@@ -124,6 +124,6 @@ jobs:
         generate_release_notes: true
         draft: true
         files: |
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
           LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

@@ -112,6 +112,7 @@ jobs:
         string: '${{ github.workspace }}'
         pattern: '\\'
         replace-with: '/'
+        flags: g
 
     - name: Draft Release
       uses: softprops/action-gh-release@v2

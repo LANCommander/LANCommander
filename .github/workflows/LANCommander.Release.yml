@@ -115,7 +115,7 @@ jobs:
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
 
     - name: List contents of workspace
-      run: ls ${{ steps.swap_path_backslashes.outputs.replaced }}
+      run: Get-ChildItem -Path ${{ steps.swap_path_backslashes.outputs.replaced }} -Recurse
 
     - name: Draft Release
       uses: softprops/action-gh-release@v2
@@ -124,6 +124,6 @@ jobs:
         generate_release_notes: true
         draft: true
         files: |
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-*.zip
           LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

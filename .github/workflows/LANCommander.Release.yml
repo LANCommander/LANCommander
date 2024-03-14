@@ -67,8 +67,9 @@ jobs:
     - name: Package Windows Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: _Build_Windows/*
-        dest: ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        files: _Build_Windows/
+        recursive: true
+        dest: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Linux
     - name: Publish Linux
@@ -80,8 +81,9 @@ jobs:
     - name: Package Linux Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: _Build_Linux/*
-        dest: ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        files: _Build_Linux/
+        recursive: true
+        dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Client
     - uses: actions/checkout@v3

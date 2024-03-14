@@ -133,7 +133,7 @@ namespace LANCommander.Areas.Identity.Pages.Account
                 {
                     var user = await _userManager.FindByNameAsync(Input.UserName);
 
-                    if (user != null && !user.Approved)
+                    if (user != null && !user.Approved && !(await _userManager.IsInRoleAsync(user, "Administrator")))
                     {
                         ModelState.AddModelError(string.Empty, "Your account must be approved by an administrator.");
                         return Page();

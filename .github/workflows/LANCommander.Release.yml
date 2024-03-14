@@ -24,6 +24,15 @@ jobs:
         pattern: 'refs/tags/v'
         replace-with: ''
 
+    - uses: frabert/replace-string-action@v2
+      name: Swap Path Backslashes
+      id: swap_path_backslashes
+      with:
+        string: '${{ github.workspace }}'
+        pattern: '\\'
+        replace-with: '/'
+        flags: g
+
     # Server
     - uses: actions/checkout@v3
     - name: Setup .NET
@@ -56,7 +65,7 @@ jobs:
 
     # Create Windows ZIP file
     - name: Package Windows Build
-      run: Compress-Archive -Path "./_Build_Windows/*" -DestinationPath "${{ github.workspace }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip"
+      run: Compress-Archive -Path ./_Build_Windows/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Linux
     - name: Publish Linux
@@ -66,7 +75,7 @@ jobs:
 
     # Create Linux ZIP file
     - name: Package Linux Build
-      run: Compress-Archive -Path "./_Build_Linux/*" -DestinationPath "${{ github.workspace }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip"
+      run: Compress-Archive -Path ./_Build_Linux/* -DestinationPath ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Client
     - uses: actions/checkout@v3
@@ -105,14 +114,8 @@ jobs:
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
 
-    - uses: frabert/replace-string-action@v2
-      name: Swap Path Backslashes
-      id: swap_path_backslashes
-      with:
-        string: '${{ github.workspace }}'
-        pattern: '\\'
-        replace-with: '/'
-        flags: g
+    - name: List contents of workspace
+      run: ls ${{ steps.swap_path_backslashes.outputs.replaced }}
 
     - name: Draft Release
       uses: softprops/action-gh-release@v2

@@ -1,7 +1,6 @@
----
 services:
   lancommander:
-    image: ghcr.io/lancommander/lancommander:latest
+    image: pathartl/lancommander:latest
     container_name: lancommander
     environment:
       - PUID=1000

@@ -1,6 +1,6 @@
 services:
   lancommander:
-    image: pathartl/lancommander:latest
+    image: lancommander/lancommander:latest
     container_name: lancommander
     environment:
       - PUID=1000

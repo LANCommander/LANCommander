@@ -6,15 +6,40 @@ The main application is self-hostable and is built on the ASP.NET Blazor web app
 
 The platform is designed to work on local networks and loads no assets from the internet. It was originally developed to help assist a LAN party where the local network is closed and no internet access is permitted.
 
-Currently only Windows is supported, though Linux builds are provided.
+Builds for Windows and Linux are provided. Some features such as server management may be best experienced on Windows.
 
 ## Community
 * [Discord](https://discord.gg/vDEEWVt8EM)
 * [Wiki](https://lancommander.app/index.php/Main_Page)
 
+## Docker
+A Docker image is available over at [Docker Hub](https://hub.docker.com/r/lancommander/lancommander). A sample compose file is provided below:
+
+```yaml
+services:
+  lancommander:
+    image: lancommander/lancommander:latest
+    container_name: lancommander
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /path/to/appdata/config:/config
+    ports:
+      - 1337:1337
+    restart: unless-stopped
+```
+
+All config files are available from `/config`. This include any archive uploads for games. Many of these paths can be changed under Settings if you wish to add additional volume mappings.
+
+_Note: The Docker image runs the Linux build and features such as server management may be limited._
+
 ## FAQ
 ### How do I get games?
 The best games are either portable games or DRM-free games. Freeware, shareware, abandonware are all great available options. LANCommander is only a management/distribution system. It does not come bundled with any games.
+
+It's worth joining our [Discord](https://discord.gg/vDEEWVt8EM) as some pre-packaged freeware games are available to download.
 
 ### I have a pretty large LAN party planned with hundreds of players. I have some sick infrastructure and a LAN cache. What do?
 LANCommander communicates over HTTP(S). There is no LAN cache configuration provided, but all downloads are provided through the `/api/Games/{id}/Download` route.
@@ -56,5 +81,6 @@ LANCommander is far from complete. The basic implementation that exists will all
  - Game media management and automatic lookup (covers, icons, backgrounds)
 
 The following features are being considered:
- - Some expansion of the dashboard with useful stats
  - Built-in VPN client/server for remote LAN parties
+ - Friends list
+ - Integration with platforms such as Discord, TeamSpeak, Mumble

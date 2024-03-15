@@ -156,4 +156,16 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.6.1/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_6_1.pext
     Changelog:
       - 'Fixed: Migration to new import method no longer creates duplicate entries and maintains install status'
+  - Version: 0.6.3
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2024-03-14
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.6.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_6_3.pext
+    Changelog:
+      - 'Added: Hitting the "Delete" key with a save selected in the save manager deletes the save'
+      - 'Changed: Completed items in download queue are now sorted by descending'
+      - 'Fixed: Working directory on non-primary actions was not being mapped correctly'
+      - 'Fixed: Game metadata is now fetched again after installation, allowing actions to be populated correctly'
+      - 'Fixed: If communication to a server is lost without being in offline mode, games would sometimes throw an error instead of providing actions or starting the game'
+
+    
 

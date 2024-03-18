@@ -8,18 +8,20 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Controllers
 {
-    [Authorize(Roles = "Administrator")]
+    [Authorize]
     public class DownloadController : Controller
     {
         private readonly ArchiveService ArchiveService;
         private readonly GameSaveService GameSaveService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public DownloadController(ArchiveService archiveService)
+        public DownloadController(ArchiveService archiveService, GameSaveService gameSaveService)
         {
             ArchiveService = archiveService;
+            GameSaveService = gameSaveService;
         }
 
+        [Authorize(Roles = "Administrator")]
         public async Task<IActionResult> Archive(Guid id)
         {
             var archive = await ArchiveService.Get(id);

@@ -27,7 +27,8 @@ services:
     volumes:
       - /path/to/appdata/config:/config
     ports:
-      - 1337:1337
+      - 1337:1337/tcp   # Webinterface
+      - 35891:35891/udp # Beacon Broadcast
     restart: unless-stopped
 ```
 

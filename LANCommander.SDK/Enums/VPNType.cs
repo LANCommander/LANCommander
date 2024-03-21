@@ -6,6 +6,6 @@ namespace LANCommander.SDK.Enums
 {
     public enum VPNType
     {
-        ZeroTier
+        ZeroTier = 1
     }
 }

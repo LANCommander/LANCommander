@@ -40,7 +40,7 @@ namespace LANCommander.SDK
             switch (configuration.Type)
             {
                 case Enums.VPNType.ZeroTier:
-                    VPNClient = new ZeroTierClient(configuration.Data as ZeroTierConfiguration);
+                    VPNClient = new ZeroTierClient(configuration.Data as ZeroTierConfiguration, Client);
                     break;
             }
         }

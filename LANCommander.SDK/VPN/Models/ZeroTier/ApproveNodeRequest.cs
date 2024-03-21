@@ -4,8 +4,8 @@ using System.Text;
 
 namespace LANCommander.SDK.VPN.Models.ZeroTier
 {
-    public class UpdateNetworkSettingsResponse
+    public class ApproveNodeRequest
     {
-        public string Id { get; set; }
+        public string NodeId { get; set; }
     }
 }

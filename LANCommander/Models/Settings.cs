@@ -1,4 +1,5 @@
-﻿using NLog.Targets;
+﻿using LANCommander.SDK.Enums;
+using NLog.Targets;
 
 namespace LANCommander.Models
 {
@@ -23,6 +24,7 @@ namespace LANCommander.Models
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
+        public LANCommanderVPNSettings VPN { get; set; } = new LANCommanderVPNSettings();
         public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
         public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
         public LANCommanderLogSettings Logs { get; set; } = new LANCommanderLogSettings();
@@ -88,6 +90,14 @@ namespace LANCommander.Models
         public string Host { get; set; } = "";
         public int Port { get; set; } = 213;
         public bool Logging { get; set; } = false;
+    }
+
+    public class LANCommanderVPNSettings
+    {
+        public bool Enabled { get; set; } = false;
+        public IEnumerable<Guid> AllowedRoles { get; set; }
+        public VPNType Type { get; set; } = VPNType.ZeroTier;
+        public object Configuration { get; set; }
     }
 
     public class LANCommanderWikiSettings

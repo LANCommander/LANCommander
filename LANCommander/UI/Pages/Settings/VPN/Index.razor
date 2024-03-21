@@ -1,0 +1,95 @@
+﻿@page "/Settings/VPN"
+@using LANCommander.SDK.VPN.Configurations
+@using Microsoft.EntityFrameworkCore
+@using LANCommander.Models;
+@using LANCommander.Extensions
+@using LANCommander.SDK.Enums
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject IMessageService MessageService
+@inject RoleManager<Role> RoleManager
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="VPN" />
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Enable">
+            <Switch @bind-Checked="context.VPN.Enabled" />
+        </FormItem>
+
+        <FormItem Label="Type">
+            <Select @bind-Value="@context.VPN.Type" TItem="VPNType" TItemValue="VPNType" DataSource="Enum.GetValues<VPNType>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+
+        <FormItem Label="Allowed Roles">
+            <Transfer DataSource="AllowedRolesTransferItems" TargetKeys="AllowedRolesTargetKeys" OnChange="OnChangeAllowedRoles" Titles="@(new string[] { "Available", "Allowed" })" />
+        </FormItem>
+
+        @switch (context.VPN.Type)
+        {
+            case VPNType.ZeroTier:
+                <LANCommander.UI.Pages.Settings.VPN.Forms.ZeroTier Configuration="context.VPN.Configuration as ZeroTierConfiguration" ConfigurationChanged="config => context.VPN.Configuration = config" />
+                break;
+        }
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    LANCommanderSettings Settings;
+
+    ICollection<Role> Roles = new List<Role>();
+    IEnumerable<TransferItem> AllowedRolesTransferItems { get; set; } = new List<TransferItem>();
+    List<string> AllowedRolesTargetKeys { get; set; } = new List<string>();
+    ICollection<Role> SelectedAllowedRoles = new List<Role>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+        Roles = await RoleManager.Roles.ToListAsync();
+
+        SelectedAllowedRoles = Roles.Where(r => Settings.VPN.AllowedRoles.Contains(r.Id)).ToList();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            AllowedRolesTransferItems = Roles.Select(r => new TransferItem()
+            {
+                Key = r.Id.ToString(),
+                Title = r.Name
+            });
+
+            if (SelectedAllowedRoles != null)
+                AllowedRolesTargetKeys = SelectedAllowedRoles.Select(i => i.Id.ToString()).ToList();
+        }
+    }
+
+    async Task OnChangeAllowedRoles(TransferChangeArgs e)
+    {
+        SelectedAllowedRoles = Roles.Where(r => e.TargetKeys.Contains(r.Id.ToString())).ToList();
+
+        Settings.VPN.AllowedRoles = SelectedAllowedRoles.Select(r => r.Id);
+    }
+
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch
+        {
+            MessageService.Error("An unknown error occurred.");
+        }
+    }
+}

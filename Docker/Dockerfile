@@ -46,6 +46,7 @@ RUN \
     /var/tmp/*
 
 # ports and volumes
-EXPOSE 1337
+EXPOSE 1337/tcp
+EXPOSE 35891/udp
 
 VOLUME /config

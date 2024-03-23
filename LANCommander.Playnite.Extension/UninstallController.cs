@@ -78,6 +78,9 @@ namespace LANCommander.PlaynitePlugin
                 throw new Exception(ResourceProvider.GetString("LOCLANCommanderUninstallGenericError"));
             }
 
+            if (Game.Name.EndsWith(ResourceProvider.GetString("LOCLANCommanderUpdateAvailableSuffix")))
+                Game.Name = Game.Name.Substring(0, Game.Name.Length - ResourceProvider.GetString("LOCLANCommanderUpdateAvailableSuffix").Length);
+
             InvokeOnUninstalled(new GameUninstalledEventArgs());
         }
     }

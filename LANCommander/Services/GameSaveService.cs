@@ -44,7 +44,7 @@ namespace LANCommander.Services
 
         public string GetSavePath(GameSave save)
         {
-            return Path.Combine(Settings.UserSaves.StoragePath, save.UserId.ToString(), $"{save.Id}");
+            return Path.Combine(Settings.UserSaves.StoragePath, save.UserId.ToString(), save.GameId.ToString(), $"{save.Id}");
         }
     }
 }

@@ -166,6 +166,8 @@ Packages:
       - 'Fixed: Working directory on non-primary actions was not being mapped correctly'
       - 'Fixed: Game metadata is now fetched again after installation, allowing actions to be populated correctly'
       - 'Fixed: If communication to a server is lost without being in offline mode, games would sometimes throw an error instead of providing actions or starting the game'
-
-    
-
+  - Version: 0.6.5
+    RequiredApiVersion: 6.0.0
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.6.5/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_6_5.pext
+    Changelog:
+      - 'Fixed: Game server host is no longer resolve through DNS if its an IP addrees'

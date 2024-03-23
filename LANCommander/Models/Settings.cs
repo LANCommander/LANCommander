@@ -100,6 +100,12 @@ namespace LANCommander.Models
         public object Configuration { get; set; }
     }
 
+    public class LANCommanderZeroTierSettings
+    {
+        public string NetworkId { get; set; }
+        public string ApiKey { get; set; }
+    }
+
     public class LANCommanderWikiSettings
     {
         public bool Enabled { get; set; } = false;

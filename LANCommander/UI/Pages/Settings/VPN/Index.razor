@@ -32,7 +32,7 @@
         @switch (context.VPN.Type)
         {
             case VPNType.ZeroTier:
-                <LANCommander.UI.Pages.Settings.VPN.Forms.ZeroTier Configuration="context.VPN.Configuration as ZeroTierConfiguration" ConfigurationChanged="config => context.VPN.Configuration = config" />
+                <LANCommander.UI.Pages.Settings.VPN.Forms.ZeroTier Configuration="context.VPN.Configuration as LANCommanderZeroTierSettings" ConfigurationChanged="config => context.VPN.Configuration = config" />
                 break;
         }
 

@@ -1,4 +1,5 @@
-﻿@using LANCommander.SDK.VPN.Configurations
+﻿@using LANCommander.Models
+@using LANCommander.SDK.VPN.Configurations
 
 <FormItem Label="Network ID">
     <Input @bind-Value="Configuration.NetworkId" />
@@ -8,14 +9,14 @@
     [Parameter] public string Value { get; set; } = "";
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
-    [Parameter] public ZeroTierConfiguration Configuration { get; set; } = new ZeroTierConfiguration();
-    [Parameter] public EventCallback<ZeroTierConfiguration> ConfigurationChanged { get; set; }
+    [Parameter] public LANCommanderZeroTierSettings Configuration { get; set; } = new LANCommanderZeroTierSettings();
+    [Parameter] public EventCallback<LANCommanderZeroTierSettings> ConfigurationChanged { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         if (Configuration == null)
         {
-            Configuration = new ZeroTierConfiguration();
+            Configuration = new LANCommanderZeroTierSettings();
             await ConfigurationChanged.InvokeAsync(Configuration);
         }
     }

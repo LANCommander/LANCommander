@@ -1,4 +1,6 @@
-﻿using LANCommander.SDK.VPN.Configurations;
+﻿using LANCommander.Models;
+using LANCommander.SDK.VPN.Configurations;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,16 +13,26 @@ namespace LANCommander.Controllers.Api
     {
         public VPNController() { }
 
+        [HttpGet]
         public async Task<VPNConfiguration> GetConfiguration()
         {
-            return new VPNConfiguration()
+            var settings = SettingService.GetSettings();
+            var configuration = new VPNConfiguration()
             {
-                Type = SDK.Enums.VPNType.ZeroTier,
-                Data = new ZeroTierConfiguration
-                {
-                    NetworkId = "<NetworkId>"
-                }
+                Type = SDK.Enums.VPNType.ZeroTier
             };
+
+            switch (settings.VPN.Type)
+            {
+                case SDK.Enums.VPNType.ZeroTier:
+                    configuration.Data = new ZeroTierConfiguration
+                    {
+                        NetworkId = (settings.VPN.Configuration as LANCommanderZeroTierSettings).NetworkId
+                    };
+                    break;
+            }
+
+            return configuration;
         }
     }
 }

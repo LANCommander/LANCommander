@@ -247,7 +247,6 @@ namespace LANCommander.PlaynitePlugin
                         try
                         {
                             var serverHost = String.IsNullOrWhiteSpace(server.Host) ? new Uri(Settings.ServerAddress).Host : server.Host;
-                            var serverIp = Dns.GetHostEntry(serverHost).AddressList.FirstOrDefault();
 
                             var variables = new Dictionary<string, string>()
                             {
@@ -255,8 +254,17 @@ namespace LANCommander.PlaynitePlugin
                                 { "ServerPort", server.Port.ToString() }
                             };
 
-                            if (serverIp != null)
-                                variables["ServerIP"] = serverIp.ToString();
+                            if (!IPAddress.TryParse(serverHost, out var parsedAddress))
+                            {
+                                var serverIp = Dns.GetHostEntry(serverHost).AddressList.FirstOrDefault();
+
+                                if (serverIp != null)
+                                    variables["ServerIP"] = serverIp.ToString();
+                            }
+                            else
+                            {
+                                variables["ServerIP"] = serverHost;
+                            }
 
                             automaticPlayController = new AutomaticPlayController(args.Game)
                             {

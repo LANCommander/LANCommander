@@ -24,6 +24,8 @@
 @code {
     [Parameter] public EventCallback<Guid> OnGameImported { get; set; }
 
+    NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
     IBrowserFile File;
     ChunkUploader ChunkUploader;
 
@@ -76,6 +78,7 @@
             }
             catch (Exception ex)
             {
+                Logger.Error(ex, "An unknown error occurred while trying to import");
                 MessageService.Error("An unknown error occurred while trying to import");
             }
         }

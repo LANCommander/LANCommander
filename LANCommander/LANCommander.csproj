@@ -28,7 +28,7 @@
     </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AntDesign" Version="0.17.4" />
+    <PackageReference Include="AntDesign" Version="0.18.1" />
     <PackageReference Include="AntDesign.Charts" Version="0.5.1" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
     <PackageReference Include="BlazorMonaco" Version="3.2.0" />

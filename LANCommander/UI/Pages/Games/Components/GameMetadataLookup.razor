@@ -47,7 +47,7 @@
 {
     <Space Style="display: flex">
         <SpaceItem Style="flex-grow: 1">
-            <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" />
+            <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" />
         </SpaceItem>
         <SpaceItem>
             <Button OnClick="() => SearchForGame(Value)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
@@ -58,7 +58,7 @@ else
 {
     <Space Style="display: flex">
         <SpaceItem Style="flex-grow: 1">
-            <Input @bind-Value="Value" BindOnInput="true" />
+            <Input @bind-Value="Value" BindOnInput="true" OnChange="ValueChanged" />
         </SpaceItem>
         <SpaceItem>
             <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">

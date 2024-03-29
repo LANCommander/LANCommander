@@ -171,3 +171,8 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.6.5/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_6_5.pext
     Changelog:
       - 'Fixed: Game server host is no longer resolve through DNS if its an IP addrees'
+  - Version: 0.6.7
+    RequiredApiVersion: 6.0.0
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.6.7/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_6_7.pext
+    Changelog:
+      - 'Fixed: Save files were potentially unpacked/packed improperly'

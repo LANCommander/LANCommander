@@ -1,5 +1,6 @@
 ﻿using LANCommander.Data;
 using LANCommander.Data.Models;
+using LANCommander.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
@@ -59,7 +60,7 @@ namespace LANCommander.Services
         /// <param name="predicate">Qualifier expressoin</param>
         /// <param name="entity">Entity to add</param>
         /// <returns>Newly created or existing entity</returns>
-        public virtual async Task<T> AddMissing(Expression<Func<T, bool>> predicate, T entity)
+        public virtual async Task<ExistingEntityResult<T>> AddMissing(Expression<Func<T, bool>> predicate, T entity)
         {
             using (var repo = new Repository<T>(Context, HttpContext))
             {
@@ -71,11 +72,19 @@ namespace LANCommander.Services
 
                     await repo.SaveChanges();
 
-                    return entity;
+                    return new ExistingEntityResult<T>
+                    {
+                        Value = entity,
+                        Existing = false
+                    };
                 }
                 else
                 {
-                    return existing;
+                    return new ExistingEntityResult<T>
+                    {
+                        Value = existing,
+                        Existing = true
+                    };
                 }
             }
         }

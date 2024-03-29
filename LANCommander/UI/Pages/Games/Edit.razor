@@ -431,12 +431,22 @@ else
 
             foreach (var developer in developers)
             {
-                Game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer }));
+                var company = await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer });
+
+                if (!company.Existing)
+                    Companies = await CompanyService.Get();
+
+                Game.Developers.Add(company.Value);
             }
 
             foreach (var publisher in publishers)
             {
-                Game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher }));
+                var company = await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher });
+
+                if (!company.Existing)
+                    Companies = await CompanyService.Get();
+
+                Game.Publishers.Add(company.Value);
             }
         }
 
@@ -446,7 +456,12 @@ else
 
             foreach (var genre in genres)
             {
-                Game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre }));
+                var genreEntity = await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre });
+
+                if (!genreEntity.Existing)
+                    Genres = await GenreService.Get();
+
+                Game.Genres.Add(genreEntity.Value);
             }
         }
 
@@ -456,7 +471,12 @@ else
 
             foreach (var tag in tags)
             {
-                Game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Data.Models.Tag { Name = tag }));
+                var tagEntity = await TagService.AddMissing(t => t.Name == tag, new Data.Models.Tag { Name = tag });
+
+                if (!tagEntity.Existing)
+                    Tags = await TagService.Get();
+
+                Game.Tags.Add(tagEntity.Value);
             }
         }
     }

@@ -250,6 +250,15 @@ namespace LANCommander.Services
                     }));
                 #endregion
 
+                #region Engine
+                if (game.Engine != null)
+                {
+                    var engine = await EngineService.AddMissing(e => e.Name == manifest.Engine, new Engine { Name = manifest.Engine });
+
+                    game.Engine = engine.Value;
+                }
+                #endregion
+
                 #region Tags
                 if (game.Tags == null)
                     game.Tags = new List<Data.Models.Tag>();
@@ -257,10 +266,10 @@ namespace LANCommander.Services
                 if (manifest.Tags != null)
                     foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
                     {
-                        game.Tags.Add(await TagService.AddMissing(t => t.Name == tag, new Tag()
+                        game.Tags.Add((await TagService.AddMissing(t => t.Name == tag, new Tag()
                         {
                             Name = tag
-                        }));
+                        })).Value);
                     }
 
                 foreach (var tag in game.Tags.Where(c => !manifest.Tags.Any(t => c.Name == t)))
@@ -274,10 +283,10 @@ namespace LANCommander.Services
                 if (manifest.Genre != null)
                     foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
                     {
-                        game.Genres.Add(await GenreService.AddMissing(g => g.Name == genre, new Genre()
+                        game.Genres.Add((await GenreService.AddMissing(g => g.Name == genre, new Genre()
                         {
                             Name = genre
-                        }));
+                        })).Value);
                     }
 
                 foreach (var genre in game.Genres.Where(c => !manifest.Genre.Any(g => c.Name == g)))
@@ -291,10 +300,10 @@ namespace LANCommander.Services
                 if (manifest.Developers != null)
                     foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
                     {
-                        game.Developers.Add(await CompanyService.AddMissing(c => c.Name == developer, new Company()
+                        game.Developers.Add((await CompanyService.AddMissing(c => c.Name == developer, new Company()
                         {
                             Name = developer
-                        }));
+                        })).Value);
                     }
 
                 foreach (var developer in game.Developers.Where(c => !manifest.Developers.Any(d => c.Name == d)))
@@ -308,10 +317,10 @@ namespace LANCommander.Services
                 if (manifest.Publishers != null)
                     foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
                     {
-                        game.Publishers.Add(await CompanyService.AddMissing(c => c.Name == publisher, new Company()
+                        game.Publishers.Add((await CompanyService.AddMissing(c => c.Name == publisher, new Company()
                         {
                             Name = publisher
-                        }));
+                        })).Value);
                     }
 
                 foreach (var publisher in game.Publishers.Where(c => !manifest.Publishers.Any(p => c.Name == p)))

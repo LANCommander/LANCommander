@@ -28,6 +28,10 @@ namespace LANCommander.Data.Models
 
         public bool Singleplayer { get; set; } = false;
 
+        public Guid? EngineId { get; set; }
+        [ForeignKey(nameof(EngineId))]
+        public virtual Engine Engine { get; set; }
+
         public virtual ICollection<MultiplayerMode>? MultiplayerModes { get; set; } = new List<MultiplayerMode>();
         public virtual ICollection<Genre>? Genres { get; set; } = new List<Genre>();
         public virtual ICollection<Tag>? Tags { get; set; } = new List<Tag>();

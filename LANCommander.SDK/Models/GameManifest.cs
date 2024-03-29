@@ -13,6 +13,7 @@ namespace LANCommander.SDK
         public string Description { get; set; }
         public string Notes { get; set; }
         public DateTime ReleasedOn { get; set; }
+        public string Engine { get; set; }
         public IEnumerable<string> Genre { get; set; }
         public IEnumerable<string> Tags { get; set; }
         public IEnumerable<string> Publishers { get; set; }

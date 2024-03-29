@@ -12,6 +12,7 @@
 @inject CompanyService CompanyService
 @inject GenreService GenreService
 @inject TagService TagService
+@inject EngineService EngineService
 @inject CollectionService CollectionService
 @inject ArchiveService ArchiveService
 @inject ScriptService ScriptService
@@ -113,6 +114,17 @@
                      </FormItem>
                     <FormItem Label="Description">
                         <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                    </FormItem>
+                    <FormItem Label="Engine">
+                        <Select TItem="Engine"
+                            TItemValue="Guid?"
+                            DataSource="@Engines.OrderBy(e => e.Name)"
+                            @bind-Value="@context.EngineId"
+                            LabelName="Name"
+                            ValueName="Id"
+                            Placeholder="Select an Engine"
+                            DefaultActiveFirstOption="false"
+                            EnableSearch />
                     </FormItem>
                     <FormItem Label="Type">
                         <Select @bind-Value="@context.Type" TItem="GameType" TItemValue="GameType" DataSource="Enum.GetValues<GameType>()">
@@ -283,6 +295,7 @@ else
     bool Success;
     string[] Errors = { };
 
+    IEnumerable<Engine> Engines;
     IEnumerable<Company> Companies;
     IEnumerable<Genre> Genres;
     IEnumerable<Data.Models.Tag> Tags;
@@ -341,6 +354,7 @@ else
         else
             Game = await GameService.Get(Id);
 
+        Engines = await EngineService.Get();
         Companies = await CompanyService.Get();
         Genres = await GenreService.Get();
         Tags = await TagService.Get();
@@ -415,6 +429,19 @@ else
 
             if (baseGame != null)
                 Game.BaseGameId = baseGame.Id;
+        }
+
+        if (result.IGDBMetadata.GameEngines != null && result.IGDBMetadata.GameEngines.Values != null)
+        {
+            var engineMetadata = result.IGDBMetadata.GameEngines.Values.FirstOrDefault();
+
+            var engine = await EngineService.AddMissing(e => e.Name == engineMetadata.Name, new Engine { Name = engineMetadata.Name });
+
+            if (!engine.Existing)
+                Engines = await EngineService.Get();
+
+            Game.Engine = engine.Value;
+            Game.EngineId = engine.Value.Id;
         }
 
         if (categoryMap.Keys.Contains(result.IGDBMetadata.Category.GetValueOrDefault()))

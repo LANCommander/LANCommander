@@ -17,6 +17,7 @@ namespace LANCommander.Services
         private readonly IMapper Mapper;
         private readonly ArchiveService ArchiveService;
         private readonly MediaService MediaService;
+        private readonly EngineService EngineService;
         private readonly TagService TagService;
         private readonly CompanyService CompanyService;
         private readonly GenreService GenreService;
@@ -27,6 +28,7 @@ namespace LANCommander.Services
             IMapper mapper,
             ArchiveService archiveService,
             MediaService mediaService,
+            EngineService engineService,
             TagService tagService,
             CompanyService companyService,
             GenreService genreService) : base(dbContext, httpContextAccessor)
@@ -34,6 +36,7 @@ namespace LANCommander.Services
             Mapper = mapper;
             ArchiveService = archiveService;
             MediaService = mediaService;
+            EngineService = engineService;
             TagService = tagService;
             CompanyService = companyService;
             GenreService = genreService;
@@ -76,6 +79,9 @@ namespace LANCommander.Services
                 ReleasedOn = game.ReleasedOn.GetValueOrDefault(),
                 Singleplayer = game.Singleplayer,
             };
+
+            if (game.Engine != null)
+                manifest.Engine = game.Engine.Name;
 
             if (game.Genres != null && game.Genres.Count > 0)
                 manifest.Genre = game.Genres.Select(g => g.Name).ToArray();

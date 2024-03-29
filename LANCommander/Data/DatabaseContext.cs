@@ -140,6 +140,12 @@ namespace LANCommander.Data
                 .WithOne(g => g.BaseGame)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Game>()
+                .HasOne(g => g.Engine)
+                .WithMany(e => e.Games)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
             #endregion
 
             #region User Relationships

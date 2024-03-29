@@ -185,7 +185,8 @@ else
             "involved_companies.developer",
             "involved_companies.publisher",
             "involved_companies.company.name",
-            "cover.*"
+            "cover.*",
+            "game_engines.*"
         };
 
         result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), fields);

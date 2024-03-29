@@ -172,6 +172,7 @@ namespace LANCommander
             builder.Services.AddScoped<GenreService>();
             builder.Services.AddScoped<KeyService>();
             builder.Services.AddScoped<TagService>();
+            builder.Services.AddScoped<EngineService>();
             builder.Services.AddScoped<CompanyService>();
             builder.Services.AddScoped<IGDBService>();
             builder.Services.AddScoped<ServerService>();

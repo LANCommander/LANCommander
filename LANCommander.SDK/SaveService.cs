@@ -391,7 +391,7 @@ namespace LANCommander.SDK
             {
                 var fileArchivePath = file.Substring(localPath.Length).Replace(Path.DirectorySeparatorChar, '/').Trim('/');
 
-                zipArchive.AddEntry($"Saves/{pathId}/{archivePath}/{fileArchivePath}", file);
+                zipArchive.AddEntry($"Files/{pathId}/{archivePath}/{fileArchivePath}", file);
             }
         }
 

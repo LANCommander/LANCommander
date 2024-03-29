@@ -12,13 +12,13 @@ Authentication:
   PasswordRequiredLength: 8
 Roles: {}
 UserSaves:
-  StoragePath: Saves
+  StoragePath: /config/Saves
   MaxSize: 25
 Archives:
-  StoragePath: Uploads
+  StoragePath: /config/Uploads
 Media:
   SteamGridDbApiKey: ''
-  StoragePath: Media
+  StoragePath: /config/Media
   MaxSize: 25
 IPXRelay:
   Host: ''
@@ -27,6 +27,6 @@ Wiki:
   Username: ''
   Password: ''
 Update:
-  StoragePath: Updates
+  StoragePath: /config/Updates
 Logs:
-  StoragePath: Logs
+  StoragePath: /config/Logs

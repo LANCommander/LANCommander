@@ -143,11 +143,17 @@ namespace LANCommander.SDK
                     manifest = ManifestHelper.Read(tempLocation);
 
                     #region Move files
+                    var tempLocationFilePath = "Files";
+
+                    // Legacy support
+                    if (!Directory.Exists(Path.Combine(tempLocation, tempLocationFilePath)))
+                        tempLocationFilePath = "Saves";
+
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
                     {
                         foreach (var entry in savePath.Entries)
                         {
-                            var entryPath = Path.Combine(tempLocation, "Files", savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
+                            var entryPath = Path.Combine(tempLocation, tempLocationFilePath, savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
                             var destinationPath = entry.ActualPath.ExpandEnvironmentVariables(installDirectory);
 
                             if (File.Exists(entryPath))

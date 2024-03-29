@@ -69,7 +69,9 @@ namespace LANCommander.Services
                 (int)Category.Port,
                 (int)Category.StandaloneExpansion,
                 (int)Category.Expansion,
-                (int)Category.Mod
+                (int)Category.Mod,
+                (int)Category.Remake,
+                (int)Category.Remaster
             };
 
             var sb = new StringBuilder();

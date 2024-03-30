@@ -14,7 +14,8 @@
         <FilePickerButton
             EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
             OnSelected="OnLocalFileSelected"
-            Root="@RootPath">
+            Root="@RootPath"
+            Disabled="@(Status != "")">
             Use Local File
         </FilePickerButton>
         <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>

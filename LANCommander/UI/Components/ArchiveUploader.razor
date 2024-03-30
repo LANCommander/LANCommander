@@ -14,7 +14,8 @@
     @<Template>
         <FilePickerButton EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".zip"))"
             OnSelected="OnLocalFileSelected"
-            Root="@RootPath">
+            Root="@RootPath"
+            Disabled="@(Status != "" || String.IsNullOrWhiteSpace(Archive.Version))">
             Use Local File
         </FilePickerButton>
         <Button OnClick="Start" Disabled="@(File == null || Status != "" || String.IsNullOrWhiteSpace(Archive.Version))" Type="@ButtonType.Primary">Upload</Button>

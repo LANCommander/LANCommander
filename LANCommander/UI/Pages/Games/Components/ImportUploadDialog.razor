@@ -11,6 +11,12 @@
 @{
     RenderFragment Footer =
     @<Template>
+        <FilePickerButton
+            EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.EndsWith(".lcx"))"
+            OnSelected="OnLocalFileSelected"
+            Root="@RootPath">
+            Use Local File
+        </FilePickerButton>
         <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
@@ -34,6 +40,8 @@
     [Parameter] public RenderFragment Hint { get; set; }
 
     NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     IBrowserFile File;
     ChunkUploader ChunkUploader;
@@ -110,5 +118,27 @@
         await InvokeAsync(StateHasChanged);
 
         MessageService.Error("An error occurred while trying to import");
+    }
+
+    public async Task OnLocalFileSelected(string path)
+    {
+        try
+        {
+            var game = await GameService.ImportLocalFile(path);
+
+            Visible = false;
+
+            await InvokeAsync(StateHasChanged);
+
+            if (OnGameImported.HasDelegate)
+                await OnGameImported.InvokeAsync(game.Id);
+
+            MessageService.Success($"{game.Title} successfully imported!");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "An unknown error occurred while trying to import");
+            MessageService.Error("An unknown error occurred while trying to import");
+        }
     }
 }

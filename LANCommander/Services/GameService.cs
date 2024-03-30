@@ -211,6 +211,17 @@ namespace LANCommander.Services
             return manifest;
         }
 
+        public async Task<Game> ImportLocalFile(string path)
+        {
+            Guid objectKey = Guid.NewGuid();
+
+            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
+
+            File.Copy(path, importArchivePath, true);
+
+            return await Import(objectKey);
+        }
+
         public async Task<Game> Import(Guid objectKey)
         {
             var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());

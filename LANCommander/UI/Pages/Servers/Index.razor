@@ -33,7 +33,12 @@
 
 <Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25" @bind-SelectedRows="SelectedServers" Responsive>
     <Selection Key="@(context.Id.ToString())" />
-    <PropertyColumn Property="s => s.Game" Hidden="@(Picker.IsColumnHidden("Game"))" DefaultSortOrder="@SortDirection.Ascending" Sortable SorterCompare="@((a, b) => String.CompareOrdinal(!String.IsNullOrWhiteSpace(a.SortTitle) ? a.SortTitle : a.Title, !String.IsNullOrWhiteSpace(b.SortTitle) ? b.SortTitle : b.Title))">
+    <PropertyColumn
+        Property="s => s.Game"
+        Hidden="@(Picker.IsColumnHidden("Game"))"
+        DefaultSortOrder="@SortDirection.Ascending"
+        Sortable
+        SorterCompare="@((a, b) => a == null ? -1 : b == null ? 1 : String.CompareOrdinal(!String.IsNullOrWhiteSpace(a.SortTitle) ? a.SortTitle : a.Title, !String.IsNullOrWhiteSpace(b.SortTitle) ? b.SortTitle : b.Title))">
         <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
         @context.Game?.Title
     </PropertyColumn>

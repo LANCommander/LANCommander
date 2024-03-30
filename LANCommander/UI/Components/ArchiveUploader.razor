@@ -12,6 +12,11 @@
 @{
     RenderFragment Footer =
     @<Template>
+        <FilePickerButton EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".zip"))"
+            OnSelected="OnLocalFileSelected"
+            Root="@RootPath">
+            Use Local File
+        </FilePickerButton>
         <Button OnClick="Start" Disabled="@(File == null || Status != "" || String.IsNullOrWhiteSpace(Archive.Version))" Type="@ButtonType.Primary">Upload</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
@@ -48,6 +53,8 @@
     [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
 
     Archive Archive;
+
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     IBrowserFile File;
     ChunkUploader ChunkUploader;
@@ -105,7 +112,10 @@
         if (Guid.TryParse(data, out var objectKey))
         {
             Archive.ObjectKey = objectKey.ToString();
-            Archive.CompressedSize = File.Size;
+
+            var archivePath = ArchiveService.GetArchiveFileLocation(Archive.ObjectKey);
+
+            Archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
 
             if (Archive.Id != Guid.Empty)
                 Archive = await ArchiveService.Update(Archive);
@@ -134,7 +144,7 @@
             if (OnArchiveUploaded.HasDelegate)
                 await OnArchiveUploaded.InvokeAsync(Archive.Id);
 
-            await MessageService.Success("Archive uploaded!");
+            MessageService.Success("Archive uploaded!");
         }
         else
         {
@@ -142,7 +152,7 @@
 
             await InvokeAsync(StateHasChanged);
 
-            await MessageService.Error("Archive failed to upload!");
+            MessageService.Error("Archive failed to upload!");
         }
 
         await ChunkUploader.Clear();
@@ -155,6 +165,20 @@
 
         await InvokeAsync(StateHasChanged);
 
-        await MessageService.Error("Archive failed to upload!");
+        MessageService.Error("Archive failed to upload!");
+    }
+
+    public async Task OnLocalFileSelected(string path)
+    {
+        try
+        {
+            var objectKey = await ArchiveService.CopyFromLocalFile(path);
+
+            await OnUploadCompleted(objectKey.ToString());
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred while trying to use a local file");
+        }
     }
 }

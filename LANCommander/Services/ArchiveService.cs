@@ -99,6 +99,17 @@ namespace LANCommander.Services
             return File.Exists(path);
         }
 
+        public async Task<Guid> CopyFromLocalFile(string path)
+        {
+            Guid objectKey = Guid.NewGuid();
+
+            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
+
+            File.Copy(path, importArchivePath, true);
+
+            return objectKey;
+        }
+
         public async Task<IEnumerable<ZipArchiveEntry>> GetContents(Guid archiveId)
         {
             var archive = await Get(archiveId);

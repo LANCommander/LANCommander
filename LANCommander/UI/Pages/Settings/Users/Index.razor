@@ -142,7 +142,7 @@
 
     private async Task DeleteUser(UserViewModel user)
     {
-        if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
+        if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1 && user.Roles.Contains("Administrator"))
         {
             await MessageService.Error("Cannot delete the only administrator!");
         }

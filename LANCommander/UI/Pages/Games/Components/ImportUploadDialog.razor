@@ -12,7 +12,7 @@
     RenderFragment Footer =
     @<Template>
         <FilePickerButton
-            EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.EndsWith(".lcx"))"
+            EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
             OnSelected="OnLocalFileSelected"
             Root="@RootPath">
             Use Local File

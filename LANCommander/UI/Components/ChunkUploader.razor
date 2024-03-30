@@ -1,32 +1,103 @@
 ﻿@inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject IJSRuntime JS
+@inject IMessageService MessageService
 
-<InputFile @ref="FileInput" id="ChunkFileInput" OnChange="OnFileSelected" accept="@Accept" hidden />
-<Upload Name="files" FileList="FileList" Accept="@Accept">
-    <label class="ant-btn" for="ChunkFileInput">
-        <Icon Type="upload" />
+<div class="ant-upload ant-upload-select-text ant-upload-drag ant-upload-select chunk-uploader" data-status="@CurrentProgressStatus">
+    <Progress Type="ProgressType.Circle" Percent="Progress" Status="@CurrentProgressStatus" Class="uploader-progress" />
 
-        @if (File == null)
+    <span class="uploader-progress-rate"></span>
+
+    <label tabindex="0" class="ant-upload" style="display: grid;" for="ChunkFileInput"role="button">
+        
+        @if (!ClearInput)
         {
-            <Text>Select File</Text>
+            <InputFile @ref="FileInput" @key="@UploaderId" id="ChunkFileInput" OnChange="OnFileSelected" accept="@Accept" style="position: absolute; width: 100%; height: 100%; opacity: 0; top: 0;left: 0; z-index:2;" />
         }
-        else
-        {
-            <Text>Change File</Text>
-        }
+        <div class="ant-upload-drag-container">            
+            <p class="ant-upload-drag-icon">
+                <Icon Type="@IconType.Outline.Upload" />
+            </p>
+            <p class="ant-upload-text">
+                @Text
+            </p>
+            <p class="ant-upload-hint">
+                @Hint
+            </p>
+        </div>
     </label>
-</Upload>
+</div>
+
 
 @if (File != null)
 {
-    <Text>@File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))</Text>
+    <div class="ant-upload-list ant-upload-list-picture">
+        <div class="ant-upload-list-picture-container" style="display: list-item;">
+            <div class="ant-upload-list-item ant-upload-list-item-done ant-upload-list-item-list-type-picture">
+                <div class="ant-upload-list-item-info">
+                    <span class="ant-upload-span">
+                        <div class="ant-upload-list-item-thumbnail ant-upload-list-item-file">
+                            <Icon Type="@IconType.Outline.FileZip" />
+                        </div>
+                        <span target="_blank" rel="noopener noreferrer" class="ant-upload-list-item-name" title="@File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))">
+                            @File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))
+                        </span>
+                        <span class="ant-upload-list-item-card-actions picture">
+                            <Button Type="@ButtonType.Text" Size="@ButtonSize.Small" Icon="@IconType.Outline.Delete" OnClick="Clear" Disabled="@(CurrentProgressStatus != ProgressStatus.Normal)" />
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
-<Progress Percent="Progress" Status="@CurrentProgressStatus" Class="uploader-progress" />
-<Text Class="uploader-progress-rate"></Text>
+<style>
+    .chunk-uploader .uploader-progress-rate {
+        position: absolute;
+        text-align: center;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        opacity: 0;
+        transform: translateY(72px) scale(0);
+    }
+
+    .chunk-uploader .uploader-progress {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        transition: transform .15s;
+    }
+
+    .chunk-uploader .ant-upload {
+        transition: transform .15s;
+        transform: scale(1);
+    }
+
+    .chunk-uploader[data-status="active"] .uploader-progress,
+    .chunk-uploader[data-status="success"] .uploader-progress {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .chunk-uploader[data-status="active"] .uploader-progress-rate,
+    .chunk-uploader[data-status="success"] .uploader-progress-rate {
+        opacity: 1;
+        transform: translateY(72px) scale(1);
+    }
+
+    .chunk-uploader[data-status="active"] .ant-upload,
+    .chunk-uploader[data-status="success"] .ant-upload {
+        opacity: 0;
+        transform: scale(0);
+    }
+</style>
 
 @code {
+    [Parameter] public RenderFragment Text { get; set; }
+    [Parameter] public RenderFragment Hint { get; set; }
     [Parameter] public string Accept { get; set; }
     [Parameter] public string ObjectKey { get; set; }
     [Parameter] public EventCallback<string> OnUploadCompleted { get; set; }
@@ -36,12 +107,15 @@
     [Parameter] public IBrowserFile File { get; set; }
     [Parameter] public EventCallback<IBrowserFile> FileChanged { get; set; }
 
+    Guid UploaderId = Guid.NewGuid();
+
     InputFile FileInput;
     List<UploadFileItem> FileList = new List<UploadFileItem>();
 
     int Progress = 0;
     bool Uploading = false;
     bool Finished = false;
+    bool ClearInput = false;
     double Speed = 0;
 
     ProgressStatus CurrentProgressStatus
@@ -100,13 +174,38 @@
 
     public async Task Clear()
     {
+        await JS.InvokeVoidAsync("Uploader.Clear");
+
         File = null;
-        await ChangeStatus("");
+
+        if (FileChanged.HasDelegate)
+            await FileChanged.InvokeAsync(null);
+
+        Status = "";
+
+        if (StatusChanged.HasDelegate)
+            await StatusChanged.InvokeAsync(Status);
+
+        StateHasChanged();
     }
 
     private async void OnFileSelected(InputFileChangeEventArgs args)
     {
-        File = args.File;
+        var file = args.File;
+
+        if (!String.IsNullOrWhiteSpace(Accept))
+        {
+            var acceptedFileExtensions = Accept.Split(',').Select(x => x.Trim());
+
+            if (!acceptedFileExtensions.Any(x => file.Name.ToLower().EndsWith(x.ToLower())))
+            {
+                MessageService.Error($"Only {String.Join(", ", acceptedFileExtensions)} can be selected!");
+                return;
+            }
+
+        }
+
+        File = file;
 
         if (FileChanged.HasDelegate)
             await FileChanged.InvokeAsync(File);

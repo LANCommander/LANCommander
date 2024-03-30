@@ -25,7 +25,7 @@ export default class Uploader {
 
     async Init(fileInputId: string, objectKey: string) {
         this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
-        this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-bg');
+        this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-circle-path');
         this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
         this.ProgressRate = document.querySelector('.uploader-progress-rate');
 
@@ -108,7 +108,7 @@ export default class Uploader {
     UpdateProgressBar(chunkIndex: number, progressEvent: AxiosProgressEvent) {
         var percent = ((1 / this.TotalChunks) * progressEvent.progress) + ((chunkIndex - 1) / this.TotalChunks);
 
-        this.ProgressBar.style.width = (percent * 100) + '%';
+        this.ProgressBar.style.strokeDasharray = percent * 295.31 + 'px, 295.31px';
         this.ProgressText.innerText = Math.ceil(percent * 100) + '%';
 
         if (progressEvent.rate > 0)
@@ -134,6 +134,11 @@ export default class Uploader {
         } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
 
         return bytes.toFixed(dp) + ' ' + units[u];
+    }
+
+    Clear() {
+        this.File = undefined;
+        this.FileInput.value = "";
     }
 
     OnStart: () => void;

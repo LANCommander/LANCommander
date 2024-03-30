@@ -138,7 +138,9 @@
     </ActionColumn>
 </Table>
 
-<ImportUploadDialog @ref="ImportUploadDialog" OnGameImported="LoadData" />
+<ImportUploadDialog @ref="ImportUploadDialog" OnGameImported="LoadData">
+    <Hint>Only LCX files are supported for importing games</Hint>
+</ImportUploadDialog>
 
  @code {
     IEnumerable<Game> Games { get; set; } = new List<Game>();

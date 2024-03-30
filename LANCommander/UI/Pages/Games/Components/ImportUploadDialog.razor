@@ -12,17 +12,26 @@
     RenderFragment Footer =
     @<Template>
         <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
-        <Button OnClick="Clear" Disabled="@(File == null || Status != "")" Danger>Clear</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
 }
 
 <Modal Visible="@Visible" Title="Import Game" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
-    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError" />
+    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+        <Text>
+            <p>Drag and Drop</p>
+            <p>or</p>
+            <p>
+                <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
+            </p>
+        </Text>
+        <Hint>@Hint</Hint>
+    </ChunkUploader>
 </Modal>
 
 @code {
     [Parameter] public EventCallback<Guid> OnGameImported { get; set; }
+    [Parameter] public RenderFragment Hint { get; set; }
 
     NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
@@ -90,6 +99,8 @@
 
             MessageService.Error("Import file failed to upload!");
         }
+
+        await Clear();
     }
 
     public async Task OnUploadError(string message)

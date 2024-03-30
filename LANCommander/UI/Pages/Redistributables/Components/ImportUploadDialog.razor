@@ -12,13 +12,21 @@
     RenderFragment Footer =
     @<Template>
         <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
-        <Button OnClick="Clear" Disabled="@(File == null || Status != "")" Danger>Clear</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
 }
 
 <Modal Visible="@Visible" Title="Import Redistributable" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
-    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError" />
+    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+        <Text>
+            <p>Drag and Drop</p>
+            <p>or</p>
+            <p>
+                <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
+            </p>
+        </Text>
+        <Hint>Only LCX files are supported for importing redistributables</Hint>
+    </ChunkUploader>
 </Modal>
 
 @code {
@@ -87,6 +95,8 @@
 
             MessageService.Error("Import file failed to upload!");
         }
+
+        await ChunkUploader.Clear();
     }
 
     public async Task OnUploadError(string message)

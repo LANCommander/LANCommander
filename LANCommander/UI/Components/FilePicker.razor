@@ -7,17 +7,20 @@
     <SpaceItem Style="flex-grow: 1">
         <Input Type="text" @bind-Value="Value" OnChange="ValueChanged" />
     </SpaceItem>
-    @if (ArchiveId != Guid.Empty) {
-        <SpaceItem>
-            <Button OnClick="BrowseForFile" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" Disabled="!ArchiveExists" />
-        </SpaceItem>
-    }
-    else if (!String.IsNullOrWhiteSpace(Root))
-    {
-        <SpaceItem>
-            <Button OnClick="BrowseForFile" Type="@ButtonType.Primary" Icon="@IconType.Outline.FolderOpen" />
-        </SpaceItem>
-    }
+    <SpaceItem>
+        <FilePickerButton
+            Type="@ButtonType.Primary"
+            Icon="@IconType.Outline.FolderOpen"
+            ArchiveId="@ArchiveId"
+            @bind-Value="@Value"
+            Title="@Title"
+            OkText="@OkText"
+            AllowDirectories="@AllowDirectories"
+            Prefix="@Prefix"
+            Root="@Root"
+            EntrySelectable="@EntrySelectable"
+            EntryVisible="@EntryVisible" />
+    </SpaceItem>
 </Space>
 
 @code {
@@ -32,53 +35,4 @@
     [Parameter] public string Root { get; set; }
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
-
-    bool ArchiveExists { get; set; } = false;
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (ArchiveId != Guid.Empty)
-            ArchiveExists = await ArchiveService.Exists(ArchiveId);
-    }
-
-    private async void BrowseForFile()
-    {
-        var modalOptions = new ModalOptions()
-        {
-            Title = Title,
-            Maximizable = false,
-            DefaultMaximized = true,
-            Closable = true,
-            OkText = OkText,
-            WrapClassName = "file-picker-dialog"
-        };
-
-        var browserOptions = new FilePickerOptions()
-        {
-            ArchiveId = ArchiveId,
-            Root = Root,
-            Select = true,
-            Multiple = false,
-            EntrySelectable = EntrySelectable,
-            EntryVisible = EntryVisible
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
-
-        modalRef.OnOk = async (results) =>
-        {
-            if (!String.IsNullOrWhiteSpace(Prefix))
-                Value = Prefix + results?.FirstOrDefault()?.Path;
-            else
-                Value = results?.FirstOrDefault()?.Path;
-
-            if (ValueChanged.HasDelegate)
-                await ValueChanged.InvokeAsync(Value);
-
-            if (OnSelected.HasDelegate)
-                await OnSelected.InvokeAsync(Value);
-
-            StateHasChanged();
-        };
-    }
 }

@@ -13,7 +13,6 @@
     RenderFragment Footer =
     @<Template>
         <Button OnClick="Start" Disabled="@(File == null || Status != "" || String.IsNullOrWhiteSpace(Archive.Version))" Type="@ButtonType.Primary">Upload</Button>
-        <Button OnClick="Clear" Disabled="@(File == null || Status != "")" Danger>Clear</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Template>;
 }
@@ -29,7 +28,16 @@
         </FormItem>
 
         <FormItem>
-            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError" />
+            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+                <Text>
+                    <p>Drag and Drop</p>
+                    <p>or</p>
+                    <p>
+                        <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
+                    </p>
+                </Text>
+                <Hint>Only ZIP files are supported as game archives</Hint>
+            </ChunkUploader>
         </FormItem>
     </Form>
 </Modal>
@@ -136,6 +144,8 @@
 
             await MessageService.Error("Archive failed to upload!");
         }
+
+        await ChunkUploader.Clear();
     }
 
     public async Task OnUploadError(string message)

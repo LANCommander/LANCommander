@@ -238,11 +238,7 @@ namespace LANCommander.Services
                 game.Title = manifest.Title;
 
                 #region Actions
-                if (game.Actions == null)
-                    game.Actions = new List<Data.Models.Action>();
-
-                foreach (var action in game.Actions)
-                    game.Actions.Remove(action);
+                game.Actions = new List<Data.Models.Action>();
 
                 if (manifest.Actions != null && manifest.Actions.Count() > 0)
                     game.Actions.AddRange(manifest.Actions.Select(a => new Data.Models.Action()

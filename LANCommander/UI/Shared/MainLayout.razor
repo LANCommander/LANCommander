@@ -13,7 +13,13 @@
             @if (User != null && User.IsInRole("Administrator"))
             {
                 <MenuItem RouterLink="/Games">Games</MenuItem>
-                <MenuItem RouterLink="/Collections">Collections</MenuItem>
+                <SubMenu Title="Metadata">
+                    <MenuItem RouterLink="/Metadata/Collections">Collections</MenuItem>
+                    <MenuItem RouterLink="/Metadata/Companies">Companies</MenuItem>
+                    <MenuItem RouterLink="/Metadata/Engines">Engines</MenuItem>
+                    <MenuItem RouterLink="/Metadata/Genres">Genres</MenuItem>
+                    <MenuItem RouterLink="/Metadata/Tags">Tags</MenuItem>
+                </SubMenu>
                 <MenuItem RouterLink="/Redistributables">Redistributables</MenuItem>
                 <MenuItem RouterLink="/Servers">Servers</MenuItem>
                 <MenuItem RouterLink="/Files">Files</MenuItem>

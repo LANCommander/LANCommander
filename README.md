@@ -62,7 +62,7 @@ Hit that fork button, submit a PR, there are no hard rules right now.
 
 If you're not a developer but still want to contribute, writing documentation in the wiki is a great way to give back to the community!
 
-The LANCommander dev team is currently spearheaded by one developer in their free time. Paid donation tiers aer available over at the [Patreon](https://patreon.com/LANCommander) page.
+The LANCommander dev team is currently spearheaded by one developer in their free time. Paid donation tiers are available over at the [Patreon](https://patreon.com/LANCommander) page.
 
 ## SDK
 A separate assembly called `LANCommander.SDK` has been created for use in client applications. The offical Playnite add-on utilizes this assembly to handle the authentication, download, install, and uninstall of entries from a LANCommander server. Here is a quick example of how one can authenticate to a LANCommander server and install a game to `C:\Games`:

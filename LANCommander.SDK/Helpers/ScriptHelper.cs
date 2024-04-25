@@ -87,7 +87,10 @@ namespace LANCommander.SDK.Helpers
                 { ScriptType.Install, "Install.ps1" },
                 { ScriptType.Uninstall, "Uninstall.ps1" },
                 { ScriptType.NameChange, "ChangeName.ps1" },
-                { ScriptType.KeyChange, "ChangeKey.ps1" }
+                { ScriptType.KeyChange, "ChangeKey.ps1" },
+                { ScriptType.DetectInstall, "DetectInstall.ps1" },
+                { ScriptType.BeforeStart, "BeforeStart.ps1" },
+                { ScriptType.AfterStop, "AfterStop.ps1" }
             };
 
             return filenames[type];

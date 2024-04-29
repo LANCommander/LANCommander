@@ -194,10 +194,10 @@ namespace LANCommander.SDK
 
             Logger?.LogTrace("Saving scripts");
 
-            ScriptHelper.SaveScript(game, ScriptType.Install);
-            ScriptHelper.SaveScript(game, ScriptType.Uninstall);
-            ScriptHelper.SaveScript(game, ScriptType.NameChange);
-            ScriptHelper.SaveScript(game, ScriptType.KeyChange);
+            foreach (var script in game.Scripts)
+            {
+                ScriptHelper.SaveScript(game, script.Type);
+            }
 
             return game.InstallDirectory;
         }

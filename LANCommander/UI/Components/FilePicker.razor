@@ -5,21 +5,21 @@
 
 <Space Style="display: flex">
     <SpaceItem Style="flex-grow: 1">
-        <Input Type="text" @bind-Value="Value" OnChange="ValueChanged" />
+        <Input TValue="string" Type="text" @bind-Value="InputValue" OnInput="OnInput" BindOnInput="true" />
     </SpaceItem>
     <SpaceItem>
         <FilePickerButton
             Type="@ButtonType.Primary"
             Icon="@IconType.Outline.FolderOpen"
             ArchiveId="@ArchiveId"
-            @bind-Value="@Value"
             Title="@Title"
             OkText="@OkText"
             AllowDirectories="@AllowDirectories"
             Prefix="@Prefix"
             Root="@Root"
             EntrySelectable="@EntrySelectable"
-            EntryVisible="@EntryVisible" />
+            EntryVisible="@EntryVisible"
+            OnSelected="OnFileSelected" />
     </SpaceItem>
 </Space>
 
@@ -35,4 +35,35 @@
     [Parameter] public string Root { get; set; }
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
+
+    string InputValue { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InputValue = Value;
+    }
+
+    async Task OnInput(ChangeEventArgs args)
+    {
+        var inputString = args?.Value.ToString();
+
+        Value = inputString;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(inputString);
+    }
+
+    async Task OnFileSelected(string selectedFile)
+    {
+        Value = selectedFile;
+        InputValue = selectedFile;
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(selectedFile);
+
+        if (OnSelected.HasDelegate)
+            await OnSelected.InvokeAsync(selectedFile);
+
+        await InvokeAsync(StateHasChanged);
+    }
 }

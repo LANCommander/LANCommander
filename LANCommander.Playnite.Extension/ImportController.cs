@@ -101,6 +101,7 @@ namespace LANCommander.PlaynitePlugin
             game.Name = manifest.Title;
             game.SortingName = manifest.SortTitle;
             game.Description = manifest.Description;
+            game.Notes = manifest.Notes;
             game.ReleaseDate = new ReleaseDate(manifest.ReleasedOn);
 
             if (game.IsInstalled && game.Version != manifest.Version)

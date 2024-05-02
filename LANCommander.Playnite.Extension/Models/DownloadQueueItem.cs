@@ -10,6 +10,8 @@ namespace LANCommander.PlaynitePlugin.Models
         Idle,
         Downloading,
         InstallingRedistributables,
+        InstallingMods,
+        InstallingExpansions,
         RunningScripts,
         DownloadingSaves,
         Canceled
@@ -72,6 +74,10 @@ namespace LANCommander.PlaynitePlugin.Models
                         return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusDownloading").Replace("{Percentage}", percent.ToString("0"));
                     case DownloadQueueItemStatus.InstallingRedistributables:
                         return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusInstallingRedistributables");
+                    case DownloadQueueItemStatus.InstallingMods:
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusInstallingMods");
+                    case DownloadQueueItemStatus.InstallingExpansions:
+                        return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusInstallingExpansions");
                     case DownloadQueueItemStatus.RunningScripts:
                         return ResourceProvider.GetString("LOCLANCommanderDownloadQueueStatusRunningScripts");
                     case DownloadQueueItemStatus.DownloadingSaves:

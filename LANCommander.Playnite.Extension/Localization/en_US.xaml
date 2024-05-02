@@ -65,6 +65,8 @@
     <sys:String x:Key="LOCLANCommanderDownloadQueueCompletedLibraryButtonTooltip">View in Library</sys:String>
     <sys:String x:Key="LOCLANCommanderDownloadQueueStatusDownloading">Downloading ({Percentage}%)</sys:String>
     <sys:String x:Key="LOCLANCommanderDownloadQueueStatusInstallingRedistributables">Installing Redistributables</sys:String>
+    <sys:String x:Key="LOCLANCommanderDownloadQueueStatusInstallingMods">Installing Mods</sys:String>
+    <sys:String x:Key="LOCLANCommanderDownloadQueueStatusInstallingExpansions">Installing Expansions</sys:String>
     <sys:String x:Key="LOCLANCommanderDownloadQueueStatusRunningScripts">Running Scripts</sys:String>
     <sys:String x:Key="LOCLANCommanderDownloadQueueStatusDownloadingSaves">Downloading Saves</sys:String>
     <sys:String x:Key="LOCLANCommanderDownloadQueueStatusCanceled">Canceling</sys:String>

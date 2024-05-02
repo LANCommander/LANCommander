@@ -144,6 +144,7 @@ namespace LANCommander.SDK
             var game = Get(gameId);
             var destination = GetInstallDirectory(game);
 
+            // Handle Standalone Mods
             if (game.Type == GameType.StandaloneMod && game.BaseGame != null)
             {
                 destination = GetInstallDirectory(game.BaseGame);
@@ -164,6 +165,7 @@ namespace LANCommander.SDK
 
             Logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
 
+            // Download and extract
             var result = RetryHelper.RetryOnException<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
             {
                 Logger?.LogTrace("Attempting to download and extract game");
@@ -178,6 +180,7 @@ namespace LANCommander.SDK
 
             game.InstallDirectory = result.Directory;
 
+            // Game is extracted, get metadata
             var writeManifestSuccess = RetryHelper.RetryOnException(maxAttempts, TimeSpan.FromSeconds(1), false, () =>
             {
                 Logger?.LogTrace("Attempting to get game manifest");

@@ -264,6 +264,7 @@ namespace LANCommander.PlaynitePlugin
 
                 return;
             }
+
             catch (InstallException ex)
             {
                 Plugin.PlayniteApi.Notifications.Add($"InstallFail-{DownloadQueue.CurrentItem.Game.Id}", ex.Message, NotificationType.Error);
@@ -326,6 +327,40 @@ namespace LANCommander.PlaynitePlugin
             catch (Exception ex)
             {
                 Logger?.Error(ex, ResourceProvider.GetString("LOCLANCommanderDownloadQueuePostInstallScriptError"));
+            }
+
+            // Install any expansions or mods
+            foreach (var dependentGame in game.DependentGames.Where(g => g.Type == SDK.Enums.GameType.Expansion || g.Type == SDK.Enums.GameType.Mod).OrderBy(g => g.Type))
+            {
+                if (dependentGame.Type == SDK.Enums.GameType.Expansion)
+                    ChangeCurrentItemStatus(DownloadQueueItemStatus.InstallingExpansions);
+                else if (dependentGame.Type == SDK.Enums.GameType.Mod)
+                    ChangeCurrentItemStatus(DownloadQueueItemStatus.InstallingMods);
+
+                try
+                {
+                    Plugin.LANCommanderClient.Games.Install(dependentGame.Id);
+                }
+                catch (InstallCanceledException ex)
+                {
+                    OnInstallCancelled?.Invoke(DownloadQueue.CurrentItem.Game);
+                    Remove(DownloadQueue.CurrentItem);
+
+                    Stopwatch.Stop();
+
+                    return;
+                }
+
+                try
+                {
+                    RunInstallScript(dependentGame);
+                    RunNameChangeScript(dependentGame);
+                    RunKeyChangeScript(dependentGame);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Scripts failed to run for mod/expansion");
+                }
             }
 
             DownloadQueue.CurrentItem.CompletedOn = DateTime.Now;

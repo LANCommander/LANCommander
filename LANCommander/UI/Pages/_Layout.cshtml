@@ -4,6 +4,10 @@
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @inject SettingService SettingService
 
+@{
+    var settings = SettingService.GetSettings();
+}
+
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -26,7 +30,7 @@
 
         <link href="~/css/site.css" rel="stylesheet" />
     </head>
-    <body data-theme="@SettingService.GetSettings().Theme">
+    <body data-theme="@settings.Theme">
         
 
         <div class="page-wrapper">
@@ -47,5 +51,9 @@
         <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
 
         <script src="~/scripts/dist/bundle.js"></script>
+
+        <script>
+            Uploader.MaxChunkSize = @(settings.Archives.MaxChunkSize * 1024 * 1024)
+        </script>
     </body>
 </html>

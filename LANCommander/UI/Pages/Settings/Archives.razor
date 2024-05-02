@@ -17,6 +17,10 @@
             <Switch @bind-Checked="context.Archives.AllowInsecureDownloads" />
         </FormItem>
 
+        <FormItem Label="Max Upload Chunk Size (MB)">
+            <AntDesign.InputNumber @bind-Value="context.Archives.MaxChunkSize" Min="1" DefaultValue="50" />
+        </FormItem>
+
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Archives.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>

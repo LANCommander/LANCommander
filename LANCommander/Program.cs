@@ -13,6 +13,7 @@ using NLog;
 using LANCommander.Services.MediaGrabbers;
 using Microsoft.Data.Sqlite;
 using LANCommander.Extensions;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace LANCommander
 {
@@ -198,7 +199,13 @@ namespace LANCommander
 
             builder.WebHost.UseKestrel(options =>
             {
-                options.Limits.MaxRequestBodySize = 1024 * 1024 * 150;
+                options.Limits.MaxRequestBodySize = long.MaxValue;
+                options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+            });
+
+            builder.Services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = long.MaxValue;
             });
 
             #region Configure NLog

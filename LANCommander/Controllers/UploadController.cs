@@ -31,6 +31,7 @@ namespace LANCommander.Controllers
             });
         }
 
+        [HttpPost]
         public async Task<IActionResult> Chunk([FromForm] ChunkUpload chunk)
         {
             var filePath = Path.Combine(Settings.Archives.StoragePath, chunk.Key.ToString());

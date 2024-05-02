@@ -73,6 +73,7 @@ namespace LANCommander.Models
         public bool EnablePatching { get; set; } = false;
         public bool AllowInsecureDownloads { get; set; } = false;
         public string StoragePath { get; set; } = "Uploads";
+        public int MaxChunkSize { get; set; } = 50;
     }
 
     public class LANCommanderMediaSettings

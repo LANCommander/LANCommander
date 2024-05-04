@@ -208,7 +208,26 @@ namespace LANCommander.PlaynitePlugin
             LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
             LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
 
-            foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+            List<SDK.GameAction> actions = new List<SDK.GameAction>();
+
+            actions.AddRange(manifest.Actions);
+
+            foreach (var dependentGameId in manifest.DependentGames)
+            {
+                try
+                {
+                    var dependentGameManifest = ManifestHelper.Read(args.Game.InstallDirectory, dependentGameId);
+
+                    if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
+                        actions.AddRange(dependentGameManifest.Actions);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                }
+            }
+
+            foreach (var action in actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
             {
                 AutomaticPlayController automaticPlayController = null;
 

@@ -78,6 +78,7 @@ namespace LANCommander.Services
                 Notes = game.Notes,
                 ReleasedOn = game.ReleasedOn.GetValueOrDefault(),
                 Singleplayer = game.Singleplayer,
+                Type = (SDK.Enums.GameType)(int)game.Type,
             };
 
             if (game.Engine != null)
@@ -156,6 +157,11 @@ namespace LANCommander.Services
                     WorkingDirectory = p.WorkingDirectory,
                     Type = p.Type.ToString()
                 });
+            }
+
+            if (game.DependentGames != null && game.DependentGames.Count > 0)
+            {
+                manifest.DependentGames = game.DependentGames.Select(g => g.Id);
             }
 
             return manifest;

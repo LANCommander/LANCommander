@@ -12,6 +12,7 @@ namespace LANCommander.SDK
         public string SortTitle { get; set; }
         public string Description { get; set; }
         public string Notes { get; set; }
+        public GameType Type { get; set; }
         public DateTime ReleasedOn { get; set; }
         public string Engine { get; set; }
         public IEnumerable<string> Genre { get; set; }
@@ -30,6 +31,7 @@ namespace LANCommander.SDK
         public IEnumerable<Script> Scripts { get; set; }
         public IEnumerable<Media> Media { get; set; }
         public IEnumerable<Archive> Archives { get; set; }
+        public IEnumerable<Guid> DependentGames { get; set; }
 
         public GameManifest() { }
     }

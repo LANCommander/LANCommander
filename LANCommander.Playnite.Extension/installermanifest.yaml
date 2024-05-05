@@ -182,8 +182,3 @@ Packages:
     Changelog:
       - 'Fixed: Before Start and After Stop scripts now download properly'
       - 'Fixed: Notes sync properly again'
-  - Version: 0.7.2
-    RequiredApiVersion: 6.0.0
-    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.7.2/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_7_2.pext
-    Changelog:
-      - 'Fixed: Mods/expansions are now installed when the base game is installed'

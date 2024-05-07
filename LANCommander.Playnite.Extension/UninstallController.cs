@@ -24,6 +24,8 @@ namespace LANCommander.PlaynitePlugin
 
         public override void Uninstall(UninstallActionArgs args)
         {
+            var manifests = Plugin.GetGameManifests(Game);
+
             try
             {
                 var completedQueueItem = Plugin.DownloadQueue.DownloadQueue.Completed.FirstOrDefault(qi => qi.Game != null && qi.Game.Id == Game.Id);
@@ -33,21 +35,23 @@ namespace LANCommander.PlaynitePlugin
 
                 try
                 {
-                    var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, Game.Id, SDK.Enums.ScriptType.Uninstall);
-
-                    if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
+                    foreach (var manifest in manifests)
                     {
-                        var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
-                        var script = new PowerShellScript();
+                        var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, manifest.Id, SDK.Enums.ScriptType.Uninstall);
 
-                        script.AddVariable("InstallDirectory", Game.InstallDirectory);
-                        script.AddVariable("GameManifest", manifest);
-                        script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
-                        script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
+                        if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
+                        {
+                            var script = new PowerShellScript();
 
-                        script.UseFile(scriptPath);
+                            script.AddVariable("InstallDirectory", Game.InstallDirectory);
+                            script.AddVariable("GameManifest", manifest);
+                            script.AddVariable("DefaultInstallDirectory", Plugin.Settings.InstallDirectory);
+                            script.AddVariable("ServerAddress", Plugin.Settings.ServerAddress);
 
-                        script.Execute();
+                            script.UseFile(scriptPath);
+
+                            script.Execute();
+                        }
                     }
                 }
                 catch (Exception ex)

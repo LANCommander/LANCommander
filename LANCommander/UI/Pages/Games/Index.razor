@@ -106,7 +106,7 @@
             }
     </Column>
 
-    <Column TData="Data.Enums.MultiplayerType[]" Title="Multiplayer Modes" Hidden="@(Picker.IsColumnHidden("Multiplayer Modes"))">
+    <Column TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes" Hidden="@(Picker.IsColumnHidden("Multiplayer Modes"))">
         @if (context.MultiplayerModes != null)
             foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
             {

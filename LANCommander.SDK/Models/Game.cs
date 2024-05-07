@@ -9,15 +9,20 @@ namespace LANCommander.SDK.Models
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string DirectoryName { get; set; }
+        public string Notes { get; set; }
         public string Description { get; set; }
+        public bool Singleplayer { get; set; }
         public DateTime ReleasedOn { get; set; }
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
         public Game BaseGame { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Tag> Tags { get; set; }
+        public virtual IEnumerable<Genre> Genres { get; set; }
         public virtual IEnumerable<Company> Publishers { get; set; }
         public virtual IEnumerable<Company> Developers { get; set; }
+        public virtual IEnumerable<Collection> Collections { get; set; }
+        public virtual IEnumerable<MultiplayerMode> MultiplayerModes { get; set; }
         public virtual IEnumerable<Archive> Archives { get; set; }
         public virtual IEnumerable<Script> Scripts { get; set; }
         public virtual IEnumerable<Media> Media { get; set; }

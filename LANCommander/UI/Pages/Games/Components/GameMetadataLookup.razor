@@ -2,6 +2,7 @@
 @using LANCommander.Data.Enums
 @using LANCommander.Models
 @using LANCommander.PCGamingWiki
+@using LANCommander.SDK.Enums
 @inject IGDBService IGDBService
 @inject CompanyService CompanyService
 @inject GenreService GenreService
@@ -232,7 +233,7 @@ else
                         break;
 
                     case "LAN Play":
-                        type = MultiplayerType.Lan;
+                        type = MultiplayerType.LAN;
                         break;
 
                     case "Online Play":

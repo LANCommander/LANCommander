@@ -47,9 +47,9 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public IEnumerable<GameManifest> Get()
+        public IEnumerable<Game> Get()
         {
-            return Client.GetRequest<IEnumerable<GameManifest>>("/api/Games");
+            return Client.GetRequest<IEnumerable<Game>>("/api/Games");
         }
 
         public Game Get(Guid id)

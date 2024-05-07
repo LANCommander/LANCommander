@@ -1,4 +1,5 @@
 ﻿using LANCommander.SDK;
+using LANCommander.SDK.Models;
 using Playnite.SDK;
 using System;
 using System.Collections.Generic;
@@ -8,18 +9,18 @@ using System.Threading.Tasks;
 
 namespace LANCommander.PlaynitePlugin.Extensions
 {
-    internal static class MultiplayerInfoExtensions
+    internal static class MultiplayerModeExtensions
     {
-        internal static string GetPlayerCount(this MultiplayerInfo multiplayerInfo)
+        internal static string GetPlayerCount(this MultiplayerMode multiplayerMode)
         {
-            if (multiplayerInfo.MinPlayers == multiplayerInfo.MaxPlayers && multiplayerInfo.MinPlayers >= 2)
-                return $"({multiplayerInfo.MinPlayers} {ResourceProvider.GetString("LOCLANCommanderPlayers")})";
+            if (multiplayerMode.MinPlayers == multiplayerMode.MaxPlayers && multiplayerMode.MinPlayers >= 2)
+                return $"({multiplayerMode.MinPlayers} {ResourceProvider.GetString("LOCLANCommanderPlayers")})";
 
-            if (multiplayerInfo.MinPlayers < multiplayerInfo.MaxPlayers && multiplayerInfo.MinPlayers >= 2)
-                return $"({multiplayerInfo.MinPlayers}-{multiplayerInfo.MaxPlayers} {ResourceProvider.GetString("LOCLANCommanderPlayers")})";
+            if (multiplayerMode.MinPlayers < multiplayerMode.MaxPlayers && multiplayerMode.MinPlayers >= 2)
+                return $"({multiplayerMode.MinPlayers}-{multiplayerMode.MaxPlayers} {ResourceProvider.GetString("LOCLANCommanderPlayers")})";
 
-            if (multiplayerInfo.MinPlayers <= 1 && multiplayerInfo.MaxPlayers > 2)
-                return $"({multiplayerInfo.MaxPlayers} {ResourceProvider.GetString("LOCLANCommanderPlayers")})";
+            if (multiplayerMode.MinPlayers <= 1 && multiplayerMode.MaxPlayers > 2)
+                return $"({multiplayerMode.MaxPlayers} {ResourceProvider.GetString("LOCLANCommanderPlayers")})";
 
             return "";
         }

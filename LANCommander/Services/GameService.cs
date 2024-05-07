@@ -121,7 +121,7 @@ namespace LANCommander.Services
             if (game.MultiplayerModes != null && game.MultiplayerModes.Count > 0)
             {
                 var local = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.Local);
-                var lan = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.Lan);
+                var lan = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.LAN);
                 var online = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.Online);
 
                 if (local != null)
@@ -356,7 +356,7 @@ namespace LANCommander.Services
                 if (manifest.LanMultiplayer != null)
                     game.MultiplayerModes.Add(new MultiplayerMode()
                     {
-                        Type = MultiplayerType.Lan,
+                        Type = MultiplayerType.LAN,
                         MinPlayers = manifest.LanMultiplayer.MinPlayers,
                         MaxPlayers = manifest.LanMultiplayer.MaxPlayers,
                         Description = manifest.LanMultiplayer.Description,

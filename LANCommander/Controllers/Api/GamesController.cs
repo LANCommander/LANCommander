@@ -32,7 +32,7 @@ namespace LANCommander.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.GameManifest>> Get()
+        public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
             var games = new List<Game>();
 
@@ -55,7 +55,7 @@ namespace LANCommander.Controllers.Api
                 games = await GameService.Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).ToListAsync();
             }
 
-            return Mapper.Map<IEnumerable<SDK.GameManifest>>(games.Select(g => GameService.GetManifest(g)));
+            return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
         }
 
         [HttpGet("{id}")]

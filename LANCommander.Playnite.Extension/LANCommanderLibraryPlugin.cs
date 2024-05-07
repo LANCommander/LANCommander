@@ -18,6 +18,7 @@ using LANCommander.SDK;
 using LANCommander.PlaynitePlugin.Controls;
 using System.Threading.Tasks;
 using System.Net;
+using Windows.System;
 
 namespace LANCommander.PlaynitePlugin
 {
@@ -202,32 +203,11 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<PlayController> GetPlayActions(GetPlayActionsArgs args)
         {
-            var manifests = new List<GameManifest>();
-
-            var mainManifest = ManifestHelper.Read(args.Game.InstallDirectory, args.Game.Id);
-
-            manifests.Add(mainManifest);
-
+            var manifests = GetGameManifests(args.Game);
             var primaryDisplay = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s => s.Primary);
 
             LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
             LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
-
-            if (mainManifest.DependentGames != null)
-            foreach (var dependentGameId in mainManifest.DependentGames)
-            {
-                try
-                {
-                    var dependentGameManifest = ManifestHelper.Read(args.Game.InstallDirectory, dependentGameId);
-
-                    if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
-                        manifests.Add(dependentGameManifest);
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, $"Could not load manifest from dependent game {dependentGameId}");
-                }
-            }
 
             foreach (var manifest in manifests)
             {
@@ -310,6 +290,33 @@ namespace LANCommander.PlaynitePlugin
                     }
                 }
             }
+        }
+
+        internal IEnumerable<GameManifest> GetGameManifests(Game game)
+        {
+            var manifests = new List<GameManifest>();
+
+            var mainManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+
+            manifests.Add(mainManifest);
+
+            if (mainManifest.DependentGames != null)
+                foreach (var dependentGameId in mainManifest.DependentGames)
+                {
+                    try
+                    {
+                        var dependentGameManifest = ManifestHelper.Read(game.InstallDirectory, dependentGameId);
+
+                        if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
+                            manifests.Add(dependentGameManifest);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                    }
+                }
+
+            return manifests;
         }
 
         public override IEnumerable<GameMenuItem> GetGameMenuItems(GetGameMenuItemsArgs args)
@@ -412,21 +419,9 @@ namespace LANCommander.PlaynitePlugin
         {
             if (args.Game.PluginId == Id)
             {
-                var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, args.Game.Id);
-                var currentGameKey = GameService.GetCurrentKey(args.Game.InstallDirectory, args.Game.Id);
+                var manifests = GetGameManifests(args.Game);
 
-                if (currentGamePlayerAlias != Settings.DisplayName)
-                {
-                    RunNameChangeScript(args.Game.InstallDirectory, args.Game.Id, currentGamePlayerAlias, Settings.DisplayName);
-                }
-
-                if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
-                {
-                    var allocatedKey = LANCommanderClient.Games.GetAllocatedKey(args.Game.Id);
-
-                    if (currentGameKey != allocatedKey)
-                        RunKeyChangeScript(args.Game.InstallDirectory, args.Game.Id, allocatedKey);
-                }
+                LANCommanderClient.Games.StartPlaySession(args.Game.Id);
 
                 if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
                 {
@@ -446,32 +441,64 @@ namespace LANCommander.PlaynitePlugin
                             return;
                         }
                     }
+                }
 
-                    LANCommanderClient.Games.StartPlaySession(args.Game.Id);
+                foreach (var manifest in manifests)
+                {
+                    var currentGamePlayerAlias = GameService.GetPlayerAlias(args.Game.InstallDirectory, manifest.Id);
+                    var currentGameKey = GameService.GetCurrentKey(args.Game.InstallDirectory, manifest.Id);
+
+                    if (currentGamePlayerAlias != Settings.DisplayName)
+                    {
+                        var nameChangeScriptPath = ScriptHelper.GetScriptFilePath(args.Game.InstallDirectory, manifest.Id, SDK.Enums.ScriptType.NameChange);
+
+                        if (File.Exists(nameChangeScriptPath))
+                            RunNameChangeScript(args.Game.InstallDirectory, manifest.Id, currentGamePlayerAlias, Settings.DisplayName);
+                    }
+
+                    if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
+                    {
+                        var keyChangeScriptPath = ScriptHelper.GetScriptFilePath(args.Game.InstallDirectory, manifest.Id, SDK.Enums.ScriptType.KeyChange);
+
+                        if (File.Exists(keyChangeScriptPath))
+                        {
+                            var allocatedKey = LANCommanderClient.Games.GetAllocatedKey(manifest.Id);
+
+                            if (currentGameKey != allocatedKey)
+                                RunKeyChangeScript(args.Game.InstallDirectory, manifest.Id, allocatedKey);
+                        }
+                    }
+
+                    // Download saves for main game + mods/expansions
+                    if (!Settings.OfflineModeEnabled && LANCommanderClient.IsConnected())
+                    {
+                        try
+                        {
+                            var latestSave = LANCommanderClient.Saves.GetLatest(manifest.Id);
+
+                            if (latestSave == null || (latestSave.CreatedOn > args.Game.LastActivity && latestSave.CreatedOn > args.Game.Added))
+                            {
+                                SaveController = new LANCommanderSaveController(this, args.Game);
+                                SaveController.Download(manifest.Id);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.Error(ex, "Could not download save");
+                        }
+                    }
 
                     try
                     {
-                        var latestSave = LANCommanderClient.Saves.GetLatest(args.Game.Id);
+                        var beforeStartScriptPath = ScriptHelper.GetScriptFilePath(args.Game.InstallDirectory, manifest.Id, SDK.Enums.ScriptType.BeforeStart);
 
-                        if (latestSave == null || (latestSave.CreatedOn > args.Game.LastActivity && latestSave.CreatedOn > args.Game.Added))
-                        {
-                            SaveController = new LANCommanderSaveController(this, args.Game);
-                            SaveController.Download(args.Game.Id);
-                        }
+                        if (File.Exists(beforeStartScriptPath))
+                            RunBeforeStartScript(args.Game.InstallDirectory, manifest.Id);
                     }
                     catch (Exception ex)
                     {
-                        Logger?.Error(ex, "Could not download save");
+                        Logger?.Error(ex, "Ran into an unexpected error when attempting to run an Before Start script");
                     }
-                }
-
-                try
-                {
-                    RunBeforeStartScript(args.Game.InstallDirectory, args.Game.Id);
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Ran into an unexpected error when attempting to run an Before Start script");
                 }
             }
         }
@@ -480,25 +507,33 @@ namespace LANCommander.PlaynitePlugin
         {
             if (args.Game.PluginId == Id && !Settings.OfflineModeEnabled)
             {
+                var manifests = GetGameManifests(args.Game);
+
                 LANCommanderClient.Games.EndPlaySession(args.Game.Id);
 
-                try
+                foreach (var manifest in manifests)
                 {
-                    SaveController = new LANCommanderSaveController(this, args.Game);
-                    SaveController.Upload(args.Game.Id);
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Could not upload save");
-                }
+                    try
+                    {
+                        SaveController = new LANCommanderSaveController(this, args.Game);
+                        SaveController.Upload(manifest.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, "Could not upload save");
+                    }
 
-                try
-                {
-                    RunAfterStopScript(args.Game.InstallDirectory, args.Game.Id);
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Ran into an unexpected error when attempting to run an After Stop script");
+                    try
+                    {
+                        var afterStopScriptPath = ScriptHelper.GetScriptFilePath(args.Game.InstallDirectory, manifest.Id, SDK.Enums.ScriptType.AfterStop);
+
+                        if (File.Exists(afterStopScriptPath))
+                            RunAfterStopScript(args.Game.InstallDirectory, args.Game.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, "Ran into an unexpected error when attempting to run an After Stop script");
+                    }
                 }
             }
         }

@@ -54,7 +54,7 @@
         }
     </Column>
 
-    <Column TData="Data.Enums.MultiplayerType[]" Title="Multiplayer Modes">
+    <Column TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes">
         @foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
         {
             <Tag>@mode.GetDisplayName()</Tag>

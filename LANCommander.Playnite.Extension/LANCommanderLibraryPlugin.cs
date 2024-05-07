@@ -202,24 +202,26 @@ namespace LANCommander.PlaynitePlugin
 
         public override IEnumerable<PlayController> GetPlayActions(GetPlayActionsArgs args)
         {
-            var manifest = ManifestHelper.Read(args.Game.InstallDirectory, args.Game.Id);
+            var manifests = new List<GameManifest>();
+
+            var mainManifest = ManifestHelper.Read(args.Game.InstallDirectory, args.Game.Id);
+
+            manifests.Add(mainManifest);
+
             var primaryDisplay = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(s => s.Primary);
 
             LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
             LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
 
-            List<SDK.GameAction> actions = new List<SDK.GameAction>();
-
-            actions.AddRange(manifest.Actions);
-
-            foreach (var dependentGameId in manifest.DependentGames)
+            if (mainManifest.DependentGames != null)
+            foreach (var dependentGameId in mainManifest.DependentGames)
             {
                 try
                 {
                     var dependentGameManifest = ManifestHelper.Read(args.Game.InstallDirectory, dependentGameId);
 
                     if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
-                        actions.AddRange(dependentGameManifest.Actions);
+                        manifests.Add(dependentGameManifest);
                 }
                 catch (Exception ex)
                 {
@@ -227,29 +229,32 @@ namespace LANCommander.PlaynitePlugin
                 }
             }
 
-            foreach (var action in actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+            foreach (var manifest in manifests)
             {
-                AutomaticPlayController automaticPlayController = null;
-
-                try
+                foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
                 {
-                    automaticPlayController = new AutomaticPlayController(args.Game)
+                    AutomaticPlayController automaticPlayController = null;
+
+                    try
                     {
-                        Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, skipSlashes: true),
-                        Name = action.Name,
-                        Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
-                        TrackingMode = TrackingMode.Default,
-                        Type = AutomaticPlayActionType.File,
-                        WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
-                    };
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Could not yield primary action");
-                }
+                        automaticPlayController = new AutomaticPlayController(args.Game)
+                        {
+                            Arguments = LANCommanderClient.Actions.ExpandVariables(action.Arguments, args.Game.InstallDirectory, skipSlashes: true),
+                            Name = action.Name,
+                            Path = LANCommanderClient.Actions.ExpandVariables(action.Path, args.Game.InstallDirectory),
+                            TrackingMode = TrackingMode.Default,
+                            Type = AutomaticPlayActionType.File,
+                            WorkingDir = LANCommanderClient.Actions.ExpandVariables(action.WorkingDirectory, args.Game.InstallDirectory)
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, "Could not yield primary action");
+                    }
 
-                if (automaticPlayController != null)
-                    yield return automaticPlayController;
+                    if (automaticPlayController != null)
+                        yield return automaticPlayController;
+                }
             }
 
             if (!Settings.OfflineModeEnabled)

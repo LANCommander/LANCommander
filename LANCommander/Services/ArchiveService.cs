@@ -5,15 +5,20 @@ using LANCommander.Helpers;
 using LANCommander.Models;
 using LANCommander.SDK;
 using System.IO.Compression;
+using System.Linq.Expressions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Services
 {
     public class ArchiveService : BaseDatabaseService<Archive>
     {
-        public ArchiveService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
+        private readonly IFusionCache Cache;
+
+        public ArchiveService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, IFusionCache cache) : base(dbContext, httpContextAccessor)
         {
+            Cache = cache;
         }
 
         public static string GetArchiveFileLocation(Archive archive)
@@ -28,11 +33,34 @@ namespace LANCommander.Services
             return Path.Combine(settings.Archives.StoragePath, objectKey);
         }
 
-        public override Task Delete(Archive archive)
+        public override async Task<Archive> Add(Archive entity)
+        {
+            await Cache.ExpireAsync("MappedGames");
+
+            return await base.Add(entity);
+        }
+
+        public override async Task<ExistingEntityResult<Archive>> AddMissing(Expression<Func<Archive, bool>> predicate, Archive entity)
+        {
+            await Cache.ExpireAsync("MappedGames");
+
+            return await base.AddMissing(predicate, entity);
+        }
+
+        public override async Task<Archive> Update(Archive entity)
+        {
+            await Cache.ExpireAsync("MappedGames");
+
+            return await base.Update(entity);
+        }
+
+        public override async Task Delete(Archive archive)
         {
             FileHelpers.DeleteIfExists(GetArchiveFileLocation(archive));
 
-            return base.Delete(archive);
+            await Cache.ExpireAsync("MappedGames");
+
+            await base.Delete(archive);
         }
 
         public static GameManifest ReadManifest(string objectKey)

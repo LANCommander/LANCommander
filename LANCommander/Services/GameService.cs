@@ -3,12 +3,15 @@ using LANCommander.Data;
 using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
 using LANCommander.Extensions;
+using LANCommander.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using NuGet.Packaging;
 using System.IO;
 using System.IO.Compression;
+using System.Linq.Expressions;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Services
 {
@@ -21,6 +24,7 @@ namespace LANCommander.Services
         private readonly TagService TagService;
         private readonly CompanyService CompanyService;
         private readonly GenreService GenreService;
+        private readonly IFusionCache Cache;
 
         public GameService(
             DatabaseContext dbContext,
@@ -31,7 +35,8 @@ namespace LANCommander.Services
             EngineService engineService,
             TagService tagService,
             CompanyService companyService,
-            GenreService genreService) : base(dbContext, httpContextAccessor)
+            GenreService genreService,
+            IFusionCache cache) : base(dbContext, httpContextAccessor)
         {
             Mapper = mapper;
             ArchiveService = archiveService;
@@ -40,6 +45,28 @@ namespace LANCommander.Services
             TagService = tagService;
             CompanyService = companyService;
             GenreService = genreService;
+            Cache = cache;
+        }
+
+        public override async Task<Game> Add(Game entity)
+        {
+            await Cache.ExpireAsync("MappedGames");
+
+            return await base.Add(entity);
+        }
+
+        public override async Task<ExistingEntityResult<Game>> AddMissing(Expression<Func<Game, bool>> predicate, Game entity)
+        {
+            await Cache.ExpireAsync("MappedGames");
+
+            return await base.AddMissing(predicate, entity);
+        }
+
+        public override async Task<Game> Update(Game entity)
+        {
+            await Cache.ExpireAsync("MappedGames");
+
+            return await base.Update(entity);
         }
 
         public override async Task Delete(Game game)
@@ -55,6 +82,8 @@ namespace LANCommander.Services
             }
 
             await base.Delete(game);
+
+            await Cache.ExpireAsync("MappedGames");
         }
 
         public async Task<GameManifest> GetManifest(Guid id)

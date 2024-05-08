@@ -3,6 +3,7 @@
 @layout SettingsLayout
 @inject IMessageService MessageService
 @inject ArchiveService ArchiveService
+@inject IFusionCache FusionCache
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Tools" />
@@ -13,6 +14,12 @@
         Some file sizes are cached in the database. Click the button below to scan through all files and recalculate their size.
     </p>
     <Button Type="@ButtonType.Primary" OnClick="RecalculateFileSizes" Loading="RecalculatingFileSizes">Recalculate</Button>
+
+    <h3>Clear Cache</h3>
+    <p>
+        A cached list of games is sent to the clients on import. Click the button below to bust this cache if you don't see your changes.
+    </p>
+    <Button Type="@ButtonType.Primary" OnClick="ClearCache">Clear Cache</Button>
 
     <Divider />
 
@@ -57,8 +64,15 @@
             }
         }
 
-        await MessageService.Success("File sizes recalculated!");
+        MessageService.Success("File sizes recalculated!");
 
         RecalculatingFileSizes = false;
+    }
+
+    async Task ClearCache()
+    {
+        await FusionCache.ExpireAsync("MappedGames");
+
+        MessageService.Success("Cache cleared!");
     }
 }

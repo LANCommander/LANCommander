@@ -154,13 +154,15 @@ namespace LANCommander
                     .UseInMemoryStorage());
             builder.Services.AddHangfireServer();
 
+            builder.Services.AddFusionCache();
+
             Logger.Debug("Registering Swashbuckle");
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
             Logger.Debug("Registering AntDesign Blazor");
             builder.Services.AddAntDesign();
-
+            
             builder.Services.AddHttpClient();
 
             Logger.Debug("Registering Services");

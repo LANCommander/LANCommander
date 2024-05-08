@@ -72,6 +72,7 @@
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
     <PackageReference Include="XtermBlazor" Version="1.10.2" />
     <PackageReference Include="YamlDotNet" Version="5.4.0" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>

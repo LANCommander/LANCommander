@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Controllers.Api
 {
@@ -22,19 +23,26 @@ namespace LANCommander.Controllers.Api
         private readonly UserManager<User> UserManager;
         private readonly RoleManager<Role> RoleManager;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
+        private readonly IFusionCache Cache;
 
-        public GamesController(IMapper mapper, GameService gameService, UserManager<User> userManager, RoleManager<Role> roleManager)
+        public GamesController(IMapper mapper, GameService gameService, UserManager<User> userManager, RoleManager<Role> roleManager, IFusionCache cache)
         {
             Mapper = mapper;
             GameService = gameService;
             UserManager = userManager;
             RoleManager = roleManager;
+            Cache = cache;
         }
 
         [HttpGet]
         public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
-            var games = new List<Game>();
+            var accessibleGames = new List<SDK.Models.Game>();
+            var games = await GameService.Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).ToListAsync();
+
+            var mappedGames = Cache.GetOrSet<IEnumerable<SDK.Models.Game>>("MappedGames", _ => {
+                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
+            }, TimeSpan.FromHours(1));
 
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole("Administrator"))
             {
@@ -44,18 +52,17 @@ namespace LANCommander.Controllers.Api
                 foreach (var roleName in roles)
                 {
                     var role = await RoleManager.FindByNameAsync(roleName);
+                    var roleGames = role.Collections.SelectMany(c => c.Games).DistinctBy(g => g.Id).Select(g => g.Id);
 
-                    games.AddRange(role.Collections.SelectMany(c => c.Games).DistinctBy(g => g.Id).ToList());
+                    accessibleGames.AddRange(mappedGames.Where(mg => roleGames.Contains(mg.Id)));
                 }
-
-                games = games.Where(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).DistinctBy(g => g.Id).ToList();
             }
             else
             {
-                games = await GameService.Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).ToListAsync();
+                accessibleGames = mappedGames.ToList();
             }
 
-            return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
+            return accessibleGames;
         }
 
         [HttpGet("{id}")]

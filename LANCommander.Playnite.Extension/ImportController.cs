@@ -166,23 +166,23 @@ namespace LANCommander.PlaynitePlugin
 
             // Genres
             if (game.Genres != null)
-                playniteGame.GenreIds = Genres.Select(g => g.Id).ToList();
+                playniteGame.GenreIds = Genres.Where(g => game.Genres.Any(gg => gg.Name == g.Name)).Select(g => g.Id).ToList();
 
             // Tags
             if (game.Tags != null)
-                playniteGame.TagIds = Tags.Select(t => t.Id).ToList();
+                playniteGame.TagIds = Tags.Where(t => game.Tags.Any(gt => gt.Name == t.Name)).Select(t => t.Id).ToList();
 
             // Publishers
             if (game.Publishers != null)
-                playniteGame.PublisherIds = Publishers.Select(p => p.Id).ToList();
+                playniteGame.PublisherIds = Publishers.Where(c => game.Publishers.Any(gp => gp.Name == c.Name)).Select(p => p.Id).ToList();
 
             // Developers
             if (game.Developers != null)
-                playniteGame.DeveloperIds = Developers.Select(d => d.Id).ToList();
+                playniteGame.DeveloperIds = Developers.Where(c => game.Developers.Any(gd => gd.Name == c.Name)).Select(d => d.Id).ToList();
 
             // Collections
             if (game.Collections != null)
-                playniteGame.CategoryIds = Collections.Select(c => c.Id).ToList();
+                playniteGame.CategoryIds = Collections.Where(c => game.Collections.Any(gc => gc.Name == c.Name)).Select(c => c.Id).ToList();
 
             // Media
             if (game.Media != null && game.Media.Any(m => m.Type == SDK.Enums.MediaType.Icon))

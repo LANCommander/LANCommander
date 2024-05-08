@@ -182,3 +182,11 @@ Packages:
     Changelog:
       - 'Fixed: Before Start and After Stop scripts now download properly'
       - 'Fixed: Notes sync properly again'
+  - Version: 0.7.3
+    RequiredApiVersion: 6.0.0
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.7.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_7_3.pext
+    Changelog:
+      - 'Fixed: Mod/expansion scripts should now run properly'
+      - 'Fixed: Mod/expansion actions should now list properly for both primary and non-primary actions'
+      - 'Fixed: Mods/expansions will now mark a game as having an update ready if a new archive is uploaded'
+      - 'Fixed: In some cases, notes on a game would fail to import, this has been resolved'

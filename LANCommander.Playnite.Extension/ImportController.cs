@@ -111,7 +111,7 @@ namespace LANCommander.PlaynitePlugin
 
                 foreach (var mani in manifests)
                 {
-                    if (game.DependentGames.Any(g => g.Id == mani.Id && playniteGame.Version != game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version))
+                    if (game.DependentGames.Any(g => g != null && g.Id == mani.Id && playniteGame.Version != game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version))
                         updateAvailable = true;
                 }
 

@@ -9,11 +9,13 @@ namespace LANCommander
             CreateMap<Data.Models.Action, SDK.Models.Action>();
             CreateMap<Data.Models.Archive, SDK.Models.Archive>();
             CreateMap<Data.Models.Company, SDK.Models.Company>();
+            CreateMap<Data.Models.Collection, SDK.Models.Collection>();
             CreateMap<Data.Models.Game, SDK.Models.Game>();
             CreateMap<Data.Models.GameSave, SDK.Models.GameSave>();
             CreateMap<Data.Models.Genre, SDK.Models.Genre>();
             CreateMap<Data.Models.Key, SDK.Models.Key>();
             CreateMap<Data.Models.Media, SDK.Models.Media>();
+            CreateMap<Data.Models.MultiplayerMode, SDK.Models.MultiplayerMode>();
             CreateMap<Data.Models.PlaySession, SDK.Models.PlaySession>();
             CreateMap<Data.Models.Redistributable, SDK.Models.Redistributable>();
             CreateMap<Data.Models.Server, SDK.Models.Server>();

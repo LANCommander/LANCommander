@@ -1,7 +1,10 @@
-﻿namespace LANCommander.SDK.Models
+﻿using System;
+
+namespace LANCommander.SDK.Models
 {
-    public class Collection : BaseModel
+    public class Collection
     {
+        public Guid Id { get; set; }
         public string Name { get; set; }
     }
 }

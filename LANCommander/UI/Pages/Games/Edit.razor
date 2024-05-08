@@ -7,6 +7,7 @@
 @using LANCommander.Models;
 @using System.IO.Compression;
 @using Microsoft.EntityFrameworkCore
+@using ZiggyCreatures.Caching.Fusion
 @attribute [Authorize(Roles = "Administrator")]
 @inject GameService GameService
 @inject CompanyService CompanyService
@@ -20,6 +21,7 @@
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
+@inject IFusionCache FusionCache
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">
@@ -389,6 +391,8 @@ else
 
                 NavigationManager.NavigateTo($"/Games/{Game.Id}");
             }
+
+            await FusionCache.ExpireAsync("MappedGames");
         }
         catch (Exception ex)
         {

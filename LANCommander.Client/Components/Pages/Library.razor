@@ -1,0 +1,39 @@
+﻿@page "/"
+@using LANCommander.Client.Extensions
+@inject SDK.Client Client
+
+<h3>Library</h3>
+
+<Tree TItem="string">
+    @foreach (var collectionName in Collections.Keys)
+    {
+        <TreeNode Title="@collectionName" TItem="string">
+            @foreach (var game in Collections[collectionName])
+            {
+                <TreeNode Title="@game.Title" Key="@game.Id.ToString()" TItem="string" />
+            }
+        </TreeNode>
+    }
+</Tree>
+
+@code {
+    Dictionary<string, ICollection<SDK.Models.Game>> Collections = new Dictionary<string, ICollection<SDK.Models.Game>>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var games = Client.Games.Get().ToList();
+
+            var collections = games.SelectMany(g => g.Collections).DistinctBy(c => c.Id);
+
+            foreach (var collection in collections)
+            {
+                Collections[collection.Name] = games.Where(g => g.Collections != null && g.Collections.Any(c => c.Id == collection.Id)).OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+            }
+
+            Collections["Uncategorized"] = games.Where(g => g.Collections == null || g.Collections.Count() == 0).ToList();
+        }
+        catch { }
+    }
+}

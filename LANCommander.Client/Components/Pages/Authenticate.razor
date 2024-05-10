@@ -1,0 +1,46 @@
+﻿@page "/Authenticate"
+@inject SDK.Client Client
+
+<Form Model="@Model" Loading="@Loading" OnFinish="OnFinish">
+    <FormItem>
+        <Input @bind-Value="@context.ServerAddress" />
+    </FormItem>
+    <FormItem>
+        <Input @bind-Value="@context.Username" />
+    </FormItem>
+    <FormItem>
+        <InputPassword @bind-Value="@context.Password" />
+    </FormItem>
+    <FormItem>
+        <Button Type="@ButtonType.Primary" HtmlType="submit">
+            Login
+        </Button>
+    </FormItem>
+</Form>
+
+@code {
+    public class AuthenticationRequest
+    {
+        public string ServerAddress { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
+    }
+
+    AuthenticationRequest Model = new AuthenticationRequest();
+    bool Loading { get; set; } = false;
+
+    async Task OnFinish(EditContext editContext)
+    {
+        Client.ChangeServerAddress(Model.ServerAddress);
+
+        var token = await Client.AuthenticateAsync(Model.Username, Model.Password);
+
+        var settings = SettingService.GetSettings();
+
+        settings.Authentication.ServerAddress = Model.ServerAddress;
+        settings.Authentication.AccessToken = token.AccessToken;
+        settings.Authentication.RefreshToken = token.RefreshToken;
+
+        SettingService.SaveSettings(settings);
+    }
+}

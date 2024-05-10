@@ -1,0 +1,20 @@
+﻿@inherits LayoutComponentBase
+
+<Layout>
+    <Header>
+        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal" Class="ant-menu-left">
+            <MenuItem>Library</MenuItem>
+            <MenuItem>Downloads</MenuItem>
+            <MenuItem RouterLink="/Authenticate">Auth</MenuItem>
+        </Menu>
+
+        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal" Class="ant-menu-left">
+        </Menu>
+    </Header>
+
+    <Content>
+        @Body
+    </Content>
+</Layout>
+
+<AntContainer />

@@ -1,4 +1,4 @@
-﻿using LANCommander.PlaynitePlugin.Models;
+using LANCommander.PlaynitePlugin.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Helpers;
@@ -353,6 +353,9 @@ namespace LANCommander.PlaynitePlugin
 
                 try
                 {
+                    if (dependentGame.BaseGame == null)
+                        dependentGame.BaseGame = game;
+
                     RunInstallScript(dependentGame);
                     RunNameChangeScript(dependentGame);
                     RunKeyChangeScript(dependentGame);

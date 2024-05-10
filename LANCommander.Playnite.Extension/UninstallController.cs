@@ -35,7 +35,8 @@ namespace LANCommander.PlaynitePlugin
 
                 try
                 {
-                    foreach (var manifest in manifests)
+                    // We should execute the uninstallation in reverse so that expansions and mods execute their uninstall scripts before the base game is uninstalled
+                    foreach (var manifest in manifests.Reverse())
                     {
                         var scriptPath = ScriptHelper.GetScriptFilePath(Game.InstallDirectory, manifest.Id, SDK.Enums.ScriptType.Uninstall);
 
@@ -61,12 +62,16 @@ namespace LANCommander.PlaynitePlugin
 
                 Plugin.PlayniteApi.Dialogs.ActivateGlobalProgress(progress =>
                 {
-                    Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory, Game.Id);
+                    // Ensure all extensions/mods are uninstalled as well before the base game
+                    foreach (var manifest in manifests.Reverse())
+                    {
+                        Plugin.LANCommanderClient.Games.Uninstall(Game.InstallDirectory, manifest.Id);
 
-                    var metadataPath = SDK.GameService.GetMetadataDirectoryPath(Game.InstallDirectory, Game.Id);
+                        var metadataPath = SDK.GameService.GetMetadataDirectoryPath(Game.InstallDirectory, manifest.Id);
 
-                    if (Directory.Exists(metadataPath))
-                        Directory.Delete(metadataPath, true);
+                        if (Directory.Exists(metadataPath))
+                            Directory.Delete(metadataPath, true);
+                    }
 
                     DirectoryHelper.DeleteEmptyDirectories(Game.InstallDirectory);
                 },

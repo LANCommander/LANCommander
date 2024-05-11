@@ -209,7 +209,7 @@ namespace LANCommander.PlaynitePlugin
             LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
             LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
 
-            foreach (var manifest in manifests)
+            foreach (var manifest in manifests.Where(m => m != null && m.Actions != null))
             {
                 foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
                 {

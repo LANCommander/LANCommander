@@ -1,7 +1,9 @@
 ﻿using LANCommander.SDK;
+using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using RestSharp;
+using Semver;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace LANCommander.SDK
@@ -85,6 +88,33 @@ namespace LANCommander.SDK
             return Connected;
         }
 
+        public static SemVersion GetCurrentVersion()
+        {
+            return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
+        }
+
+        private void ValidateVersion(IRestResponse response)
+        {
+            var version = GetCurrentVersion();
+            var header = response.Headers.FirstOrDefault(h => h.Name == "X-API-Version");
+
+            if (header == null)
+                throw new ApiVersionMismatchException(version, null, $"The server is out of date and does not support client version {version}.");
+
+            var apiVersion = SemVersion.Parse((string)header.Value, SemVersionStyles.Any);
+
+            if (version.Major != apiVersion.Major || version.Minor != apiVersion.Minor)
+            {
+                switch (version.ComparePrecedenceTo(apiVersion))
+                {
+                    case -1:
+                        throw new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is out of date and is not supported by the server (v{apiVersion})");
+                    case 1:
+                        throw new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is on a version not supported by the server (v{apiVersion})");
+                }
+            }
+        }
+
         internal T PostRequest<T>(string route, object body)
         {
             if (Token == null)
@@ -93,6 +123,8 @@ namespace LANCommander.SDK
             var request = new RestRequest(route)
                 .AddJsonBody(body)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
 
             var response = ApiClient.Post<T>(request);
 
@@ -107,6 +139,8 @@ namespace LANCommander.SDK
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
+            request.OnBeforeDeserialization += ValidateVersion;
+
             var response = ApiClient.Post<T>(request);
 
             return response.Data;
@@ -120,7 +154,11 @@ namespace LANCommander.SDK
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
+            request.OnBeforeDeserialization += ValidateVersion;
+
             var response = ApiClient.Get<T>(request);
+
+            
 
             return response.Data;
         }
@@ -191,6 +229,8 @@ namespace LANCommander.SDK
         {
             var request = new RestRequest(route, Method.POST)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
 
             request.AddFile(fileName, data, fileName);
 
@@ -291,6 +331,8 @@ namespace LANCommander.SDK
             var request = new RestRequest("/api/Auth/Refresh")
                 .AddJsonBody(token);
 
+            request.OnBeforeDeserialization += ValidateVersion;
+
             var response = ApiClient.Post<AuthResponse>(request);
 
             if (response.StatusCode != HttpStatusCode.OK)
@@ -325,6 +367,8 @@ namespace LANCommander.SDK
 
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {

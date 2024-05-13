@@ -66,6 +66,7 @@ namespace LANCommander.SDK.Helpers
         public static T Deserialize<T>(string serializedManifest)
         {
             var deserializer = new DeserializerBuilder()
+                .IgnoreUnmatchedProperties()
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 

@@ -49,7 +49,6 @@ namespace LANCommander.SDK
 
         public Client(string baseUrl, string defaultInstallDirectory)
         {
-            BaseUrl = new Uri(baseUrl);
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory);
@@ -59,17 +58,12 @@ namespace LANCommander.SDK
             Profile = new ProfileService(this);
             Media = new MediaService(this);
 
-            if (!String.IsNullOrWhiteSpace(baseUrl))
-                ApiClient = new RestClient(BaseUrl);
+            ChangeServerAddress(baseUrl);
         }
 
         public Client(string baseUrl, string defaultInstallDirectory, ILogger logger)
         {
-            if (!String.IsNullOrWhiteSpace(baseUrl))
-            {
-                BaseUrl = new Uri(baseUrl);
-                ApiClient = new RestClient(BaseUrl);
-            }
+            ChangeServerAddress(baseUrl);
 
             DefaultInstallDirectory = defaultInstallDirectory;
 
@@ -81,6 +75,17 @@ namespace LANCommander.SDK
             Media = new MediaService(this, logger);
 
             Logger = logger;
+        }
+
+        public void ChangeServerAddress(string baseUrl)
+        {
+            if (!String.IsNullOrWhiteSpace(baseUrl))
+            {
+                BaseUrl = new Uri(baseUrl);
+                ApiClient = new RestClient(BaseUrl);
+
+                ApiClient.ThrowOnAnyError = true;
+            }
         }
 
         public bool IsConnected()
@@ -157,8 +162,6 @@ namespace LANCommander.SDK
             request.OnBeforeDeserialization += ValidateVersion;
 
             var response = ApiClient.Get<T>(request);
-
-            
 
             return response.Data;
         }

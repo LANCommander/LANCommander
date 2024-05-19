@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Management.Automation.Internal;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
@@ -151,6 +152,37 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
+        internal async Task<T> PostRequestAsync<T>(string route, object body)
+        {
+            if (Token == null)
+                return default;
+
+            var request = new RestRequest(route)
+                .AddJsonBody(body)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
+
+            var response = await ApiClient.PostAsync<T>(request);
+
+            return response;
+        }
+
+        internal async Task<T> PostRequestAsync<T>(string route)
+        {
+            if (Token == null)
+                return default;
+
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
+
+            var response = await ApiClient.PostAsync<T>(request);
+
+            return response;
+        }
+
         internal T GetRequest<T>(string route)
         {
             if (Token == null)
@@ -166,7 +198,22 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
-        internal async Task<string> DownloadRequest(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        internal async Task<T> GetRequestAsync<T>(string route)
+        {
+            if (Token == null)
+                return default;
+
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
+
+            var response = await ApiClient.GetAsync<T>(request);
+
+            return response;
+        }
+
+        internal async Task<string> DownloadRequestAsync(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             route = route.TrimStart('/');
 
@@ -192,7 +239,7 @@ namespace LANCommander.SDK
             return tempFile;
         }
 
-        internal async Task<string> DownloadRequest(string route, string destination)
+        internal async Task<string> DownloadRequestAsync(string route, string destination)
         {
             route = route.TrimStart('/');
 
@@ -240,6 +287,20 @@ namespace LANCommander.SDK
             var response = ApiClient.Post<T>(request);
 
             return response.Data;
+        }
+
+        internal async Task<T> UploadRequestAsync<T>(string route, string fileName, byte[] data)
+        {
+            var request = new RestRequest(route, Method.POST)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
+
+            request.AddFile(fileName, data, fileName);
+
+            var response = await ApiClient.PostAsync<T>(request);
+
+            return response;
         }
 
         public async Task<AuthToken> AuthenticateAsync(string username, string password)
@@ -391,6 +452,45 @@ namespace LANCommander.SDK
             Connected = valid;
 
             return response.StatusCode == HttpStatusCode.OK;
+        }
+
+        public async Task<bool> ValidateTokenAsync(AuthToken token)
+        {
+            Logger?.LogTrace("Validating token...");
+
+            if (token == null)
+            {
+                Logger?.LogTrace("Token is null!");
+                return false;
+            }
+
+            var request = new RestRequest("/api/Auth/Validate")
+                .AddHeader("Authorization", $"Bearer {token.AccessToken}");
+
+            request.OnBeforeDeserialization += ValidateVersion;
+
+            if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
+            {
+                Logger?.LogTrace("Token is empty!");
+                return false;
+            }
+
+            try
+            {
+                var response = await ApiClient.PostAsync<object>(request);
+
+                Logger?.LogTrace("Token is valid!");
+
+                Connected = true;
+            }
+            catch
+            {
+                Logger?.LogTrace("Token is invalid!");
+
+                Connected = false;
+            }
+
+            return Connected;
         }
 
         public void UseToken(AuthToken token)

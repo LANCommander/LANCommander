@@ -209,7 +209,7 @@ namespace LANCommander.PlaynitePlugin
             LANCommanderClient.Actions.AddVariable("DisplayWidth", primaryDisplay.Bounds.Width.ToString());
             LANCommanderClient.Actions.AddVariable("DisplayHeight", primaryDisplay.Bounds.Height.ToString());
 
-            foreach (var manifest in manifests)
+            foreach (var manifest in manifests.Where(m => m != null && m.Actions != null))
             {
                 foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
                 {
@@ -239,9 +239,11 @@ namespace LANCommander.PlaynitePlugin
 
             if (!Settings.OfflineModeEnabled)
             {
-                var game = LANCommanderClient.Games.Get(args.Game.Id);
+                SDK.Models.Game game = null;
 
-                if (game.Servers != null)
+                game = LANCommanderClient.Games.Get(args.Game.Id);
+
+                if (game != null && game.Servers != null)
                 foreach (var server in game.Servers.Where(s => s.Actions != null))
                 {
                     foreach (var action in server.Actions)

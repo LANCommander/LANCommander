@@ -237,6 +237,8 @@ namespace LANCommander
                 app.UseHsts();
             }
 
+            app.UseMiddleware<ApiMiddleware>();
+
             app.UseHangfireDashboard();
 
             // app.UseHttpsRedirection();

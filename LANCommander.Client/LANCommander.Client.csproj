@@ -70,7 +70,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Views\" />
+      <Folder Include="Components\Layout\" />
+      <Folder Include="Components\Pages\" />
     </ItemGroup>
 
 </Project>

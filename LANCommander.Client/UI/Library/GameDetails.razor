@@ -1,0 +1,10 @@
+﻿@if (Game != null)
+{
+    <h1>@Game.Title</h1>
+    <p>@Game.Description</p>
+}
+
+@code {
+    [Parameter] public SDK.Models.Game Game { get; set; }
+    [Parameter] public EventCallback<SDK.Models.Game> GameChanged { get; set; }
+}

@@ -1,0 +1,34 @@
+﻿@page "/"
+@inject SDK.Client Client
+@inject NavigationManager NavigationManager
+
+<GridRow>
+    <GridCol Span="6">
+        <GameList @bind-Games="Games" OnGameSelected="SelectGame" />
+    </GridCol>
+    <GridCol Span="18">
+        <GameDetails @bind-Game="SelectedGame" />
+    </GridCol>
+</GridRow>
+
+@code {
+    ICollection<SDK.Models.Game> Games { get; set; } = new List<SDK.Models.Game>();
+    SDK.Models.Game SelectedGame { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Games = Client.Games.Get().ToList();
+        }
+        catch
+        {
+            NavigationManager.NavigateTo("/Authenticate", true);
+        }
+    }
+
+    void SelectGame(SDK.Models.Game game)
+    {
+        SelectedGame = game;
+    }
+}

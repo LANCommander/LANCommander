@@ -42,7 +42,7 @@ namespace LANCommander.SDK
 
         public async Task<string> Download(Media media, string destination)
         {
-            return await Client.DownloadRequest(GetDownloadPath(media), destination);
+            return await Client.DownloadRequestAsync(GetDownloadPath(media), destination);
         }
 
         public string GetAbsoluteUrl(Media media)

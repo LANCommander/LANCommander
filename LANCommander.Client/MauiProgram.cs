@@ -1,4 +1,6 @@
-﻿using LANCommander.Client.Services;
+﻿using LANCommander.Client.Data;
+using LANCommander.Client.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 #if WINDOWS
@@ -46,8 +48,13 @@ namespace LANCommander.Client
 
 
             builder.Services.AddMauiBlazorWebView();
-
             builder.Services.AddAntDesign();
+
+            builder.Services.AddDbContext<DatabaseContext>(db =>
+            {
+                db.UseLazyLoadingProxies();
+                db.UseSqlite(settings.Database.ConnectionString);
+            });
 
             var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);
 

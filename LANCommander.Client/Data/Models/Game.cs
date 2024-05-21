@@ -12,9 +12,12 @@ namespace LANCommander.Client.Data.Models
         [Display(Name = "Sort Title")]
         public string? SortTitle { get; set; }
         [Display(Name = "Directory Name")]
-        public string? DirectoryName { get; set; }
         public string? Description { get; set; }
         public string? Notes { get; set; }
+
+        public bool Installed { get; set; }
+        public string? InstalledVersion { get; set; }
+        public string? InstallDirectory { get; set; }
 
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }

@@ -5,9 +5,19 @@ namespace LANCommander.Client.Data
 {
     public class DatabaseContext : DbContext
     {
-        public DatabaseContext(DbContextOptions<DatabaseContext> options)
+        public DatabaseContext() { }
+
+        public DatabaseContext(DbContextOptions options)
             : base(options)
         {
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
+
+            optionsBuilder.UseSqlite($"Data Source={dbPath};Cache=Shared");
+            optionsBuilder.UseLazyLoadingProxies();
         }
 
         protected override void OnModelCreating(ModelBuilder builder)

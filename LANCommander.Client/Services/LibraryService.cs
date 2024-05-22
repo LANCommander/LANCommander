@@ -57,6 +57,7 @@ namespace LANCommander.Client.Services
                     localGame = await GameService.Update(localGame);
             }
 
+            // Potentially delete any games that no longer exist on the server or have been revoked
             foreach (var localGame in localGames)
             {
                 var remoteGame = remoteGames.FirstOrDefault(g => g.Id == localGame.Id);

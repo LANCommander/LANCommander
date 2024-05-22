@@ -1,5 +1,6 @@
 ﻿using LANCommander.Client.Data;
 using LANCommander.Client.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
@@ -18,6 +19,9 @@ namespace LANCommander.Client
             var settings = SettingService.GetSettings();
 
             var builder = MauiApp.CreateBuilder();
+
+            builder.Services.AddDbContext<DbContext, DatabaseContext>();
+
             builder
                 .UseMauiApp<App>()
                 .ConfigureFonts(fonts =>
@@ -50,12 +54,6 @@ namespace LANCommander.Client
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddAntDesign();
 
-            builder.Services.AddDbContext<DatabaseContext>(db =>
-            {
-                db.UseLazyLoadingProxies();
-                db.UseSqlite(settings.Database.ConnectionString);
-            });
-
             var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);
 
             client.UseToken(new SDK.Models.AuthToken
@@ -71,7 +69,26 @@ namespace LANCommander.Client
     		builder.Logging.AddDebug();
 #endif
 
-            return builder.Build();
+            var app = builder.Build();
+
+            using var scope = app.Services.CreateScope();
+
+            using var db = scope.ServiceProvider.GetService<DatabaseContext>();
+
+            if (db.Database.GetPendingMigrations().Any())
+            {
+                var dataSource = new SqliteConnectionStringBuilder(db.Database.GetConnectionString()).DataSource;
+                var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+
+                if (File.Exists(dataSource))
+                {
+                    File.Copy(dataSource, backupName);
+                }
+
+                db.Database.Migrate();
+            }
+
+            return app;
         }
     }
 }

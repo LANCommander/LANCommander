@@ -9,7 +9,5 @@ namespace LANCommander.Client.Data.Models
         public string Name { get; set; }
         [JsonIgnore]
         public virtual ICollection<Game> Games { get; set; }
-        [JsonIgnore]
-        public virtual ICollection<Role> Roles { get; set; }
     }
 }

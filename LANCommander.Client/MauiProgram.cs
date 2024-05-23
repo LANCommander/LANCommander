@@ -63,9 +63,18 @@ namespace LANCommander.Client
             });
 
             builder.Services.AddSingleton(client);
+            builder.Services.AddScoped<CollectionService>();
+            builder.Services.AddScoped<CompanyService>();
+            builder.Services.AddScoped<EngineService>();
+            builder.Services.AddScoped<GameService>();
+            builder.Services.AddScoped<GenreService>();
+            builder.Services.AddScoped<MultiplayerModeService>();
+            builder.Services.AddScoped<TagService>();
+            builder.Services.AddScoped<RedistributableService>();
+            builder.Services.AddScoped<LibraryService>();
 
 #if DEBUG
-    		builder.Services.AddBlazorWebViewDeveloperTools();
+            builder.Services.AddBlazorWebViewDeveloperTools();
     		builder.Logging.AddDebug();
 #endif
 

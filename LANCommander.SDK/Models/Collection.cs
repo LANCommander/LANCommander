@@ -2,9 +2,8 @@
 
 namespace LANCommander.SDK.Models
 {
-    public class Collection
+    public class Collection : KeyedModel
     {
-        public Guid Id { get; set; }
         public string Name { get; set; }
     }
 }

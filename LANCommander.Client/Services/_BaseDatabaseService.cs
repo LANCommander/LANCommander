@@ -8,7 +8,7 @@ namespace LANCommander.Client.Services
 {
     public abstract class BaseDatabaseService<T> : BaseService where T : BaseModel
     {
-        public DatabaseContext Context { get; set; }
+        protected DatabaseContext Context { get; set; }
 
         public BaseDatabaseService(DatabaseContext dbContext) : base()
         {

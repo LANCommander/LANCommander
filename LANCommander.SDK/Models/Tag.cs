@@ -3,9 +3,8 @@ using System.Collections.Generic;
 
 namespace LANCommander.SDK.Models
 {
-    public class Tag
+    public class Tag : KeyedModel
     {
-        public Guid Id { get; set; }
         public string Name { get; set; }
     }
 }

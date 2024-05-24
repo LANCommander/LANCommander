@@ -1,34 +1,47 @@
 ﻿@page "/"
+@using LANCommander.Client.Models
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
+@inject LibraryService LibraryService
 
 <GridRow>
     <GridCol Span="6">
-        <GameList @bind-Games="Games" OnGameSelected="SelectGame" />
+        <Collapse>
+            @foreach (var collection in LibraryItems.Where(i => i.DataItem is Data.Models.Collection))
+            {
+                <Panel Header="@collection.Name" Key="@collection.Key.ToString()">
+                    <AntList DataSource="@collection.Children" TItem="LibraryItem" Size="small">
+                        <ListItem OnClick="() => OnLibraryItemSelected(context)">
+                            @context.Name
+                        </ListItem>
+                    </AntList>
+                </Panel>
+            }
+        </Collapse>
     </GridCol>
     <GridCol Span="18">
-        <GameDetails @bind-Game="SelectedGame" />
+        
     </GridCol>
 </GridRow>
 
 @code {
-    ICollection<SDK.Models.Game> Games { get; set; } = new List<SDK.Models.Game>();
-    SDK.Models.Game SelectedGame { get; set; }
+    Data.Models.Game SelectedGame { get; set; }
+
+    IEnumerable<LibraryItem> LibraryItems { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            Games = Client.Games.Get().ToList();
-        }
-        catch
-        {
-            NavigationManager.NavigateTo("/Authenticate", true);
-        }
+        LibraryItems = await LibraryService.GetLibraryItemsAsync();
     }
 
-    void SelectGame(SDK.Models.Game game)
+    async Task OnLibraryItemSelected(LibraryItem item)
     {
-        SelectedGame = game;
+        if (item.DataItem is Data.Models.Game)
+            SelectedGame = item.DataItem as Data.Models.Game;
+    }
+
+    async void Import()
+    {
+        await LibraryService.ImportAsync();
     }
 }

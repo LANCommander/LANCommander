@@ -1,5 +1,7 @@
 ﻿using LANCommander.Client.Data;
 using LANCommander.Client.Data.Models;
+using LANCommander.Client.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -262,6 +264,22 @@ namespace LANCommander.Client.Services
         public async Task ImportRedistributables()
         {
 
+        }
+
+        public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
+        {
+            var items = new List<LibraryItem>();
+
+            var collections = await CollectionService.Get();
+
+            items.AddRange(collections.Select(c => new LibraryItem(c)));
+
+            var redistributables = await RedistributableService.Get();
+
+            foreach (var redistributable in redistributables)
+                items.Add(new LibraryItem(redistributable));
+
+            return items;
         }
 
         // Could use something like automapper, but that's slow.

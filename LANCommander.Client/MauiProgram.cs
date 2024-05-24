@@ -86,8 +86,12 @@ namespace LANCommander.Client
 
             if (db.Database.GetPendingMigrations().Any())
             {
-                var dataSource = new SqliteConnectionStringBuilder(db.Database.GetConnectionString()).DataSource;
-                var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+                var backupPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
+                var dataSource = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
+                var backupName = Path.Combine(backupPath, $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+
+                if (!Directory.Exists(backupPath))
+                    Directory.CreateDirectory(backupPath);
 
                 if (File.Exists(dataSource))
                 {

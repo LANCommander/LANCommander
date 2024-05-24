@@ -96,26 +96,26 @@ namespace LANCommander.Client.Services
             });
             #endregion
 
-            #region Import Multiplayer Modes
-            /*var multiplayerModes = await ImportFromModel<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.SelectMany(g => g.MultiplayerModes).DistinctBy(m => m.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
-            {
-                multiplayerMode.Description = importMultiplayerMode.Description;
-                multiplayerMode.MinPlayers = importMultiplayerMode.MinPlayers;
-                multiplayerMode.MaxPlayers = importMultiplayerMode.MaxPlayers;
-                multiplayerMode.NetworkProtocol = importMultiplayerMode.NetworkProtocol;
-                multiplayerMode.Type = importMultiplayerMode.Type;
-                multiplayerMode.Spectators = importMultiplayerMode.Spectators;
-
-                return multiplayerMode;
-            });*/
-            #endregion
-
             #region Import Tags
             var tags = await ImportFromModel<Tag, SDK.Models.Tag, TagService>(remoteGames.SelectMany(g => g.Tags).DistinctBy(t => t.Id), TagService, (tag, importTag) =>
             {
                 tag.Name = importTag.Name;
 
                 return tag;
+            });
+            #endregion
+
+            #region Import MultiplayerModes
+            var multiplayerModes = await ImportFromModel<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.SelectMany(g => g.MultiplayerModes).DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
+            {
+                multiplayerMode.Type = importMultiplayerMode.Type;
+                multiplayerMode.NetworkProtocol = importMultiplayerMode.NetworkProtocol;
+                multiplayerMode.Description = importMultiplayerMode.Description;
+                multiplayerMode.MinPlayers = importMultiplayerMode.MinPlayers;
+                multiplayerMode.MaxPlayers = importMultiplayerMode.MaxPlayers;
+                multiplayerMode.Spectators = importMultiplayerMode.Spectators;
+
+                return multiplayerMode;
             });
             #endregion
 
@@ -217,7 +217,21 @@ namespace LANCommander.Client.Services
                     }
                     #endregion
 
-                    // localGame.MultiplayerModes = multiplayerModes.Where(m => remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id)).ToList();
+                    #region Update Game Multiplayer Modes
+                    if (localGame.MultiplayerModes == null)
+                        localGame.MultiplayerModes = multiplayerModes.Where(m => remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id)).ToList();
+                    else
+                    {
+                        var modesToRemove = localGame.MultiplayerModes.Where(m => !remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id)).ToList();
+                        var modesToAdd = multiplayerModes.Where(m => remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id) && !localGame.MultiplayerModes.Any(lm => lm.Id == m.Id)).ToList();
+
+                        foreach (var mode in modesToRemove)
+                            localGame.MultiplayerModes.Remove(mode);
+
+                        foreach (var mode in modesToAdd)
+                            localGame.MultiplayerModes.Add(mode);
+                    }
+                    #endregion
 
                     if (localGame.Id == Guid.Empty)
                     {

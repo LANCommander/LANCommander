@@ -46,7 +46,7 @@ namespace LANCommander.Client.Data
             builder.Entity<Game>()
                 .HasMany(g => g.MultiplayerModes)
                 .WithOne(m => m.Game)
-                .IsRequired(true)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()

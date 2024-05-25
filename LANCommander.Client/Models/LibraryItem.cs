@@ -1,12 +1,22 @@
 ﻿using LANCommander.Client.Data.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace LANCommander.Client.Models
 {
+    public enum LibraryItemState
+    {
+        NotInstalled,
+        Installed,
+        Queued,
+        Installing,
+        UpdateAvailable
+    }
+
     public enum LibraryItemType
     {
         Game,
@@ -17,10 +27,11 @@ namespace LANCommander.Client.Models
     {
         public Guid Key { get; set; }
         public LibraryItemType Type { get; set; }
+        public LibraryItemState State { get; set; }
         public string Name { get; set; }
         public string SortName { get; set; }
         public object DataItem { get; set; }
-        public IEnumerable<LibraryItem> Children { get; set; }
+        public ObservableCollection<LibraryItem> Children { get; set; }
 
         public LibraryItem(Collection collection)
         {
@@ -28,7 +39,7 @@ namespace LANCommander.Client.Models
             Type = LibraryItemType.Game;
             Name = collection.Name;
             DataItem = collection;
-            Children = collection.Games.Select(g => new LibraryItem(g)).ToList();
+            Children = new ObservableCollection<LibraryItem>(collection.Games.Select(g => new LibraryItem(g)).ToList());
         }
 
         public LibraryItem(Game game)
@@ -38,6 +49,13 @@ namespace LANCommander.Client.Models
             Name = game.Title;
             SortName = game.SortTitle;
             DataItem = game;
+
+            if (game.Installed && !String.IsNullOrWhiteSpace(game.LatestVersion) && game.InstalledVersion != game.LatestVersion)
+                State = LibraryItemState.UpdateAvailable;
+            else if (game.Installed)
+                State = LibraryItemState.Installed;
+            else
+                State = LibraryItemState.NotInstalled;
         }
 
         public LibraryItem(Redistributable redistributable)

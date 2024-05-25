@@ -1,0 +1,54 @@
+﻿@inject DownloadService DownloadService
+
+<h2>In Progress</h2>
+@foreach (var queueItem in DownloadService.Queue.Where(qi => qi.State))
+{
+    <div class="queue-item">
+        <img src="@queueItem.CoverPath" />
+        <div class="queue-item-info">
+            <div>
+                <h4>@queueItem.Title | @queueItem</h4>
+                <span>@queueItem.BytesDownloaded / @queueItem.TotalBytes</span>
+            </div>
+        </div>
+    </div>
+}
+
+<h2>Up Next</h2>
+@foreach (var queueItem in DownloadService.Queue.Where(qi => qi.Status == Enums.DownloadStatus.Idle))
+{
+    <div class="queue-item">
+        <img src="@queueItem.CoverPath" />
+        <div class="queue-item-info">
+            <div>
+                <h4>@queueItem.Title | @queueItem</h4>
+                <span>@queueItem.BytesDownloaded / @queueItem.TotalBytes</span>
+            </div>
+        </div>
+    </div>
+}
+
+<h2>Completed</h2>
+@foreach (var queueItem in DownloadService.Queue.Where(qi => !qi.State))
+{
+    <div class="queue-item">
+        <img src="@queueItem.CoverPath" />
+        <div class="queue-item-info">
+            <div>
+                <h4>@queueItem.Title | @queueItem</h4>
+                <span>@queueItem.BytesDownloaded / @queueItem.TotalBytes</span>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        DownloadService.OnQueueChanged += () =>
+        {
+            StateHasChanged();
+        };
+    }
+
+}

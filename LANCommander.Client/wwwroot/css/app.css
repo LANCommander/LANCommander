@@ -84,3 +84,42 @@ h1:focus {
         padding-left: env(safe-area-inset-left);
     }
 }
+
+#app {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.ant-layout {
+    height: 100%;
+}
+
+.split-pane {
+    display: flex;
+    flex-direction: row;
+}
+
+.split-pane .pane {
+    overflow-x: scroll;
+}
+
+.library {
+    width: 100%;
+    height: 100%;
+}
+
+.library .pane {
+    overflow-x: hidden;
+}
+
+.library-list {
+
+}
+
+.library-list .ant-list-item {
+    cursor: pointer;
+    white-space: nowrap;
+}

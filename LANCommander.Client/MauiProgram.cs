@@ -72,6 +72,7 @@ namespace LANCommander.Client
             builder.Services.AddScoped<TagService>();
             builder.Services.AddScoped<RedistributableService>();
             builder.Services.AddScoped<LibraryService>();
+            builder.Services.AddScoped<DownloadService>();
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();

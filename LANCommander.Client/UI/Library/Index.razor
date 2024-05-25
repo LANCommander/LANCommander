@@ -3,11 +3,12 @@
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
 @inject LibraryService LibraryService
+@inject DownloadService DownloadService
 
-<GridRow>
-    <GridCol Span="6">
+<SplitPane Class="library">
+    <Pane Size="25%" Class="library-list">
         <Collapse>
-            @foreach (var collection in LibraryItems.Where(i => i.DataItem is Data.Models.Collection))
+            @foreach (var collection in LibraryItems.Where(i => i != null && i.DataItem is Data.Models.Collection))
             {
                 <Panel Header="@collection.Name" Key="@collection.Key.ToString()">
                     <AntList DataSource="@collection.Children" TItem="LibraryItem" Size="small">
@@ -18,16 +19,46 @@
                 </Panel>
             }
         </Collapse>
-    </GridCol>
-    <GridCol Span="18">
-        
-    </GridCol>
-</GridRow>
+    </Pane>
+
+    <Pane Class="game-details">
+        @if (SelectedGame != null)
+        {
+            <div class="game-hero">
+                <h1>@SelectedGame.Name</h1>
+            </div>
+            <div class="game-infobar">
+                @if (SelectedGame.State == LibraryItemState.NotInstalled)
+                {
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedGame)">Install</Button>
+                }
+                else if (SelectedGame.State == LibraryItemState.Installed)
+                {
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.CaretRight">Play</Button>
+                }
+                else if (SelectedGame.State == LibraryItemState.Queued)
+                {
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
+                }
+                else if (SelectedGame.State == LibraryItemState.UpdateAvailable)
+                {
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Download">Update</Button>
+                }
+                else if (SelectedGame.State == LibraryItemState.Installing)
+                {
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Loading">Installing</Button>
+                }
+            </div>
+        }
+    </Pane>
+</SplitPane>
+
+<DownloadQueue />
 
 @code {
-    Data.Models.Game SelectedGame { get; set; }
+    LibraryItem SelectedGame { get; set; }
 
-    IEnumerable<LibraryItem> LibraryItems { get; set; }
+    IEnumerable<LibraryItem> LibraryItems { get; set; } = new List<LibraryItem>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -37,11 +68,16 @@
     async Task OnLibraryItemSelected(LibraryItem item)
     {
         if (item.DataItem is Data.Models.Game)
-            SelectedGame = item.DataItem as Data.Models.Game;
+            SelectedGame = item;
     }
 
     async void Import()
     {
         await LibraryService.ImportAsync();
+    }
+
+    async Task Install(LibraryItem item)
+    {
+        await DownloadService.Add(item.DataItem as Data.Models.Game);
     }
 }

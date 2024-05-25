@@ -4,6 +4,7 @@ using LANCommander.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Management.Automation.Language;
 using System.Text;
@@ -23,6 +24,8 @@ namespace LANCommander.Client.Services
         private readonly MultiplayerModeService MultiplayerModeService;
         private readonly RedistributableService RedistributableService;
         private readonly TagService TagService;
+
+        private ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
 
         public LibraryService(
             SDK.Client client,
@@ -324,84 +327,6 @@ namespace LANCommander.Client.Services
 
             // Too slow?
             return await service.Get();
-        }
-
-        public async Task<IEnumerable<Collection>> ImportCollections(IEnumerable<SDK.Models.Collection> importCollections)
-        {
-            var collections = await CollectionService.Get();
-
-            foreach (var importCollection in importCollections)
-            {
-                try
-                {
-                    var collection = collections.FirstOrDefault(g => g.Id == importCollection.Id);
-
-                    if (collection == null)
-                        collection = new Collection();
-
-                    collection.Name = importCollection.Name;
-
-                    if (collection.Id == Guid.Empty)
-                    {
-                        collection.Id = importCollection.Id;
-
-                        collection = await CollectionService.Add(collection);
-                    }
-                    else
-                        collection = await CollectionService.Update(collection);
-                }
-                catch (Exception ex)
-                {
-                    // Exception handling
-                }
-            }
-
-            foreach (var collection in collections.Where(g => !importCollections.Any(ig => ig.Id == g.Id)))
-            {
-                await CollectionService.Delete(collection);
-            }
-
-            // Too slow?
-            return await CollectionService.Get();
-        }
-
-        public async Task<IEnumerable<Genre>> ImportGenres(IEnumerable<SDK.Models.Genre> importGenres)
-        {
-            var collections = await GenreService.Get();
-
-            foreach (var importGenre in importGenres)
-            {
-                try
-                {
-                    var collection = collections.FirstOrDefault(g => g.Id == importGenre.Id);
-
-                    if (collection == null)
-                        collection = new Genre();
-
-                    collection.Name = importGenre.Name;
-
-                    if (collection.Id == Guid.Empty)
-                    {
-                        collection.Id = importGenre.Id;
-
-                        collection = await GenreService.Add(collection);
-                    }
-                    else
-                        collection = await GenreService.Update(collection);
-                }
-                catch (Exception ex)
-                {
-                    // Exception handling
-                }
-            }
-
-            foreach (var collection in collections.Where(g => !importGenres.Any(ig => ig.Id == g.Id)))
-            {
-                await GenreService.Delete(collection);
-            }
-
-            // Too slow?
-            return await GenreService.Get();
         }
     }
 }

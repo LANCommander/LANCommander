@@ -1,9 +1,12 @@
 ﻿@page "/"
 @using LANCommander.Client.Models
+@using System.Diagnostics
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
 @inject LibraryService LibraryService
 @inject DownloadService DownloadService
+@inject GameService GameService
+@inject ModalService ModalService
 
 <SplitPane Class="library">
     <Pane Size="25%" Class="library-list">
@@ -34,7 +37,7 @@
                 }
                 else if (SelectedGame.State == LibraryItemState.Installed)
                 {
-                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.CaretRight">Play</Button>
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.CaretRight" OnClick="() => Run(SelectedGame)">Play</Button>
                 }
                 else if (SelectedGame.State == LibraryItemState.Queued)
                 {
@@ -79,5 +82,27 @@
     async Task Install(LibraryItem item)
     {
         await DownloadService.Add(item.DataItem as Data.Models.Game);
+    }
+
+    async Task Run(LibraryItem item)
+    {
+        var game = item.DataItem as Data.Models.Game;
+        var gameInfo = Client.Games.Get(game.Id);
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = item.Name,
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+        };
+
+        var model = new ActionSelectorDialogOptions
+        {
+            Actions = gameInfo.Actions,
+            LibraryItem = item
+        };
+
+        var modalRef = ModalService.CreateModal<ActionSelectorDialog, ActionSelectorDialogOptions, Process>(modalOptions, model);
     }
 }

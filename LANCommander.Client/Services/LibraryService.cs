@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Management.Automation.Language;
 using System.Text;
@@ -26,6 +27,7 @@ namespace LANCommander.Client.Services
         private readonly TagService TagService;
 
         private ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
+        public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
         public LibraryService(
             SDK.Client client,
@@ -327,6 +329,23 @@ namespace LANCommander.Client.Services
 
             // Too slow?
             return await service.Get();
+        }
+
+        public async Task Run(LibraryItem libraryItem, SDK.Models.Action action)
+        {
+            var process = new Process();
+            var game = libraryItem.DataItem as Game;
+
+            Client.Actions.AddVariable("DisplayWidth", ((int)DeviceDisplay.Current.MainDisplayInfo.Width).ToString());
+            Client.Actions.AddVariable("DisplayHeight", ((int)DeviceDisplay.Current.MainDisplayInfo.Height).ToString());
+            Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
+
+            process.StartInfo.Arguments = Client.Actions.ExpandVariables(action.Arguments, game.InstallDirectory, skipSlashes: true);
+            process.StartInfo.FileName = Client.Actions.ExpandVariables(action.Path, game.InstallDirectory);
+            process.StartInfo.WorkingDirectory = Client.Actions.ExpandVariables(action.WorkingDirectory, game.InstallDirectory);
+            process.StartInfo.UseShellExecute = true;
+
+            process.Start();
         }
     }
 }

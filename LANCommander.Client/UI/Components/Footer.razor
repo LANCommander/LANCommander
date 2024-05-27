@@ -1,0 +1,33 @@
+﻿@using LANCommander.Client.Models
+@inject DownloadService DownloadService
+
+<div class="footer">
+    <div class="downloader">
+        @if (CurrentQueueItem != null)
+        {
+            <div>@CurrentQueueItem.Title</div>
+            <div>@CurrentQueueItem.Version</div>
+            <Progress Percent="(CurrentQueueItem.Progress * 100)" />
+        }
+        else
+        {
+            <div>Fallout 3</div>
+            <div>v1.0.0</div>
+            <Progress Percent="56" />
+        }
+    </div>
+</div>
+
+@code {
+    IDownloadQueueItem CurrentQueueItem = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        DownloadService.OnQueueChanged += () =>
+        {
+            CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+
+            StateHasChanged();
+        };
+    }
+}

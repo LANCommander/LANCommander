@@ -7,6 +7,9 @@
 @inject DownloadService DownloadService
 @inject GameService GameService
 @inject ModalService ModalService
+@inject ImportService ImportService
+
+<Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Download" OnClick="() => Import()">Import</Button>
 
 <SplitPane Class="library">
     <Pane Size="25%" Class="library-list">
@@ -77,7 +80,7 @@
 
     async void Import()
     {
-        await LibraryService.ImportAsync();
+        await ImportService.ImportAsync();
     }
 
     async Task Install(LibraryItem item)

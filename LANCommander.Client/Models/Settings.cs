@@ -11,6 +11,7 @@ namespace LANCommander.Client.Models
         public DatabaseSettings Database { get; set; } = new DatabaseSettings();
         public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();
         public GameSettings Games { get; set; } = new GameSettings();
+        public MediaSettings Media { get; set; } = new MediaSettings();
     }
 
     public class DatabaseSettings
@@ -28,5 +29,10 @@ namespace LANCommander.Client.Models
     public class GameSettings
     {
         public string DefaultInstallDirectory { get; set; } = "C:\\Games";
+    }
+
+    public class MediaSettings
+    {
+        public string StoragePath { get; set; } = "Media";
     }
 }

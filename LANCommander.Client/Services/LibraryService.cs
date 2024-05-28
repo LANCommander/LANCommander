@@ -70,6 +70,9 @@ namespace LANCommander.Client.Services
             process.StartInfo.WorkingDirectory = Client.Actions.ExpandVariables(action.WorkingDirectory, game.InstallDirectory);
             process.StartInfo.UseShellExecute = true;
 
+            if (String.IsNullOrWhiteSpace(action.WorkingDirectory))
+                process.StartInfo.WorkingDirectory = game.InstallDirectory;
+
             process.Start();
         }
     }

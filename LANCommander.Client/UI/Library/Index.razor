@@ -91,7 +91,7 @@
     async Task Run(LibraryItem item)
     {
         var game = item.DataItem as Data.Models.Game;
-        var gameInfo = Client.Games.Get(game.Id);
+        var actions = await GameService.GetActionsAsync(game);
 
         var modalOptions = new ModalOptions()
         {
@@ -103,7 +103,7 @@
 
         var model = new ActionSelectorDialogOptions
         {
-            Actions = gameInfo.Actions,
+            Actions = actions,
             LibraryItem = item
         };
 

@@ -21,7 +21,7 @@ namespace LANCommander.SDK
         public IEnumerable<string> Developers { get; set; }
         public IEnumerable<string> Collections { get; set; }
         public string Version { get; set; }
-        public IEnumerable<GameAction> Actions { get; set; }
+        public IEnumerable<Models.Action> Actions { get; set; }
         public bool Singleplayer { get; set; }
         public MultiplayerInfo LocalMultiplayer { get; set; }
         public MultiplayerInfo LanMultiplayer { get; set; }
@@ -34,17 +34,6 @@ namespace LANCommander.SDK
         public IEnumerable<Guid> DependentGames { get; set; }
 
         public GameManifest() { }
-    }
-
-    public class GameAction
-    {
-        public string Name { get; set; }
-        public string Arguments { get; set; }
-        public string Path { get; set; }
-        public string WorkingDirectory { get; set; }
-        public bool IsPrimaryAction { get; set; }
-        public int SortOrder { get; set; }
-        public Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
     }
 
     public class MultiplayerInfo

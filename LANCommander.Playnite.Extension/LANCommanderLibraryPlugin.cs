@@ -211,7 +211,7 @@ namespace LANCommander.PlaynitePlugin
 
             foreach (var manifest in manifests.Where(m => m != null && m.Actions != null))
             {
-                foreach (var action in manifest.Actions.Where(a => a.IsPrimaryAction).OrderBy(a => a.SortOrder))
+                foreach (var action in manifest.Actions.Where(a => a.PrimaryAction).OrderBy(a => a.SortOrder))
                 {
                     AutomaticPlayController automaticPlayController = null;
 

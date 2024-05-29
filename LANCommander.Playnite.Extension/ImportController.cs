@@ -144,7 +144,7 @@ namespace LANCommander.PlaynitePlugin
                 playniteGame.GameActions.Remove(action);
 
             if (playniteGame.IsInstalled || playniteGame.IsInstalling)
-                foreach (var action in game.Actions.OrderBy(a => a.SortOrder).Where(a => !a.PrimaryAction))
+                foreach (var action in game.Actions.OrderBy(a => a.SortOrder).Where(a => !a.IsPrimaryAction))
                 {
                     var actionPath = action.Path?.ExpandEnvironmentVariables(playniteGame.InstallDirectory);
                     var actionWorkingDir = String.IsNullOrWhiteSpace(action.WorkingDirectory) ? playniteGame.InstallDirectory : action.WorkingDirectory.ExpandEnvironmentVariables(playniteGame.InstallDirectory);

@@ -41,6 +41,27 @@
                 else if (SelectedGame.State == LibraryItemState.Installed)
                 {
                     <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.CaretRight" OnClick="() => Run(SelectedGame)">Play</Button>
+
+                    <DropdownButton Icon="@IconType.Outline.Ellipsis">
+                        <Overlay>
+                            <Menu>
+                                @if (SelectedGameActions.Count() > 0)
+                                {
+                                    @foreach (var action in SelectedGameActions)
+                                    {
+                                        <MenuItem OnClick="() => LibraryService.Run(SelectedGame, action)">
+                                            @action.Name
+                                        </MenuItem>
+                                    }
+
+                                    <MenuDivider />
+                                }
+                            </Menu>
+                        </Overlay>
+                        <ChildContent>
+                            More
+                        </ChildContent>
+                    </DropdownButton>
                 }
                 else if (SelectedGame.State == LibraryItemState.Queued)
                 {
@@ -65,6 +86,7 @@
 @code {
     LibraryItem SelectedGame { get; set; }
 
+    IEnumerable<SDK.Models.Action> SelectedGameActions { get; set; }
     IEnumerable<LibraryItem> LibraryItems { get; set; } = new List<LibraryItem>();
 
     protected override async Task OnInitializedAsync()
@@ -75,7 +97,10 @@
     async Task OnLibraryItemSelected(LibraryItem item)
     {
         if (item.DataItem is Data.Models.Game)
+        {
             SelectedGame = item;
+            SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame.DataItem as Data.Models.Game)).Where(a => !a.IsPrimaryAction);
+        }
     }
 
     async void Import()
@@ -86,6 +111,11 @@
     async Task Install(LibraryItem item)
     {
         await DownloadService.Add(item.DataItem as Data.Models.Game);
+    }
+
+    async Task Uninstall(LibraryItem item)
+    {
+        await LibraryService.Uninstall(item);
     }
 
     async Task Run(LibraryItem item)
@@ -103,7 +133,7 @@
 
         var model = new ActionSelectorDialogOptions
         {
-            Actions = actions,
+            Actions = actions.Where(a => a.IsPrimaryAction),
             LibraryItem = item
         };
 

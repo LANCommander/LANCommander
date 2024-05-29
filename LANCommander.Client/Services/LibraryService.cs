@@ -55,6 +55,13 @@ namespace LANCommander.Client.Services
             return items;
         }
 
+        public async Task Uninstall(LibraryItem libraryItem)
+        {
+            var game = libraryItem.DataItem as Game;
+
+            Client.Games.Uninstall(game.InstallDirectory, game.Id);
+        }
+
 
         public async Task Run(LibraryItem libraryItem, SDK.Models.Action action)
         {

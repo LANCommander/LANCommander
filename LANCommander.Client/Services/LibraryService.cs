@@ -17,26 +17,36 @@ namespace LANCommander.Client.Services
     public class LibraryService : BaseService
     {
         private readonly SDK.Client Client;
+        private readonly DownloadService DownloadService;
         private readonly CollectionService CollectionService;
+        private readonly GameService GameService;
         private readonly RedistributableService RedistributableService;
 
         private ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
+        public delegate void OnLibraryChangedHandler();
+        public event OnLibraryChangedHandler OnLibraryChanged;
+
         public LibraryService(
             SDK.Client client,
+            DownloadService downloadService,
             CollectionService collectionService,
-            CompanyService companyService,
-            EngineService engineService,
             GameService gameService,
-            GenreService genreService,
-            MultiplayerModeService multiplayerModeService,
-            RedistributableService redistributableService,
-            TagService tagService) : base()
+            RedistributableService redistributableService) : base()
         {
             Client = client;
+            DownloadService = downloadService;
             CollectionService = collectionService;
+            GameService = gameService;
             RedistributableService = redistributableService;
+
+            DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
+        }
+
+        private void DownloadService_OnInstallComplete()
+        {
+            OnLibraryChanged?.Invoke();
         }
 
         public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
@@ -55,13 +65,27 @@ namespace LANCommander.Client.Services
             return items;
         }
 
+        public async Task Install(LibraryItem libraryItem)
+        {
+            var game = libraryItem.DataItem as Game;
+
+            await DownloadService.Add(game);
+        }
+
         public async Task Uninstall(LibraryItem libraryItem)
         {
             var game = libraryItem.DataItem as Game;
 
-            Client.Games.Uninstall(game.InstallDirectory, game.Id);
-        }
+            await Task.Run(() => Client.Games.Uninstall(game.InstallDirectory, game.Id));
 
+            game.InstallDirectory = null;
+            game.Installed = false;
+            game.InstalledVersion = null;
+
+            await GameService.Update(game);
+
+            OnLibraryChanged?.Invoke();
+        }
 
         public async Task Run(LibraryItem libraryItem, SDK.Models.Action action)
         {

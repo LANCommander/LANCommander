@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using LANCommander.Client.Models
 @using System.Diagnostics
+@using LANCommander.SDK.Helpers
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
 @inject LibraryService LibraryService
@@ -55,6 +56,10 @@
                                     }
 
                                     <MenuDivider />
+
+                                    <MenuItem OnClick="() => Uninstall(SelectedGame)">
+                                        Uninstall
+                                    </MenuItem>
                                 }
                             </Menu>
                         </Overlay>
@@ -91,7 +96,23 @@
 
     protected override async Task OnInitializedAsync()
     {
+        LibraryService.OnLibraryChanged += LoadData;
+
+        LoadData();
+    }
+
+    async void LoadData()
+    {
         LibraryItems = await LibraryService.GetLibraryItemsAsync();
+
+        if (SelectedGame != null)
+        {
+            var selectedGame = LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == SelectedGame.Key);
+
+            await OnLibraryItemSelected(selectedGame);
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task OnLibraryItemSelected(LibraryItem item)
@@ -99,7 +120,9 @@
         if (item.DataItem is Data.Models.Game)
         {
             SelectedGame = item;
-            SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame.DataItem as Data.Models.Game)).Where(a => !a.IsPrimaryAction);
+
+            if (SelectedGame.State == LibraryItemState.Installed)
+                SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame.DataItem as Data.Models.Game)).Where(a => !a.IsPrimaryAction);
         }
     }
 
@@ -110,12 +133,33 @@
 
     async Task Install(LibraryItem item)
     {
-        await DownloadService.Add(item.DataItem as Data.Models.Game);
+        await LibraryService.Install(item);
     }
 
     async Task Uninstall(LibraryItem item)
     {
-        await LibraryService.Uninstall(item);
+        var game = item.DataItem as Data.Models.Game;
+        var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+
+        var message = $"Would you like to uninstall {game.Title}?";
+
+        if (manifest.SavePaths != null && manifest.SavePaths.Any())
+            message += " Your save files have been uploaded to the server.";
+        else
+            message += " Your save files may be unrecoverable if they are contained within the game's install directory.";
+
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
+        {
+            OkText = "Uninstall",
+            CancelText = "Cancel",
+            Title = "Uninstall",
+            Content = message,
+            OkType = "danger",
+            Icon = @<Icon Type="@IconType.Outline.Delete" />
+        });
+
+        if (confirmed)
+            await LibraryService.Uninstall(item);
     }
 
     async Task Run(LibraryItem item)

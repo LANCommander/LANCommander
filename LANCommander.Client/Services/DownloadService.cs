@@ -24,6 +24,9 @@ namespace LANCommander.Client.Services
         public delegate void OnQueueChangedHandler();
         public event OnQueueChangedHandler OnQueueChanged;
 
+        public delegate void OnInstallCompleteHandler();
+        public event OnInstallCompleteHandler OnInstallComplete;
+
         public DownloadService(SDK.Client client, GameService gameService) : base()
         {
             Client = client;
@@ -141,6 +144,8 @@ namespace LANCommander.Client.Services
                 game.InstallDirectory = installDirectory;
 
                 await GameService.Update(game);
+
+                OnInstallComplete?.Invoke();
             }
         }
     }

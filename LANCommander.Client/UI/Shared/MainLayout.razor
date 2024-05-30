@@ -2,20 +2,13 @@
 @inherits LayoutComponentBase
 
 <Layout>
-    <Header>
-        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal" Class="ant-menu-left">
-            <MenuItem RouterLink="/Library">Library</MenuItem>
-            <MenuItem RouterLink="/Downloads">Downloads</MenuItem>
-            <MenuItem RouterLink="/Authenticate">Auth</MenuItem>
-        </Menu>
-
-        <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Horizontal" Class="ant-menu-left">
-        </Menu>
-    </Header>
-
     <Content>
         @Body
     </Content>
 </Layout>
+
+<DownloadQueue />
+
+<LANCommander.Client.UI.Components.Footer />
 
 <AntContainer />

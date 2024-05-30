@@ -91,10 +91,13 @@ h1:focus {
     left: 0;
     right: 0;
     bottom: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .ant-layout {
-    height: 100%;
+    flex-grow: 1;
+    overflow: hidden;
 }
 
 .split-pane {

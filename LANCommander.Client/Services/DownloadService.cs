@@ -47,6 +47,19 @@ namespace LANCommander.Client.Services
             {
                 OnQueueChanged?.Invoke();
             };
+
+            // Client.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
+            // Client.Games.OnArchiveEntryExtractionProgress += Games_OnArchiveEntryExtractionProgress;
+        }
+
+        private void Games_OnArchiveExtractionProgress(long position, long length, SDK.Models.Game game)
+        {
+            OnQueueChanged?.Invoke();
+        }
+
+        private void Games_OnArchiveEntryExtractionProgress(object sender, SDK.ArchiveEntryExtractionProgressArgs e)
+        {
+            OnQueueChanged?.Invoke();
         }
 
         public async Task Add(Game game)

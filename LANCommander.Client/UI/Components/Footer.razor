@@ -1,7 +1,8 @@
 ﻿@using LANCommander.Client.Models
 @inject DownloadService DownloadService
+@inject SDK.Client Client
 
-<div class="footer">
+<footer>
     <div class="downloader">
         @if (CurrentQueueItem != null)
         {
@@ -16,18 +17,33 @@
             <Progress Percent="56" />
         }
     </div>
-</div>
+</footer>
 
 @code {
     IDownloadQueueItem CurrentQueueItem = null;
 
     protected override async Task OnInitializedAsync()
     {
+        Client.Games.OnArchiveExtractionProgress += (long position, long length, SDK.Models.Game game) =>
+        {
+            CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+
+            CurrentQueueItem.BytesDownloaded = position;
+            CurrentQueueItem.TotalBytes = length;
+
+            InvokeAsync(StateHasChanged);
+        };
+
+        Client.Games.OnArchiveEntryExtractionProgress += (object sender, SDK.ArchiveEntryExtractionProgressArgs e) =>
+        {
+            InvokeAsync(StateHasChanged);
+        };
+
         DownloadService.OnQueueChanged += () =>
         {
             CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
 
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         };
     }
 }

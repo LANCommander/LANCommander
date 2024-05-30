@@ -35,7 +35,13 @@ namespace LANCommander.Client.Models
         }
         public DownloadStatus Status { get; set; }
         public SDK.Models.Game Game { get; set; }
-        public float Progress { get; set; }
+        public float Progress {
+            get
+            {
+                return BytesDownloaded / (float)TotalBytes;
+            }
+            set { }
+        }
         public long TransferSpeed { get; set; }
         public long BytesDownloaded { get; set; }
         public long TotalBytes { get; set; }

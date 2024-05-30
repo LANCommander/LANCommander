@@ -284,7 +284,7 @@ namespace LANCommander.Services
 
                 await Task.Run(() =>
                 {
-                    foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+                    foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
                     {
                         try
                         {

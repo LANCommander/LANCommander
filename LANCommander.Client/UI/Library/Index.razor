@@ -167,20 +167,27 @@
         var game = item.DataItem as Data.Models.Game;
         var actions = await GameService.GetActionsAsync(game);
 
-        var modalOptions = new ModalOptions()
-        {
-            Title = item.Name,
-            Maximizable = false,
-            DefaultMaximized = false,
-            Closable = true,
-        };
+        var primaryActions = actions.Where(a => a.IsPrimaryAction);
 
-        var model = new ActionSelectorDialogOptions
+        if (primaryActions.Count() == 1)
+            LibraryService.Run(item, primaryActions.First());
+        else
         {
-            Actions = actions.Where(a => a.IsPrimaryAction),
-            LibraryItem = item
-        };
+            var modalOptions = new ModalOptions()
+            {
+                Title = item.Name,
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+            };
 
-        var modalRef = ModalService.CreateModal<ActionSelectorDialog, ActionSelectorDialogOptions, Process>(modalOptions, model);
+            var model = new ActionSelectorDialogOptions
+            {
+                Actions = actions.Where(a => a.IsPrimaryAction),
+                LibraryItem = item
+            };
+
+            var modalRef = ModalService.CreateModal<ActionSelectorDialog, ActionSelectorDialogOptions, Process>(modalOptions, model);
+        }
     }
 }

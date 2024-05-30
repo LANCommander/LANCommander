@@ -12,6 +12,7 @@ namespace LANCommander.Client.Models
         public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();
         public GameSettings Games { get; set; } = new GameSettings();
         public MediaSettings Media { get; set; } = new MediaSettings();
+        public ProfileSettings Profile { get; set; } = new ProfileSettings();
     }
 
     public class DatabaseSettings
@@ -34,5 +35,10 @@ namespace LANCommander.Client.Models
     public class MediaSettings
     {
         public string StoragePath { get; set; } = "Media";
+    }
+
+    public class ProfileSettings
+    {
+        public string DisplayName { get; set; }
     }
 }

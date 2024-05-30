@@ -72,6 +72,7 @@ namespace LANCommander.Client
             builder.Services.AddScoped<TagService>();
             builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<RedistributableService>();
+            builder.Services.AddScoped<SaveService>();
             builder.Services.AddScoped<ImportService>();
             builder.Services.AddScoped<LibraryService>();
             builder.Services.AddScoped<DownloadService>();

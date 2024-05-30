@@ -2,6 +2,9 @@
 using LANCommander.Client.Enums;
 using LANCommander.Client.Models;
 using LANCommander.SDK.Exceptions;
+using LANCommander.SDK.Helpers;
+using LANCommander.SDK.PowerShell;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,6 +19,9 @@ namespace LANCommander.Client.Services
     {
         private readonly SDK.Client Client;
         private readonly GameService GameService;
+        private readonly SaveService SaveService;
+
+        private Settings Settings;
 
         private Stopwatch Stopwatch { get; set; }
 
@@ -27,11 +33,13 @@ namespace LANCommander.Client.Services
         public delegate void OnInstallCompleteHandler();
         public event OnInstallCompleteHandler OnInstallComplete;
 
-        public DownloadService(SDK.Client client, GameService gameService) : base()
+        public DownloadService(SDK.Client client, GameService gameService, SaveService saveService) : base()
         {
             Client = client;
             GameService = gameService;
+            SaveService = saveService;
             Stopwatch = new Stopwatch();
+            Settings = SettingService.GetSettings();
 
             Queue = new ObservableCollection<IDownloadQueueItem>();
 
@@ -94,6 +102,7 @@ namespace LANCommander.Client.Services
             if (currentItem == null)
                 return;
 
+            var game = await GameService.Get(currentItem.Id);
             var gameInfo = await Client.Games.GetAsync(currentItem.Id);
 
             if (gameInfo == null)
@@ -108,6 +117,10 @@ namespace LANCommander.Client.Services
             try
             {
                 installDirectory = await Task.Run(() => Client.Games.Install(gameInfo.Id));
+
+                game.InstallDirectory = installDirectory;
+                game.Installed = true;
+                game.InstalledVersion = currentItem.Version;
             }
             catch (InstallCanceledException ex)
             {
@@ -130,23 +143,182 @@ namespace LANCommander.Client.Services
 
             currentItem.Progress = 1;
             currentItem.BytesDownloaded = currentItem.TotalBytes;
-            currentItem.CompletedOn = DateTime.Now;
-            currentItem.Status = DownloadStatus.Complete;
 
             OnQueueChanged?.Invoke();
 
+            #region Install Redistributables
+            if (gameInfo.Redistributables != null && gameInfo.Redistributables.Any())
+            {
+                currentItem.Status = DownloadStatus.InstallingRedistributables;
+                OnQueueChanged?.Invoke();
+
+                await Task.Run(() => Client.Redistributables.Install(gameInfo));
+            }
+            #endregion
+
+            #region Download Latest Save
+            // Logger?.Trace("Attempting to download the latest save");
+            currentItem.Status = DownloadStatus.DownloadingSaves;
+            OnQueueChanged?.Invoke();
+
+            await SaveService.DownloadLatest(game);
+            #endregion
+
+            #region Run Scripts
+            if (gameInfo.Scripts != null && gameInfo.Scripts.Any())
+            {
+                currentItem.Status = DownloadStatus.RunningScripts;
+                OnQueueChanged?.Invoke();
+
+                try
+                {
+                    RunInstallScript(gameInfo);
+                    RunKeyChangeScript(gameInfo);
+                    RunNameChangeScript(gameInfo);
+                }
+                catch (Exception ex) {
+                    // Logger?.Error
+                }
+            }
+            #endregion
+
+            #region Install Expansions/Mods
+            foreach (var dependentGame in gameInfo.DependentGames.Where(g => g.Type == SDK.Enums.GameType.Expansion || g.Type == SDK.Enums.GameType.Mod))
+            {
+                if (dependentGame.Type == SDK.Enums.GameType.Expansion)
+                    currentItem.Status = DownloadStatus.InstallingExpansions;
+                else if (dependentGame.Type == SDK.Enums.GameType.Mod)
+                    currentItem.Status = DownloadStatus.InstallingMods;
+
+                OnQueueChanged?.Invoke();
+
+                try
+                {
+                    await Task.Run(() => Client.Games.Install(dependentGame.Id));
+                }
+                catch (InstallCanceledException ex)
+                {
+
+                }
+
+                try
+                {
+                    if (dependentGame.BaseGame == null)
+                        dependentGame.BaseGame = gameInfo;
+
+                    RunInstallScript(dependentGame);
+                    RunNameChangeScript(dependentGame);
+                    RunKeyChangeScript(dependentGame);
+                }
+                catch (Exception ex)
+                {
+                    // Logger?.Error(ex, "Scripts failed to run for mod/expansion");
+                }
+            }
+            #endregion
+
             if (currentItem is DownloadQueueGame)
             {
-                var game = await GameService.Get(currentItem.Id);
+                currentItem.CompletedOn = DateTime.Now;
+                currentItem.Status = DownloadStatus.Complete;
+                currentItem.Progress = 1;
+                currentItem.BytesDownloaded = currentItem.TotalBytes;
 
-                game.Installed = true;
-                game.InstalledVersion = currentItem.Version;
-                game.InstallDirectory = installDirectory;
+                OnQueueChanged?.Invoke();
 
                 await GameService.Update(game);
 
                 OnInstallComplete?.Invoke();
             }
+
+            Install();
+        }
+
+        private int RunInstallScript(SDK.Models.Game game)
+        {
+            var installDirectory = Client.Games.GetInstallDirectory(game);
+            var manifest = ManifestHelper.Read(installDirectory, game.Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.Install);
+
+            if (File.Exists(path))
+            {
+                // Logger?.Trace("Running install script");
+
+                var script = new PowerShellScript();
+
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", Settings.Games.DefaultInstallDirectory);
+                script.AddVariable("ServerAddress", Settings.Authentication.ServerAddress);
+
+                script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.Install));
+
+                return script.Execute();
+            }
+
+            return 0;
+        }
+
+        private int RunNameChangeScript(SDK.Models.Game game)
+        {
+            var installDirectory = Client.Games.GetInstallDirectory(game);
+            var manifest = ManifestHelper.Read(installDirectory, game.Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.NameChange);
+
+            var oldName = SDK.GameService.GetPlayerAlias(installDirectory, game.Id);
+            var newName = Settings.Profile.DisplayName;
+
+            if (File.Exists(path))
+            {
+                // Logger?.Trace("Running name change script");
+
+                var script = new PowerShellScript();
+
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", Settings.Games.DefaultInstallDirectory);
+                script.AddVariable("ServerAddress", Settings.Authentication.ServerAddress);
+                script.AddVariable("OldPlayerAlias", oldName);
+                script.AddVariable("NewPlayerAlias", newName);
+
+                script.UseFile(path);
+
+                SDK.GameService.UpdatePlayerAlias(installDirectory, game.Id, newName);
+
+                return script.Execute();
+            }
+
+            return 0;
+        }
+
+        private int RunKeyChangeScript(SDK.Models.Game game)
+        {
+            var installDirectory = Client.Games.GetInstallDirectory(game);
+            var manifest = ManifestHelper.Read(installDirectory, game.Id);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.KeyChange);
+
+            if (File.Exists(path))
+            {
+                // Logger?.Trace("Running key change script");
+
+                var script = new PowerShellScript();
+
+                var key = Client.Games.GetAllocatedKey(manifest.Id);
+
+                script.AddVariable("InstallDirectory", installDirectory);
+                script.AddVariable("GameManifest", manifest);
+                script.AddVariable("DefaultInstallDirectory", Settings.Games.DefaultInstallDirectory);
+                script.AddVariable("ServerAddress", Settings.Authentication.ServerAddress);
+                script.AddVariable("AllocatedKey", key);
+
+                script.UseFile(path);
+
+                SDK.GameService.UpdateCurrentKey(installDirectory, game.Id, key);
+
+                return script.Execute();
+            }
+
+            return 0;
         }
     }
 }

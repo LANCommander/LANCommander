@@ -1,4 +1,5 @@
 ﻿@using LANCommander.Client.Models
+@using System.Diagnostics
 @inject DownloadService DownloadService
 @inject SDK.Client Client
 
@@ -32,22 +33,36 @@
 
     bool DownloadQueueVisible = false;
 
+    Stopwatch Stopwatch = new Stopwatch();
+
     protected override async Task OnInitializedAsync()
     {
         Client.Games.OnArchiveExtractionProgress += (long position, long length, SDK.Models.Game game) =>
         {
-            CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+            if (!Stopwatch.IsRunning)
+                Stopwatch.Start();
 
-            CurrentQueueItem.BytesDownloaded = position;
-            CurrentQueueItem.TotalBytes = length;
+            if (Stopwatch.ElapsedMilliseconds > 500)
+            {
+                CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
 
-            InvokeAsync(StateHasChanged);
+                CurrentQueueItem.BytesDownloaded = position;
+                CurrentQueueItem.TotalBytes = length;
+
+                InvokeAsync(StateHasChanged);
+
+                Stopwatch.Reset();
+            }
         };
 
         Client.Games.OnArchiveEntryExtractionProgress += (object sender, SDK.ArchiveEntryExtractionProgressArgs e) =>
         {
+            // InvokeAsync(StateHasChanged);
+        };
 
-            InvokeAsync(StateHasChanged);
+        DownloadService.OnInstallComplete += () =>
+        {
+            Stopwatch.Stop();
         };
 
         DownloadService.OnQueueChanged += () =>

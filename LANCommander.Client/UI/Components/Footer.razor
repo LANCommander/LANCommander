@@ -3,24 +3,34 @@
 @inject SDK.Client Client
 
 <footer>
-    <div class="downloader">
-        @if (CurrentQueueItem != null)
-        {
-            <div>@CurrentQueueItem.Title</div>
-            <div>@CurrentQueueItem.Version</div>
-            <Progress Percent="(CurrentQueueItem.Progress * 100)" />
-        }
-        else
-        {
-            <div>Fallout 3</div>
-            <div>v1.0.0</div>
-            <Progress Percent="56" />
-        }
-    </div>
+    <Space Direction="DirectionVHType.Horizontal" Style="width: 100%">
+        <SpaceItem Class="downloader" Style="flex-grow: 1">
+            @if (CurrentQueueItem != null)
+            {
+                <div>@CurrentQueueItem.Title</div>
+                <div>@CurrentQueueItem.Version</div>
+                <Progress Percent="(CurrentQueueItem.Progress * 100)" />
+            }
+            else
+            {
+                <div>Fallout 3</div>
+                <div>v1.0.0</div>
+                <Progress Percent="56" />
+            }
+        </SpaceItem>
+
+        <SpaceItem>
+            <Button Type="@ButtonType.Primary" OnClick="() => ShowDownloadQueue()">^</Button>
+        </SpaceItem>
+    </Space>
 </footer>
+
+<DownloadQueue @bind-Visible="@DownloadQueueVisible" />
 
 @code {
     IDownloadQueueItem CurrentQueueItem = null;
+
+    bool DownloadQueueVisible = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,6 +46,7 @@
 
         Client.Games.OnArchiveEntryExtractionProgress += (object sender, SDK.ArchiveEntryExtractionProgressArgs e) =>
         {
+
             InvokeAsync(StateHasChanged);
         };
 
@@ -45,5 +56,10 @@
 
             InvokeAsync(StateHasChanged);
         };
+    }
+
+    async Task ShowDownloadQueue()
+    {
+        DownloadQueueVisible = true;
     }
 }

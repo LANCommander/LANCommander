@@ -1,6 +1,6 @@
 ﻿@inject DownloadService DownloadService
 
-<Drawer Placement="bottom" Class="download-queue">
+<Drawer Placement="bottom" Class="download-queue" @bind-Visible="@Visible">
     <h2>In Progress</h2>
     @foreach (var queueItem in DownloadService.Queue.Where(qi => qi.State))
     {
@@ -45,6 +45,9 @@
 </Drawer>
 
 @code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         DownloadService.OnQueueChanged += () =>

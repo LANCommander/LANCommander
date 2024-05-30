@@ -59,6 +59,7 @@
         <PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="8.0.40" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.40" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+        <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.2" />
         <PackageReference Include="NLog" Version="5.3.2" />
         <PackageReference Include="NLog.Extensions.Logging" Version="5.3.11" />
     </ItemGroup>

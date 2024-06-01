@@ -34,6 +34,15 @@
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
 
+	<Target Name="CompileGlobalSass" BeforeTargets="Compile">
+		<Message Text="Compiling global SCSS files" Importance="high" />
+		<Exec Command="npm run sass -- Styles:wwwroot/css" />
+	</Target>
+
+	<ItemGroup>
+		<ComponentScssFiles Include="**/*/*.scss" Exclude="node_modules/**;wwwroot/**;Styles/**" />
+	</ItemGroup>
+
     <ItemGroup>
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />

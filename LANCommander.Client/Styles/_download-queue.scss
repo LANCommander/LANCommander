@@ -1,0 +1,19 @@
+.download-queue {
+    z-index: inherit !important;
+    top: 100%;
+    transition: .3s all;
+
+    &.ant-drawer-open {
+        top: 0;
+    }
+
+    .ant-drawer-mask {
+        position: fixed;
+    }
+
+    .ant-drawer-content-wrapper {
+        height: calc(100% - 128px) !important;
+        z-index: 9999 !important;
+        transform: none !important;
+    }
+}

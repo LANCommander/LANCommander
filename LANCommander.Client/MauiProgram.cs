@@ -84,6 +84,20 @@ namespace LANCommander.Client
 
             var app = builder.Build();
 
+            string[] requiredDirectories = new string[]
+            {
+                "Backups",
+                "Media"
+            };
+
+            foreach (var directory in requiredDirectories)
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directory);
+
+                if (!Directory.Exists(path))
+                    Directory.CreateDirectory(path);
+            }
+
             using var scope = app.Services.CreateScope();
 
             using var db = scope.ServiceProvider.GetService<DatabaseContext>();
@@ -93,9 +107,6 @@ namespace LANCommander.Client
                 var backupPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
                 var dataSource = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
                 var backupName = Path.Combine(backupPath, $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
-
-                if (!Directory.Exists(backupPath))
-                    Directory.CreateDirectory(backupPath);
 
                 if (File.Exists(dataSource))
                 {

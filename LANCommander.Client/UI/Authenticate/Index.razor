@@ -1,9 +1,27 @@
 ﻿@page "/Authenticate"
+@using BeaconLib
 @inject SDK.Client Client
+@inject NavigationManager NavigationManager
 
 <Form Model="@Model" Loading="@Loading" OnFinish="OnFinish">
     <FormItem>
         <Input @bind-Value="@context.ServerAddress" />
+
+        <Card Title="Discovered Servers">
+            <Extra>
+                @if (BeaconActive)
+                {
+                    <Icon Type="loading" Theme="outline" />
+                }
+            </Extra>
+            <Body>
+                <AntList Bordered DataSource="DiscoveredServers" Context="server" Size="small">
+                    <ListItem OnClick="() => Model.ServerAddress = server">
+                        <Text>@server</Text>
+                    </ListItem>
+                </AntList>
+            </Body>
+        </Card>
     </FormItem>
     <FormItem>
         <Input @bind-Value="@context.Username" />
@@ -28,6 +46,49 @@
 
     AuthenticationRequest Model = new AuthenticationRequest();
     bool Loading { get; set; } = false;
+    List<string> DiscoveredServers = new List<string>();
+
+    bool BeaconActive = true;
+    Probe Probe = new Probe("LANCommander");
+
+    protected override async Task OnInitializedAsync()
+    {
+        Probe.BeaconsUpdated += (beacons) =>
+        {
+            foreach (var beacon in beacons)
+            {
+                if (!String.IsNullOrWhiteSpace(beacon.Data) && Uri.TryCreate(beacon.Data, UriKind.Absolute, out var beaconUri))
+                {
+                    if (!DiscoveredServers.Contains(beaconUri.ToString()))
+                        DiscoveredServers.Add(beaconUri.ToString());
+                    else
+                    {
+                        var address = $"http://{beacon.Address.Address}:{beacon.Address.Port}";
+
+                        if (!DiscoveredServers.Contains(address))
+                            DiscoveredServers.Add(address);
+                    }
+                }
+            }
+        };
+
+        ActivateBeacon();
+    }
+
+    async Task ActivateBeacon()
+    {
+        BeaconActive = true;
+
+        Probe.Start();
+
+        await Task.Delay(10000);
+
+        Probe.Stop();
+
+        BeaconActive = false;
+
+        await InvokeAsync(StateHasChanged);
+    }
 
     async Task OnFinish(EditContext editContext)
     {
@@ -42,5 +103,7 @@
         settings.Authentication.RefreshToken = token.RefreshToken;
 
         SettingService.SaveSettings(settings);
+
+        NavigationManager.NavigateTo("/");
     }
 }

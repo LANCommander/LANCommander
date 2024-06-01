@@ -62,6 +62,7 @@
         <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.2" />
         <PackageReference Include="NLog" Version="5.3.2" />
         <PackageReference Include="NLog.Extensions.Logging" Version="5.3.11" />
+        <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
     </ItemGroup>
 
     <ItemGroup>

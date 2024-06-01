@@ -238,6 +238,14 @@ namespace LANCommander.Client.Services
                     }
                     #endregion
 
+                    if (localGame.Id == Guid.Empty)
+                    {
+                        localGame.Id = remoteGame.Id;
+                        localGame = await GameService.Add(localGame);
+                    }
+                    else
+                        localGame = await GameService.Update(localGame);
+
                     #region Download Media
                     var medias = await ImportFromModel<Media, SDK.Models.Media, MediaService>(remoteGame.Media, MediaService, (media, importMedia) =>
                     {
@@ -270,14 +278,6 @@ namespace LANCommander.Client.Services
                         }
                     }
                     #endregion
-
-                    if (localGame.Id == Guid.Empty)
-                    {
-                        localGame.Id = remoteGame.Id;
-                        localGame = await GameService.Add(localGame);
-                    }
-                    else
-                        localGame = await GameService.Update(localGame);
                 }
                 catch (Exception ex)
                 {

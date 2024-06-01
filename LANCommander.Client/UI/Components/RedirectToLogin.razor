@@ -1,0 +1,12 @@
+﻿@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        var settings = SettingService.GetSettings();
+        var currentUri = new Uri(NavigationManager.Uri);
+
+        if (String.IsNullOrEmpty(settings.Authentication.AccessToken) && currentUri.LocalPath != "/Authenticate")
+            NavigationManager.NavigateTo("/Authenticate");
+    }
+}

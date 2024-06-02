@@ -37,7 +37,7 @@
                 <h1>@SelectedGame.Title</h1>
                 @if (SelectedGame.Media.Any(m => m.Type == Data.Enums.MediaType.Background))
                 {
-                    <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Background).Id)" />
+                    <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Background).Id)" Class="game-details-background" />
                 }
             </div>
             <div class="game-infobar">

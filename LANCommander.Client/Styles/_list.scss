@@ -1,0 +1,9 @@
+.ant-list-clickable {
+    .ant-list-item {
+        cursor: pointer;
+
+        &:hover {
+            background: #262626
+        }
+    }
+}

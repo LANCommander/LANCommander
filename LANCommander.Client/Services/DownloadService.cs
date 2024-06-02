@@ -28,10 +28,10 @@ namespace LANCommander.Client.Services
 
         public ObservableCollection<IDownloadQueueItem> Queue { get; set; }
 
-        public delegate void OnQueueChangedHandler();
+        public delegate Task OnQueueChangedHandler();
         public event OnQueueChangedHandler OnQueueChanged;
 
-        public delegate void OnInstallCompleteHandler();
+        public delegate Task OnInstallCompleteHandler();
         public event OnInstallCompleteHandler OnInstallComplete;
 
         public DownloadService(SDK.Client client, GameService gameService, SaveService saveService) : base()

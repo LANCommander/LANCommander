@@ -43,7 +43,7 @@ namespace LANCommander.Client.Services
             DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
         }
 
-        private void DownloadService_OnInstallComplete()
+        private async Task DownloadService_OnInstallComplete()
         {
             OnLibraryChanged?.Invoke();
         }
@@ -62,6 +62,14 @@ namespace LANCommander.Client.Services
                 items.Add(new LibraryItem(redistributable));
 
             return items;
+        }
+
+        public async Task<LibraryItem> GetLibraryItemAsync(LibraryItem libraryItem)
+        {
+            // Assume for now it's a game
+            var game = await GameService.Get(libraryItem.Key);
+
+            return new LibraryItem(game);
         }
 
         public async Task Install(LibraryItem libraryItem)

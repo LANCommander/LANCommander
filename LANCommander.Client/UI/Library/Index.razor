@@ -20,7 +20,7 @@
             @foreach (var collection in LibraryItems.Where(i => i != null && i.DataItem is Data.Models.Collection))
             {
                 <Panel Header="@collection.Name" Key="@collection.Key.ToString()">
-                    <AntList DataSource="@collection.Children" TItem="LibraryItem" Size="small">
+                    <AntList DataSource="@collection.Children" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
                         <ListItem OnClick='() => NavigationManager.NavigateTo($"/{context.Key}")'>
                             @context.Name
                         </ListItem>

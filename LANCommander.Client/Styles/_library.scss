@@ -13,3 +13,32 @@
         white-space: nowrap;
     }
 }
+
+.game-hero {
+    position: relative;
+
+    h1 {
+        position: absolute;
+        left: 32px;
+        bottom: 32px;
+        margin-bottom: 0;
+        z-index: 200;
+        font-size: 2rem;
+    }
+
+    img {
+        width: 100%;
+        object-fit: cover;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 128px;
+        background: linear-gradient(0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+        z-index: 100;
+    }
+}

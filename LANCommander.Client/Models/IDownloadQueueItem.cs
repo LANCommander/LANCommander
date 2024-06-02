@@ -15,6 +15,7 @@ namespace LANCommander.Client.Models
         string CoverPath { get; set; }
         DateTime QueuedOn { get; set; }
         DateTime? CompletedOn { get; set; }
+        bool IsUpdate { get; set; }
         bool State { get; }
         DownloadStatus Status { get; set; }
         float Progress { get; set; }

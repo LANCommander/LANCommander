@@ -4,6 +4,7 @@ using LANCommander.Client.Models;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
+using Microsoft.Toolkit.Uwp.Notifications;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -241,10 +242,38 @@ namespace LANCommander.Client.Services
 
                 await GameService.Update(game);
 
+                ShowCompletedNotification(currentItem);
+
                 OnInstallComplete?.Invoke();
             }
 
             Install();
+        }
+
+        private void ShowCompletedNotification(IDownloadQueueItem queueItem)
+        {
+            var builder = new ToastContentBuilder();
+
+            if (queueItem.IsUpdate)
+                builder.AddText("Game Updated")
+                    .AddText($"{queueItem.Title} has finished updating!");
+            else
+                builder.AddText("Game Installed")
+                    .AddText($"{queueItem.Title} has finished installing!");
+
+            builder.AddArgument("gameId", queueItem.Id.ToString())
+                .AddButton(
+                    new ToastButton()
+                        .SetContent("Play")
+                        .AddArgument("action", "play")
+                )
+                .AddButton(
+                    new ToastButton()
+                        .SetContent("View in Library")
+                        .AddArgument("action", "viewInLibrary")
+                )
+                // .AddAppLogoOverride()
+                .Show();
         }
 
         private int RunInstallScript(SDK.Models.Game game)

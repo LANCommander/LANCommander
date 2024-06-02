@@ -1,0 +1,21 @@
+﻿@using LANCommander.Client.Data.Models
+@inject MediaService MediaService
+
+<img src="data:@(Media.MimeType);base64,@Data" />
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Media Media { get; set; }
+    string Data { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Media = await MediaService.Get(Id);
+
+        var path = MediaService.GetImagePath(Media);
+
+        if (File.Exists(path))
+            Data = Convert.ToBase64String(await File.ReadAllBytesAsync(path));
+    }
+}

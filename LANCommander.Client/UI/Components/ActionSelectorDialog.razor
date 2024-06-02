@@ -1,18 +1,19 @@
 ﻿@using System.Diagnostics
+@using LANCommander.Client.Data.Models
 @using LANCommander.Client.Models
 @inherits FeedbackComponent<ActionSelectorDialogOptions, Process>
 @inject LibraryService LibraryService
 
 <AntList DataSource="Options.Actions" TItem="SDK.Models.Action" Size="small">
-    <ListItem OnClick="() => Run(Options.LibraryItem, context)">
+    <ListItem OnClick="() => Run(Options.Game, context)">
         @context.Name
     </ListItem>
 </AntList>
 
 @code {
-    void Run(LibraryItem libraryItem, SDK.Models.Action action)
+    void Run(Game game, SDK.Models.Action action)
     {
-        LibraryService.Run(Options.LibraryItem, action);
+        LibraryService.Run(game, action);
 
         CloseFeedbackAsync();
     }

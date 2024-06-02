@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LANCommander.Client.Data.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,6 @@ namespace LANCommander.Client.Models
     {
         public IEnumerable<SDK.Models.Action> Actions { get; set; }
         public string Title { get; set; }
-        public LibraryItem LibraryItem { get; set; }
+        public Game Game { get; set; }
     }
 }

@@ -22,7 +22,6 @@ namespace LANCommander.Client.Services
         private readonly GameService GameService;
         private readonly RedistributableService RedistributableService;
 
-        private ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
         public delegate void OnLibraryChangedHandler();
@@ -87,10 +86,9 @@ namespace LANCommander.Client.Services
             OnLibraryChanged?.Invoke();
         }
 
-        public async Task Run(LibraryItem libraryItem, SDK.Models.Action action)
+        public async Task Run(Game game, SDK.Models.Action action)
         {
             var process = new Process();
-            var game = libraryItem.DataItem as Game;
 
             Client.Actions.AddVariable("DisplayWidth", ((int)DeviceDisplay.Current.MainDisplayInfo.Width).ToString());
             Client.Actions.AddVariable("DisplayHeight", ((int)DeviceDisplay.Current.MainDisplayInfo.Height).ToString());

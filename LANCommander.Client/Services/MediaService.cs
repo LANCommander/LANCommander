@@ -55,9 +55,7 @@ namespace LANCommander.Client.Services
 
         public static string GetImagePath(Media entity)
         {
-            var settings = SettingService.GetSettings();
-
-            return Path.Combine(settings.Media.StoragePath, entity.FileId.ToString());
+            return Path.Combine(GetStoragePath(), $"{entity.FileId}-{entity.Crc32}");
         }
 
         public void DeleteLocalMediaFile(Media entity)

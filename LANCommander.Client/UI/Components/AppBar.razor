@@ -1,11 +1,16 @@
-﻿@using Microsoft.UI
-@using Microsoft.UI.Windowing
+﻿@inject WindowService WindowService
+
 <Space Direction="@DirectionVHType.Horizontal">
+    <SpaceItem Class="appbar-draggable-titlebar" >
+        <div @onmousedown="() => WindowService.StartDragWindow()" @onmouseup="() => WindowService.StopDragWindow()">
+
+        </div>
+    </SpaceItem>
     <SpaceItem>
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.VerticalAlignBottom" OnClick="MinimizeApp" />
     </SpaceItem>
     <SpaceItem>
-        @if (IsMaximized)
+        @if (WindowService.IsMaximized)
         {
             <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Border" OnClick="ToggleMaximize" />
         }
@@ -20,51 +25,25 @@
 </Space>
 
 @code {
-    bool IsMaximized { get
-        {
-            var window = App.Current.Windows.First();
-
-            if (window.Handler != null)
-            {
-                var p = GetPresenter();
-
-                return p.State == OverlappedPresenterState.Maximized;
-            }
-            else return false;
-        }
+    void DragWindow()
+    {
+        //WindowService.DragWindow();
     }
+
     void MinimizeApp()
     {
-        var p = GetPresenter();
-
-        p.Minimize();
+        WindowService.Minimize();
     }
 
     void ToggleMaximize()
     {
-        var p = GetPresenter();
-
-        if (p.State != OverlappedPresenterState.Maximized)
-            p.Maximize();
-        else
-            p.Restore();
+        WindowService.ToggleMaximize();
 
         StateHasChanged();
     }
 
     void CloseApp()
     {
-        Application.Current.Quit();
-    }
-
-    OverlappedPresenter GetPresenter()
-    {
-        var Window = App.Current.Windows.First();
-        var nativeWindow = Window.Handler.PlatformView;
-        IntPtr windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow);
-        WindowId WindowId = Win32Interop.GetWindowIdFromWindow(windowHandle);
-        AppWindow appWindow = AppWindow.GetFromWindowId(WindowId);
-
-        return appWindow.Presenter as OverlappedPresenter;
+        WindowService.Close();
     }
 }

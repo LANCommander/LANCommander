@@ -1,0 +1,11 @@
+.appbar-draggable-titlebar {
+    flex-grow: 1;
+    height: 32px;
+    display: block;
+
+    & > div {
+        cursor: move;
+        height: 32px;
+        width: 100%;
+    }
+}

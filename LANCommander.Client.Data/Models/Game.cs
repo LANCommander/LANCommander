@@ -44,5 +44,6 @@ namespace LANCommander.Client.Data.Models
         public virtual ICollection<Media>? Media { get; set; } = new List<Media>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
         public virtual ICollection<Game> DependentGames { get; set; } = new List<Game>();
+        public virtual ICollection<PlaySession> PlaySessions { get; set; } = new List<PlaySession>();
     }
 }

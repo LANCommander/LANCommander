@@ -63,6 +63,7 @@ namespace LANCommander.Client
             });
 
             builder.Services.AddSingleton(client);
+            builder.Services.AddSingleton<WindowService>();
             builder.Services.AddScoped<CollectionService>();
             builder.Services.AddScoped<CompanyService>();
             builder.Services.AddScoped<EngineService>();
@@ -71,6 +72,7 @@ namespace LANCommander.Client
             builder.Services.AddScoped<MultiplayerModeService>();
             builder.Services.AddScoped<TagService>();
             builder.Services.AddScoped<MediaService>();
+            builder.Services.AddScoped<PlaySessionService>();
             builder.Services.AddScoped<RedistributableService>();
             builder.Services.AddScoped<SaveService>();
             builder.Services.AddScoped<ImportService>();

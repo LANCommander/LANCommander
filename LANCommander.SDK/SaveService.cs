@@ -56,12 +56,12 @@ namespace LANCommander.SDK
 
         private async Task<string> Download(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return await Client.DownloadRequest($"/api/Saves/Download/{id}", progressHandler, completeHandler);
+            return await Client.DownloadRequestAsync($"/api/Saves/Download/{id}", progressHandler, completeHandler);
         }
 
         public async Task<string> DownloadLatest(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return await Client.DownloadRequest($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
+            return await Client.DownloadRequestAsync($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
         }
 
         public IEnumerable<GameSave> Get(Guid gameId)

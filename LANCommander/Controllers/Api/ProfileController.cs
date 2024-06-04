@@ -57,6 +57,26 @@ namespace LANCommander.Controllers.Api
                 return Unauthorized();
         }
 
+        [HttpGet("Avatar")]
+        public async Task<IActionResult> Avatar()
+        {
+            if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+                var media = user.Media?.FirstOrDefault(u => u.Type == Data.Enums.MediaType.Avatar);
+
+                if (media == null)
+                    return NotFound();
+
+                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+
+                return File(fs, media.MimeType);
+            }
+
+            return NotFound();
+        }
+
         [AllowAnonymous]
         [HttpGet("{userName}/Avatar")]
         public async Task<IActionResult> Avatar(string userName)

@@ -20,6 +20,7 @@ namespace LANCommander.Client.Services
         private readonly DownloadService DownloadService;
         private readonly CollectionService CollectionService;
         private readonly GameService GameService;
+        private readonly PlaySessionService PlaySessionService;
         private readonly RedistributableService RedistributableService;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
@@ -32,12 +33,14 @@ namespace LANCommander.Client.Services
             DownloadService downloadService,
             CollectionService collectionService,
             GameService gameService,
+            PlaySessionService playSessionService,
             RedistributableService redistributableService) : base()
         {
             Client = client;
             DownloadService = downloadService;
             CollectionService = collectionService;
             GameService = gameService;
+            PlaySessionService = playSessionService;
             RedistributableService = redistributableService;
 
             DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
@@ -110,7 +113,15 @@ namespace LANCommander.Client.Services
             if (String.IsNullOrWhiteSpace(action.WorkingDirectory))
                 process.StartInfo.WorkingDirectory = game.InstallDirectory;
 
+            var userId = Guid.NewGuid();
+
+            await PlaySessionService.StartSession(game.Id, userId);
+
             process.Start();
+
+            await process.WaitForExitAsync();
+
+            await PlaySessionService.EndSession(game.Id, userId);
         }
     }
 }

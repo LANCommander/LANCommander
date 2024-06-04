@@ -40,6 +40,13 @@ namespace LANCommander.SDK
             return Client.GetRequest<User>("/api/Profile");
         }
 
+        public async Task<User> GetAsync()
+        {
+            Logger?.LogTrace("Requesting player's profile...");
+
+            return await Client.GetRequestAsync<User>("/api/Profile");
+        }
+
         public string ChangeAlias(string alias)
         {
             Logger?.LogTrace("Requesting to change player alias...");
@@ -50,6 +57,15 @@ namespace LANCommander.SDK
             });
 
             return response;
+        }
+
+        public async Task<string> DownloadAvatar()
+        {
+            Logger?.LogTrace("Retrieving player's avatar...");
+
+            var tempFile = Path.GetTempFileName();
+
+            return await Client.DownloadRequestAsync("/api/Profile/Avatar", tempFile);
         }
 
         public IEnumerable<PlaySession> GetPlaySessions()

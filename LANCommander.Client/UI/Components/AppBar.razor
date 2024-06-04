@@ -1,4 +1,6 @@
-﻿@inject WindowService WindowService
+﻿@using LANCommander.Client.Models
+@inject WindowService WindowService
+@inject ProfileService ProfileService
 
 <Space Direction="@DirectionVHType.Horizontal">
     <SpaceItem Class="appbar-draggable-titlebar" >
@@ -6,6 +8,17 @@
 
         </div>
     </SpaceItem>
+
+    @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
+    {
+        <SpaceItem>
+            <Button Type="@ButtonType.Primary">
+                <img src="data:base64,@(Settings.Profile.Avatar)" />
+                @Settings.Profile.Alias
+            </Button>
+        </SpaceItem>
+    }
+
     <SpaceItem>
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.VerticalAlignBottom" OnClick="MinimizeApp" />
     </SpaceItem>
@@ -25,6 +38,13 @@
 </Space>
 
 @code {
+    Settings Settings = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
     void DragWindow()
     {
         //WindowService.DragWindow();

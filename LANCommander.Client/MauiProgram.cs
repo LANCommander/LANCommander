@@ -72,6 +72,7 @@ namespace LANCommander.Client
             builder.Services.AddScoped<MultiplayerModeService>();
             builder.Services.AddScoped<TagService>();
             builder.Services.AddScoped<MediaService>();
+            builder.Services.AddScoped<ProfileService>();
             builder.Services.AddScoped<PlaySessionService>();
             builder.Services.AddScoped<RedistributableService>();
             builder.Services.AddScoped<SaveService>();

@@ -308,7 +308,7 @@ namespace LANCommander.Client.Services
             var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.NameChange);
 
             var oldName = SDK.GameService.GetPlayerAlias(installDirectory, game.Id);
-            var newName = Settings.Profile.DisplayName;
+            var newName = Settings.Profile.Alias;
 
             if (File.Exists(path))
             {

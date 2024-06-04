@@ -39,6 +39,8 @@ namespace LANCommander.Client.Models
 
     public class ProfileSettings
     {
-        public string DisplayName { get; set; }
+        public Guid Id { get; set; }
+        public string Alias { get; set; }
+        public string Avatar { get; set; }
     }
 }

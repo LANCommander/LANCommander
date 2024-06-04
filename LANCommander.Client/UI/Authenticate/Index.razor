@@ -1,6 +1,6 @@
 ﻿@page "/Authenticate"
 @using BeaconLib
-@inject SDK.Client Client
+@inject ProfileService ProfileService
 @inject NavigationManager NavigationManager
 
 <Form Model="@Model" Loading="@Loading" OnFinish="OnFinish">
@@ -15,7 +15,7 @@
                 }
             </Extra>
             <Body>
-                <AntList Bordered DataSource="DiscoveredServers" Context="server" Size="small">
+                <AntList Bordered DataSource="DiscoveredServers" Context="server" Size="small" Class="ant-list-clickable">
                     <ListItem OnClick="() => Model.ServerAddress = server">
                         <Text>@server</Text>
                     </ListItem>
@@ -92,18 +92,15 @@
 
     async Task OnFinish(EditContext editContext)
     {
-        Client.ChangeServerAddress(Model.ServerAddress);
+        try
+        {
+            await ProfileService.Login(Model.ServerAddress, Model.Username, Model.Password);
 
-        var token = await Client.AuthenticateAsync(Model.Username, Model.Password);
-
-        var settings = SettingService.GetSettings();
-
-        settings.Authentication.ServerAddress = Model.ServerAddress;
-        settings.Authentication.AccessToken = token.AccessToken;
-        settings.Authentication.RefreshToken = token.RefreshToken;
-
-        SettingService.SaveSettings(settings);
-
-        NavigationManager.NavigateTo("/");
+            NavigationManager.NavigateTo("/", true);
+        }
+        catch (Exception ex)
+        {
+            
+        }
     }
 }

@@ -1,3 +1,22 @@
+.appbar-profile-button {
+    padding-left: 32px;
+    position: relative;
+    overflow: hidden;
+
+    span {
+        position: static;
+        padding-left: 15px;
+    }
+
+    img {
+        width: 32px;
+        height: 32px;
+        position: absolute;
+        top: -1px;
+        left: -1px;
+    }
+}
+
 .appbar-draggable-titlebar {
     flex-grow: 1;
     height: 32px;

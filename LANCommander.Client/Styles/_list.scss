@@ -1,3 +1,9 @@
+.ant-card-body > .ant-list {
+    border: none;
+    border-radius: 0;
+    margin: -24px;
+}
+
 .ant-list-clickable {
     .ant-list-item {
         cursor: pointer;

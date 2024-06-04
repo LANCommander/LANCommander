@@ -12,8 +12,6 @@
 @inject ModalService ModalService
 @inject ImportService ImportService
 
-<Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Download" OnClick="() => Import()">Import</Button>
-
 <SplitPane Class="library">
     <Pane Size="25%" Class="library-list">
         <Collapse>
@@ -143,11 +141,6 @@
             if (SelectedItem.State == LibraryItemState.Installed)
                 SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame)).Where(a => !a.IsPrimaryAction);
         }
-    }
-
-    async void Import()
-    {
-        await ImportService.ImportAsync();
     }
 
     async Task Install(LibraryItem item)

@@ -1,21 +1,40 @@
 ﻿@using LANCommander.Client.Models
+@inject ImportService ImportService
 @inject WindowService WindowService
 @inject ProfileService ProfileService
+@inject NavigationManager NavigationManager
 
-<Space Direction="@DirectionVHType.Horizontal">
+<Space Direction="@DirectionVHType.Horizontal" Class="appbar">
     <SpaceItem Class="appbar-draggable-titlebar" >
         <div @onmousedown="() => WindowService.StartDragWindow()" @onmouseup="() => WindowService.StopDragWindow()">
 
         </div>
     </SpaceItem>
 
+    <SpaceItem>
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" />
+    </SpaceItem>
+
     @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
     {
         <SpaceItem>
-            <Button Type="@ButtonType.Primary">
-                <img src="data:base64,@(Settings.Profile.Avatar)" />
-                @Settings.Profile.Alias
-            </Button>
+            <Dropdown>
+                <Overlay>
+                    <Menu>
+                        <MenuItem OnClick="Logout">
+                            Logout
+                        </MenuItem>
+                    </Menu>
+                </Overlay>
+
+                <ChildContent>
+                    <Button Type="@ButtonType.Primary" Class="appbar-profile-button">
+                        <img src="data:image/png;base64,@(Settings.Profile.Avatar)" />
+                        @Settings.Profile.Alias
+                    </Button>
+                </ChildContent>
+            </Dropdown>
+
         </SpaceItem>
     }
 
@@ -65,5 +84,17 @@
     void CloseApp()
     {
         WindowService.Close();
+    }
+
+    async Task Logout()
+    {
+        await ProfileService.Logout();
+
+        NavigationManager.NavigateTo("/Authenticate", true);
+    }
+
+    async void Import()
+    {
+        await ImportService.ImportAsync();
     }
 }

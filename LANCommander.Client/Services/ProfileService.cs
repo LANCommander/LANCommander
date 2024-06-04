@@ -42,9 +42,23 @@ namespace LANCommander.Client.Services
             SettingService.SaveSettings(settings);
         }
 
+        public async Task Logout()
+        {
+            await Client.LogoutAsync();
+
+            var settings = SettingService.GetSettings();
+
+            settings.Profile = new ProfileSettings();
+            settings.Authentication = new AuthenticationSettings();
+
+            SettingService.SaveSettings(settings);
+        }
+
         public bool IsAuthenticated()
         {
-            return true;
+            var settings = SettingService.GetSettings();
+
+            return !String.IsNullOrWhiteSpace(settings.Authentication.AccessToken);
         }
     }
 }

@@ -1,59 +1,28 @@
 ﻿using LANCommander.Client.Data;
 using LANCommander.Client.Services;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Maui.LifecycleEvents;
-#if WINDOWS
-using Microsoft.UI;
-using Microsoft.UI.Windowing;
-using Windows.Graphics;
-#endif
+using Microsoft.Extensions.DependencyInjection;
+using Photino.Blazor;
+using Photino.Blazor.CustomWindow.Extensions;
 
 namespace LANCommander.Client
 {
-    public static class MauiProgram
+    class Program
     {
-        public static MauiApp CreateMauiApp()
+        [STAThread]
+        static void Main(string[] args)
         {
             var settings = SettingService.GetSettings();
+            var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
-            var builder = MauiApp.CreateBuilder();
+            builder.RootComponents.Add<App>("app");
 
+            builder.Services.AddLogging();
+            builder.Services.AddCustomWindow();
+            builder.Services.AddAntDesign();
             builder.Services.AddDbContext<DbContext, DatabaseContext>();
 
-            builder
-                .UseMauiApp<App>()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                });
-
-            builder.ConfigureLifecycleEvents(events =>
-            {
-
-#if WINDOWS
-            events.AddWindows(wndLifeCycleBuilder =>
-            {                
-                wndLifeCycleBuilder.OnWindowCreated(window =>
-                {
-                    IntPtr nativeWindowHandle = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                    WindowId nativeWindowId = Win32Interop.GetWindowIdFromWindow(nativeWindowHandle);
-                    AppWindow appWindow = AppWindow.GetFromWindowId(nativeWindowId);
-                    var p = appWindow.Presenter as OverlappedPresenter;
-
-                    window.ExtendsContentIntoTitleBar = true;
-                    
-                    p.SetBorderAndTitleBar(false, false);
-                });
-            });
-#endif
-            });
-
-
-            builder.Services.AddMauiBlazorWebView();
-            builder.Services.AddAntDesign();
-
+            #region Register Client
             var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);
 
             client.UseToken(new SDK.Models.AuthToken
@@ -63,7 +32,9 @@ namespace LANCommander.Client
             });
 
             builder.Services.AddSingleton(client);
-            builder.Services.AddSingleton<WindowService>();
+            #endregion
+
+            #region Register Services
             builder.Services.AddScoped<CollectionService>();
             builder.Services.AddScoped<CompanyService>();
             builder.Services.AddScoped<EngineService>();
@@ -79,14 +50,22 @@ namespace LANCommander.Client
             builder.Services.AddScoped<ImportService>();
             builder.Services.AddScoped<LibraryService>();
             builder.Services.AddScoped<DownloadService>();
-
-#if DEBUG
-            builder.Services.AddBlazorWebViewDeveloperTools();
-    		builder.Logging.AddDebug();
-#endif
+            #endregion
 
             var app = builder.Build();
 
+            app.MainWindow
+                .SetTitle("LANCommander")
+                .SetUseOsDefaultLocation(true)
+                .SetChromeless(true)
+                .SetResizable(true);
+
+            AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+            {
+                app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
+            };
+
+            #region Scaffold Required Directories
             string[] requiredDirectories = new string[]
             {
                 "Backups",
@@ -100,7 +79,9 @@ namespace LANCommander.Client
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
             }
+            #endregion
 
+            #region Migrate Database
             using var scope = app.Services.CreateScope();
 
             using var db = scope.ServiceProvider.GetService<DatabaseContext>();
@@ -118,8 +99,9 @@ namespace LANCommander.Client
 
                 db.Database.Migrate();
             }
+            #endregion
 
-            return app;
+            app.Run();
         }
     }
 }

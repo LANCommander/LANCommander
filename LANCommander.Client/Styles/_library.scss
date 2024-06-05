@@ -8,6 +8,9 @@
 }
 
 .library-list {
+    position: relative;
+    z-index: 500;
+
     .ant-list-item {
         cursor: pointer;
         white-space: nowrap;

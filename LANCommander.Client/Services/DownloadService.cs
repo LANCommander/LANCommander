@@ -271,9 +271,10 @@ namespace LANCommander.Client.Services
                     new ToastButton()
                         .SetContent("View in Library")
                         .AddArgument("action", "viewInLibrary")
-                )
+                );
+                //.Show
                 // .AddAppLogoOverride()
-                .Show();
+                //.Show();
         }
 
         private int RunInstallScript(SDK.Models.Game game)

@@ -1,0 +1,89 @@
+﻿@using LANCommander.Client.Models
+@using Photino.Blazor.CustomWindow.Components
+@inherits LayoutComponentBase
+@inject ImportService ImportService
+@inject ProfileService ProfileService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+
+<CustomWindow HeaderHeight="32">
+    <HeaderExtraControlsLayout>
+        <Space Direction="@DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
+            </SpaceItem>
+
+            @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
+            {
+                <SpaceItem>
+                    <Dropdown>
+                        <Overlay>
+                            <Menu>
+                                <MenuItem OnClick="Logout">
+                                    Logout
+                                </MenuItem>
+                            </Menu>
+                        </Overlay>
+
+                        <ChildContent>
+                            <Button Type="@ButtonType.Primary" Class="appbar-profile-button">
+                                <img src="data:image/png;base64,@(Settings.Profile.Avatar)" />
+                                @Settings.Profile.Alias
+                            </Button>
+                        </ChildContent>
+                    </Dropdown>
+
+                </SpaceItem>
+            }
+        </Space>
+    </HeaderExtraControlsLayout>
+    <WindowContent>
+        <Layout>
+            <Content>
+                @Body
+            </Content>
+        </Layout>
+
+        <LANCommander.Client.UI.Components.Footer />
+
+        <AntContainer />
+        <RedirectToLogin />
+    </WindowContent>
+</CustomWindow>
+
+@code {
+    Settings Settings = null;
+
+    bool Importing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    async Task Logout()
+    {
+        await ProfileService.Logout();
+
+        NavigationManager.NavigateTo("/Authenticate", true);
+    }
+
+    async void Import()
+    {
+        var config = new MessageConfig()
+        {
+            Content = "Importing...",
+            Duration = 0
+        };
+
+        Importing = true;
+
+        var task = MessageService.Loading(config);
+
+        await ImportService.ImportAsync();
+
+        task.Start();
+
+        Importing = true;
+    }
+}

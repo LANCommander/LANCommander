@@ -1,0 +1,31 @@
+﻿.pb-custom-window {
+    & > * {
+        position: absolute;
+    }
+
+    &-content {
+        top: 0 !important;
+        left: 0 !important;
+        height: 100vh !important;
+        width: 100vw !important;
+        display: flex;
+        flex-direction: column;
+    }
+
+    &-header-drag-area {
+        background: rgba(0, 0, 0, .5) !important;
+        backdrop-filter: blur(3px);
+    }
+
+    &-controls {
+        background: none !important;
+    }
+
+    &-header {
+        display: none;
+    }
+
+    &-resize-thumb {
+        z-index: 9999;
+    }
+}

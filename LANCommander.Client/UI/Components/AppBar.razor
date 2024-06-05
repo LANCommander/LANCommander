@@ -1,13 +1,12 @@
 ﻿@using LANCommander.Client.Models
 @inject ImportService ImportService
-@inject WindowService WindowService
 @inject ProfileService ProfileService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 
 <Space Direction="@DirectionVHType.Horizontal" Class="appbar">
     <SpaceItem Class="appbar-draggable-titlebar" >
-        <div @onmousedown="() => WindowService.StartDragWindow()" @onmouseup="() => WindowService.StopDragWindow()">
+        <div>
 
         </div>
     </SpaceItem>
@@ -43,7 +42,7 @@
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.VerticalAlignBottom" OnClick="MinimizeApp" />
     </SpaceItem>
     <SpaceItem>
-        @if (WindowService.IsMaximized)
+        @if (true)
         {
             <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Border" OnClick="ToggleMaximize" />
         }
@@ -74,19 +73,19 @@
 
     void MinimizeApp()
     {
-        WindowService.Minimize();
+        
     }
 
     void ToggleMaximize()
     {
-        WindowService.ToggleMaximize();
+        
 
         StateHasChanged();
     }
 
     void CloseApp()
     {
-        WindowService.Close();
+        
     }
 
     async Task Logout()

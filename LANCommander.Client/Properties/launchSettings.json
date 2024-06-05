@@ -1,8 +1,7 @@
 {
   "profiles": {
-    "Windows Machine": {
-      "commandName": "MsixPackage",
-      "nativeDebugging": false
+    "HelloPhotinoApp": {
+      "commandName": "Project"
     }
   }
 }

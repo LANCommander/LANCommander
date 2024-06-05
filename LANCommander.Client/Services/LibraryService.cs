@@ -101,9 +101,9 @@ namespace LANCommander.Client.Services
         {
             var process = new Process();
 
-            Client.Actions.AddVariable("DisplayWidth", ((int)DeviceDisplay.Current.MainDisplayInfo.Width).ToString());
-            Client.Actions.AddVariable("DisplayHeight", ((int)DeviceDisplay.Current.MainDisplayInfo.Height).ToString());
-            Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
+            // Client.Actions.AddVariable("DisplayWidth", ((int)DeviceDisplay.Current.MainDisplayInfo.Width).ToString());
+            // Client.Actions.AddVariable("DisplayHeight", ((int)DeviceDisplay.Current.MainDisplayInfo.Height).ToString());
+            // Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
 
             process.StartInfo.Arguments = Client.Actions.ExpandVariables(action.Arguments, game.InstallDirectory, skipSlashes: true);
             process.StartInfo.FileName = Client.Actions.ExpandVariables(action.Path, game.InstallDirectory);

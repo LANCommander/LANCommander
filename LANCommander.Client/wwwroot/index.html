@@ -1,21 +1,20 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>LANCommander.Client</title>
-    <base href="/" />
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LANCommander</title>
+    <link rel="stylesheet" href="_content/Photino.blazor.CustomWindow/css/pb-custom-window.css" />
     <link rel="stylesheet" href="_content/AntDesign/css/ant-design-blazor.dark.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="stylesheet" href="LANCommander.Client.styles.css" />
-    <link rel="icon" type="image/png" href="favicon.png" />
 </head>
-
 <body>
 
     <div class="status-bar-safe-area"></div>
 
-    <div id="app">Loading...</div>
+    <app>Loading...</app>
 
     <div id="blazor-error-ui">
         An unhandled error has occurred.
@@ -24,9 +23,10 @@
     </div>
 
     <script src="_content/AntDesign/js/ant-design-blazor.js"></script>
-    <script src="_framework/blazor.webview.js" autostart="false"></script>
+    <script src="_framework/blazor.webview.js"></script>
+    <script src="_content/Photino.Blazor.CustomWindow/js/js-extensions.js"></script>
+    <script src="_content/Photino.Blazor.CustomWindow/js/pb-custom-window.js"></script>
     <script src="scripts/dist/bundle.js"></script>
 
 </body>
-
 </html>

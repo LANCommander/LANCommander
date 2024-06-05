@@ -4,6 +4,7 @@
 
     .pane {
         overflow-x: scroll;
+        position: relative;
 
         &:hover::-webkit-scrollbar {
             opacity: 1;

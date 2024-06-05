@@ -2,6 +2,7 @@
 @inject ImportService ImportService
 @inject WindowService WindowService
 @inject ProfileService ProfileService
+@inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 
 <Space Direction="@DirectionVHType.Horizontal" Class="appbar">
@@ -12,7 +13,7 @@
     </SpaceItem>
 
     <SpaceItem>
-        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" />
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
     </SpaceItem>
 
     @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
@@ -59,6 +60,8 @@
 @code {
     Settings Settings = null;
 
+    bool Importing = false;
+
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
@@ -95,6 +98,20 @@
 
     async void Import()
     {
+        var config = new MessageConfig()
+        {
+            Content = "Importing...",
+            Duration = 0
+        };
+
+        Importing = true;
+
+        var task = MessageService.Loading(config);
+
         await ImportService.ImportAsync();
+
+        task.Start();
+
+        Importing = true;
     }
 }

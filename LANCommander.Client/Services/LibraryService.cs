@@ -2,6 +2,7 @@
 using LANCommander.Client.Data.Models;
 using LANCommander.Client.Models;
 using Microsoft.EntityFrameworkCore;
+using Photino.NET;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,6 +23,7 @@ namespace LANCommander.Client.Services
         private readonly GameService GameService;
         private readonly PlaySessionService PlaySessionService;
         private readonly RedistributableService RedistributableService;
+        private readonly PhotinoWindow Window;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
@@ -34,6 +36,7 @@ namespace LANCommander.Client.Services
             CollectionService collectionService,
             GameService gameService,
             PlaySessionService playSessionService,
+            PhotinoWindow window,
             RedistributableService redistributableService) : base()
         {
             Client = client;
@@ -41,6 +44,7 @@ namespace LANCommander.Client.Services
             CollectionService = collectionService;
             GameService = gameService;
             PlaySessionService = playSessionService;
+            Window = window;
             RedistributableService = redistributableService;
 
             DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
@@ -101,8 +105,10 @@ namespace LANCommander.Client.Services
         {
             var process = new Process();
 
-            // Client.Actions.AddVariable("DisplayWidth", ((int)DeviceDisplay.Current.MainDisplayInfo.Width).ToString());
-            // Client.Actions.AddVariable("DisplayHeight", ((int)DeviceDisplay.Current.MainDisplayInfo.Height).ToString());
+            var monitor = Window.Monitors.First(m => m.MonitorArea.X == 0 && m.MonitorArea.Y == 0);
+
+            Client.Actions.AddVariable("DisplayWidth", monitor.MonitorArea.Width.ToString());
+            Client.Actions.AddVariable("DisplayHeight", monitor.MonitorArea.Height.ToString());
             // Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
 
             process.StartInfo.Arguments = Client.Actions.ExpandVariables(action.Arguments, game.InstallDirectory, skipSlashes: true);

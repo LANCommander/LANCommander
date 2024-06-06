@@ -5,6 +5,7 @@
 @inject ProfileService ProfileService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject ModalService ModalService
 
 <CustomWindow HeaderHeight="32">
     <HeaderExtraControlsLayout>
@@ -21,6 +22,10 @@
                             <Menu>
                                 <MenuItem OnClick="Logout">
                                     Logout
+                                </MenuItem>
+
+                                <MenuItem OnClick="ChangeAlias">
+                                    Change Name
                                 </MenuItem>
                             </Menu>
                         </Overlay>
@@ -66,6 +71,31 @@
         await ProfileService.Logout();
 
         NavigationManager.NavigateTo("/Authenticate", true);
+    }
+
+    async Task ChangeAlias()
+    {
+        var settings = SettingService.GetSettings();
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Change Name",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Centered = true
+        };
+
+        var modalRef = ModalService.CreateModal<ChangeAliasDialog, string, string>(modalOptions, settings.Profile.Alias);
+
+        modalRef.OnOk = async (newName) =>
+        {
+            await ProfileService.ChangeAlias(newName);
+
+            Settings = SettingService.GetSettings();
+
+            await InvokeAsync(StateHasChanged);
+        };
     }
 
     async void Import()

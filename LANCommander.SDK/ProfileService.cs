@@ -59,6 +59,18 @@ namespace LANCommander.SDK
             return response;
         }
 
+        public async Task<string> ChangeAliasAsync(string alias)
+        {
+            Logger?.LogTrace("Requesting to change player alias...");
+
+            var response = await Client.PostRequestAsync<string>("/api/Profile/ChangeAlias", new
+            {
+                Alias = alias
+            });
+
+            return response;
+        }
+
         public async Task<string> DownloadAvatar()
         {
             Logger?.LogTrace("Retrieving player's avatar...");

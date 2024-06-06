@@ -8,9 +8,24 @@
     .ant-list-item {
         cursor: pointer;
         user-select: none;
+        position: relative;
 
         &:hover {
-            background: #262626
+            background: #262626;
+
+            &::after {
+                background: linear-gradient(270deg, rgba(38,38,38,1) 0%, rgba(38,38,38,0) 100%);
+            }
+        }
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 24px;
+            background: linear-gradient(270deg, rgba(20,20,20,1) 0%, rgba(20,20,20,0) 100%);
         }
     }
 }

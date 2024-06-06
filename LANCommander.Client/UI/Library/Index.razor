@@ -20,7 +20,10 @@
                 <Panel Header="@collection.Name" Key="@collection.Key.ToString()">
                     <AntList DataSource="@collection.Children" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
                         <ListItem OnClick='() => NavigationManager.NavigateTo($"/{context.Key}")'>
-                            @context.Name
+                            <div class="library-list-icon">
+                                <MediaImage Id="@context.IconId" />
+                            </div>
+                            <span>@context.Name</span>
                         </ListItem>
                     </AntList>
                 </Panel>

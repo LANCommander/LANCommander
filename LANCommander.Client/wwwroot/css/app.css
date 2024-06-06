@@ -167,9 +167,22 @@ app {
 .ant-list-clickable .ant-list-item {
   cursor: pointer;
   user-select: none;
+  position: relative;
 }
 .ant-list-clickable .ant-list-item:hover {
   background: #262626;
+}
+.ant-list-clickable .ant-list-item:hover::after {
+  background: linear-gradient(270deg, rgb(38, 38, 38) 0%, rgba(38, 38, 38, 0) 100%);
+}
+.ant-list-clickable .ant-list-item::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  background: linear-gradient(270deg, rgb(20, 20, 20) 0%, rgba(20, 20, 20, 0) 100%);
 }
 
 .library {
@@ -184,7 +197,42 @@ app {
   position: relative;
   z-index: 500;
 }
+.library-list .ant-collapse {
+  border: none;
+}
+.library-list .ant-collapse > .ant-collapse-item > .ant-collapse-header {
+  padding: 5px 12px;
+}
+.library-list .ant-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-arrow {
+  margin: 0;
+  margin-right: 12px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
 .library-list .ant-list-item {
+  cursor: pointer;
+  white-space: nowrap;
+  gap: 12px;
+  padding: 5px 12px;
+  border: none;
+}
+.library-list .ant-list-item .library-list-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.library-list .ant-list-item .library-list-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+}
+.library-list .ant-list-item span {
+  flex-grow: 1;
+}
+.library-list .ant-collapse-header-text {
   cursor: pointer;
   white-space: nowrap;
 }
@@ -216,7 +264,6 @@ app {
 }
 
 .download-queue {
-  z-index: inherit !important;
   top: 100%;
   transition: 0.3s all;
 }

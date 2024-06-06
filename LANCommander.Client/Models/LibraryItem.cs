@@ -26,6 +26,7 @@ namespace LANCommander.Client.Models
     public class LibraryItem
     {
         public Guid Key { get; set; }
+        public Guid IconId { get; set; }
         public LibraryItemType Type { get; set; }
         public LibraryItemState State { get; set; }
         public string Name { get; set; }
@@ -56,6 +57,11 @@ namespace LANCommander.Client.Models
                 State = LibraryItemState.Installed;
             else
                 State = LibraryItemState.NotInstalled;
+
+            var icon = game.Media.FirstOrDefault(m => m.Type == Data.Enums.MediaType.Icon);
+
+            if (icon != null)
+                IconId = icon.Id;
         }
 
         public LibraryItem(Redistributable redistributable)

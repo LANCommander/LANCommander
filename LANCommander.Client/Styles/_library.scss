@@ -11,7 +11,49 @@
     position: relative;
     z-index: 500;
 
+    .ant-collapse {
+        border: none;
+
+        & > .ant-collapse-item > .ant-collapse-header {
+            padding: 5px 12px;
+
+            .ant-collapse-arrow {
+                margin: 0;
+                margin-right: 12px;
+                padding-left: 6px;
+                padding-right: 6px;
+            }
+        }
+    }
+
     .ant-list-item {
+        cursor: pointer;
+        white-space: nowrap;
+        gap: 12px;
+        padding: 5px 12px;
+        border: none;
+
+        .library-list-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+
+            img {
+                width: 24px;
+                height: 24px;
+                object-fit: cover;
+            }
+        }
+
+        span {
+            flex-grow: 1;
+        }
+    }
+
+    .ant-collapse-header-text {
         cursor: pointer;
         white-space: nowrap;
     }

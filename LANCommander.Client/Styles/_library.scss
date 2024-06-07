@@ -13,6 +13,7 @@
     z-index: 500;
     width: 320px;
     margin-top: 74px;
+    flex-shrink: 0;
 
     .ant-collapse {
         border: none;

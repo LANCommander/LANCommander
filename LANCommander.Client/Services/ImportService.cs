@@ -238,6 +238,21 @@ namespace LANCommander.Client.Services
                     }
                     #endregion
 
+                    #region Update Play Sessions
+                    foreach (var session in remoteGame.PlaySessions.Where(rps => !localGame.PlaySessions.Any(lps => lps.Start == rps.Start && lps.End == lps.End)))
+                    {
+                        localGame.PlaySessions.Add(new PlaySession
+                        {
+                            Start = session.Start,
+                            End = session.End,
+                            CreatedOn = session.CreatedOn,
+                            UpdatedOn = session.UpdatedOn,
+                            GameId = session.GameId,
+                            UserId = Settings.Profile.Id
+                        });
+                    }
+                    #endregion
+
                     if (localGame.Id == Guid.Empty)
                     {
                         localGame.Id = remoteGame.Id;

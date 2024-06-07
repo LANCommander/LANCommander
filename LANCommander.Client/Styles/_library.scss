@@ -20,8 +20,30 @@
         overflow-x: hidden;
         height: 100%;
 
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%);
+            z-index: 600;
+        }
+
+        &::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 10px;
+            background: linear-gradient(0deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+            z-index: 600;
+        }
+
         & > .ant-collapse-item > .ant-collapse-header {
-            padding: 5px 12px;
+            padding: 10px 12px;
 
             .ant-collapse-arrow {
                 margin: 0;

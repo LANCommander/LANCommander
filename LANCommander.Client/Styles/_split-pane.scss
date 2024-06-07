@@ -5,30 +5,6 @@
     .pane {
         overflow-x: scroll;
         position: relative;
-
-        &:hover::-webkit-scrollbar {
-            opacity: 1;
-        }
-
-        &::-webkit-scrollbar {
-            width: 6px;
-            opacity: 0;
-            transition: opacity .1s;
-        }
-
-        &::-webkit-scrollbar-track {
-            background-color: transparent;
-            border: none;
-        }
-
-        &::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 0);
-            transition: background-color linear .1s;
-        }
-
-        &:hover::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 1);
-        }
     }
 
     .gutter {

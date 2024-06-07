@@ -12,8 +12,8 @@
 @inject ModalService ModalService
 @inject ImportService ImportService
 
-<SplitPane Class="library">
-    <Pane Size="25%" Class="library-list">
+<div class="library">
+    <div class="library-list">
         <Collapse>
             @foreach (var collection in LibraryItems.Where(i => i != null && i.DataItem is Data.Models.Collection))
             {
@@ -29,9 +29,9 @@
                 </Panel>
             }
         </Collapse>
-    </Pane>
+    </div>
 
-    <Pane Size="75%" Class="game-details">
+    <div class="game-details">
         @if (SelectedGame != null)
         {
             <div class="game-hero">
@@ -96,8 +96,8 @@
                 }
             </div>
         }
-    </Pane>
-</SplitPane>
+    </div>
+</div>
 
 @code {
     [Parameter] public Guid Id { get; set; }

@@ -54,6 +54,17 @@ namespace LANCommander.Client.Services
             SettingService.SaveSettings(settings);
         }
 
+        public async Task ChangeAlias(string newName)
+        {
+            await Client.Profile.ChangeAliasAsync(newName);
+
+            var settings = SettingService.GetSettings();
+
+            settings.Profile.Alias = newName;
+
+            SettingService.SaveSettings(settings);
+        }
+
         public bool IsAuthenticated()
         {
             var settings = SettingService.GetSettings();

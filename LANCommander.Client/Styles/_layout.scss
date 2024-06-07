@@ -14,3 +14,15 @@ app {
     flex-grow: 1;
     overflow: hidden;
 }
+
+.logo {
+    position: fixed;
+    width: 333px;
+    height: 74px;
+    z-index: 1000;
+    pointer-events: none;
+
+    & > img {
+        width: 100%;
+    }
+}

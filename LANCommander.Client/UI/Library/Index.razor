@@ -42,58 +42,68 @@
                 }
             </div>
             <div class="game-infobar">
-                @if (SelectedItem.State == LibraryItemState.NotInstalled)
-                {
-                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
-                }
-                else if (SelectedItem.State == LibraryItemState.Installed)
-                {
-                    <Space Direction="@DirectionVHType.Horizontal">
-                        <SpaceItem>
-                            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run(SelectedGame)">Play</Button>
-                        </SpaceItem>
+                <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                    <SpaceItem>
+                        @if (SelectedItem.State == LibraryItemState.NotInstalled)
+                        {
+                            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                        }
+                        else if (SelectedItem.State == LibraryItemState.Installed)
+                        {
+                            <Space Direction="@DirectionVHType.Horizontal">
+                                <SpaceItem>
+                                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run(SelectedGame)">Play</Button>
+                                </SpaceItem>
 
-                        <SpaceItem>
-                            <Dropdown>
-                                <Overlay>
-                                    <Menu>
-                                        @if (SelectedGameActions.Count() > 0)
-                                        {
-                                            @foreach (var action in SelectedGameActions)
-                                            {
-                                                <MenuItem OnClick="() => LibraryService.Run(SelectedGame, action)">
-                                                    @action.Name
+                                <SpaceItem>
+                                    <Dropdown>
+                                        <Overlay>
+                                            <Menu>
+                                                @if (SelectedGameActions.Count() > 0)
+                                                {
+                                                    @foreach (var action in SelectedGameActions)
+                                                    {
+                                                        <MenuItem OnClick="() => LibraryService.Run(SelectedGame, action)">
+                                                            @action.Name
+                                                        </MenuItem>
+                                                    }
+
+                                                    <MenuDivider />
+                                                }
+
+                                                <MenuItem OnClick="() => Uninstall(SelectedItem)">
+                                                    Uninstall
                                                 </MenuItem>
-                                            }
+                                            </Menu>
+                                        </Overlay>
 
-                                            <MenuDivider />
-                                        }
-
-                                        <MenuItem OnClick="() => Uninstall(SelectedItem)">
-                                            Uninstall
-                                        </MenuItem>
-                                    </Menu>
-                                </Overlay>
-
-                                <ChildContent>
-                                    <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
-                                </ChildContent>
-                            </Dropdown>
-                        </SpaceItem>
-                    </Space>
-                }
-                else if (SelectedItem.State == LibraryItemState.Queued)
-                {
-                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
-                }
-                else if (SelectedItem.State == LibraryItemState.UpdateAvailable)
-                {
-                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
-                }
-                else if (SelectedItem.State == LibraryItemState.Installing)
-                {
-                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
-                }
+                                        <ChildContent>
+                                            <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
+                                        </ChildContent>
+                                    </Dropdown>
+                                </SpaceItem>
+                            </Space>
+                        }
+                        else if (SelectedItem.State == LibraryItemState.Queued)
+                        {
+                            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
+                        }
+                        else if (SelectedItem.State == LibraryItemState.UpdateAvailable)
+                        {
+                            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
+                        }
+                        else if (SelectedItem.State == LibraryItemState.Installing)
+                        {
+                            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
+                        }
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
+                    </SpaceItem>
+                    <SpaceItem>
+                        <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
+                    </SpaceItem>
+                </Space>
             </div>
         }
     </div>
@@ -245,5 +255,25 @@
 
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    string GetPlayTime(Data.Models.Game game)
+    {
+        var totalTime = new TimeSpan(game.PlaySessions
+            .Where(ps => ps.End != null && ps.Start != null)
+            .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
+            .Sum(ts => ts.Ticks));
+
+        return totalTime.TotalHours.ToString("0.##") + " hours";
+    }
+
+    string GetLastPlayed(Data.Models.Game game)
+    {
+        var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
+
+        if (lastSession != null)
+            return lastSession.End.Value.ToString("MMMM d");
+        else
+            return "Never";
     }
 }

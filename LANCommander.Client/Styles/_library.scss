@@ -122,4 +122,16 @@
 .game-infobar {
     padding-left: 16px;
     padding-right: 16px;
+
+    .ant-statistic {
+        line-height: 1.2;
+
+        &-title {
+            margin-bottom: 4px;
+        }
+
+        &-content {
+            font-size: 16px;
+        }
+    }
 }

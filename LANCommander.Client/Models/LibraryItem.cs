@@ -1,4 +1,5 @@
 ﻿using LANCommander.Client.Data.Models;
+using LANCommander.Client.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -40,7 +41,7 @@ namespace LANCommander.Client.Models
             Type = LibraryItemType.Game;
             Name = collection.Name;
             DataItem = collection;
-            Children = new ObservableCollection<LibraryItem>(collection.Games.Select(g => new LibraryItem(g)).ToList());
+            Children = new ObservableCollection<LibraryItem>(collection.Games.Select(g => new LibraryItem(g)).OrderByTitle(g => g.SortName ?? g.Name).ToList());
         }
 
         public LibraryItem(Game game)

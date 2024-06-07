@@ -1,5 +1,6 @@
 ﻿using LANCommander.Client.Data;
 using LANCommander.Client.Data.Models;
+using LANCommander.Client.Extensions;
 using LANCommander.Client.Models;
 using Microsoft.EntityFrameworkCore;
 using Photino.NET;
@@ -61,7 +62,7 @@ namespace LANCommander.Client.Services
 
             var collections = await CollectionService.Get();
 
-            items.AddRange(collections.Select(c => new LibraryItem(c)));
+            items.AddRange(collections.OrderByTitle(c => c.Name).Select(c => new LibraryItem(c)));
 
             var redistributables = await RedistributableService.Get();
 

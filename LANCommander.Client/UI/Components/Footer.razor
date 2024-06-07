@@ -4,8 +4,8 @@
 @inject SDK.Client Client
 
 <footer>
-    <Space Direction="DirectionVHType.Horizontal" Style="width: 100%">
-        <SpaceItem Class="downloader" Style="flex-grow: 1">
+    <Space Direction="DirectionVHType.Horizontal" Class="downloader" Style="width: 100%">
+        <SpaceItem Style="flex-grow: 1">
             @if (CurrentQueueItem != null)
             {
                 <div>@CurrentQueueItem.Title</div>

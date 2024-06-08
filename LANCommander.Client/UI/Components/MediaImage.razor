@@ -1,7 +1,10 @@
 ﻿@using LANCommander.Client.Data.Models
 @inject MediaService MediaService
 
-<img src="data:@(Media.MimeType);base64,@Data" class="@Class" />
+@if (Media != null)
+{
+    <img src="media://@(Media.FileId)-@(Media.Crc32)?mime=@(Media.MimeType)" />
+}
 
 @code {
     [Parameter] public Guid Id { get; set; }

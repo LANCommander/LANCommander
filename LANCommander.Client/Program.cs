@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
+using System.Web;
 
 namespace LANCommander.Client
 {
@@ -58,7 +59,18 @@ namespace LANCommander.Client
                 .SetTitle("LANCommander")
                 .SetUseOsDefaultLocation(true)
                 .SetChromeless(true)
-                .SetResizable(true);
+                .SetResizable(true)
+                .RegisterCustomSchemeHandler("media", (object sender, string scheme, string url, out string contentType) =>
+                {
+                    var uri = new Uri(url);
+                    var query = HttpUtility.ParseQueryString(uri.Query);
+
+                    var filePath = Path.Combine(MediaService.GetStoragePath(), uri.Host);
+
+                    contentType = query["mime"];
+
+                    return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                });
 
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {

@@ -1,6 +1,7 @@
 ﻿@page "/"
 @page "/{id:guid}"
 @using LANCommander.Client.Enums
+@using LANCommander.Client.Extensions
 @using LANCommander.Client.Models
 @using System.Diagnostics
 @using LANCommander.SDK.Helpers
@@ -279,9 +280,9 @@
     {
         var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
 
-        if (lastSession != null)
-            return lastSession.End.Value.ToString("MMMM d");
-        else
+        if (lastSession == null)
             return "Never";
+        else
+            return lastSession.End.Value.ToRelativeDate();
     }
 }

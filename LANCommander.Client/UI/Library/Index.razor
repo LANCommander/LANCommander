@@ -43,70 +43,105 @@
                         <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Background).Id)" Class="game-details-background" />
                     }
                 </div>
-                <div class="game-infobar">
-                    <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
-                        <SpaceItem>
-                            @if (SelectedItem.State == LibraryItemState.NotInstalled)
-                            {
-                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
-                            }
-                            else if (SelectedItem.State == LibraryItemState.Installed)
-                            {
-                                <Space Direction="@DirectionVHType.Horizontal">
-                                    <SpaceItem>
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run(SelectedGame)">Play</Button>
-                                    </SpaceItem>
+                <GridRow Gutter="32" Class="game-info" Wrap="false">
+                    <GridCol Flex="@("auto")">
+                        <div class="game-action-bar">
+                            <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                                <SpaceItem>
+                                    @if (SelectedItem.State == LibraryItemState.NotInstalled)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.Installed)
+                                    {
+                                        <Space Direction="@DirectionVHType.Horizontal">
+                                            <SpaceItem>
+                                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run(SelectedGame)">Play</Button>
+                                            </SpaceItem>
 
-                                    <SpaceItem>
-                                        <Dropdown>
-                                            <Overlay>
-                                                <Menu>
-                                                    @if (SelectedGameActions.Count() > 0)
-                                                    {
-                                                        @foreach (var action in SelectedGameActions)
-                                                        {
-                                                            <MenuItem OnClick="() => LibraryService.Run(SelectedGame, action)">
-                                                                @action.Name
+                                            <SpaceItem>
+                                                <Dropdown>
+                                                    <Overlay>
+                                                        <Menu>
+                                                            @if (SelectedGameActions.Count() > 0)
+                                                            {
+                                                                @foreach (var action in SelectedGameActions)
+                                                                {
+                                                                    <MenuItem OnClick="() => LibraryService.Run(SelectedGame, action)">
+                                                                        @action.Name
+                                                                    </MenuItem>
+                                                                }
+
+                                                                <MenuDivider />
+                                                            }
+
+                                                            <MenuItem OnClick="() => Uninstall(SelectedItem)">
+                                                                Uninstall
                                                             </MenuItem>
-                                                        }
+                                                        </Menu>
+                                                    </Overlay>
 
-                                                        <MenuDivider />
-                                                    }
+                                                    <ChildContent>
+                                                        <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
+                                                    </ChildContent>
+                                                </Dropdown>
+                                            </SpaceItem>
+                                        </Space>
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.Queued)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.UpdateAvailable)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.Installing)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
+                                    }
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
+                                </SpaceItem>
+                            </Space>
+                        </div>
 
-                                                    <MenuItem OnClick="() => Uninstall(SelectedItem)">
-                                                        Uninstall
-                                                    </MenuItem>
-                                                </Menu>
-                                            </Overlay>
+                        <div class="game-metadata">
+                            <div class="game-metadata-description">@SelectedGame.Description</div>
+                            <div class="game-metadata-released-on">
+                                <h3>Released On</h3>
+                                <span>@SelectedGame.ReleasedOn.Value.ToString("MMMM d, yyyy")</span>
+                            </div>
+                            <div class="game-metadata-developers">
+                                <h3>Developers</h3>
+                                <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
+                            </div>
+                            <div class="game-metadata-publishers">
+                                <h3>Publishers</h3>
+                                <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
+                            </div>
+                            <div class="game-metadata-genres">
+                                <h3>Genres</h3>
+                                <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
+                            </div>
+                            <div class="game-metadata-tags">
+                                <h3>Tags</h3>
+                                <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
+                            </div>
+                        </div>
+                    </GridCol>
 
-                                            <ChildContent>
-                                                <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
-                                            </ChildContent>
-                                        </Dropdown>
-                                    </SpaceItem>
-                                </Space>
-                            }
-                            else if (SelectedItem.State == LibraryItemState.Queued)
-                            {
-                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
-                            }
-                            else if (SelectedItem.State == LibraryItemState.UpdateAvailable)
-                            {
-                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
-                            }
-                            else if (SelectedItem.State == LibraryItemState.Installing)
-                            {
-                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
-                            }
-                        </SpaceItem>
-                        <SpaceItem>
-                            <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
-                        </SpaceItem>
-                        <SpaceItem>
-                            <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
-                        </SpaceItem>
-                    </Space>
-                </div>
+                    <GridCol Flex="@("256px")" Class="game-cover">
+                        @if (SelectedGame.Media.Any(m => m.Type == Data.Enums.MediaType.Cover))
+                        {
+                            <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Cover).Id)" />
+                        }
+                    </GridCol>
+                </GridRow>
             }
         </div>
     </Content>

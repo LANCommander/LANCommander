@@ -90,6 +90,8 @@
 
 .game-details {
     width: 100%;
+    overflow-y: scroll;
+    overflow-x: hidden;
 }
 
 .game-hero {
@@ -123,10 +125,12 @@
     }
 }
 
-.game-infobar {
+.game-info {
     padding-left: 16px;
     padding-right: 16px;
+}
 
+.game-action-bar {
     .ant-statistic {
         line-height: 1;
 
@@ -137,5 +141,24 @@
         &-content {
             font-size: 16px;
         }
+    }
+}
+
+.game-cover {
+    img {
+        width: 100%;
+    }
+}
+
+.game-metadata {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 32px;
+    padding-bottom: 32px;
+
+    h3 {
+        font-weight: bold;
+        margin-bottom: 0;
     }
 }

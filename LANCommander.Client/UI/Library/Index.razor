@@ -272,8 +272,12 @@
             .Where(ps => ps.End != null && ps.Start != null)
             .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
             .Sum(ts => ts.Ticks));
-
-        return totalTime.TotalHours.ToString("0.##") + " hours";
+        if (totalTime.TotalMinutes < 1)
+            return "None";
+        else if (totalTime.TotalHours < 1)
+            return totalTime.TotalMinutes.ToString("0") + " minutes";
+        else
+            return totalTime.TotalHours.ToString("0.##") + " hours";
     }
 
     string GetLastPlayed(Data.Models.Game game)

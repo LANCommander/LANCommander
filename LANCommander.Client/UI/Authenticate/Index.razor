@@ -90,7 +90,7 @@
         {
             await ProfileService.Login(Model.ServerAddress, Model.Username, Model.Password);
 
-            NavigationManager.NavigateTo("/", true);
+            NavigationManager.NavigateTo("/");
         }
         catch (Exception ex)
         {

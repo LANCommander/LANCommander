@@ -102,6 +102,46 @@ namespace LANCommander.Client.Services
             OnLibraryChanged?.Invoke();
         }
 
+        public async Task Stop(Game game)
+        {
+            await Task.Run(() =>
+            {
+                var process = RunningProcesses[game.Id];
+
+                process.CloseMainWindow();
+
+                RunningProcesses.Remove(game.Id);
+            });
+        }
+
+        public bool IsRunning(Game game)
+        {
+            return IsRunning(game.Id);
+        }
+
+        public bool IsRunning(Guid id)
+        {
+            if (!RunningProcesses.ContainsKey(id))
+                return false;
+
+            var process = RunningProcesses[id];
+
+            try
+            {
+                if (process.HasExited)
+                {
+                    RunningProcesses.Remove(id);
+                    return false;
+                }
+                else
+                    return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public async Task Run(Game game, SDK.Models.Action action)
         {
             var process = new Process();
@@ -126,7 +166,11 @@ namespace LANCommander.Client.Services
 
             process.Start();
 
+            RunningProcesses.Add(game.Id, process);
+
             await process.WaitForExitAsync();
+
+            RunningProcesses.Remove(game.Id);
 
             await PlaySessionService.EndSession(game.Id, userId);
         }

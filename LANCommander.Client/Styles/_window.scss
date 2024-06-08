@@ -1,5 +1,15 @@
-﻿.pb-custom-window {
-    background: #000;
+﻿:root {
+    --pb-custom-window-main-color: #000;
+    --pb-custom-window-main-unfocused-color: #000;
+    --pb-custom-window-background-color: #000;
+    --pb-custom-window-title-color: #fff;
+    --pb-custom-window-controls-color: #fff;
+    --pb-custom-window-close-control-background: firebrick;
+    --pb-custom-window-controls-background: rgba(0,0,0,.25); /* rgba(255,255,255,.25); */
+    --pb-custom-window-controls-background-hover: rgba(0,0,0,.5); /* rgba(255,255,255,.5); */
+}
+
+.pb-custom-window {
 
     & > * {
         position: absolute;
@@ -21,10 +31,18 @@
 
     &-controls {
         background: none !important;
+
+        .ant-btn-icon-only > * {
+            font-size: 22px;
+        }
     }
 
     &-control-button {
         border-radius: 0;
+    }
+
+    &-title {
+        display: none;
     }
 
     &-header {

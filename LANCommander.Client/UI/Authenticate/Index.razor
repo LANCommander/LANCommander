@@ -3,38 +3,32 @@
 @inject ProfileService ProfileService
 @inject NavigationManager NavigationManager
 
-<Form Model="@Model" Loading="@Loading" OnFinish="OnFinish">
-    <FormItem>
-        <Input @bind-Value="@context.ServerAddress" />
+<Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
+    <Content Class="authentication-form">
+        <div class="authentication-logo">
+            <img src="assets/logo.svg" />
+        </div>
 
-        <Card Title="Discovered Servers">
-            <Extra>
-                @if (BeaconActive)
-                {
-                    <Icon Type="loading" Theme="outline" />
-                }
-            </Extra>
-            <Body>
-                <AntList Bordered DataSource="DiscoveredServers" Context="server" Size="small" Class="ant-list-clickable">
-                    <ListItem OnClick="() => Model.ServerAddress = server">
-                        <Text>@server</Text>
-                    </ListItem>
-                </AntList>
-            </Body>
-        </Card>
-    </FormItem>
-    <FormItem>
-        <Input @bind-Value="@context.Username" />
-    </FormItem>
-    <FormItem>
-        <InputPassword @bind-Value="@context.Password" />
-    </FormItem>
-    <FormItem>
-        <Button Type="@ButtonType.Primary" HtmlType="submit">
-            Login
-        </Button>
-    </FormItem>
-</Form>
+        <Form Model="@Model" Loading="@Loading" Layout="@FormLayout.Vertical" OnFinish="OnFinish">
+            <FormItem Label="Server Address">
+                <AutoComplete Options="DiscoveredServers">
+                    <AutoCompleteInput @bind-Value="@context.ServerAddress" />
+                </AutoComplete>
+            </FormItem>
+            <FormItem Label="Username">
+                <Input @bind-Value="@context.Username" />
+            </FormItem>
+            <FormItem Label="Password">
+                <InputPassword @bind-Value="@context.Password" />
+            </FormItem>
+            <FormItem>
+                <Button Type="@ButtonType.Primary" HtmlType="submit">
+                    Login
+                </Button>
+            </FormItem>
+        </Form>
+    </Content>
+</Layout>
 
 @code {
     public class AuthenticationRequest

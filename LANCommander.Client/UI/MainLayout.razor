@@ -10,22 +10,21 @@
 <CustomWindow HeaderHeight="37">
     <HeaderExtraControlsLayout>
         <Space Direction="@DirectionVHType.Horizontal">
-            <SpaceItem>
-                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
-            </SpaceItem>
-
             @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
             {
+                <SpaceItem>
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
+                </SpaceItem>
+
                 <SpaceItem>
                     <Dropdown>
                         <Overlay>
                             <Menu>
-                                <MenuItem OnClick="Logout">
-                                    Logout
-                                </MenuItem>
-
                                 <MenuItem OnClick="ChangeAlias">
                                     Change Name
+                                </MenuItem>
+                                <MenuItem OnClick="Logout">
+                                    Logout
                                 </MenuItem>
                             </Menu>
                         </Overlay>

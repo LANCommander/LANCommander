@@ -2,6 +2,7 @@
 @using BeaconLib
 @inject ProfileService ProfileService
 @inject NavigationManager NavigationManager
+@inject IMessageService MessageService
 
 <Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
     <Content Class="authentication-form">
@@ -86,6 +87,8 @@
 
     async Task OnFinish(EditContext editContext)
     {
+        Loading = true;
+
         try
         {
             await ProfileService.Login(Model.ServerAddress, Model.Username, Model.Password);
@@ -94,7 +97,8 @@
         }
         catch (Exception ex)
         {
-            
+            MessageService.Error(ex.Message);
+            Loading = false;
         }
     }
 }

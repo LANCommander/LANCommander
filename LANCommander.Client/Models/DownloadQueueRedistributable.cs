@@ -39,7 +39,7 @@ namespace LANCommander.Client.Models
         public DownloadStatus Status { get; set; }
         public SDK.Models.Redistributable Redistributable { get; set; }
         public float Progress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public long TransferSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public double TransferSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public long BytesDownloaded { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public long TotalBytes { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 

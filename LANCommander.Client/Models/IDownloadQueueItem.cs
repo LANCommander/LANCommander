@@ -20,7 +20,7 @@ namespace LANCommander.Client.Models
         bool State { get; }
         DownloadStatus Status { get; set; }
         float Progress { get; set; }
-        long TransferSpeed { get; set; }
+        double TransferSpeed { get; set; }
         long BytesDownloaded { get; set; }
         long TotalBytes { get; set; }
     }

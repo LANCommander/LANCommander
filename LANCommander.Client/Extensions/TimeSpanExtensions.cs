@@ -11,9 +11,9 @@ namespace LANCommander.Client.Extensions
         public static string ToShortTime(this TimeSpan timeSpan)
         {
             if (timeSpan.TotalHours >= 1)
-                return timeSpan.ToString("hh:mm:ss");
+                return timeSpan.ToString("hh\\:mm\\:ss");
             else
-                return timeSpan.ToString("mm:ss");
+                return timeSpan.ToString("mm\\:ss");
         }
     }
 }

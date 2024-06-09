@@ -44,7 +44,7 @@ namespace LANCommander.Client.Models
             }
             set { }
         }
-        public long TransferSpeed { get; set; }
+        public double TransferSpeed { get; set; }
         public long BytesDownloaded { get; set; }
         public long TotalBytes { get; set; }
 

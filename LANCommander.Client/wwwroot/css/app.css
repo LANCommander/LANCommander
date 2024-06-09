@@ -413,6 +413,7 @@ footer {
   flex-grow: 1;
   max-width: 512px;
   font-size: 12px;
+  cursor: pointer;
 }
 .downloader-current {
   display: flex;
@@ -429,6 +430,10 @@ footer {
 }
 .downloader-current-info {
   flex-grow: 1;
+}
+.downloader-current-upper {
+  display: flex;
+  justify-content: space-between;
 }
 .downloader-current-progress {
   margin-top: 4px;

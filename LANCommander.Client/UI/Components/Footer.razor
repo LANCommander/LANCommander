@@ -63,8 +63,11 @@
             {
                 CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
 
+                var bytesThisInterval = position - CurrentQueueItem.BytesDownloaded;
+
                 CurrentQueueItem.BytesDownloaded = position;
                 CurrentQueueItem.TotalBytes = length;
+                CurrentQueueItem.TransferSpeed = (double)(bytesThisInterval / (Stopwatch.ElapsedMilliseconds / 1000d));
 
                 InvokeAsync(StateHasChanged);
 

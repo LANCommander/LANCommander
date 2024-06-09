@@ -80,7 +80,7 @@ namespace LANCommander.Client.Services
                 }
             }
 
-            if (!Queue.Any(i => i.Id == game.Id || (i.Status != DownloadStatus.Canceled || i.Status != DownloadStatus.Failed)))
+            if (!Queue.Any(i => i.Id == game.Id && (i.Status != DownloadStatus.Canceled || i.Status != DownloadStatus.Failed)))
             {
                 var queueItem = new DownloadQueueGame(gameInfo);
 

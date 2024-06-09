@@ -104,6 +104,19 @@ namespace LANCommander.Client.Services
             }
         }
 
+        public void Remove(Guid id)
+        {
+            var queueItem = Queue.FirstOrDefault(i => i.Id == id);
+
+            Remove(queueItem);
+        }
+
+        public void Remove(IDownloadQueueItem queueItem)
+        {
+            if (queueItem != null)
+                Queue.Remove(queueItem);
+        }
+
         public async Task CancelInstall()
         {
 

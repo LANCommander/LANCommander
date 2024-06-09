@@ -99,6 +99,8 @@ namespace LANCommander.Client.Services
 
             await GameService.Update(game);
 
+            DownloadService.Remove(libraryItem.Key);
+
             OnLibraryChanged?.Invoke();
         }
 

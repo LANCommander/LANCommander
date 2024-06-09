@@ -12,7 +12,8 @@ namespace LANCommander.Client.Models
         public Guid Id { get; set; }
         public string Title { get; set; }
         public string Version { get; set; }
-        public string CoverPath { get; set; }
+        public Guid CoverId { get; set; }
+        public Guid IconId { get; set; }
         public DateTime QueuedOn { get; set; }
         public DateTime? CompletedOn { get; set; }
         public bool IsUpdate { get; set; }
@@ -55,6 +56,16 @@ namespace LANCommander.Client.Models
             Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
             QueuedOn = DateTime.Now;
             Status = DownloadStatus.Idle;
+
+            var cover = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
+
+            if (cover != null)
+                CoverId = cover.Id;
+
+            var icon = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+
+            if (icon != null)
+                IconId = icon.Id;
         }
     }
 }

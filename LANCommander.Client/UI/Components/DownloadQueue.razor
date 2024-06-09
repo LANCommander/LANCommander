@@ -5,7 +5,7 @@
     @foreach (var queueItem in DownloadService.Queue.Where(qi => qi.State))
     {
         <div class="queue-item">
-            <img src="@queueItem.CoverPath" />
+            <MediaImage Id="@queueItem.CoverId" />
             <div class="queue-item-info">
                 <div>
                     <h4>@queueItem.Title | @queueItem</h4>
@@ -19,7 +19,7 @@
     @foreach (var queueItem in DownloadService.Queue.Where(qi => qi.Status == Enums.DownloadStatus.Idle))
     {
         <div class="queue-item">
-            <img src="@queueItem.CoverPath" />
+            <MediaImage Id="@queueItem.CoverId" />
             <div class="queue-item-info">
                 <div>
                     <h4>@queueItem.Title | @queueItem</h4>
@@ -33,7 +33,7 @@
     @foreach (var queueItem in DownloadService.Queue.Where(qi => !qi.State))
     {
         <div class="queue-item">
-            <img src="@queueItem.CoverPath" />
+            <MediaImage Id="@queueItem.CoverId" />
             <div class="queue-item-info">
                 <div>
                     <h4>@queueItem.Title | @queueItem</h4>

@@ -8,9 +8,32 @@
         <SpaceItem Style="flex-grow: 1">
             @if (CurrentQueueItem != null)
             {
-                <div>@CurrentQueueItem.Title</div>
-                <div>@CurrentQueueItem.Version</div>
-                <Progress Percent="(CurrentQueueItem.Progress * 100)" />
+                <div class="downloader-current">
+                    <div class="downloader-current-icon">
+                        <MediaImage Id="@CurrentQueueItem.IconId" />
+                    </div>
+                    <div class="downloader-current-info">
+                        <div class="downloader-current-upper">
+                            <div class="downloader-current-upper-status">
+                                @CurrentQueueItem.Status: @CurrentQueueItem.Progress.ToString("0%")
+                            </div>
+                            @if (CurrentQueueItem.TransferSpeed > 0)
+                            {
+                                <div class="downloader-current-upper-time-remaining">
+                                    @TimeSpan.FromSeconds((CurrentQueueItem.TotalBytes - CurrentQueueItem.BytesDownloaded) / CurrentQueueItem.TransferSpeed).ToShortTime()
+                                </div>
+                            }
+                        </div>
+                        <div class="downloader-current-progress">
+                            <Progress Percent="(CurrentQueueItem.Progress * 100)" />
+                        </div>
+                        <div class="downloader-current-lower">
+                            <div class="downloader-current-lower-data">
+                                @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TotalBytes).ToString()
+                            </div>
+                        </div>
+                    </div>
+                </div>
             }
             else
             {

@@ -12,7 +12,8 @@ namespace LANCommander.Client.Models
         public Guid Id { get; set; }
         public string Title { get; set; }
         public string Version { get; set; }
-        public string CoverPath { get; set; }
+        public Guid CoverId { get; set; }
+        public Guid IconId { get; set; }
         public DateTime QueuedOn { get; set; }
         public DateTime? CompletedOn { get; set; }
         public bool IsUpdate { get; set; }

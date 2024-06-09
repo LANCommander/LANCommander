@@ -1,5 +1,19 @@
 .downloader {
-    background: #1f1f1f;
+    max-width: 512px;
+
+    &-current {
+        display: flex;
+    }
+    
+    &-current-icon img {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+    }
+
+    &-current-info {
+        flex-grow: 1;
+    }
 }
 
 .download-queue {

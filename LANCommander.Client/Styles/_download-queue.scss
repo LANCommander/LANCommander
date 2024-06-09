@@ -1,18 +1,45 @@
 .downloader {
+    flex-grow: 1;
     max-width: 512px;
+    font-size: 12px;
 
     &-current {
         display: flex;
+        gap: 16px;
     }
-    
-    &-current-icon img {
-        width: 32px;
-        height: 32px;
-        object-fit: contain;
+
+    &-current-icon {
+        display: flex;
+        align-items: center;
+
+        img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
     }
 
     &-current-info {
         flex-grow: 1;
+    }
+
+    &-current-progress {
+        margin-top: 4px;
+        margin-bottom: 4px;
+    }
+
+    .ant-progress,
+    .ant-progress-inner,
+    .ant-progress-outer {
+        display: block;
+    }
+
+    .ant-progress-text {
+        display: none;
+    }
+
+    .ant-progress-show-info .ant-progress-outer {
+        padding-right: 0;
     }
 }
 

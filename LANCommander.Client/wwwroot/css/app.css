@@ -134,6 +134,14 @@ app {
   filter: drop-shadow(5px 0px 5px rgba(0, 0, 0, 0.5));
 }
 
+footer {
+  background: #1f1f1f;
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
 #blazor-error-ui {
   background: lightyellow;
   bottom: 0;
@@ -393,13 +401,49 @@ app {
   padding-top: 32px;
   padding-bottom: 32px;
 }
+.game-metadata-description {
+  text-align: justify;
+}
 .game-metadata h3 {
   font-weight: bold;
   margin-bottom: 0;
 }
 
 .downloader {
-  background: #1f1f1f;
+  flex-grow: 1;
+  max-width: 512px;
+  font-size: 12px;
+}
+.downloader-current {
+  display: flex;
+  gap: 16px;
+}
+.downloader-current-icon {
+  display: flex;
+  align-items: center;
+}
+.downloader-current-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.downloader-current-info {
+  flex-grow: 1;
+}
+.downloader-current-progress {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+.downloader .ant-progress,
+.downloader .ant-progress-inner,
+.downloader .ant-progress-outer {
+  display: block;
+}
+.downloader .ant-progress-text {
+  display: none;
+}
+.downloader .ant-progress-show-info .ant-progress-outer {
+  padding-right: 0;
 }
 
 .download-queue {

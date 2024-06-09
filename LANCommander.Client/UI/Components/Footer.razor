@@ -4,49 +4,43 @@
 @inject SDK.Client Client
 
 <footer>
-    <Space Direction="DirectionVHType.Horizontal" Class="downloader" Style="width: 100%">
-        <SpaceItem Style="flex-grow: 1">
-            @if (CurrentQueueItem != null)
-            {
-                <div class="downloader-current">
-                    <div class="downloader-current-icon">
-                        <MediaImage Id="@CurrentQueueItem.IconId" />
+    <div class="downloader" @onclick="() => ShowDownloadQueue()">
+        @if (CurrentQueueItem != null)
+        {
+            <div class="downloader-current">
+                <div class="downloader-current-icon">
+                    <MediaImage Id="@CurrentQueueItem.IconId" />
+                </div>
+                <div class="downloader-current-info">
+                    <div class="downloader-current-upper">
+                        <div class="downloader-current-upper-status">
+                            @CurrentQueueItem.Status: @CurrentQueueItem.Progress.ToString("0%")
+                        </div>
+                        @if (CurrentQueueItem.TransferSpeed > 0)
+                        {
+                            <div class="downloader-current-upper-time-remaining">
+                                @TimeSpan.FromSeconds((CurrentQueueItem.TotalBytes - CurrentQueueItem.BytesDownloaded) / CurrentQueueItem.TransferSpeed).ToShortTime()
+                            </div>
+                        }
                     </div>
-                    <div class="downloader-current-info">
-                        <div class="downloader-current-upper">
-                            <div class="downloader-current-upper-status">
-                                @CurrentQueueItem.Status: @CurrentQueueItem.Progress.ToString("0%")
-                            </div>
-                            @if (CurrentQueueItem.TransferSpeed > 0)
-                            {
-                                <div class="downloader-current-upper-time-remaining">
-                                    @TimeSpan.FromSeconds((CurrentQueueItem.TotalBytes - CurrentQueueItem.BytesDownloaded) / CurrentQueueItem.TransferSpeed).ToShortTime()
-                                </div>
-                            }
-                        </div>
-                        <div class="downloader-current-progress">
-                            <Progress Percent="(CurrentQueueItem.Progress * 100)" />
-                        </div>
-                        <div class="downloader-current-lower">
-                            <div class="downloader-current-lower-data">
-                                @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TotalBytes).ToString()
-                            </div>
+                    <div class="downloader-current-progress">
+                        <Progress Percent="(CurrentQueueItem.Progress * 100)" />
+                    </div>
+                    <div class="downloader-current-lower">
+                        <div class="downloader-current-lower-data">
+                            @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TotalBytes).ToString()
                         </div>
                     </div>
                 </div>
-            }
-            else
-            {
-                <div>Fallout 3</div>
-                <div>v1.0.0</div>
-                <Progress Percent="56" />
-            }
-        </SpaceItem>
-
-        <SpaceItem>
-            <Button Type="@ButtonType.Primary" OnClick="() => ShowDownloadQueue()">^</Button>
-        </SpaceItem>
-    </Space>
+            </div>
+        }
+        else
+        {
+            <div>Fallout 3</div>
+            <div>v1.0.0</div>
+            <Progress Percent="56" />
+        }
+    </div>
 </footer>
 
 <DownloadQueue @bind-Visible="@DownloadQueueVisible" />

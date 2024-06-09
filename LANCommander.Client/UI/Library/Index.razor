@@ -244,9 +244,11 @@
 
         if (primaryActions.Count() == 1)
         {
-            LibraryService.Run(game, primaryActions.First());
+            var task = LibraryService.Run(game, primaryActions.First());
 
             await InvokeAsync(StateHasChanged);
+
+            await task;
         }
         else
         {

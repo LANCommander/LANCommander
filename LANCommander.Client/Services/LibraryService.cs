@@ -106,11 +106,14 @@ namespace LANCommander.Client.Services
         {
             await Task.Run(() =>
             {
-                var process = RunningProcesses[game.Id];
+                if (RunningProcesses.ContainsKey(game.Id))
+                {
+                    var process = RunningProcesses[game.Id];
 
-                process.CloseMainWindow();
+                    process.CloseMainWindow();
 
-                RunningProcesses.Remove(game.Id);
+                    RunningProcesses.Remove(game.Id);
+                }
             });
         }
 

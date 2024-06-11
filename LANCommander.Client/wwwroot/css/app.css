@@ -419,6 +419,17 @@ footer {
   display: flex;
   gap: 16px;
 }
+.downloader-current .ant-progress,
+.downloader-current .ant-progress-inner,
+.downloader-current .ant-progress-outer {
+  display: block;
+}
+.downloader-current .ant-progress-text {
+  display: none;
+}
+.downloader-current .ant-progress-show-info .ant-progress-outer {
+  padding-right: 0;
+}
 .downloader-current-icon {
   display: flex;
   align-items: center;
@@ -439,17 +450,6 @@ footer {
   margin-top: 4px;
   margin-bottom: 4px;
 }
-.downloader .ant-progress,
-.downloader .ant-progress-inner,
-.downloader .ant-progress-outer {
-  display: block;
-}
-.downloader .ant-progress-text {
-  display: none;
-}
-.downloader .ant-progress-show-info .ant-progress-outer {
-  padding-right: 0;
-}
 
 .download-queue {
   top: 100%;
@@ -465,6 +465,37 @@ footer {
 .download-queue .ant-drawer-content-wrapper {
   height: calc(100% - 128px) !important;
   transform: none !important;
+}
+.download-queue .queue-item {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.download-queue .queue-item + .queue-item {
+  margin-top: 16px;
+}
+.download-queue .queue-item-info {
+  flex-grow: 1;
+}
+.download-queue .queue-item-info h3 {
+  font-size: 1.4rem;
+}
+.download-queue .queue-item-cover {
+  max-height: 128px;
+}
+.download-queue .queue-item-current-download {
+  flex-grow: 1;
+  min-width: 300px;
+}
+.download-queue .queue-item + h2 {
+  margin-top: 32px;
+}
+.download-queue .ant-drawer-close {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  padding: 4px;
+  font-size: 24px;
 }
 
 .game-actions-dialog .ant-modal-body {

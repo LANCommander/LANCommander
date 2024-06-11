@@ -53,7 +53,7 @@
                                     }
                                     else if (SelectedItem.State == LibraryItemState.NotInstalled)
                                     {
-                                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
                                     }
                                     else if (SelectedItem.State == LibraryItemState.Queued)
                                     {
@@ -122,6 +122,7 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
+
     LibraryItem SelectedItem { get; set; }
 
     Data.Models.Game SelectedGame { get; set; }

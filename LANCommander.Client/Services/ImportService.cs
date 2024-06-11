@@ -23,6 +23,12 @@ namespace LANCommander.Client.Services
         private readonly TagService TagService;
         private readonly Settings Settings;
 
+        public delegate void OnImportCompleteHandler();
+        public event OnImportCompleteHandler OnImportComplete;
+
+        public delegate void OnImportFailedHandler();
+        public event OnImportFailedHandler OnImportFailed;
+
         public ImportService(
             SDK.Client client,
             MediaService mediaService,
@@ -51,8 +57,17 @@ namespace LANCommander.Client.Services
 
         public async Task ImportAsync()
         {
-            await ImportGamesAsync();
-            await ImportRedistributables();
+            try
+            {
+                await ImportGamesAsync();
+                await ImportRedistributables();
+
+                OnImportComplete?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                OnImportFailed?.Invoke();
+            }
         }
 
         public async Task ImportGamesAsync()

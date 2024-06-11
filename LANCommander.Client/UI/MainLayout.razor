@@ -6,6 +6,7 @@
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
+@inject IJSRuntime JS
 
 <CustomWindow HeaderHeight="37">
     <HeaderExtraControlsLayout>
@@ -52,11 +53,22 @@
 @code {
     Settings Settings = null;
 
-    bool Importing = false;
+    public bool Importing = false;
+    public IMessageService Messages { get; set; }
+
+    public static MainLayout _MainLayout { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        _MainLayout = this;
+
         Settings = SettingService.GetSettings();
+        Messages = MessageService;
+
+        ImportService.OnImportComplete += () =>
+        {
+            MessageService.Success("Import Complete", 3);
+        };
     }
 
     async Task Logout()
@@ -93,20 +105,21 @@
 
     async void Import()
     {
-        var config = new MessageConfig()
+        if (!Importing)
         {
-            Content = "Importing...",
-            Duration = 0
-        };
+            await JS.InvokeVoidAsync("sendMessage", "import");
 
-        Importing = true;
+            Importing = true;
+            StateHasChanged();
+            MessageService.Info("Import Started", 2.5);
+        }
+    }
 
-        var task = MessageService.Loading(config);
-
-        await ImportService.ImportAsync();
-
-        task.Start();
-
-        Importing = true;
+    [JSInvokable("ImportComplete")]
+    public static void ImportComplete()
+    {
+        _MainLayout.Messages.Success("Import Complete!");
+        _MainLayout.Importing = false;
+        _MainLayout.StateHasChanged();
     }
 }

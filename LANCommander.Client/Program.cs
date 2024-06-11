@@ -4,6 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
+using Photino.NET;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Web;
 
 namespace LANCommander.Client
@@ -70,6 +74,23 @@ namespace LANCommander.Client
                     contentType = query["mime"];
 
                     return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                })
+                .RegisterWebMessageReceivedHandler(async (object sender, string message) =>
+                {
+                    using var scope = app.Services.CreateScope();
+
+                    var importService = scope.ServiceProvider.GetService<ImportService>();
+
+                    var window = (PhotinoWindow)sender;
+
+                    switch (message)
+                    {
+                        case "import":
+                            await importService.ImportAsync();
+
+                            window.SendWebMessage("importComplete");
+                            break;
+                    }
                 });
 
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>

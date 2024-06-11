@@ -28,5 +28,19 @@
     <script src="_content/Photino.Blazor.CustomWindow/js/pb-custom-window.js"></script>
     <script src="scripts/dist/bundle.js"></script>
 
+    <script>
+        window.sendMessage = function (message) {
+            window.external.sendMessage(message);
+        }
+
+        window.external.receiveMessage(message => {
+            switch (message) {
+                case 'importComplete':
+                    DotNet.invokeMethodAsync('LANCommander.Client', 'ImportComplete');
+                    break;
+            }
+        });
+    </script>
+
 </body>
 </html>

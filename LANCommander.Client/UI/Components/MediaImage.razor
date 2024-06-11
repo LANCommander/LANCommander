@@ -3,7 +3,7 @@
 
 @if (Media != null)
 {
-    <img src="media://@(Media.FileId)-@(Media.Crc32)?mime=@(Media.MimeType)" />
+    <img src="media://@(Media.FileId)-@(Media.Crc32)?mime=@(Media.MimeType)" class="@Class" />
 }
 
 @code {

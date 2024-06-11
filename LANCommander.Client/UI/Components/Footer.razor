@@ -2,96 +2,26 @@
 @using System.Diagnostics
 @inject DownloadService DownloadService
 @inject SDK.Client Client
+@inject GameService GameService
 
 <footer>
-    <div class="downloader" @onclick="() => ShowDownloadQueue()">
-        @if (CurrentQueueItem != null)
-        {
-            <div class="downloader-current">
-                <div class="downloader-current-icon">
-                    <MediaImage Id="@CurrentQueueItem.IconId" />
-                </div>
-                <div class="downloader-current-info">
-                    <div class="downloader-current-upper">
-                        <div class="downloader-current-upper-status">
-                            @CurrentQueueItem.Status: @CurrentQueueItem.Progress.ToString("0%")
-                        </div>
-                        @if (CurrentQueueItem.TransferSpeed > 0)
-                        {
-                            <div class="downloader-current-upper-time-remaining">
-                                @TimeSpan.FromSeconds((CurrentQueueItem.TotalBytes - CurrentQueueItem.BytesDownloaded) / CurrentQueueItem.TransferSpeed).ToShortTime()
-                            </div>
-                        }
-                    </div>
-                    <div class="downloader-current-progress">
-                        <Progress Percent="(CurrentQueueItem.Progress * 100)" />
-                    </div>
-                    <div class="downloader-current-lower">
-                        <div class="downloader-current-lower-data">
-                            @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TotalBytes).ToString()
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div>Fallout 3</div>
-            <div>v1.0.0</div>
-            <Progress Percent="56" />
-        }
-    </div>
+    @if (DownloadService.Queue.Any(qi => qi.State))
+    {
+        <div class="downloader" @onclick="() => ShowDownloadQueue()">
+            <CurrentDownloadItem ShowIcon="true" />
+        </div>
+    }
+    else
+    {
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
+    }
 </footer>
 
 <DownloadQueue @bind-Visible="@DownloadQueueVisible" />
 
 @code {
-    IDownloadQueueItem CurrentQueueItem = null;
 
     bool DownloadQueueVisible = false;
-
-    Stopwatch Stopwatch = new Stopwatch();
-
-    protected override async Task OnInitializedAsync()
-    {
-        Client.Games.OnArchiveExtractionProgress += (long position, long length, SDK.Models.Game game) =>
-        {
-            if (!Stopwatch.IsRunning)
-                Stopwatch.Start();
-
-            if (Stopwatch.ElapsedMilliseconds > 500)
-            {
-                CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
-
-                var bytesThisInterval = position - CurrentQueueItem.BytesDownloaded;
-
-                CurrentQueueItem.BytesDownloaded = position;
-                CurrentQueueItem.TotalBytes = length;
-                CurrentQueueItem.TransferSpeed = (double)(bytesThisInterval / (Stopwatch.ElapsedMilliseconds / 1000d));
-
-                InvokeAsync(StateHasChanged);
-
-                Stopwatch.Reset();
-            }
-        };
-
-        Client.Games.OnArchiveEntryExtractionProgress += (object sender, SDK.ArchiveEntryExtractionProgressArgs e) =>
-        {
-            // InvokeAsync(StateHasChanged);
-        };
-
-        DownloadService.OnInstallComplete += async () =>
-        {
-            Stopwatch.Stop();
-        };
-
-        DownloadService.OnQueueChanged += async () =>
-        {
-            CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
-
-            InvokeAsync(StateHasChanged);
-        };
-    }
 
     async Task ShowDownloadQueue()
     {

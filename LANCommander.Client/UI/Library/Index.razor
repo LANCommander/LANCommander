@@ -47,51 +47,13 @@
                         <div class="game-action-bar">
                             <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
                                 <SpaceItem>
-                                    @if (LibraryService.IsRunning(SelectedGame))
+                                    @if (SelectedItem.State == LibraryItemState.Installed)
                                     {
-                                        <Popconfirm Title="Do you want to stop this game?" OkText="Yes" OnConfirm="() => Stop(SelectedGame)">
-                                            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
-                                        </Popconfirm>
+                                        <PlayButton GameId="@SelectedItem.Key" />
                                     }
                                     else if (SelectedItem.State == LibraryItemState.NotInstalled)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
-                                    }
-                                    else if (SelectedItem.State == LibraryItemState.Installed)
-                                    {
-                                        <Space Direction="@DirectionVHType.Horizontal">
-                                            <SpaceItem>
-                                                <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run(SelectedGame)">Play</Button>
-                                            </SpaceItem>
-
-                                            <SpaceItem>
-                                                <Dropdown>
-                                                    <Overlay>
-                                                        <Menu>
-                                                            @if (SelectedGameActions.Count() > 0)
-                                                            {
-                                                                @foreach (var action in SelectedGameActions)
-                                                                {
-                                                                    <MenuItem OnClick="() => LibraryService.Run(SelectedGame, action)">
-                                                                        @action.Name
-                                                                    </MenuItem>
-                                                                }
-
-                                                                <MenuDivider />
-                                                            }
-
-                                                            <MenuItem OnClick="() => Uninstall(SelectedItem)">
-                                                                Uninstall
-                                                            </MenuItem>
-                                                        </Menu>
-                                                    </Overlay>
-
-                                                    <ChildContent>
-                                                        <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
-                                                    </ChildContent>
-                                                </Dropdown>
-                                            </SpaceItem>
-                                        </Space>
+                                    <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
                                     }
                                     else if (SelectedItem.State == LibraryItemState.Queued)
                                     {
@@ -210,79 +172,9 @@
         await LibraryService.Install(item);
     }
 
-    async Task Uninstall(LibraryItem item)
-    {
-        var game = item.DataItem as Data.Models.Game;
-        var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
-
-        var message = $"Would you like to uninstall {game.Title}?";
-
-        if (manifest.SavePaths != null && manifest.SavePaths.Any())
-            message += " Your save files have been uploaded to the server.";
-        else
-            message += " Your save files may be unrecoverable if they are contained within the game's install directory.";
-
-        var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
-        {
-            OkText = "Uninstall",
-            CancelText = "Cancel",
-            Title = "Uninstall",
-            Content = message,
-            OkType = "danger",
-            Icon = @<Icon Type="@IconType.Outline.Delete" />
-        });
-
-        if (confirmed)
-            await LibraryService.Uninstall(item);
-    }
-
-    async Task Run(Data.Models.Game game)
-    {
-        var actions = await GameService.GetActionsAsync(game);
-
-        var primaryActions = actions.Where(a => a.IsPrimaryAction);
-
-        if (primaryActions.Count() == 1)
-        {
-            var task = LibraryService.Run(game, primaryActions.First());
-
-            await InvokeAsync(StateHasChanged);
-
-            await task;
-        }
-        else
-        {
-            var modalOptions = new ModalOptions()
-            {
-                Title = game.Title,
-                Maximizable = false,
-                DefaultMaximized = false,
-                Closable = true,
-                Footer = null,
-                Centered = true,
-                WrapClassName = "game-actions-dialog"
-            };
-
-            var model = new ActionSelectorDialogOptions
-            {
-                Actions = actions.Where(a => a.IsPrimaryAction),
-                Game = game
-            };
-
-            var modalRef = ModalService.CreateModal<ActionSelectorDialog, ActionSelectorDialogOptions, Process>(modalOptions, model);
-        }
-    }
-
-    async Task Stop(Data.Models.Game game)
-    {
-        await LibraryService.Stop(game);
-
-        await InvokeAsync(StateHasChanged);
-    }
-
     async Task OnQueueChanged()
     {
-        var queueItem = DownloadService.Queue.FirstOrDefault(i => i.Id == SelectedItem.Key);
+        var queueItem = DownloadService.Queue.FirstOrDefault(i => SelectedItem != null && i.Id == SelectedItem.Key);
 
         if (queueItem != null)
         {

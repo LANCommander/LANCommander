@@ -87,20 +87,8 @@ namespace LANCommander.Client.Services
             await DownloadService.Add(game);
         }
 
-        public async Task Uninstall(LibraryItem libraryItem)
+        public async Task LibraryChanged()
         {
-            var game = libraryItem.DataItem as Game;
-
-            await Task.Run(() => Client.Games.Uninstall(game.InstallDirectory, game.Id));
-
-            game.InstallDirectory = null;
-            game.Installed = false;
-            game.InstalledVersion = null;
-
-            await GameService.Update(game);
-
-            DownloadService.Remove(libraryItem.Key);
-
             OnLibraryChanged?.Invoke();
         }
 

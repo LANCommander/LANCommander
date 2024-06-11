@@ -1,5 +1,6 @@
 ﻿using LANCommander.Client.Data;
 using LANCommander.Client.Data.Models;
+using LANCommander.Client.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using System;
@@ -66,6 +67,17 @@ namespace LANCommander.Client.Services
                 }
 
             return manifests;
+        }
+
+        public async Task Uninstall(Game game)
+        {
+            await Task.Run(() => Client.Games.Uninstall(game.InstallDirectory, game.Id));
+
+            game.InstallDirectory = null;
+            game.Installed = false;
+            game.InstalledVersion = null;
+
+            await Update(game);
         }
     }
 }

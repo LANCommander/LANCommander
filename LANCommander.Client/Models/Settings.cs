@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,7 @@ namespace LANCommander.Client.Models
         public GameSettings Games { get; set; } = new GameSettings();
         public MediaSettings Media { get; set; } = new MediaSettings();
         public ProfileSettings Profile { get; set; } = new ProfileSettings();
+        public DebugSettings Debug { get; set; } = new DebugSettings();
     }
 
     public class DatabaseSettings
@@ -42,5 +44,12 @@ namespace LANCommander.Client.Models
         public Guid Id { get; set; }
         public string Alias { get; set; }
         public string Avatar { get; set; }
+    }
+
+    public class DebugSettings
+    {
+        public bool EnableScriptDebugging { get; set; } = false;
+        public LogLevel LoggingLevel { get; set; } = LogLevel.Warning;
+        public string LoggingPath { get; set; } = "Logs";
     }
 }

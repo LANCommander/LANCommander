@@ -7,6 +7,8 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.SDK.PowerShell
 {
@@ -17,6 +19,7 @@ namespace LANCommander.SDK.PowerShell
         private bool AsAdmin { get; set; }              = false;
         private bool ShellExecute { get; set; }         = false;
         private bool IgnoreWow64 { get; set; }          = false;
+        private bool Debug { get; set; }                = false;
         private ICollection<PowerShellVariable> Variables { get; set; }
         private Dictionary<string, string> Arguments { get; set; }
         private List<string> Modules { get; set; }
@@ -122,6 +125,13 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
+        public PowerShellScript EnableDebug()
+        {
+            Debug = true;
+
+            return this;
+        }
+
         public int Execute()
         {
             var scriptBuilder = new StringBuilder();
@@ -142,6 +152,13 @@ namespace LANCommander.SDK.PowerShell
             }
 
             scriptBuilder.AppendLine(Contents);
+
+            if (Debug)
+            {
+                scriptBuilder.AppendLine("Read-Host");
+
+                Process.StartInfo.Arguments += " -NoExit";
+            }
 
             var path = ScriptHelper.SaveTempScript(scriptBuilder.ToString());
 
@@ -181,8 +198,12 @@ namespace LANCommander.SDK.PowerShell
 
         public static string Serialize<T>(T input)
         {
-            // Use the PowerShell serializer to generate XML for our input. Then convert to base64 so we can put it on one line.
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(System.Management.Automation.PSSerializer.Serialize(input)));
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(new PascalCaseNamingConvention())
+                .Build();
+
+            // Use the YamlDotNet serializer to generate a string for our input. Then convert to base64 so we can put it on one line.
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(serializer.Serialize(input)));
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]

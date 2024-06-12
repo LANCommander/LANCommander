@@ -22,6 +22,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Client.Data", "LANCommander.Client.Data\LANCommander.Client.Data.csproj", "{02FBFF81-6550-4E11-A78C-E965E593B3CC}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Client", "LANCommander.Client\LANCommander.Client.csproj", "{28D73284-B55A-4468-B96D-394C39BA162D}"
+	ProjectSection(ProjectDependencies) = postProject
+		{807943BF-0C7D-4ED3-8393-CFEE64E3138C} = {807943BF-0C7D-4ED3-8393-CFEE64E3138C}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Photino.Blazor.CustomWindow", "..\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow.csproj", "{507C8A0B-636B-4EC9-B47A-DD65C8829301}"
 EndProject

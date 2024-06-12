@@ -4,6 +4,8 @@ using System.Linq;
 using System.Management.Automation;
 using System.Text;
 using System.Threading.Tasks;
+using YamlDotNet.Serialization.NamingConventions;
+using YamlDotNet.Serialization;
 
 namespace LANCommander.PowerShell.Cmdlets
 {
@@ -16,7 +18,11 @@ namespace LANCommander.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            var output = Convert.ToBase64String(Encoding.UTF8.GetBytes(PSSerializer.Serialize(Input)));
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(new PascalCaseNamingConvention())
+                .Build();
+
+            var output = Convert.ToBase64String(Encoding.UTF8.GetBytes(serializer.Serialize(Input)));
 
             WriteObject(output);
         }

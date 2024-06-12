@@ -3298,4 +3298,8 @@
       <None Include="wwwroot\scripts\node_modules\yallist\README.md" />
       <None Include="wwwroot\scripts\node_modules\yallist\yallist.js" />
     </ItemGroup>
+  
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+      <Exec Command="Copy $(SolutionDir)LANCommander.PowerShell\bin\Debug\LANCommander.PowerShell.dll $(TargetDir)LANCommander.PowerShell.dll&#xD;&#xA;Copy $(SolutionDir)LANCommander.PowerShell\bin\Debug\LANCommander.PowerShell.psd1 $(TargetDir)LANCommander.PowerShell.psd1&#xD;&#xA;PowerShell -Command &quot;(Get-Content '$(TargetDir)LANCommander.PowerShell.psd1') -replace 'YamlDotNet.dll', '..\..\YamlDotNet.dll' | Out-File '$(TargetDir)LANCommander.PowerShell.psd1'&quot;" />
+    </Target>
 </Project>

@@ -309,6 +309,9 @@ namespace LANCommander.Client.Services
 
                 script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.Install));
 
+                if (Settings.Debug.EnableScriptDebugging)
+                    script.EnableDebug();
+
                 return script.Execute();
             }
 
@@ -341,6 +344,9 @@ namespace LANCommander.Client.Services
 
                 SDK.GameService.UpdatePlayerAlias(installDirectory, game.Id, newName);
 
+                if (Settings.Debug.EnableScriptDebugging)
+                    script.EnableDebug();
+
                 return script.Execute();
             }
 
@@ -370,6 +376,9 @@ namespace LANCommander.Client.Services
                 script.UseFile(path);
 
                 SDK.GameService.UpdateCurrentKey(installDirectory, game.Id, key);
+
+                if (Settings.Debug.EnableScriptDebugging)
+                    script.EnableDebug();
 
                 return script.Execute();
             }

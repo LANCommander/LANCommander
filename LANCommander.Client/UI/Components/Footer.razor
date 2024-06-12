@@ -20,8 +20,15 @@
 <DownloadQueue @bind-Visible="@DownloadQueueVisible" />
 
 @code {
-
     bool DownloadQueueVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        DownloadService.OnQueueChanged += async () =>
+        {
+            await InvokeAsync(StateHasChanged);
+        };
+    }
 
     async Task ShowDownloadQueue()
     {

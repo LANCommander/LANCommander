@@ -74,9 +74,7 @@ namespace LANCommander.Client.Services
 
                 if (baseGame != null && !baseGame.Installed)
                 {
-                    // Install game
-                    // Where does this get executed? In Playnite it's triggering the InstallController
-                    // Probably because it does a bunch of UI things
+                    await Add(baseGame);
                 }
             }
 
@@ -92,15 +90,10 @@ namespace LANCommander.Client.Services
 
                     Queue.Add(queueItem);
 
-                    Install();
+                    await Install();
                 }
 
                 OnQueueChanged?.Invoke();
-
-                game.Title = gameInfo.Title;
-                game.Installed = false;
-
-                await GameService.Update(game);
             }
         }
 
@@ -260,7 +253,7 @@ namespace LANCommander.Client.Services
                 OnInstallComplete?.Invoke();
             }
 
-            Install();
+            await Install();
         }
 
         private void ShowCompletedNotification(IDownloadQueueItem queueItem)

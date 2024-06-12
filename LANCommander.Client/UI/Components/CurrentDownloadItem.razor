@@ -81,7 +81,7 @@
         {
             CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
 
-            InvokeAsync(StateHasChanged);
+            await InvokeAsync(StateHasChanged);
         };
     }
 }

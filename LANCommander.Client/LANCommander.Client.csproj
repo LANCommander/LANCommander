@@ -5,6 +5,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+		<ApplicationIcon>LANCommanderDark.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -39,7 +40,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Content Include="LANCommander.ico" />
+	  <Content Include="LANCommander.ico">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="LANCommanderDark.ico" />
 	  <Content Include="wwwroot\scripts\node_modules\%40discoveryjs\json-ext\package.json" />
 	  <Content Include="wwwroot\scripts\node_modules\%40jridgewell\gen-mapping\package.json" />
 	  <Content Include="wwwroot\scripts\node_modules\%40jridgewell\resolve-uri\package.json" />
@@ -3298,6 +3302,12 @@
       <None Include="wwwroot\scripts\node_modules\yallist\LICENSE" />
       <None Include="wwwroot\scripts\node_modules\yallist\README.md" />
       <None Include="wwwroot\scripts\node_modules\yallist\yallist.js" />
+    </ItemGroup>
+  
+    <ItemGroup>
+      <None Update="LANCommanderDark.ico">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
   
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">

@@ -2,7 +2,7 @@
 @inject DownloadService DownloadService
 @inject NavigationManager NavigationManager
 
-<Drawer Placement="bottom" Class="download-queue" @bind-Visible="@Visible">
+<Drawer Placement="bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="() => Visible = false">
 
     @if (DownloadService.Queue.Any(qi => qi.State))
     {

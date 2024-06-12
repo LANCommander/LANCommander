@@ -39,6 +39,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Content Include="LANCommander.ico" />
 	  <Content Include="wwwroot\scripts\node_modules\%40discoveryjs\json-ext\package.json" />
 	  <Content Include="wwwroot\scripts\node_modules\%40jridgewell\gen-mapping\package.json" />
 	  <Content Include="wwwroot\scripts\node_modules\%40jridgewell\resolve-uri\package.json" />

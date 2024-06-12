@@ -20,7 +20,7 @@
                 {
                     <Panel Header="@collection.Name" Key="@collection.Key.ToString()">
                         <AntList DataSource="@collection.Children" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
-                            <ListItem OnClick='() => NavigationManager.NavigateTo($"/{context.Key}")'>
+                            <ListItem OnClick='() => NavigationManager.NavigateTo($"/{context.Key}")' Class="@GetItemClasses(context)">
                                 <div class="library-list-icon">
                                     <MediaImage Id="@context.IconId" />
                                 </div>
@@ -154,6 +154,19 @@
             await OnLibraryItemSelected(LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == Id));
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    string GetItemClasses(LibraryItem item)
+    {
+        HashSet<string> classes = new HashSet<string>();
+
+        if (item.State == LibraryItemState.Installed)
+            classes.Add("installed");
+
+        if (SelectedGame != null && SelectedGame.Id == item.Key)
+            classes.Add("selected");
+
+        return String.Join(" ", classes);
     }
 
     async Task OnLibraryItemSelected(LibraryItem item)

@@ -61,6 +61,12 @@
         gap: 12px;
         padding: 5px 12px;
         border: none;
+        color: #aaa;
+
+        &.installed {
+            font-weight: 400;
+            color: #fff;
+        }
 
         .library-list-icon {
             width: 24px;

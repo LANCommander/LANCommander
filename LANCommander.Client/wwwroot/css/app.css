@@ -224,10 +224,10 @@ footer {
   user-select: none;
   position: relative;
 }
-.ant-list-clickable .ant-list-item:hover {
+.ant-list-clickable .ant-list-item:hover, .ant-list-clickable .ant-list-item.selected {
   background: #262626;
 }
-.ant-list-clickable .ant-list-item:hover::after {
+.ant-list-clickable .ant-list-item:hover::after, .ant-list-clickable .ant-list-item.selected::after {
   background: linear-gradient(270deg, rgb(38, 38, 38) 0%, rgba(38, 38, 38, 0) 100%);
 }
 .ant-list-clickable .ant-list-item::after {
@@ -319,6 +319,11 @@ footer {
   gap: 12px;
   padding: 5px 12px;
   border: none;
+  color: #aaa;
+}
+.library-list .ant-list-item.installed {
+  font-weight: 400;
+  color: #fff;
 }
 .library-list .ant-list-item .library-list-icon {
   width: 24px;

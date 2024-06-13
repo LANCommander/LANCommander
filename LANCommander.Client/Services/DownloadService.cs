@@ -172,12 +172,14 @@ namespace LANCommander.Client.Services
                 currentItem.Status = DownloadStatus.InstallingRedistributables;
                 OnQueueChanged?.Invoke();
 
+                Logger?.Trace("Installing redistributables")
+
                 await Task.Run(() => Client.Redistributables.Install(gameInfo));
             }
             #endregion
 
             #region Download Latest Save
-            // Logger?.Trace("Attempting to download the latest save");
+            Logger?.Trace("Attempting to download the latest save");
             currentItem.Status = DownloadStatus.DownloadingSaves;
             OnQueueChanged?.Invoke();
 
@@ -197,7 +199,7 @@ namespace LANCommander.Client.Services
                     RunNameChangeScript(gameInfo);
                 }
                 catch (Exception ex) {
-                    // Logger?.Error
+                    Logger?.Error(ex, "Scripts failed to execute for mod/expansion {GameTitle} ({GameId})", game.Title, game.Id);
                 }
             }
             #endregion
@@ -218,7 +220,7 @@ namespace LANCommander.Client.Services
                 }
                 catch (InstallCanceledException ex)
                 {
-
+                    Logger?.Debug("Install canceled");
                 }
 
                 try
@@ -232,7 +234,7 @@ namespace LANCommander.Client.Services
                 }
                 catch (Exception ex)
                 {
-                    // Logger?.Error(ex, "Scripts failed to run for mod/expansion");
+                    Logger?.Error(ex, "Scripts failed to execute for mod/expansion {GameTitle} ({GameId})", dependentGame.Title, dependentGame.Id);
                 }
             }
             #endregion
@@ -247,6 +249,8 @@ namespace LANCommander.Client.Services
                 OnQueueChanged?.Invoke();
 
                 await GameService.Update(game);
+
+                Logger?.Trace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
 
                 ShowCompletedNotification(currentItem);
 
@@ -291,7 +295,7 @@ namespace LANCommander.Client.Services
 
             if (File.Exists(path))
             {
-                // Logger?.Trace("Running install script");
+                Logger?.Trace("Running install script for game {GameTitle} ({GameId})", game.Title, game.Id);
 
                 var script = new PowerShellScript();
 
@@ -308,6 +312,8 @@ namespace LANCommander.Client.Services
                 return script.Execute();
             }
 
+            Logger?.Trace("No install script found for game {GameTitle} ({GameId})", game.Title, game.Id);
+
             return 0;
         }
 
@@ -322,7 +328,12 @@ namespace LANCommander.Client.Services
 
             if (File.Exists(path))
             {
-                // Logger?.Trace("Running name change script");
+                Logger?.Trace("Running name change script for game {GameTitle} ({GameId})", game.Title, game.Id);
+
+                if (!String.IsNullOrWhiteSpace(oldName))
+                    Logger?.Trace("Old Name: {OldName}", oldName);
+
+                Logger?.Trace("New Name: {NewName}", newName);
 
                 var script = new PowerShellScript();
 
@@ -354,11 +365,13 @@ namespace LANCommander.Client.Services
 
             if (File.Exists(path))
             {
-                // Logger?.Trace("Running key change script");
+                Logger?.Trace("Running key change script for game {GameTitle} ({GameId})", game.Title, game.Id);
 
                 var script = new PowerShellScript();
 
                 var key = Client.Games.GetAllocatedKey(manifest.Id);
+
+                Logger?.Trace("New key is {Key}", key);
 
                 script.AddVariable("InstallDirectory", installDirectory);
                 script.AddVariable("GameManifest", manifest);

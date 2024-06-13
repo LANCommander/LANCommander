@@ -2,6 +2,8 @@
 using LANCommander.Client.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
@@ -26,6 +28,15 @@ namespace LANCommander.Client
             builder.Services.AddCustomWindow();
             builder.Services.AddAntDesign();
             builder.Services.AddDbContext<DbContext, DatabaseContext>();
+
+            NLog.GlobalDiagnosticsContext.Set("StoragePath", settings.Debug.LoggingPath);
+
+            builder.Services.AddLogging(loggingBuilder =>
+            {
+                loggingBuilder.ClearProviders();
+                loggingBuilder.SetMinimumLevel(settings.Debug.LoggingLevel);
+                loggingBuilder.AddNLog();
+            });
 
             #region Register Client
             var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);

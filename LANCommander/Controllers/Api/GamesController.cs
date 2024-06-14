@@ -47,14 +47,22 @@ namespace LANCommander.Controllers.Api
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole("Administrator"))
             {
                 var user = await UserManager.FindByNameAsync(User.Identity.Name);
-                var roles = await UserManager.GetRolesAsync(user);
+                var roleNames = await UserManager.GetRolesAsync(user);
+                var roles = new List<Role>();
 
-                foreach (var roleName in roles)
+                foreach (var name in roleNames)
                 {
-                    var role = await RoleManager.FindByNameAsync(roleName);
-                    var roleGames = role.Collections.SelectMany(c => c.Games).DistinctBy(g => g.Id).Select(g => g.Id);
+                    roles.Add(await RoleManager.FindByNameAsync(name));
+                }
 
-                    accessibleGames.AddRange(mappedGames.Where(mg => roleGames.Contains(mg.Id)));
+                var accessibleCollections = roles.SelectMany(r => r.Collections).DistinctBy(c => c.Id);
+                var accessibleCollectionGames = accessibleCollections.SelectMany(c => c.Games).DistinctBy(g => g.Id).Select(g => g.Id);
+
+                accessibleGames.AddRange(mappedGames.Where(mg => accessibleCollectionGames.Contains(mg.Id)));
+
+                foreach (var game in accessibleGames)
+                {
+                    game.Collections = game.Collections.Where(c => accessibleCollections.Any(ac => ac.Id == c.Id));
                 }
             }
             else

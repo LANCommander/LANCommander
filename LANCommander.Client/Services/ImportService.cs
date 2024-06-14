@@ -55,6 +55,11 @@ namespace LANCommander.Client.Services
             Settings = SettingService.GetSettings();
         }
 
+        public void ImportHasCompleted()
+        {
+            OnImportComplete?.Invoke();
+        }
+
         public async Task ImportAsync()
         {
             try

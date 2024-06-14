@@ -134,6 +134,7 @@
     {
         LibraryService.OnLibraryChanged += LoadData;
         DownloadService.OnQueueChanged += OnQueueChanged;
+        ImportService.OnImportComplete += LoadData;
 
         LoadData();
     }

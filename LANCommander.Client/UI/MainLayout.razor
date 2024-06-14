@@ -121,5 +121,6 @@
         _MainLayout.Messages.Success("Import Complete!");
         _MainLayout.Importing = false;
         _MainLayout.StateHasChanged();
+        _MainLayout.ImportService.ImportHasCompleted();
     }
 }

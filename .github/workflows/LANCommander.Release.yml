@@ -35,6 +35,8 @@ jobs:
 
     # Server
     - uses: actions/checkout@v3
+      with:
+        submodules: true
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:

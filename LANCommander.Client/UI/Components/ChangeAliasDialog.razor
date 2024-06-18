@@ -1,0 +1,26 @@
+﻿@inherits FeedbackComponent<string, string>
+
+<Form Model="Model" OnFinish="Save">
+    <FormItem Label="New Name">
+        <Input @bind-Value="@context.NewAlias" />
+    </FormItem>
+</Form>
+
+@code {
+    public ChangeAliasDialogModel Model { get; set; } = new ChangeAliasDialogModel();
+
+    public class ChangeAliasDialogModel
+    {
+        public string NewAlias { get; set; }
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await base.OkCancelRefWithResult!.OnOk(Model.NewAlias);
+    }
+
+    async Task Save(EditContext editContext)
+    {
+        
+    }
+}

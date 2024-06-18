@@ -1,0 +1,37 @@
+﻿@using LANCommander.Client.Models
+@using System.Diagnostics
+@inject DownloadService DownloadService
+@inject SDK.Client Client
+@inject GameService GameService
+
+<footer>
+    @if (DownloadService.Queue.Any(qi => qi.State))
+    {
+        <div class="downloader" @onclick="() => ShowDownloadQueue()">
+            <CurrentDownloadItem ShowIcon="true" />
+        </div>
+    }
+    else
+    {
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
+    }
+</footer>
+
+<DownloadQueue @bind-Visible="@DownloadQueueVisible" />
+
+@code {
+    bool DownloadQueueVisible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        DownloadService.OnQueueChanged += async () =>
+        {
+            await InvokeAsync(StateHasChanged);
+        };
+    }
+
+    async Task ShowDownloadQueue()
+    {
+        DownloadQueueVisible = true;
+    }
+}

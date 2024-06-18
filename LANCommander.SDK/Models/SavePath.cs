@@ -5,9 +5,8 @@ using System.Text;
 
 namespace LANCommander.SDK.Models
 {
-    public class SavePath
+    public class SavePath : KeyedModel
     {
-        public Guid Id { get; set; }
         public SavePathType Type { get; set; }
         public string Path { get; set; }
         public string WorkingDirectory { get; set; }

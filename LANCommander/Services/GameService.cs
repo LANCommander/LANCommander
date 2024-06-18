@@ -136,7 +136,7 @@ namespace LANCommander.Services
 
             if (game.Actions != null && game.Actions.Count > 0)
             {
-                manifest.Actions = game.Actions.Select(a => new GameAction()
+                manifest.Actions = game.Actions.Select(a => new SDK.Models.Action()
                 {
                     Name = a.Name,
                     Arguments = a.Arguments,

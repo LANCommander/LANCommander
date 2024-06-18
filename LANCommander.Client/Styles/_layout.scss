@@ -1,0 +1,52 @@
+body {
+    background: #000;
+}
+
+app {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.ant-layout {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.logo {
+    position: fixed;
+    width: 333px;
+    height: 74px;
+    z-index: 1000;
+    // pointer-events: none;
+
+    & > img {
+        width: 100%;
+        filter: drop-shadow(5px 0px 5px rgba(0,0,0,0.5));
+    }
+
+    &::before {
+        content: '';
+        opacity: 0;
+        background: linear-gradient(100deg, #FE0000 16.66%, #FD8C00 16.66%, 33.32%, #FFE500 33.32%, 49.98%, #119F0B 49.98%, 66.64%, #0644B3 66.64%, 83.3%, #C22EDC 83.3%) 0 0/200% 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 16px;
+        bottom: 0;
+        transition: .5s opacity;
+        animation: a 3s linear infinite;
+    }
+
+    &:hover::before {
+        opacity: 1;
+    }
+}
+
+@keyframes a {
+    to {
+        background-position: -200% 0
+    }
+}

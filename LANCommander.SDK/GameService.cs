@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LANCommander.SDK
 {
@@ -52,14 +53,29 @@ namespace LANCommander.SDK
             return Client.GetRequest<IEnumerable<Game>>("/api/Games");
         }
 
+        public async Task<IEnumerable<Game>> GetAsync()
+        {
+            return await Client.GetRequestAsync<IEnumerable<Game>>("/api/Games");
+        }
+
         public Game Get(Guid id)
         {
             return Client.GetRequest<Game>($"/api/Games/{id}");
         }
 
+        public async Task<Game> GetAsync(Guid id)
+        {
+            return await Client.GetRequestAsync<Game>($"/api/Games/{id}");
+        }
+
         public GameManifest GetManifest(Guid id)
         {
             return Client.GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
+        }
+
+        public async Task<GameManifest> GetManifestAsync(Guid id)
+        {
+            return await Client.GetRequestAsync<GameManifest>($"/api/Games/{id}/Manifest");
         }
 
         public IEnumerable<GameManifest> GetManifests()

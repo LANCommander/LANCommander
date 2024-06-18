@@ -5,9 +5,8 @@ using System.Text;
 
 namespace LANCommander.SDK.Models
 {
-    public class MultiplayerMode
+    public class MultiplayerMode : KeyedModel
     {
-        public Guid Id { get; set; }
         public MultiplayerType Type { get; set; }
         public NetworkProtocol NetworkProtocol { get; set; }
         public string Description { get; set; }

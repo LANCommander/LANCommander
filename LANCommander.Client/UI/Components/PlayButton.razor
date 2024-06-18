@@ -1,0 +1,141 @@
+﻿@using LANCommander.Client.Models
+@using System.Diagnostics
+@using LANCommander.SDK.Helpers
+@inject GameService GameService
+@inject LibraryService LibraryService
+@inject DownloadService DownloadService
+@inject ModalService ModalService
+
+@if (LibraryService.IsRunning(Game))
+{
+    <Popconfirm Title="Do you want to stop this game?" OkText="Yes" OnConfirm="() => Stop()">
+        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
+    </Popconfirm>
+}
+else
+{
+    <Space Direction="@DirectionVHType.Horizontal">
+        <SpaceItem>
+            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">Play</Button>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Dropdown>
+                <Overlay>
+                    <Menu>
+                        @if (GameActions != null && GameActions.Count() > 0)
+                        {
+                            @foreach (var action in GameActions)
+                            {
+                                <MenuItem OnClick="() => LibraryService.Run(Game, action)">
+                                    @action.Name
+                                </MenuItem>
+                            }
+
+                            <MenuDivider />
+                        }
+
+                        @if (Game.Installed)
+                        {
+                            <MenuItem OnClick="() => Uninstall()">
+                                Uninstall
+                            </MenuItem>
+                        }
+
+                        @MenuExtra
+                    </Menu>
+                </Overlay>
+
+                <ChildContent>
+                    <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
+                </ChildContent>
+            </Dropdown>
+        </SpaceItem>
+    </Space>
+}
+
+@code {
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public RenderFragment MenuExtra { get; set; }
+
+    Data.Models.Game Game { get; set; }
+    IEnumerable<SDK.Models.Action> GameActions { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Game = await GameService.Get(GameId);
+    }
+
+    async Task Run()
+    {
+        var actions = await GameService.GetActionsAsync(Game);
+
+        var primaryActions = actions.Where(a => a.IsPrimaryAction);
+
+        if (primaryActions.Count() == 1)
+        {
+            var task = LibraryService.Run(Game, primaryActions.First());
+
+            await InvokeAsync(StateHasChanged);
+
+            await task;
+        }
+        else
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = Game.Title,
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                Footer = null,
+                Centered = true,
+                WrapClassName = "game-actions-dialog"
+            };
+
+            var model = new ActionSelectorDialogOptions
+            {
+                Actions = actions.Where(a => a.IsPrimaryAction),
+                Game = Game
+            };
+
+            var modalRef = ModalService.CreateModal<ActionSelectorDialog, ActionSelectorDialogOptions, Process>(modalOptions, model);
+        }
+    }
+
+    async Task Stop()
+    {
+        await LibraryService.Stop(Game);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Uninstall()
+    {
+        var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
+
+        var message = $"Would you like to uninstall {Game.Title}?";
+
+        if (manifest.SavePaths != null && manifest.SavePaths.Any())
+            message += " Your save files have been uploaded to the server.";
+        else
+            message += " Your save files may be unrecoverable if they are contained within the game's install directory.";
+
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
+        {
+            OkText = "Uninstall",
+            CancelText = "Cancel",
+            Title = "Uninstall",
+            Content = message,
+            OkType = "danger",
+            Icon = @<Icon Type="@IconType.Outline.Delete" />
+        });
+
+        if (confirmed)
+            await GameService.Uninstall(Game);
+
+        DownloadService.Remove(Game.Id);
+
+        await LibraryService.LibraryChanged();
+    }
+}

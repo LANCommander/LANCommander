@@ -1,0 +1,126 @@
+﻿@using LANCommander.Client.Models
+@using Photino.Blazor.CustomWindow.Components
+@inherits LayoutComponentBase
+@inject ImportService ImportService
+@inject ProfileService ProfileService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ModalService ModalService
+@inject IJSRuntime JS
+
+<CustomWindow HeaderHeight="37">
+    <HeaderExtraControlsLayout>
+        <Space Direction="@DirectionVHType.Horizontal">
+            @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
+            {
+                <SpaceItem>
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
+                </SpaceItem>
+
+                <SpaceItem>
+                    <Dropdown>
+                        <Overlay>
+                            <Menu>
+                                <MenuItem OnClick="ChangeAlias">
+                                    Change Name
+                                </MenuItem>
+                                <MenuItem OnClick="Logout">
+                                    Logout
+                                </MenuItem>
+                            </Menu>
+                        </Overlay>
+
+                        <ChildContent>
+                            <Button Type="@ButtonType.Primary" Class="appbar-profile-button">
+                                <img src="data:image/png;base64,@(Settings.Profile.Avatar)" />
+                                @Settings.Profile.Alias
+                            </Button>
+                        </ChildContent>
+                    </Dropdown>
+
+                </SpaceItem>
+            }
+        </Space>
+    </HeaderExtraControlsLayout>
+    <WindowContent>
+        @Body
+
+        <AntContainer />
+        <RedirectToLogin />
+    </WindowContent>
+</CustomWindow>
+
+@code {
+    Settings Settings = null;
+
+    public bool Importing = false;
+    public IMessageService Messages { get; set; }
+
+    public static MainLayout _MainLayout { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _MainLayout = this;
+
+        Settings = SettingService.GetSettings();
+        Messages = MessageService;
+
+        ImportService.OnImportComplete += () =>
+        {
+            MessageService.Success("Import Complete", 3);
+        };
+    }
+
+    async Task Logout()
+    {
+        await ProfileService.Logout();
+
+        NavigationManager.NavigateTo("/Authenticate");
+    }
+
+    async Task ChangeAlias()
+    {
+        var settings = SettingService.GetSettings();
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Change Name",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Centered = true
+        };
+
+        var modalRef = ModalService.CreateModal<ChangeAliasDialog, string, string>(modalOptions, settings.Profile.Alias);
+
+        modalRef.OnOk = async (newName) =>
+        {
+            await ProfileService.ChangeAlias(newName);
+
+            Settings = SettingService.GetSettings();
+
+            await InvokeAsync(StateHasChanged);
+        };
+    }
+
+    async void Import()
+    {
+        if (!Importing)
+        {
+            await JS.InvokeVoidAsync("sendMessage", "import");
+
+            Importing = true;
+            StateHasChanged();
+            MessageService.Info("Import Started", 2.5);
+        }
+    }
+
+    [JSInvokable("ImportComplete")]
+    public static void ImportComplete()
+    {
+        _MainLayout.Messages.Success("Import Complete!");
+        _MainLayout.Importing = false;
+        _MainLayout.StateHasChanged();
+        _MainLayout.ImportService.ImportHasCompleted();
+    }
+}

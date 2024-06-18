@@ -1,0 +1,25 @@
+﻿@using LANCommander.Client.Data.Models
+@inject MediaService MediaService
+
+@if (Media != null)
+{
+    <img src="media://@(Media.FileId)-@(Media.Crc32)?mime=@(Media.MimeType)" class="@Class" />
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Class { get; set; }
+
+    Media Media { get; set; }
+    string Data { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Media = await MediaService.Get(Id);
+
+        var path = MediaService.GetImagePath(Media);
+
+        if (File.Exists(path))
+            Data = Convert.ToBase64String(await File.ReadAllBytesAsync(path));
+    }
+}

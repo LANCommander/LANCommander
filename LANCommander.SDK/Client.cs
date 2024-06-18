@@ -440,18 +440,27 @@ namespace LANCommander.SDK
                 return false;
             }
 
-            var response = ApiClient.Post(request);
+            try
+            {
+                var response = ApiClient.Post(request);
 
-            var valid = response.StatusCode == HttpStatusCode.OK;
+                var valid = response.StatusCode == HttpStatusCode.OK;
 
-            if (valid)
-                Logger?.LogTrace("Token is valid!");
-            else
-                Logger?.LogTrace("Token is invalid!");
+                if (valid)
+                    Logger?.LogTrace("Token is valid!");
+                else
+                    Logger?.LogTrace("Token is invalid!");
 
-            Connected = valid;
+                Connected = valid;
 
-            return response.StatusCode == HttpStatusCode.OK;
+                return response.StatusCode == HttpStatusCode.OK;
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogTrace(ex, "Token could not be retrieved");
+
+                return false;
+            }
         }
 
         public async Task<bool> ValidateTokenAsync(AuthToken token)

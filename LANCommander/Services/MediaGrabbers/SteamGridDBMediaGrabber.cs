@@ -44,6 +44,10 @@ namespace LANCommander.Services.MediaGrabbers
                     case MediaType.Background:
                         results.AddRange(await GetBackgroundsAsync(game));
                         break;
+
+                    case MediaType.Logo:
+                        results.AddRange(await GetLogosAsync(game));
+                        break;
                 }
             }
 
@@ -88,6 +92,21 @@ namespace LANCommander.Services.MediaGrabbers
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Background,
+                SourceUrl = b.FullImageUrl,
+                ThumbnailUrl = b.ThumbnailImageUrl,
+                Group = game.Name,
+                MimeType = GetMimeType(b.Format)
+            });
+        }
+
+        private async Task<IEnumerable<MediaGrabberResult>> GetLogosAsync(SteamGridDbGame game)
+        {
+            var logos = await SteamGridDb.GetLogosByGameIdAsync(game.Id);
+
+            return logos.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            {
+                Id = b.Id.ToString(),
+                Type = MediaType.Logo,
                 SourceUrl = b.FullImageUrl,
                 ThumbnailUrl = b.ThumbnailImageUrl,
                 Group = game.Name,

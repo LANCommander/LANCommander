@@ -26,7 +26,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Client", "LANC
 		{807943BF-0C7D-4ED3-8393-CFEE64E3138C} = {807943BF-0C7D-4ED3-8393-CFEE64E3138C}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Photino.Blazor.CustomWindow", "..\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow.csproj", "{507C8A0B-636B-4EC9-B47A-DD65C8829301}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Photino.Blazor.CustomWindow", "Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow.csproj", "{7EF5AB60-84C3-47FC-A845-AE669A314CFE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -74,10 +74,10 @@ Global
 		{28D73284-B55A-4468-B96D-394C39BA162D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{28D73284-B55A-4468-B96D-394C39BA162D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{28D73284-B55A-4468-B96D-394C39BA162D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{507C8A0B-636B-4EC9-B47A-DD65C8829301}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{507C8A0B-636B-4EC9-B47A-DD65C8829301}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{507C8A0B-636B-4EC9-B47A-DD65C8829301}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{507C8A0B-636B-4EC9-B47A-DD65C8829301}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

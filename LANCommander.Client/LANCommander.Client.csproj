@@ -25,9 +25,9 @@
     </ItemGroup>
   
     <ItemGroup>
-        <ProjectReference Include="..\..\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow.csproj" />
         <ProjectReference Include="..\LANCommander.Client.Data\LANCommander.Client.Data.csproj" />
         <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+        <ProjectReference Include="..\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow.csproj" />
     </ItemGroup>
 
 	<Target Name="CompileGlobalSass" BeforeTargets="Compile">

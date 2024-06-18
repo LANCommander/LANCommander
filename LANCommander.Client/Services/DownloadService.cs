@@ -172,7 +172,7 @@ namespace LANCommander.Client.Services
                 currentItem.Status = DownloadStatus.InstallingRedistributables;
                 OnQueueChanged?.Invoke();
 
-                Logger?.Trace("Installing redistributables")
+                Logger?.Trace("Installing redistributables");
 
                 await Task.Run(() => Client.Redistributables.Install(gameInfo));
             }

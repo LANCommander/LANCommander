@@ -14,6 +14,7 @@ using LANCommander.Services.MediaGrabbers;
 using Microsoft.Data.Sqlite;
 using LANCommander.Extensions;
 using Microsoft.AspNetCore.Http.Features;
+using RobotsTxt;
 
 namespace LANCommander
 {
@@ -71,6 +72,9 @@ namespace LANCommander
                     options.AreaPageViewLocationFormats.Add("/UI/Pages/Shared/{0}.cshtml");
                     options.AreaPageViewLocationFormats.Add("/UI/Views/Shared/{0}.cshtml");
                 });
+
+            builder.Services.AddStaticRobotsTxt(builder => builder.DenyAll());
+
             builder.Services.AddRazorPages(options =>
             {
                 options.RootDirectory = "/UI/Pages";

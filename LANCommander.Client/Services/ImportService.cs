@@ -1,5 +1,6 @@
 ﻿using LANCommander.Client.Data.Models;
 using LANCommander.Client.Models;
+using LANCommander.SDK.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -270,6 +271,24 @@ namespace LANCommander.Client.Services
                             GameId = session.GameId,
                             UserId = Settings.Profile.Id
                         });
+                    }
+                    #endregion
+
+                    #region Check Installation Status
+                    var installDirectory = Client.Games.GetInstallDirectory(remoteGame);
+
+                    if (Directory.Exists(installDirectory))
+                    {
+                        var manifestLocation = ManifestHelper.GetPath(installDirectory, remoteGame.Id);
+
+                        if (File.Exists(manifestLocation))
+                        {
+                            var manifest = ManifestHelper.Read(installDirectory, remoteGame.Id);
+
+                            localGame.Installed = true;
+                            localGame.InstallDirectory = installDirectory;
+                            localGame.InstalledVersion = manifest.Version;
+                        }
                     }
                     #endregion
 

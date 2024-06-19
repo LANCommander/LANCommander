@@ -273,7 +273,43 @@ namespace LANCommander.Services
                 {
                     var process = Processes[server.Id];
 
-                    process.Kill();
+                    if (server.ProcessTerminationMethod == ProcessTerminationMethod.Close)
+                        process.CloseMainWindow();
+                    else if (server.ProcessTerminationMethod == ProcessTerminationMethod.Kill)
+                        process.Kill();
+                    else
+                    {
+                        int signal = 1;
+                        int pid = process.Id;
+
+                        process.Close();
+
+                        switch (server.ProcessTerminationMethod)
+                        {
+                            case ProcessTerminationMethod.SIGHUP:
+                                signal = 1;
+                                break;
+                            case ProcessTerminationMethod.SIGINT:
+                                signal = 2;
+                                break;
+                            case ProcessTerminationMethod.SIGKILL:
+                                signal = 9;
+                                break;
+                            case ProcessTerminationMethod.SIGTERM:
+                                signal = 15;
+                                break;
+                        }
+
+                        using (var terminator = new Process())
+                        {
+                            terminator.StartInfo.FileName = "kill";
+                            terminator.StartInfo.Arguments = $"-{signal} {pid}";
+                            terminator.Start();
+                            await terminator.WaitForExitAsync();
+                        }
+                    }
+
+                    Processes.Remove(server.Id);
                 }
 
                 if (LogFileMonitors.ContainsKey(server.Id))

@@ -18,6 +18,7 @@ namespace LANCommander.Data.Models
         public int Port { get; set; } = 0;
 
         public bool UseShellExecute { get; set; }
+        public ProcessTerminationMethod ProcessTerminationMethod { get; set; }
         public bool Autostart { get; set; }
         public ServerAutostartMethod AutostartMethod { get; set; }
         public int AutostartDelay { get; set; }

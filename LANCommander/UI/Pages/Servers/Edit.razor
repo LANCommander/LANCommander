@@ -7,6 +7,7 @@
 @using LANCommander.Data.Enums
 @using LANCommander.Extensions
 @using Microsoft.EntityFrameworkCore
+@using System.Runtime.InteropServices
 @inject GameService GameService
 @inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
@@ -103,6 +104,9 @@
                         <ChildContent>
                             <Switch @bind-Checked="context.UseShellExecute" />
                         </ChildContent>
+                    </FormItem>
+                    <FormItem Label="Termination Method">
+                        <Select @bind-Value="context.ProcessTerminationMethod" TItem="ProcessTerminationMethod" TItemValue="ProcessTerminationMethod" DataSource="AllowedProcessTerminationMethods" />
                     </FormItem>
                     <FormItem>
                         <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
@@ -201,6 +205,27 @@
 
     Server Server;
     Guid GameId;
+
+    IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods
+    {
+        get
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return new ProcessTerminationMethod[]
+                {
+                    ProcessTerminationMethod.SIGHUP,
+                    ProcessTerminationMethod.SIGINT,
+                    ProcessTerminationMethod.SIGKILL,
+                    ProcessTerminationMethod.SIGTERM
+                };
+            else
+                return new ProcessTerminationMethod[]
+                {
+                    ProcessTerminationMethod.Close,
+                    ProcessTerminationMethod.Kill
+                };
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

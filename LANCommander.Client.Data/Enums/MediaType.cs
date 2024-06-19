@@ -5,6 +5,7 @@
         Icon,
         Cover,
         Background,
-        Avatar
+        Avatar,
+        Logo
     }
 }

@@ -36,7 +36,15 @@
             @if (SelectedGame != null)
             {
                 <div class="game-hero">
-                    <h1>@SelectedGame.Title</h1>
+                    @if (SelectedGame.Media.Any(m => m.Type == Data.Enums.MediaType.Logo))
+                    {
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Logo).Id)" Class="game-details-logo" />
+                    }
+                    else
+                    {
+                        <h1>@SelectedGame.Title</h1>
+                    }
+
                     @if (SelectedGame.Media.Any(m => m.Type == Data.Enums.MediaType.Background))
                     {
                         <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Background).Id)" Class="game-details-background" />

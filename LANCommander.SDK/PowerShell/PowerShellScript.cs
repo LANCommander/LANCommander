@@ -32,7 +32,7 @@ namespace LANCommander.SDK.PowerShell
             Modules = new List<string>();
             Process = new Process();
 
-            Process.StartInfo.FileName = "powershell.exe";
+            Process.StartInfo.FileName = "powershell";
             Process.StartInfo.RedirectStandardOutput = false;
 
             AddArgument("ExecutionPolicy", "Unrestricted");

@@ -8,6 +8,9 @@ namespace LANCommander.SDK.Enums
     {
         Icon,
         Cover,
-        Background
+        Background,
+        Avatar,
+        Logo,
+        Manual
     }
 }

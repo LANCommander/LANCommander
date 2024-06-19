@@ -6,6 +6,7 @@
         Cover,
         Background,
         Avatar,
-        Logo
+        Logo,
+        Manual
     }
 }

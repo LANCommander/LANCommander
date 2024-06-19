@@ -9,7 +9,7 @@
     <SpaceItem>
         <Table TItem="Media" DataSource="@Values" HidePagination="true" Responsive>
             <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
-                @if (MediaService.FileExists(context))
+                @if (MediaService.FileExists(context) && context.Type != MediaType.Manual)
                 {
                     <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")" />
                 }

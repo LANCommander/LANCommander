@@ -1,4 +1,5 @@
-﻿@using LANCommander.Client.Models
+﻿@using LANCommander.Client.Data.Models
+@using LANCommander.Client.Models
 @using System.Diagnostics
 @using LANCommander.SDK.Helpers
 @inject GameService GameService
@@ -40,6 +41,16 @@ else
                             <MenuItem OnClick="() => Uninstall()">
                                 Uninstall
                             </MenuItem>
+
+                            if (Game.Media != null)
+                            {
+                                foreach (var manual in Game.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
+                                {
+                                    <MenuItem OnClick="() => OpenManual(manual)">
+                                        @(String.IsNullOrWhiteSpace(manual.Name) ? "Manual" : manual.Name)
+                                    </MenuItem>
+                                }
+                            }
                         }
 
                         @MenuExtra
@@ -137,5 +148,22 @@ else
         DownloadService.Remove(Game.Id);
 
         await LibraryService.LibraryChanged();
+    }
+
+    async Task OpenManual(Media media)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = media.Name,
+            Maximizable = true,
+            DefaultMaximized = true,
+            Closable = true,
+            Footer = null,
+            Draggable = true,
+            Resizable = true,
+            WrapClassName = "pdf-reader-dialog",
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
     }
 }

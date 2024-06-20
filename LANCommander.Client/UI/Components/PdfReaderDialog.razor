@@ -1,0 +1,9 @@
+﻿@using LANCommander.Client.Data.Models
+@inherits FeedbackComponent<Media>
+@inject MediaService MediaService
+
+<BootstrapBlazor.Components.PdfReader FileName="@($"media://{Options.FileId}-{Options.Crc32}?mime={Options.MimeType}")" Height="100%" />
+
+@code {
+
+}

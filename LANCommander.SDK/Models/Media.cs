@@ -8,6 +8,7 @@ namespace LANCommander.SDK.Models
     public class Media : BaseModel
     {
         public Guid FileId { get; set; }
+        public string Name { get; set; }
         public MediaType Type { get; set; }
         public string SourceUrl { get; set; }
         public string MimeType { get; set; }

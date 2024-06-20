@@ -213,6 +213,15 @@ footer {
   border-radius: 0;
 }
 
+.ant-modal-close,
+.ant-modal-max-btn {
+  color: rgba(255, 255, 255, 0.45);
+}
+.ant-modal-close:hover,
+.ant-modal-max-btn:hover {
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .split-pane {
   display: flex;
   flex-direction: row;
@@ -534,6 +543,23 @@ footer {
 
 .game-actions-dialog .ant-modal-body {
   padding: 0;
+}
+
+.pdf-reader-dialog .ant-modal-content {
+  resize: both !important;
+}
+.pdf-reader-dialog .ant-modal-body {
+  padding: 0;
+  height: 100%;
+}
+.pdf-reader-dialog .ant-modal-close-x,
+.pdf-reader-dialog .ant-modal-max-btn-x {
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+}
+.pdf-reader-dialog .ant-modal-max-btn {
+  right: 32px;
 }
 
 /*# sourceMappingURL=app.css.map */

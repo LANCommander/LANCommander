@@ -20,6 +20,11 @@ namespace LANCommander.Data.Models
         [MaxLength(8)]
         public string Crc32 { get; set; }
 
+        public virtual Media? Thumbnail { get; set; }
+
+        [JsonIgnore]
+        public virtual Media? Parent { get; set; }
+
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

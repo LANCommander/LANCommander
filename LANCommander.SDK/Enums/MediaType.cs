@@ -11,6 +11,7 @@ namespace LANCommander.SDK.Enums
         Background,
         Avatar,
         Logo,
-        Manual
+        Manual,
+        Thumbnail
     }
 }

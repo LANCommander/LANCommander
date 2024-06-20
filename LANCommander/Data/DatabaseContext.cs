@@ -148,6 +148,14 @@ namespace LANCommander.Data
                 .OnDelete(DeleteBehavior.SetNull);
             #endregion
 
+            #region Media Relationships
+            builder.Entity<Media>()
+                .HasOne(m => m.Thumbnail)
+                .WithOne(m => m.Parent)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+            #endregion
+
             #region User Relationships
             builder.Entity<User>()
                 .HasMany(u => u.GameSaves)

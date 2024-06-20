@@ -99,7 +99,7 @@
 
     void LoadAvatar()
     {
-        var avatar = User.Media.FirstOrDefault(a => a.Type == Data.Enums.MediaType.Avatar);
+        var avatar = User.Media.FirstOrDefault(a => a.Type == SDK.Enums.MediaType.Avatar);
 
         if (avatar != null)
             AvatarUrl = $"/api/Media/{avatar.Id}/Download?fileId={avatar.FileId}";
@@ -109,12 +109,12 @@
 
     async Task UploadAvatar(InputFileChangeEventArgs e)
     {
-        var media = User.Media.FirstOrDefault(m => m.Type == Data.Enums.MediaType.Avatar);
+        var media = User.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
 
         if (media == null)
             media = new Media
             {
-                Type = Data.Enums.MediaType.Avatar,
+                Type = SDK.Enums.MediaType.Avatar,
                 UserId = User.Id
             };
 

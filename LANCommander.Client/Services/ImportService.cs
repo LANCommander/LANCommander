@@ -304,7 +304,7 @@ namespace LANCommander.Client.Services
                     var medias = await ImportFromModel<Media, SDK.Models.Media, MediaService>(remoteGame.Media, MediaService, (media, importMedia) =>
                     {
                         media.FileId = importMedia.FileId;
-                        media.Type = (Data.Enums.MediaType)(int)importMedia.Type;
+                        media.Type = importMedia.Type;
                         media.SourceUrl = importMedia.SourceUrl;
                         media.MimeType = importMedia.MimeType;
                         media.Crc32 = importMedia.Crc32;

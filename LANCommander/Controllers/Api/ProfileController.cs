@@ -64,7 +64,7 @@ namespace LANCommander.Controllers.Api
             {
                 var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
-                var media = user.Media?.FirstOrDefault(u => u.Type == Data.Enums.MediaType.Avatar);
+                var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
 
                 if (media == null)
                     return NotFound();
@@ -88,7 +88,7 @@ namespace LANCommander.Controllers.Api
                 if (user == null)
                     return NotFound();
 
-                var media = user.Media?.FirstOrDefault(u => u.Type == Data.Enums.MediaType.Avatar);
+                var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
 
                 if (media == null)
                     return NotFound();

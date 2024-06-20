@@ -1,6 +1,7 @@
 ﻿using craftersmine.SteamGridDBNet;
 using LANCommander.Data.Enums;
 using LANCommander.Models;
+using LANCommander.SDK.Enums;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace LANCommander.Services.MediaGrabbers

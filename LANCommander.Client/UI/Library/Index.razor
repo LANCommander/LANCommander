@@ -36,18 +36,18 @@
             @if (SelectedGame != null)
             {
                 <div class="game-hero">
-                    @if (SelectedGame.Media.Any(m => m.Type == Data.Enums.MediaType.Logo))
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
                     {
-                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Logo).Id)" Class="game-details-logo" />
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo).Id)" Class="game-details-logo" />
                     }
                     else
                     {
                         <h1>@SelectedGame.Title</h1>
                     }
 
-                    @if (SelectedGame.Media.Any(m => m.Type == Data.Enums.MediaType.Background))
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
                     {
-                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Background).Id)" Class="game-details-background" />
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background).Id)" Class="game-details-background" />
                     }
                 </div>
                 <GridRow Gutter="32" Class="game-info" Wrap="false">
@@ -111,9 +111,9 @@
                     </GridCol>
 
                     <GridCol Flex="@("256px")" Class="game-cover">
-                        @if (SelectedGame.Media.Any(m => m.Type == Data.Enums.MediaType.Cover))
+                        @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
                         {
-                            <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == Data.Enums.MediaType.Cover).Id)" />
+                            <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover).Id)" />
                         }
                     </GridCol>
                 </GridRow>

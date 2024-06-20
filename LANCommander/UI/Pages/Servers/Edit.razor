@@ -294,7 +294,7 @@
 
     private string GetIcon(Game game)
     {
-        var media = game?.Media?.FirstOrDefault(m => m.Type == Data.Enums.MediaType.Icon);
+        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
         if (media != null)
             return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";

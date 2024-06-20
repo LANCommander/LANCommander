@@ -511,7 +511,7 @@ namespace LANCommander.Services
                     {
                         media.SourceUrl = manifestMedia.SourceUrl;
                         media.FileId = manifestMedia.FileId;
-                        media.Type = (Data.Enums.MediaType)(int)manifestMedia.Type;
+                        media.Type = (SDK.Enums.MediaType)(int)manifestMedia.Type;
                         media.MimeType = manifestMedia.MimeType;
                         media.CreatedOn = manifestMedia.CreatedOn;
 
@@ -530,7 +530,7 @@ namespace LANCommander.Services
                             FileId = manifestMedia.FileId,
                             MimeType = manifestMedia.MimeType,
                             SourceUrl = manifestMedia.SourceUrl,
-                            Type = (Data.Enums.MediaType)(int)manifestMedia.Type,
+                            Type = (SDK.Enums.MediaType)(int)manifestMedia.Type,
                             CreatedOn = manifestMedia.CreatedOn,
                         };
 

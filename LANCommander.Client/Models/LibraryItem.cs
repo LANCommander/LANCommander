@@ -59,7 +59,7 @@ namespace LANCommander.Client.Models
             else
                 State = LibraryItemState.NotInstalled;
 
-            var icon = game.Media.FirstOrDefault(m => m.Type == Data.Enums.MediaType.Icon);
+            var icon = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
             if (icon != null)
                 IconId = icon.Id;

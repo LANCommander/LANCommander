@@ -1,4 +1,4 @@
-﻿using LANCommander.Data.Enums;
+﻿using LANCommander.SDK.Enums;
 
 namespace LANCommander.Models
 {

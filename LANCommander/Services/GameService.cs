@@ -421,6 +421,7 @@ namespace LANCommander.Services
                     if (manifestSavePath != null)
                     {
                         path.Path = manifestSavePath.Path;
+                        path.WorkingDirectory = manifestSavePath.WorkingDirectory;
                         path.IsRegex = manifestSavePath.IsRegex;
                         path.Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type);
                     }
@@ -434,6 +435,7 @@ namespace LANCommander.Services
                         game.SavePaths.Add(new Data.Models.SavePath()
                         {
                             Path = manifestSavePath.Path,
+                            WorkingDirectory = manifestSavePath.WorkingDirectory,
                             IsRegex = manifestSavePath.IsRegex,
                             Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type)
                         });

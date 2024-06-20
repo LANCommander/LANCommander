@@ -5,7 +5,14 @@
 @inject ArchiveService ArchiveService;
 @attribute [Authorize(Roles = "Administrator")]
 
-<PageHeader Title="Orphaned Files" />
+<PageHeader>
+    <PageHeaderTitle>Orphaned Files</PageHeaderTitle>
+    <PageHeaderExtra>
+        <Popconfirm OnConfirm="DeleteAll" Title="Delete all orphan files?" Disabled="@(!Orphans.Any())">
+            <Button Type="@ButtonType.Primary" Disabled="@(!Orphans.Any())">Delete All</Button>
+        </Popconfirm>
+    </PageHeaderExtra>
+</PageHeader>
 
 <div style="padding: 0 24px;">
     <p>
@@ -75,5 +82,13 @@
         Orphans.Remove(file);
 
         StateHasChanged();
+    }
+
+    async Task DeleteAll()
+    {
+        foreach (var file in Orphans)
+        {
+            await Delete(file);
+        }
     }
 }

@@ -9,6 +9,8 @@ namespace LANCommander.Data.Models
     public class Media : BaseModel
     {
         public Guid FileId { get; set; }
+        [MaxLength(64)]
+        public string? Name { get; set; }
         public MediaType Type { get; set; }
 
         [MaxLength(2048)]

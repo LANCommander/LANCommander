@@ -16,7 +16,14 @@
         <div class="downloader-current-info">
             <div class="downloader-current-upper">
                 <div class="downloader-current-upper-status">
-                    @CurrentQueueItem.Status: @CurrentQueueItem.Progress.ToString("0%")
+                    @if (CurrentQueueItem.Status == Enums.DownloadStatus.Downloading)
+                    {
+                        <Text>@CurrentQueueItem.Status.GetDisplayName(): @CurrentQueueItem.Progress.ToString("0%")</Text>
+                    }
+                    else
+                    {
+                        <Text>@CurrentQueueItem.Status.GetDisplayName()</Text>
+                    }
                 </div>
                 @if (CurrentQueueItem.TransferSpeed > 0)
                 {

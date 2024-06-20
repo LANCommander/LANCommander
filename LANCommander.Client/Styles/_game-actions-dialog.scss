@@ -2,4 +2,8 @@
     .ant-modal-body {
         padding: 0;
     }
+
+    .ant-list-clickable .ant-list-item::after {
+        display: none;
+    }
 }

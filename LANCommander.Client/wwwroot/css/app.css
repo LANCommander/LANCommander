@@ -544,6 +544,9 @@ footer {
 .game-actions-dialog .ant-modal-body {
   padding: 0;
 }
+.game-actions-dialog .ant-list-clickable .ant-list-item::after {
+  display: none;
+}
 
 .pdf-reader-dialog .ant-modal-content {
   resize: both !important;

@@ -317,9 +317,9 @@ namespace LANCommander.Client.Services
                     {
                         var localPath = Path.Combine(MediaService.GetStoragePath(), $"{media.FileId}-{media.Crc32}");
 
-                        if (!File.Exists(localPath))
+                        if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
                         {
-                            var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{media.FileId}-*.cache");
+                            var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{media.FileId}-*");
 
                             foreach (var staleFile in staleFiles)
                                 File.Delete(staleFile);

@@ -239,6 +239,27 @@ namespace LANCommander.Client.Services
             }
             #endregion
 
+            #region Download Manuals
+            foreach (var manual in gameInfo.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
+            {
+                var localPath = Path.Combine(MediaService.GetStoragePath(), $"{manual.FileId}-{manual.Crc32}");
+
+                if (!File.Exists(localPath) && manual.Type != SDK.Enums.MediaType.Manual)
+                {
+                    var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{manual.FileId}-*");
+
+                    foreach (var staleFile in staleFiles)
+                        File.Delete(staleFile);
+
+                    await Client.Media.Download(new SDK.Models.Media
+                    {
+                        Id = manual.Id,
+                        FileId = manual.FileId
+                    }, localPath);
+                }
+            }
+            #endregion
+
             if (currentItem is DownloadQueueGame)
             {
                 currentItem.CompletedOn = DateTime.Now;

@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Data.Enums;
 @using LANCommander.Models;
 @using LANCommander.SDK.Enums
+@using System.Net.Mime
 @inject MediaService MediaService
 @inject ModalService ModalService
 @inject IMessageService MessageService
@@ -10,13 +11,30 @@
     <SpaceItem>
         <Table TItem="Media" DataSource="@Values" HidePagination="true" Responsive>
             <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
-                @if (MediaService.FileExists(context) && context.Type != MediaType.Manual)
+                @if (MediaService.FileExists(context))
                 {
-                    <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")" />
+                    if (context.Thumbnail != null && context.Type == MediaType.Manual)
+                    {
+                        <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail.Id}/Download?fileId={context.Thumbnail.FileId}")" PreviewVisible="false" OnClick="() => OpenManual(context)" />
+                    }
+                    else if (context.Thumbnail != null)
+                    {
+                        <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail.Id}/Download?fileId={context.Thumbnail.FileId}")" />
+                    }
+                    else if (context.Type != MediaType.Manual)
+                    {
+                        <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")" />
+                    }
                 }
             </PropertyColumn>
             <PropertyColumn Property="p => p.Type">
                 <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="AllowedMediaTypes" />
+            </PropertyColumn>
+            <PropertyColumn Property="p => p.Name">
+                @if (context.Type == MediaType.Manual)
+                {
+                    <Input @bind-Value="context.Name" />
+                }
             </PropertyColumn>
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
@@ -24,7 +42,7 @@
                         @{
                             var fileInputId = Guid.NewGuid();
                         }
-                        <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden accept=".jpg,.jpeg,.png,.gif" />
+                        <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden accept=".jpg,.jpeg,.png,.gif,.pdf" />
                         <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
                             <Icon Type="@IconType.Outline.Upload" />
                         </label>
@@ -60,7 +78,7 @@
     </SpaceItem>
 </Space>
 
- @code {
+@code {
     [Parameter] public ICollection<Media> Values { get; set; } = new List<Media>();
     [Parameter] public EventCallback<ICollection<Media>> ValuesChanged { get; set; }
 
@@ -74,14 +92,31 @@
         MediaType.Icon,
         MediaType.Cover,
         MediaType.Background,
+        MediaType.Logo,
+        MediaType.Manual
+    };
+
+    MediaType[] SearchableMediaTypes = new MediaType[]
+    {
+        MediaType.Icon,
+        MediaType.Cover,
+        MediaType.Background,
         MediaType.Logo
     };
 
     string[] ValidMimeTypes = new string[]
     {
-        "image/png",
-        "image/jpeg"
+        MediaTypeNames.Image.Png,
+        MediaTypeNames.Image.Jpeg,
+        MediaTypeNames.Image.Gif,
+        MediaTypeNames.Application.Pdf
     };
+
+    private async Task Update(Media media)
+    {
+        if (media.Id != Guid.Empty)
+            await MediaService.Update(media);
+    }
 
     private async Task AddMedia()
     {
@@ -182,6 +217,23 @@
         Values.Remove(media);
 
         await MediaService.Delete(media);
+    }
+
+    private async Task OpenManual(Media media)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = media.Name,
+            Maximizable = true,
+            DefaultMaximized = true,
+            Closable = true,
+            Footer = null,
+            Draggable = true,
+            Resizable = true,
+            WrapClassName = "pdf-reader-dialog",
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
     }
 
     private void NavigateToSettings()

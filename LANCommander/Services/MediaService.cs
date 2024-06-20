@@ -4,6 +4,8 @@ using LANCommander.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Models;
 using Microsoft.AspNetCore.Components.Forms;
+using Syncfusion.PdfToImageConverter;
+using System.Net.Mime;
 
 namespace LANCommander.Services
 {
@@ -62,10 +64,62 @@ namespace LANCommander.Services
             using (var fs = new FileStream(path, FileMode.Create))
             {
                 await file.OpenReadStream(maxAllowedSize: settings.Media.MaxSize * 1024 * 1024).CopyToAsync(fs);
+
+                if (media.MimeType == MediaTypeNames.Application.Pdf)
+                {
+                    using (var ms = new MemoryStream())
+                    {
+                        await file.OpenReadStream(maxAllowedSize: settings.Media.MaxSize * 1024 * 1024).CopyToAsync(ms);
+
+                        var thumbnail = await GeneratePdfThumbnailAsync(ms);
+
+                        media.Thumbnail = thumbnail;
+                    }
+                }
             }
 
             media.Crc32 = CalculateChecksum(path);
             media.FileId = fileId;
+
+            return media;
+        }
+
+        private async Task<Media> GeneratePdfThumbnailAsync(Stream inputStream)
+        {
+            var settings = SettingService.GetSettings();
+            var fileId = Guid.NewGuid();
+
+            var path = Path.Combine(settings.Media.StoragePath, fileId.ToString());
+
+            PdfToImageConverter converter = new PdfToImageConverter();
+
+            converter.Load(inputStream);
+
+            var outputStream = converter.Convert(0, false, true);
+
+            using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write))
+            {
+                try
+                {
+                    outputStream.Position = 0;
+                    await outputStream.CopyToAsync(fs);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not write thumbnail for PDF");
+
+                    if (File.Exists(path))
+                        File.Delete(path);
+                }
+            }
+
+            var media = new Media
+            {
+                FileId = fileId,
+                MimeType = MediaTypeNames.Application.Pdf,
+                Type = SDK.Enums.MediaType.Thumbnail,
+                Crc32 = CalculateChecksum(path),
+            };
 
             return media;
         }

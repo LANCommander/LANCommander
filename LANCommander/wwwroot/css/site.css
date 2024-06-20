@@ -316,6 +316,27 @@ label.ant-btn-icon-only {
     flex-grow: 1;
 }
 
+.pdf-reader-dialog .ant-modal-content {
+    resize: both !important;
+}
+
+.pdf-reader-dialog .ant-modal-body {
+    padding: 0;
+    height: 100%;
+}
+
+.pdf-reader-dialog .ant-modal-close-x,
+.pdf-reader-dialog .ant-modal-max-btn-x {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+}
+
+.pdf-reader-dialog .ant-modal-max-btn {
+    right: 32px;
+    color: rgba(255, 255, 255, 0.45);
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

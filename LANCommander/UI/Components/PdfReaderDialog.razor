@@ -1,0 +1,8 @@
+﻿@inherits FeedbackComponent<Media>
+@inject MediaService MediaService
+
+<BootstrapBlazor.Components.PdfReader FileName="@($"/api/Media/{Options.Id}/Download?fileId={Options.FileId}")" Height="100%" />
+
+@code {
+
+}

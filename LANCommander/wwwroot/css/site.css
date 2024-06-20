@@ -337,6 +337,10 @@ label.ant-btn-icon-only {
     color: rgba(255, 255, 255, 0.45);
 }
 
+.pdf-reader-dialog .ant-modal-header {
+    padding: 6px 8px;
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

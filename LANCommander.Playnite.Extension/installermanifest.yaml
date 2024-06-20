@@ -196,3 +196,11 @@ Packages:
     Changelog:
       - 'Fixed: Expansions/mods with no actions defined no longer break all primary actions'
       - 'Fixed: Expansions/mods installation and uninstallation fixes by @dalbitresb12'
+  - Version: 0.8.0
+    RequiredApiVersion: 6.0.0
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.8.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_8_0.pext
+    Changelog:
+      - 'Fixed: Game actions now load properly if there is no active connection to the server or the client is in offline mode'
+      - 'Fixed: Slightly improved library import times by trimming the amount of data collected from the server'
+      - 'Fixed: Inaccessible server no longer causes the extension to crash on load'
+      - 'Fixed: Library imports should now work correctly for games created before v0.7.4'

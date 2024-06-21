@@ -9,7 +9,7 @@ namespace LANCommander.Client.Extensions
 {
     internal static class IEnumerableExtensions
     {
-        static Regex TitleComparisonExpression = new Regex(@"^(?:a|the|an)\s*", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+        static Regex TitleComparisonExpression = new Regex(@"^(?:a|the|an)\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
         internal static IOrderedEnumerable<T> OrderByTitle<T>(this IEnumerable<T> items, Func<T, string> keySelector)
         {

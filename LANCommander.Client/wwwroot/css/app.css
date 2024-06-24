@@ -418,9 +418,12 @@ footer {
   position: absolute;
   left: 48px;
   bottom: 64px;
-  max-width: 512px;
-  max-height: 200px;
-  height: auto;
+  width: 512px;
+  height: 512px;
+  object-fit: contain;
+  object-position: bottom left;
+  max-width: 33%;
+  max-height: 50%;
 }
 
 .game-info {

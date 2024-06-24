@@ -105,6 +105,10 @@
   background-color: rgb(255, 255, 255);
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+}
+
 body {
   background: #000;
 }
@@ -294,9 +298,20 @@ footer {
   width: 100%;
   height: 100%;
   display: flex;
+  position: relative;
 }
 .library .pane {
   overflow-x: hidden;
+}
+.library::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.3) 100%);
+  z-index: 600;
 }
 
 .library-list {
@@ -320,16 +335,6 @@ footer {
   right: 0;
   height: 10px;
   background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgb(0, 0, 0) 100%);
-  z-index: 600;
-}
-.library-list .ant-collapse::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 10px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.3) 100%);
   z-index: 600;
 }
 .library-list .ant-collapse > .ant-collapse-item > .ant-collapse-header {

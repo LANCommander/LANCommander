@@ -93,6 +93,8 @@
         {
             await ProfileService.Login(Model.ServerAddress, Model.Username, Model.Password);
 
+            MainLayout.Import();
+
             NavigationManager.NavigateTo("/");
         }
         catch (Exception ex)

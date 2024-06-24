@@ -103,22 +103,21 @@
         };
     }
 
-    async void Import()
+    public static async void Import()
     {
-        if (!Importing)
+        if (!_MainLayout.Importing)
         {
-            await JS.InvokeVoidAsync("sendMessage", "import");
+            await _MainLayout.JS.InvokeVoidAsync("sendMessage", "import");
 
-            Importing = true;
-            StateHasChanged();
-            MessageService.Info("Import Started", 2.5);
+            _MainLayout.Importing = true;
+            _MainLayout.StateHasChanged();
+            _MainLayout.MessageService.Info("Import Started", 2.5);
         }
     }
 
     [JSInvokable("ImportComplete")]
     public static void ImportComplete()
     {
-        _MainLayout.Messages.Success("Import Complete!");
         _MainLayout.Importing = false;
         _MainLayout.StateHasChanged();
         _MainLayout.ImportService.ImportHasCompleted();

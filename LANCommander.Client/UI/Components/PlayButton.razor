@@ -38,11 +38,7 @@ else
 
                         @if (Game.Installed)
                         {
-                            <MenuItem OnClick="() => Uninstall()">
-                                Uninstall
-                            </MenuItem>
-
-                            if (Game.Media != null)
+                            if (Game.Media != null && Game.Media.Any(m => m.Type == SDK.Enums.MediaType.Manual))
                             {
                                 foreach (var manual in Game.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
                                 {
@@ -50,7 +46,16 @@ else
                                         @(String.IsNullOrWhiteSpace(manual.Name) ? "Manual" : manual.Name)
                                     </MenuItem>
                                 }
+
+                                <MenuDivider />
                             }
+
+                            <MenuItem OnClick="() => BrowseFiles()">
+                                Browse Files
+                            </MenuItem>
+                            <MenuItem OnClick="() => Uninstall()">
+                                Uninstall
+                            </MenuItem>
                         }
 
                         @MenuExtra
@@ -119,6 +124,11 @@ else
         await LibraryService.Stop(Game);
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    async Task BrowseFiles()
+    {
+        Process.Start("explorer", Game.InstallDirectory);
     }
 
     async Task Uninstall()

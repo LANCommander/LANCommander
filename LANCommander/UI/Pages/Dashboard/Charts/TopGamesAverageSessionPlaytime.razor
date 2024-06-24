@@ -15,7 +15,7 @@
         meta: {
             playtime: {
                 alias: 'Average Session Playtime',
-                formatter: (v) => new Date(v * 1000).toISOString().slice(11, 19)
+                formatter: (v) => Math.floor(v / 3600) > 0 ? `${Math.floor(v / 3600)}h ${Math.floor((v % 3600) / 60)}m` : `${Math.floor((v % 3600) / 60)}m`
             }
         },
         label: {

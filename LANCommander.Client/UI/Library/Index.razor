@@ -180,7 +180,7 @@
 
     async Task OnLibraryItemSelected(LibraryItem item)
     {
-        if (item.DataItem is Data.Models.Game)
+        if (item != null && item.DataItem is Data.Models.Game)
         {
             SelectedItem = item;
             SelectedGame = item.DataItem as Data.Models.Game;

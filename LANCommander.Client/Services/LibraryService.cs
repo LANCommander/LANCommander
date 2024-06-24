@@ -60,6 +60,16 @@ namespace LANCommander.Client.Services
         {
             var items = new List<LibraryItem>();
 
+            var uncategorizedGames = await GameService.Get(g => !g.Collections.Any()).ToListAsync();
+            var uncategorizedCollection = await CollectionService.AddMissing(c => c.Name == "Uncategorized", new Collection
+            {
+                Name = "Uncategorized"
+            });
+
+            uncategorizedCollection.Value.Games = uncategorizedGames;
+
+            await CollectionService.Update(uncategorizedCollection.Value);
+
             var collections = await CollectionService.Get();
 
             items.AddRange(collections.OrderByTitle(c => c.Name).Select(c => new LibraryItem(c)));

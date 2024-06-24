@@ -15,11 +15,14 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        Media = await MediaService.Get(Id);
+        try {
+            Media = await MediaService.Get(Id);
 
-        var path = MediaService.GetImagePath(Media);
+            var path = MediaService.GetImagePath(Media);
 
-        if (File.Exists(path))
-            Data = Convert.ToBase64String(await File.ReadAllBytesAsync(path));
+            if (File.Exists(path))
+                Data = Convert.ToBase64String(await File.ReadAllBytesAsync(path));
+        }
+        catch { }
     }
 }

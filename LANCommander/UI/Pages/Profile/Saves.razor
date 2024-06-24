@@ -14,6 +14,7 @@
     <PageHeaderExtra>
         <Select TItem="Game"
                 TItemValue="Guid"
+                AutoFocus="true"
                 DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
                 @bind-Value="@GameId"
                 LabelName="Title"

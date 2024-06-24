@@ -11,6 +11,9 @@
             <SpaceItem>
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
             </SpaceItem>
+            <SpaceItem>
+                <Button OnClick="OpenAdd" Type="@ButtonType.Primary">Add Collection</Button>
+            </SpaceItem>
         </Space>
     </PageHeaderExtra>
 </PageHeader>
@@ -24,7 +27,7 @@
     <PropertyColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
     <PropertyColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
     <Column Title="Games" TData="int">
-        @context.Games.Count
+        @context.Games?.Count
     </Column>
     <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
         <TitleTemplate>
@@ -47,6 +50,14 @@
     </ActionColumn>
 </Table>
 
+<Modal Title="Add Collection" OnOk="Add" OnCancel="CloseAdd" @bind-Visible="AddCollectionVisible">
+    <Form Model="@CollectionContext">
+        <FormItem Label="Name">
+            <Input @bind-Value="@context.Name" />
+        </FormItem>
+    </Form>
+</Modal>
+
  @code {
     IEnumerable<Collection> Collections { get; set; } = new List<Collection>();
 
@@ -56,6 +67,9 @@
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
+
+    bool AddCollectionVisible = false;
+    Collection CollectionContext = new Collection();
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -76,9 +90,38 @@
         Collections = await CollectionService.Get(r => r.Name.ToLower().Contains(fuzzySearch)).OrderBy(r => r.Name).ToListAsync();
     }
 
-    private void Add()
+    private async Task OpenAdd()
     {
-        NavigationManager.NavigateTo("/Collections/Add");
+        CollectionContext = new Collection();
+
+        AddCollectionVisible = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CloseAdd()
+    {
+        AddCollectionVisible = false;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Add()
+    {
+        try
+        {
+            await CollectionService.AddMissing(x => x.Name == CollectionContext.Name, CollectionContext);
+
+            MessageService.Success($"{CollectionContext.Name} was added!");
+
+            await LoadData();
+
+            await CloseAdd();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not add {CollectionContext.Name}!");
+        }
     }
 
     private async Task Delete(Collection Collection)

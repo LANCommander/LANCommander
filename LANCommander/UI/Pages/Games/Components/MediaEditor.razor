@@ -51,12 +51,12 @@
                         @if (String.IsNullOrWhiteSpace(Settings.Media.SteamGridDbApiKey))
                         {
                             <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
-                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
+                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" Disabled="context.Type == MediaType.Manual" />
                             </Popconfirm>
                         }
                         else
                         {
-                            <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
+                            <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" Disabled="context.Type == MediaType.Manual" />
                         }
                     </SpaceItem>
                     <SpaceItem>

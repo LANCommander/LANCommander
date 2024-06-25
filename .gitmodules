@@ -1,3 +1,6 @@
 [submodule "Photino.Blazor.CustomWindow"]
 	path = Photino.Blazor.CustomWindow
 	url = https://github.com/LANCommander/Photino.Blazor.CustomWindow.git
+[submodule "SharpCompress"]
+	path = SharpCompress
+	url = https://github.com/LANCommander/SharpCompress

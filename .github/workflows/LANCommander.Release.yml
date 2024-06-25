@@ -87,7 +87,21 @@ jobs:
         recursive: true
         dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
-    # Client
+    # macOS
+    - name: Publish macOS
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_macOS --self-contained --os osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove macOS Extra Files
+      run: rm -Recurse -Force ./_Build_macOS/wwwroot/_content/AntDesign/less
+
+    # Create macOS ZIP file
+    - name: Package macOS Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_macOS/
+        recursive: true
+        dest: LANCommander-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Playnite
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1.3.1
     - name: Setup NuGet
@@ -119,7 +133,51 @@ jobs:
         commitChange: false
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
+    
+    # Launcher
+    # Windows
+    - name: Publish Windows Client
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Windows Extra Files
+      run: rm -Recurse -Force ./_Build_Client_Windows/wwwroot/_content/AntDesign/less
 
+    # Create Windows ZIP file
+    - name: Package Windows Client Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_Client_Windows/
+        recursive: true
+        dest: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Linux
+    - name: Publish Linux Client
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Linux Extra Files
+      run: rm -Recurse -Force ./_Build_Client_Linux/wwwroot/_content/AntDesign/less
+
+    # Create Linux ZIP file
+    - name: Package Linux Client Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_Client_Linux/
+        recursive: true
+        dest: LANCommander.Client-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # macOS
+    - name: Publish macOS Client
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_macOS --self-contained --os osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove macOS Extra Files
+      run: rm -Recurse -Force ./_Build_Client_macOS/wwwroot/_content/AntDesign/less
+
+    # Create macOS ZIP file
+    - name: Package macOS Client Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_Client_macOS/
+        recursive: true
+        dest: LANCommander.Client-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Draft Release
     - name: List contents of workspace
       run: Get-ChildItem -Path ${{ steps.swap_path_backslashes.outputs.replaced }} -Recurse
 
@@ -132,4 +190,8 @@ jobs:
         files: |
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-macOS-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Windows-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Linux-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-macOS-arm64-*.zip
           LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

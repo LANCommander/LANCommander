@@ -55,6 +55,9 @@ namespace LANCommander.Client.Services
 
         public static string GetImagePath(Media entity)
         {
+            if (entity == null)
+                return "";
+
             return Path.Combine(GetStoragePath(), $"{entity.FileId}-{entity.Crc32}");
         }
 

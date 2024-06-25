@@ -38,7 +38,8 @@
         flex-grow: 1;
     }
 
-    &-current-upper {
+    &-current-upper,
+    &-current-lower {
         display: flex;
         justify-content: space-between;
     }

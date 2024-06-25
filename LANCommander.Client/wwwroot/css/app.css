@@ -424,6 +424,7 @@ footer {
   object-position: bottom left;
   max-width: 33%;
   max-height: 50%;
+  z-index: 200;
 }
 
 .game-info {
@@ -493,7 +494,7 @@ footer {
 .downloader-current-info {
   flex-grow: 1;
 }
-.downloader-current-upper {
+.downloader-current-upper, .downloader-current-lower {
   display: flex;
   justify-content: space-between;
 }

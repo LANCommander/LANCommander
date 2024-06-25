@@ -123,10 +123,13 @@
         if (Values == null)
             Values = new List<Media>();
 
+        var types = Enum.GetValues<MediaType>();
+        var nextType = types.FirstOrDefault(t => !Values.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
+
         Values.Add(new Media()
         {
             GameId = GameId,
-            Type = Enum.GetValues<MediaType>().ToList().FirstOrDefault(t => !Values.Any(v => v.Type == t))
+            Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType
         });
     }
 

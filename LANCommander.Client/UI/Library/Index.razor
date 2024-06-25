@@ -10,6 +10,7 @@
 @inject DownloadService DownloadService
 @inject GameService GameService
 @inject ModalService ModalService
+@inject ConfirmService ConfirmService
 @inject ImportService ImportService
 
 <Layout>
@@ -142,6 +143,7 @@
     {
         LibraryService.OnLibraryChanged += LoadData;
         DownloadService.OnQueueChanged += OnQueueChanged;
+        DownloadService.OnInstallFail += OnInstallFail;
         ImportService.OnImportComplete += LoadData;
 
         LoadData();
@@ -231,6 +233,25 @@
             await OnLibraryItemSelected(SelectedItem);
 
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task OnInstallFail(Data.Models.Game game)
+    {
+        var result = await ConfirmService.Show(
+            $"The installation for {game.Title} has failed. Retry download?",
+            "Installation Failed",
+            ConfirmButtons.RetryCancel,
+            ConfirmIcon.Error
+        );
+
+        await LibraryService.LibraryChanged();
+
+        if (result == ConfirmResult.Retry)
+        {
+            var libraryItem = LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == game.Id);
+
+            Install(libraryItem);
         }
     }
 

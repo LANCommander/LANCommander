@@ -79,7 +79,7 @@
             // InvokeAsync(StateHasChanged);
         };
 
-        DownloadService.OnInstallComplete += async () =>
+        DownloadService.OnInstallComplete += async (game) =>
         {
             Stopwatch.Stop();
         };

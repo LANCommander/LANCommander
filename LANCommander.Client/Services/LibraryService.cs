@@ -51,7 +51,7 @@ namespace LANCommander.Client.Services
             DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
         }
 
-        private async Task DownloadService_OnInstallComplete()
+        private async Task DownloadService_OnInstallComplete(Game game)
         {
             OnLibraryChanged?.Invoke();
         }

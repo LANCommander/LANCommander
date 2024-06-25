@@ -31,8 +31,11 @@ namespace LANCommander.Client.Services
         public delegate Task OnQueueChangedHandler();
         public event OnQueueChangedHandler OnQueueChanged;
 
-        public delegate Task OnInstallCompleteHandler();
+        public delegate Task OnInstallCompleteHandler(Game game);
         public event OnInstallCompleteHandler OnInstallComplete;
+
+        public delegate Task OnInstallFailHandler(Game game);
+        public event OnInstallFailHandler OnInstallFail;
 
         public DownloadService(SDK.Client client, GameService gameService, SaveService saveService) : base()
         {
@@ -78,7 +81,7 @@ namespace LANCommander.Client.Services
                 }
             }
 
-            if (!Queue.Any(i => i.Id == game.Id && (i.Status != DownloadStatus.Canceled || i.Status != DownloadStatus.Failed)))
+            if (!Queue.Any(i => i.Id == game.Id && i.Status == DownloadStatus.Idle))
             {
                 var queueItem = new DownloadQueueGame(gameInfo);
 
@@ -222,6 +225,22 @@ namespace LANCommander.Client.Services
                 {
                     Logger?.Debug("Install canceled");
                 }
+                catch (Exception ex)
+                {
+                    OnInstallFail?.Invoke(game);
+
+                    currentItem.Status = DownloadStatus.Failed;
+
+                    OnQueueChanged?.Invoke();
+
+                    game.Installed = false;
+                    game.InstallDirectory = null;
+                    game.InstalledVersion = null;
+
+                    await GameService.Update(game);
+
+                    return;
+                }
 
                 try
                 {
@@ -275,7 +294,7 @@ namespace LANCommander.Client.Services
 
                 ShowCompletedNotification(currentItem);
 
-                OnInstallComplete?.Invoke();
+                OnInstallComplete?.Invoke(game);
             }
 
             await Install();

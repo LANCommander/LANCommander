@@ -89,7 +89,7 @@ jobs:
 
     # macOS
     - name: Publish macOS
-      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_macOS --self-contained --os osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_macOS --self-contained --runtime osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Remove macOS Extra Files
       run: rm -Recurse -Force ./_Build_macOS/wwwroot/_content/AntDesign/less
 
@@ -165,7 +165,7 @@ jobs:
 
     # macOS
     - name: Publish macOS Client
-      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_macOS --self-contained --os osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_macOS --self-contained --runtime osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Remove macOS Extra Files
       run: rm -Recurse -Force ./_Build_Client_macOS/wwwroot/_content/AntDesign/less
 

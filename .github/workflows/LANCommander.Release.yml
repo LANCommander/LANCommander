@@ -135,6 +135,8 @@ jobs:
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
     
     # Launcher
+    - run: cd LANCommander.Client; npm install
+
     # Windows
     - name: Publish Windows Client
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"

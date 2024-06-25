@@ -39,6 +39,9 @@
                 <div class="downloader-current-lower-data">
                     @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TotalBytes).ToString()
                 </div>
+                <div class="downloader-current-lower-speed">
+                    @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TransferSpeed).ToString()/s
+                </div>
             </div>
         </div>
     </div>

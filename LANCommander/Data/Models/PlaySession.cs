@@ -23,5 +23,16 @@ namespace LANCommander.Data.Models
 
         [Display(Name = "End")]
         public DateTime? End { get; set; }
+
+        public virtual TimeSpan? Duration
+        {
+            get
+            {
+                if (!Start.HasValue) return null;
+                if (!End.HasValue) return null;
+
+                return End.Value.Subtract(Start.Value);
+            }
+        }
     }
 }

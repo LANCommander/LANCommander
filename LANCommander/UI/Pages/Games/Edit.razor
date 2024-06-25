@@ -17,6 +17,7 @@
 @inject ArchiveService ArchiveService
 @inject ScriptService ScriptService
 @inject RedistributableService RedistributableService
+@inject PlaySessionService PlaySessionService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
@@ -44,6 +45,11 @@
                 if (Game.DependentGames.Any(g => g.Type == GameType.Mod))
                 {
                     <MenuItem RouterLink="@($"/Games/{Game.Id}/Mods")">Mods</MenuItem>
+                }
+
+                if (Game.PlaySessions != null && Game.PlaySessions.Any())
+                {
+                    <MenuItem RouterLink="@($"/Games/{Game.Id}/PlaySessions")">Play Sessions</MenuItem>
                 }
 
                 if (Settings.Wiki.Enabled)
@@ -257,6 +263,29 @@
                          </ActionColumn>
                      </Table>
                  </div>
+
+                <div data-panel="PlaySessions">
+                    <Table TItem="PlaySession" DataSource="@Game.PlaySessions" Context="session" Responsive>
+                        <PropertyColumn Property="e => e.Start" Sortable Filterable />
+                        <PropertyColumn Property="e => e.End" Sortable Filterable />
+                        <PropertyColumn Property="e => e.Duration" Sortable DefaultSortOrder="SortDirection.Descending">
+                            @if (session.Duration.HasValue)
+                            {
+                                <Text>@($"{(int)session.Duration.Value.TotalHours}:{session.Duration.Value.Minutes:D2}:{session.Duration.Value.Seconds:D2}")</Text>
+                            }
+                        </PropertyColumn>
+                        <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Title="Player" Sortable Filterable />
+                        <ActionColumn Style="text-align: right">
+                            <Space Direction="DirectionVHType.Horizontal">
+                                <SpaceItem>
+                                    <Popconfirm OnConfirm="() => DeleteSession(session)" Title="Are you sure you want to delete this session?">
+                                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                    </Popconfirm>
+                                </SpaceItem>
+                            </Space>
+                        </ActionColumn>
+                    </Table>
+                </div>
 
                 @if (Settings.Wiki.Enabled)
                 {
@@ -529,6 +558,20 @@ else
         catch (Exception ex)
         {
             MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+        }
+    }
+
+    private async Task DeleteSession(PlaySession session)
+    {
+        try
+        {
+            await PlaySessionService.Delete(session);
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not delete play session!");
         }
     }
 }

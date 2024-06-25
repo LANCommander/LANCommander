@@ -33,7 +33,7 @@
             <PropertyColumn Property="p => p.Name">
                 @if (context.Type == MediaType.Manual)
                 {
-                    <Input @bind-Value="context.Name" />
+                    <Input @bind-Value="context.Name" OnBlur="() => Update(context)" />
                 }
             </PropertyColumn>
             <ActionColumn>
@@ -114,8 +114,19 @@
 
     private async Task Update(Media media)
     {
-        if (media.Id != Guid.Empty)
-            await MediaService.Update(media);
+        try
+        {
+            if (media.Id != Guid.Empty)
+            {
+                await MediaService.Update(media);
+
+                MessageService.Success($"{media.Type} updated!");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"{media.Type} could not be updated.");
+        }
     }
 
     private async Task AddMedia()

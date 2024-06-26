@@ -140,8 +140,8 @@ jobs:
     # Windows
     - name: Publish Windows Client
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Remove Windows Extra Files
-      run: rm -Recurse -Force ./_Build_Client_Windows/wwwroot/_content/AntDesign/less, ./_Build_Client_Windows/wwwroot/_content/compat, ./_Build_Client_Windows/*.pdb, ./_Build_Client_Windows/*.json, ./_Build_Client_Windows/*.ico
+    #- name: Remove Windows Extra Files
+    #  run: rm -Recurse -Force ./_Build_Client_Windows/wwwroot/_content/AntDesign/less, ./_Build_Client_Windows/wwwroot/_content/compat, ./_Build_Client_Windows/*.pdb, ./_Build_Client_Windows/*.json, ./_Build_Client_Windows/*.ico
 
     # Create Windows ZIP file
     - name: Package Windows Client Build
@@ -154,8 +154,8 @@ jobs:
     # Linux
     - name: Publish Linux Client
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Remove Linux Client Extra Files
-      run: rm -Recurse -Force ./_Build_Client_Linux/wwwroot/_content/AntDesign/less, ./_Build_Client_Linux/wwwroot/_content/compat, ./_Build_Client_Linux/*.pdb, ./_Build_Client_Linux/*.json, ./_Build_Client_Linux/*.ico
+    #- name: Remove Linux Client Extra Files
+    #  run: rm -Recurse -Force ./_Build_Client_Linux/wwwroot/_content/AntDesign/less, ./_Build_Client_Linux/wwwroot/_content/compat, ./_Build_Client_Linux/*.pdb, ./_Build_Client_Linux/*.json, ./_Build_Client_Linux/*.ico
 
     # Create Linux ZIP file
     - name: Package Linux Client Build
@@ -168,8 +168,8 @@ jobs:
     # macOS
     - name: Publish macOS Client
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_macOS --self-contained --runtime osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Remove macOS Extra Files
-      run: rm -Recurse -Force ./_Build_Client_macOS/wwwroot/_content/AntDesign/less, ./_Build_Client_macOS/wwwroot/_content/compat, ./_Build_Client_macOS/*.pdb, ./_Build_Client_macOS/*.json, ./_Build_Client_macOS/*.ico
+    #- name: Remove macOS Extra Files
+    #  run: rm -Recurse -Force ./_Build_Client_macOS/wwwroot/_content/AntDesign/less, ./_Build_Client_macOS/wwwroot/_content/compat, ./_Build_Client_macOS/*.pdb, ./_Build_Client_macOS/*.json, ./_Build_Client_macOS/*.ico
 
     # Create macOS ZIP file
     - name: Package macOS Client Build

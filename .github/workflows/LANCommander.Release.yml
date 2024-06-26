@@ -136,12 +136,13 @@ jobs:
     
     # Launcher
     - run: cd LANCommander.Client; npm install
+    - run: rm -Recurse -Force ./_Build_Client_Windows/wwwroot/_content/AntDesign/less
 
     # Windows
     - name: Publish Windows Client
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Remove Windows Extra Files
-      run: rm -Recurse -Force ./_Build_Client_Windows/wwwroot/_content/AntDesign/less
+      run: rm -Recurse -Force ./_Build_Client_Windows/wwwroot/_content/AntDesign/less, ./_Build_Client_Windows/wwwroot/_content/compat
 
     # Create Windows ZIP file
     - name: Package Windows Client Build
@@ -154,8 +155,8 @@ jobs:
     # Linux
     - name: Publish Linux Client
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Remove Linux Extra Files
-      run: rm -Recurse -Force ./_Build_Client_Linux/wwwroot/_content/AntDesign/less
+    - name: Remove Linux Client Extra Files
+      run: rm -Recurse -Force ./_Build_Client_Linux/wwwroot/_content/AntDesign/less, ./_Build_Client_Linux/wwwroot/_content/compat
 
     # Create Linux ZIP file
     - name: Package Linux Client Build
@@ -169,7 +170,7 @@ jobs:
     - name: Publish macOS Client
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release -o _Build_Client_macOS --self-contained --runtime osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Remove macOS Extra Files
-      run: rm -Recurse -Force ./_Build_Client_macOS/wwwroot/_content/AntDesign/less
+      run: rm -Recurse -Force ./_Build_Client_macOS/wwwroot/_content/AntDesign/less, ./_Build_Client_macOS/wwwroot/_content/compat
 
     # Create macOS ZIP file
     - name: Package macOS Client Build

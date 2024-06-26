@@ -341,7 +341,11 @@ namespace LANCommander.SDK
                                 PreserveFileTime = true
                             });
                         else // Skip to next entry
-                            Reader.OpenEntryStream().Dispose();
+                            try
+                            {
+                                Reader.OpenEntryStream().Dispose();
+                            }
+                            catch { }
                     }
                     catch (IOException ex)
                     {

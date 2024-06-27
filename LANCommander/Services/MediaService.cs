@@ -152,9 +152,9 @@ namespace LANCommander.Services
                         var thumbnail = await GeneratePdfThumbnailAsync(ms);
 
                         media.Thumbnail = thumbnail;
-
-                        ms.Position = 0;
                     }
+
+                    ms.Position = 0;
 
                     await ms.CopyToAsync(fs);
                 }

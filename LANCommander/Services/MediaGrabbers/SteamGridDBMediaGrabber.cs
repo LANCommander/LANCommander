@@ -80,24 +80,70 @@ namespace LANCommander.Services.MediaGrabbers
 
         private async Task<IEnumerable<MediaGrabberResult>> GetCoversAsync(SteamGridDbGame game)
         {
+            var appIdResults = await SteamClient.SearchGamesAsync(game.Name);
+
             var covers = await SteamGridDb.GetGridsByGameIdAsync(game.Id);
 
-            return covers.Where(c => SupportedFormats.Contains(c.Format)).Select(c => new MediaGrabberResult()
+            var results = new List<MediaGrabberResult>();
+
+            foreach (var appIdResult in appIdResults)
             {
-                Id = c.Id.ToString(),
+                var existsResult = await SteamClient.HasWebAssetAsync(appIdResult.AppId, WebAssetType.LibraryCover);
+
+                if (existsResult.Exists)
+                {
+                    results.Add(new MediaGrabberResult()
+                    {
+                        Id = appIdResult.AppId.ToString(),
+                        Type = MediaType.Background,
+                        SourceUrl = SteamClient.GetWebAssetUri(appIdResult.AppId, WebAssetType.LibraryCover).ToString(),
+                        ThumbnailUrl = SteamClient.GetWebAssetUri(appIdResult.AppId, WebAssetType.LibraryCover).ToString(),
+                        Group = appIdResult.Name,
+                        MimeType = existsResult.MimeType
+                    });
+                }
+            }
+
+            results.AddRange(covers.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            {
+                Id = b.Id.ToString(),
                 Type = MediaType.Cover,
-                SourceUrl = c.FullImageUrl,
-                ThumbnailUrl = c.ThumbnailImageUrl,
+                SourceUrl = b.FullImageUrl,
+                ThumbnailUrl = b.ThumbnailImageUrl,
                 Group = game.Name,
-                MimeType = GetMimeType(c.Format)
-            });
+                MimeType = GetMimeType(b.Format)
+            }));
+
+            return results;
         }
 
         private async Task<IEnumerable<MediaGrabberResult>> GetBackgroundsAsync(SteamGridDbGame game)
         {
+            var appIdResults = await SteamClient.SearchGamesAsync(game.Name);
+
             var backgrounds = await SteamGridDb.GetHeroesByGameIdAsync(game.Id);
 
-            return backgrounds.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            var results = new List<MediaGrabberResult>();
+
+            foreach (var appIdResult in appIdResults)
+            {
+                var existsResult = await SteamClient.HasWebAssetAsync(appIdResult.AppId, WebAssetType.LibraryHero);
+
+                if (existsResult.Exists)
+                {
+                    results.Add(new MediaGrabberResult()
+                    {
+                        Id = appIdResult.AppId.ToString(),
+                        Type = MediaType.Background,
+                        SourceUrl = SteamClient.GetWebAssetUri(appIdResult.AppId, WebAssetType.LibraryHero).ToString(),
+                        ThumbnailUrl = SteamClient.GetWebAssetUri(appIdResult.AppId, WebAssetType.LibraryHero).ToString(),
+                        Group = appIdResult.Name,
+                        MimeType = existsResult.MimeType
+                    });
+                }
+            }
+
+            results.AddRange(backgrounds.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Background,
@@ -105,14 +151,38 @@ namespace LANCommander.Services.MediaGrabbers
                 ThumbnailUrl = b.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(b.Format)
-            });
+            }));
+
+            return results;
         }
 
         private async Task<IEnumerable<MediaGrabberResult>> GetLogosAsync(SteamGridDbGame game)
         {
+            var appIdResults = await SteamClient.SearchGamesAsync(game.Name);
+
             var logos = await SteamGridDb.GetLogosByGameIdAsync(game.Id);
 
-            return logos.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            var results = new List<MediaGrabberResult>();
+
+            foreach (var appIdResult in appIdResults)
+            {
+                var existsResult = await SteamClient.HasWebAssetAsync(appIdResult.AppId, WebAssetType.Logo);
+
+                if (existsResult.Exists)
+                {
+                    results.Add(new MediaGrabberResult()
+                    {
+                        Id = appIdResult.AppId.ToString(),
+                        Type = MediaType.Logo,
+                        SourceUrl = SteamClient.GetWebAssetUri(appIdResult.AppId, WebAssetType.Logo).ToString(),
+                        ThumbnailUrl = SteamClient.GetWebAssetUri(appIdResult.AppId, WebAssetType.Logo).ToString(),
+                        Group = appIdResult.Name,
+                        MimeType = existsResult.MimeType
+                    });
+                }
+            }
+
+            results.AddRange(logos.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Logo,
@@ -120,7 +190,9 @@ namespace LANCommander.Services.MediaGrabbers
                 ThumbnailUrl = b.ThumbnailImageUrl,
                 Group = game.Name,
                 MimeType = GetMimeType(b.Format)
-            });
+            }));
+
+            return results;
         }
 
         private async Task<IEnumerable<MediaGrabberResult>> GetManualsAsync(string keywords)

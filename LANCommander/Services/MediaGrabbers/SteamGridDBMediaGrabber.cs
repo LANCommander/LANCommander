@@ -121,11 +121,11 @@ namespace LANCommander.Services.MediaGrabbers
             {
                 case SteamGridDbFormats.Png:
                 case SteamGridDbFormats.Ico:
-                    return "image/png";
+                    return MediaTypeNames.Image.Png;
                 case SteamGridDbFormats.Jpeg:
-                    return "image/jpg";
+                    return MediaTypeNames.Image.Jpeg;
                 case SteamGridDbFormats.Webp:
-                    return "image/webp";
+                    return MediaTypeNames.Image.Webp;
                 default:
                     throw new NotImplementedException("The SteamGridDB grabber currently does not support this format");
             }

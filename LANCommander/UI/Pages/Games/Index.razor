@@ -123,9 +123,6 @@
         <ChildContent>
             <Space Direction="DirectionVHType.Horizontal">
                 <SpaceItem>
-                    <Button OnClick="() => ViewSaves(context)">Saves</Button>
-                </SpaceItem>
-                <SpaceItem>
                     <a href="/Games/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
                 </SpaceItem>
                 <SpaceItem>
@@ -235,11 +232,6 @@
     private void Add()
     {
         NavigationManager.NavigateTo("/Games/Add");
-    }
-
-    private void ViewSaves(Game game)
-    {
-        NavigationManager.NavigateTo($"/Games/{game.Id}/Saves", true);
     }
 
     private void Edit(Game game)

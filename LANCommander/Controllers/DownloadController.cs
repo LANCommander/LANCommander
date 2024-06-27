@@ -49,7 +49,7 @@ namespace LANCommander.Controllers
         {
             var save = await GameSaveService.Get(id);
 
-            if (User == null || User.Identity?.Name != save.User?.UserName)
+            if (User == null || User.Identity?.Name != save.User?.UserName && !User.IsInRole("Administrator"))
                 return Unauthorized();
 
             if (save == null)

@@ -141,9 +141,23 @@ namespace LANCommander.Services
             using (var http = new HttpClient())
             using (var fs = new FileStream(path, FileMode.Create))
             {
-                var response = await http.GetStreamAsync(sourceUrl);
+                using (var ms = new MemoryStream())
+                {
+                    var response = await http.GetStreamAsync(sourceUrl);
 
-                await response.CopyToAsync(fs);
+                    await response.CopyToAsync(ms);
+
+                    if (media.MimeType == MediaTypeNames.Application.Pdf)
+                    {
+                        var thumbnail = await GeneratePdfThumbnailAsync(ms);
+
+                        media.Thumbnail = thumbnail;
+
+                        ms.Position = 0;
+                    }
+
+                    await ms.CopyToAsync(fs);
+                }
             }
 
             media.Crc32 = CalculateChecksum(path);

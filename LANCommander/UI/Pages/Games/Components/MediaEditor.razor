@@ -51,12 +51,12 @@
                         @if (String.IsNullOrWhiteSpace(Settings.Media.SteamGridDbApiKey))
                         {
                             <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
-                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" Disabled="context.Type == MediaType.Manual" />
+                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
                             </Popconfirm>
                         }
                         else
                         {
-                            <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" Disabled="context.Type == MediaType.Manual" />
+                            <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
                         }
                     </SpaceItem>
                     <SpaceItem>
@@ -101,7 +101,8 @@
         MediaType.Icon,
         MediaType.Cover,
         MediaType.Background,
-        MediaType.Logo
+        MediaType.Logo,
+        MediaType.Manual
     };
 
     string[] ValidMimeTypes = new string[]
@@ -179,7 +180,9 @@
             else
             {
                 MediaService.DeleteLocalMediaFile(media.FileId);
+                
                 media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
+
                 await MediaService.Update(media);
             }
 

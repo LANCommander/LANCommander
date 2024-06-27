@@ -2,13 +2,16 @@
 using LANCommander.Data.Enums;
 using LANCommander.Models;
 using LANCommander.SDK.Enums;
+using LANCommander.Steam;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Net.Mime;
 
 namespace LANCommander.Services.MediaGrabbers
 {
     public class SteamGridDBMediaGrabber : IMediaGrabberService
     {
         SteamGridDb SteamGridDb { get; set; }
+        SteamClient SteamClient { get; set; }
 
         private SteamGridDbFormats[] SupportedFormats = new SteamGridDbFormats[]
         {
@@ -23,12 +26,17 @@ namespace LANCommander.Services.MediaGrabbers
             var settings = SettingService.GetSettings();
 
             SteamGridDb = new SteamGridDb(settings.Media.SteamGridDbApiKey);
+            SteamClient = new SteamClient();
         }
 
         public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords)
         {
             var games = await SteamGridDb.SearchForGamesAsync(keywords);
+
             var results = new List<MediaGrabberResult>();
+
+            if (type == MediaType.Manual)
+                return await GetManualsAsync(keywords);
 
             foreach (var game in games)
             {
@@ -113,6 +121,35 @@ namespace LANCommander.Services.MediaGrabbers
                 Group = game.Name,
                 MimeType = GetMimeType(b.Format)
             });
+        }
+
+        private async Task<IEnumerable<MediaGrabberResult>> GetManualsAsync(string keywords)
+        {
+            var appIdResults = await SteamClient.SearchGamesAsync(keywords);
+
+            var results = new List<MediaGrabberResult>();
+
+            foreach (var appIdResult in appIdResults)
+            {
+                var hasManual = await SteamClient.HasManualAsync(appIdResult.AppId);
+
+                if (!hasManual)
+                    continue;
+
+                var result = new MediaGrabberResult()
+                {
+                    Id = appIdResult.AppId.ToString(),
+                    Type = MediaType.Manual,
+                    SourceUrl = SteamClient.GetManualUri(appIdResult.AppId).ToString(),
+                    Group = appIdResult.Name,
+                    MimeType = MediaTypeNames.Application.Pdf,
+                    ThumbnailUrl = "/static/pdf.png"
+                };
+
+                results.Add(result);
+            }
+
+            return results;
         }
 
         private string GetMimeType(SteamGridDbFormats format)

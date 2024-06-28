@@ -1,0 +1,170 @@
+﻿@using LANCommander.Client.Data.Models
+@using LANCommander.Client.Models
+@using System.Collections.ObjectModel
+@inject LibraryService LibraryService
+@inject EngineService EngineService
+@inject GenreService GenreService
+@inject TagService TagService
+
+<Form @ref="Form" Model="Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical" Size="small">
+    <FormItem Label="Title">
+        <Input @bind-Value="@context.Title" />
+    </FormItem>
+    <FormItem Label="Engine">
+        <TagsInput Entities="Engines" @bind-Values="@context.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
+    </FormItem>
+    <FormItem Label="Genre">
+        <TagsInput Entities="Genres" @bind-Values="@context.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
+    </FormItem>
+    <FormItem Label="Tag">
+        <TagsInput Entities="Tags" @bind-Values="@context.Tags" OptionLabelSelector="t => t.Name" TItem="Data.Models.Tag" />
+    </FormItem>
+    <FormItem Label="Developers">
+        <TagsInput Entities="Developers" @bind-Values="@context.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+    </FormItem>
+    <FormItem Label="Publishers">
+        <TagsInput Entities="Publishers" @bind-Values="@context.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+    </FormItem>
+    <FormItem>
+        <Button Type="@ButtonType.Primary" HtmlType="submit">Apply</Button>
+        <Button Type="@ButtonType.Text" OnClick="ResetFilter" Icon="@IconType.Outline.Close" Danger />
+    </FormItem>
+</Form>
+
+@code {
+    public class FilterModel
+    {
+        public string Title { get; set; }
+        public ICollection<Engine> Engines { get; set; }
+        public ICollection<Genre> Genres { get; set; }
+        public ICollection<Data.Models.Tag> Tags { get; set; }
+        public ICollection<Company> Developers { get; set; }
+        public ICollection<Company> Publishers { get; set; }
+        public int MinPlayers { get; set; }
+        public int MaxPlayers { get; set; }
+    }
+
+    FilterModel Filter = new FilterModel();
+    Form<FilterModel> Form;
+
+    IEnumerable<Engine> Engines { get; set; }
+    IEnumerable<Genre> Genres { get; set; }
+    IEnumerable<Data.Models.Tag> Tags { get; set; }
+    IEnumerable<Company> Developers { get; set; }
+    IEnumerable<Company> Publishers { get; set; }
+
+    int MinPlayers { get; set; }
+    int MaxPlayers { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        LibraryService.LibraryFilter += OnLibraryFilterInvoked;
+
+        var games = LibraryService.GetLibraryItems<Game>().Select(i => i.DataItem as Game).Where(i => i != null);
+        var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
+
+        Engines = games
+            .Select(i => i.Engine)
+            .Where(e => e != null)
+            .DistinctBy(e => e.Id)
+            .OrderBy(e => e.Name);
+
+        Genres = games
+            .SelectMany(i => i.Genres)
+            .Where(g => g != null)
+            .DistinctBy(g => g.Id)
+            .OrderBy(g => g.Name);
+
+        Tags = games
+            .SelectMany(i => i.Tags)
+            .Where(t => t != null)
+            .DistinctBy(t => t.Id)
+            .OrderBy(t => t.Name);
+
+        Developers = games
+            .SelectMany(i => i.Developers)
+            .Where(c => c != null)
+            .DistinctBy(c => c.Id)
+            .OrderBy(c => c.Name);
+
+        Publishers = games
+            .SelectMany(i => i.Publishers)
+            .Where(c => c != null)
+            .DistinctBy(c => c.Id)
+            .OrderBy(c => c.Name);
+
+        if (games.Any(li => li.Singleplayer))
+            MinPlayers = 1;
+        else
+            MinPlayers = multiplayerModes.Min(i => i.MinPlayers);
+
+        MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
+    }
+
+    async Task ResetFilter()
+    {
+        Filter = new FilterModel();
+        await LibraryService.LibraryChanged();
+    }
+
+    async Task ApplyFilter()
+    {
+        LibraryService.LibraryChanged();
+    }
+
+    IEnumerable<LibraryItem> OnLibraryFilterInvoked(IEnumerable<LibraryItem> items)
+    {
+        foreach (var item in items)
+        {
+            if (!String.IsNullOrWhiteSpace(Filter.Title))
+            {
+                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => i.Name?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0));
+            }
+
+            if (Filter.Engines != null && Filter.Engines.Any())
+            {
+                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Engines.Any(e => e.Id == (i.DataItem as Game)?.Engine.Id)));
+            }
+
+            if (Filter.Genres != null && Filter.Genres.Any())
+            {
+                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg.Id == g.Id))));
+            }
+
+            if (Filter.Tags != null && Filter.Tags.Any())
+            {
+                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Tags.Any(fg => (i.DataItem as Game).Tags.Any(g => fg.Id == g.Id))));
+            }
+
+            if (Filter.Developers != null && Filter.Developers.Any())
+            {
+                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc.Id == c.Id))));
+            }
+
+            if (Filter.Publishers != null && Filter.Publishers.Any())
+            {
+                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc.Id == c.Id))));
+            }
+
+            if (Filter.MinPlayers != MinPlayers || Filter.MaxPlayers != MaxPlayers)
+            {
+                /*item.Children = new ObservableCollection<LibraryItem>(
+                    item.Children
+                        .Where(i => (i.DataItem as Game)
+                            .MultiplayerModes
+                                .Any(m => 
+                                    m.MinPlayers >= Filter.MinPlayers &&
+                                    m.MinPlayers <= Filter.MaxPlayers &&
+                                    m.MaxPlayers <= Filter.MaxPlayers &&
+                                    m.MaxPlayers >= Filter.MinPlayers
+                                )
+                        )
+                   );*/
+            }
+        }
+
+        items = items.Where(i => i.Children.Any());
+
+        return items;
+    }
+}

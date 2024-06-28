@@ -17,7 +17,7 @@
     <Content Class="library">
         <div class="library-list">
             <Collapse>
-                @foreach (var collection in LibraryItems.Where(i => i != null && i.DataItem is Data.Models.Collection))
+                @foreach (var collection in LibraryService.LibraryItems.Where(i => i != null && i.DataItem is Data.Models.Collection))
                 {
                     <Panel Header="@collection.Name" Key="@collection.Key.ToString()">
                         <AntList DataSource="@collection.Children" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
@@ -137,8 +137,6 @@
     Data.Models.Game SelectedGame { get; set; }
     IEnumerable<SDK.Models.Action> SelectedGameActions { get; set; }
 
-    IEnumerable<LibraryItem> LibraryItems { get; set; } = new List<LibraryItem>();
-
     protected override async Task OnInitializedAsync()
     {
         LibraryService.OnLibraryChanged += LoadData;
@@ -152,17 +150,17 @@
     protected override async Task OnParametersSetAsync()
     {
         if (Id != Guid.Empty)
-            await OnLibraryItemSelected(LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == Id));
+            await OnLibraryItemSelected(LibraryService.GetLibraryItem(Id));
 
         await InvokeAsync(StateHasChanged);
     }
 
     async void LoadData()
     {
-        LibraryItems = await LibraryService.GetLibraryItemsAsync();
+        await LibraryService.RefreshLibraryItemsAsync();
 
         if (Id != Guid.Empty)
-            await OnLibraryItemSelected(LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == Id));
+            await OnLibraryItemSelected(LibraryService.GetLibraryItem(Id));
 
         await InvokeAsync(StateHasChanged);
     }
@@ -249,7 +247,7 @@
 
         if (result == ConfirmResult.Retry)
         {
-            var libraryItem = LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == game.Id);
+            var libraryItem = LibraryService.GetLibraryItem(game.Id);
 
             Install(libraryItem);
         }

@@ -1,4 +1,5 @@
-﻿using LANCommander.Client.Data;
+﻿using AntDesign;
+using LANCommander.Client.Data;
 using LANCommander.Client.Data.Models;
 using LANCommander.Client.Extensions;
 using LANCommander.Client.Models;
@@ -28,8 +29,13 @@ namespace LANCommander.Client.Services
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
+        public ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
+
         public delegate void OnLibraryChangedHandler();
         public event OnLibraryChangedHandler OnLibraryChanged;
+
+        public delegate IEnumerable<LibraryItem> LibraryFilterHandler(IEnumerable<LibraryItem> items);
+        public event LibraryFilterHandler LibraryFilter;
 
         public LibraryService(
             SDK.Client client,
@@ -56,6 +62,23 @@ namespace LANCommander.Client.Services
             OnLibraryChanged?.Invoke();
         }
 
+        public async Task<IEnumerable<LibraryItem>> RefreshLibraryItemsAsync()
+        {
+            LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
+
+            return LibraryItems;
+        }
+
+        public IEnumerable<LibraryItem> GetLibraryItems<T>()
+        {
+            var items = new List<LibraryItem>();
+
+            items.AddRange(LibraryItems);
+            items.AddRange(LibraryItems.SelectMany(i => i.Children));
+
+            return items.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
+        }
+
         public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
         {
             var items = new List<LibraryItem>();
@@ -79,7 +102,20 @@ namespace LANCommander.Client.Services
             foreach (var redistributable in redistributables)
                 items.Add(new LibraryItem(redistributable));
 
+            if (LibraryFilter != null)
+                return LibraryFilter.Invoke(items);
+
             return items;
+        }
+
+        public LibraryItem GetLibraryItem(Guid key)
+        {
+            var item = LibraryItems.FirstOrDefault(i => i.Key == key);
+
+            if (item == null)
+                item = LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == key);
+
+            return item;
         }
 
         public async Task<LibraryItem> GetLibraryItemAsync(LibraryItem libraryItem)

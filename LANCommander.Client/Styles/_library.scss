@@ -95,6 +95,20 @@
     }
 }
 
+.library-filter {
+    .ant-popover-inner-content {
+        width: 320px;
+    }
+
+    .ant-form-item {
+        margin-bottom: 8px;
+
+        &-label {
+            padding-bottom: 0;
+        }
+    }
+}
+
 .game-details {
     width: 100%;
     overflow-y: scroll;

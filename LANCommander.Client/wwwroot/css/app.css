@@ -379,6 +379,16 @@ footer {
   white-space: nowrap;
 }
 
+.library-filter .ant-popover-inner-content {
+  width: 320px;
+}
+.library-filter .ant-form-item {
+  margin-bottom: 8px;
+}
+.library-filter .ant-form-item-label {
+  padding-bottom: 0;
+}
+
 .game-details {
   width: 100%;
   overflow-y: scroll;

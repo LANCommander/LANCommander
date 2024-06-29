@@ -5,14 +5,7 @@
 @inject GameService GameService
 
 <footer>
-    <Popover Trigger="@(new AntDesign.Trigger[] { AntDesign.Trigger.Click})" OverlayClassName="library-filter" Placement="@Placement.TopLeft">
-        <ChildContent>
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Filter" Style="position: absolute; left: 8px;" />
-        </ChildContent>
-        <ContentTemplate>
-            <LibraryItemFilter />
-        </ContentTemplate>
-    </Popover>
+    <LibraryItemFilter />
 
     @if (DownloadService.Queue.Any(qi => qi.State))
     {

@@ -6,30 +6,47 @@
 @inject GenreService GenreService
 @inject TagService TagService
 
-<Form @ref="Form" Model="Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical" Size="small">
-    <FormItem Label="Title">
-        <Input @bind-Value="@context.Title" />
-    </FormItem>
-    <FormItem Label="Engine">
-        <TagsInput Entities="Engines" @bind-Values="@context.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
-    </FormItem>
-    <FormItem Label="Genre">
-        <TagsInput Entities="Genres" @bind-Values="@context.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
-    </FormItem>
-    <FormItem Label="Tag">
-        <TagsInput Entities="Tags" @bind-Values="@context.Tags" OptionLabelSelector="t => t.Name" TItem="Data.Models.Tag" />
-    </FormItem>
-    <FormItem Label="Developers">
-        <TagsInput Entities="Developers" @bind-Values="@context.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
-    </FormItem>
-    <FormItem Label="Publishers">
-        <TagsInput Entities="Publishers" @bind-Values="@context.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
-    </FormItem>
-    <FormItem>
-        <Button Type="@ButtonType.Primary" HtmlType="submit">Apply</Button>
-        <Button Type="@ButtonType.Text" OnClick="ResetFilter" Icon="@IconType.Outline.Close" Danger />
-    </FormItem>
-</Form>
+<Popover Trigger="@(new AntDesign.Trigger[] { AntDesign.Trigger.Click})" OverlayClassName="library-filter" Placement="@Placement.TopLeft">
+    <ChildContent>
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Filter" Style="position: absolute; left: 8px;" />
+    </ChildContent>
+    <ContentTemplate>
+        <Form @ref="Form" Model="Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical" Size="small">
+            <FormItem Label="Title">
+                <Input @bind-Value="@context.Title" />
+            </FormItem>
+            <FormItem Label="Engine">
+                <TagsInput Entities="Engines" @bind-Values="@context.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
+            </FormItem>
+            <FormItem Label="Genre">
+                <TagsInput Entities="Genres" @bind-Values="@context.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
+            </FormItem>
+            <FormItem Label="Tag">
+                <TagsInput Entities="Tags" @bind-Values="@context.Tags" OptionLabelSelector="t => t.Name" TItem="Data.Models.Tag" />
+            </FormItem>
+            <FormItem Label="Developers">
+                <TagsInput Entities="Developers" @bind-Values="@context.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+            </FormItem>
+            <FormItem Label="Publishers">
+                <TagsInput Entities="Publishers" @bind-Values="@context.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+            </FormItem>
+            <FormItem Label="Players">
+                <InputGroup Compact>
+                    <AntDesign.InputNumber @bind-Value="@context.MinPlayers" Min="@MinPlayers" Max="@MaxPlayers" PlaceHolder="Minimum" Style="flex-grow: 1;" />
+                    <Input TValue="string" InputElementSuffixClass="site-input-split" Style="width: 30px; border-left: 0; border-right: 0; pointer-events: none; text-align: center;" Placeholder="~" Disabled />
+                    <AntDesign.InputNumber @bind-Value="@context.MaxPlayers" Min="@MinPlayers" Max="@MaxPlayers" PlaceHolder="Maximum" Style="flex-grow: 1;" />
+                </InputGroup>
+            </FormItem>
+            <FormItem>
+                <Checkbox @bind-Value="@context.Installed">Installed</Checkbox>
+            </FormItem>
+            <FormItem>
+                <Button Type="@ButtonType.Primary" HtmlType="submit">Apply</Button>
+                <Button Type="@ButtonType.Text" OnClick="ResetFilter" Icon="@IconType.Outline.Close" Danger />
+            </FormItem>
+        </Form>
+    </ContentTemplate>
+</Popover>
 
 @code {
     public class FilterModel
@@ -40,8 +57,9 @@
         public ICollection<Data.Models.Tag> Tags { get; set; }
         public ICollection<Company> Developers { get; set; }
         public ICollection<Company> Publishers { get; set; }
-        public int MinPlayers { get; set; }
-        public int MaxPlayers { get; set; }
+        public int? MinPlayers { get; set; }
+        public int? MaxPlayers { get; set; }
+        public bool Installed { get; set; }
     }
 
     FilterModel Filter = new FilterModel();
@@ -146,20 +164,23 @@
                 item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc.Id == c.Id))));
             }
 
-            if (Filter.MinPlayers != MinPlayers || Filter.MaxPlayers != MaxPlayers)
+            if (Filter.MinPlayers != null)
             {
-                /*item.Children = new ObservableCollection<LibraryItem>(
-                    item.Children
-                        .Where(i => (i.DataItem as Game)
-                            .MultiplayerModes
-                                .Any(m => 
-                                    m.MinPlayers >= Filter.MinPlayers &&
-                                    m.MinPlayers <= Filter.MaxPlayers &&
-                                    m.MaxPlayers <= Filter.MaxPlayers &&
-                                    m.MaxPlayers >= Filter.MinPlayers
-                                )
-                        )
-                   );*/
+                item.Children = new ObservableCollection<LibraryItem>(
+                    item.Children.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= Filter.MinPlayers && mm.MaxPlayers >= Filter.MinPlayers))
+                );
+            }
+
+            if (Filter.MaxPlayers != null)
+            {
+                item.Children = new ObservableCollection<LibraryItem>(
+                    item.Children.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= Filter.MaxPlayers))
+                );
+            }
+
+            if (Filter.Installed)
+            {
+                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => (i.DataItem as Game).Installed));
             }
         }
 

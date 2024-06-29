@@ -113,10 +113,11 @@
 
         if (games.Any(li => li.Singleplayer))
             MinPlayers = 1;
-        else
-            MinPlayers = multiplayerModes.Min(i => i.MinPlayers);
+        else if (multiplayerModes.Any())
+            MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
 
-        MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
+        if (multiplayerModes.Any())
+            MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
     }
 
     async Task ResetFilter()

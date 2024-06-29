@@ -90,7 +90,7 @@ namespace LANCommander.Services.MediaGrabbers
             {
                 var existsResult = await SteamClient.HasWebAssetAsync(appIdResult.AppId, WebAssetType.LibraryCover);
 
-                if (existsResult.Exists)
+                if (existsResult.Exists && !results.Any(r => r.Id == appIdResult.AppId.ToString()))
                 {
                     results.Add(new MediaGrabberResult()
                     {
@@ -104,7 +104,7 @@ namespace LANCommander.Services.MediaGrabbers
                 }
             }
 
-            results.AddRange(covers.Where(b => SupportedFormats.Contains(b.Format)).Select(b => new MediaGrabberResult()
+            results.AddRange(covers.Where(b => SupportedFormats.Contains(b.Format) && !results.Any(r => r.Id == b.Id.ToString())).Select(b => new MediaGrabberResult()
             {
                 Id = b.Id.ToString(),
                 Type = MediaType.Cover,

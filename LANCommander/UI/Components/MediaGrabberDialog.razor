@@ -21,7 +21,7 @@
         <div class="media-grabber-group">
             <h2>@group.First().Group</h2>
 
-            <ImagePicker Size="Size" Images="@group.ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" />
+            <ImagePicker Size="Size" Images="@group.DistinctBy(g => g.Id).ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" />
         </div>
     }
 

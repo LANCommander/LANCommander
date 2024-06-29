@@ -88,18 +88,19 @@ namespace LANCommander.Client
                 })
                 .RegisterWebMessageReceivedHandler(async (object sender, string message) =>
                 {
-                    using var scope = app.Services.CreateScope();
-
-                    var importService = scope.ServiceProvider.GetService<ImportService>();
-
-                    var window = (PhotinoWindow)sender;
-
                     switch (message)
                     {
                         case "import":
-                            await importService.ImportAsync();
+                            using (var scope = app.Services.CreateScope())
+                            {
+                                var importService = scope.ServiceProvider.GetService<ImportService>();
 
-                            window.SendWebMessage("importComplete");
+                                var window = (PhotinoWindow)sender;
+
+                                await importService.ImportAsync();
+
+                                window.SendWebMessage("importComplete");
+                            }
                             break;
                     }
                 });

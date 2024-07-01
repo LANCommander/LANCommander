@@ -28,7 +28,7 @@ else
                         {
                             @foreach (var action in GameActions)
                             {
-                                <MenuItem OnClick="() => LibraryService.Run(Game, action)">
+                                <MenuItem OnClick="() => Run(Game, action)">
                                     @action.Name
                                 </MenuItem>
                             }
@@ -117,6 +117,13 @@ else
 
             var modalRef = ModalService.CreateModal<ActionSelectorDialog, ActionSelectorDialogOptions, Process>(modalOptions, model);
         }
+    }
+
+    async Task Run(Game game, SDK.Models.Action action)
+    {
+        LibraryService.Run(Game, action);
+
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task Stop()

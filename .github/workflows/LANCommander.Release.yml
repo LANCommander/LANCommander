@@ -74,18 +74,32 @@ jobs:
         dest: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # Linux
-    - name: Publish Linux
+    - name: Publish Linux x86
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Remove Linux Extra Files
       run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
 
     # Create Linux ZIP file
-    - name: Package Linux Build
+    - name: Package Linux x86 Build
       uses: vimtor/action-zip@v1.2
       with:
         files: _Build_Linux/
         recursive: true
         dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Linux
+    - name: Publish Linux ARM64
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux_ARM --self-contained --runtime linux-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Linux Extra Files
+      run: rm -Recurse -Force ./_Build_Linux_ARM/wwwroot/_content/AntDesign/less
+
+    # Create Linux ZIP file
+    - name: Package Linux ARM64 Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_Linux_ARM/
+        recursive: true
+        dest: LANCommander-Linux-ARM-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # macOS
     - name: Publish macOS

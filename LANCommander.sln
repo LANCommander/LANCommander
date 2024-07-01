@@ -30,7 +30,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Photino.Blazor.CustomWindow
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SharpCompress", "SharpCompress\src\SharpCompress\SharpCompress.csproj", "{CB30ECCD-0144-4E37-B5B9-111E45FBDAFC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Steam", "LANCommander.Steam\LANCommander.Steam.csproj", "{9CFBF137-0277-41BA-A7EB-C0DDCF119E85}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Steam", "LANCommander.Steam\LANCommander.Steam.csproj", "{9CFBF137-0277-41BA-A7EB-C0DDCF119E85}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

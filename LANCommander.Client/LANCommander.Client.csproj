@@ -55,6 +55,6 @@
     </ItemGroup>
   
     <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-      <Exec Command="Copy $(SolutionDir)LANCommander.PowerShell\bin\$(ConfigurationName)\LANCommander.PowerShell.dll $(OutDir)LANCommander.PowerShell.dll&#xD;&#xA;Copy $(SolutionDir)LANCommander.PowerShell\bin\$(ConfigurationName)\LANCommander.PowerShell.psd1 $(OutDir)LANCommander.PowerShell.psd1&#xD;&#xA;PowerShell -Command &quot;(Get-Content '$(TargetDir)LANCommander.PowerShell.psd1') -replace 'YamlDotNet.dll', '..\..\YamlDotNet.dll' | Out-File '$(OutDir)LANCommander.PowerShell.psd1'&quot;" />
+      <Exec Command="Copy $(ProjectDir)..\LANCommander.PowerShell\bin\$(ConfigurationName)\LANCommander.PowerShell.dll $(ProjectDir)$(OutDir)LANCommander.PowerShell.dll&#xD;&#xA;Copy $(ProjectDir)..\LANCommander.PowerShell\bin\$(ConfigurationName)\LANCommander.PowerShell.psd1 $(ProjectDir)$(OutDir)LANCommander.PowerShell.psd1&#xD;&#xA;PowerShell -Command &quot;(Get-Content '$(TargetDir)LANCommander.PowerShell.psd1') -replace 'YamlDotNet.dll', '..\..\YamlDotNet.dll' | Out-File '$(ProjectDir)$(OutDir)LANCommander.PowerShell.psd1'&quot;" />
     </Target>
 </Project>

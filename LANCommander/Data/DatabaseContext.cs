@@ -28,6 +28,7 @@ namespace LANCommander.Data
             builder.ConfigureBaseRelationships<Key>();
             builder.ConfigureBaseRelationships<Media>();
             builder.ConfigureBaseRelationships<MultiplayerMode>();
+            builder.ConfigureBaseRelationships<Platform>();
             builder.ConfigureBaseRelationships<PlaySession>();
             builder.ConfigureBaseRelationships<Redistributable>();
             builder.ConfigureBaseRelationships<SavePath>();
@@ -53,6 +54,10 @@ namespace LANCommander.Data
             builder.Entity<Tag>()
                 .HasMany(t => t.Games)
                 .WithMany(g => g.Tags);
+
+            builder.Entity<Platform>()
+                .HasMany(p => p.Games)
+                .WithMany(g => g.Platforms);
 
             #region Game Relationships
             builder.Entity<Game>()

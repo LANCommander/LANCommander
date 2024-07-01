@@ -11,6 +11,7 @@
 @inject GameService GameService
 @inject CompanyService CompanyService
 @inject GenreService GenreService
+@inject PlatformService PlatformService
 @inject TagService TagService
 @inject EngineService EngineService
 @inject CollectionService CollectionService
@@ -174,6 +175,9 @@
                     </FormItem>
                     <FormItem Label="Publishers">
                         <TagsInput Entities="Companies" @bind-Values="Game.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                    </FormItem>
+                    <FormItem Label="Platforms">
+                        <TagsInput Entities="Platforms" @bind-Values="Game.Platforms" OptionLabelSelector="c => c.Name" TItem="Platform" />
                     </FormItem>
                     <FormItem Label="Genres">
                         <TagsInput Entities="Genres" @bind-Values="Game.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
@@ -359,6 +363,7 @@ else
     IEnumerable<Engine> Engines;
     IEnumerable<Company> Companies;
     IEnumerable<Genre> Genres;
+    IEnumerable<Platform> Platforms;
     IEnumerable<Data.Models.Tag> Tags;
     IEnumerable<Collection> Collections;
     IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
@@ -418,6 +423,7 @@ else
         Engines = await EngineService.Get();
         Companies = await CompanyService.Get();
         Genres = await GenreService.Get();
+        Platforms = await PlatformService.Get();
         Tags = await TagService.Get();
         Collections = await CollectionService.Get();
         Games = await GameService.Get(g => g.Type == GameType.MainGame).ToListAsync();

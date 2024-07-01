@@ -106,6 +106,14 @@
             }
     </Column>
 
+    <Column TData="string[]" Title="Platforms" Hidden="@(Picker.IsColumnHidden("Platforms", false))">
+        @if (context.Platforms != null)
+            foreach (var platform in context.Platforms)
+            {
+                <Tag>@platform.Name</Tag>
+            }
+    </Column>
+
     <Column TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes" Hidden="@(Picker.IsColumnHidden("Multiplayer Modes"))">
         @if (context.MultiplayerModes != null)
             foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())

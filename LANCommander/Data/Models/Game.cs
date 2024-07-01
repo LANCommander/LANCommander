@@ -35,6 +35,7 @@ namespace LANCommander.Data.Models
         public virtual ICollection<MultiplayerMode>? MultiplayerModes { get; set; } = new List<MultiplayerMode>();
         public virtual ICollection<Genre>? Genres { get; set; } = new List<Genre>();
         public virtual ICollection<Tag>? Tags { get; set; } = new List<Tag>();
+        public virtual ICollection<Platform>? Platforms { get; set; } = new List<Platform>();
         public virtual ICollection<Category>? Categories { get; set; } = new List<Category>();
         public virtual ICollection<Company>? Publishers { get; set; } = new List<Company>();
         public virtual ICollection<Company>? Developers { get; set; } = new List<Company>();

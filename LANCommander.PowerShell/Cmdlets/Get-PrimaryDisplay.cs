@@ -1,6 +1,7 @@
-﻿using System.Linq;
+﻿using LANCommander.PowerShell.Extensions;
+using LANCommander.PowerShell.Models;
+using System.Linq;
 using System.Management.Automation;
-using System.Windows.Forms;
 
 namespace LANCommander.PowerShell.Cmdlets
 {
@@ -10,9 +11,27 @@ namespace LANCommander.PowerShell.Cmdlets
     {
         protected override void ProcessRecord()
         {
-            var screens = Screen.AllScreens;
+            var screens = System.Windows.Forms.Screen.AllScreens;
 
-            WriteObject(screens.First(s => s.Primary));
+            var primaryScreen = screens.First(s => s.Primary);
+
+            var mode = primaryScreen.GetDeviceMode();
+
+            var screen = new Screen
+            {
+                Bounds = new Bounds
+                {
+                    Width = primaryScreen.Bounds.Width,
+                    Height = primaryScreen.Bounds.Height
+                },
+                Width = primaryScreen.Bounds.Width,
+                Height = primaryScreen.Bounds.Height,
+                Primary = true,
+                RefreshRate = mode.dmNup,
+                BitsPerPixel = primaryScreen.BitsPerPixel
+            };
+
+            WriteObject(screen);
         }
     }
 }

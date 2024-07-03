@@ -1,0 +1,1 @@
+﻿Update-IniValue -Section "Display" -Key "Width" -Value $Display.Width -FilePath "$InstallDirectory\config.ini"

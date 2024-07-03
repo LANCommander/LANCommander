@@ -34,6 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="PeanutButter.INI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\PeanutButter.INI.3.0.306\lib\net462\PeanutButter.INI.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -54,6 +57,7 @@
   <ItemGroup>
     <Compile Include="Cmdlets\ConvertTo-SerializedBase64.cs" />
     <Compile Include="Cmdlets\ConvertFrom-SerializedBase64.cs" />
+    <Compile Include="Cmdlets\Update-IniValue.cs" />
     <Compile Include="Cmdlets\Edit-PatchBinary.cs" />
     <Compile Include="Cmdlets\Uninstall-Game.cs" />
     <Compile Include="Cmdlets\Install-Game.cs" />

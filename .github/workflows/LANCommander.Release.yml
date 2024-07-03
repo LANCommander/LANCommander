@@ -122,6 +122,8 @@ jobs:
       uses: NuGet/setup-nuget@v1.1.1
     - name: Restore NuGet packages
       run: nuget restore LANCommander.sln
+    - name: Build and Publish PowerShell Module
+      run: msbuild LANCommander.PowerShell/LANCommander.PowerShell.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Build and Publish Library
       run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Sign Windows Binary
@@ -161,7 +163,7 @@ jobs:
     - name: Package Windows Client Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Client/bin/Release/net8.0/win-x64/publish/
+        files: LANCommander.Client/bin/Release/net8.0/win-x64/publish/ LANCommander.PowerShell/Build/LANCommander.PowerShell.dll LANCommander.PowerShell/Build/LANCommander.PowerShell.psd1
         recursive: true
         dest: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
@@ -195,7 +197,7 @@ jobs:
 
     # Draft Release
     - name: List contents of workspace
-      run: Get-ChildItem -Path ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client/bin -Recurse
+      run: Get-ChildItem -Path ${{ steps.swap_path_backslashes.outputs.replaced }} -Recurse
       if: always()
 
     - name: Draft Release

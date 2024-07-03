@@ -1,2 +1,4 @@
-﻿# Bounds are accessible by $Display.Bounds.Width and $Display.Bounds.Height
+﻿# $Display.Width
+# $Display.Height
+# $Display.RefreshRate
 $Display = Get-PrimaryDisplay

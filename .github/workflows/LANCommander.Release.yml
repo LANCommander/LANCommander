@@ -46,6 +46,107 @@ jobs:
     - name: Setup Node.js environment
       uses: actions/setup-node@v3.8.1
     - run: cd LANCommander/wwwroot/scripts; npm install
+
+    # Windows
+    - name: Publish Windows
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Publish Windows Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release -o _Build_Windows --self-contained --os win -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename Windows Updater
+      run: mv ./_Build_Windows/LANCommander.AutoUpdater.exe ./_Build_Windows/LANCommander.AutoUpdater.exe.Update
+    - name: Remove Windows Extra Files
+      run: rm -Recurse -Force ./_Build_Windows/wwwroot/_content/AntDesign/less
+
+    # Sign Windows Binary
+    - name: Sign Windows Binary
+      uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
+      with:
+        certificate: "${{ secrets.CERTIFICATE }}"
+        cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
+        filepath: "./_Build_Windows/LANCommander.exe"
+
+    # Create Windows ZIP file
+    - name: Package Windows Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_Windows/
+        recursive: true
+        dest: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Linux
+    - name: Publish Linux x86
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Linux Extra Files
+      run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
+
+    # Create Linux ZIP file
+    - name: Package Linux x86 Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_Linux/
+        recursive: true
+        dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Linux
+    - name: Publish Linux ARM64
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux_ARM --self-contained --runtime linux-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Linux Extra Files
+      run: rm -Recurse -Force ./_Build_Linux_ARM/wwwroot/_content/AntDesign/less
+
+    # Create Linux ZIP file
+    - name: Package Linux ARM64 Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_Linux_ARM/
+        recursive: true
+        dest: LANCommander-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # macOS
+    - name: Publish macOS
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_macOS --self-contained --runtime osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove macOS Extra Files
+      run: rm -Recurse -Force ./_Build_macOS/wwwroot/_content/AntDesign/less
+
+    # Create macOS ZIP file
+    - name: Package macOS Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: _Build_macOS/
+        recursive: true
+        dest: LANCommander-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # Playnite
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.3.1
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.1.1
+    - name: Restore NuGet packages
+      run: nuget restore LANCommander.sln
+    - name: Build and Publish Library
+      run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Sign Windows Binary
+      uses: nadeemjazmawe/Sign-action-signtool.exe@v0.1
+      with:
+        certificate: "${{ secrets.CERTIFICATE }}"
+        cert-password: "${{ secrets.CERTIFICATE_PASSWORD }}"
+        filepath: "./LANCommander.Playnite.Extension/Build/LANCommander.PlaynitePlugin.dll"
+    - name: Download Playnite Release
+      uses: robinraju/release-downloader@v1.7
+      with:
+        repository: JosefNemec/Playnite
+        tag: 10.32
+        fileName: Playnite1032.zip
+    - name: Extract Playnite
+      run: Expand-Archive -Path Playnite1032.zip -DestinationPath Playnite
+    - name: Update Manifest Versioning
+      uses: fjogeleit/yaml-update-action@main
+      with:
+        valueFile: "LANCommander.Playnite.Extension/Build/extension.yaml"
+        propertyPath: "Version"
+        value: "${{ steps.trim_tag_ref.outputs.replaced }}"
+        commitChange: false
+    - name: Run Playnite Toolbox
+      run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
     
     # Launcher
     - run: cd LANCommander.Client; npm install
@@ -64,9 +165,37 @@ jobs:
         recursive: true
         dest: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
+    # Linux
+    - name: Publish Linux Client
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release --self-contained --runtime linux-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    #- name: Remove Linux Client Extra Files
+    #  run: rm -Recurse -Force ./_Build_Client_Linux/wwwroot/_content/AntDesign/less, ./_Build_Client_Linux/wwwroot/_content/compat, ./_Build_Client_Linux/*.pdb, ./_Build_Client_Linux/*.json, ./_Build_Client_Linux/*.ico
+
+    # Create Linux ZIP file
+    - name: Package Linux Client Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: LANCommander.Client/bin/Release/net8.0/linux-x64/publish/
+        recursive: true
+        dest: LANCommander.Client-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    # macOS
+    - name: Publish macOS Client
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release --self-contained --runtime osx-arm64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    #- name: Remove macOS Extra Files
+    #  run: rm -Recurse -Force ./_Build_Client_macOS/wwwroot/_content/AntDesign/less, ./_Build_Client_macOS/wwwroot/_content/compat, ./_Build_Client_macOS/*.pdb, ./_Build_Client_macOS/*.json, ./_Build_Client_macOS/*.ico
+
+    # Create macOS ZIP file
+    - name: Package macOS Client Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: LANCommander.Client/bin/Release/net8.0/osx-arm64/publish/
+        recursive: true
+        dest: LANCommander.Client-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
     # Draft Release
     - name: List contents of workspace
-      run: Get-ChildItem -Path ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.PowerShell/bin -Recurse
+      run: Get-ChildItem -Path ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client/bin -Recurse
       if: always()
 
     - name: Draft Release

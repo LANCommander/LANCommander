@@ -151,10 +151,6 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\LANCommander.PowerShell\LANCommander.PowerShell.csproj">
-      <Project>{807943bf-0c7d-4ed3-8393-cfee64e3138c}</Project>
-      <Name>LANCommander.PowerShell</Name>
-    </ProjectReference>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj">
       <Project>{4c2a71fd-a30b-4d62-888a-4ef843d8e506}</Project>
       <Name>LANCommander.SDK</Name>

@@ -167,7 +167,7 @@ jobs:
 
     # Linux
     - name: Publish Linux Client
-      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release --self-contained --os linux-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release --self-contained --runtime linux-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     #- name: Remove Linux Client Extra Files
     #  run: rm -Recurse -Force ./_Build_Client_Linux/wwwroot/_content/AntDesign/less, ./_Build_Client_Linux/wwwroot/_content/compat, ./_Build_Client_Linux/*.pdb, ./_Build_Client_Linux/*.json, ./_Build_Client_Linux/*.ico
 

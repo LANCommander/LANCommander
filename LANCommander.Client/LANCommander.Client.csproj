@@ -28,7 +28,6 @@
   
     <ItemGroup>
         <ProjectReference Include="..\LANCommander.Client.Data\LANCommander.Client.Data.csproj" />
-        <ProjectReference Include="..\LANCommander.PowerShell\LANCommander.PowerShell.csproj" />
         <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
         <ProjectReference Include="..\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow.csproj" />
     </ItemGroup>
@@ -54,5 +53,8 @@
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
     </ItemGroup>
-
+  
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+      <Exec Command="Copy $(ProjectDir)..\LANCommander.PowerShell\bin\$(ConfigurationName)\LANCommander.PowerShell.dll $(TargetDir)LANCommander.PowerShell.dll&#xD;&#xA;Copy $(ProjectDir)..\LANCommander.PowerShell\bin\$(ConfigurationName)\LANCommander.PowerShell.psd1 $(TargetDir)LANCommander.PowerShell.psd1&#xD;&#xA;PowerShell -Command &quot;(Get-Content '$(TargetDir)LANCommander.PowerShell.psd1') -replace 'YamlDotNet.dll', '..\..\YamlDotNet.dll' | Out-File '$(TargetDir)LANCommander.PowerShell.psd1'&quot;" />
+    </Target>
 </Project>

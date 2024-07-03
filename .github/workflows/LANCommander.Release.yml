@@ -196,6 +196,7 @@ jobs:
     # Draft Release
     - name: List contents of workspace
       run: Get-ChildItem -Path ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client/bin -Recurse
+      if: always()
 
     - name: Draft Release
       uses: softprops/action-gh-release@v2

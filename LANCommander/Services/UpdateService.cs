@@ -59,16 +59,19 @@ namespace LANCommander.Services
             });
         }
 
-        public async Task DownloadRelease(Release release)
+        public async Task<Release?> GetRelease(SemVersion version)
         {
-            string releaseFile = String.Empty;
+            var releases = await GetReleases(10);
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                releaseFile = release.Assets.FirstOrDefault(a => a.Name.Contains("Windows")).BrowserDownloadUrl;
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                releaseFile = release.Assets.FirstOrDefault(a => a.Name.Contains("Linux")).BrowserDownloadUrl;
-            else
-                throw new NotImplementedException("The current operating system is not supported.");
+            return releases.FirstOrDefault(r => r.TagName == $"v{version}");
+        }
+
+        public async Task DownloadServerRelease(Release release)
+        {
+            string releaseFile = release.Assets.FirstOrDefault(a => a.Name.StartsWith($"LANCommander-{GetOS()}-{GetArchitecture()}-"))?.BrowserDownloadUrl ?? String.Empty;
+
+            if (String.IsNullOrWhiteSpace(releaseFile))
+                throw new NotImplementedException("Your platform is not supported");
 
             Logger?.Info("Stopping all servers");
 
@@ -89,7 +92,56 @@ namespace LANCommander.Services
 
                 client.DownloadFileCompleted += ReleaseDownloaded;
                 client.QueryString.Add("Version", release.TagName);
-                client.DownloadFileAsync(new Uri(releaseFile), Path.Combine(Settings.Update.StoragePath, release.TagName + ".zip"));
+                await client.DownloadFileTaskAsync(new Uri(releaseFile), Path.Combine(Settings.Update.StoragePath, $"{release.TagName}.zip"));
+            }
+        }
+
+        public async Task DownloadClientRelease(Release release)
+        {
+            var releaseFiles = release.Assets.Where(a => a.Name.StartsWith("LANCommander.Client-")).Select(a => a.BrowserDownloadUrl);
+
+            Logger?.Info("Downloading release version {Version}", release.TagName);
+
+            foreach (var releaseFile in releaseFiles)
+            {
+                Logger?.Info($"Downloading client from {releaseFile}");
+
+                if (!String.IsNullOrWhiteSpace(releaseFile))
+                {
+                    WebClient client = new WebClient();
+
+                    var uri = new Uri(releaseFile);
+
+                    client.QueryString.Add("Version", release.TagName);
+                    await client.DownloadFileTaskAsync(uri, Path.Combine(Settings.Update.StoragePath, uri.Segments.Last()));
+                }
+            }
+        }
+
+        private string GetOS()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return "Windows";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return "Linux";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return "macOS";
+
+            return String.Empty;
+        }
+
+        private string GetArchitecture()
+        {
+            switch (RuntimeInformation.ProcessArchitecture)
+            {
+                case Architecture.X64:
+                    return "x64";
+
+                case Architecture.Arm64:
+                    return "arm64";
+
+                default:
+                    return String.Empty;
             }
         }
 

@@ -101,6 +101,7 @@ namespace LANCommander.Models
     public class LANCommanderUpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
+        public bool HostClientUpdates { get; set; } = false;
     }
 
     public class LANCommanderLogSettings

@@ -4,6 +4,7 @@
 @layout SettingsLayout
 @inject IMessageService MessageService
 @inject ArchiveService ArchiveService
+@inject UpdateService UpdateService
 @inject IFusionCache FusionCache
 @attribute [Authorize(Roles = "Administrator")]
 
@@ -23,6 +24,12 @@
         A cached list of games is sent to the clients on import. Click the button below to bust this cache if you don't see your changes.
     </p>
     <Button Type="@ButtonType.Primary" OnClick="ClearCache">Clear Cache</Button>
+
+    <Divider />
+
+    <h3>Download Clients</h3>
+    <p>Check for any client releases for the current version and download them to this server.</p>
+    <Button Type="@ButtonType.Primary" OnClick="DownloadClients" Loading="DownloadingClients">Download</Button>
 
     <Divider />
 
@@ -46,12 +53,13 @@
 
 @code {
     bool RecalculatingFileSizes = false;
+    bool DownloadingClients = false;
 
     async Task RecalculateFileSizes()
     {
         RecalculatingFileSizes = true;
 
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
 
         var archives = await ArchiveService.Get();
 
@@ -77,5 +85,28 @@
         await FusionCache.ExpireAsync("MappedGames");
 
         MessageService.Success("Cache cleared!");
+    }
+
+    async Task DownloadClients()
+    {
+        DownloadingClients = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        var currentVersion = UpdateService.GetCurrentVersion();
+        var currentRelease = await UpdateService.GetRelease(currentVersion);
+
+        if (currentRelease != null)
+        {
+            await UpdateService.DownloadClientRelease(currentRelease);
+
+            MessageService.Success("Clients downloaded!");
+        }
+        else
+        {
+            MessageService.Error("You are on an unsupported version and clients cannot be downloaded");
+        }
+
+        DownloadingClients = false;
     }
 }

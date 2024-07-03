@@ -15,6 +15,20 @@
 </PageHeader>
 
 <div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Storage Path">
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Update.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+        </FormItem>
+
+        <FormItem Label="Host Client Updates">
+            <Switch @bind-Checked="context.Update.HostClientUpdates" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+
     @if (!Loading && !UpdateAvailable)
     {
         <Alert Type="@AlertType.Success" Message="You are on the latest version!" ShowIcon="true" />
@@ -95,7 +109,10 @@
         try {
             Updating = true;
 
-            await UpdateService.DownloadRelease(Releases.First());
+            if (Settings.Update.HostClientUpdates)
+                await UpdateService.DownloadClientRelease(Releases.First());
+
+            await UpdateService.DownloadServerRelease(Releases.First());
         }
         catch (NotImplementedException ex) {
             MessageService.Error(ex.Message);
@@ -104,5 +121,28 @@
         {
             MessageService.Error("An unknown error occurred while updating. Please check the logs");
         }
+    }
+
+    void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch
+        {
+            MessageService.Error("An unknown error occurred.");
+        }
+    }
+
+    void OnPathSelected(string path)
+    {
+        var appPath = Directory.GetCurrentDirectory();
+
+        if (path != null && path.StartsWith(appPath))
+            path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+
+        Settings.Update.StoragePath = path;
     }
 }

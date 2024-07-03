@@ -99,7 +99,7 @@ jobs:
       with:
         files: _Build_Linux_ARM/
         recursive: true
-        dest: LANCommander-Linux-ARM-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        dest: LANCommander-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     # macOS
     - name: Publish macOS
@@ -207,6 +207,7 @@ jobs:
         files: |
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-macOS-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Windows-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Linux-x64-*.zip

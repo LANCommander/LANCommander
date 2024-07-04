@@ -80,6 +80,14 @@ else
     protected override async Task OnParametersSetAsync()
     {
         Game = await GameService.Get(GameId);
+        GameActions = new List<SDK.Models.Action>();
+
+        if (Game.Installed)
+        {
+            var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
+
+            GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
+        }
     }
 
     async Task Run()

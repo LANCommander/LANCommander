@@ -157,6 +157,52 @@ namespace LANCommander.Client.Services
                 });
                 #endregion
 
+                #region Download Media
+                // MediaId, GameId
+                var mediaMap = new Dictionary<Guid, Guid>();
+
+                foreach (var remoteGame in remoteGames)
+                {
+                    foreach (var remoteMedia in remoteGame.Media)
+                    {
+                        mediaMap[remoteMedia.Id] = remoteGame.Id;
+                    }
+                }
+
+                var medias = await ImportFromModel<Media, SDK.Models.Media, MediaService>(remoteGames.SelectMany(g => g.Media), MediaService, (media, importMedia) =>
+                {
+                    media.FileId = importMedia.FileId;
+                    media.Type = importMedia.Type;
+                    media.SourceUrl = importMedia.SourceUrl;
+                    media.MimeType = importMedia.MimeType;
+                    media.Crc32 = importMedia.Crc32;
+                    media.GameId = mediaMap.ContainsKey(importMedia.Id) ? mediaMap[importMedia.Id] : Guid.Empty;
+
+                    return media;
+                }, false);
+
+                var mediaStoragePath = MediaService.GetStoragePath();
+
+                foreach (var media in medias)
+                {
+                    var localPath = Path.Combine(MediaService.GetStoragePath(), $"{media.FileId}-{media.Crc32}");
+
+                    if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
+                    {
+                        var staleFiles = Directory.EnumerateFiles(mediaStoragePath, $"{media.FileId}-*");
+
+                        foreach (var staleFile in staleFiles)
+                            File.Delete(staleFile);
+
+                        await Client.Media.Download(new SDK.Models.Media
+                        {
+                            Id = media.Id,
+                            FileId = media.FileId
+                        }, localPath);
+                    }
+                }
+                #endregion
+
                 await metadataTransaction.CommitAsync();
             }
 
@@ -316,39 +362,6 @@ namespace LANCommander.Client.Services
                         }
                         else
                             localGame = await GameService.Update(localGame);
-
-                        #region Download Media
-                        var medias = await ImportFromModel<Media, SDK.Models.Media, MediaService>(remoteGame.Media, MediaService, (media, importMedia) =>
-                        {
-                            media.FileId = importMedia.FileId;
-                            media.Type = importMedia.Type;
-                            media.SourceUrl = importMedia.SourceUrl;
-                            media.MimeType = importMedia.MimeType;
-                            media.Crc32 = importMedia.Crc32;
-                            media.GameId = localGame.Id == Guid.Empty ? remoteGame.Id : localGame.Id;
-
-                            return media;
-                        }, false);
-
-                        foreach (var media in medias)
-                        {
-                            var localPath = Path.Combine(MediaService.GetStoragePath(), $"{media.FileId}-{media.Crc32}");
-
-                            if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
-                            {
-                                var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{media.FileId}-*");
-
-                                foreach (var staleFile in staleFiles)
-                                    File.Delete(staleFile);
-
-                                await Client.Media.Download(new SDK.Models.Media
-                                {
-                                    Id = media.Id,
-                                    FileId = media.FileId
-                                }, localPath);
-                            }
-                        }
-                        #endregion
                     }
                     catch (Exception ex)
                     {

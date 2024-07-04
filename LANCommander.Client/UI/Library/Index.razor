@@ -87,27 +87,50 @@
                         </div>
 
                         <div class="game-metadata">
-                            <div class="game-metadata-description">@SelectedGame.Description</div>
-                            <div class="game-metadata-released-on">
-                                <h3>Released On</h3>
-                                <span>@SelectedGame.ReleasedOn.Value.ToString("MMMM d, yyyy")</span>
-                            </div>
-                            <div class="game-metadata-developers">
-                                <h3>Developers</h3>
-                                <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
-                            </div>
-                            <div class="game-metadata-publishers">
-                                <h3>Publishers</h3>
-                                <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
-                            </div>
-                            <div class="game-metadata-genres">
-                                <h3>Genres</h3>
-                                <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
-                            </div>
-                            <div class="game-metadata-tags">
-                                <h3>Tags</h3>
-                                <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
-                            </div>
+                            @if (!String.IsNullOrWhiteSpace(SelectedGame.Description))
+                            {
+                                <div class="game-metadata-description">@SelectedGame.Description</div>
+                            }
+
+                            @if (SelectedGame.ReleasedOn.HasValue)
+                            {
+                                <div class="game-metadata-released-on">
+                                    <h3>Released On</h3>
+                                    <span>@SelectedGame.ReleasedOn.Value.ToString("MMMM d, yyyy")</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Developers != null && SelectedGame.Developers.Any())
+                            {
+                                <div class="game-metadata-developers">
+                                    <h3>Developers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+                            
+                            @if (SelectedGame.Publishers != null && SelectedGame.Publishers.Any())
+                            {
+                                <div class="game-metadata-publishers">
+                                    <h3>Publishers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+                            
+                            @if (SelectedGame.Genres != null && SelectedGame.Genres.Any())
+                            {
+                                <div class="game-metadata-genres">
+                                    <h3>Genres</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Tags != null && SelectedGame.Tags.Any())
+                            {
+                                <div class="game-metadata-tags">
+                                    <h3>Tags</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
+                                </div>
+                            }
                         </div>
                     </GridCol>
 

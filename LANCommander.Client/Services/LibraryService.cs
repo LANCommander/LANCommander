@@ -201,13 +201,17 @@ namespace LANCommander.Client.Services
 
             var userId = Guid.NewGuid();
 
-            await PlaySessionService.StartSession(game.Id, userId);
+            try
+            {
+                process.Start();
 
-            process.Start();
+                await PlaySessionService.StartSession(game.Id, userId);
 
-            RunningProcesses.Add(game.Id, process);
+                RunningProcesses.Add(game.Id, process);
 
-            await process.WaitForExitAsync();
+                await process.WaitForExitAsync();
+            }
+            catch (Exception ex) { }
 
             RunningProcesses.Remove(game.Id);
 

@@ -122,6 +122,10 @@ jobs:
       uses: NuGet/setup-nuget@v1.1.1
     - name: Restore NuGet packages
       run: nuget restore LANCommander.sln
+
+    - name: Build and Publish PowerShell Module
+      run: msbuild LANCommander.PowerShell/LANCommander.PowerShell.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
     - name: Build and Publish Library
       run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Sign Windows Binary
@@ -147,9 +151,6 @@ jobs:
         commitChange: false
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
-
-    - name: Build and Publish PowerShell Module
-      run: msbuild LANCommander.PowerShell/LANCommander.PowerShell.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     
     # Launcher
     - run: cd LANCommander.Client; npm install

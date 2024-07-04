@@ -4,6 +4,7 @@
         <ItemGroup>
 		    <InputAssemblies Include="$(TargetPath)" />
             <InputAssemblies Include="$(OutputPath)\YamlDotNet.dll" />
+            <InputAssemblies Include="$(OutputPath)\PeanutButter.INI.dll" />
             <InputAssemblies Include="$(OutputPath)\LANCommander.SDK.dll" />
         </ItemGroup>
 

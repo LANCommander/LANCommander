@@ -67,6 +67,8 @@
 }
 .pb-custom-window-controls .ant-btn-icon-only > * {
   font-size: 22px;
+  display: flex;
+  justify-content: center;
 }
 .pb-custom-window-control-button {
   border-radius: 0;

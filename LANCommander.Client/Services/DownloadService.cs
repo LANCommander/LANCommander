@@ -263,7 +263,7 @@ namespace LANCommander.Client.Services
             {
                 var localPath = Path.Combine(MediaService.GetStoragePath(), $"{manual.FileId}-{manual.Crc32}");
 
-                if (!File.Exists(localPath) && manual.Type != SDK.Enums.MediaType.Manual)
+                if (!File.Exists(localPath))
                 {
                     var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{manual.FileId}-*");
 

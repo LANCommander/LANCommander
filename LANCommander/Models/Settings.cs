@@ -23,6 +23,7 @@ namespace LANCommander.Models
         public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
+        public LANCommanderServerSettings Servers { get; set; } = new LANCommanderServerSettings();
         public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
         public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
         public LANCommanderLogSettings Logs { get; set; } = new LANCommanderLogSettings();
@@ -89,6 +90,11 @@ namespace LANCommander.Models
         public string Host { get; set; } = "";
         public int Port { get; set; } = 213;
         public bool Logging { get; set; } = false;
+    }
+
+    public class LANCommanderServerSettings
+    {
+        public string StoragePath { get; set; } = "Servers";
     }
 
     public class LANCommanderWikiSettings

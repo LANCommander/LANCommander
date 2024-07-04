@@ -1,4 +1,4 @@
-﻿namespace LANCommander.Data.Enums
+﻿namespace LANCommander.SDK.Enums
 {
     public enum ProcessTerminationMethod
     {

@@ -3,6 +3,7 @@
 @page "/Servers/{id:guid}/{panel}/{logId}"
 @page "/Servers/Add"
 @attribute [Authorize(Roles = "Administrator")]
+@using LANCommander.SDK.Enums
 @using LANCommander.UI.Pages.Servers.Components
 @using LANCommander.Data.Enums
 @using LANCommander.Extensions
@@ -145,7 +146,7 @@
                     </FormItem>
 
                     <FormItem Label="Method">
-                        <Select @bind-Value="context.AutostartMethod" TItem="ServerAutostartMethod" TItemValue="ServerAutostartMethod" DataSource="Enum.GetValues<ServerAutostartMethod>()">
+                        <Select @bind-Value="context.AutostartMethod" TItem="Data.Enums.ServerAutostartMethod" TItemValue="Data.Enums.ServerAutostartMethod" DataSource="Enum.GetValues<Data.Enums.ServerAutostartMethod>()">
                             <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
                             <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
                         </Select>
@@ -197,7 +198,7 @@
 
             @if (Panel == "Scripts")
             {
-                <ScriptEditor ServerId="@Server.Id" AllowedTypes="new ScriptType[] { ScriptType.BeforeStart, ScriptType.AfterStop }" />
+                <ScriptEditor ServerId="@Server.Id" AllowedTypes="new Data.Enums.ScriptType[] { Data.Enums.ScriptType.BeforeStart, Data.Enums.ScriptType.AfterStop }" />
             }
 
             @if (Panel == "Files")

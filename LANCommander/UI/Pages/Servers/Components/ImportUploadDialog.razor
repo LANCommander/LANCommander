@@ -4,7 +4,7 @@
 @using LANCommander.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
 @inject NavigationManager Navigator
-@inject RedistributableService RedistributableService
+@inject ServerService ServerService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 
@@ -16,7 +16,7 @@
     </Template>;
 }
 
-<Modal Visible="@Visible" Title="Import Redistributable" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
+<Modal Visible="@Visible" Title="Import Server" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
     <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
         <Text>
             <p>Drag and Drop</p>
@@ -25,12 +25,12 @@
                 <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
             </p>
         </Text>
-        <Hint>Only LCX files are supported for importing redistributables</Hint>
+        <Hint>@Hint</Hint>
     </ChunkUploader>
 </Modal>
 
 @code {
-    [Parameter] public EventCallback<Guid> OnRedistributableImported { get; set; }
+    [Parameter] public EventCallback<Guid> OnServerImported { get; set; }
     [Parameter] public RenderFragment Hint { get; set; }
 
     IBrowserFile File;
@@ -72,16 +72,16 @@
         {
             try
             {
-                var redistributable = await RedistributableService.Import(objectKey);
+                var server = await ServerService.Import(objectKey);
 
                 Visible = false;
 
                 await InvokeAsync(StateHasChanged);
 
-                if (OnRedistributableImported.HasDelegate)
-                    await OnRedistributableImported.InvokeAsync(redistributable.Id);
+                if (OnServerImported.HasDelegate)
+                    await OnServerImported.InvokeAsync(server.Id);
 
-                MessageService.Success($"{redistributable.Name} successfully imported!");
+                MessageService.Success($"{server.Name} successfully imported!");
             }
             catch (Exception ex)
             {

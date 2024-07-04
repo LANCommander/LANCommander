@@ -23,6 +23,9 @@
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
             </SpaceItem>
             <SpaceItem>
+                <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
+            </SpaceItem>
+            <SpaceItem>
                 <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Server</Button>
             </SpaceItem>
         </Space>
@@ -70,6 +73,10 @@
     </ActionColumn>
 </Table>
 
+<ImportUploadDialog @ref="ImportUploadDialog" OnServerImported="LoadData">
+    <Hint>Only LCX files are supported for importing servers</Hint>
+</ImportUploadDialog>
+
 @code {
     IEnumerable<Server> Servers { get; set; } = new List<Server>();
 
@@ -77,6 +84,7 @@
 
     string Search = "";
 
+    ImportUploadDialog ImportUploadDialog;
     IEnumerable<Server> SelectedServers;
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;

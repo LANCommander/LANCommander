@@ -1,4 +1,5 @@
 ﻿using LANCommander.Data.Enums;
+using LANCommander.SDK.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
@@ -20,7 +21,7 @@ namespace LANCommander.Data.Models
         public bool UseShellExecute { get; set; }
         public ProcessTerminationMethod ProcessTerminationMethod { get; set; }
         public bool Autostart { get; set; }
-        public ServerAutostartMethod AutostartMethod { get; set; }
+        public Data.Enums.ServerAutostartMethod AutostartMethod { get; set; }
         public int AutostartDelay { get; set; }
 
         public Guid? GameId { get; set; }

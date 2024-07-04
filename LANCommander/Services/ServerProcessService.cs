@@ -3,6 +3,7 @@ using CoreRCON;
 using LANCommander.Data.Enums;
 using LANCommander.Data.Models;
 using LANCommander.Hubs;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -176,7 +177,7 @@ namespace LANCommander.Services
 
                 await Task.Run(() =>
                 {
-                    foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
+                    foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.BeforeStart))
                     {
                         try
                         {
@@ -238,7 +239,7 @@ namespace LANCommander.Services
 
                     Processes[server.Id] = process;
 
-                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
+                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == Data.Enums.ServerConsoleType.LogFile))
                     {
                         StartMonitoringLog(logFile, server);
                     }
@@ -320,7 +321,7 @@ namespace LANCommander.Services
 
                 await Task.Run(() =>
                 {
-                    foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
+                    foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.AfterStop))
                     {
                         try
                         {

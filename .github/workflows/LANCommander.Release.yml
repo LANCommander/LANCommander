@@ -149,6 +149,8 @@ jobs:
         propertyPath: "Version"
         value: "${{ steps.trim_tag_ref.outputs.replaced }}"
         commitChange: false
+    - name: Copy PowerShell Module to Playnite Extension
+      run: Copy-Item LANCommander.PowerShell/Build/LANCommander.PowerShell.* -Destination LANCommander.Playnite.Extension/Build
     - name: Run Playnite Toolbox
       run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
     

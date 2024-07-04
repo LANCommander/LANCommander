@@ -21,6 +21,9 @@ namespace LANCommander.PowerShell.Cmdlets
         [Parameter(Mandatory = true, Position = 3)]
         public string FilePath { get; set; }
 
+        [Parameter(Mandatory = false)]
+        public bool WrapValueInQuotes { get; set; } = false;
+
         protected override void ProcessRecord()
         {
             if (File.Exists(FilePath))
@@ -28,7 +31,7 @@ namespace LANCommander.PowerShell.Cmdlets
                 var ini = new INIFile(FilePath);
 
                 ini.SetValue(Section, Key, Value);
-
+                ini.WrapValueInQuotes = WrapValueInQuotes;
                 ini.Persist();
             }
         }

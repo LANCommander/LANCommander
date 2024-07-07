@@ -119,6 +119,7 @@
         await InvokeAsync(StateHasChanged);
 
         MessageService.Error("An error occurred while trying to import");
+        Logger?.Error($"An error occurred while trying to import: {message}");
     }
 
     public async Task OnLocalFileSelected(string path)

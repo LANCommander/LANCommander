@@ -6,6 +6,7 @@
 @inject WikiService WikiService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
+@inject ILogger<WikiEditor> Logger
 
 <Spin Spinning="@Loading">
     <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
@@ -119,6 +120,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Wiki initialization failed!");
+            Logger.LogError(ex, "Wiki initialization failed!");
         }
         finally
         {
@@ -141,6 +143,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Could not publish changes!");
+            Logger.LogError(ex, "Could not publish changes!");
         }
         finally
         {

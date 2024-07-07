@@ -5,6 +5,7 @@
 @inject UserManager<User> UserManager
 @inject RoleManager<Role> RoleManager
 @inject IMessageService MessageService
+@inject ILogger<ManageRolesDialog> Logger
 
 <Transfer DataSource="TransferItems" TargetKeys="TargetKeys" OnChange="OnChange" Titles="@(new string[] { "Available", "Assigned" })" />
 
@@ -76,6 +77,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Could not update user roles!");
+            Logger.LogError(ex, "Could not update user roles!");
         }
 
         await base.OkCancelRefWithResult!.OnOk(User.Id);

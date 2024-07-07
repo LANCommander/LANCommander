@@ -4,6 +4,7 @@
 @inject EngineService EngineService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Engines">
     <PageHeaderExtra>
@@ -115,7 +116,9 @@
             if (EngineContext.Id == Guid.Empty)
                 MessageService.Error($"Could not add {EngineContext.Name}!");
             else
-                MessageService.Error($"Could not update to {EngineContext.Name}!");
+                MessageService.Error($"Could not update {EngineContext.Name}!");
+
+            Logger.LogError(ex, "Could not add/update {EngineContext.Name}!");
         }
 
         await CloseEdit();

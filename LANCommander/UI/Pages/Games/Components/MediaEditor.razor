@@ -6,6 +6,7 @@
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject ILogger<MediaEditor> Logger
 
 <Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%" Class="media-editor">
     <SpaceItem>
@@ -127,6 +128,7 @@
         catch (Exception ex)
         {
             MessageService.Error($"{media.Type} could not be updated.");
+            Logger.LogError(ex, $"{media.Type} could not be updated.");
         }
     }
 
@@ -180,7 +182,7 @@
             else
             {
                 MediaService.DeleteLocalMediaFile(media.FileId);
-                
+
                 media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
 
                 await MediaService.Update(media);
@@ -198,6 +200,7 @@
         if (!ValidMimeTypes.Contains(e.File.ContentType))
         {
             MessageService.Error("Unsupported file type");
+            Logger.LogError($"Unsupported file type {e.File.ContentType}");
             return;
         }
 

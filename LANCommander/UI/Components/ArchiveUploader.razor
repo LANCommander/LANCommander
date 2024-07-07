@@ -8,6 +8,7 @@
 @inject ArchiveService ArchiveService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
+@inject ILogger<ArchiveUploader> Logger
 
 @{
     RenderFragment Footer =
@@ -154,6 +155,7 @@
             await InvokeAsync(StateHasChanged);
 
             MessageService.Error("Archive failed to upload!");
+            Logger.LogError("Archive failed to upload!");
         }
 
         await ChunkUploader.Clear();
@@ -167,6 +169,7 @@
         await InvokeAsync(StateHasChanged);
 
         MessageService.Error("Archive failed to upload!");
+        Logger.LogError($"Archive failed to upload: {message}");
     }
 
     public async Task OnLocalFileSelected(string path)
@@ -180,6 +183,7 @@
         catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred while trying to use a local file");
+            Logger.LogError(ex, "An unknown error occurred while trying to use a local file");
         }
     }
 }

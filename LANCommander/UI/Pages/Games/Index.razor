@@ -13,6 +13,7 @@
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Games" Subtitle="@Games.Count().ToString()">
     <PageHeaderExtra>
@@ -147,7 +148,7 @@
     <Hint>Only LCX files are supported for importing games</Hint>
 </ImportUploadDialog>
 
- @code {
+@code {
     IEnumerable<Game> Games { get; set; } = new List<Game>();
 
     bool Loading = true;
@@ -262,6 +263,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Could not delete the game!");
+            Logger.LogError(ex, "Could not delete the game!");
         }
 
         Games = await GameService.Get(x => true).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToListAsync();

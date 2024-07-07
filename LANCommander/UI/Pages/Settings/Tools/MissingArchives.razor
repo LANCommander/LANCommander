@@ -4,6 +4,7 @@
 @layout SettingsLayout
 @inject IMessageService MessageService
 @inject ArchiveService ArchiveService
+@inject ILogger<MissingArchives> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Missing Archives" />
@@ -93,7 +94,8 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error("Archive could not be deleted.");
+            MessageService.Error("Archive could not be deleted.");
+            Logger.LogError(ex, "Archive could not be deleted.");
         }
     }
 }

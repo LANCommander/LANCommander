@@ -5,6 +5,7 @@
 @layout SettingsLayout
 @inject IMessageService MessageService
 @inject PlaySessionService PlaySessionService
+@inject ILogger<ActiveSessions> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Active Sessions" />
@@ -61,11 +62,12 @@
 
             await LoadData();
 
-            await MessageService.Success("Session deleted!");
+            MessageService.Success("Session deleted!");
         }
         catch (Exception ex)
         {
-            await MessageService.Error("Session could not be deleted.");
+            MessageService.Error("Session could not be deleted.");
+            Logger.LogError(ex, "Session could not be deleted.");
         }
     }
 }

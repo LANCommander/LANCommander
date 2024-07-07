@@ -4,6 +4,7 @@
 @inject CollectionService CollectionService
 @inject GameService GameService
 @inject IMessageService MessageService
+@inject ILogger<AddToCollectionDialog> Logger
 
 <Select
     AllowClear
@@ -75,13 +76,9 @@
         catch (Exception ex)
         {
             MessageService.Error("Could not add a new collection!");
+            Logger.LogError(ex, "Could not add a new collection!");
         }
     }
-
-    /*private void OnSelectedItemsChanged(Collection collection)
-        {
-        SelectedCollection = collection.Id;
-    }*/
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
@@ -109,12 +106,14 @@
             else
                 MessageService.Success("Added to collection!");
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
             if (collections.Count > 1)
                 MessageService.Error("Could not add to collections!");
             else
                 MessageService.Error("Could not add to collection!");
+
+            Logger.LogError(ex, "Could not add to collection(s)!");
         }
 
         await base.OkCancelRefWithResult!.OnOk(collections);

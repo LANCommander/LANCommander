@@ -4,6 +4,7 @@
 @inject PlatformService PlatformService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Platforms">
     <PageHeaderExtra>
@@ -115,7 +116,9 @@
             if (PlatformContext.Id == Guid.Empty)
                 MessageService.Error($"Could not add {PlatformContext.Name}!");
             else
-                MessageService.Error($"Could not update to {PlatformContext.Name}!");
+                MessageService.Error($"Could not update {PlatformContext.Name}!");
+
+            Logger.LogError(ex, $"Could not add/update {PlatformContext.Name}!");
         }
 
         await CloseEdit();

@@ -6,6 +6,7 @@
 @inject UserManager<User> UserManager
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject ILogger<Edit> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Edit Role">
@@ -52,6 +53,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Role could not be updated!");
+            Logger.LogError(ex, "Role could not be updated!");
         }
     }
 }

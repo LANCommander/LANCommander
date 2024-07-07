@@ -7,6 +7,7 @@
 @inject ServerService ServerService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
+@inject ILogger<ImportUploadDialog> Logger
 
 @{
     RenderFragment Footer =
@@ -86,6 +87,7 @@
             catch (Exception ex)
             {
                 MessageService.Error("An unknown error occurred while trying to import");
+                Logger.LogError(ex, "An unknown error occurred while trying to import");
             }
         }
         else
@@ -95,6 +97,7 @@
             await InvokeAsync(StateHasChanged);
 
             MessageService.Error("Import file failed to upload!");
+            Logger.LogError("Import file failed to upload!");
         }
 
         await ChunkUploader.Clear();
@@ -107,5 +110,6 @@
         await InvokeAsync(StateHasChanged);
 
         MessageService.Error("An error occurred while trying to import");
+        Logger.LogError($"An error occurred while trying to import: {message}");
     }
 }

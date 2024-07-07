@@ -7,6 +7,7 @@
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Console> Logger
 @implements IAsyncDisposable
 
 <Xterm @ref="Terminal" Options="TerminalOptions" AddonIds="TerminalAddons" />
@@ -117,7 +118,8 @@
             }
             catch (Exception ex)
             {
-                await MessageService.Error($"Could not connect to RCON server: {ex.Message}");
+                MessageService.Error($"Could not connect to RCON server: {ex.Message}");
+                Logger.LogError($"Could not connect to RCON server");
             }
         }
     }

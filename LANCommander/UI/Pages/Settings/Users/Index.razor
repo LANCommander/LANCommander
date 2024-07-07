@@ -131,7 +131,7 @@
     {
         if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
         {
-            await MessageService.Error("Cannot demote the only administrator!");
+            MessageService.Error("Cannot demote the only administrator!");
         }
         else
         {
@@ -144,14 +144,14 @@
     {
         if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1 && user.Roles.Contains("Administrator"))
         {
-            await MessageService.Error("Cannot delete the only administrator!");
+            MessageService.Error("Cannot delete the only administrator!");
         }
         else
         {
             await UserManager.DeleteAsync(UserManager.Users.First(u => u.UserName == user.UserName));
             await RefreshUserList();
 
-            await MessageService.Success($"Deleted {user.UserName}!");
+            MessageService.Success($"Deleted {user.UserName}!");
         }
     }
 

@@ -5,6 +5,7 @@
 @inject UserManager<User> UserManager
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject ILogger<Index> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Roles">
@@ -123,14 +124,14 @@
 
         if (role.Name == "Administrator")
         {
-            await MessageService.Error("Cannot delete the administrator role!");
+            MessageService.Error("Cannot delete the administrator role!");
         }
         else
         {
             await RoleManager.DeleteAsync(role);
             await LoadData();
 
-            await MessageService.Success($"Deleted {role.Name}!");
+            MessageService.Success($"Deleted {role.Name}!");
         }
     }
 
@@ -162,7 +163,8 @@
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not added role!");
+            MessageService.Error("Could not add role!");
+            Logger.LogError(ex, "Could not add role!");
         }
     }
 
@@ -173,9 +175,10 @@
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
         }
-        catch
+        catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 }

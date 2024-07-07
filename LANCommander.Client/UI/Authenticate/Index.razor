@@ -3,6 +3,7 @@
 @inject ProfileService ProfileService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
     <Content Class="authentication-form">
@@ -100,6 +101,7 @@
         catch (Exception ex)
         {
             MessageService.Error(ex.Message);
+            Logger.LogError(ex, ex.Message);
             Loading = false;
         }
     }

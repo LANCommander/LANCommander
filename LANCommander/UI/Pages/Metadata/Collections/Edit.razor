@@ -6,6 +6,7 @@
 @inject CollectionService CollectionService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject ILogger<Edit> Logger
 
 <PageHeader>
     <PageHeaderTitle>
@@ -74,7 +75,7 @@
     </ActionColumn>
 </Table>
 
- @code {
+@code {
     [Parameter] public Guid Id { get; set; }
 
     Collection Collection;
@@ -108,7 +109,8 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error("Could not save!");
+            MessageService.Error("Could not save!");
+            Logger.LogError(ex, "Could not save!");
         }
     }
 
@@ -130,6 +132,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Game could not be removed from the collection!");
+            Logger.LogError(ex, "Game could not be removed from the collection!");
         }
     }
 

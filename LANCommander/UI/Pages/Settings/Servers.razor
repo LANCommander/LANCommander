@@ -3,6 +3,7 @@
 @layout SettingsLayout
 @inject SettingService SettingService
 @inject IMessageService MessageService
+@inject ILogger<Servers> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Servers" />
@@ -36,9 +37,10 @@
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
         }
-        catch
+        catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 

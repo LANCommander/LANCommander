@@ -4,6 +4,7 @@
 @inject CompanyService CompanyService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Companies">
     <PageHeaderExtra>
@@ -116,7 +117,9 @@
             if (CompanyContext.Id == Guid.Empty)
                 MessageService.Error($"Could not add {CompanyContext.Name}!");
             else
-                MessageService.Error($"Could not update to {CompanyContext.Name}!");
+                MessageService.Error($"Could not update {CompanyContext.Name}!");
+
+            Logger.LogError(ex, $"Could not update/add {CompanyContext.Name}!");
         }
 
         await CloseEdit();

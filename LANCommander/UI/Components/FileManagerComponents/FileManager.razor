@@ -3,6 +3,7 @@
 @inject ArchiveService ArchiveService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
+@inject ILogger<FileManager> Logger
 @namespace LANCommander.UI.Components
 
 <div class="file-manager">
@@ -155,7 +156,7 @@
 <NewFolderModal @ref="NewFolderModal" OnFolderNameEntered="AddFolder" />
 <UploadModal @ref="UploadModal" Path="@FileSource.GetCurrentPath().Path" OnUploadCompleted="() => Refresh()" />
 
- @code {
+@code {
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public string WorkingDirectory { get; set; }
     [Parameter] public bool SelectMultiple { get; set; } = true;
@@ -303,9 +304,10 @@
 
             MessageService.Success("Folder created!");
         }
-        catch
+        catch (Exception ex)
         {
             MessageService.Error("Error creating folder!");
+            Logger.LogError(ex, "Error creating folder!");
         }
     }
 
@@ -321,9 +323,10 @@
             Selected = new List<IFileManagerEntry>();
             MessageService.Success("Deleted!");
         }
-        catch
+        catch (Exception ex)
         {
-            MessageService.Error("Error deleting!");
+            MessageService.Error("Error deleting file/folder!");
+            Logger.LogError(ex, "Error deleting file/folder!");
         }
 
         await Refresh();

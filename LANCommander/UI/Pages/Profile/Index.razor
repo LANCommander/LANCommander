@@ -9,6 +9,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject ILogger<Index> Logger
 @attribute [Authorize]
 
 <PageHeader Title="Profile" />
@@ -93,7 +94,8 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error("An unknown error occurred.");
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 

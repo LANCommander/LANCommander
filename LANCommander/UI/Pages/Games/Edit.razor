@@ -23,6 +23,7 @@
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
+@inject ILogger<Edit> Logger
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">
@@ -459,7 +460,8 @@ else
         }
         catch (Exception ex)
         {
-            await MessageService.Error("Could not save!");
+            MessageService.Error("Could not save game!");
+            Logger.LogError(ex, "Could not save game!");
         }
     }
 
@@ -596,6 +598,7 @@ else
         catch (Exception ex)
         {
             MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+            Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
         }
     }
 
@@ -610,6 +613,7 @@ else
         catch (Exception ex)
         {
             MessageService.Error($"Could not delete play session!");
+            Logger.LogError(ex, "Could not delete the play session!");
         }
     }
 
@@ -624,6 +628,7 @@ else
         catch (Exception ex)
         {
             MessageService.Error($"Could not delete game save!");
+            Logger.LogError(ex, "Could not delete the game save!");
         }
     }
 }

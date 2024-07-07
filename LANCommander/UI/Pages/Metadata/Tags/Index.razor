@@ -4,6 +4,7 @@
 @inject TagService TagService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Tags">
     <PageHeaderExtra>
@@ -115,7 +116,9 @@
             if (TagContext.Id == Guid.Empty)
                 MessageService.Error($"Could not add {TagContext.Name}!");
             else
-                MessageService.Error($"Could not update to {TagContext.Name}!");
+                MessageService.Error($"Could not update {TagContext.Name}!");
+
+            Logger.LogError(ex, $"Could not update/add {TagContext.Name}!");
         }
 
         await CloseEdit();

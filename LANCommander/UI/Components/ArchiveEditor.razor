@@ -9,6 +9,7 @@
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
+@inject ILogger<ArchiveEditor> Logger
 
 <Space Direction="DirectionVHType.Vertical" Style="width: 100%">
     <SpaceItem>
@@ -114,6 +115,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Archive could not be updated.");
+            Logger.LogError(ex, "Archive could not be updated.");
         }
     }
 
@@ -130,6 +132,7 @@
         catch (Exception ex)
         {
             MessageService.Error("Archive could not be deleted.");
+            Logger.LogError(ex, "Archive could not be deleted.");
         }
     }
 }

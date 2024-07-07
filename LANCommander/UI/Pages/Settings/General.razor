@@ -6,6 +6,7 @@
 @inject SettingService SettingService
 @inject IGDBService IGDBService
 @inject IMessageService MessageService
+@inject ILogger<General> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="General" />
@@ -55,9 +56,10 @@
 
             MessageService.Success("Settings saved!");
         }
-        catch
+        catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 }

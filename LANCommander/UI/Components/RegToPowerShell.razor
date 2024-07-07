@@ -1,4 +1,5 @@
 ﻿@inject IMessageService MessageService
+@inject ILogger<RegToPowerShell> Logger
 
 <Modal Visible="Visible" OkText="@("Insert")" OnOk="Parse" OnCancel="Close" Width="800" Title="Paste Export File Contents">
     <StandaloneCodeEditor @ref="Editor" ConstructionOptions="EditorConstructionOptions" />
@@ -75,6 +76,7 @@
         catch (Exception ex)
         {
             MessageService.Error(ex.Message);
+            Logger.LogError(ex, ex.Message);
         }
     }
 

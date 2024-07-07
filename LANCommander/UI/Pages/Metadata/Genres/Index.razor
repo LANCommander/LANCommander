@@ -4,6 +4,7 @@
 @inject GenreService GenreService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Genres">
     <PageHeaderExtra>
@@ -115,7 +116,9 @@
             if (GenreContext.Id == Guid.Empty)
                 MessageService.Error($"Could not add {GenreContext.Name}!");
             else
-                MessageService.Error($"Could not update to {GenreContext.Name}!");
+                MessageService.Error($"Could not update {GenreContext.Name}!");
+
+            Logger.LogError(ex, $"Could not update {GenreContext.Name}!");
         }
 
         await CloseEdit();

@@ -14,6 +14,7 @@
 @inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
+@inject ILogger<Edit> Logger
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">
@@ -285,7 +286,8 @@
         }
         catch (Exception ex)
         {
-            await MessageService.Error("Could not save!");
+            MessageService.Error("Could not save!");
+            Logger.LogError(ex, "Could not save!");
         }
     }
 

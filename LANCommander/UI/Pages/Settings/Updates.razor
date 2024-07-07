@@ -6,6 +6,7 @@
 @inject SettingService SettingService
 @inject IMessageService MessageService
 @inject UpdateService UpdateService
+@inject ILogger<Updates> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Updates">
@@ -116,10 +117,12 @@
         }
         catch (NotImplementedException ex) {
             MessageService.Error(ex.Message);
+            Logger.LogError(ex, "An unknown error occurred.");
         }
         catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred while updating. Please check the logs");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 
@@ -130,9 +133,10 @@
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
         }
-        catch
+        catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 

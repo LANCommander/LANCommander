@@ -4,6 +4,7 @@
 @inject SettingService SettingService
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
+@inject ILogger<IPXRelay> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="IPX Relay" />
@@ -50,9 +51,10 @@
 
             IPXRelayService.Init();
         }
-        catch
+        catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 }

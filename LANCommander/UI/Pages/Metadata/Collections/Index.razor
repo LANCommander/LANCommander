@@ -4,6 +4,7 @@
 @inject CollectionService CollectionService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Collections">
     <PageHeaderExtra>
@@ -121,6 +122,7 @@
         catch (Exception ex)
         {
             MessageService.Error($"Could not add {CollectionContext.Name}!");
+            Logger.LogError(ex, $"Could not add {CollectionContext.Name}!");
         }
     }
 

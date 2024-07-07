@@ -4,6 +4,7 @@
 @using LANCommander.SDK.Enums
 @inject IMediaGrabberService MediaGrabberService
 @inject IMessageService MessageService
+@inject ILogger<MediaGrabberDialog> Logger
 
 <GridRow Justify="space-between">
     <GridCol Span="6">
@@ -69,6 +70,7 @@
         catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred when trying to get media results");
+            Logger.LogError(ex, "An unknown error occurred when trying to get media results");
 
             Loading = false;
         }

@@ -4,6 +4,7 @@
 @inject SettingService SettingService
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
+@inject ILogger<Beacon> Logger
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader Title="Beacon" />
@@ -41,9 +42,10 @@
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
         }
-        catch
+        catch (Exception ex)
         {
             MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
         }
     }
 }

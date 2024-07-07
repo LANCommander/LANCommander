@@ -84,7 +84,10 @@ namespace LANCommander.Client
 
                     contentType = query["mime"];
 
-                    return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                    if (File.Exists(filePath))
+                        return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                    else
+                        return null;
                 })
                 .RegisterWebMessageReceivedHandler(async (object sender, string message) =>
                 {

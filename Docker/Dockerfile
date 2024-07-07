@@ -22,7 +22,8 @@ RUN \
       jq \
       libicu70 \
       sqlite3 \
-      unzip && \
+      unzip 
+      python3 && \
   echo "**** setup lancommander ****" && \
     unzip "/tmp/LANCommander-Linux-x64-${VERSION}.zip" -d /app/LANCommander && \
     chmod +x /app/LANCommander/LANCommander && \

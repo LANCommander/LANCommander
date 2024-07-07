@@ -214,3 +214,8 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.8.2/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_8_2.pext
     Changelog:
       - Bug fixes
+  - Version: 0.8.3
+    RequiredApiVersion: 6.0.0
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.8.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_8_3.pext
+    Changelog:
+      - Updates to PowerShell cmdlets, review full LANCommander release for more details

@@ -13,7 +13,9 @@
     position: relative;
     overflow: hidden;
 
-    span {
+    span,
+    &:focus span,
+    &:active span {
         position: static;
         padding-left: 15px;
     }

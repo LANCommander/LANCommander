@@ -13,7 +13,7 @@
   position: relative;
   overflow: hidden;
 }
-.appbar-profile-button span {
+.appbar-profile-button span, .appbar-profile-button:focus span, .appbar-profile-button:active span {
   position: static;
   padding-left: 15px;
 }

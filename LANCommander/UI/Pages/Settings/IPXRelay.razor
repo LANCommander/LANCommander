@@ -17,11 +17,11 @@
 
         <FormItem Label="Host">
             <Text Type="@TextElementType.Secondary">Use this to customize the host that is broadcasted to clients.</Text>
-                <Input @bind-Value="Settings.IPXRelay.Host" />
+                <Input @bind-Value="context.IPXRelay.Host" />
         </FormItem>
 
         <FormItem Label="Port">
-            <AntDesign.InputNumber @bind-Value="Settings.IPXRelay.Port" Max="65535" />
+            <AntDesign.InputNumber @bind-Value="context.IPXRelay.Port" Max="65535" />
         </FormItem>
 
         <FormItem Label="Logging">

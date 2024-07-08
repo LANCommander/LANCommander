@@ -26,7 +26,7 @@ else
                     <Menu>
                         @if (GameActions != null && GameActions.Count() > 0)
                         {
-                            @foreach (var action in GameActions)
+                            @foreach (var action in GameActions.OrderBy(a => a.SortOrder))
                             {
                                 <MenuItem OnClick="() => Run(Game, action)">
                                     @action.Name

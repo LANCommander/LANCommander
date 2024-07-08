@@ -1,0 +1,62 @@
+﻿@page "/Settings"
+@using LANCommander.Client.Models
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<PageHeader Title="Settings" OnBack="@(() => { NavigationManager.NavigateTo("/"); })" Style="padding-top: 48px">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<Form Model="Settings" Layout="@FormLayout.Vertical" Style="padding: 0 24px">
+    <Divider Orientation="left" Plain>Games</Divider>
+    <FormItem Label="Storage Path">
+        <Input @bind-Value="@context.Games.DefaultInstallDirectory" />
+    </FormItem>
+
+    <Divider Orientation="left" Plain>Media</Divider>
+    <FormItem Label="Storage Path">
+        <Input @bind-Value="@context.Media.StoragePath" />
+    </FormItem>
+
+    <Divider Orientation="left" Plain>Debug</Divider>
+    <FormItem Label="Enable Script Debugging">
+        <Switch @bind-Checked="@context.Debug.EnableScriptDebugging" />
+    </FormItem>
+    <FormItem Label="Logging Path">
+        <Input @bind-Value="@context.Debug.LoggingPath" />
+    </FormItem>
+    <FormItem Label="Logging Level">
+        <Select @bind-Value="@context.Debug.LoggingLevel" TItem="LogLevel" TItemValue="LogLevel" DataSource="Enum.GetValues<LogLevel>()">
+            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+        </Select>
+    </FormItem>
+</Form>
+
+
+@code {
+    Settings Settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

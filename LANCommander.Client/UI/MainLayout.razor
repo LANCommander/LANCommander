@@ -24,6 +24,9 @@
                                 <MenuItem OnClick="ChangeAlias">
                                     Change Name
                                 </MenuItem>
+                                <MenuItem OnClick="@(() => NavigationManager.NavigateTo("/Settings"))">
+                                    Settings
+                                </MenuItem>
                                 <MenuItem OnClick="Logout">
                                     Logout
                                 </MenuItem>
@@ -51,7 +54,7 @@
 </CustomWindow>
 
 @code {
-    Settings Settings = null;
+    Models.Settings Settings = null;
 
     public bool Importing = false;
     public IMessageService Messages { get; set; }

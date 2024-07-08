@@ -155,7 +155,15 @@ namespace LANCommander.SDK.PowerShell
 
             if (Debug)
             {
-                scriptBuilder.AppendLine("Read-Host");
+                scriptBuilder.AppendLine("Write-Host '----- DEBUG -----'");
+                scriptBuilder.AppendLine("Write-Host 'Variables:'");
+                
+                foreach (var variable in Variables)
+                {
+                    scriptBuilder.AppendLine($"Write-Host '    ${variable.Name}'");
+                }
+
+                scriptBuilder.AppendLine("Write-Host ''");
 
                 Process.StartInfo.Arguments += " -NoExit";
             }

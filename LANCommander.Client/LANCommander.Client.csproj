@@ -15,7 +15,7 @@
     </ItemGroup>
   
     <ItemGroup>
-        <PackageReference Include="AntDesign" Version="0.19.1" />
+        <PackageReference Include="AntDesign" Version="0.19.4" />
         <PackageReference Include="BootstrapBlazor.PdfReader" Version="8.0.4" />
         <PackageReference Include="ByteSize" Version="2.1.2" />
         <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />

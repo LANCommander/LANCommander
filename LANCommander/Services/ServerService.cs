@@ -39,6 +39,9 @@ namespace LANCommander.Services
                 server.AutostartMethod = (Data.Enums.ServerAutostartMethod)(int)manifest.AutostartMethod;
                 server.AutostartDelay = manifest.AutostartDelay;
                 server.WorkingDirectory = Path.Combine(settings.Servers.StoragePath, server.Name.SanitizeFilename());
+                server.Path = manifest.Path.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
+                server.Arguments = manifest.Arguments.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
+                server.UseShellExecute = manifest.UseShellExecute;
                 server.ProcessTerminationMethod = manifest.ProcessTerminationMethod;
                 server.OnStartScriptPath = manifest.OnStartScriptPath;
                 server.OnStopScriptPath = manifest.OnStopScriptPath;

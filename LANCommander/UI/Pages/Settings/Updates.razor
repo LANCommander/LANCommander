@@ -97,6 +97,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Settings = SettingService.GetSettings();
+
         CurrentVersion = UpdateService.GetCurrentVersion();
         UpdateAvailable = await UpdateService.UpdateAvailable();
         LatestVersion = await UpdateService.GetLatestVersion();

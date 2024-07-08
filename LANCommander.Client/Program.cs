@@ -1,4 +1,5 @@
-﻿using LANCommander.Client.Data;
+﻿using Emzi0767.NtfsDataStreams;
+using LANCommander.Client.Data;
 using LANCommander.Client.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +9,7 @@ using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Web;
@@ -146,6 +148,14 @@ namespace LANCommander.Client
                 }
 
                 db.Database.Migrate();
+            }
+            #endregion
+
+            #region Fix PowerShell Module Zone Identifier
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var fileInfo = new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LANCommander.PowerShell.dll"));
+                fileInfo.GetDataStream("Zone.Identifier")?.Delete();
             }
             #endregion
 

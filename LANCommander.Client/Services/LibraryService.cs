@@ -82,7 +82,7 @@ namespace LANCommander.Client.Services
 
             var games = await GameService.Get();
 
-            items.AddRange(games.Select(g => new LibraryItem(g, GroupSelector)));
+            items.AddRange(games.Select(g => new LibraryItem(g, GroupSelector)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name));
 
             if (LibraryFilter != null)
                 return LibraryFilter.Invoke(items);

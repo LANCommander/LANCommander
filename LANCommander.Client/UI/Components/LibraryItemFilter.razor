@@ -77,47 +77,55 @@
     protected override async Task OnInitializedAsync()
     {
         LibraryService.LibraryFilter += OnLibraryFilterInvoked;
+    }
 
-        var games = LibraryService.GetLibraryItems<Game>().Select(i => i.DataItem as Game).Where(i => i != null);
-        var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var games = LibraryService.GetLibraryItems<Game>().Select(i => i.DataItem as Game).Where(i => i != null);
+            var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
 
-        Engines = games
-            .Select(i => i.Engine)
-            .Where(e => e != null)
-            .DistinctBy(e => e.Id)
-            .OrderBy(e => e.Name);
+            Engines = games
+                .Select(i => i.Engine)
+                .Where(e => e != null)
+                .DistinctBy(e => e.Id)
+                .OrderBy(e => e.Name);
 
-        Genres = games
-            .SelectMany(i => i.Genres)
-            .Where(g => g != null)
-            .DistinctBy(g => g.Id)
-            .OrderBy(g => g.Name);
+            Genres = games
+                .SelectMany(i => i.Genres)
+                .Where(g => g != null)
+                .DistinctBy(g => g.Id)
+                .OrderBy(g => g.Name);
 
-        Tags = games
-            .SelectMany(i => i.Tags)
-            .Where(t => t != null)
-            .DistinctBy(t => t.Id)
-            .OrderBy(t => t.Name);
+            Tags = games
+                .SelectMany(i => i.Tags)
+                .Where(t => t != null)
+                .DistinctBy(t => t.Id)
+                .OrderBy(t => t.Name);
 
-        Developers = games
-            .SelectMany(i => i.Developers)
-            .Where(c => c != null)
-            .DistinctBy(c => c.Id)
-            .OrderBy(c => c.Name);
+            Developers = games
+                .SelectMany(i => i.Developers)
+                .Where(c => c != null)
+                .DistinctBy(c => c.Id)
+                .OrderBy(c => c.Name);
 
-        Publishers = games
-            .SelectMany(i => i.Publishers)
-            .Where(c => c != null)
-            .DistinctBy(c => c.Id)
-            .OrderBy(c => c.Name);
+            Publishers = games
+                .SelectMany(i => i.Publishers)
+                .Where(c => c != null)
+                .DistinctBy(c => c.Id)
+                .OrderBy(c => c.Name);
 
-        if (games.Any(li => li.Singleplayer))
-            MinPlayers = 1;
-        else if (multiplayerModes.Any())
-            MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
+            if (games.Any(li => li.Singleplayer))
+                MinPlayers = 1;
+            else if (multiplayerModes.Any())
+                MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
 
-        if (multiplayerModes.Any())
-            MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
+            if (multiplayerModes.Any())
+                MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
+
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     async Task ResetFilter()

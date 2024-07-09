@@ -151,7 +151,9 @@
         LibraryService.OnLibraryChanged += LoadData;
         DownloadService.OnQueueChanged += OnQueueChanged;
         DownloadService.OnInstallFail += OnInstallFail;
+        DownloadService.OnInstallComplete += OnInstallComplete;
         ImportService.OnImportComplete += LoadData;
+        GameService.OnUninstallComplete += OnUninstallComplete;
 
         LibraryService.GroupSelector = (libraryItem) =>
         {
@@ -172,12 +174,9 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    async void LoadData()
+    void LoadData()
     {
         LibraryService.RefreshLibraryItemsAsync().Wait();
-
-        if (Id != Guid.Empty)
-            OnLibraryItemSelected(LibraryService.GetLibraryItem(Id)).Wait();
 
         StateHasChanged();
     }
@@ -238,6 +237,17 @@
         }
     }
 
+    async Task OnInstallComplete(Data.Models.Game game)
+    {
+        LoadData();
+
+        if (SelectedItem.DataItem is Game selectedGame)
+        {
+            if (selectedGame.Id == game.Id)
+                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
+        }
+    }
+
     async Task OnInstallFail(Data.Models.Game game)
     {
         var result = await ConfirmService.Show(
@@ -254,6 +264,17 @@
             var libraryItem = LibraryService.GetLibraryItem(game.Id);
 
             Install(libraryItem);
+        }
+    }
+
+    async Task OnUninstallComplete(Data.Models.Game game)
+    {
+        LoadData();
+
+        if (SelectedItem.DataItem is Game selectedGame)
+        {
+            if (selectedGame.Id == game.Id)
+                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
         }
     }
 

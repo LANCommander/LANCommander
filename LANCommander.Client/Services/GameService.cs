@@ -17,6 +17,9 @@ namespace LANCommander.Client.Services
         private readonly SDK.Client Client;
         private Settings Settings { get; set; }
 
+        public delegate Task OnUninstallCompleteHandler(Game game);
+        public event OnUninstallCompleteHandler OnUninstallComplete;
+
         public GameService(DatabaseContext dbContext, SDK.Client client) : base(dbContext)
         {
             Client = client;
@@ -107,6 +110,8 @@ namespace LANCommander.Client.Services
             game.InstalledVersion = null;
 
             await Update(game);
+
+            OnUninstallComplete?.Invoke(game);
         }
 
         private int RunUninstallScript(Game game)

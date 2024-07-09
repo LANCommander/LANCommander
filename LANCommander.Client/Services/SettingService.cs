@@ -55,13 +55,16 @@ namespace LANCommander.Client.Services
 
         public static void SaveSettings(Settings settings)
         {
-            var serializer = new SerializerBuilder()
+            if (settings != null)
+            {
+                var serializer = new SerializerBuilder()
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
-            File.WriteAllText(SettingsFilePath, serializer.Serialize(settings));
+                File.WriteAllText(SettingsFilePath, serializer.Serialize(settings));
 
-            Settings = settings;
+                Settings = settings;
+            }
         }
     }
 }

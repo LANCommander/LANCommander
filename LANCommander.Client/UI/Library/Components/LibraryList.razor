@@ -1,0 +1,49 @@
+﻿@using LANCommander.Client.Models
+@inject LibraryService LibraryService
+
+<div class="library-list">
+    <Collapse>
+        @foreach (var group in LibraryService.LibraryItems.SelectMany(i => i.Groups).Distinct())
+        {
+            <Panel Header="@group" Key="@group">
+                <AntList DataSource="LibraryService.LibraryItems.Where(i => i.Groups.Contains(group))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                    <ListItem OnClick='() => SelectItem(context)' Class="@GetItemClasses(context)">
+                        <div class="library-list-icon">
+                            <MediaImage Id="@context.IconId" />
+                        </div>
+                        <span>@context.Name</span>
+                    </ListItem>
+                </AntList>
+            </Panel>
+        }
+    </Collapse>
+</div>
+
+@code {
+    [Parameter] public Guid? SelectedItem { get; set; }
+    [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
+
+    protected override void OnInitialized()
+    {
+        LibraryService.OnLibraryChanged += StateHasChanged;
+    }
+
+    string GetItemClasses(LibraryItem item)
+    {
+        HashSet<string> classes = new HashSet<string>();
+
+        if (item.State == LibraryItemState.Installed)
+            classes.Add("installed");
+
+        if (SelectedItem == item.Key)
+            classes.Add("selected");
+
+        return String.Join(" ", classes);
+    }
+
+    async Task SelectItem(LibraryItem item)
+    {
+        if (OnItemSelected.HasDelegate)
+            await OnItemSelected.InvokeAsync(item.Key);
+    }
+}

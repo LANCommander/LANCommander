@@ -1,8 +1,10 @@
 ﻿@page "/"
 @page "/{id:guid}"
+@using LANCommander.Client.Data.Models
 @using LANCommander.Client.Enums
 @using LANCommander.Client.Models
 @using System.Diagnostics
+@using LANCommander.Client.UI.Library.Components
 @using LANCommander.SDK.Helpers
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
@@ -15,23 +17,7 @@
 
 <Layout>
     <Content Class="library">
-        <div class="library-list">
-            <Collapse>
-                @foreach (var collection in LibraryService.LibraryItems.Where(i => i != null && i.DataItem is Data.Models.Collection))
-                {
-                    <Panel Header="@collection.Name" Key="@collection.Key.ToString()">
-                        <AntList DataSource="@collection.Children" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
-                            <ListItem OnClick='() => NavigationManager.NavigateTo($"/{context.Key}")' Class="@GetItemClasses(context)">
-                                <div class="library-list-icon">
-                                    <MediaImage Id="@context.IconId" />
-                                </div>
-                                <span>@context.Name</span>
-                            </ListItem>
-                        </AntList>
-                    </Panel>
-                }
-            </Collapse>
-        </div>
+        <LibraryList SelectedItem="@(SelectedGame?.Id)" OnItemSelected="@((key) => NavigationManager.NavigateTo($"/{key}"))" />
 
         <div class="game-details no-scrollbar">
             @if (SelectedGame != null)
@@ -167,6 +153,14 @@
         DownloadService.OnInstallFail += OnInstallFail;
         ImportService.OnImportComplete += LoadData;
 
+        LibraryService.GroupSelector = (libraryItem) =>
+        {
+            if (libraryItem.DataItem is Game game)
+                return game.Collections.Select(c => c.Name).ToArray();
+            else
+                return new string[] { };
+        };
+
         LoadData();
     }
 
@@ -180,25 +174,12 @@
 
     async void LoadData()
     {
-        await LibraryService.RefreshLibraryItemsAsync();
+        LibraryService.RefreshLibraryItemsAsync().Wait();
 
         if (Id != Guid.Empty)
-            await OnLibraryItemSelected(LibraryService.GetLibraryItem(Id));
+            OnLibraryItemSelected(LibraryService.GetLibraryItem(Id)).Wait();
 
-        await InvokeAsync(StateHasChanged);
-    }
-
-    string GetItemClasses(LibraryItem item)
-    {
-        HashSet<string> classes = new HashSet<string>();
-
-        if (item.State == LibraryItemState.Installed)
-            classes.Add("installed");
-
-        if (SelectedGame != null && SelectedGame.Id == item.Key)
-            classes.Add("selected");
-
-        return String.Join(" ", classes);
+        StateHasChanged();
     }
 
     async Task OnLibraryItemSelected(LibraryItem item)

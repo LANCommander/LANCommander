@@ -32,8 +32,8 @@ namespace LANCommander.Client.Models
         public LibraryItemState State { get; set; }
         public string Name { get; set; }
         public string SortName { get; set; }
+        public string[] Groups { get; set; }
         public object DataItem { get; set; }
-        public ObservableCollection<LibraryItem> Children { get; set; }
 
         public LibraryItem(Collection collection)
         {
@@ -41,10 +41,9 @@ namespace LANCommander.Client.Models
             Type = LibraryItemType.Game;
             Name = collection.Name;
             DataItem = collection;
-            Children = new ObservableCollection<LibraryItem>(collection.Games.Select(g => new LibraryItem(g)).OrderByTitle(g => g.SortName ?? g.Name).ToList());
         }
 
-        public LibraryItem(Game game)
+        public LibraryItem(Game game, Func<LibraryItem, string[]> groupSelector)
         {
             Key = game.Id;
             Type = LibraryItemType.Game;
@@ -63,6 +62,8 @@ namespace LANCommander.Client.Models
 
             if (icon != null)
                 IconId = icon.Id;
+
+            Groups = groupSelector.Invoke(this);
         }
 
         public LibraryItem(Redistributable redistributable)

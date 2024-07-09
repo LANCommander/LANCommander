@@ -133,59 +133,50 @@
 
     IEnumerable<LibraryItem> OnLibraryFilterInvoked(IEnumerable<LibraryItem> items)
     {
-        foreach (var item in items)
+        if (!String.IsNullOrWhiteSpace(Filter.Title))
         {
-            if (!String.IsNullOrWhiteSpace(Filter.Title))
-            {
-                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => i.Name?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0));
-            }
-
-            if (Filter.Engines != null && Filter.Engines.Any())
-            {
-                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Engines.Any(e => e.Id == (i.DataItem as Game)?.Engine.Id)));
-            }
-
-            if (Filter.Genres != null && Filter.Genres.Any())
-            {
-                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg.Id == g.Id))));
-            }
-
-            if (Filter.Tags != null && Filter.Tags.Any())
-            {
-                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Tags.Any(fg => (i.DataItem as Game).Tags.Any(g => fg.Id == g.Id))));
-            }
-
-            if (Filter.Developers != null && Filter.Developers.Any())
-            {
-                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc.Id == c.Id))));
-            }
-
-            if (Filter.Publishers != null && Filter.Publishers.Any())
-            {
-                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc.Id == c.Id))));
-            }
-
-            if (Filter.MinPlayers != null)
-            {
-                item.Children = new ObservableCollection<LibraryItem>(
-                    item.Children.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= Filter.MinPlayers && mm.MaxPlayers >= Filter.MinPlayers))
-                );
-            }
-
-            if (Filter.MaxPlayers != null)
-            {
-                item.Children = new ObservableCollection<LibraryItem>(
-                    item.Children.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= Filter.MaxPlayers))
-                );
-            }
-
-            if (Filter.Installed)
-            {
-                item.Children = new ObservableCollection<LibraryItem>(item.Children.Where(i => (i.DataItem as Game).Installed));
-            }
+            items = items.Where(i => i.Name?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
         }
 
-        items = items.Where(i => i.Children.Any());
+        if (Filter.Engines != null && Filter.Engines.Any())
+        {
+            items = items.Where(i => Filter.Engines.Any(e => e.Id == (i.DataItem as Game)?.Engine.Id));
+        }
+
+        if (Filter.Genres != null && Filter.Genres.Any())
+        {
+            items = items.Where(i => Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg.Id == g.Id)));
+        }
+
+        if (Filter.Tags != null && Filter.Tags.Any())
+        {
+            items = items.Where(i => Filter.Tags.Any(fg => (i.DataItem as Game).Tags.Any(g => fg.Id == g.Id)));
+        }
+
+        if (Filter.Developers != null && Filter.Developers.Any())
+        {
+            items = items.Where(i => Filter.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc.Id == c.Id)));
+        }
+
+        if (Filter.Publishers != null && Filter.Publishers.Any())
+        {
+            items = items.Where(i => Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc.Id == c.Id)));
+        }
+
+        if (Filter.MinPlayers != null)
+        {
+            items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= Filter.MinPlayers && mm.MaxPlayers >= Filter.MinPlayers));
+        }
+
+        if (Filter.MaxPlayers != null)
+        {
+            items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= Filter.MaxPlayers));
+        }
+
+        if (Filter.Installed)
+        {
+            items = items.Where(i => (i.DataItem as Game).Installed);
+        }
 
         return items;
     }

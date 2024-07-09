@@ -37,6 +37,8 @@ namespace LANCommander.Client.Services
         public delegate IEnumerable<LibraryItem> LibraryFilterHandler(IEnumerable<LibraryItem> items);
         public event LibraryFilterHandler LibraryFilter;
 
+        public Func<LibraryItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
+
         public LibraryService(
             SDK.Client client,
             DownloadService downloadService,
@@ -71,36 +73,16 @@ namespace LANCommander.Client.Services
 
         public IEnumerable<LibraryItem> GetLibraryItems<T>()
         {
-            var items = new List<LibraryItem>();
-
-            items.AddRange(LibraryItems);
-            items.AddRange(LibraryItems.SelectMany(i => i.Children));
-
-            return items.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
+            return LibraryItems.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
         }
 
         public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
         {
             var items = new List<LibraryItem>();
 
-            var uncategorizedGames = await GameService.Get(g => !g.Collections.Any()).ToListAsync();
-            var uncategorizedCollection = await CollectionService.AddMissing(c => c.Name == "Uncategorized", new Collection
-            {
-                Name = "Uncategorized"
-            });
+            var games = await GameService.Get();
 
-            uncategorizedCollection.Value.Games = uncategorizedGames;
-
-            await CollectionService.Update(uncategorizedCollection.Value);
-
-            var collections = await CollectionService.Get();
-
-            items.AddRange(collections.OrderByTitle(c => c.Name).Select(c => new LibraryItem(c)));
-
-            var redistributables = await RedistributableService.Get();
-
-            foreach (var redistributable in redistributables)
-                items.Add(new LibraryItem(redistributable));
+            items.AddRange(games.Select(g => new LibraryItem(g, GroupSelector)));
 
             if (LibraryFilter != null)
                 return LibraryFilter.Invoke(items);
@@ -113,7 +95,7 @@ namespace LANCommander.Client.Services
             var item = LibraryItems.FirstOrDefault(i => i.Key == key);
 
             if (item == null)
-                item = LibraryItems.SelectMany(i => i.Children).FirstOrDefault(i => i.Key == key);
+                item = LibraryItems.FirstOrDefault(i => i.Key == key);
 
             return item;
         }
@@ -123,7 +105,7 @@ namespace LANCommander.Client.Services
             // Assume for now it's a game
             var game = await GameService.Get(libraryItem.Key);
 
-            return new LibraryItem(game);
+            return new LibraryItem(game, GroupSelector);
         }
 
         public async Task Install(LibraryItem libraryItem)

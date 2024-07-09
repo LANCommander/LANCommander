@@ -11,8 +11,11 @@ namespace LANCommander.Client.Services
 {
     public class PlaySessionService : BaseDatabaseService<PlaySession>
     {
-        public PlaySessionService(DatabaseContext dbContext) : base(dbContext)
+        private readonly SDK.Client Client;
+
+        public PlaySessionService(DatabaseContext dbContext, SDK.Client client) : base(dbContext)
         {
+            Client = client;
         }
 
         public async Task StartSession(Guid gameId, Guid userId)
@@ -30,6 +33,8 @@ namespace LANCommander.Client.Services
             };
 
             await Add(session);
+
+            await Client.Games.StartPlaySessionAsync(gameId);
         }
 
         public async Task EndSession(Guid gameId, Guid userId)
@@ -42,6 +47,8 @@ namespace LANCommander.Client.Services
 
                 await Update(existingSession);
             }
+
+            await Client.Games.EndPlaySessionAsync(gameId);
         }
     }
 }

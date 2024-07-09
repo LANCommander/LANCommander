@@ -95,11 +95,25 @@ namespace LANCommander.SDK
             Client.PostRequest<object>($"/api/PlaySessions/Start/{id}");
         }
 
+        public async Task StartPlaySessionAsync(Guid id)
+        {
+            Logger?.LogTrace("Starting a game session...");
+
+            await Client.PostRequestAsync<object>($"/api/PlaySessions/Start/{id}");
+        }
+
         public void EndPlaySession(Guid id)
         {
             Logger?.LogTrace("Ending a game session...");
 
             Client.PostRequest<object>($"/api/PlaySessions/End/{id}");
+        }
+
+        public async Task EndPlaySessionAsync(Guid id)
+        {
+            Logger?.LogTrace("Ending a game session...");
+
+            await Client.PostRequestAsync<object>($"/api/PlaySessions/End/{id}");
         }
 
         public string GetAllocatedKey(Guid id)

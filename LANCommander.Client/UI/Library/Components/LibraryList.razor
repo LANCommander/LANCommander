@@ -3,10 +3,26 @@
 
 <div class="library-list">
     <Collapse>
-        @foreach (var group in LibraryService.LibraryItems.SelectMany(i => i.Groups).Distinct())
+        @if (Groups.Any())
         {
-            <Panel Header="@group" Key="@group">
-                <AntList DataSource="LibraryService.LibraryItems.Where(i => i.Groups.Contains(group))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+            foreach (var group in Groups.OrderByTitle(g => g))
+            {
+                <Panel Header="@group" Key="@group">
+                    <AntList DataSource="@(LibraryService.LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                        <ListItem OnClick='() => SelectItem(context)' Class="@GetItemClasses(context)">
+                            <div class="library-list-icon">
+                                <MediaImage Id="@context.IconId" />
+                            </div>
+                            <span>@context.Name</span>
+                        </ListItem>
+                    </AntList>
+                </Panel>
+            }
+        }
+        else
+        {
+            <Panel Class="no-header">
+                <AntList DataSource="LibraryService.LibraryItems" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
                     <ListItem OnClick='() => SelectItem(context)' Class="@GetItemClasses(context)">
                         <div class="library-list-icon">
                             <MediaImage Id="@context.IconId" />
@@ -23,9 +39,13 @@
     [Parameter] public Guid? SelectedItem { get; set; }
     [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
 
+    List<string> Groups = new List<string>();
+
     protected override void OnInitialized()
     {
-        LibraryService.OnLibraryChanged += StateHasChanged;
+        LibraryService.OnLibraryChanged += UpdateGroups;
+
+        UpdateGroups();
     }
 
     string GetItemClasses(LibraryItem item)
@@ -45,5 +65,15 @@
     {
         if (OnItemSelected.HasDelegate)
             await OnItemSelected.InvokeAsync(item.Key);
+    }
+
+    void UpdateGroups()
+    {
+        Groups = LibraryService.LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
+
+        if (LibraryService.LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
+            Groups.Add("Uncategorized");
+
+        StateHasChanged();
     }
 }

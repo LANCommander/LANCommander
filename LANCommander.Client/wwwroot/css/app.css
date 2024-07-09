@@ -339,6 +339,16 @@ footer {
   background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgb(0, 0, 0) 100%);
   z-index: 600;
 }
+.library-list .ant-collapse-content {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.library-list .ant-collapse > .ant-collapse-item.no-header > .ant-collapse-header {
+  display: none;
+}
+.library-list .ant-collapse > .ant-collapse-item.no-header > .ant-collapse-content {
+  display: block;
+}
 .library-list .ant-collapse > .ant-collapse-item > .ant-collapse-header {
   padding: 10px 12px;
 }

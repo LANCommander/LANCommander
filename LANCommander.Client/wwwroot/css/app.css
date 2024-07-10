@@ -70,6 +70,9 @@
   display: flex;
   justify-content: center;
 }
+.pb-custom-window-controls .ant-btn.ant-btn-loading::before {
+  display: none;
+}
 .pb-custom-window-control-button {
   border-radius: 0;
 }

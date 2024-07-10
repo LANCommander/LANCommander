@@ -37,6 +37,10 @@
             display: flex;
             justify-content: center;
         }
+
+        .ant-btn.ant-btn-loading::before {
+            display: none;
+        }
     }
 
     &-control-button {

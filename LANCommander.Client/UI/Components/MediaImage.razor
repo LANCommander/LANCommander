@@ -17,11 +17,6 @@
     {
         try {
             Media = await MediaService.Get(Id);
-
-            var path = MediaService.GetImagePath(Media);
-
-            if (File.Exists(path))
-                Data = Convert.ToBase64String(await File.ReadAllBytesAsync(path));
         }
         catch { }
     }

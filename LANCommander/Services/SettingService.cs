@@ -43,13 +43,16 @@ namespace LANCommander.Services
 
         public static void SaveSettings(LANCommanderSettings settings)
         {
-            var serializer = new SerializerBuilder()
+            if (settings != null)
+            {
+                var serializer = new SerializerBuilder()
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
-            File.WriteAllText(SettingsFilename, serializer.Serialize(settings));
+                File.WriteAllText(SettingsFilename, serializer.Serialize(settings));
 
-            Settings = settings;
+                Settings = settings;
+            }
         }
     }
 }

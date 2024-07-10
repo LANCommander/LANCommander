@@ -1,23 +1,50 @@
-﻿@using LANCommander.Client.Data.Models
+﻿@implements IDisposable
+@using LANCommander.Client.Data.Models
 @inject MediaService MediaService
+@inject MessageBusService MessageBusService
 
-@if (Media != null)
-{
-    <img src="media://@(Media.FileId)-@(Media.Crc32)?mime=@(Media.MimeType)" class="@Class" />
-}
+<img @ref="Ref" @key="Id" src="@MediaUrl" class="@Class" />
 
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Class { get; set; }
 
-    Media Media { get; set; }
-    string Data { get; set; }
+    string MediaUrl { get; set; }
+
+    ElementReference Ref;
+
+    protected override async Task OnInitializedAsync()
+    {
+        MessageBusService.OnMediaChanged += OnMediaChanged;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
         try {
-            Media = await MediaService.Get(Id);
+            var media = await MediaService.Get(Id);
+
+            UpdateMediaUrl(media);
         }
         catch { }
+    }
+
+    async Task OnMediaChanged(Media media)
+    {
+        if (media.Id == Id)
+        {
+            UpdateMediaUrl(media);
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    void UpdateMediaUrl(Media media)
+    {
+        MediaUrl = $"media://{media?.FileId}-{media?.Crc32}?mime={media?.MimeType}";
+    }
+
+    public void Dispose()
+    {
+        MessageBusService.OnMediaChanged -= OnMediaChanged;
     }
 }

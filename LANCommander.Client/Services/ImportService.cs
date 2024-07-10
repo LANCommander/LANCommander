@@ -24,6 +24,7 @@ namespace LANCommander.Client.Services
         private readonly MultiplayerModeService MultiplayerModeService;
         private readonly RedistributableService RedistributableService;
         private readonly TagService TagService;
+        private readonly MessageBusService MessageBusService;
         private readonly Settings Settings;
         private readonly DatabaseContext DatabaseContext;
 
@@ -44,6 +45,7 @@ namespace LANCommander.Client.Services
             MultiplayerModeService multiplayerModeService,
             RedistributableService redistributableService,
             TagService tagService,
+            MessageBusService messageBusService,
             DatabaseContext databaseContext) : base()
         {
             Client = client;
@@ -56,6 +58,7 @@ namespace LANCommander.Client.Services
             MultiplayerModeService = multiplayerModeService;
             RedistributableService = redistributableService;
             TagService = tagService;
+            MessageBusService = messageBusService;
             DatabaseContext = databaseContext;
 
             Settings = SettingService.GetSettings();
@@ -351,7 +354,7 @@ namespace LANCommander.Client.Services
                 media.Type = importMedia.Type;
                 media.SourceUrl = importMedia.SourceUrl;
                 media.MimeType = importMedia.MimeType;
-                media.Crc32 = importMedia.Crc32;
+                media.Crc32 = importMedia.Crc32.ToUpper();
                 media.Name = importMedia.Name ?? String.Empty;
                 media.GameId = mediaMap.ContainsKey(importMedia.Id) ? mediaMap[importMedia.Id] : Guid.Empty;
 
@@ -376,6 +379,8 @@ namespace LANCommander.Client.Services
                         Id = media.Id,
                         FileId = media.FileId
                     }, localPath);
+
+                    MessageBusService.MediaChanged(media);
                 }
             }
             #endregion

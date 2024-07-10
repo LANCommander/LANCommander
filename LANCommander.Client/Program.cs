@@ -50,6 +50,7 @@ namespace LANCommander.Client
             });
 
             builder.Services.AddSingleton(client);
+            builder.Services.AddSingleton<MessageBusService>();
             #endregion
 
             #region Register Services

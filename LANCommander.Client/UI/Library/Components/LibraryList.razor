@@ -1,5 +1,6 @@
 ﻿@using LANCommander.Client.Models
 @inject LibraryService LibraryService
+@inject ImportService ImportService
 
 <div class="library-list">
     <Collapse>
@@ -44,6 +45,7 @@
     protected override void OnInitialized()
     {
         LibraryService.OnLibraryChanged += UpdateGroups;
+        ImportService.OnImportComplete += UpdateGroups;
 
         UpdateGroups();
     }
@@ -74,6 +76,6 @@
         if (LibraryService.LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
             Groups.Add("Uncategorized");
 
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
     }
 }

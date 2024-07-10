@@ -178,7 +178,7 @@
     {
         LibraryService.RefreshLibraryItemsAsync().Wait();
 
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
     }
 
     async Task OnLibraryItemSelected(LibraryItem item)

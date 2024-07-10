@@ -3,7 +3,7 @@
 
 <div class="library-list">
     <Collapse>
-        @if (Groups.Any())
+        @if (Groups.Count > 1)
         {
             foreach (var group in Groups.OrderByTitle(g => g))
             {

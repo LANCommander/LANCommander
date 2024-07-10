@@ -2,6 +2,7 @@
 using LANCommander.Client.Data.Models;
 using LANCommander.Client.Models;
 using LANCommander.SDK.Helpers;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -91,120 +92,69 @@ namespace LANCommander.Client.Services
             IEnumerable<Tag> tags;
             IEnumerable<MultiplayerMode> multiplayerModes;
 
-            using (var metadataTransaction = DatabaseContext.Database.BeginTransaction())
+            #region Import Collections
+            collections = await ImportBulk<Collection, SDK.Models.Collection, CollectionService>(remoteGames.SelectMany(g => g.Collections).DistinctBy(c => c.Id), CollectionService, (collection, importCollection) =>
             {
-                #region Import Collections
-                collections = await ImportFromModel<Collection, SDK.Models.Collection, CollectionService>(remoteGames.SelectMany(g => g.Collections).DistinctBy(c => c.Id), CollectionService, (collection, importCollection) =>
-                {
-                    collection.Name = importCollection.Name;
+                collection.Name = importCollection.Name;
 
-                    return collection;
-                });
-                #endregion
+                return collection;
+            });
+            #endregion
 
-                #region Import Companies
-                var importCompanies = new List<SDK.Models.Company>();
+            #region Import Companies
+            var importCompanies = new List<SDK.Models.Company>();
 
-                importCompanies.AddRange(remoteGames.SelectMany(g => g.Developers));
-                importCompanies.AddRange(remoteGames.SelectMany(g => g.Publishers));
+            importCompanies.AddRange(remoteGames.SelectMany(g => g.Developers));
+            importCompanies.AddRange(remoteGames.SelectMany(g => g.Publishers));
 
-                companies = await ImportFromModel<Company, SDK.Models.Company, CompanyService>(importCompanies.DistinctBy(c => c.Id), CompanyService, (company, importCompany) =>
-                {
-                    company.Name = importCompany.Name;
+            companies = await ImportBulk<Company, SDK.Models.Company, CompanyService>(importCompanies.DistinctBy(c => c.Id), CompanyService, (company, importCompany) =>
+            {
+                company.Name = importCompany.Name;
 
-                    return company;
-                });
-                #endregion
+                return company;
+            });
+            #endregion
 
-                #region Import Engines
-                /*var engines = await ImportFromModel<Engine, SDK.Models.Engine, EngineService>(remoteGames.SelectMany(g => g.Engines).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
-                {
-                    engine.Name = importEngine.Name;
+            #region Import Engines
+            /*var engines = await ImportFromModel<Engine, SDK.Models.Engine, EngineService>(remoteGames.SelectMany(g => g.Engines).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
+            {
+                engine.Name = importEngine.Name;
 
-                    return engine;
-                });*/
-                #endregion
+                return engine;
+            });*/
+            #endregion
 
-                #region Import Genres
-                genres = await ImportFromModel<Genre, SDK.Models.Genre, GenreService>(remoteGames.SelectMany(g => g.Genres).DistinctBy(g => g.Id), GenreService, (genre, importGenre) =>
-                {
-                    genre.Name = importGenre.Name;
+            #region Import Genres
+            genres = await ImportBulk<Genre, SDK.Models.Genre, GenreService>(remoteGames.SelectMany(g => g.Genres).DistinctBy(g => g.Id), GenreService, (genre, importGenre) =>
+            {
+                genre.Name = importGenre.Name;
 
-                    return genre;
-                });
-                #endregion
+                return genre;
+            });
+            #endregion
 
-                #region Import Tags
-                tags = await ImportFromModel<Tag, SDK.Models.Tag, TagService>(remoteGames.SelectMany(g => g.Tags).DistinctBy(t => t.Id), TagService, (tag, importTag) =>
-                {
-                    tag.Name = importTag.Name;
+            #region Import Tags
+            tags = await ImportBulk<Tag, SDK.Models.Tag, TagService>(remoteGames.SelectMany(g => g.Tags).DistinctBy(t => t.Id), TagService, (tag, importTag) =>
+            {
+                tag.Name = importTag.Name;
 
-                    return tag;
-                });
-                #endregion
+                return tag;
+            });
+            #endregion
 
-                #region Import MultiplayerModes
-                multiplayerModes = await ImportFromModel<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.SelectMany(g => g.MultiplayerModes).DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
-                {
-                    multiplayerMode.Type = importMultiplayerMode.Type;
-                    multiplayerMode.NetworkProtocol = importMultiplayerMode.NetworkProtocol;
-                    multiplayerMode.Description = importMultiplayerMode.Description;
-                    multiplayerMode.MinPlayers = importMultiplayerMode.MinPlayers;
-                    multiplayerMode.MaxPlayers = importMultiplayerMode.MaxPlayers;
-                    multiplayerMode.Spectators = importMultiplayerMode.Spectators;
+            #region Import MultiplayerModes
+            multiplayerModes = await ImportBulk<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.SelectMany(g => g.MultiplayerModes).DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
+            {
+                multiplayerMode.Type = importMultiplayerMode.Type;
+                multiplayerMode.NetworkProtocol = importMultiplayerMode.NetworkProtocol;
+                multiplayerMode.Description = importMultiplayerMode.Description;
+                multiplayerMode.MinPlayers = importMultiplayerMode.MinPlayers;
+                multiplayerMode.MaxPlayers = importMultiplayerMode.MaxPlayers;
+                multiplayerMode.Spectators = importMultiplayerMode.Spectators;
 
-                    return multiplayerMode;
-                });
-                #endregion
-
-                #region Download Media
-                // MediaId, GameId
-                var mediaMap = new Dictionary<Guid, Guid>();
-
-                foreach (var remoteGame in remoteGames)
-                {
-                    foreach (var remoteMedia in remoteGame.Media)
-                    {
-                        mediaMap[remoteMedia.Id] = remoteGame.Id;
-                    }
-                }
-
-                var medias = await ImportFromModel<Media, SDK.Models.Media, MediaService>(remoteGames.SelectMany(g => g.Media), MediaService, (media, importMedia) =>
-                {
-                    media.FileId = importMedia.FileId;
-                    media.Type = importMedia.Type;
-                    media.SourceUrl = importMedia.SourceUrl;
-                    media.MimeType = importMedia.MimeType;
-                    media.Crc32 = importMedia.Crc32;
-                    media.GameId = mediaMap.ContainsKey(importMedia.Id) ? mediaMap[importMedia.Id] : Guid.Empty;
-
-                    return media;
-                }, false);
-
-                var mediaStoragePath = MediaService.GetStoragePath();
-
-                foreach (var media in medias)
-                {
-                    var localPath = Path.Combine(MediaService.GetStoragePath(), $"{media.FileId}-{media.Crc32}");
-
-                    if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
-                    {
-                        var staleFiles = Directory.EnumerateFiles(mediaStoragePath, $"{media.FileId}-*");
-
-                        foreach (var staleFile in staleFiles)
-                            File.Delete(staleFile);
-
-                        await Client.Media.Download(new SDK.Models.Media
-                        {
-                            Id = media.Id,
-                            FileId = media.FileId
-                        }, localPath);
-                    }
-                }
-                #endregion
-
-                await metadataTransaction.CommitAsync();
-            }
+                return multiplayerMode;
+            });
+            #endregion
 
             using (var gameTransaction = DatabaseContext.Database.BeginTransaction())
             {
@@ -382,6 +332,53 @@ namespace LANCommander.Client.Services
 
                 await gameTransaction.CommitAsync();
             }
+
+            #region Download Media
+            // MediaId, GameId
+            var mediaMap = new Dictionary<Guid, Guid>();
+
+            foreach (var remoteGame in remoteGames)
+            {
+                foreach (var remoteMedia in remoteGame.Media)
+                {
+                    mediaMap[remoteMedia.Id] = remoteGame.Id;
+                }
+            }
+
+            var medias = await ImportBulk<Media, SDK.Models.Media, MediaService>(remoteGames.SelectMany(g => g.Media), MediaService, (media, importMedia) =>
+            {
+                media.FileId = importMedia.FileId;
+                media.Type = importMedia.Type;
+                media.SourceUrl = importMedia.SourceUrl;
+                media.MimeType = importMedia.MimeType;
+                media.Crc32 = importMedia.Crc32;
+                media.Name = importMedia.Name ?? String.Empty;
+                media.GameId = mediaMap.ContainsKey(importMedia.Id) ? mediaMap[importMedia.Id] : Guid.Empty;
+
+                return media;
+            }, false);
+
+            var mediaStoragePath = MediaService.GetStoragePath();
+
+            foreach (var media in medias)
+            {
+                var localPath = Path.Combine(MediaService.GetStoragePath(), $"{media.FileId}-{media.Crc32}");
+
+                if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
+                {
+                    var staleFiles = Directory.EnumerateFiles(mediaStoragePath, $"{media.FileId}-*");
+
+                    foreach (var staleFile in staleFiles)
+                        File.Delete(staleFile);
+
+                    await Client.Media.Download(new SDK.Models.Media
+                    {
+                        Id = media.Id,
+                        FileId = media.FileId
+                    }, localPath);
+                }
+            }
+            #endregion
         }
 
         public async Task ImportRedistributables()
@@ -390,7 +387,7 @@ namespace LANCommander.Client.Services
         }
 
         // Could use something like automapper, but that's slow.
-        public async Task<IEnumerable<T>> ImportFromModel<T, U, V>(IEnumerable<U> importModels, V service, Func<T, U, T> additionalMapping, bool clean = true)
+        public async Task<IEnumerable<T>> ImportBulk<T, U, V>(IEnumerable<U> importModels, V service, Func<T, U, T> additionalMapping, bool clean = true)
             where T : BaseModel
             where U : SDK.Models.KeyedModel
             where V : BaseDatabaseService<T>
@@ -400,27 +397,38 @@ namespace LANCommander.Client.Services
 
             foreach (var importModel in importModels)
             {
-                try
+                using (var transaction = DatabaseContext.Database.BeginTransaction())
                 {
-                    var model = models.FirstOrDefault(m => m.Id == importModel.Id);
-
-                    if (model == null)
-                        model = (T)Activator.CreateInstance(typeof(T));
-
-                    model = additionalMapping.Invoke(model, importModel);
-
-                    if (model.Id == Guid.Empty)
+                    try
                     {
-                        model.Id = importModel.Id;
+                        var model = models.FirstOrDefault(m => m.Id == importModel.Id);
 
-                        model = await service.Add(model);
+                        if (model == null)
+                            model = (T)Activator.CreateInstance(typeof(T));
+
+                        model = additionalMapping.Invoke(model, importModel);
+
+                        if (model.Id == Guid.Empty)
+                        {
+                            model.Id = importModel.Id;
+
+                            model = await service.Add(model);
+                        }
+                        else
+                            model = await service.Update(model);
+
+                        transaction.Commit();
                     }
-                    else
-                        model = await service.Update(model);
-                }
-                catch (Exception ex)
-                {
+                    catch (DbUpdateException ex)
+                    {
+                        transaction.Rollback();
 
+                        continue;
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
                 }
             }
 

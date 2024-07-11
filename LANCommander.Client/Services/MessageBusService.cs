@@ -15,6 +15,22 @@ namespace LANCommander.Client.Services
         public void MediaChanged(Media media)
         {
             OnMediaChanged?.Invoke(media);
-        } 
+        }
+
+        public delegate Task OnGameStartedHander(Game game);
+        public event OnGameStartedHander OnGameStarted;
+
+        public void GameStarted(Game game)
+        {
+            OnGameStarted?.Invoke(game);
+        }
+
+        public delegate Task OnGameStoppedHander(Game game);
+        public event OnGameStoppedHander OnGameStopped;
+
+        public void GameStopped(Game game)
+        {
+            OnGameStopped?.Invoke(game);
+        }
     }
 }

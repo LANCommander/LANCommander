@@ -25,6 +25,7 @@ namespace LANCommander.Client.Services
         private readonly GameService GameService;
         private readonly PlaySessionService PlaySessionService;
         private readonly RedistributableService RedistributableService;
+        private readonly MessageBusService MessageBusService;
         private readonly PhotinoWindow Window;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
@@ -46,7 +47,8 @@ namespace LANCommander.Client.Services
             GameService gameService,
             PlaySessionService playSessionService,
             PhotinoWindow window,
-            RedistributableService redistributableService) : base()
+            RedistributableService redistributableService,
+            MessageBusService messageBusService) : base()
         {
             Client = client;
             DownloadService = downloadService;
@@ -55,6 +57,7 @@ namespace LANCommander.Client.Services
             PlaySessionService = playSessionService;
             Window = window;
             RedistributableService = redistributableService;
+            MessageBusService = messageBusService;
 
             DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
         }
@@ -191,9 +194,13 @@ namespace LANCommander.Client.Services
 
                 RunningProcesses.Add(game.Id, process);
 
+                MessageBusService.GameStarted(game);
+
                 await process.WaitForExitAsync();
             }
             catch (Exception ex) { }
+
+            MessageBusService.GameStopped(game);
 
             RunningProcesses.Remove(game.Id);
 

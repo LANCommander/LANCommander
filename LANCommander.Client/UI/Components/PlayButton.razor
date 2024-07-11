@@ -6,6 +6,7 @@
 @inject LibraryService LibraryService
 @inject DownloadService DownloadService
 @inject ModalService ModalService
+@inject MessageBusService MessageBusService
 
 @if (LibraryService.IsRunning(Game))
 {
@@ -77,6 +78,12 @@ else
     Data.Models.Game Game { get; set; }
     IEnumerable<SDK.Models.Action> GameActions { get; set; }
 
+    protected override async Task OnInitializedAsync()
+    {
+        MessageBusService.OnGameStarted += UpdateState;
+        MessageBusService.OnGameStopped += UpdateState;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         Game = await GameService.Get(GameId);
@@ -87,6 +94,14 @@ else
             var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
 
             GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
+        }
+    }
+
+    async Task UpdateState(Game game)
+    {
+        if (GameId == game.Id)
+        {
+            await InvokeAsync(StateHasChanged);
         }
     }
 

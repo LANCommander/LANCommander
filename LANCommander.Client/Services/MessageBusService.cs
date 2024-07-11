@@ -32,5 +32,13 @@ namespace LANCommander.Client.Services
         {
             OnGameStopped?.Invoke(game);
         }
+
+        public delegate Task OnLibraryFilterAppliedHander();
+        public event OnLibraryFilterAppliedHander OnLibraryFilterApplied;
+
+        public void LibraryFilterApplied()
+        {
+            OnLibraryFilterApplied?.Invoke();
+        }
     }
 }

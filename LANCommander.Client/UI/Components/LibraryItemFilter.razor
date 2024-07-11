@@ -5,6 +5,7 @@
 @inject EngineService EngineService
 @inject GenreService GenreService
 @inject TagService TagService
+@inject MessageBusService MessageBusService
 
 <Popover Trigger="@(new AntDesign.Trigger[] { AntDesign.Trigger.Click})" OverlayClassName="library-filter" Placement="@Placement.TopLeft">
     <ChildContent>
@@ -131,12 +132,12 @@
     async Task ResetFilter()
     {
         Filter = new FilterModel();
-        await LibraryService.LibraryChanged();
+        MessageBusService.LibraryFilterApplied();
     }
 
     async Task ApplyFilter()
     {
-        LibraryService.LibraryChanged();
+        MessageBusService.LibraryFilterApplied();
     }
 
     IEnumerable<LibraryItem> OnLibraryFilterInvoked(IEnumerable<LibraryItem> items)

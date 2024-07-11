@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Client.Models
 @inject LibraryService LibraryService
 @inject ImportService ImportService
+@inject MessageBusService MessageBusService
 
 <div class="library-list">
     <Collapse>
@@ -9,7 +10,7 @@
             foreach (var group in Groups.OrderByTitle(g => g))
             {
                 <Panel Header="@group" Key="@group">
-                    <AntList DataSource="@(LibraryService.LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
                         <ListItem OnClick='() => SelectItem(context)' Class="@GetItemClasses(context)">
                             <div class="library-list-icon">
                                 <MediaImage Id="@context.IconId" />
@@ -41,11 +42,20 @@
     [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
 
     List<string> Groups = new List<string>();
+    IEnumerable<LibraryItem> LibraryItems;
 
     protected override void OnInitialized()
     {
-        LibraryService.OnLibraryChanged += UpdateGroups;
-        ImportService.OnImportComplete += UpdateGroups;
+        LibraryService.OnLibraryChanged += () => {
+            UpdateGroups();
+        };
+
+        ImportService.OnImportComplete += () =>
+        {
+            UpdateGroups();
+        };
+
+        MessageBusService.OnLibraryFilterApplied += UpdateGroups;
 
         UpdateGroups();
     }
@@ -69,11 +79,13 @@
             await OnItemSelected.InvokeAsync(item.Key);
     }
 
-    void UpdateGroups()
+    async Task UpdateGroups()
     {
-        Groups = LibraryService.LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
+        LibraryItems = await LibraryService.GetLibraryItemsAsync();
 
-        if (LibraryService.LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
+        Groups = LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
+
+        if (LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
             Groups.Add("Uncategorized");
 
         InvokeAsync(StateHasChanged);

@@ -3,9 +3,7 @@
 namespace LANCommander.Client.Data.Models
 {
     [Table("Engines")]
-    public class Engine : BaseModel
+    public class Engine : BaseTaxonomyModel
     {
-        public string Name { get; set; }
-        public virtual ICollection<Game> Games { get; set; }
     }
 }

@@ -5,11 +5,7 @@ using System.Text.Json.Serialization;
 namespace LANCommander.Client.Data.Models
 {
     [Table("Tags")]
-    public class Tag : BaseModel
+    public class Tag : BaseTaxonomyModel
     {
-        public string Name { get; set; }
-
-        [JsonIgnore]
-        public virtual List<Game> Games { get; set; }
     }
 }

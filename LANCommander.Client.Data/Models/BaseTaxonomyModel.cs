@@ -1,10 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace LANCommander.Client.Data.Models
 {
-    [Table("Genres")]
-    public class Genre : BaseTaxonomyModel
+    public abstract class BaseTaxonomyModel : BaseModel
     {
         public string Name { get; set; }
         [JsonIgnore]

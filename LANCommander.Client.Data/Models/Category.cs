@@ -3,11 +3,9 @@
 namespace LANCommander.Client.Data.Models
 {
     [Table("Categories")]
-    public class Category : BaseModel
+    public class Category : BaseTaxonomyModel
     {
-        public string Name { get; set; }
         public virtual Category Parent { get; set; }
         public virtual ICollection<Category> Children { get; set; }
-        public virtual ICollection<Game> Games { get; set; }
     }
 }

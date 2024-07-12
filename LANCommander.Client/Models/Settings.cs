@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using LANCommander.Client.Enums;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace LANCommander.Client.Models
         public GameSettings Games { get; set; } = new GameSettings();
         public MediaSettings Media { get; set; } = new MediaSettings();
         public ProfileSettings Profile { get; set; } = new ProfileSettings();
+        public FilterSettings Filter { get; set; } = new FilterSettings();
         public DebugSettings Debug { get; set; } = new DebugSettings();
     }
 
@@ -32,6 +34,7 @@ namespace LANCommander.Client.Models
     public class GameSettings
     {
         public string DefaultInstallDirectory { get; set; } = "C:\\Games";
+        public Guid? LastSelected { get; set; } = null;
     }
 
     public class MediaSettings
@@ -44,6 +47,20 @@ namespace LANCommander.Client.Models
         public Guid Id { get; set; }
         public string Alias { get; set; }
         public string Avatar { get; set; }
+    }
+
+    public class FilterSettings
+    {
+        public string? Title { get; set; }
+        public GroupBy GroupBy { get; set; } = GroupBy.Collection;
+        public IEnumerable<string> Engines { get; set; }
+        public IEnumerable<string> Genres { get; set; }
+        public IEnumerable<string> Tags { get; set; }
+        public IEnumerable<string> Developers { get; set; }
+        public IEnumerable<string> Publishers { get; set; }
+        public int? MinPlayers { get; set; }
+        public int? MaxPlayers { get; set; }
+        public bool Installed { get; set; } = false;
     }
 
     public class DebugSettings

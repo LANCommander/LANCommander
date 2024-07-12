@@ -35,8 +35,8 @@ namespace LANCommander.Client.Services
         public delegate void OnLibraryChangedHandler();
         public event OnLibraryChangedHandler OnLibraryChanged;
 
-        public delegate IEnumerable<LibraryItem> LibraryFilterHandler(IEnumerable<LibraryItem> items);
-        public event LibraryFilterHandler LibraryFilter;
+        public delegate Task OnLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
+        public event OnLibraryItemsFilteredHandler OnLibraryItemsFiltered;
 
         public Func<LibraryItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
 
@@ -81,14 +81,62 @@ namespace LANCommander.Client.Services
 
         public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
         {
+            var settings = SettingService.GetSettings();
             var items = new List<LibraryItem>();
 
             var games = await GameService.Get();
 
+            switch (settings.Filter.GroupBy)
+            {
+                case Enums.GroupBy.None:
+                    GroupSelector = (g) => new string[] { };
+                    break;
+                case Enums.GroupBy.Collection:
+                    GroupSelector = (g) => (g.DataItem as Game).Collections.Select(c => c.Name).ToArray();
+                    break;
+                case Enums.GroupBy.Genre:
+                    GroupSelector = (g) => (g.DataItem as Game).Genres.Select(ge => ge.Name).ToArray();
+                    break;
+            }
+
             items.AddRange(games.Select(g => new LibraryItem(g, GroupSelector)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name));
 
-            if (LibraryFilter != null)
-                return LibraryFilter.Invoke(items);
+            return await FilterLibraryItems(items);
+        }
+
+        async Task<IEnumerable<LibraryItem>> FilterLibraryItems(IEnumerable<LibraryItem> items)
+        {
+            var settings = SettingService.GetSettings();
+
+            if (!String.IsNullOrWhiteSpace(settings.Filter.Title))
+                items = items.Where(i => i.Name?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (settings.Filter.Engines != null && settings.Filter.Engines.Any())
+                items = items.Where(i => settings.Filter.Engines.Any(e => e == (i.DataItem as Game)?.Engine.Name));
+
+            if (settings.Filter.Genres != null && settings.Filter.Genres.Any())
+                items = items.Where(i => settings.Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg == g.Name)));
+
+            if (settings.Filter.Tags != null && settings.Filter.Tags.Any())
+                items = items.Where(i => settings.Filter.Tags.Any(ft => (i.DataItem as Game).Tags.Any(t => ft == t.Name)));
+
+            if (settings.Filter.Developers != null && settings.Filter.Developers.Any())
+                items = items.Where(i => settings.Filter.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc == c.Name)));
+
+            if (settings.Filter.Publishers != null && settings.Filter.Publishers.Any())
+                items = items.Where(i => settings.Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc == c.Name)));
+
+            if (settings.Filter.MinPlayers != null)
+                items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= settings.Filter.MinPlayers && mm.MaxPlayers >= settings.Filter.MinPlayers));
+
+            if (settings.Filter.MaxPlayers != null)
+                items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= settings.Filter.MaxPlayers));
+
+            if (settings.Filter.Installed)
+                items = items.Where(i => (i.DataItem as Game).Installed);
+
+            if (OnLibraryItemsFiltered != null)
+                await OnLibraryItemsFiltered.Invoke(items);
 
             return items;
         }

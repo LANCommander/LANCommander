@@ -1,4 +1,6 @@
-﻿@using LANCommander.Client.Data.Models
+﻿@implements IDisposable
+@using LANCommander.Client.Data.Models
+@using LANCommander.Client.Enums
 @using LANCommander.Client.Models
 @using System.Collections.ObjectModel
 @inject LibraryService LibraryService
@@ -7,7 +9,7 @@
 @inject TagService TagService
 @inject MessageBusService MessageBusService
 
-<Popover Trigger="@(new AntDesign.Trigger[] { AntDesign.Trigger.Click})" OverlayClassName="library-filter" Placement="@Placement.TopLeft">
+<Popover @ref="@Popover" Trigger="@(new AntDesign.Trigger[] { AntDesign.Trigger.Click})" OverlayClassName="library-filter" Placement="@Placement.TopLeft">
     <ChildContent>
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Filter" Style="position: absolute; left: 8px;" />
     </ChildContent>
@@ -15,6 +17,12 @@
         <Form @ref="Form" Model="Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical" Size="small">
             <FormItem Label="Title">
                 <Input @bind-Value="@context.Title" />
+            </FormItem>
+            <FormItem Label="Group By">
+                <Select @bind-Value="@context.GroupBy" TItem="GroupBy" TItemValue="GroupBy" DataSource="Enum.GetValues<GroupBy>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
             </FormItem>
             <FormItem Label="Engine">
                 <TagsInput Entities="Engines" @bind-Values="@context.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
@@ -53,6 +61,7 @@
     public class FilterModel
     {
         public string Title { get; set; }
+        public GroupBy GroupBy { get; set; }
         public ICollection<Engine> Engines { get; set; }
         public ICollection<Genre> Genres { get; set; }
         public ICollection<Data.Models.Tag> Tags { get; set; }
@@ -75,118 +84,124 @@
     int MinPlayers { get; set; }
     int MaxPlayers { get; set; }
 
+    Popover Popover;
+
     protected override async Task OnInitializedAsync()
     {
-        LibraryService.LibraryFilter += OnLibraryFilterInvoked;
+        LibraryService.OnLibraryItemsFiltered += PopulateFilter;
+
+        Load();
+        MessageBusService.LibraryFilterApplied();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    async Task PopulateFilter(IEnumerable<LibraryItem> items)
     {
-        if (firstRender)
+        var games = items.Where(i => i != null && i.DataItem != null && i.DataItem is Game).Select(i => i.DataItem as Game);
+        var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
+
+        Engines = games
+            .Select(i => i.Engine)
+            .Where(e => e != null)
+            .DistinctBy(e => e.Id)
+            .OrderBy(e => e.Name);
+
+        Genres = games
+            .SelectMany(i => i.Genres)
+            .Where(g => g != null)
+            .DistinctBy(g => g.Id)
+            .OrderBy(g => g.Name);
+
+        Tags = games
+            .SelectMany(i => i.Tags)
+            .Where(t => t != null)
+            .DistinctBy(t => t.Id)
+            .OrderBy(t => t.Name);
+
+        Developers = games
+            .SelectMany(i => i.Developers)
+            .Where(c => c != null)
+            .DistinctBy(c => c.Id)
+            .OrderBy(c => c.Name);
+
+        Publishers = games
+            .SelectMany(i => i.Publishers)
+            .Where(c => c != null)
+            .DistinctBy(c => c.Id)
+            .OrderBy(c => c.Name);
+
+        if (games.Any(li => li.Singleplayer))
+            MinPlayers = 1;
+        else if (multiplayerModes.Any())
+            MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
+
+        if (multiplayerModes.Any())
+            MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void Save()
+    {
+        var settings = SettingService.GetSettings();
+
+        settings.Filter = new FilterSettings()
         {
-            var games = LibraryService.GetLibraryItems<Game>().Select(i => i.DataItem as Game).Where(i => i != null);
-            var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
+            Title = Filter.Title,
+            GroupBy = Filter.GroupBy,
+            Engines = Filter.Engines?.Select(e => e.Name),
+            Genres = Filter.Genres?.Select(g => g.Name),
+            Tags = Filter.Tags?.Select(t => t.Name),
+            Developers = Filter.Developers?.Select(c => c.Name),
+            Publishers = Filter.Publishers?.Select(c => c.Name),
+            MinPlayers = Filter.MinPlayers,
+            MaxPlayers = Filter.MaxPlayers,
+            Installed = Filter.Installed
+        };
 
-            Engines = games
-                .Select(i => i.Engine)
-                .Where(e => e != null)
-                .DistinctBy(e => e.Id)
-                .OrderBy(e => e.Name);
+        SettingService.SaveSettings(settings);
+    }
 
-            Genres = games
-                .SelectMany(i => i.Genres)
-                .Where(g => g != null)
-                .DistinctBy(g => g.Id)
-                .OrderBy(g => g.Name);
+    void Load()
+    {
+        var settings = SettingService.GetSettings();
 
-            Tags = games
-                .SelectMany(i => i.Tags)
-                .Where(t => t != null)
-                .DistinctBy(t => t.Id)
-                .OrderBy(t => t.Name);
+        var engines = settings.Filter.Engines != null ? Engines?.Where(e => settings.Filter.Engines.Contains(e.Name)).ToList() : null;
+        var genres = settings.Filter.Genres != null ? Genres?.Where(e => settings.Filter.Genres.Contains(e.Name)).ToList() : null;
+        var tags = settings.Filter.Tags != null ? Tags?.Where(e => settings.Filter.Tags.Contains(e.Name)).ToList() : null;
+        var publishers = settings.Filter.Publishers != null ? Publishers?.Where(e => settings.Filter.Publishers.Contains(e.Name)).ToList() : null;
+        var developers = settings.Filter.Developers != null ? Developers?.Where(e => settings.Filter.Developers.Contains(e.Name)).ToList() : null;
 
-            Developers = games
-                .SelectMany(i => i.Developers)
-                .Where(c => c != null)
-                .DistinctBy(c => c.Id)
-                .OrderBy(c => c.Name);
-
-            Publishers = games
-                .SelectMany(i => i.Publishers)
-                .Where(c => c != null)
-                .DistinctBy(c => c.Id)
-                .OrderBy(c => c.Name);
-
-            if (games.Any(li => li.Singleplayer))
-                MinPlayers = 1;
-            else if (multiplayerModes.Any())
-                MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
-
-            if (multiplayerModes.Any())
-                MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
-
-            await InvokeAsync(StateHasChanged);
-        }
+        Filter = new FilterModel()
+        {
+            Title = settings.Filter.Title,
+            GroupBy = settings.Filter.GroupBy,
+            Engines = engines,
+            Genres = genres,
+            Tags = tags,
+            Developers = developers,
+            Publishers = publishers,
+            MinPlayers = settings.Filter.MinPlayers,
+            MaxPlayers = settings.Filter.MaxPlayers,
+            Installed = settings.Filter.Installed
+        };
     }
 
     async Task ResetFilter()
     {
         Filter = new FilterModel();
+        Save();
         MessageBusService.LibraryFilterApplied();
     }
 
     async Task ApplyFilter()
     {
+        Save();
         MessageBusService.LibraryFilterApplied();
+        await Popover.Close();
     }
 
-    IEnumerable<LibraryItem> OnLibraryFilterInvoked(IEnumerable<LibraryItem> items)
+    public void Dispose()
     {
-        if (!String.IsNullOrWhiteSpace(Filter.Title))
-        {
-            items = items.Where(i => i.Name?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
-        }
-
-        if (Filter.Engines != null && Filter.Engines.Any())
-        {
-            items = items.Where(i => Filter.Engines.Any(e => e.Id == (i.DataItem as Game)?.Engine.Id));
-        }
-
-        if (Filter.Genres != null && Filter.Genres.Any())
-        {
-            items = items.Where(i => Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg.Id == g.Id)));
-        }
-
-        if (Filter.Tags != null && Filter.Tags.Any())
-        {
-            items = items.Where(i => Filter.Tags.Any(fg => (i.DataItem as Game).Tags.Any(g => fg.Id == g.Id)));
-        }
-
-        if (Filter.Developers != null && Filter.Developers.Any())
-        {
-            items = items.Where(i => Filter.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc.Id == c.Id)));
-        }
-
-        if (Filter.Publishers != null && Filter.Publishers.Any())
-        {
-            items = items.Where(i => Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc.Id == c.Id)));
-        }
-
-        if (Filter.MinPlayers != null)
-        {
-            items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= Filter.MinPlayers && mm.MaxPlayers >= Filter.MinPlayers));
-        }
-
-        if (Filter.MaxPlayers != null)
-        {
-            items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= Filter.MaxPlayers));
-        }
-
-        if (Filter.Installed)
-        {
-            items = items.Where(i => (i.DataItem as Game).Installed);
-        }
-
-        return items;
+        LibraryService.OnLibraryItemsFiltered -= PopulateFilter;
     }
 }

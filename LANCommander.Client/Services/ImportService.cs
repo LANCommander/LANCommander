@@ -21,6 +21,7 @@ namespace LANCommander.Client.Services
         private readonly EngineService EngineService;
         private readonly GameService GameService;
         private readonly GenreService GenreService;
+        private readonly PlatformService PlatformService;
         private readonly MultiplayerModeService MultiplayerModeService;
         private readonly RedistributableService RedistributableService;
         private readonly TagService TagService;
@@ -42,6 +43,7 @@ namespace LANCommander.Client.Services
             EngineService engineService,
             GameService gameService,
             GenreService genreService,
+            PlatformService platformService,
             MultiplayerModeService multiplayerModeService,
             RedistributableService redistributableService,
             TagService tagService,
@@ -55,6 +57,7 @@ namespace LANCommander.Client.Services
             EngineService = engineService;
             GameService = gameService;
             GenreService = genreService;
+            PlatformService = platformService;
             MultiplayerModeService = multiplayerModeService;
             RedistributableService = redistributableService;
             TagService = tagService;
@@ -92,6 +95,7 @@ namespace LANCommander.Client.Services
             IEnumerable<Collection> collections;
             IEnumerable<Company> companies;
             IEnumerable<Genre> genres;
+            IEnumerable<Platform> platforms;
             IEnumerable<Tag> tags;
             IEnumerable<MultiplayerMode> multiplayerModes;
 
@@ -133,6 +137,15 @@ namespace LANCommander.Client.Services
                 genre.Name = importGenre.Name;
 
                 return genre;
+            });
+            #endregion
+
+            #region Import Platforms
+            platforms = await ImportBulk<Platform, SDK.Models.Platform, PlatformService>(remoteGames.SelectMany(g => g.Platforms).DistinctBy(g => g.Id), PlatformService, (platform, importPlatform) =>
+            {
+                platform.Name = importPlatform.Name;
+
+                return platform;
             });
             #endregion
 

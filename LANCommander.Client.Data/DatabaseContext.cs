@@ -41,6 +41,10 @@ namespace LANCommander.Client.Data
                 .HasMany(t => t.Games)
                 .WithMany(g => g.Tags);
 
+            builder.Entity<Platform>()
+                .HasMany(p => p.Games)
+                .WithMany(g => g.Platforms);
+
             #region Game Relationships
 
             builder.Entity<Game>()

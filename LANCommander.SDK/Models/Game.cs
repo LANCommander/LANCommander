@@ -19,6 +19,7 @@ namespace LANCommander.SDK.Models
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Tag> Tags { get; set; }
         public virtual IEnumerable<Genre> Genres { get; set; }
+        public virtual IEnumerable<Platform> Platforms { get; set; }
         public virtual IEnumerable<Company> Publishers { get; set; }
         public virtual IEnumerable<Company> Developers { get; set; }
         public virtual IEnumerable<Collection> Collections { get; set; }

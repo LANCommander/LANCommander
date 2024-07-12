@@ -40,6 +40,7 @@ namespace LANCommander.Client.Data.Models
         public virtual ICollection<Category>? Categories { get; set; } = new List<Category>();
         public virtual ICollection<Company>? Publishers { get; set; } = new List<Company>();
         public virtual ICollection<Company>? Developers { get; set; } = new List<Company>();
+        public virtual ICollection<Platform>? Platforms { get; set; } = new List<Platform>();
         public virtual ICollection<Redistributable>? Redistributables { get; set; } = new List<Redistributable>();
         public virtual ICollection<Media>? Media { get; set; } = new List<Media>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();

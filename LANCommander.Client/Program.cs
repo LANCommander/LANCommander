@@ -59,6 +59,7 @@ namespace LANCommander.Client
             builder.Services.AddScoped<EngineService>();
             builder.Services.AddScoped<GameService>();
             builder.Services.AddScoped<GenreService>();
+            builder.Services.AddScoped<PlatformService>();
             builder.Services.AddScoped<MultiplayerModeService>();
             builder.Services.AddScoped<TagService>();
             builder.Services.AddScoped<MediaService>();

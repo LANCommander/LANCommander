@@ -46,18 +46,11 @@
 
     protected override void OnInitialized()
     {
-        LibraryService.OnLibraryChanged += () => {
-            UpdateGroups();
-        };
+        LibraryService.OnLibraryChanged += UpdateGroups;
+        LibraryService.OnLibraryItemsFiltered += UpdateGroups;
+        ImportService.OnImportComplete += LibraryService.LibraryChanged;
 
-        ImportService.OnImportComplete += () =>
-        {
-            UpdateGroups();
-        };
-
-        MessageBusService.OnLibraryFilterApplied += UpdateGroups;
-
-        UpdateGroups();
+        UpdateGroups(LibraryService.LibraryItems);
     }
 
     string GetItemClasses(LibraryItem item)
@@ -79,15 +72,22 @@
             await OnItemSelected.InvokeAsync(item.Key);
     }
 
-    async Task UpdateGroups()
+    async Task UpdateGroups(IEnumerable<LibraryItem> items)
     {
-        LibraryItems = await LibraryService.GetLibraryItemsAsync();
+        LibraryItems = items;
 
         Groups = LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
 
         if (LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
             Groups.Add("Uncategorized");
 
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        LibraryService.OnLibraryChanged -= UpdateGroups;
+        LibraryService.OnLibraryItemsFiltered -= UpdateGroups;
+        ImportService.OnImportComplete -= LibraryService.LibraryChanged;
     }
 }

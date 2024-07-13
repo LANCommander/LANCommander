@@ -29,7 +29,7 @@ namespace LANCommander.Client.Services
         private readonly Settings Settings;
         private readonly DatabaseContext DatabaseContext;
 
-        public delegate void OnImportCompleteHandler();
+        public delegate Task OnImportCompleteHandler();
         public event OnImportCompleteHandler OnImportComplete;
 
         public delegate void OnImportFailedHandler();
@@ -123,7 +123,7 @@ namespace LANCommander.Client.Services
             #endregion
 
             #region Import Engines
-            var engines = await ImportBulk<Engine, SDK.Models.Engine, EngineService>(remoteGames.Select(g => g.Engine).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
+            var engines = await ImportBulk<Engine, SDK.Models.Engine, EngineService>(remoteGames.Where(g => g.Engine != null).Select(g => g.Engine).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
             {
                 engine.Name = importEngine.Name;
 
@@ -191,6 +191,21 @@ namespace LANCommander.Client.Services
                         localGame.Type = (Data.Enums.GameType)(int)remoteGame.Type;
                         localGame.BaseGameId = remoteGame.BaseGame?.Id;
                         localGame.Singleplayer = remoteGame.Singleplayer;
+
+                        #region Update Game Engine
+                        if (remoteGame.Engine == null && localGame.Engine != null)
+                        {
+                            localGame.Engine = null;
+                            localGame.EngineId = null;
+                        }
+                        else if (remoteGame.Engine != null)
+                        {
+                            var engine = engines.FirstOrDefault(e => e.Id == remoteGame.Engine.Id);
+
+                            localGame.Engine = engine;
+                            localGame.EngineId = engine.Id;
+                        }
+                        #endregion
 
                         #region Update Game Collections
                         if (localGame.Collections == null)

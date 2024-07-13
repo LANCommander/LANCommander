@@ -148,11 +148,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        LibraryService.OnLibraryChanged += LoadData;
         DownloadService.OnQueueChanged += OnQueueChanged;
         DownloadService.OnInstallFail += OnInstallFail;
         DownloadService.OnInstallComplete += OnInstallComplete;
-        ImportService.OnImportComplete += LoadData;
         GameService.OnUninstallComplete += OnUninstallComplete;
 
         LibraryService.GroupSelector = (libraryItem) =>

@@ -68,10 +68,12 @@
         Settings = SettingService.GetSettings();
         Messages = MessageService;
 
-        ImportService.OnImportComplete += () =>
-        {
-            MessageService.Success("Import Complete", 3);
-        };
+        ImportService.OnImportComplete += OnImportComplete;
+    }
+
+    async Task OnImportComplete()
+    {
+        MessageService.Success("Import Complete", 3);
     }
 
     async Task Logout()

@@ -32,8 +32,11 @@ namespace LANCommander.Client.Services
 
         public ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
 
-        public delegate void OnLibraryChangedHandler();
+        public delegate Task OnLibraryChangedHandler(IEnumerable<LibraryItem> items);
         public event OnLibraryChangedHandler OnLibraryChanged;
+
+        public delegate Task OnPreLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
+        public event OnPreLibraryItemsFilteredHandler OnPreLibraryItemsFiltered;
 
         public delegate Task OnLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
         public event OnLibraryItemsFilteredHandler OnLibraryItemsFiltered;
@@ -64,7 +67,8 @@ namespace LANCommander.Client.Services
 
         private async Task DownloadService_OnInstallComplete(Game game)
         {
-            OnLibraryChanged?.Invoke();
+            if (OnLibraryChanged != null)
+                await OnLibraryChanged.Invoke(LibraryItems);
         }
 
         public async Task<IEnumerable<LibraryItem>> RefreshLibraryItemsAsync()
@@ -111,11 +115,14 @@ namespace LANCommander.Client.Services
         {
             var settings = SettingService.GetSettings();
 
+            if (OnPreLibraryItemsFiltered != null)
+                await OnPreLibraryItemsFiltered.Invoke(items);
+
             if (!String.IsNullOrWhiteSpace(settings.Filter.Title))
                 items = items.Where(i => i.Name?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
 
             if (settings.Filter.Engines != null && settings.Filter.Engines.Any())
-                items = items.Where(i => settings.Filter.Engines.Any(e => e == (i.DataItem as Game)?.Engine.Name));
+                items = items.Where(i => settings.Filter.Engines.Any(e => e == (i.DataItem as Game)?.Engine?.Name));
 
             if (settings.Filter.Genres != null && settings.Filter.Genres.Any())
                 items = items.Where(i => settings.Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg == g.Name)));
@@ -171,7 +178,13 @@ namespace LANCommander.Client.Services
 
         public async Task LibraryChanged()
         {
-            OnLibraryChanged?.Invoke();
+            if (OnLibraryChanged != null)
+                await OnLibraryChanged.Invoke(LibraryItems);
+        }
+
+        public async Task FilterChanged()
+        {
+            LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
         }
 
         public async Task Stop(Game game)

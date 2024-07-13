@@ -56,6 +56,7 @@ namespace LANCommander.Client.Models
         public IEnumerable<string> Engines { get; set; }
         public IEnumerable<string> Genres { get; set; }
         public IEnumerable<string> Tags { get; set; }
+        public IEnumerable<string> Platforms { get; set; }
         public IEnumerable<string> Developers { get; set; }
         public IEnumerable<string> Publishers { get; set; }
         public int? MinPlayers { get; set; }

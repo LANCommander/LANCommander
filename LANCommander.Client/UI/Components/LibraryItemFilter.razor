@@ -33,6 +33,9 @@
             <FormItem Label="Tag">
                 <TagsInput Entities="Tags" @bind-Values="@context.Tags" OptionLabelSelector="t => t.Name" TItem="Data.Models.Tag" />
             </FormItem>
+            <FormItem Label="Platform">
+                <TagsInput Entities="Platforms" @bind-Values="@context.Platforms" OptionLabelSelector="p => p.Name" TItem="Platform" />
+            </FormItem>
             <FormItem Label="Developers">
                 <TagsInput Entities="Developers" @bind-Values="@context.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
             </FormItem>
@@ -65,6 +68,7 @@
         public ICollection<Engine> Engines { get; set; }
         public ICollection<Genre> Genres { get; set; }
         public ICollection<Data.Models.Tag> Tags { get; set; }
+        public ICollection<Platform> Platforms { get; set; }
         public ICollection<Company> Developers { get; set; }
         public ICollection<Company> Publishers { get; set; }
         public int? MinPlayers { get; set; }
@@ -78,6 +82,7 @@
     IEnumerable<Engine> Engines { get; set; }
     IEnumerable<Genre> Genres { get; set; }
     IEnumerable<Data.Models.Tag> Tags { get; set; }
+    IEnumerable<Platform> Platforms { get; set; }
     IEnumerable<Company> Developers { get; set; }
     IEnumerable<Company> Publishers { get; set; }
 
@@ -117,6 +122,12 @@
             .DistinctBy(t => t.Id)
             .OrderBy(t => t.Name);
 
+        Platforms = games
+            .SelectMany(i => i.Platforms)
+            .Where(p => p != null)
+            .DistinctBy(p => p.Id)
+            .OrderBy(p => p.Name);
+
         Developers = games
             .SelectMany(i => i.Developers)
             .Where(c => c != null)
@@ -151,6 +162,7 @@
             Engines = Filter.Engines?.Select(e => e.Name),
             Genres = Filter.Genres?.Select(g => g.Name),
             Tags = Filter.Tags?.Select(t => t.Name),
+            Platforms = Filter.Platforms?.Select(p => p.Name),
             Developers = Filter.Developers?.Select(c => c.Name),
             Publishers = Filter.Publishers?.Select(c => c.Name),
             MinPlayers = Filter.MinPlayers,
@@ -168,6 +180,7 @@
         var engines = settings.Filter.Engines != null ? Engines?.Where(e => settings.Filter.Engines.Contains(e.Name)).ToList() : null;
         var genres = settings.Filter.Genres != null ? Genres?.Where(e => settings.Filter.Genres.Contains(e.Name)).ToList() : null;
         var tags = settings.Filter.Tags != null ? Tags?.Where(e => settings.Filter.Tags.Contains(e.Name)).ToList() : null;
+        var platforms = settings.Filter.Platforms != null ? Platforms?.Where(e => settings.Filter.Platforms.Contains(e.Name)).ToList() : null;
         var publishers = settings.Filter.Publishers != null ? Publishers?.Where(e => settings.Filter.Publishers.Contains(e.Name)).ToList() : null;
         var developers = settings.Filter.Developers != null ? Developers?.Where(e => settings.Filter.Developers.Contains(e.Name)).ToList() : null;
 
@@ -178,6 +191,7 @@
             Engines = engines,
             Genres = genres,
             Tags = tags,
+            Platforms = platforms,
             Developers = developers,
             Publishers = publishers,
             MinPlayers = settings.Filter.MinPlayers,

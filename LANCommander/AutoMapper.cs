@@ -10,6 +10,7 @@ namespace LANCommander
             CreateMap<Data.Models.Archive, SDK.Models.Archive>();
             CreateMap<Data.Models.Company, SDK.Models.Company>();
             CreateMap<Data.Models.Collection, SDK.Models.Collection>();
+            CreateMap<Data.Models.Engine, SDK.Models.Engine>();
             CreateMap<Data.Models.Game, SDK.Models.Game>();
             CreateMap<Data.Models.GameSave, SDK.Models.GameSave>();
             CreateMap<Data.Models.Genre, SDK.Models.Genre>();

@@ -123,12 +123,12 @@ namespace LANCommander.Client.Services
             #endregion
 
             #region Import Engines
-            /*var engines = await ImportFromModel<Engine, SDK.Models.Engine, EngineService>(remoteGames.SelectMany(g => g.Engines).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
+            var engines = await ImportBulk<Engine, SDK.Models.Engine, EngineService>(remoteGames.Select(g => g.Engine).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
             {
                 engine.Name = importEngine.Name;
 
                 return engine;
-            });*/
+            });
             #endregion
 
             #region Import Genres

@@ -16,6 +16,7 @@ namespace LANCommander.SDK.Models
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
         public Game BaseGame { get; set; }
+        public Engine Engine { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Tag> Tags { get; set; }
         public virtual IEnumerable<Genre> Genres { get; set; }

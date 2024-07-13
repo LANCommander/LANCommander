@@ -1,3 +1,7 @@
+* {
+    user-select: none;
+}
+
 @import '_appbar';
 @import '_window';
 @import '_scrollbar';

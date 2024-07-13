@@ -1,3 +1,7 @@
+* {
+  user-select: none;
+}
+
 .appbar {
   position: absolute;
   top: 0;
@@ -258,7 +262,6 @@ footer {
 
 .ant-list-clickable .ant-list-item {
   cursor: pointer;
-  user-select: none;
   position: relative;
 }
 .ant-list-clickable .ant-list-item:hover, .ant-list-clickable .ant-list-item.selected {

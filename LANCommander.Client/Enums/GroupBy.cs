@@ -11,5 +11,6 @@ namespace LANCommander.Client.Enums
         None,
         Collection,
         Genre,
+        Platform
     }
 }

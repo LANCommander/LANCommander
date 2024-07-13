@@ -97,6 +97,9 @@ namespace LANCommander.Client.Services
                 case Enums.GroupBy.Genre:
                     GroupSelector = (g) => (g.DataItem as Game).Genres.Select(ge => ge.Name).ToArray();
                     break;
+                case Enums.GroupBy.Platform:
+                    GroupSelector = (g) => (g.DataItem as Game).Platforms.Select(p => p.Name).ToArray();
+                    break;
             }
 
             items.AddRange(games.Select(g => new LibraryItem(g, GroupSelector)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name));

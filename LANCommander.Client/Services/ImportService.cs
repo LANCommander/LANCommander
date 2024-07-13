@@ -132,7 +132,7 @@ namespace LANCommander.Client.Services
             #endregion
 
             #region Import Genres
-            genres = await ImportBulk<Genre, SDK.Models.Genre, GenreService>(remoteGames.SelectMany(g => g.Genres).DistinctBy(g => g.Id), GenreService, (genre, importGenre) =>
+            genres = await ImportBulk<Genre, SDK.Models.Genre, GenreService>(remoteGames.Where(g => g.Genres != null).SelectMany(g => g.Genres).DistinctBy(g => g.Id), GenreService, (genre, importGenre) =>
             {
                 genre.Name = importGenre.Name;
 
@@ -141,7 +141,7 @@ namespace LANCommander.Client.Services
             #endregion
 
             #region Import Platforms
-            platforms = await ImportBulk<Platform, SDK.Models.Platform, PlatformService>(remoteGames.SelectMany(g => g.Platforms).DistinctBy(g => g.Id), PlatformService, (platform, importPlatform) =>
+            platforms = await ImportBulk<Platform, SDK.Models.Platform, PlatformService>(remoteGames.Where(g => g.Platforms != null).SelectMany(g => g.Platforms).DistinctBy(g => g.Id), PlatformService, (platform, importPlatform) =>
             {
                 platform.Name = importPlatform.Name;
 
@@ -150,7 +150,7 @@ namespace LANCommander.Client.Services
             #endregion
 
             #region Import Tags
-            tags = await ImportBulk<Tag, SDK.Models.Tag, TagService>(remoteGames.SelectMany(g => g.Tags).DistinctBy(t => t.Id), TagService, (tag, importTag) =>
+            tags = await ImportBulk<Tag, SDK.Models.Tag, TagService>(remoteGames.Where(g => g.Tags != null).SelectMany(g => g.Tags).DistinctBy(t => t.Id), TagService, (tag, importTag) =>
             {
                 tag.Name = importTag.Name;
 
@@ -159,7 +159,7 @@ namespace LANCommander.Client.Services
             #endregion
 
             #region Import MultiplayerModes
-            multiplayerModes = await ImportBulk<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.SelectMany(g => g.MultiplayerModes).DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
+            multiplayerModes = await ImportBulk<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes).DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
             {
                 multiplayerMode.Type = importMultiplayerMode.Type;
                 multiplayerMode.NetworkProtocol = importMultiplayerMode.NetworkProtocol;

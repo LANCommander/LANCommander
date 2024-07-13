@@ -25,6 +25,7 @@ namespace LANCommander.Client.Services
         private readonly GameService GameService;
         private readonly PlaySessionService PlaySessionService;
         private readonly RedistributableService RedistributableService;
+        private readonly ImportService ImportService;
         private readonly MessageBusService MessageBusService;
         private readonly PhotinoWindow Window;
 
@@ -51,6 +52,7 @@ namespace LANCommander.Client.Services
             PlaySessionService playSessionService,
             PhotinoWindow window,
             RedistributableService redistributableService,
+            ImportService importService,
             MessageBusService messageBusService) : base()
         {
             Client = client;
@@ -60,9 +62,18 @@ namespace LANCommander.Client.Services
             PlaySessionService = playSessionService;
             Window = window;
             RedistributableService = redistributableService;
+            ImportService = importService;
             MessageBusService = messageBusService;
 
             DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
+            ImportService.OnImportComplete += ImportService_OnImportComplete;
+        }
+
+        private async Task ImportService_OnImportComplete()
+        {
+            await RefreshLibraryItemsAsync();
+
+            LibraryChanged();
         }
 
         private async Task DownloadService_OnInstallComplete(Game game)

@@ -48,7 +48,6 @@
     {
         LibraryService.OnLibraryChanged += UpdateGroups;
         LibraryService.OnLibraryItemsFiltered += UpdateGroups;
-        ImportService.OnImportComplete += LibraryService.LibraryChanged;
 
         UpdateGroups(LibraryService.LibraryItems);
     }

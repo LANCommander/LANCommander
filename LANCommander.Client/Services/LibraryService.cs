@@ -3,6 +3,8 @@ using LANCommander.Client.Data;
 using LANCommander.Client.Data.Models;
 using LANCommander.Client.Extensions;
 using LANCommander.Client.Models;
+using LANCommander.SDK.Helpers;
+using LANCommander.SDK.PowerShell;
 using Microsoft.EntityFrameworkCore;
 using Photino.NET;
 using System;
@@ -251,6 +253,8 @@ namespace LANCommander.Client.Services
             Client.Actions.AddVariable("DisplayHeight", monitor.MonitorArea.Height.ToString());
             // Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
 
+            RunBeforeStartScript(game);
+
             process.StartInfo.Arguments = Client.Actions.ExpandVariables(action.Arguments, game.InstallDirectory, skipSlashes: true);
             process.StartInfo.FileName = Client.Actions.ExpandVariables(action.Path, game.InstallDirectory);
             process.StartInfo.WorkingDirectory = Client.Actions.ExpandVariables(action.WorkingDirectory, game.InstallDirectory);
@@ -280,6 +284,68 @@ namespace LANCommander.Client.Services
             RunningProcesses.Remove(game.Id);
 
             await PlaySessionService.EndSession(game.Id, userId);
+
+            RunAfterStopScript(game);
+        }
+
+        private void RunBeforeStartScript(Game game)
+        {
+            try
+            {
+                var settings = SettingService.GetSettings();
+                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.BeforeStart);
+
+                if (File.Exists(path))
+                {
+                    var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+
+                    var script = new PowerShellScript();
+
+                    script.AddVariable("InstallDirectory", game.InstallDirectory);
+                    script.AddVariable("GameManifest", manifest);
+                    script.AddVariable("DefaultInstallDirectory", settings.Games.DefaultInstallDirectory);
+                    script.AddVariable("ServerAddress", settings.Authentication.ServerAddress);
+                    script.AddVariable("PlayerAlias", settings.Profile.Alias);
+
+                    script.UseFile(path);
+
+                    script.Execute();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Ran into an unexpected error when attempting to run an Before Start script");
+            }
+        }
+
+        private void RunAfterStopScript(Game game)
+        {
+            try
+            {
+                var settings = SettingService.GetSettings();
+                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.AfterStop);
+
+                if (File.Exists(path))
+                {
+                    var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+
+                    var script = new PowerShellScript();
+
+                    script.AddVariable("InstallDirectory", game.InstallDirectory);
+                    script.AddVariable("GameManifest", manifest);
+                    script.AddVariable("DefaultInstallDirectory", settings.Games.DefaultInstallDirectory);
+                    script.AddVariable("ServerAddress", settings.Authentication.ServerAddress);
+                    script.AddVariable("PlayerAlias", settings.Profile.Alias);
+
+                    script.UseFile(path);
+
+                    script.Execute();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Ran into an unexpected error when attempting to run an After Stop script");
+            }
         }
     }
 }

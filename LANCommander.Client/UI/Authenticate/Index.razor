@@ -27,6 +27,13 @@
                 <Button Type="@ButtonType.Primary" HtmlType="submit">
                     Login
                 </Button>
+
+                @if (Settings.Profile.Id != Guid.Empty && !String.IsNullOrWhiteSpace(Settings.Profile.Alias))
+                {
+                    <Button OnClick="OfflineMode">
+                        Offline
+                    </Button>
+                }
             </FormItem>
         </Form>
     </Content>
@@ -44,6 +51,7 @@
     bool Loading { get; set; } = false;
     List<string> DiscoveredServers = new List<string>();
 
+    Models.Settings Settings = SettingService.GetSettings();
     bool BeaconActive = true;
     Probe Probe = new Probe("LANCommander");
 
@@ -104,5 +112,13 @@
             Logger.LogError(ex, ex.Message);
             Loading = false;
         }
+    }
+
+    async Task OfflineMode()
+    {
+        Settings.Authentication.OfflineMode = true;
+        SettingService.SaveSettings(Settings);
+
+        NavigationManager.NavigateTo("/");
     }
 }

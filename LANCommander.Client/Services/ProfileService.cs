@@ -44,6 +44,15 @@ namespace LANCommander.Client.Services
             SettingService.SaveSettings(Settings);
         }
 
+        public void SetOfflineMode(bool state)
+        {
+            Settings = SettingService.GetSettings();
+
+            Settings.Authentication.OfflineMode = false;
+
+            SettingService.SaveSettings(Settings);
+        }
+
         public async Task Logout()
         {
             await Client.LogoutAsync();

@@ -29,6 +29,7 @@ namespace LANCommander.Client.Models
         public string ServerAddress { get; set; } = "";
         public string AccessToken { get; set; } = "";
         public string RefreshToken { get; set; } = "";
+        public bool OfflineMode { get; set; } = false;
     }
 
     public class GameSettings

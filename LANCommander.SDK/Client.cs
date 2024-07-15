@@ -105,7 +105,11 @@ namespace LANCommander.SDK
             var header = response.Headers.FirstOrDefault(h => h.Name == "X-API-Version");
 
             if (header == null)
-                throw new ApiVersionMismatchException(version, null, $"The server is out of date and does not support client version {version}.");
+            {
+                response.ErrorException = new ApiVersionMismatchException(version, null, $"The server is out of date and does not support client version {version}.");
+
+                return;
+            }
 
             var apiVersion = SemVersion.Parse((string)header.Value, SemVersionStyles.Any);
 
@@ -114,9 +118,12 @@ namespace LANCommander.SDK
                 switch (version.ComparePrecedenceTo(apiVersion))
                 {
                     case -1:
-                        throw new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is out of date and is not supported by the server (v{apiVersion})");
+                        response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is out of date and is not supported by the server (v{apiVersion})");
+                        break;
+
                     case 1:
-                        throw new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is on a version not supported by the server (v{apiVersion})");
+                        response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is on a version not supported by the server (v{apiVersion})");
+                        break;
                 }
             }
         }
@@ -492,9 +499,9 @@ namespace LANCommander.SDK
 
                 Connected = true;
             }
-            catch
+            catch (Exception ex)
             {
-                Logger?.LogTrace("Token is invalid!");
+                Logger?.LogTrace(ex, "Could not validate token");
 
                 Connected = false;
             }

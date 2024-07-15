@@ -3,6 +3,7 @@ using LANCommander.Client.Data;
 using LANCommander.Client.Data.Models;
 using LANCommander.Client.Extensions;
 using LANCommander.Client.Models;
+using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,7 @@ namespace LANCommander.Client.Services
         private readonly DownloadService DownloadService;
         private readonly CollectionService CollectionService;
         private readonly GameService GameService;
+        private readonly SaveService SaveService;
         private readonly PlaySessionService PlaySessionService;
         private readonly RedistributableService RedistributableService;
         private readonly ImportService ImportService;
@@ -51,6 +53,7 @@ namespace LANCommander.Client.Services
             DownloadService downloadService,
             CollectionService collectionService,
             GameService gameService,
+            SaveService saveService,
             PlaySessionService playSessionService,
             PhotinoWindow window,
             RedistributableService redistributableService,
@@ -61,6 +64,7 @@ namespace LANCommander.Client.Services
             DownloadService = downloadService;
             CollectionService = collectionService;
             GameService = gameService;
+            SaveService = saveService;
             PlaySessionService = playSessionService;
             Window = window;
             RedistributableService = redistributableService;
@@ -246,14 +250,13 @@ namespace LANCommander.Client.Services
         public async Task Run(Game game, SDK.Models.Action action)
         {
             var process = new Process();
+            var settings = SettingService.GetSettings();
 
             var monitor = Window.Monitors.First(m => m.MonitorArea.X == 0 && m.MonitorArea.Y == 0);
 
             Client.Actions.AddVariable("DisplayWidth", monitor.MonitorArea.Width.ToString());
             Client.Actions.AddVariable("DisplayHeight", monitor.MonitorArea.Height.ToString());
             // Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
-
-            RunBeforeStartScript(game);
 
             process.StartInfo.Arguments = Client.Actions.ExpandVariables(action.Arguments, game.InstallDirectory, skipSlashes: true);
             process.StartInfo.FileName = Client.Actions.ExpandVariables(action.Path, game.InstallDirectory);
@@ -264,6 +267,55 @@ namespace LANCommander.Client.Services
                 process.StartInfo.WorkingDirectory = game.InstallDirectory;
 
             var userId = Guid.NewGuid();
+
+            #region Run Scripts
+            var manifests = GetGameManifests(game);
+
+            foreach (var manifest in manifests)
+            {
+                var currentGamePlayerAlias = SDK.GameService.GetPlayerAlias(game.InstallDirectory, manifest.Id);
+                var currentGameKey = SDK.GameService.GetCurrentKey(game.InstallDirectory, manifest.Id);
+
+                #region Check Game's Player Name
+                if (currentGamePlayerAlias != settings.Profile.Alias)
+                    RunNameChangeScript(game, manifest.Id, currentGamePlayerAlias, settings.Profile.Alias);
+                #endregion
+
+                #region Check Key Allocation
+                if (!settings.Authentication.OfflineMode && Client.IsConnected())
+                {
+                    var allocatedKey = await Client.Games.GetAllocatedKeyAsync(manifest.Id);
+
+                    if (currentGameKey != allocatedKey)
+                        RunKeyChangeScript(game, manifest.Id, allocatedKey);
+                }
+                #endregion
+
+                #region Download Latest Saves
+                if (!settings.Authentication.OfflineMode && Client.IsConnected())
+                {
+                    try
+                    {
+                        var latestSave = await Client.Saves.GetLatestAsync(manifest.Id);
+                        var latestSession = await PlaySessionService.GetLatestSession(manifest.Id, userId);
+
+                        if (latestSave != null && (latestSave.CreatedOn > latestSession.End))
+                        {
+                            await SaveService.DownloadLatestAsync(manifest.Id, game.InstallDirectory);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, "Could not download save");
+                    }
+                }
+                #endregion
+
+                #region Run Before Start Script
+                RunBeforeStartScript(game, manifest.Id);
+                #endregion
+            }
+            #endregion
 
             try
             {
@@ -285,19 +337,51 @@ namespace LANCommander.Client.Services
 
             await PlaySessionService.EndSession(game.Id, userId);
 
-            RunAfterStopScript(game);
+            foreach (var manifest in manifests)
+            {
+                RunAfterStopScript(game, manifest.Id);
+            }
         }
 
-        private void RunBeforeStartScript(Game game)
+        private IEnumerable<GameManifest> GetGameManifests(Game game)
         {
+            var manifests = new List<GameManifest>();
+            var mainManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+
+            manifests.Add(mainManifest);
+
+            if (mainManifest.DependentGames != null)
+            {
+                foreach (var dependentGameId in mainManifest.DependentGames)
+                {
+                    try
+                    {
+                        var dependentGameManifest = ManifestHelper.Read(game.InstallDirectory, dependentGameId);
+
+                        if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
+                            manifests.Add(dependentGameManifest);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                    }
+                }
+            }
+
+            return manifests;
+        }
+
+        private void RunBeforeStartScript(Game game, Guid gameId)
+        {
+
             try
             {
                 var settings = SettingService.GetSettings();
-                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.BeforeStart);
+                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, gameId, SDK.Enums.ScriptType.BeforeStart);
 
                 if (File.Exists(path))
                 {
-                    var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+                    var manifest = ManifestHelper.Read(game.InstallDirectory, gameId);
 
                     var script = new PowerShellScript();
 
@@ -318,16 +402,16 @@ namespace LANCommander.Client.Services
             }
         }
 
-        private void RunAfterStopScript(Game game)
+        private void RunAfterStopScript(Game game, Guid gameId)
         {
             try
             {
                 var settings = SettingService.GetSettings();
-                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.AfterStop);
+                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, gameId, SDK.Enums.ScriptType.AfterStop);
 
                 if (File.Exists(path))
                 {
-                    var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+                    var manifest = ManifestHelper.Read(game.InstallDirectory, gameId);
 
                     var script = new PowerShellScript();
 
@@ -345,6 +429,71 @@ namespace LANCommander.Client.Services
             catch (Exception ex)
             {
                 Logger?.Error(ex, "Ran into an unexpected error when attempting to run an After Stop script");
+            }
+        }
+
+        private void RunNameChangeScript(Game game, Guid gameId, string oldName, string newName)
+        {
+            try
+            {
+                var settings = SettingService.GetSettings();
+                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, gameId, SDK.Enums.ScriptType.NameChange);
+
+                if (File.Exists(path))
+                {
+                    var manifest = ManifestHelper.Read(game.InstallDirectory, gameId);
+
+                    var script = new PowerShellScript();
+
+                    script.AddVariable("InstallDirectory", game.InstallDirectory);
+                    script.AddVariable("GameManifest", manifest);
+                    script.AddVariable("DefaultInstallDirectory", settings.Games.DefaultInstallDirectory);
+                    script.AddVariable("ServerAddress", settings.Authentication.ServerAddress);
+                    script.AddVariable("OldPlayerAlias", oldName);
+                    script.AddVariable("NewPlayerAlias", newName);
+
+                    script.UseFile(path);
+
+                    SDK.GameService.UpdatePlayerAlias(game.InstallDirectory, gameId, newName);
+
+                    script.Execute();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Ran into an unexpected error when attempting to run a Name Change script");
+            }
+        }
+
+        private void RunKeyChangeScript(Game game, Guid gameId, string newKey = "")
+        {
+            try
+            {
+                var settings = SettingService.GetSettings();
+                var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, gameId, SDK.Enums.ScriptType.NameChange);
+
+                if (File.Exists(path))
+                {
+                    var manifest = ManifestHelper.Read(game.InstallDirectory, gameId);
+
+                    var script = new PowerShellScript();
+
+                    script.AddVariable("InstallDirectory", game.InstallDirectory);
+                    script.AddVariable("GameManifest", manifest);
+                    script.AddVariable("DefaultInstallDirectory", settings.Games.DefaultInstallDirectory);
+                    script.AddVariable("ServerAddress", settings.Authentication.ServerAddress);
+                    script.AddVariable("AllocatedKey", newKey);
+
+                    script.UseFile(path);
+
+                    SDK.GameService.UpdateCurrentKey(game.InstallDirectory, gameId, newKey);
+
+                    script.Execute();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Ran into an unexpected error when attempting to run a Name Change script");
             }
         }
     }

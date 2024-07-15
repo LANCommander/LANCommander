@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Management.Automation.Remoting;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -131,6 +132,28 @@ namespace LANCommander.SDK
             };
 
             var response = Client.PostRequest<Key>($"/api/Keys/GetAllocated/{id}", request);
+
+            if (response == null)
+                return String.Empty;
+
+            return response.Value;
+        }
+
+        public async Task<string> GetAllocatedKeyAsync(Guid id)
+        {
+            Logger?.LogTrace("Requesting allocated key...");
+
+            var macAddress = Client.GetMacAddress();
+
+            var request = new KeyRequest()
+            {
+                GameId = id,
+                MacAddress = macAddress,
+                ComputerName = Environment.MachineName,
+                IpAddress = Client.GetIpAddress(),
+            };
+
+            var response = await Client.PostRequestAsync<Key>($"/api/Keys/GetAllocated/{id}", request);
 
             if (response == null)
                 return String.Empty;

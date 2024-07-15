@@ -1,6 +1,7 @@
 ﻿using JetBrains.Annotations;
 using LANCommander.Client.Data;
 using LANCommander.Client.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +17,11 @@ namespace LANCommander.Client.Services
         public PlaySessionService(DatabaseContext dbContext, SDK.Client client) : base(dbContext)
         {
             Client = client;
+        }
+
+        public async Task<PlaySession> GetLatestSession(Guid gameId, Guid userId)
+        {
+            return await Get(ps => ps.GameId == gameId && ps.UserId == userId).OrderByDescending(ps => ps.End).FirstOrDefaultAsync();
         }
 
         public async Task StartSession(Guid gameId, Guid userId)

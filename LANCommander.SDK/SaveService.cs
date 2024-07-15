@@ -74,6 +74,11 @@ namespace LANCommander.SDK
             return Client.GetRequest<GameSave>($"/api/Saves/Latest/{gameId}");
         }
 
+        public Task<GameSave> GetLatestAsync(Guid gameId)
+        {
+            return Client.GetRequestAsync<GameSave>($"/api/Saves/Latest/{gameId}");
+        }
+
         public GameSave Upload(Guid gameId, byte[] data)
         {
             Logger?.LogTrace("Uploading save...");

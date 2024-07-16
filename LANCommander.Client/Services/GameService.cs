@@ -17,13 +17,16 @@ namespace LANCommander.Client.Services
         private readonly SDK.Client Client;
         private Settings Settings { get; set; }
 
+        private readonly ScriptService ScriptService;
+
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;
 
-        public GameService(DatabaseContext dbContext, SDK.Client client) : base(dbContext)
+        public GameService(DatabaseContext dbContext, SDK.Client client, ScriptService scriptService) : base(dbContext)
         {
             Client = client;
             Settings = SettingService.GetSettings();
+            ScriptService = scriptService;
         }
 
         public async Task<IEnumerable<SDK.Models.Action>> GetActionsAsync(Game game)
@@ -48,10 +51,9 @@ namespace LANCommander.Client.Services
             return actions;
         }
 
-        private IEnumerable<SDK.GameManifest> GetGameManifests(Game game)
+        public IEnumerable<SDK.GameManifest> GetGameManifests(Game game)
         {
             var manifests = new List<GameManifest>();
-
             var mainManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
 
             manifests.Add(mainManifest);
@@ -68,7 +70,7 @@ namespace LANCommander.Client.Services
                     }
                     catch (Exception ex)
                     {
-                        // Logger?.Error(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                         Logger?.Error(ex, $"Could not load manifest from dependent game {dependentGameId}");
                     }
                 }
 
@@ -89,14 +91,7 @@ namespace LANCommander.Client.Services
 
             await Task.Run(() => Client.Games.Uninstall(game.InstallDirectory, game.Id));
 
-            try
-            {
-                RunUninstallScript(game);
-            }
-            catch (Exception ex)
-            {
-
-            }
+            ScriptService.RunUninstallScript(game, game.Id);
 
             var metadataPath = SDK.GameService.GetMetadataDirectoryPath(game.InstallDirectory, game.Id);
 
@@ -112,31 +107,6 @@ namespace LANCommander.Client.Services
             await Update(game);
 
             OnUninstallComplete?.Invoke(game);
-        }
-
-        private int RunUninstallScript(Game game)
-        {
-            var manifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
-            var path = ScriptHelper.GetScriptFilePath(game.InstallDirectory, game.Id, SDK.Enums.ScriptType.Uninstall);
-
-            if (File.Exists(path))
-            {
-                var script = new PowerShellScript();
-
-                script.AddVariable("InstallDirectory", game.InstallDirectory);
-                script.AddVariable("GameManifest", manifest);
-                script.AddVariable("DefaultInstallDirectory", Settings.Games.DefaultInstallDirectory);
-                script.AddVariable("ServerAddress", Settings.Authentication.ServerAddress);
-
-                script.UseFile(path);
-
-                if (Settings.Debug.EnableScriptDebugging)
-                    script.EnableDebug();
-
-                return script.Execute();
-            }
-
-            return 0;
         }
     }
 }

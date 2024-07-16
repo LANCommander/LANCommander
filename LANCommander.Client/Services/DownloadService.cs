@@ -21,6 +21,7 @@ namespace LANCommander.Client.Services
         private readonly SDK.Client Client;
         private readonly GameService GameService;
         private readonly SaveService SaveService;
+        private readonly ScriptService ScriptService;
 
         private Settings Settings;
 
@@ -37,11 +38,12 @@ namespace LANCommander.Client.Services
         public delegate Task OnInstallFailHandler(Game game);
         public event OnInstallFailHandler OnInstallFail;
 
-        public DownloadService(SDK.Client client, GameService gameService, SaveService saveService) : base()
+        public DownloadService(SDK.Client client, GameService gameService, SaveService saveService, ScriptService scriptService) : base()
         {
             Client = client;
             GameService = gameService;
             SaveService = saveService;
+            ScriptService = scriptService;
             Stopwatch = new Stopwatch();
             Settings = SettingService.GetSettings();
 
@@ -197,9 +199,9 @@ namespace LANCommander.Client.Services
 
                 try
                 {
-                    RunInstallScript(gameInfo);
-                    RunKeyChangeScript(gameInfo);
-                    RunNameChangeScript(gameInfo);
+                    ScriptService.RunInstallScript(game, gameInfo.Id);
+                    ScriptService.RunKeyChangeScript(game, gameInfo.Id);
+                    ScriptService.RunNameChangeScript(game, gameInfo.Id);
                 }
                 catch (Exception ex) {
                     Logger?.Error(ex, "Scripts failed to execute for mod/expansion {GameTitle} ({GameId})", game.Title, game.Id);
@@ -247,9 +249,9 @@ namespace LANCommander.Client.Services
                     if (dependentGame.BaseGame == null)
                         dependentGame.BaseGame = gameInfo;
 
-                    RunInstallScript(dependentGame);
-                    RunNameChangeScript(dependentGame);
-                    RunKeyChangeScript(dependentGame);
+                    ScriptService.RunInstallScript(game, dependentGame.Id);
+                    ScriptService.RunNameChangeScript(game, dependentGame.Id);
+                    ScriptService.RunKeyChangeScript(game, dependentGame.Id);
                 }
                 catch (Exception ex)
                 {
@@ -325,111 +327,6 @@ namespace LANCommander.Client.Services
                 //.Show
                 // .AddAppLogoOverride()
                 //.Show();
-        }
-
-        private int RunInstallScript(SDK.Models.Game game)
-        {
-            var installDirectory = Client.Games.GetInstallDirectory(game);
-            var manifest = ManifestHelper.Read(installDirectory, game.Id);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.Install);
-
-            if (File.Exists(path))
-            {
-                Logger?.Trace("Running install script for game {GameTitle} ({GameId})", game.Title, game.Id);
-
-                var script = new PowerShellScript();
-
-                script.AddVariable("InstallDirectory", installDirectory);
-                script.AddVariable("GameManifest", manifest);
-                script.AddVariable("DefaultInstallDirectory", Settings.Games.DefaultInstallDirectory);
-                script.AddVariable("ServerAddress", Settings.Authentication.ServerAddress);
-
-                script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.Install));
-
-                if (Settings.Debug.EnableScriptDebugging)
-                    script.EnableDebug();
-
-                return script.Execute();
-            }
-
-            Logger?.Trace("No install script found for game {GameTitle} ({GameId})", game.Title, game.Id);
-
-            return 0;
-        }
-
-        private int RunNameChangeScript(SDK.Models.Game game)
-        {
-            var installDirectory = Client.Games.GetInstallDirectory(game);
-            var manifest = ManifestHelper.Read(installDirectory, game.Id);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.NameChange);
-
-            var oldName = SDK.GameService.GetPlayerAlias(installDirectory, game.Id);
-            var newName = Settings.Profile.Alias;
-
-            if (File.Exists(path))
-            {
-                Logger?.Trace("Running name change script for game {GameTitle} ({GameId})", game.Title, game.Id);
-
-                if (!String.IsNullOrWhiteSpace(oldName))
-                    Logger?.Trace("Old Name: {OldName}", oldName);
-
-                Logger?.Trace("New Name: {NewName}", newName);
-
-                var script = new PowerShellScript();
-
-                script.AddVariable("InstallDirectory", installDirectory);
-                script.AddVariable("GameManifest", manifest);
-                script.AddVariable("DefaultInstallDirectory", Settings.Games.DefaultInstallDirectory);
-                script.AddVariable("ServerAddress", Settings.Authentication.ServerAddress);
-                script.AddVariable("OldPlayerAlias", oldName);
-                script.AddVariable("NewPlayerAlias", newName);
-
-                script.UseFile(path);
-
-                SDK.GameService.UpdatePlayerAlias(installDirectory, game.Id, newName);
-
-                if (Settings.Debug.EnableScriptDebugging)
-                    script.EnableDebug();
-
-                return script.Execute();
-            }
-
-            return 0;
-        }
-
-        private int RunKeyChangeScript(SDK.Models.Game game)
-        {
-            var installDirectory = Client.Games.GetInstallDirectory(game);
-            var manifest = ManifestHelper.Read(installDirectory, game.Id);
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, game.Id, SDK.Enums.ScriptType.KeyChange);
-
-            if (File.Exists(path))
-            {
-                Logger?.Trace("Running key change script for game {GameTitle} ({GameId})", game.Title, game.Id);
-
-                var script = new PowerShellScript();
-
-                var key = Client.Games.GetAllocatedKey(manifest.Id);
-
-                Logger?.Trace("New key is {Key}", key);
-
-                script.AddVariable("InstallDirectory", installDirectory);
-                script.AddVariable("GameManifest", manifest);
-                script.AddVariable("DefaultInstallDirectory", Settings.Games.DefaultInstallDirectory);
-                script.AddVariable("ServerAddress", Settings.Authentication.ServerAddress);
-                script.AddVariable("AllocatedKey", key);
-
-                script.UseFile(path);
-
-                SDK.GameService.UpdateCurrentKey(installDirectory, game.Id, key);
-
-                if (Settings.Debug.EnableScriptDebugging)
-                    script.EnableDebug();
-
-                return script.Execute();
-            }
-
-            return 0;
         }
     }
 }

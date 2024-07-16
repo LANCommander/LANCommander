@@ -85,7 +85,7 @@
 
         ImportService.OnImportComplete += OnImportComplete;
 
-        if (!LANCommander.IsConnected() && !Settings.Authentication.OfflineMode)
+        if (!(await LANCommander.ValidateTokenAsync()) && !Settings.Authentication.OfflineMode)
             NavigationManager.NavigateTo("/Authenticate");
     }
 

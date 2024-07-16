@@ -1,10 +1,12 @@
-﻿@using LANCommander.Client.Data.Models
+﻿@implements IDisposable
+@using LANCommander.Client.Data.Models
 @using LANCommander.Client.Models
 @using System.Diagnostics
 @using LANCommander.SDK.Helpers
 @inject GameService GameService
 @inject LibraryService LibraryService
 @inject DownloadService DownloadService
+@inject ScriptService ScriptService
 @inject ModalService ModalService
 @inject MessageBusService MessageBusService
 
@@ -59,6 +61,23 @@ else
                             </MenuItem>
                         }
 
+                        @if (Settings.Debug.EnableScriptDebugging)
+                        {
+                            <MenuDivider />
+
+                            <MenuItem OnClick="() => RunInstallScripts()">
+                                Run Install Scripts
+                            </MenuItem>
+
+                            <MenuItem OnClick="() => RunNameChangeScripts()">
+                                Run Name Change Scripts
+                            </MenuItem>
+
+                            <MenuItem OnClick="() => RunKeyChangeScripts()">
+                                Run Key Change Scripts
+                            </MenuItem>
+                        }
+
                         @MenuExtra
                     </Menu>
                 </Overlay>
@@ -78,10 +97,14 @@ else
     Data.Models.Game Game { get; set; }
     IEnumerable<SDK.Models.Action> GameActions { get; set; }
 
+    Settings Settings;
+
     protected override async Task OnInitializedAsync()
     {
         MessageBusService.OnGameStarted += UpdateState;
         MessageBusService.OnGameStopped += UpdateState;
+
+        Settings = SettingService.GetSettings();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -191,6 +214,36 @@ else
         await LibraryService.LibraryChanged();
     }
 
+    async Task RunInstallScripts()
+    {
+        var manifests = GameService.GetGameManifests(Game);
+
+        foreach (var manifest in manifests)
+        {
+            ScriptService.RunInstallScript(Game, manifest.Id);
+        }
+    }
+
+    async Task RunNameChangeScripts()
+    {
+        var manifests = GameService.GetGameManifests(Game);
+
+        foreach (var manifest in manifests)
+        {
+            ScriptService.RunNameChangeScript(Game, manifest.Id);
+        }
+    }
+
+    async Task RunKeyChangeScripts()
+    {
+        var manifests = GameService.GetGameManifests(Game);
+
+        foreach (var manifest in manifests)
+        {
+            ScriptService.RunKeyChangeScript(Game, manifest.Id);
+        }
+    }
+
     async Task OpenManual(Media media)
     {
         var modalOptions = new ModalOptions()
@@ -206,5 +259,11 @@ else
         };
 
         var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+    }
+
+    public void Dispose()
+    {
+        MessageBusService.OnGameStarted -= UpdateState;
+        MessageBusService.OnGameStopped -= UpdateState;
     }
 }

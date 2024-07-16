@@ -186,7 +186,7 @@ namespace LANCommander.Client.Services
             currentItem.Status = DownloadStatus.DownloadingSaves;
             OnQueueChanged?.Invoke();
 
-            await SaveService.DownloadLatest(game);
+            await SaveService.DownloadLatest(game.InstallDirectory, game.Id);
             #endregion
 
             #region Run Scripts

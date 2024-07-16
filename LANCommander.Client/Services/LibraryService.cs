@@ -301,7 +301,7 @@ namespace LANCommander.Client.Services
 
                         if (latestSave != null && (latestSave.CreatedOn > latestSession.End))
                         {
-                            await SaveService.DownloadLatestAsync(manifest.Id, game.InstallDirectory);
+                            await SaveService.DownloadLatestAsync(game.InstallDirectory, manifest.Id);
                         }
                     }
                     catch (Exception ex)
@@ -339,6 +339,17 @@ namespace LANCommander.Client.Services
 
             foreach (var manifest in manifests)
             {
+                #region Upload Saves
+                try
+                {
+                    await SaveService.UploadAsync(game.InstallDirectory, manifest.Id);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not upload save");
+                }
+                #endregion
+
                 RunAfterStopScript(game, manifest.Id);
             }
         }

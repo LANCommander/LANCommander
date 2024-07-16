@@ -16,12 +16,20 @@ namespace LANCommander.Client.Services
             Client = client;
         }
 
-        public async Task DownloadLatest(Game game, string installDirectory = "")
+        public async Task DownloadLatestAsync(string installDirectory, Guid gameId)
         {
-            if (installDirectory == "")
-                installDirectory = game.InstallDirectory;
+            await Task.Run(() => Client.Saves.Download(installDirectory, gameId));
+        }
 
-            await Task.Run(() => Client.Saves.Download(installDirectory, game.Id));
+        public async Task DownloadLatest(string installDirectory, Guid gameId)
+        {
+
+            await Task.Run(() => Client.Saves.Download(installDirectory, gameId));
+        }
+
+        public async Task UploadAsync(string installDirectory, Guid gameId)
+        {
+            await Task.Run(() => Client.Saves.Upload(installDirectory, gameId));
         }
     }
 }

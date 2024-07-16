@@ -1,5 +1,6 @@
 ﻿using LANCommander.Client.Enums;
 using Microsoft.Extensions.Logging;
+using NLog.Targets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,5 +71,7 @@ namespace LANCommander.Client.Models
         public bool EnableScriptDebugging { get; set; } = false;
         public LogLevel LoggingLevel { get; set; } = LogLevel.Warning;
         public string LoggingPath { get; set; } = "Logs";
+        public FileArchivePeriod LoggingArchivePeriod { get; set; } = FileArchivePeriod.Day;
+        public int MaxArchiveFiles { get; set; } = 10;
     }
 }

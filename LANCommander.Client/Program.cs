@@ -1,10 +1,13 @@
 ﻿using Emzi0767.NtfsDataStreams;
 using LANCommander.Client.Data;
+using LANCommander.Client.Extensions;
 using LANCommander.Client.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NLog.Config;
 using NLog.Extensions.Logging;
+using NLog.Targets;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
@@ -31,14 +34,21 @@ namespace LANCommander.Client
             builder.Services.AddAntDesign();
             builder.Services.AddDbContext<DbContext, DatabaseContext>();
 
-            NLog.GlobalDiagnosticsContext.Set("StoragePath", settings.Debug.LoggingPath);
-
+            #region Configure Logging
             builder.Services.AddLogging(loggingBuilder =>
             {
+                var loggerConfig = new LoggingConfiguration();
+
+                NLog.GlobalDiagnosticsContext.Set("StoragePath", settings.Debug.LoggingPath);
+                NLog.GlobalDiagnosticsContext.Set("ArchiveEvery", settings.Debug.LoggingArchivePeriod);
+                NLog.GlobalDiagnosticsContext.Set("MaxArchiveFiles", settings.Debug.MaxArchiveFiles);
+                NLog.GlobalDiagnosticsContext.Set("LoggingLevel", settings.Debug.LoggingLevel);
+
                 loggingBuilder.ClearProviders();
                 loggingBuilder.SetMinimumLevel(settings.Debug.LoggingLevel);
                 loggingBuilder.AddNLog();
             });
+            #endregion
 
             #region Register Client
             var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);

@@ -30,13 +30,13 @@ jobs:
 
       - name: Get the latest tag
         id: get_latest_tag
-        run: echo "::set-output name=latest_tag::$(git describe --tags `git rev-list --tags --max-count=1`)"
+        uses: actions-ecosystem/action-get-latest-tag@v1
 
       - uses: frabert/replace-string-action@v2
         name: Trim Tag Ref
         id: trim_tag_ref
         with:
-          string: '${{ steps.get_latest_tag.outputs.latest_tag }}'
+          string: '${{ steps.get_latest_tag.outputs.tag }}'
           pattern: 'refs/tags/v'
           replace-with: ''
           

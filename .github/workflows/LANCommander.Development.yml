@@ -1,0 +1,135 @@
+name: LANCommander Server Development Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'LANCommander/**'
+      - 'LANCommander.AutoUpdater/**'
+      - 'LANCommander.PCGamingWiki/**'
+      - 'LANCommander.SDK/**'
+      - 'LANCommander.Steam/**'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow_id: LANCommander.Development.yml
+    
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Get the latest tag
+        id: get_latest_tag
+        run: echo "::set-output name=latest_tag::$(git describe --tags `git rev-list --tags --max-count=1`)"
+
+      - uses: frabert/replace-string-action@v2
+        name: Trim Tag Ref
+        id: trim_tag_ref
+        with:
+          string: '${{ steps.get_latest_tag.outputs.latest_tag }}'
+          pattern: 'refs/tags/v'
+          replace-with: ''
+          
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3.8.1
+      - run: cd LANCommander/wwwroot/scripts; npm install
+
+      # Windows
+      - name: Publish Windows
+        run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Windows --self-contained --os win -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      - name: Publish Windows Updater
+        run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release -o _Build_Windows --self-contained --os win -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      - name: Rename Windows Updater
+        run: mv ./_Build_Windows/LANCommander.AutoUpdater.exe ./_Build_Windows/LANCommander.AutoUpdater.exe.Update
+      - name: Remove Windows Extra Files
+        run: rm -Recurse -Force ./_Build_Windows/wwwroot/_content/AntDesign/less
+  
+      # Create Windows ZIP file
+      - name: Package Windows Build
+        uses: vimtor/action-zip@v1.2
+        with:
+          files: _Build_Windows/
+          recursive: true
+          dest: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      - name: Upload Windows Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}-Preview.zip
+          path: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+  
+      # Linux
+      - name: Publish Linux x86
+        run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux --self-contained --os linux -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      - name: Remove Linux Extra Files
+        run: rm -Recurse -Force ./_Build_Linux/wwwroot/_content/AntDesign/less
+  
+      # Create Linux ZIP file
+      - name: Package Linux x86 Build
+        uses: vimtor/action-zip@v1.2
+        with:
+          files: _Build_Linux/
+          recursive: true
+          dest: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      - name: Upload Linux x64 Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}-Preview.zip
+          path: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+  
+      # Linux
+      - name: Publish Linux ARM64
+        run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_Linux_ARM --self-contained --runtime linux-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      - name: Remove Linux Extra Files
+        run: rm -Recurse -Force ./_Build_Linux_ARM/wwwroot/_content/AntDesign/less
+  
+      # Create Linux ZIP file
+      - name: Package Linux ARM64 Build
+        uses: vimtor/action-zip@v1.2
+        with:
+          files: _Build_Linux_ARM/
+          recursive: true
+          dest: LANCommander-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      - name: Upload Linux ARM64 Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANCommander-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}-Preview.zip
+          path: LANCommander-Linux-atm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+  
+      # macOS
+      - name: Publish macOS
+        run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release -o _Build_macOS --self-contained --runtime osx-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      - name: Remove macOS Extra Files
+        run: rm -Recurse -Force ./_Build_macOS/wwwroot/_content/AntDesign/less
+  
+      # Create macOS ZIP file
+      - name: Package macOS Build
+        uses: vimtor/action-zip@v1.2
+        with:
+          files: _Build_macOS/
+          recursive: true
+          dest: LANCommander-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+      - name: Upload macOS arm64 Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LANCommander-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}-Preview.zip
+          path: LANCommander-macos-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip

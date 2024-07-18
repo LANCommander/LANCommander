@@ -470,6 +470,11 @@ namespace LANCommander.SDK
             }
         }
 
+        public async Task<bool> ValidateTokenAsync()
+        {
+            return await ValidateTokenAsync(Token);
+        }
+
         public async Task<bool> ValidateTokenAsync(AuthToken token)
         {
             Logger?.LogTrace("Validating token...");

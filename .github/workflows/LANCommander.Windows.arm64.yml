@@ -1,0 +1,75 @@
+name: LANCommander Windows arm64
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - uses: frabert/replace-string-action@v2
+      name: Trim Tag Ref
+      id: trim_tag_ref
+      with:
+        string: '${{ github.ref }}'
+        pattern: 'refs/tags/v'
+        replace-with: ''
+
+    - uses: frabert/replace-string-action@v2
+      name: Swap Path Backslashes
+      id: swap_path_backslashes
+      with:
+        string: '${{ github.workspace }}'
+        pattern: '\\'
+        replace-with: '/'
+        flags: g
+
+    # dotnet
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # Auto Updater
+    - name: Publish Windows arm64 Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime win-arm64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename Windows arm64 Updater
+      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/LANCommander.AutoUpdater.exe ./LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/LANCommander.AutoUpdater.exe.Update
+
+    # Node.js
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v3.8.1
+    - run: cd LANCommander/wwwroot/scripts; npm install
+
+    # Windows arm64
+    - name: Publish Windows
+      run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release --self-contained --runtime win-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Remove Windows Extra Files
+      run: rm -Recurse -Force ./LANCommander/bin/Release/net8.0/win-arm64/publish/wwwroot/_content/AntDesign/less
+
+    # Create Windows arm64 ZIP file
+    - name: Package Windows Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: LANCommander/bin/Release/net8.0/win-arm64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/
+        recursive: true
+        dest: LANCommander-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        dest: LANCommander-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip

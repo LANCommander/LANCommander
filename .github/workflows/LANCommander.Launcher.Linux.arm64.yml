@@ -1,0 +1,70 @@
+name: LANCommander Launcher Linux arm64
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - uses: frabert/replace-string-action@v2
+      name: Trim Tag Ref
+      id: trim_tag_ref
+      with:
+        string: '${{ github.ref }}'
+        pattern: 'refs/tags/v'
+        replace-with: ''
+
+    - uses: frabert/replace-string-action@v2
+      name: Swap Path Backslashes
+      id: swap_path_backslashes
+      with:
+        string: '${{ github.workspace }}'
+        pattern: '\\'
+        replace-with: '/'
+        flags: g
+
+    # dotnet
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # Auto Updater
+    - name: Publish Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime linux-arm64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename Updater
+      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/linux-arm64/publish/LANCommander.AutoUpdater ./LANCommander.AutoUpdater/bin/Release/net8.0/linux-arm64/publish/LANCommander.AutoUpdater.Update
+    
+    # Launcher
+    - run: cd LANCommander.Client; npm install
+
+    - name: Publish Launcher
+      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release --self-contained --runtime linux-arm64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
+    # Create ZIP file
+    - name: Package Launcher Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: LANCommander.Client/bin/Release/net8.0/linux-arm64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/linux-arm64/publish/ LANCommander.PowerShell/Build/LANCommander.PowerShell.dll LANCommander.PowerShell/Build/LANCommander.PowerShell.psd1
+        recursive: true
+        dest: LANCommander.Client-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        path: LANCommander.Client-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip

@@ -9,6 +9,34 @@ permissions:
   contents: write
 
 jobs:
+  # Server
+  build_server_linux-arm64:
+    uses: ./.github/workflows/LANCommander.Linux.arm64.yml
+  build_server_linux-x64:
+    uses: ./.github/workflows/LANCommander.Linux.x64.yml
+  build_server_osx-arm64:
+    uses: ./.github/workflows/LANCommander.macOS.arm64.yml
+  build_server_win-arm64:
+    uses: ./.github/workflows/LANCommander.Windows.arm64.yml
+  build_server_win-x64:
+    uses: ./.github/workflows/LANCommander.Windows.x64.yml
+
+  # Launcher
+  build_server_linux-arm64:
+    uses: ./.github/workflows/LANCommander.Launcher.Linux.arm64.yml
+  build_server_linux-x64:
+    uses: ./.github/workflows/LANCommander.Launcher.Linux.x64.yml
+  build_server_osx-arm64:
+    uses: ./.github/workflows/LANCommander.Launcher.macOS.arm64.yml
+  build_server_win-arm64:
+    uses: ./.github/workflows/LANCommander.Launcher.Windows.arm64.yml
+  build_server_win-x64:
+    uses: ./.github/workflows/LANCommander.Launcher.Windows.x64.yml
+  
+  # Playnite
+  build_playnite:
+    uses: ./.github/workflows/LANCommander.Playnite.yml
+
   build_release:
     runs-on: windows-latest
 
@@ -32,34 +60,6 @@ jobs:
         pattern: '\\'
         replace-with: '/'
         flags: g
-
-    # Launcher
-    build_server_linux-arm64:
-      uses: ./.github/workflows/LANCommander.Linux.arm64.yml
-    build_server_linux-x64:
-      uses: ./.github/workflows/LANCommander.Linux.x64.yml
-    build_server_osx-arm64:
-      uses: ./.github/workflows/LANCommander.macOS.arm64.yml
-    build_server_win-arm64:
-      uses: ./.github/workflows/LANCommander.Windows.arm64.yml
-    build_server_win-x64:
-      uses: ./.github/workflows/LANCommander.Windows.x64.yml
-
-    # Launcher
-    build_server_linux-arm64:
-      uses: ./.github/workflows/LANCommander.Linux.arm64.yml
-    build_server_linux-x64:
-      uses: ./.github/workflows/LANCommander.Linux.x64.yml
-    build_server_osx-arm64:
-      uses: ./.github/workflows/LANCommander.macOS.arm64.yml
-    build_server_win-arm64:
-      uses: ./.github/workflows/LANCommander.Windows.arm64.yml
-    build_server_win-x64:
-      uses: ./.github/workflows/LANCommander.Windows.x64.yml
-    
-    # Playnite
-    build_playnite:
-      uses: ./.github/workflows/LANCommander.Playnite.yml
 
     # Draft Release
     - name: Download Server Linux ARM64

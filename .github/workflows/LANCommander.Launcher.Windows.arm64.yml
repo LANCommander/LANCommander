@@ -1,5 +1,8 @@
 name: LANCommander Launcher Windows arm64
 
+on:
+  workflow_dispatch:
+
 permissions:
   contents: write
 

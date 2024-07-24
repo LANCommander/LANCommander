@@ -1,5 +1,8 @@
 name: LANCommander Release
 
+on:
+  workflow_dispatch:
+
 permissions:
   contents: write
 

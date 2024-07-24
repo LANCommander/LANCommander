@@ -32,6 +32,15 @@ jobs:
         replace-with: '/'
         flags: g
 
+    - uses: frabert/replace-string-action@v2
+      name: Snake Case Version
+      id: snake_case_version
+      with:
+        string: '${{ steps.trim_tag_ref.outputs.replaced }}'
+        pattern: '.'
+        replace-with: '_'
+        flags: g
+
     # dotnet
     - uses: actions/checkout@v3
       with:
@@ -78,5 +87,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
-        path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_${{ steps.trim_tag_ref.outputs.replaced }}.pext
+        path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_${{ steps.snake_case_version.outputs.replaced }}.pext
         name: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_${{ steps.trim_tag_ref.outputs.replaced }}.pext

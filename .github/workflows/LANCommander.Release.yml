@@ -22,15 +22,15 @@ jobs:
     uses: ./.github/workflows/LANCommander.Windows.x64.yml
 
   # Launcher
-  build_server_linux-arm64:
+  build_launcher_linux-arm64:
     uses: ./.github/workflows/LANCommander.Launcher.Linux.arm64.yml
-  build_server_linux-x64:
+  build_launcher_linux-x64:
     uses: ./.github/workflows/LANCommander.Launcher.Linux.x64.yml
-  build_server_osx-arm64:
+  build_launcher_osx-arm64:
     uses: ./.github/workflows/LANCommander.Launcher.macOS.arm64.yml
-  build_server_win-arm64:
+  build_launcher_win-arm64:
     uses: ./.github/workflows/LANCommander.Launcher.Windows.arm64.yml
-  build_server_win-x64:
+  build_launcher_win-x64:
     uses: ./.github/workflows/LANCommander.Launcher.Windows.x64.yml
   
   # Playnite

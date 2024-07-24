@@ -37,7 +37,7 @@ jobs:
       id: snake_case_version
       with:
         string: '${{ steps.trim_tag_ref.outputs.replaced }}'
-        pattern: '.'
+        pattern: '\.'
         replace-with: '_'
         flags: g
 

@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build_release:
     runs-on: windows-latest
 
     env:

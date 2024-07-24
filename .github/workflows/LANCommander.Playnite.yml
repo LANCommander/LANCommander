@@ -1,10 +1,5 @@
 name: LANCommander Release
 
-on:
-  push:
-    tags:
-      - 'v*'
-
 permissions:
   contents: write
 
@@ -33,7 +28,7 @@ jobs:
         replace-with: '/'
         flags: g
 
-    # Server
+    # dotnet
     - uses: actions/checkout@v3
       with:
         submodules: true
@@ -86,3 +81,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         path: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_${{ steps.trim_tag_ref.outputs.replaced }}.pext
+        name: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_${{ steps.trim_tag_ref.outputs.replaced }}.pext

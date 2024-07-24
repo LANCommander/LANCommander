@@ -2,6 +2,7 @@ name: LANCommander macOS arm64
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: write

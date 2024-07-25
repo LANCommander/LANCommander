@@ -151,11 +151,14 @@ jobs:
         generate_release_notes: true
         draft: true
         files: |
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-macOS-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Windows-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Windows-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Linux-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Linux-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-macOS-arm64-*.zip
           LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

@@ -11,9 +11,6 @@ jobs:
   build:
     runs-on: windows-latest
 
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     steps:
     - uses: frabert/replace-string-action@v2
       name: Trim Tag Ref
@@ -40,17 +37,6 @@ jobs:
         pattern: '\.'
         replace-with: '_'
         flags: g
-
-    # dotnet
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
-    - name: Restore dependencies
-      run: dotnet restore
 
     # Playnite
     - name: Setup MSBuild

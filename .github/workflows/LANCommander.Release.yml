@@ -35,7 +35,7 @@ jobs:
 
   build_release:
     runs-on: windows-latest
-    needs: [build_server_linux-arm64, build_server_linux-x64, build_server_osx-arm64, build_server_win-arm64, build_server_win-x64, build_launcher_linux-arm64, build_launcher_linux-x64, build_launcher_osx-arm64, build_launcher_win-arm64, build_launcher_win-x64, build_playnite]
+    needs: [build_server_linux-arm64, build_server_linux-x64, build_server_osx-arm64, build_server_win-arm64, build_server_win-x64, build_launcher_linux-arm64, build_launcher_linux-x64, build_launcher_osx-arm64, build_launcher_win-arm64, build_launcher_win-x64]
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -143,10 +143,6 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-    - name: Download Playnite
-      uses: actions/download-artifact@v3
-      with:
-        name: LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc-${{ steps.trim_tag_ref.outputs.replaced }}.pext
 
     - name: Draft Release
       uses: softprops/action-gh-release@v2

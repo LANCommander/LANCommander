@@ -62,6 +62,39 @@ jobs:
         replace-with: '/'
         flags: g
 
+    # Playnite
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.3.1
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.1.1
+    - name: Restore NuGet packages
+      run: nuget restore LANCommander.sln
+
+    - name: Build and Publish PowerShell Module
+      run: msbuild LANCommander.PowerShell/LANCommander.PowerShell.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
+    - name: Build and Publish Library
+      run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Download Playnite Release
+      uses: robinraju/release-downloader@v1.7
+      with:
+        repository: JosefNemec/Playnite
+        tag: 10.32
+        fileName: Playnite1032.zip
+    - name: Extract Playnite
+      run: Expand-Archive -Path Playnite1032.zip -DestinationPath Playnite
+    - name: Update Manifest Versioning
+      uses: fjogeleit/yaml-update-action@main
+      with:
+        valueFile: "LANCommander.Playnite.Extension/Build/extension.yaml"
+        propertyPath: "Version"
+        value: "${{ steps.trim_tag_ref.outputs.replaced }}"
+        commitChange: false
+    - name: Copy PowerShell Module to Playnite Extension
+      run: Copy-Item LANCommander.PowerShell/Build/LANCommander.PowerShell.* -Destination LANCommander.Playnite.Extension/Build
+    - name: Run Playnite Toolbox
+      run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
+
     # Draft Release
     - name: Download Server Linux ARM64
       uses: actions/download-artifact@v3

@@ -32,10 +32,6 @@ jobs:
     uses: ./.github/workflows/LANCommander.Launcher.Windows.arm64.yml
   build_launcher_win-x64:
     uses: ./.github/workflows/LANCommander.Launcher.Windows.x64.yml
-  
-  # Playnite
-  build_playnite:
-    uses: ./.github/workflows/LANCommander.Playnite.yml
 
   build_release:
     runs-on: windows-latest

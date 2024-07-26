@@ -5,9 +5,10 @@ using Semver;
 
 namespace LANCommander.Controllers.Api
 {
+    [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class LauncherController : Controller
+    public class LauncherController : ControllerBase
     {
         private UpdateService UpdateService;
 
@@ -17,7 +18,7 @@ namespace LANCommander.Controllers.Api
         }
 
         [AllowAnonymous]
-        [HttpGet]
+        [HttpGet(nameof(Download))]
         public async Task<IActionResult> Download()
         {
             var version = UpdateService.GetCurrentVersion();
@@ -37,8 +38,8 @@ namespace LANCommander.Controllers.Api
             return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);
         }
 
-        [HttpGet]
-        public IActionResult CheckForUpdate()
+        [HttpGet(nameof(CheckForUpdate))]
+        public async Task<IActionResult> CheckForUpdate()
         {
             var launcherVersionString = Request.Headers["X-API-Version"];
 

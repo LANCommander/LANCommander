@@ -321,13 +321,23 @@ namespace LANCommander.SDK
             return response;
         }
 
-        public async Task<AuthToken> AuthenticateAsync(string username, string password)
+        public async Task<AuthToken> AuthenticateAsync(string username, string password, bool ignoreVersion = false)
         {
-            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/Auth", Method.POST).AddJsonBody(new AuthRequest()
+            var request = new RestRequest("/api/Auth", Method.POST);
+
+            request.AddJsonBody(new AuthRequest()
             {
                 UserName = username,
                 Password = password
-            }));
+            });
+
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
+
+            var response = await ApiClient.ExecuteAsync<AuthToken>(request);
+
+            if (response.ErrorException != null)
+                throw response.ErrorException;
 
             switch (response.StatusCode)
             {

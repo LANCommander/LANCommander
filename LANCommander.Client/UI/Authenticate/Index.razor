@@ -108,7 +108,7 @@
         }
         catch (Exception ex)
         {
-            MessageService.Error(ex.Message);
+            MessageService.Error(ex.Message, 5);
             Logger.LogError(ex, ex.Message);
             Loading = false;
         }

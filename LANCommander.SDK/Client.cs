@@ -104,30 +104,37 @@ namespace LANCommander.SDK
 
         private void ValidateVersion(IRestResponse response)
         {
-            var version = GetCurrentVersion();
-            var header = response.Headers.FirstOrDefault(h => h.Name == "X-API-Version");
-
-            if (header == null)
+            try
             {
-                response.ErrorException = new ApiVersionMismatchException(version, null, $"The server is out of date and does not support client version {version}.");
+                var version = GetCurrentVersion();
+                var header = response.Headers.FirstOrDefault(h => h.Name == "X-API-Version");
 
-                return;
-            }
-
-            var apiVersion = SemVersion.Parse((string)header.Value, SemVersionStyles.Any);
-
-            if (version.Major != apiVersion.Major || version.Minor != apiVersion.Minor)
-            {
-                switch (version.ComparePrecedenceTo(apiVersion))
+                if (response.IsSuccessful && header == null)
                 {
-                    case -1:
-                        response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is out of date and is not supported by the server (v{apiVersion})");
-                        break;
+                    response.ErrorException = new ApiVersionMismatchException(version, null, $"The server is out of date and does not support client version {version}.");
 
-                    case 1:
-                        response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is on a version not supported by the server (v{apiVersion})");
-                        break;
+                    return;
                 }
+
+                var apiVersion = SemVersion.Parse((string)header.Value, SemVersionStyles.Any);
+
+                if (version.Major != apiVersion.Major || version.Minor != apiVersion.Minor)
+                {
+                    switch (version.ComparePrecedenceTo(apiVersion))
+                    {
+                        case -1:
+                            response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is out of date and is not supported by the server (v{apiVersion})");
+                            break;
+
+                        case 1:
+                            response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is on a version not supported by the server (v{apiVersion})");
+                            break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not validate API version");
             }
         }
 

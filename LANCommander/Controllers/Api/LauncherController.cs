@@ -1,7 +1,7 @@
 ﻿using LANCommander.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Semver;
-using System.Web.Http;
 
 namespace LANCommander.Controllers.Api
 {
@@ -17,6 +17,7 @@ namespace LANCommander.Controllers.Api
         }
 
         [AllowAnonymous]
+        [HttpGet]
         public async Task<IActionResult> Download()
         {
             var version = UpdateService.GetCurrentVersion();
@@ -36,6 +37,7 @@ namespace LANCommander.Controllers.Api
             return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);
         }
 
+        [HttpGet]
         public IActionResult CheckForUpdate()
         {
             var launcherVersionString = Request.Headers["X-API-Version"];

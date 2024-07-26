@@ -138,7 +138,8 @@ namespace LANCommander.SDK
 
             var request = new RestRequest(route)
                 .AddJsonBody(body)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -154,7 +155,8 @@ namespace LANCommander.SDK
                 return default;
 
             var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -171,7 +173,8 @@ namespace LANCommander.SDK
 
             var request = new RestRequest(route)
                 .AddJsonBody(body)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -187,7 +190,8 @@ namespace LANCommander.SDK
                 return default;
 
             var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -203,7 +207,8 @@ namespace LANCommander.SDK
                 return default;
 
             var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -219,7 +224,8 @@ namespace LANCommander.SDK
                 return default;
 
             var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -237,6 +243,7 @@ namespace LANCommander.SDK
             var tempFile = Path.GetTempFileName();
 
             client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+            client.Headers.Add("X-API-Version", GetCurrentVersion().ToString());
             client.DownloadProgressChanged += (s, e) => progressHandler(e);
             client.DownloadFileCompleted += (s, e) => completeHandler(e);
 
@@ -262,6 +269,7 @@ namespace LANCommander.SDK
             var client = new WebClient();
 
             client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+            client.Headers.Add("X-API-Version", GetCurrentVersion().ToString());
 
             try
             {
@@ -285,6 +293,7 @@ namespace LANCommander.SDK
             var client = new WebClient();
 
             client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+            client.Headers.Add("X-API-Version", GetCurrentVersion().ToString());
 
             var ws = client.OpenRead(new Uri(BaseUrl, route));
 
@@ -294,7 +303,8 @@ namespace LANCommander.SDK
         internal T UploadRequest<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
             var request = new RestRequest(route, Method.POST)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -309,7 +319,8 @@ namespace LANCommander.SDK
         internal async Task<T> UploadRequestAsync<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
             var request = new RestRequest(route, Method.POST)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -459,7 +470,8 @@ namespace LANCommander.SDK
             }
 
             var request = new RestRequest("/api/Auth/Validate")
-                .AddHeader("Authorization", $"Bearer {token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;
@@ -509,7 +521,8 @@ namespace LANCommander.SDK
             }
 
             var request = new RestRequest("/api/Auth/Validate")
-                .AddHeader("Authorization", $"Bearer {token.AccessToken}");
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
                 request.OnBeforeDeserialization += ValidateVersion;

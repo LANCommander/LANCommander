@@ -132,8 +132,11 @@ namespace LANCommander.Client
             #region Scaffold Required Directories
             string[] requiredDirectories = new string[]
             {
-                "Backups",
-                "Media"
+                settings.Debug.LoggingPath,
+                settings.Media.StoragePath,
+                settings.Games.DefaultInstallDirectory,
+                settings.Database.BackupsPath,
+                settings.Updates.StoragePath
             };
 
             foreach (var directory in requiredDirectories)

@@ -55,6 +55,15 @@ jobs:
     - name: Publish Launcher
       run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release --self-contained --runtime linux-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
+    - name: Remove Extra Files
+      run: |
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/AntDesign/less
+
     # Create ZIP file
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2

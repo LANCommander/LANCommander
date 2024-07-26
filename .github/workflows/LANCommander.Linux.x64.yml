@@ -57,8 +57,15 @@ jobs:
     # Linux x64
     - name: Publish Linux
       run: dotnet publish "./LANCommander/LANCommander.csproj" -c Release --self-contained --runtime linux-x64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Remove Linux Extra Files
-      run: rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/AntDesign/less
+
+    - name: Remove Extra Files
+      run: |
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force ./LANCommander/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/AntDesign/less
 
     # Create Linux x64 ZIP file
     - name: Package Linux Build

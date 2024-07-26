@@ -39,10 +39,17 @@ namespace LANCommander.SDK
         {
             Logger?.LogTrace("Checking the server to see if we're on a matching launcher version...");
 
-            var versionAvailable = await Client.GetRequestAsync<string>("/api/Launcher/CheckForUpdate", true);
+            try
+            {
+                var versionAvailable = await Client.GetRequestAsync<string>("/api/Launcher/CheckForUpdate", true);
 
-            if (SemVersion.TryParse(versionAvailable, SemVersionStyles.Any, out var version))
-                return version;
+                if (SemVersion.TryParse(versionAvailable, SemVersionStyles.Any, out var version))
+                    return version;
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not check for updates from server");
+            }
 
             return null;
         }

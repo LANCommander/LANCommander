@@ -1,0 +1,26 @@
+﻿@using Semver
+@inject UpdateService UpdateService
+@inject ModalService ModalService
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        UpdateService.OnUpdateAvailable += OnUpdateAvailable;
+    }
+
+    async Task OnUpdateAvailable(SemVersion version)
+    {
+        var confirmUpdate = await ModalService.ConfirmAsync(new ConfirmOptions
+        {
+            OkText = "Update Now",
+            CancelText = "Later",
+            Title = "Launcher Update",
+            Content = $"An update for v{version} is available"
+        });
+
+        if (confirmUpdate)
+        {
+            await UpdateService.UpdateAsync(version);
+        }
+    }
+}

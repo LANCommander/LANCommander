@@ -81,6 +81,7 @@ namespace LANCommander.Client
             builder.Services.AddScoped<ImportService>();
             builder.Services.AddScoped<LibraryService>();
             builder.Services.AddScoped<DownloadService>();
+            builder.Services.AddScoped<UpdateService>();
             #endregion
 
             var app = builder.Build();

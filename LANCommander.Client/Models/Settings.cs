@@ -18,11 +18,13 @@ namespace LANCommander.Client.Models
         public ProfileSettings Profile { get; set; } = new ProfileSettings();
         public FilterSettings Filter { get; set; } = new FilterSettings();
         public DebugSettings Debug { get; set; } = new DebugSettings();
+        public UpdateSettings Updates { get; set; } = new UpdateSettings();
     }
 
     public class DatabaseSettings
     {
         public string ConnectionString { get; set; } = "Data Source=LANCommander.db;Cache=Shared";
+        public string BackupsPath { get; set; } = "Backups";
     }
 
     public class AuthenticationSettings
@@ -73,5 +75,10 @@ namespace LANCommander.Client.Models
         public string LoggingPath { get; set; } = "Logs";
         public FileArchivePeriod LoggingArchivePeriod { get; set; } = FileArchivePeriod.Day;
         public int MaxArchiveFiles { get; set; } = 10;
+    }
+
+    public class UpdateSettings
+    {
+        public string StoragePath { get; set; } = "Updates";
     }
 }

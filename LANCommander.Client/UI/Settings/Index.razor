@@ -1,12 +1,20 @@
 ﻿@page "/Settings"
 @using LANCommander.Client.Models
 @inject NavigationManager NavigationManager
+@inject UpdateService UpdateService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
 <PageHeader Title="Settings" OnBack="@(() => { NavigationManager.NavigateTo("/"); })" Style="padding-top: 48px">
     <PageHeaderExtra>
-        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        <Space Direction="@DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Button OnClick="CheckForUpdates">Check for Updates</Button>
+            </SpaceItem>
+            <SpaceItem>
+                <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+            </SpaceItem>
+        </Space>
     </PageHeaderExtra>
 </PageHeader>
 
@@ -58,5 +66,10 @@
             MessageService.Error("An unknown error occurred.");
             Logger.LogError(ex, "An unknown error occurred.");
         }
+    }
+
+    async Task CheckForUpdates()
+    {
+        await UpdateService.CheckForUpdateAsync();
     }
 }

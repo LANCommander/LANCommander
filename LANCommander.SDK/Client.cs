@@ -35,6 +35,7 @@ namespace LANCommander.SDK
         public readonly ActionService Actions;
         public readonly ProfileService Profile;
         public readonly MediaService Media;
+        public readonly LauncherService Launcher;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -58,6 +59,7 @@ namespace LANCommander.SDK
             Actions = new ActionService(this);
             Profile = new ProfileService(this);
             Media = new MediaService(this);
+            Launcher = new LauncherService(this);
 
             ChangeServerAddress(baseUrl);
         }
@@ -74,6 +76,7 @@ namespace LANCommander.SDK
             Actions = new ActionService(this);
             Profile = new ProfileService(this, logger);
             Media = new MediaService(this, logger);
+            Launcher = new LauncherService(this);
 
             Logger = logger;
         }
@@ -128,7 +131,7 @@ namespace LANCommander.SDK
             }
         }
 
-        internal T PostRequest<T>(string route, object body)
+        internal T PostRequest<T>(string route, object body, bool ignoreVersion = false)
         {
             if (Token == null)
                 return default;
@@ -137,14 +140,15 @@ namespace LANCommander.SDK
                 .AddJsonBody(body)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             var response = ApiClient.Post<T>(request);
 
             return response.Data;
         }
 
-        internal T PostRequest<T>(string route)
+        internal T PostRequest<T>(string route, bool ignoreVersion = false)
         {
             if (Token == null)
                 return default;
@@ -152,14 +156,15 @@ namespace LANCommander.SDK
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             var response = ApiClient.Post<T>(request);
 
             return response.Data;
         }
 
-        internal async Task<T> PostRequestAsync<T>(string route, object body)
+        internal async Task<T> PostRequestAsync<T>(string route, object body, bool ignoreVersion = false)
         {
             if (Token == null)
                 return default;
@@ -168,14 +173,15 @@ namespace LANCommander.SDK
                 .AddJsonBody(body)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             var response = await ApiClient.PostAsync<T>(request);
 
             return response;
         }
 
-        internal async Task<T> PostRequestAsync<T>(string route)
+        internal async Task<T> PostRequestAsync<T>(string route, bool ignoreVersion = false)
         {
             if (Token == null)
                 return default;
@@ -183,14 +189,15 @@ namespace LANCommander.SDK
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             var response = await ApiClient.PostAsync<T>(request);
 
             return response;
         }
 
-        internal T GetRequest<T>(string route)
+        internal T GetRequest<T>(string route, bool ignoreVersion = false)
         {
             if (Token == null)
                 return default;
@@ -198,14 +205,15 @@ namespace LANCommander.SDK
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             var response = ApiClient.Get<T>(request);
 
             return response.Data;
         }
 
-        internal async Task<T> GetRequestAsync<T>(string route)
+        internal async Task<T> GetRequestAsync<T>(string route, bool ignoreVersion = false)
         {
             if (Token == null)
                 return default;
@@ -213,7 +221,8 @@ namespace LANCommander.SDK
             var request = new RestRequest(route)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             var response = await ApiClient.GetAsync<T>(request);
 
@@ -282,12 +291,13 @@ namespace LANCommander.SDK
             return new TrackableStream(ws, true, Convert.ToInt64(client.ResponseHeaders["Content-Length"]));
         }
 
-        internal T UploadRequest<T>(string route, string fileName, byte[] data)
+        internal T UploadRequest<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
             var request = new RestRequest(route, Method.POST)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             request.AddFile(fileName, data, fileName);
 
@@ -296,12 +306,13 @@ namespace LANCommander.SDK
             return response.Data;
         }
 
-        internal async Task<T> UploadRequestAsync<T>(string route, string fileName, byte[] data)
+        internal async Task<T> UploadRequestAsync<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
             var request = new RestRequest(route, Method.POST)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             request.AddFile(fileName, data, fileName);
 
@@ -395,14 +406,15 @@ namespace LANCommander.SDK
             return response.StatusCode == HttpStatusCode.OK;
         }
 
-        public AuthToken RefreshToken(AuthToken token)
+        public AuthToken RefreshToken(AuthToken token, bool ignoreVersion = false)
         {
             Logger?.LogTrace("Refreshing token...");
 
             var request = new RestRequest("/api/Auth/Refresh")
                 .AddJsonBody(token);
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             var response = ApiClient.Post<AuthResponse>(request);
 
@@ -426,7 +438,7 @@ namespace LANCommander.SDK
             return ValidateToken(Token);
         }
 
-        public bool ValidateToken(AuthToken token)
+        public bool ValidateToken(AuthToken token, bool ignoreVersion = false)
         {
             Logger?.LogTrace("Validating token...");
 
@@ -439,7 +451,8 @@ namespace LANCommander.SDK
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {
@@ -475,7 +488,7 @@ namespace LANCommander.SDK
             return await ValidateTokenAsync(Token);
         }
 
-        public async Task<bool> ValidateTokenAsync(AuthToken token)
+        public async Task<bool> ValidateTokenAsync(AuthToken token, bool ignoreVersion = false)
         {
             Logger?.LogTrace("Validating token...");
 
@@ -488,7 +501,8 @@ namespace LANCommander.SDK
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {token.AccessToken}");
 
-            request.OnBeforeDeserialization += ValidateVersion;
+            if (!ignoreVersion)
+                request.OnBeforeDeserialization += ValidateVersion;
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {

@@ -70,6 +70,9 @@
 
     async Task CheckForUpdates()
     {
-        await UpdateService.CheckForUpdateAsync();
+        var updateVersion = await UpdateService.CheckForUpdateAsync();
+
+        if (updateVersion == null)
+            MessageService.Success("You are on the latest version!");
     }
 }

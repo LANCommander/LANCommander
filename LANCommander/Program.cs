@@ -224,6 +224,26 @@ namespace LANCommander
             Logger.Debug("Building Application");
             var app = builder.Build();
 
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.StartsWithSegments("/robots.txt"))
+                {
+                    context.Response.ContentType = "text/plain";
+
+                    await context.Response.WriteAsync("User-agent: *\nDisallow: /Identity/");
+                }
+                else await next();
+            });
+
+            app.Use((context, next) =>
+            {
+                var headers = context.Response.Headers;
+
+                headers.Append("X-API-Version", UpdateService.GetCurrentVersion().ToString());
+
+                return next();
+            });
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -238,8 +258,6 @@ namespace LANCommander
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-
-            app.UseMiddleware<ApiMiddleware>();
 
             app.UseHangfireDashboard();
 
@@ -257,22 +275,12 @@ namespace LANCommander
             app.MapHub<GameServerHub>("/hubs/gameserver");
 
             Logger.Debug("Registering Endpoints");
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
                 endpoints.MapControllers();
-            });
-
-            app.Use(async (context, next) =>
-            {
-                if (context.Request.Path.StartsWithSegments("/robots.txt"))
-                {
-                    context.Response.ContentType = "text/plain";
-
-                    await context.Response.WriteAsync("User-agent: *\nDisallow: /Identity/");
-                }
-                else await next();
             });
 
             Logger.Debug("Ensuring required directories exist");

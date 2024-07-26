@@ -26,6 +26,7 @@ namespace LANCommander.Models
         public LANCommanderServerSettings Servers { get; set; } = new LANCommanderServerSettings();
         public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
         public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
+        public LANCommanderLauncherSettings Launcher { get; set; } = new LANCommanderLauncherSettings();
         public LANCommanderLogSettings Logs { get; set; } = new LANCommanderLogSettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
@@ -107,7 +108,12 @@ namespace LANCommander.Models
     public class LANCommanderUpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
-        public bool HostClientUpdates { get; set; } = false;
+    }
+
+    public class LANCommanderLauncherSettings
+    {
+        public string StoragePath { get; set; } = "Launcher";
+        public bool HostUpdates { get; set; } = true;
     }
 
     public class LANCommanderLogSettings

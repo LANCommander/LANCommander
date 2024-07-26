@@ -23,11 +23,12 @@ namespace LANCommander.Client.Services
 
         public async Task<SemVersion> CheckForUpdateAsync()
         {
-            var serverVersion = await Client.Launcher.CheckForUpdateAsync();
+            var updateVersion = await Client.Launcher.CheckForUpdateAsync();
 
-            OnUpdateAvailable?.Invoke(serverVersion);
+            if (updateVersion != null)
+                OnUpdateAvailable?.Invoke(updateVersion);
 
-            return serverVersion;
+            return updateVersion;
         }
 
         public async Task UpdateAsync(SemVersion version)

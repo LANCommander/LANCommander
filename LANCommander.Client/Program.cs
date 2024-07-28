@@ -5,6 +5,7 @@ using LANCommander.Client.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NLog;
 using NLog.Config;
 using NLog.Extensions.Logging;
 using NLog.Targets;
@@ -21,10 +22,16 @@ namespace LANCommander.Client
 {
     class Program
     {
+        static Logger Logger = LogManager.GetCurrentClassLogger();
+
         [STAThread]
         static void Main(string[] args)
         {
+            Logger?.Debug("Starting up launcher...");
+            Logger?.Debug("Loading settings from file");
             var settings = SettingService.GetSettings();
+
+
             var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
             builder.RootComponents.Add<App>("app");
@@ -35,6 +42,8 @@ namespace LANCommander.Client
             builder.Services.AddDbContext<DbContext, DatabaseContext>();
 
             #region Configure Logging
+            Logger?.Debug("Configuring logging...");
+
             builder.Services.AddLogging(loggingBuilder =>
             {
                 var loggerConfig = new LoggingConfiguration();
@@ -51,6 +60,7 @@ namespace LANCommander.Client
             #endregion
 
             #region Register Client
+            Logger?.Debug("Registering LANCommander client...");
             var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);
 
             client.UseToken(new SDK.Models.AuthToken
@@ -64,6 +74,8 @@ namespace LANCommander.Client
             #endregion
 
             #region Register Services
+            Logger?.Debug("Registering services...");
+
             builder.Services.AddScoped<CollectionService>();
             builder.Services.AddScoped<CompanyService>();
             builder.Services.AddScoped<EngineService>();
@@ -83,6 +95,9 @@ namespace LANCommander.Client
             builder.Services.AddScoped<DownloadService>();
             builder.Services.AddScoped<UpdateService>();
             #endregion
+
+            #region Build Application
+            Logger?.Debug("Building application...");
 
             var app = builder.Build();
 
@@ -123,6 +138,7 @@ namespace LANCommander.Client
                             break;
                     }
                 });
+            #endregion
 
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
@@ -130,21 +146,33 @@ namespace LANCommander.Client
             };
 
             #region Scaffold Required Directories
-            string[] requiredDirectories = new string[]
+            try
             {
-                settings.Debug.LoggingPath,
-                settings.Media.StoragePath,
-                settings.Games.DefaultInstallDirectory,
-                settings.Database.BackupsPath,
-                settings.Updates.StoragePath
-            };
+                Logger?.Debug("Scaffolding required directories...");
 
-            foreach (var directory in requiredDirectories)
+                string[] requiredDirectories = new string[]
+                {
+	                settings.Debug.LoggingPath,
+	                settings.Media.StoragePath,
+	                settings.Games.DefaultInstallDirectory,
+	                settings.Database.BackupsPath,
+	                settings.Updates.StoragePath
+                };
+
+                foreach (var directory in requiredDirectories)
+                {
+                    var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directory);
+
+                    if (!Directory.Exists(path))
+                    {
+                        Logger?.Debug("Creating path {Path}", path);
+                        Directory.CreateDirectory(path);
+                    }
+                }
+            }
+            catch (Exception ex)
             {
-                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directory);
-
-                if (!Directory.Exists(path))
-                    Directory.CreateDirectory(path);
+                Logger?.Error(ex, "Could not scaffold required directories");
             }
             #endregion
 
@@ -155,15 +183,19 @@ namespace LANCommander.Client
 
             if (db.Database.GetPendingMigrations().Any())
             {
+                Logger?.Debug("Migrations are pending!");
+
                 var backupPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
                 var dataSource = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
                 var backupName = Path.Combine(backupPath, $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
 
                 if (File.Exists(dataSource))
                 {
+                    Logger?.Debug("Database already exists, backing up as {BackupName}", backupName);
                     File.Copy(dataSource, backupName);
                 }
 
+                Logger?.Debug("Migrating database...");
                 db.Database.Migrate();
             }
             #endregion
@@ -171,12 +203,23 @@ namespace LANCommander.Client
             #region Fix PowerShell Module Zone Identifier
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var fileInfo = new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LANCommander.PowerShell.dll"));
-                fileInfo.GetDataStream("Zone.Identifier")?.Delete();
+                Logger?.Debug("Attempting to fix security zone identifier for assemblies...");
+
+                try
+                {
+                    var fileInfo = new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LANCommander.PowerShell.dll"));
+                    fileInfo.GetDataStream("Zone.Identifier")?.Delete();
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not fix zone identifier");
+                }
             }
             #endregion
 
             app.Run();
+
+            Logger?.Debug("Closing application...");
         }
     }
 }

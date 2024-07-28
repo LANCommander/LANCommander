@@ -54,6 +54,10 @@ namespace LANCommander.Client.Services
 
             Process.Start(process);
 
+            settings.LaunchCount = 0;
+
+            SettingService.SaveSettings(settings);
+
             Logger?.Info("Shutting down to get out of the way");
 
             Environment.Exit(0);

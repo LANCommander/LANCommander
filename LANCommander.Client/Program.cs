@@ -13,6 +13,7 @@ using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -200,22 +201,38 @@ namespace LANCommander.Client
             }
             #endregion
 
-            #region Fix PowerShell Module Zone Identifier
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (settings.LaunchCount == 0)
             {
-                Logger?.Debug("Attempting to fix security zone identifier for assemblies...");
+                #region Fix Zone Identifier
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Logger?.Debug("Attempting to fix security zone identifier all files...");
 
-                try
-                {
-                    var fileInfo = new FileInfo(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LANCommander.PowerShell.dll"));
-                    fileInfo.GetDataStream("Zone.Identifier")?.Delete();
+                    var workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                    var files = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories);
+
+                    foreach (var file in files)
+                    {
+                        try
+                        {
+                            var fileInfo = new FileInfo(file);
+
+                            fileInfo.GetDataStream("Zone.Identifier")?.Delete();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.Error(ex, "Could not fix zone identifier");
+                        }
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Could not fix zone identifier");
-                }
+                #endregion
             }
-            #endregion
+
+            settings.LaunchCount++;
+
+            SettingService.SaveSettings(settings);
+
+            Logger?.Debug("Starting application...");
 
             app.Run();
 

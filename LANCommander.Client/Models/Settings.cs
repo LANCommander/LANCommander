@@ -11,6 +11,8 @@ namespace LANCommander.Client.Models
 {
     public class Settings
     {
+        public int LaunchCount { get; set; } = 0;
+
         public DatabaseSettings Database { get; set; } = new DatabaseSettings();
         public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();
         public GameSettings Games { get; set; } = new GameSettings();

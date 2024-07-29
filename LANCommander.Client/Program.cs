@@ -226,6 +226,24 @@ namespace LANCommander.Client
                     }
                 }
                 #endregion
+
+                #region Rename Autoupdater
+                if (File.Exists("LANCommander.AutoUpdater.exe.Update"))
+                {
+                    if (File.Exists("LANCommander.AutoUpdater.exe"))
+                        File.Delete("LANCommander.AutoUpdater.exe");
+
+                    File.Move("LANCommander.AutoUpdater.exe.Update", "LANCommander.AutoUpdater.exe");
+                }
+
+                if (File.Exists("LANCommander.AutoUpdater.Update"))
+                {
+                    if (File.Exists("LANCommander.AutoUpdater"))
+                        File.Delete("LANCommander.AutoUpdater");
+
+                    File.Move("LANCommander.AutoUpdater.Update", "LANCommander.AutoUpdater");
+                }
+                #endregion
             }
 
             settings.LaunchCount++;

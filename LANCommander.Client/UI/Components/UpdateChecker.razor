@@ -16,7 +16,8 @@
             OkText = "Update Now",
             CancelText = "Later",
             Title = "Launcher Update",
-            Content = $"An update for v{response.Version} is available"
+            Content = $"An update for v{response.Version} is available. Do you want to download and install?",
+            Centered = true
         });
 
         if (confirmUpdate && SemVersion.TryParse(response.Version, SemVersionStyles.Any, out var version))

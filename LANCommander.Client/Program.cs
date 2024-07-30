@@ -206,23 +206,30 @@ namespace LANCommander.Client
                 #region Fix Zone Identifier
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    Logger?.Debug("Attempting to fix security zone identifier all files...");
-
-                    var workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                    var files = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories);
-
-                    foreach (var file in files)
+                    try
                     {
-                        try
-                        {
-                            var fileInfo = new FileInfo(file);
+                        Logger?.Debug("Attempting to fix security zone identifier all files...");
 
-                            fileInfo.GetDataStream("Zone.Identifier")?.Delete();
-                        }
-                        catch (Exception ex)
+                        var workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                        var files = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories);
+
+                        foreach (var file in files)
                         {
-                            Logger?.Error(ex, "Could not fix zone identifier");
+                            try
+                            {
+                                var fileInfo = new FileInfo(file);
+
+                                fileInfo.GetDataStream("Zone.Identifier")?.Delete();
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger?.Error(ex, "Could not fix zone identifier");
+                            }
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Error(ex, "Could not get files to fix zone identifier");
                     }
                 }
                 #endregion

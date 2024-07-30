@@ -19,9 +19,9 @@
             Content = $"An update for v{response.Version} is available"
         });
 
-        if (confirmUpdate)
+        if (confirmUpdate && SemVersion.TryParse(response.Version, SemVersionStyles.Any, out var version))
         {
-            await UpdateService.UpdateAsync(response.Version);
+            await UpdateService.UpdateAsync(version);
         }
     }
 }

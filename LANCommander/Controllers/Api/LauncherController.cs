@@ -52,7 +52,7 @@ namespace LANCommander.Controllers.Api
                 if (launcherVersion.ComparePrecedenceTo(currentVersion) < 0)
                 {
                     response.UpdateAvailable = true;
-                    response.Version = currentVersion;
+                    response.Version = currentVersion.ToString();
                     response.DownloadUrl = Url.Action(nameof(Download));
                 }
             }

@@ -1,4 +1,5 @@
-﻿using Photino.Blazor;
+﻿using LANCommander.SDK.Models;
+using Photino.Blazor;
 using Semver;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace LANCommander.Client.Services
     {
         private readonly SDK.Client Client;
 
-        public delegate Task OnUpdateAvailableHandler(SemVersion version);
+        public delegate Task OnUpdateAvailableHandler(CheckForUpdateResponse response);
         public event OnUpdateAvailableHandler OnUpdateAvailable;
 
         public UpdateService(SDK.Client client)
@@ -21,14 +22,14 @@ namespace LANCommander.Client.Services
             Client = client;
         }
 
-        public async Task<SemVersion> CheckForUpdateAsync()
+        public async Task<CheckForUpdateResponse> CheckForUpdateAsync()
         {
-            var updateVersion = await Client.Launcher.CheckForUpdateAsync();
+            var response = await Client.Launcher.CheckForUpdateAsync();
 
-            if (updateVersion != null)
-                OnUpdateAvailable?.Invoke(updateVersion);
+            if (response != null && response.UpdateAvailable)
+                OnUpdateAvailable?.Invoke(response);
 
-            return updateVersion;
+            return response;
         }
 
         public async Task UpdateAsync(SemVersion version)

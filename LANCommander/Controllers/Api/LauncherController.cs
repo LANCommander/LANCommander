@@ -1,4 +1,5 @@
-﻿using LANCommander.Services;
+﻿using LANCommander.SDK.Models;
+using LANCommander.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Semver;
@@ -41,6 +42,7 @@ namespace LANCommander.Controllers.Api
         [HttpGet(nameof(CheckForUpdate))]
         public async Task<IActionResult> CheckForUpdate()
         {
+            var response = new CheckForUpdateResponse();
             var launcherVersionString = Request.Headers["X-API-Version"];
 
             if (SemVersion.TryParse(launcherVersionString, SemVersionStyles.Any, out var launcherVersion))
@@ -48,10 +50,14 @@ namespace LANCommander.Controllers.Api
                 var currentVersion = UpdateService.GetCurrentVersion();
 
                 if (launcherVersion.ComparePrecedenceTo(currentVersion) < 0)
-                    return Ok(Url.Action(nameof(Download)));
+                {
+                    response.UpdateAvailable = true;
+                    response.Version = currentVersion;
+                    response.DownloadUrl = Url.Action(nameof(Download));
+                }
             }
 
-            return NotFound();
+            return Ok(response);
         }
     }
 }

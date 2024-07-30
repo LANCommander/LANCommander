@@ -35,16 +35,13 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public async Task<SemVersion> CheckForUpdateAsync()
+        public async Task<CheckForUpdateResponse> CheckForUpdateAsync()
         {
-            Logger?.LogTrace("Checking the server to see if we're on a matching launcher version...");
-
             try
             {
-                var versionAvailable = await Client.GetRequestAsync<string>("/api/Launcher/CheckForUpdate", true);
+                var request = new RestRequest("/api/Launcher", Method.GET);
 
-                if (SemVersion.TryParse(versionAvailable, SemVersionStyles.Any, out var version))
-                    return version;
+                return await Client.GetRequestAsync<CheckForUpdateResponse>("/api/Launcher/CheckForUpdate", true);
             }
             catch (Exception ex)
             {

@@ -1,4 +1,5 @@
-﻿@using Semver
+﻿@using LANCommander.SDK.Models
+@using Semver
 @inject UpdateService UpdateService
 @inject ModalService ModalService
 
@@ -8,19 +9,19 @@
         UpdateService.OnUpdateAvailable += OnUpdateAvailable;
     }
 
-    async Task OnUpdateAvailable(SemVersion version)
+    async Task OnUpdateAvailable(CheckForUpdateResponse response)
     {
         var confirmUpdate = await ModalService.ConfirmAsync(new ConfirmOptions
         {
             OkText = "Update Now",
             CancelText = "Later",
             Title = "Launcher Update",
-            Content = $"An update for v{version} is available"
+            Content = $"An update for v{response.Version} is available"
         });
 
         if (confirmUpdate)
         {
-            await UpdateService.UpdateAsync(version);
+            await UpdateService.UpdateAsync(response.Version);
         }
     }
 }

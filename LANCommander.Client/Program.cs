@@ -203,6 +203,8 @@ namespace LANCommander.Client
 
             if (settings.LaunchCount == 0)
             {
+                var workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
                 #region Fix Zone Identifier
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
@@ -210,7 +212,6 @@ namespace LANCommander.Client
                     {
                         Logger?.Debug("Attempting to fix security zone identifier all files...");
 
-                        var workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                         var files = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories);
 
                         foreach (var file in files)
@@ -235,20 +236,38 @@ namespace LANCommander.Client
                 #endregion
 
                 #region Rename Autoupdater
-                if (File.Exists("LANCommander.AutoUpdater.exe.Update"))
-                {
-                    if (File.Exists("LANCommander.AutoUpdater.exe"))
-                        File.Delete("LANCommander.AutoUpdater.exe");
+                var updaterPath = Path.Combine(workingDirectory, "LANCommander.AutoUpdater.exe");
 
-                    File.Move("LANCommander.AutoUpdater.exe.Update", "LANCommander.AutoUpdater.exe");
+                try
+                {
+                    if (File.Exists($"{updaterPath}.Update"))
+                    {
+                        if (File.Exists(updaterPath))
+                            File.Delete(updaterPath);
+
+                        File.Move($"{updaterPath}.Update", updaterPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not rename updater");
                 }
 
-                if (File.Exists("LANCommander.AutoUpdater.Update"))
-                {
-                    if (File.Exists("LANCommander.AutoUpdater"))
-                        File.Delete("LANCommander.AutoUpdater");
+                updaterPath = Path.Combine(workingDirectory, "LANCommander.AutoUpdater");
 
-                    File.Move("LANCommander.AutoUpdater.Update", "LANCommander.AutoUpdater");
+                try
+                {
+                    if (File.Exists($"{updaterPath}.Update"))
+                    {
+                        if (File.Exists(updaterPath))
+                            File.Delete(updaterPath);
+
+                        File.Move($"{updaterPath}.Update", updaterPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.Error(ex, "Could not rename updater");
                 }
                 #endregion
             }

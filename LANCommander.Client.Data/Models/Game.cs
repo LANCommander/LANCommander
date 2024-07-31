@@ -18,6 +18,7 @@ namespace LANCommander.Client.Data.Models
         public bool Installed { get; set; }
         public string? InstallDirectory { get; set; }
         public string? InstalledVersion { get; set; }
+        public DateTime? InstalledOn { get; set; }
         public string? LatestVersion { get; set; }
 
         [Display(Name = "Released On")]

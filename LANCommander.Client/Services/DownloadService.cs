@@ -146,6 +146,7 @@ namespace LANCommander.Client.Services
                 game.InstallDirectory = installDirectory;
                 game.Installed = true;
                 game.InstalledVersion = currentItem.Version;
+                game.InstalledOn = DateTime.Now;
             }
             catch (InstallCanceledException ex)
             {
@@ -236,6 +237,7 @@ namespace LANCommander.Client.Services
                     OnQueueChanged?.Invoke();
 
                     game.Installed = false;
+                    game.InstalledOn = null;
                     game.InstallDirectory = null;
                     game.InstalledVersion = null;
 

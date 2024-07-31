@@ -330,6 +330,7 @@ namespace LANCommander.Client.Services
                                 var manifest = ManifestHelper.Read(installDirectory, remoteGame.Id);
 
                                 localGame.Installed = true;
+                                localGame.InstalledOn = DateTime.Now;
                                 localGame.InstallDirectory = installDirectory;
                                 localGame.InstalledVersion = manifest.Version;
                             }

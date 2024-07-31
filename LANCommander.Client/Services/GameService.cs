@@ -102,6 +102,7 @@ namespace LANCommander.Client.Services
 
             game.InstallDirectory = null;
             game.Installed = false;
+            game.InstalledOn = null;
             game.InstalledVersion = null;
 
             await Update(game);

@@ -13,12 +13,37 @@ namespace LANCommander.Controllers
     {
         private readonly ArchiveService ArchiveService;
         private readonly GameSaveService GameSaveService;
+        private readonly UpdateService UpdateService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public DownloadController(ArchiveService archiveService, GameSaveService gameSaveService)
+        public DownloadController(ArchiveService archiveService, GameSaveService gameSaveService, UpdateService updateService)
         {
             ArchiveService = archiveService;
             GameSaveService = gameSaveService;
+            UpdateService = updateService;
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<IActionResult> Launcher()
+        {
+            var version = UpdateService.GetCurrentVersion();
+            var settings = SettingService.GetSettings();
+            var fileName = $"LANCommander.Client-Windows-x64-v{version}.zip";
+            var path = Path.Combine(settings.Launcher.StoragePath, fileName);
+
+            if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
+            {
+                var release = await UpdateService.GetRelease(version);
+                var asset = release.Assets.FirstOrDefault(a => a.Name == fileName);
+
+                if (asset != null)
+                    return Redirect(asset.BrowserDownloadUrl);
+                else
+                    return Redirect(release.HtmlUrl);
+            }
+
+            return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);
         }
 
         [Authorize(Roles = "Administrator")]

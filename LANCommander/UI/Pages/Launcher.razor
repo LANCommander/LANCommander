@@ -18,7 +18,7 @@
 
     <h1>Grab the Launcher!</h1>
 
-    <a href="@DownloadLink" class="ant-btn ant-btn-primary ant-btn-lg">
+    <a href="/Download/Launcher" class="ant-btn ant-btn-primary ant-btn-lg">
         <Icon Type="@IconType.Outline.Download" />
         <span>Download</span>
     </a>
@@ -33,31 +33,4 @@
 
 @code {
     LANCommanderSettings Settings = SettingService.GetSettings();
-
-    string DownloadLink { get; set; } = "/Launcher/Download";
-
-    protected override async Task OnInitializedAsync()
-    {
-        var version = UpdateService.GetCurrentVersion();
-        var fileName = $"LANCommander.Client-Windows-x64-v{version}.zip";
-        var path = Path.Combine(Settings.Launcher.StoragePath, fileName);
-
-        if (!File.Exists(path) || !Settings.Launcher.HostUpdates)
-        {
-            var release = await UpdateService.GetRelease(version);
-
-            if (release == null)
-                release = (await UpdateService.GetReleases(1)).FirstOrDefault();
-
-            if (release != null)
-            {
-                var asset = release.Assets.FirstOrDefault(a => a.Name == fileName);
-
-                if (asset != null)
-                    DownloadLink = asset.BrowserDownloadUrl;
-                else
-                    DownloadLink = release.HtmlUrl;
-            }
-        }
-    }
 }

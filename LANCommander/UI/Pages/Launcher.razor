@@ -55,6 +55,8 @@
 
                 if (asset != null)
                     DownloadLink = asset.BrowserDownloadUrl;
+                else
+                    DownloadLink = release.HtmlUrl;
             }
         }
     }

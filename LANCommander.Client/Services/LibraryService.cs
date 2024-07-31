@@ -295,7 +295,7 @@ namespace LANCommander.Client.Services
                         var latestSave = await Client.Saves.GetLatestAsync(manifest.Id);
                         var latestSession = await PlaySessionService.GetLatestSession(manifest.Id, userId);
 
-                        if (latestSave != null && (latestSave.CreatedOn > latestSession.End))
+                        if (latestSave != null && latestSession != null && latestSave.CreatedOn > latestSession.End && latestSave.CreatedOn > game.InstalledOn)
                         {
                             await SaveService.DownloadLatestAsync(game.InstallDirectory, manifest.Id);
                         }

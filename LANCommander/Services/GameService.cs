@@ -517,7 +517,7 @@ namespace LANCommander.Services
 
                         importArchive.ExtractEntry($"Media/{media.FileId}", MediaService.GetImagePath(media), true);
 
-                        media.Crc32 = MediaService.CalculateChecksum(MediaService.GetImagePath(media));
+                        media.Crc32 = SDK.MediaService.CalculateChecksum(MediaService.GetImagePath(media));
                     }
                 }
 
@@ -536,7 +536,7 @@ namespace LANCommander.Services
 
                         importArchive.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetImagePath(media), true);
 
-                        media.Crc32 = MediaService.CalculateChecksum(MediaService.GetImagePath(media));
+                        media.Crc32 = SDK.MediaService.CalculateChecksum(MediaService.GetImagePath(media));
 
                         game.Media.Add(media);
                     }

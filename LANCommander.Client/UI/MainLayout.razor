@@ -49,8 +49,12 @@
 
                         <ChildContent>
                             <Button Type="@ButtonType.Primary" Class="appbar-profile-button">
-                                <img src="data:image/png;base64,@(Settings.Profile.Avatar)" />
-                                @Settings.Profile.Alias
+                                @if (Settings.Profile.AvatarId != null && Settings.Profile.AvatarId != Guid.Empty)
+                                {
+                                    <MediaImage Id="@Settings.Profile.AvatarId" />
+                                }
+
+                                <span>@Settings.Profile.Alias</span>
                             </Button>
                         </ChildContent>
                     </Dropdown>

@@ -9,15 +9,16 @@
 }
 
 .appbar-profile-button {
-    padding-left: 32px;
     position: relative;
     overflow: hidden;
 
-    span,
     &:focus span,
     &:active span {
-        position: static;
-        padding-left: 15px;
+        position: static
+    }
+
+    img + span {
+        padding-left: 32px;
     }
 
     img {

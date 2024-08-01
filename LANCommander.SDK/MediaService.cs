@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK;
+﻿using Force.Crc32;
+using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
@@ -53,6 +54,28 @@ namespace LANCommander.SDK
         public string GetDownloadPath(Media media)
         {
             return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        }
+
+        public static string CalculateChecksum(string path)
+        {
+            uint crc = 0;
+
+            using (FileStream fs = File.Open(path, FileMode.Open))
+            {
+                var buffer = new byte[4096];
+
+                while (true)
+                {
+                    var count = fs.Read(buffer, 0, buffer.Length);
+
+                    if (count == 0)
+                        break;
+
+                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                }
+            }
+
+            return crc.ToString("X");
         }
     }
 }

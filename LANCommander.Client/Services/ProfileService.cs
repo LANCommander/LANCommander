@@ -1,7 +1,9 @@
-﻿using LANCommander.Client.Models;
+﻿using LANCommander.Client.Data.Models;
+using LANCommander.Client.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,10 +12,13 @@ namespace LANCommander.Client.Services
     public class ProfileService
     {
         private readonly SDK.Client Client;
+        private readonly MediaService MediaService;
+
         private Settings Settings;
 
-        public ProfileService(SDK.Client client) {
+        public ProfileService(SDK.Client client, MediaService mediaService) {
             Client = client;
+            MediaService = mediaService;
             Settings = SettingService.GetSettings();
         }
 
@@ -38,8 +43,22 @@ namespace LANCommander.Client.Services
 
             var tempAvatarPath = await Client.Profile.DownloadAvatar();
 
+            var media = new Media
+            {
+                FileId = Guid.NewGuid(),
+                Type = SDK.Enums.MediaType.Avatar,
+                MimeType = MediaTypeNames.Image.Png,
+                Crc32 = SDK.MediaService.CalculateChecksum(tempAvatarPath),
+            };
+
+            media = await MediaService.Add(media);
+
+            var localPath = MediaService.GetImagePath(media);
+
             if (File.Exists(tempAvatarPath))
-                Settings.Profile.Avatar = Convert.ToBase64String(await File.ReadAllBytesAsync(tempAvatarPath));
+                File.Move(tempAvatarPath, localPath);
+
+            Settings.Profile.AvatarId = media.Id;
 
             SettingService.SaveSettings(Settings);
         }

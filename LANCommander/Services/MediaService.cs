@@ -78,7 +78,7 @@ namespace LANCommander.Services
                 }
             }
 
-            media.Crc32 = CalculateChecksum(path);
+            media.Crc32 = SDK.MediaService.CalculateChecksum(path);
             media.FileId = fileId;
 
             return media;
@@ -118,7 +118,7 @@ namespace LANCommander.Services
                 FileId = fileId,
                 MimeType = MediaTypeNames.Application.Pdf,
                 Type = SDK.Enums.MediaType.Thumbnail,
-                Crc32 = CalculateChecksum(path),
+                Crc32 = SDK.MediaService.CalculateChecksum(path),
             };
 
             return media;
@@ -160,32 +160,10 @@ namespace LANCommander.Services
                 }
             }
 
-            media.Crc32 = CalculateChecksum(path);
+            media.Crc32 = SDK.MediaService.CalculateChecksum(path);
             media.FileId = fileId;
 
             return media;
-        }
-
-        public string CalculateChecksum(string path)
-        {
-            uint crc = 0;
-
-            using (FileStream fs = File.Open(path, FileMode.Open))
-            {
-                var buffer = new byte[4096];
-
-                while (true)
-                {
-                    var count = fs.Read(buffer, 0, buffer.Length);
-
-                    if (count == 0)
-                        break;
-
-                    crc = Crc32Algorithm.Append(crc, buffer, 0, count);
-                }
-            }
-
-            return crc.ToString("X");
         }
     }
 }

@@ -394,7 +394,7 @@ namespace LANCommander.Client.Services
 
             foreach (var media in medias)
             {
-                var localPath = Path.Combine(MediaService.GetStoragePath(), $"{media.FileId}-{media.Crc32}");
+                var localPath = MediaService.GetImagePath(media);
 
                 if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
                 {

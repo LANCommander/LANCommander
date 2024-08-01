@@ -3,13 +3,14 @@
 @inject MediaService MediaService
 @inject MessageBusService MessageBusService
 
-<img @ref="Ref" @key="Id" src="@MediaUrl" class="@Class" />
+<img @ref="Ref" @key="Id" src="@MediaUrl" class="@Class @HiddenClass" @onerror="Hide" />
 
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Class { get; set; }
 
     string MediaUrl { get; set; }
+    string HiddenClass { get; set; }
 
     ElementReference Ref;
 
@@ -36,6 +37,11 @@
 
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    async Task Hide()
+    {
+        HiddenClass = "hidden";
     }
 
     void UpdateMediaUrl(Media media)

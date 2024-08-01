@@ -2,6 +2,10 @@
   user-select: none;
 }
 
+.hidden {
+  display: none;
+}
+
 .appbar {
   position: absolute;
   top: 0;
@@ -13,13 +17,14 @@
 }
 
 .appbar-profile-button {
-  padding-left: 32px;
   position: relative;
   overflow: hidden;
 }
-.appbar-profile-button span, .appbar-profile-button:focus span, .appbar-profile-button:active span {
+.appbar-profile-button:focus span, .appbar-profile-button:active span {
   position: static;
-  padding-left: 15px;
+}
+.appbar-profile-button img + span {
+  padding-left: 32px;
 }
 .appbar-profile-button img {
   width: 32px;

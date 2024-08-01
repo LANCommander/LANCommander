@@ -2,6 +2,10 @@
     user-select: none;
 }
 
+.hidden {
+    display: none;
+}
+
 @import '_appbar';
 @import '_window';
 @import '_scrollbar';

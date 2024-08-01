@@ -30,10 +30,16 @@ namespace LANCommander.Controllers.Api
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
             {
                 var release = await UpdateService.GetRelease(version);
+
+                if (release == null)
+                    return NotFound();
+
                 var asset = release.Assets.FirstOrDefault(a => a.Name == fileName);
 
                 if (asset != null)
                     return Redirect(asset.BrowserDownloadUrl);
+                else
+                    return NotFound();
             }
 
             return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);

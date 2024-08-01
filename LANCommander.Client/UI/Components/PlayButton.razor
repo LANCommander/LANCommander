@@ -8,6 +8,7 @@
 @inject DownloadService DownloadService
 @inject ScriptService ScriptService
 @inject ModalService ModalService
+@inject MessageService MessageService
 @inject MessageBusService MessageBusService
 
 @if (LibraryService.IsRunning(LibraryItem))
@@ -73,7 +74,19 @@ else
         var game = LibraryItem.DataItem as Game;
         var actions = await GameService.GetActionsAsync(game);
 
+        if (actions == null || actions.Count() == 0)
+        {
+            MessageService.Error("No actions found!");
+            return;
+        }        
+
         var primaryActions = actions.Where(a => a.IsPrimaryAction);
+
+        if (primaryActions.Count() == 0)
+        {
+            MessageService.Error("No primary action found!");
+            return;
+        }
 
         if (primaryActions.Count() == 1)
         {

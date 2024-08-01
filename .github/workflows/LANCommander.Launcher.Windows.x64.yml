@@ -43,6 +43,9 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
 
+    - name: Build PowerShell Module
+      run: dotnet build "./LANCommander.PowerShell/LANCommander.PowerShell.csproj" -c Release -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
     # Auto Updater
     - name: Publish Updater
       run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime win-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
@@ -68,7 +71,7 @@ jobs:
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Client/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.PowerShell/Build/LANCommander.PowerShell.dll LANCommander.PowerShell/Build/LANCommander.PowerShell.psd1
+        files: LANCommander.Client/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.dll LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.psd1
         recursive: true
         dest: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 

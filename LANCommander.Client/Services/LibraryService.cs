@@ -225,7 +225,9 @@ namespace LANCommander.Client.Services
 
         public bool IsRunning(LibraryItem libraryItem)
         {
-            return IsRunning(libraryItem.Key);
+            if (libraryItem != null)
+                return IsRunning(libraryItem.Key);
+            return false;
         }
 
         public bool IsRunning(Guid id)

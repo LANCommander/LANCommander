@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -62,6 +63,11 @@ namespace LANCommander.Client.Services
             Logger?.Info("Shutting down to get out of the way");
 
             Environment.Exit(0);
+        }
+
+        public static SemVersion GetCurrentVersion()
+        {
+            return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
         }
     }
 }

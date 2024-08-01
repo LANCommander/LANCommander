@@ -50,7 +50,7 @@ namespace LANCommander.Client.Services
             var process = new ProcessStartInfo();
 
             process.FileName = processExecutable;
-            process.Arguments = $"-Version {version} -Path \"{settings.Updates.StoragePath}\"";
+            process.Arguments = $"-Version {version} -Path \"{settings.Updates.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
             process.UseShellExecute = true;
 
             Process.Start(process);

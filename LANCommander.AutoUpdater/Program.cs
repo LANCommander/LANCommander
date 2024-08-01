@@ -51,7 +51,12 @@ finally
 {
     Console.WriteLine("Starting LANCommander...");
 
-    Process.Start(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.exe"));
+    var executable = "LANCommander.exe";
+
+    if (arguments.ContainsKey("Executable"))
+        executable = arguments["Executable"];
+
+    Process.Start(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, executable));
 
     Console.WriteLine("LANCommander has been started! My job here is done");
 }

@@ -348,13 +348,6 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
-Upload/
-LANCommander/Icon/
-LANCommander/Settings.yml
-LANCommander/Saves/
-LANCommander/Media/
-LANCommander/Uploads/
-LANCommander/Updates/
-LANCommander/Launcher
-LANCommander/dist
-LANCommander/wwwroot/scripts/dist
+
+.vscode
+.DS_Store

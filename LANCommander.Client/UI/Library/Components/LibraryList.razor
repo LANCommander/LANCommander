@@ -11,12 +11,7 @@
             {
                 <Panel Header="@group" Key="@group">
                     <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
-                        <ListItem OnClick='() => SelectItem(context)' Class="@GetItemClasses(context)">
-                            <div class="library-list-icon">
-                                <MediaImage Id="@context.IconId" />
-                            </div>
-                            <span>@context.Name</span>
-                        </ListItem>
+                        <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                     </AntList>
                 </Panel>
             }
@@ -25,12 +20,7 @@
         {
             <Panel Class="no-header">
                 <AntList DataSource="LibraryService.LibraryItems" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
-                    <ListItem OnClick='() => SelectItem(context)' Class="@GetItemClasses(context)">
-                        <div class="library-list-icon">
-                            <MediaImage Id="@context.IconId" />
-                        </div>
-                        <span>@context.Name</span>
-                    </ListItem>
+                    <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                 </AntList>
             </Panel>
         }
@@ -50,19 +40,6 @@
         LibraryService.OnLibraryItemsFiltered += UpdateGroups;
 
         UpdateGroups(LibraryService.LibraryItems);
-    }
-
-    string GetItemClasses(LibraryItem item)
-    {
-        HashSet<string> classes = new HashSet<string>();
-
-        if (item.State == LibraryItemState.Installed)
-            classes.Add("installed");
-
-        if (SelectedItem == item.Key)
-            classes.Add("selected");
-
-        return String.Join(" ", classes);
     }
 
     async Task SelectItem(LibraryItem item)

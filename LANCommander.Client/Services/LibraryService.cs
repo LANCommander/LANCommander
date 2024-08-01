@@ -180,8 +180,12 @@ namespace LANCommander.Client.Services
 
         public async Task<LibraryItem> GetLibraryItemAsync(LibraryItem libraryItem)
         {
-            // Assume for now it's a game
-            var game = await GameService.Get(libraryItem.Key);
+            return await GetLibraryItemAsync(libraryItem.Key);
+        }
+
+        public async Task<LibraryItem> GetLibraryItemAsync(Guid key)
+        {
+            var game = await GameService.Get(key);
 
             return new LibraryItem(game, GroupSelector);
         }
@@ -204,24 +208,24 @@ namespace LANCommander.Client.Services
             LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
         }
 
-        public async Task Stop(Game game)
+        public async Task Stop(LibraryItem libraryItem)
         {
             await Task.Run(() =>
             {
-                if (RunningProcesses.ContainsKey(game.Id))
+                if (RunningProcesses.ContainsKey(libraryItem.Key))
                 {
-                    var process = RunningProcesses[game.Id];
+                    var process = RunningProcesses[libraryItem.Key];
 
                     process.CloseMainWindow();
 
-                    RunningProcesses.Remove(game.Id);
+                    RunningProcesses.Remove(libraryItem.Key);
                 }
             });
         }
 
-        public bool IsRunning(Game game)
+        public bool IsRunning(LibraryItem libraryItem)
         {
-            return IsRunning(game.Id);
+            return IsRunning(libraryItem.Key);
         }
 
         public bool IsRunning(Guid id)

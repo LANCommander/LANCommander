@@ -1,0 +1,37 @@
+﻿@using LANCommander.Client.Models
+
+<Dropdown Trigger="new Trigger[] { Trigger.ContextMenu }" Style="display: block; width: 100%;">
+    <Overlay>
+        <Menu>
+            <LibraryItemContextMenu Model="Model" />
+        </Menu>
+    </Overlay>
+    <ChildContent>
+        <ListItem OnClick="OnClick" Class="@GetItemClasses()">
+            <div class="library-list-icon">
+                <MediaImage Id="@Model.IconId" />
+            </div>
+            <span>@Model.Name</span>
+        </ListItem>
+    </ChildContent>
+</Dropdown>
+
+@code {
+    [Parameter] public LibraryItem Model { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public Guid? SelectedItem { get; set; }
+    [Parameter] public EventCallback<Guid?> SelectedItemChanged { get; set; }
+
+    string GetItemClasses()
+    {
+        HashSet<string> classes = new HashSet<string>();
+
+        if (Model.State == LibraryItemState.Installed)
+            classes.Add("installed");
+
+        if (SelectedItem == Model.Key)
+            classes.Add("selected");
+
+        return String.Join(" ", classes);
+    }
+}

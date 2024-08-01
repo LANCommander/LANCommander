@@ -203,7 +203,9 @@ namespace LANCommander.Client
 
             if (settings.LaunchCount == 0)
             {
-                var workingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                var workingDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+
+                Logger?.Debug("Current working directory is {WorkingDirectory}", workingDirectory);
 
                 #region Fix Zone Identifier
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

@@ -37,7 +37,7 @@ namespace LANCommander.SDK.PowerShell
 
             AddArgument("ExecutionPolicy", "Unrestricted");
 
-            var moduleManifests = Directory.EnumerateFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "LANCommander.PowerShell.psd1", SearchOption.AllDirectories);
+            var moduleManifests = Directory.EnumerateFiles(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), "LANCommander.PowerShell.psd1", SearchOption.AllDirectories);
 
             if (moduleManifests.Any())
                 AddModule(moduleManifests.First());

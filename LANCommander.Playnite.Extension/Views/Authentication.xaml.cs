@@ -159,6 +159,12 @@ namespace LANCommander.PlaynitePlugin.Views
                 if (Plugin.LANCommanderClient == null)
                     Plugin.LANCommanderClient = new LANCommander.SDK.Client(Context.ServerAddress, Plugin.Settings.InstallDirectory);
 
+                if (String.IsNullOrWhiteSpace(Context.ServerAddress))
+                    throw new Exception("Server address is blank");
+
+                if (String.IsNullOrWhiteSpace(Context.UserName) || String.IsNullOrWhiteSpace(Context.UserName))
+                    throw new Exception("Username or password is blank");
+
                 var response = await Plugin.LANCommanderClient.RegisterAsync(Context.UserName, Context.Password);
 
                 Plugin.Settings.ServerAddress = Context.ServerAddress;

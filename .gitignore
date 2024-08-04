@@ -358,3 +358,10 @@ LANCommander/Updates/
 LANCommander/Launcher
 LANCommander/dist
 LANCommander/wwwroot/scripts/dist
+LANCommander.Server/Media
+LANCommander.Server/Uploads
+LANCommander.Server/Updates
+LANCommander.Server/Saves
+LANCommander.Server/Launcher
+LANCommander.Server/Settings.yml
+LANCommander.Server/LANCommander.db*

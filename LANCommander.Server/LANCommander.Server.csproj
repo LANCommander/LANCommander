@@ -6,6 +6,7 @@
     <UserSecretsId>aspnet-LANCommander-C1F79CFA-9767-4AD7-BD5A-2549F8328A2D</UserSecretsId>
     <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
     <TypeScriptModuleKind>none</TypeScriptModuleKind>
+	<Version>0.9.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <Content Remove="wwwroot\js\Upload.ts" />

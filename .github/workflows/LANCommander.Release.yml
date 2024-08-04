@@ -11,15 +11,15 @@ permissions:
 jobs:
   # Server
   build_server_linux-arm64:
-    uses: ./.github/workflows/LANCommander.Linux.arm64.yml
+    uses: ./.github/workflows/LANCommander.Server.Linux.arm64.yml
   build_server_linux-x64:
-    uses: ./.github/workflows/LANCommander.Linux.x64.yml
+    uses: ./.github/workflows/LANCommander.Server.Linux.x64.yml
   build_server_osx-arm64:
-    uses: ./.github/workflows/LANCommander.macOS.arm64.yml
+    uses: ./.github/workflows/LANCommander.Server.macOS.arm64.yml
   build_server_win-arm64:
-    uses: ./.github/workflows/LANCommander.Windows.arm64.yml
+    uses: ./.github/workflows/LANCommander.Server.Windows.arm64.yml
   build_server_win-x64:
-    uses: ./.github/workflows/LANCommander.Windows.x64.yml
+    uses: ./.github/workflows/LANCommander.Server.Windows.x64.yml
 
   # Launcher
   build_launcher_linux-arm64:
@@ -106,43 +106,43 @@ jobs:
     - name: Download Server Linux ARM64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Server-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server Linux x64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Server-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server macOS ARM64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Server-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server Windows ARM64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Server-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server Windows x64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Server-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Linux ARM64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander.Client-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Launcher-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Linux x64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander.Client-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Launcher-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher macOS ARM64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander.Client-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Launcher-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Windows ARM64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander.Client-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Launcher-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Windows x64
       uses: actions/download-artifact@v3
       with:
-        name: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Launcher-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     - name: Draft Release
       uses: softprops/action-gh-release@v2
@@ -151,14 +151,14 @@ jobs:
         generate_release_notes: true
         draft: true
         files: |
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-arm64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Windows-x64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-x64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-Linux-arm64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander-macOS-arm64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Windows-arm64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Windows-x64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Linux-x64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-Linux-arm64-*.zip
-          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Client-macOS-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-Windows-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-Windows-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-Linux-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-Linux-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-macOS-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Windows-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Windows-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Linux-x64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Linux-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-macOS-arm64-*.zip
           LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext

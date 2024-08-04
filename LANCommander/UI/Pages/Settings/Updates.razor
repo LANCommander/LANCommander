@@ -99,7 +99,7 @@
             Updating = true;
 
             if (Settings.Launcher.HostUpdates)
-                await UpdateService.DownloadClientRelease(Releases.First());
+                await UpdateService.DownloadLauncherRelease(Releases.First());
 
             await UpdateService.DownloadServerRelease(Releases.First());
         }

@@ -1,0 +1,134 @@
+﻿@implements IDisposable
+@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models
+@using System.Diagnostics
+@using LANCommander.SDK.Helpers
+@inject GameService GameService
+@inject LibraryService LibraryService
+@inject DownloadService DownloadService
+@inject ScriptService ScriptService
+@inject ModalService ModalService
+@inject MessageService MessageService
+@inject MessageBusService MessageBusService
+
+@if (LibraryService.IsRunning(LibraryItem))
+{
+    <Popconfirm Title="Do you want to stop this game?" OkText="Yes" OnConfirm="() => Stop()">
+        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
+    </Popconfirm>
+}
+else
+{
+    <Space Direction="@DirectionVHType.Horizontal">
+        <SpaceItem>
+            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">Play</Button>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Dropdown>
+                <Overlay>
+                    <Menu>
+                        <LibraryItemContextMenu Model="LibraryItem" MenuExtra="MenuExtra" />
+                    </Menu>
+                </Overlay>
+
+                <ChildContent>
+                    <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
+                </ChildContent>
+            </Dropdown>
+        </SpaceItem>
+    </Space>
+}
+
+@code {
+    [Parameter] public Guid LibraryItemId { get; set; }
+    [Parameter] public LibraryItem LibraryItem { get; set; }
+    [Parameter] public RenderFragment MenuExtra { get; set; }
+
+    Settings Settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        MessageBusService.OnGameStarted += UpdateState;
+        MessageBusService.OnGameStopped += UpdateState;
+
+        Settings = SettingService.GetSettings();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (LibraryItem == null && LibraryItemId != Guid.Empty)
+            LibraryService.GetLibraryItemAsync(LibraryItemId);
+    }
+
+    async Task UpdateState(Game game)
+    {
+        if (LibraryItem?.Key == game.Id)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task Run()
+    {
+        var game = LibraryItem.DataItem as Game;
+        var actions = await GameService.GetActionsAsync(game);
+
+        if (actions == null || actions.Count() == 0)
+        {
+            MessageService.Error("No actions found!");
+            return;
+        }        
+
+        var primaryActions = actions.Where(a => a.IsPrimaryAction);
+
+        if (primaryActions.Count() == 0)
+        {
+            MessageService.Error("No primary action found!");
+            return;
+        }
+
+        if (primaryActions.Count() == 1)
+        {
+            var task = LibraryService.Run(game, primaryActions.First());
+
+            await InvokeAsync(StateHasChanged);
+
+            await task;
+        }
+        else
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = $"Play {game.Title}",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                Footer = null,
+                Centered = true,
+                WrapClassName = "game-actions-dialog"
+            };
+
+            var model = new ActionSelectorDialogOptions
+            {
+                Actions = actions.Where(a => a.IsPrimaryAction),
+                Game = game
+            };
+
+            var modalRef = ModalService.CreateModal<ActionSelectorDialog, ActionSelectorDialogOptions, Process>(modalOptions, model);
+        }
+    }
+
+    async Task Stop()
+    {
+        await LibraryService.Stop(LibraryItem);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        MessageBusService.OnGameStarted -= UpdateState;
+        MessageBusService.OnGameStopped -= UpdateState;
+    }
+}

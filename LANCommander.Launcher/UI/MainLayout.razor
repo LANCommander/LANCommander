@@ -1,0 +1,199 @@
+﻿@using LANCommander.Launcher.Models
+@using Photino.Blazor.CustomWindow.Components
+@inherits LayoutComponentBase
+@inject ImportService ImportService
+@inject ProfileService ProfileService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ModalService ModalService
+@inject LANCommander.SDK.Client LANCommander
+@inject IJSRuntime JS
+
+<CustomWindow HeaderHeight="37">
+    <HeaderExtraControlsLayout>
+        <Space Direction="@DirectionVHType.Horizontal">
+            @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
+            {
+                @if (!Settings.Authentication.OfflineMode)
+                {
+                    <SpaceItem>
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
+                    </SpaceItem>
+                }
+                else
+                {
+                    <SpaceItem>
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger />
+                    </SpaceItem>
+                }
+
+                <SpaceItem>
+                    <Dropdown>
+                        <Overlay>
+                            <Menu>
+                                <MenuItem OnClick="ChangeAlias" Disabled="Settings.Authentication.OfflineMode">
+                                    Change Name
+                                </MenuItem>
+                                <MenuItem OnClick="@(() => NavigationManager.NavigateTo("/Settings"))">
+                                    Settings
+                                </MenuItem>
+
+                                @if (!Settings.Authentication.OfflineMode)
+                                {
+                                    <MenuItem OnClick="Logout">
+                                        Logout
+                                    </MenuItem>
+                                }
+                            </Menu>
+                        </Overlay>
+
+                        <ChildContent>
+                            <Button Type="@ButtonType.Primary" Class="appbar-profile-button">
+                                @if (Settings.Profile.AvatarId != null && Settings.Profile.AvatarId != Guid.Empty)
+                                {
+                                    <MediaImage Id="@Settings.Profile.AvatarId" />
+                                }
+
+                                <span>@Settings.Profile.Alias</span>
+                            </Button>
+                        </ChildContent>
+                    </Dropdown>
+
+                </SpaceItem>
+            }
+        </Space>
+    </HeaderExtraControlsLayout>
+    <WindowContent>
+        @Body
+
+        <AntContainer />
+        <RedirectToLogin />
+        <UpdateChecker />
+    </WindowContent>
+</CustomWindow>
+
+@code {
+    Models.Settings Settings = null;
+
+    public bool Importing = false;
+    public bool Connecting = false;
+    public IMessageService Messages { get; set; }
+
+    public static MainLayout _MainLayout { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _MainLayout = this;
+
+        Settings = SettingService.GetSettings();
+        Messages = MessageService;
+
+        ImportService.OnImportComplete += OnImportComplete;
+
+        if (!(await LANCommander.ValidateTokenAsync()) && !Settings.Authentication.OfflineMode)
+            NavigationManager.NavigateTo("/Authenticate");
+    }
+
+    async Task OnImportComplete()
+    {
+        MessageService.Success("Import Complete", 3);
+    }
+
+    async Task Logout()
+    {
+        await ProfileService.Logout();
+
+        NavigationManager.NavigateTo("/Authenticate");
+    }
+
+    async Task ChangeAlias()
+    {
+        var settings = SettingService.GetSettings();
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Change Name",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Centered = true
+        };
+
+        var modalRef = ModalService.CreateModal<ChangeAliasDialog, string, string>(modalOptions, settings.Profile.Alias);
+
+        modalRef.OnOk = async (newName) =>
+        {
+            await ProfileService.ChangeAlias(newName);
+
+            Settings = SettingService.GetSettings();
+
+            await InvokeAsync(StateHasChanged);
+        };
+    }
+
+    async Task Connect()
+    {
+        Connecting = true;
+
+        Settings = SettingService.GetSettings();
+
+        var token = new SDK.Models.AuthToken
+        {
+            AccessToken = Settings.Authentication.AccessToken,
+            RefreshToken = Settings.Authentication.RefreshToken
+        };
+
+        if (await LANCommander.ValidateTokenAsync(token))
+        {
+            ProfileService.SetOfflineMode(false);
+            MessageService.Success("Back Online!");
+        }
+        else
+        {
+            if (await LANCommander.PingAsync())
+            {
+                ProfileService.SetOfflineMode(false);
+                await Logout();
+            }
+            else
+            {
+                await ModalService.ConfirmAsync(new ConfirmOptions()
+                {
+                    Title = "Could Not Reconnect!",
+                    Icon = @<Icon Type="@IconType.Outline.ExclamationCircle"></Icon>,
+                    Content = "The LANCommander server could not be reached. Click stay offline and try later, or logout and fix your credentials.",
+                    OkText = "Logout",
+                    CancelText = "Stay Offline",
+                    Centered = true,
+                    OnOk = async (e) =>
+                    {
+                        await Logout();
+                    }
+                });
+            }
+        }
+
+        Connecting = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public static async void Import()
+    {
+        if (!_MainLayout.Importing)
+        {
+            await _MainLayout.JS.InvokeVoidAsync("sendMessage", "import");
+
+            _MainLayout.Importing = true;
+            _MainLayout.StateHasChanged();
+            _MainLayout.MessageService.Info("Import Started", 2.5);
+        }
+    }
+
+    [JSInvokable("ImportComplete")]
+    public static void ImportComplete()
+    {
+        _MainLayout.Importing = false;
+        _MainLayout.StateHasChanged();
+        _MainLayout.ImportService.ImportHasCompleted();
+    }
+}

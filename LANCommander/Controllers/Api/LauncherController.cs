@@ -24,7 +24,7 @@ namespace LANCommander.Controllers.Api
         {
             var version = UpdateService.GetCurrentVersion();
             var settings = SettingService.GetSettings();
-            var fileName = $"LANCommander.Client-Windows-x64-v{version}.zip";
+            var fileName = $"LANCommander.Launcher-Windows-x64-v{version}.zip";
             var path = Path.Combine(settings.Launcher.StoragePath, fileName);
 
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)

@@ -1,0 +1,10 @@
+﻿@using BootstrapBlazor.Components
+@using LANCommander.Launcher.Data.Models
+@inherits FeedbackComponent<Media>
+@inject MediaService MediaService
+
+<PdfReader LocalFileName="@(MediaService.GetImagePath(Options))" Height="100%" />
+
+@code {
+
+}

@@ -19,9 +19,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.SDK.Tests", "L
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.AutoUpdater", "LANCommander.AutoUpdater\LANCommander.AutoUpdater.csproj", "{C580750D-5F66-4613-979D-67379D8F4170}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Client.Data", "LANCommander.Client.Data\LANCommander.Client.Data.csproj", "{02FBFF81-6550-4E11-A78C-E965E593B3CC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher.Data", "LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj", "{02FBFF81-6550-4E11-A78C-E965E593B3CC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Client", "LANCommander.Client\LANCommander.Client.csproj", "{28D73284-B55A-4468-B96D-394C39BA162D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher", "LANCommander.Launcher\LANCommander.Launcher.csproj", "{28D73284-B55A-4468-B96D-394C39BA162D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{807943BF-0C7D-4ED3-8393-CFEE64E3138C} = {807943BF-0C7D-4ED3-8393-CFEE64E3138C}
 	EndProjectSection

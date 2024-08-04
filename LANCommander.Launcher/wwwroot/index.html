@@ -1,0 +1,48 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LANCommander</title>
+    <link rel="stylesheet" href="_content/Photino.blazor.CustomWindow/css/pb-custom-window.css" />
+    <link rel="stylesheet" href="_content/AntDesign/css/ant-design-blazor.dark.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="LANCommander.Launcher.styles.css" />
+</head>
+<body>
+
+    <div class="status-bar-safe-area"></div>
+
+    <app>
+        <img src="assets/logo.svg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 33vh; height: auto;" />
+    </app>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_content/AntDesign/js/ant-design-blazor.js"></script>
+    <script src="_framework/blazor.webview.js"></script>
+    <script src="_content/Photino.Blazor.CustomWindow/js/js-extensions.js"></script>
+    <script src="_content/Photino.Blazor.CustomWindow/js/pb-custom-window.js"></script>
+    <script src="scripts/dist/bundle.js"></script>
+
+    <script>
+        window.sendMessage = function (message) {
+            window.external.sendMessage(message);
+        }
+
+        window.external.receiveMessage(message => {
+            switch (message) {
+                case 'importComplete':
+                    DotNet.invokeMethodAsync('LANCommander.Launcher', 'ImportComplete');
+                    break;
+            }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,97 @@
+﻿@using LANCommander.Launcher.Models
+@using System.Diagnostics
+@inject DownloadService DownloadService
+@inject SDK.Client Client
+@inject GameService GameService
+
+@if (CurrentQueueItem != null)
+{
+    <div class="downloader-current">
+        @if (ShowIcon)
+        {
+            <div class="downloader-current-icon">
+                <MediaImage Id="@CurrentQueueItem.IconId" />
+            </div>
+        }
+        <div class="downloader-current-info">
+            <div class="downloader-current-upper">
+                <div class="downloader-current-upper-status">
+                    @if (CurrentQueueItem.Status == Enums.DownloadStatus.Downloading && CurrentQueueItem.Progress > 0)
+                    {
+                        <Text>@CurrentQueueItem.Status.GetDisplayName(): @CurrentQueueItem.Progress.ToString("0%")</Text>
+                    }
+                    else
+                    {
+                        <Text>@CurrentQueueItem.Status.GetDisplayName()</Text>
+                    }
+                </div>
+                @if (CurrentQueueItem.TransferSpeed > 0)
+                {
+                    <div class="downloader-current-upper-time-remaining">
+                        @TimeSpan.FromSeconds((CurrentQueueItem.TotalBytes - CurrentQueueItem.BytesDownloaded) / CurrentQueueItem.TransferSpeed).ToShortTime()
+                    </div>
+                }
+            </div>
+            <div class="downloader-current-progress">
+                <Progress Percent="(CurrentQueueItem.Progress * 100)" />
+            </div>
+            <div class="downloader-current-lower">
+                <div class="downloader-current-lower-data">
+                    @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TotalBytes).ToString()
+                </div>
+                <div class="downloader-current-lower-speed">
+                    @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TransferSpeed).ToString()/s
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool ShowIcon { get; set; }
+
+    IDownloadQueueItem CurrentQueueItem = null;
+
+    Stopwatch Stopwatch = new Stopwatch();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Client.Games.OnArchiveExtractionProgress += (long position, long length, SDK.Models.Game game) =>
+        {
+            if (!Stopwatch.IsRunning)
+                Stopwatch.Start();
+
+            if (Stopwatch.ElapsedMilliseconds > 500)
+            {
+                CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+
+                var bytesThisInterval = position - CurrentQueueItem.BytesDownloaded;
+
+                CurrentQueueItem.BytesDownloaded = position;
+                CurrentQueueItem.TotalBytes = length;
+                CurrentQueueItem.TransferSpeed = (double)(bytesThisInterval / (Stopwatch.ElapsedMilliseconds / 1000d));
+
+                InvokeAsync(StateHasChanged);
+
+                Stopwatch.Reset();
+            }
+        };
+
+        Client.Games.OnArchiveEntryExtractionProgress += (object sender, SDK.ArchiveEntryExtractionProgressArgs e) =>
+        {
+            // InvokeAsync(StateHasChanged);
+        };
+
+        DownloadService.OnInstallComplete += async (game) =>
+        {
+            Stopwatch.Stop();
+        };
+
+        DownloadService.OnQueueChanged += async () =>
+        {
+            CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+
+            await InvokeAsync(StateHasChanged);
+        };
+    }
+}

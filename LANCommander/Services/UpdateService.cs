@@ -68,7 +68,7 @@ namespace LANCommander.Services
 
         public async Task DownloadServerRelease(Release release)
         {
-            string releaseFile = release.Assets.FirstOrDefault(a => a.Name.StartsWith($"LANCommander-{GetOS()}-{GetArchitecture()}-"))?.BrowserDownloadUrl ?? String.Empty;
+            string releaseFile = release.Assets.FirstOrDefault(a => a.Name.StartsWith($"LANCommander.Server-{GetOS()}-{GetArchitecture()}-"))?.BrowserDownloadUrl ?? String.Empty;
 
             if (String.IsNullOrWhiteSpace(releaseFile))
                 throw new NotImplementedException("Your platform is not supported");
@@ -96,15 +96,15 @@ namespace LANCommander.Services
             }
         }
 
-        public async Task DownloadClientRelease(Release release)
+        public async Task DownloadLauncherRelease(Release release)
         {
-            var releaseFiles = release.Assets.Where(a => a.Name.StartsWith("LANCommander.Client-")).Select(a => a.BrowserDownloadUrl);
+            var releaseFiles = release.Assets.Where(a => a.Name.StartsWith("LANCommander.Launcher-")).Select(a => a.BrowserDownloadUrl);
 
             Logger?.Info("Downloading release version {Version}", release.TagName);
 
             foreach (var releaseFile in releaseFiles)
             {
-                Logger?.Info($"Downloading client from {releaseFile}");
+                Logger?.Info($"Downloading launcher from {releaseFile}");
 
                 if (!String.IsNullOrWhiteSpace(releaseFile))
                 {

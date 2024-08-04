@@ -1,0 +1,41 @@
+﻿@using LANCommander.Launcher.Data.Models
+@typeparam TItem where TItem : BaseModel
+
+<Select 
+    @ref="@Select"
+    Mode="multiple"
+    DataSource="Entities"
+    ValueProperty="e => e.Id"
+    LabelProperty="OptionLabelSelector"
+    @bind-Values="@SelectedValues"
+    EnableSearch
+    EnableVirtualization>
+</Select>
+
+@code {
+    [Parameter] public Func<TItem, string> OptionLabelSelector { get; set; }
+    [Parameter] public IEnumerable<TItem> Entities { get; set; }
+
+    [Parameter] public ICollection<TItem> Values { get; set; }
+    [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
+
+    Select<Guid, TItem> Select;
+
+    private IEnumerable<Guid> SelectedValues
+    {
+        get
+        {
+            return Values?.Select(e => e.Id);
+        }
+        set
+        {
+            if (value != null)
+            {
+                Values = Entities.Where(e => value.Contains(e.Id)).ToList();
+
+                if (ValuesChanged.HasDelegate)
+                    ValuesChanged.InvokeAsync(Values);
+            }
+        }
+    }
+}

@@ -1,0 +1,210 @@
+﻿@implements IDisposable
+@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models
+@using System.Diagnostics
+@using LANCommander.SDK.Helpers
+@inject GameService GameService
+@inject LibraryService LibraryService
+@inject DownloadService DownloadService
+@inject ScriptService ScriptService
+@inject ModalService ModalService
+@inject MessageBusService MessageBusService
+
+@if (GameActions != null && GameActions.Count() > 0)
+{
+    @foreach (var action in GameActions.OrderBy(a => a.SortOrder))
+    {
+        <MenuItem OnClick="() => Run(Game, action)">
+            @action.Name
+        </MenuItem>
+    }
+
+    <MenuDivider />
+}
+
+@if (Game.Installed)
+{
+    if (Game.Media != null && Game.Media.Any(m => m.Type == SDK.Enums.MediaType.Manual))
+    {
+        foreach (var manual in Game.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
+        {
+            <MenuItem OnClick="() => OpenManual(manual)">
+                @(String.IsNullOrWhiteSpace(manual.Name) ? "Manual" : manual.Name)
+            </MenuItem>
+        }
+
+        <MenuDivider />
+    }
+
+    <MenuItem OnClick="() => BrowseFiles()">
+        Browse Files
+    </MenuItem>
+    <MenuItem OnClick="() => Uninstall()">
+        Uninstall
+    </MenuItem>
+}
+else
+{
+    <MenuItem OnClick="() => Install()">
+        Install
+    </MenuItem>
+}
+
+@if (Settings.Debug.EnableScriptDebugging)
+{
+    <MenuDivider />
+
+    <MenuItem OnClick="() => RunInstallScripts()">
+        Run Install Scripts
+    </MenuItem>
+
+    <MenuItem OnClick="() => RunNameChangeScripts()">
+        Run Name Change Scripts
+    </MenuItem>
+
+    <MenuItem OnClick="() => RunKeyChangeScripts()">
+        Run Key Change Scripts
+    </MenuItem>
+}
+
+@MenuExtra
+
+@code {
+    [Parameter] public LibraryItem Model { get; set; }
+    [Parameter] public RenderFragment MenuExtra { get; set; }
+
+    Data.Models.Game Game { get; set; }
+    IEnumerable<SDK.Models.Action> GameActions { get; set; }
+
+    Settings Settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        MessageBusService.OnGameStarted += UpdateState;
+        MessageBusService.OnGameStopped += UpdateState;
+
+        Settings = SettingService.GetSettings();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Model.DataItem is Game)
+        {
+            Game = Model.DataItem as Game;
+            GameActions = new List<SDK.Models.Action>();
+
+            if (Game.Installed)
+            {
+                var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
+
+                GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
+            }
+        }
+    }
+
+    async Task UpdateState(Game game)
+    {
+        if (Game.Id == game.Id)
+            await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Run(Game game, SDK.Models.Action action)
+    {
+        LibraryService.Run(Game, action);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task BrowseFiles()
+    {
+        Process.Start("explorer", Game.InstallDirectory);
+    }
+
+    async Task Install()
+    {
+        await LibraryService.Install(Model);
+    }
+
+    async Task Uninstall()
+    {
+        var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
+
+        var message = $"Would you like to uninstall {Game.Title}?";
+
+        if (manifest.SavePaths != null && manifest.SavePaths.Any())
+            message += " Your save files have been uploaded to the server.";
+        else
+            message += " Your save files may be unrecoverable if they are contained within the game's install directory.";
+
+        var confirmed = await ModalService.ConfirmAsync(new ConfirmOptions
+        {
+            OkText = "Uninstall",
+            CancelText = "Cancel",
+            Title = "Uninstall",
+            Content = message,
+            OkType = "danger",
+            Centered = true,
+            Icon = @<Icon Type="@IconType.Outline.Delete" />
+        });
+
+        if (confirmed)
+            await GameService.Uninstall(Game);
+
+        DownloadService.Remove(Game.Id);
+
+        await LibraryService.LibraryChanged();
+    }
+
+    async Task RunInstallScripts()
+    {
+        var manifests = GameService.GetGameManifests(Game);
+
+        foreach (var manifest in manifests)
+        {
+            ScriptService.RunInstallScript(Game, manifest.Id);
+        }
+    }
+
+    async Task RunNameChangeScripts()
+    {
+        var manifests = GameService.GetGameManifests(Game);
+
+        foreach (var manifest in manifests)
+        {
+            ScriptService.RunNameChangeScript(Game, manifest.Id);
+        }
+    }
+
+    async Task RunKeyChangeScripts()
+    {
+        var manifests = GameService.GetGameManifests(Game);
+
+        foreach (var manifest in manifests)
+        {
+            ScriptService.RunKeyChangeScript(Game, manifest.Id);
+        }
+    }
+
+    async Task OpenManual(Media media)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = media.Name,
+            Maximizable = true,
+            DefaultMaximized = true,
+            Closable = true,
+            Footer = null,
+            Draggable = true,
+            Resizable = true,
+            WrapClassName = "pdf-reader-dialog",
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+    }
+
+    public void Dispose()
+    {
+        MessageBusService.OnGameStarted -= UpdateState;
+        MessageBusService.OnGameStopped -= UpdateState;
+    }
+}

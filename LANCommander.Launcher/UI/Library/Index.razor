@@ -1,0 +1,302 @@
+﻿@page "/"
+@page "/{id:guid}"
+@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Enums
+@using LANCommander.Launcher.Models
+@using System.Diagnostics
+@using LANCommander.Launcher.UI.Library.Components
+@using LANCommander.SDK.Helpers
+@inject SDK.Client Client
+@inject NavigationManager NavigationManager
+@inject LibraryService LibraryService
+@inject DownloadService DownloadService
+@inject GameService GameService
+@inject ModalService ModalService
+@inject ConfirmService ConfirmService
+@inject ImportService ImportService
+
+<Layout>
+    <Content Class="library">
+        <LibraryList SelectedItem="@(SelectedGame?.Id)" OnItemSelected="@((key) => NavigationManager.NavigateTo($"/{key}"))" />
+
+        <div class="game-details no-scrollbar">
+            @if (SelectedGame != null)
+            {
+                <div class="game-hero">
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
+                    {
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo).Id)" Class="game-details-logo" />
+                    }
+                    else
+                    {
+                        <h1>@SelectedGame.Title</h1>
+                    }
+
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
+                    {
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background).Id)" Class="game-details-background" />
+                    }
+                </div>
+                <GridRow Gutter="32" Class="game-info" Wrap="false">
+                    <GridCol Flex="@("auto")">
+                        <div class="game-action-bar">
+                            <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                                <SpaceItem>
+                                    @if (SelectedItem.State == LibraryItemState.Installed)
+                                    {
+                                        <PlayButton LibraryItem="SelectedItem" />
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.NotInstalled)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.Queued)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.UpdateAvailable)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
+                                    }
+                                    else if (SelectedItem.State == LibraryItemState.Installing)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
+                                    }
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
+                                </SpaceItem>
+                            </Space>
+                        </div>
+
+                        <div class="game-metadata">
+                            @if (!String.IsNullOrWhiteSpace(SelectedGame.Description))
+                            {
+                                <div class="game-metadata-description">@SelectedGame.Description</div>
+                            }
+
+                            @if (SelectedGame.ReleasedOn.HasValue)
+                            {
+                                <div class="game-metadata-released-on">
+                                    <h3>Released On</h3>
+                                    <span>@SelectedGame.ReleasedOn.Value.ToString("MMMM d, yyyy")</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Developers != null && SelectedGame.Developers.Any())
+                            {
+                                <div class="game-metadata-developers">
+                                    <h3>Developers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+                            
+                            @if (SelectedGame.Publishers != null && SelectedGame.Publishers.Any())
+                            {
+                                <div class="game-metadata-publishers">
+                                    <h3>Publishers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+                            
+                            @if (SelectedGame.Genres != null && SelectedGame.Genres.Any())
+                            {
+                                <div class="game-metadata-genres">
+                                    <h3>Genres</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Tags != null && SelectedGame.Tags.Any())
+                            {
+                                <div class="game-metadata-tags">
+                                    <h3>Tags</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
+                                </div>
+                            }
+                        </div>
+                    </GridCol>
+
+                    <GridCol Flex="@("256px")" Class="game-cover">
+                        @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
+                        {
+                            <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover).Id)" />
+                        }
+                    </GridCol>
+                </GridRow>
+            }
+        </div>
+    </Content>
+</Layout>
+
+<div class="logo">
+    <img src="assets/logo-cut.svg" />
+</div>
+
+<LANCommander.Launcher.UI.Components.Footer />
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    LibraryItem SelectedItem { get; set; }
+
+    Data.Models.Game SelectedGame { get; set; }
+    IEnumerable<SDK.Models.Action> SelectedGameActions { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        DownloadService.OnQueueChanged += OnQueueChanged;
+        DownloadService.OnInstallFail += OnInstallFail;
+        DownloadService.OnInstallComplete += OnInstallComplete;
+        GameService.OnUninstallComplete += OnUninstallComplete;
+
+        LibraryService.GroupSelector = (libraryItem) =>
+        {
+            if (libraryItem.DataItem is Game game)
+                return game.Collections.Select(c => c.Name).ToArray();
+            else
+                return new string[] { };
+        };
+
+        LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id != Guid.Empty)
+            await OnLibraryItemSelected(LibraryService.GetLibraryItem(Id));
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void LoadData()
+    {
+        LibraryService.RefreshLibraryItemsAsync().Wait();
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    async Task OnLibraryItemSelected(LibraryItem item)
+    {
+        if (item != null && item.DataItem is Data.Models.Game)
+        {
+            SelectedItem = item;
+            SelectedGame = item.DataItem as Data.Models.Game;
+
+            if (SelectedItem.State == LibraryItemState.Installed)
+                SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame)).Where(a => !a.IsPrimaryAction);
+        }
+    }
+
+    async Task Install(LibraryItem item)
+    {
+        await LibraryService.Install(item);
+    }
+
+    async Task OnQueueChanged()
+    {
+        var queueItem = DownloadService.Queue.FirstOrDefault(i => SelectedItem != null && i.Id == SelectedItem.Key);
+
+        if (queueItem != null)
+        {
+            SelectedItem = await LibraryService.GetLibraryItemAsync(SelectedItem);
+
+            switch (queueItem.Status)
+            {
+                case DownloadStatus.Downloading:
+                case DownloadStatus.InstallingRedistributables:
+                case DownloadStatus.InstallingMods:
+                case DownloadStatus.InstallingExpansions:
+                case DownloadStatus.RunningScripts:
+                case DownloadStatus.DownloadingSaves:
+                    SelectedItem.State = LibraryItemState.Installing;
+                    break;
+
+                case DownloadStatus.Idle:
+                    SelectedItem.State = LibraryItemState.Queued;
+                    break;
+
+                case DownloadStatus.Failed:
+                case DownloadStatus.Canceled:
+                    SelectedItem.State = LibraryItemState.NotInstalled;
+                    break;
+
+                case DownloadStatus.Complete:
+                    SelectedItem.State = LibraryItemState.Installed;
+                    break;
+            }
+
+            await OnLibraryItemSelected(SelectedItem);
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task OnInstallComplete(Data.Models.Game game)
+    {
+        LoadData();
+
+        if (SelectedItem.DataItem is Game selectedGame)
+        {
+            if (selectedGame.Id == game.Id)
+                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
+        }
+    }
+
+    async Task OnInstallFail(Data.Models.Game game)
+    {
+        var result = await ConfirmService.Show(
+            $"The installation for {game.Title} has failed. Retry download?",
+            "Installation Failed",
+            ConfirmButtons.RetryCancel,
+            ConfirmIcon.Error
+        );
+
+        await LibraryService.LibraryChanged();
+
+        if (result == ConfirmResult.Retry)
+        {
+            var libraryItem = LibraryService.GetLibraryItem(game.Id);
+
+            Install(libraryItem);
+        }
+    }
+
+    async Task OnUninstallComplete(Data.Models.Game game)
+    {
+        LoadData();
+
+        if (SelectedItem.DataItem is Game selectedGame)
+        {
+            if (selectedGame.Id == game.Id)
+                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
+        }
+    }
+
+    string GetPlayTime(Data.Models.Game game)
+    {
+        var totalTime = new TimeSpan(game.PlaySessions
+            .Where(ps => ps.End != null && ps.Start != null)
+            .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
+            .Sum(ts => ts.Ticks));
+        if (totalTime.TotalMinutes < 1)
+            return "None";
+        else if (totalTime.TotalHours < 1)
+            return totalTime.TotalMinutes.ToString("0") + " minutes";
+        else
+            return totalTime.TotalHours.ToString("0.##") + " hours";
+    }
+
+    string GetLastPlayed(Data.Models.Game game)
+    {
+        var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
+
+        if (lastSession == null)
+            return "Never";
+        else
+            return lastSession.End.Value.ToRelativeDate();
+    }
+}

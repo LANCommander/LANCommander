@@ -57,10 +57,10 @@ jobs:
       run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/LANCommander.AutoUpdater.exe ./LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/LANCommander.AutoUpdater.exe.Update
     
     # Launcher
-    - run: cd LANCommander.Client; npm install
+    - run: cd LANCommander.Launcher; npm install
 
     - name: Publish Launcher
-      run: dotnet publish "./LANCommander.Client/LANCommander.Client.csproj" -c Release --self-contained --runtime win-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c Release --self-contained --runtime win-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
     - name: Remove Extra Files
       run: |
@@ -75,12 +75,12 @@ jobs:
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Client/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.dll LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.psd1
+        files: LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.dll LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.psd1
         recursive: true
-        dest: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        dest: LANCommander.Launcher-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
-        path: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-        name: LANCommander.Client-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        path: LANCommander.Launcher-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Launcher-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip

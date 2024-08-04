@@ -12,7 +12,7 @@ LABEL maintainer="bashNinja"
 COPY root/ /
 
 # grab app
-ADD "https://github.com/LANCommander/LANCommander/releases/download/${VERSION}/LANCommander-Linux-x64-${VERSION}.zip" "/tmp"
+ADD "https://github.com/LANCommander/LANCommander/releases/download/${VERSION}/LANCommander.Server-Linux-x64-${VERSION}.zip" "/tmp"
 
 # install app
 RUN \
@@ -25,12 +25,13 @@ RUN \
       unzip \
       python3 && \
   echo "**** setup lancommander ****" && \
-    unzip "/tmp/LANCommander-Linux-x64-${VERSION}.zip" -d /app/LANCommander && \
+    unzip "/tmp/LANCommander.Server-Linux-x64-${VERSION}.zip" -d /app/LANCommander && \
     chmod +x /app/LANCommander/LANCommander && \
     ls -alh /app/LANCommander && \
   echo "**** setup symlinks ****" && \
     ln -s /config/Uploads/ /app/LANCommander/Uploads && \
     ln -s /config/Updates/ /app/LANCommander/Updates && \
+    ln -s /config/Launcher/ /app/LANCommander/Launcher && \
     ln -s /config/Saves/ /app/LANCommander/Saves && \
     ln -s /config/Media/ /app/LANCommander/Media && \
     ln -s /config/Logs/ /app/LANCommander/Logs && \

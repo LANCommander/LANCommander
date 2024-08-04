@@ -1,0 +1,69 @@
+﻿@using LANCommander.Launcher.Models
+@inject LibraryService LibraryService
+@inject ImportService ImportService
+@inject MessageBusService MessageBusService
+
+<div class="library-list">
+    <Collapse>
+        @if (Groups.Count > 1)
+        {
+            foreach (var group in Groups.OrderByTitle(g => g))
+            {
+                <Panel Header="@group" Key="@group">
+                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                        <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
+                    </AntList>
+                </Panel>
+            }
+        }
+        else
+        {
+            <Panel Class="no-header">
+                <AntList DataSource="LibraryService.LibraryItems" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                    <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
+                </AntList>
+            </Panel>
+        }
+    </Collapse>
+</div>
+
+@code {
+    [Parameter] public Guid? SelectedItem { get; set; }
+    [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
+
+    List<string> Groups = new List<string>();
+    IEnumerable<LibraryItem> LibraryItems;
+
+    protected override void OnInitialized()
+    {
+        LibraryService.OnLibraryChanged += UpdateGroups;
+        LibraryService.OnLibraryItemsFiltered += UpdateGroups;
+
+        UpdateGroups(LibraryService.LibraryItems);
+    }
+
+    async Task SelectItem(LibraryItem item)
+    {
+        if (OnItemSelected.HasDelegate)
+            await OnItemSelected.InvokeAsync(item.Key);
+    }
+
+    async Task UpdateGroups(IEnumerable<LibraryItem> items)
+    {
+        LibraryItems = items;
+
+        Groups = LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
+
+        if (LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
+            Groups.Add("Uncategorized");
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        LibraryService.OnLibraryChanged -= UpdateGroups;
+        LibraryService.OnLibraryItemsFiltered -= UpdateGroups;
+        ImportService.OnImportComplete -= LibraryService.LibraryChanged;
+    }
+}

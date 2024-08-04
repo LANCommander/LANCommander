@@ -1,0 +1,112 @@
+﻿@page "/Settings/Tools"
+@using LANCommander.Server.Models;
+@using ZiggyCreatures.Caching.Fusion
+@layout SettingsLayout
+@inject IMessageService MessageService
+@inject ArchiveService ArchiveService
+@inject UpdateService UpdateService
+@inject IFusionCache FusionCache
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Tools" />
+
+<div style="padding: 0 24px;">
+    <h3>Recalculate File Sizes</h3>
+    <p>
+        Some file sizes are cached in the database. Click the button below to scan through all files and recalculate their size.
+    </p>
+    <Button Type="@ButtonType.Primary" OnClick="RecalculateFileSizes" Loading="RecalculatingFileSizes">Recalculate</Button>
+
+    <Divider />
+
+    <h3>Clear Cache</h3>
+    <p>
+        A cached list of games is sent to the clients on import. Click the button below to bust this cache if you don't see your changes.
+    </p>
+    <Button Type="@ButtonType.Primary" OnClick="ClearCache">Clear Cache</Button>
+
+    <Divider />
+
+    <h3>Download Clients</h3>
+    <p>Check for any client releases for the current version and download them to this server.</p>
+    <Button Type="@ButtonType.Primary" OnClick="DownloadClients" Loading="DownloadingClients">Download</Button>
+
+    <Divider />
+
+    <h3>Missing Archives</h3>
+    <p>List and fix all archives that are missing their backing files.</p>
+    <a href="/Settings/Tools/MissingArchives" class="ant-btn ant-btn-primary">View Missing Archives</a>
+
+    <Divider />
+
+    <h3>Orphaned Files</h3>
+    <p>Find and delete any files that don't exist in the database and may be taking up unnecessary disk space.</p>
+    <a href="/Settings/Tools/OrphanedFiles" class="ant-btn ant-btn-primary">View Orphaned Files</a>
+
+    <Divider />
+
+    <h3>Active Sessions</h3>
+    <p>List and delete any active user play sessions.</p>
+    <a href="/Settings/Tools/ActiveSessions" class="ant-btn ant-btn-primary">View Active Sessions</a>
+</div>
+
+
+@code {
+    bool RecalculatingFileSizes = false;
+    bool DownloadingClients = false;
+
+    async Task RecalculateFileSizes()
+    {
+        RecalculatingFileSizes = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        var archives = await ArchiveService.Get();
+
+        foreach (var archive in archives)
+        {
+            var path = ArchiveService.GetArchiveFileLocation(archive);
+
+            if (File.Exists(path))
+            {
+                archive.CompressedSize = new FileInfo(path).Length;
+
+                await ArchiveService.Update(archive);
+            }
+        }
+
+        MessageService.Success("File sizes recalculated!");
+
+        RecalculatingFileSizes = false;
+    }
+
+    async Task ClearCache()
+    {
+        await FusionCache.ExpireAsync("MappedGames");
+
+        MessageService.Success("Cache cleared!");
+    }
+
+    async Task DownloadClients()
+    {
+        DownloadingClients = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        var currentVersion = UpdateService.GetCurrentVersion();
+        var currentRelease = await UpdateService.GetRelease(currentVersion);
+
+        if (currentRelease != null)
+        {
+            await UpdateService.DownloadLauncherRelease(currentRelease);
+
+            MessageService.Success("Clients downloaded!");
+        }
+        else
+        {
+            MessageService.Error("You are on an unsupported version and clients cannot be downloaded");
+        }
+
+        DownloadingClients = false;
+    }
+}

@@ -1,0 +1,184 @@
+﻿@page "/Settings/Roles"
+@using LANCommander.Server.Models;
+@layout SettingsLayout
+@inject RoleManager<Role> RoleManager
+@inject UserManager<User> UserManager
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ILogger<Index> Logger
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Roles">
+    <PageHeaderExtra>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+            </SpaceItem>
+             <SpaceItem>
+                 <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
+             </SpaceItem>
+         </Space>
+     </PageHeaderExtra>
+ </PageHeader>
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Restrict Games by Collection">
+            <Switch @bind-Checked="context.Roles.RestrictGamesByCollection" />
+        </FormItem>
+        <FormItem Label="Default Role">
+            <Select
+                TItem="RoleViewModel"
+                TItemValue="Guid"
+                DataSource="Roles"
+                @bind-Value="context.Roles.DefaultRoleId"
+                LabelName="@nameof(RoleViewModel.Name)"
+                ValueName="@nameof(RoleViewModel.Id)"
+                Placeholder="Select a role"
+                DefaultActiveFirstOption="false"
+                EnableSearch />
+        </FormItem>
+    </Form>
+
+    <Table TItem="RoleViewModel" DataSource="@Roles" Loading="@(Loading)" Responsive>
+        <PropertyColumn Property="r => r.Name" Title="Name" />
+        <PropertyColumn Property="r => r.Collections" Title="Collections" />
+        <PropertyColumn Property="r => r.Users" Title="Users" />
+        <ActionColumn>
+            <Space Style="display: flex; justify-content: end">
+                <SpaceItem>
+                    <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+                </SpaceItem>
+                <SpaceItem>
+                    @if (context.Name != "Administrator")
+                    {
+                        <Popconfirm OnConfirm="() => DeleteRole(context)" Title="Are you sure you want to delete this role?">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                         </Popconfirm>
+                    }
+                    else
+                    {
+                        <Tooltip Title="The administrator role cannot be deleted.">
+                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
+                         </Tooltip>
+                    }
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </Table>
+</div>
+
+<Modal Title="Add a Role" @bind-Visible="AddRoleDialogVisible" OnOk="AddRole" OnCancel="() => AddRoleDialogVisible = false">
+    <Form Model="NewRole">
+        <FormItem Label="Name">
+            <Input @bind-Value="@context.Name" />
+        </FormItem>
+    </Form>
+</Modal>
+
+@code {
+    ICollection<RoleViewModel> Roles { get; set; }
+
+    LANCommanderSettings Settings = SettingService.GetSettings();
+    bool Loading = true;
+    bool AddRoleDialogVisible = false;
+
+    RoleViewModel NewRole = new RoleViewModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Roles = new List<RoleViewModel>();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        Roles = new List<RoleViewModel>();
+
+        foreach (var role in RoleManager.Roles)
+        {
+            var users = await UserManager.GetUsersInRoleAsync(role.Name);
+
+            Roles.Add(new RoleViewModel()
+            {
+                Id = role.Id,
+                Name = role.Name,
+                Collections = role.Collections != null ? role.Collections.Count : 0,
+                Users = users != null ? users.Count : 0
+            });
+        }
+
+        Loading = false;
+
+        StateHasChanged();
+    }
+
+    private async Task DeleteRole(RoleViewModel roleViewModel)
+    {
+        var role = await RoleManager.FindByNameAsync(roleViewModel.Name);
+
+        if (role.Name == "Administrator")
+        {
+            MessageService.Error("Cannot delete the administrator role!");
+        }
+        else
+        {
+            await RoleManager.DeleteAsync(role);
+            await LoadData();
+
+            MessageService.Success($"Deleted {role.Name}!");
+        }
+    }
+
+    private void ShowNewRoleDialog()
+    {
+        NewRole = new RoleViewModel();
+
+        AddRoleDialogVisible = true;
+    }
+
+    private async Task AddRole()
+    {
+        if (await RoleManager.RoleExistsAsync(NewRole.Name))
+        {
+            MessageService.Error("A role with that name already exists!");
+            AddRoleDialogVisible = false;
+            return;
+        }
+
+        try
+        {
+            await RoleManager.CreateAsync(new Role()
+            {
+                Name = NewRole.Name
+            });
+
+            await LoadData();
+            MessageService.Success("Role added!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not add role!");
+            Logger.LogError(ex, "Could not add role!");
+        }
+    }
+
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

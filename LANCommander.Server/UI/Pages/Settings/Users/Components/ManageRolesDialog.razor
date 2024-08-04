@@ -1,0 +1,85 @@
+﻿@using LANCommander.Server.Models
+@using Microsoft.EntityFrameworkCore
+@using Components
+@inherits FeedbackComponent<Guid, Guid>
+@inject UserManager<User> UserManager
+@inject RoleManager<Role> RoleManager
+@inject IMessageService MessageService
+@inject ILogger<ManageRolesDialog> Logger
+
+<Transfer DataSource="TransferItems" TargetKeys="TargetKeys" OnChange="OnChange" Titles="@(new string[] { "Available", "Assigned" })" />
+
+@code {
+    User User;
+    ICollection<Role> Roles = new List<Role>();
+    ICollection<Role> SelectedRoles = new List<Role>();
+    IEnumerable<TransferItem> TransferItems { get; set; } = new List<TransferItem>();
+    List<string> TargetKeys { get; set; } = new List<string>();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            TransferItems = Roles.Select(r => new TransferItem()
+            {
+                Key = r.Id.ToString(),
+                Title = r.Name
+            });
+
+            if (SelectedRoles != null)
+                TargetKeys = SelectedRoles.Select(i => i.Id.ToString()).ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        User = await UserManager.FindByIdAsync(Options.ToString());
+        Roles = await RoleManager.Roles.ToListAsync();
+
+        var currentRoles = await UserManager.GetRolesAsync(User);
+
+        SelectedRoles = Roles.Where(r => currentRoles.Contains(r.Name)).ToList();
+    }
+
+    async Task OnChange(TransferChangeArgs e)
+    {
+        SelectedRoles = Roles.Where(r => e.TargetKeys.Contains(r.Id.ToString())).ToList();
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        var currentAdmins = await UserManager.GetUsersInRoleAsync("Administrator");
+
+        try
+        {
+            var currentRoles = await UserManager.GetRolesAsync(User);
+
+            await UserManager.AddToRolesAsync(User, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Contains(r)));
+
+            foreach (var role in currentRoles)
+            {
+                if (!SelectedRoles.Any(r => r.Name == role))
+                {
+                    if (role == "Administrator" && currentAdmins.Count == 1)
+                        MessageService.Warning("Cannot demote the only administrator!");
+                    else
+                        await UserManager.RemoveFromRoleAsync(User, role);
+                }
+            }
+
+            MessageService.Success("Updated user roles!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not update user roles!");
+            Logger.LogError(ex, "Could not update user roles!");
+        }
+
+        await base.OkCancelRefWithResult!.OnOk(User.Id);
+    }
+}

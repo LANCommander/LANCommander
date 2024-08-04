@@ -1,0 +1,634 @@
+﻿@page "/Games/{id:guid}"
+@page "/Games/{id:guid}/{panel}"
+@page "/Games/Add"
+@using LANCommander.Server.Extensions
+@using LANCommander.Server.UI.Pages.Games.Components;
+@using LANCommander.Server.Data.Enums;
+@using LANCommander.Server.Models;
+@using System.IO.Compression;
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Roles = "Administrator")]
+@inject GameService GameService
+@inject CompanyService CompanyService
+@inject GenreService GenreService
+@inject PlatformService PlatformService
+@inject TagService TagService
+@inject EngineService EngineService
+@inject CollectionService CollectionService
+@inject ArchiveService ArchiveService
+@inject ScriptService ScriptService
+@inject RedistributableService RedistributableService
+@inject PlaySessionService PlaySessionService
+@inject GameSaveService GameSaveService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ModalService ModalService
+@inject ILogger<Edit> Logger
+
+<Layout Class="panel-layout" Style="padding: 24px 0;">
+    <Sider Width="200">
+        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+            <MenuItem RouterLink="@($"/Games/{Game.Id}/General")">General</MenuItem>
+
+            @if (Game != null && Game.Id != Guid.Empty)
+            {
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Media")">Media</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Actions")">Actions</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Multiplayer")">Multiplayer</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/SavePaths")">Save Paths</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Keys")">Keys</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Archives")">Archives</MenuItem>
+
+                if (Game.DependentGames.Any(g => g.Type == GameType.Expansion))
+                {
+                    <MenuItem RouterLink="@($"/Games/{Game.Id}/Expansions")">Expansions</MenuItem>
+                }
+
+                if (Game.DependentGames.Any(g => g.Type == GameType.Mod))
+                {
+                    <MenuItem RouterLink="@($"/Games/{Game.Id}/Mods")">Mods</MenuItem>
+                }
+
+                if (Game.PlaySessions != null && Game.PlaySessions.Any())
+                {
+                    <MenuItem RouterLink="@($"/Games/{Game.Id}/PlaySessions")">Play Sessions</MenuItem>
+                }
+
+                if (Game.GameSaves != null && Game.GameSaves.Any())
+                {
+                    <MenuItem RouterLink="@($"/Games/{Game.Id}/Saves")">Saves</MenuItem>
+                }
+
+                if (Settings.Wiki.Enabled)
+                {
+                    <MenuItem RouterLink="@($"/Games/{Game.Id}/Wiki")">Wiki</MenuItem>
+                }
+            }
+        </Menu>
+    </Sider>
+
+    <Content>
+        <PageHeader>
+            <PageHeaderTitle>
+                @if (Panel == null)
+                {
+                    <Text>Add New Game</Text>
+                }
+                else if (PanelDisplayNames.ContainsKey(Panel))
+                {
+                    @PanelDisplayNames[Panel]
+                }
+                else
+                {
+                    @Panel
+                }
+            </PageHeaderTitle>
+            <PageHeaderExtra>
+                <Space Direction="DirectionVHType.Horizontal">
+                    @if (Game != null && Game.Id != Guid.Empty)
+                    {
+                        <SpaceItem>
+                            <Dropdown Trigger="@(new Trigger[] { Trigger.Click })" OnClick='e => { Console.WriteLine("Dropdown button clicked."); }'>
+                                <Overlay>
+                                    <Menu>
+                                        <MenuItem>
+                                            <a href="/Games/@(Id)/Export/Full" target="_blank">Full</a>
+                                        </MenuItem>
+                                        <MenuItem>
+                                            <a href="/Games/@(Id)/Export/Metadata" target="_blank">Metadata</a>
+                                        </MenuItem>
+                                    </Menu>
+                                </Overlay>
+                                <ChildContent>
+                                    <Button>Export</Button>
+                                </ChildContent>
+                            </Dropdown>
+                            
+                        </SpaceItem>
+                    }
+                    <SpaceItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                    </SpaceItem>
+                </Space>
+            </PageHeaderExtra>
+        </PageHeader>
+
+        <div class="panel-layout-content">
+            <div data-panel="General">
+                <Form Model="@Game" Layout="@FormLayout.Vertical">
+                    <FormItem Label="Title">
+                        <GameMetadataLookup ButtonText="Lookup" @bind-Value="context.Title" OnResultSelected="OnGameLookupResultSelected" />
+                    </FormItem>
+                    <FormItem Label="Sort Title">
+                        <Input @bind-Value="@context.SortTitle" />
+                    </FormItem>
+                    <FormItem Label="Notes">
+                        <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+                     </FormItem>
+                    <FormItem Label="Description">
+                        <TextArea @bind-Value="@context.Description" />
+                    </FormItem>
+                    <FormItem Label="Engine">
+                        <Select TItem="Engine"
+                            TItemValue="Guid?"
+                            DataSource="@Engines.OrderBy(e => e.Name)"
+                            @bind-Value="@context.EngineId"
+                            LabelName="Name"
+                            ValueName="Id"
+                            Placeholder="Select an Engine"
+                            DefaultActiveFirstOption="false"
+                            EnableSearch />
+                    </FormItem>
+                    <FormItem Label="Type">
+                        <Select @bind-Value="@context.Type" TItem="GameType" TItemValue="GameType" DataSource="Enum.GetValues<GameType>()">
+                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                        </Select>
+                    </FormItem>
+                    @if (context.Type != GameType.MainGame)
+                    {
+                        <FormItem Label="Base Game">
+                            <Select TItem="Game"
+                                    TItemValue="Guid?"
+                                    DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                                    @bind-Value="@context.BaseGameId"
+                                    LabelName="Title"
+                                    ValueName="Id"
+                                    Placeholder="Select a Game"
+                                    DefaultActiveFirstOption="false"
+                                    EnableSearch>
+                                <ItemTemplate Context="baseGame">
+                                    <Image Src="@GetIcon(baseGame)" Height="32" Width="32" Preview="false"></Image>
+                                    @baseGame.Title
+                                </ItemTemplate>
+                            </Select>
+                        </FormItem>
+                    }
+                    <FormItem Label="Released On">
+                        <DatePicker TValue="DateTime?" @bind-Value="@context.ReleasedOn" Picker="@DatePickerType.Date" />
+                    </FormItem>
+                    <FormItem Label="Singleplayer">
+                        <Checkbox @bind-Checked="@context.Singleplayer" />
+                    </FormItem>
+                    <FormItem Label="Developers">
+                        <TagsInput Entities="Companies" @bind-Values="Game.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                    </FormItem>
+                    <FormItem Label="Publishers">
+                        <TagsInput Entities="Companies" @bind-Values="Game.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+                    </FormItem>
+                    <FormItem Label="Platforms">
+                        <TagsInput Entities="Platforms" @bind-Values="Game.Platforms" OptionLabelSelector="c => c.Name" TItem="Platform" />
+                    </FormItem>
+                    <FormItem Label="Genres">
+                        <TagsInput Entities="Genres" @bind-Values="Game.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
+                    </FormItem>
+                    <FormItem Label="Tags">
+                        <TagsInput Entities="Tags" @bind-Values="Game.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
+                    </FormItem>
+                    <FormItem Label="Collections">
+                        <TagsInput Entities="Collections" @bind-Values="Game.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
+                    </FormItem>
+                    <FormItem Label="Redistributables">
+                        <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Redistributables" TitleSelector="r => r.Name" @bind-Values="Game.Redistributables" />
+                    </FormItem>
+                </Form>
+            </div>
+
+            @if (Game != null && Game.Id != Guid.Empty)
+            {
+                <div data-panel="Media">
+                    <MediaEditor @bind-Values="Game.Media" GameId="Game.Id" GameTitle="@Game.Title" />
+                </div>
+
+                <div data-panel="Actions">
+                    <ActionEditor @bind-Actions="Game.Actions" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
+                </div>
+
+                <div data-panel="Multiplayer">
+                    <MultiplayerModeEditor @bind-Value="Game.MultiplayerModes" />
+                </div>
+
+                <div data-panel="SavePaths">
+                    <SavePathEditor @bind-Value="Game.SavePaths" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
+                </div>
+
+                <div data-panel="Keys">
+                    <KeysEditor @ref="KeysEditor" @bind-Keys="Game.Keys" GameId="Game.Id" />
+
+                    <Button OnClick="() => KeysEditor.Edit()">Edit</Button>
+                </div>
+
+                <div data-panel="Scripts">
+                    <ScriptEditor GameId="Game.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop }" />
+                </div>
+
+                <div data-panel="Archives">
+                    <ArchiveEditor GameId="Game.Id" />
+                </div>
+
+                <div data-panel="Expansions">
+                    <Table TItem="Game" DataSource="@Game.DependentGames.Where(g => g.Type == GameType.Expansion)" Context="expansion" Responsive>
+                        <PropertyColumn Property="e => e.Title" Sortable Filterable />
+                        <PropertyColumn Property="e => e.SortTitle" Sortable Filterable />
+                        <PropertyColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
+                        <PropertyColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+                        <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Sortable Filterable />
+                        <PropertyColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+                        <PropertyColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Sortable Filterable />
+                        <ActionColumn Style="text-align: right">
+                             <Space Direction="DirectionVHType.Horizontal">
+                                 <SpaceItem>
+                                     <Button Type="@ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{expansion.Id}", true))">Edit</Button>
+                                 </SpaceItem>
+                                 <SpaceItem>
+                                     <Popconfirm OnConfirm="() => Delete(expansion)" Title="Are you sure you want to delete this expansion?">
+                                         <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                     </Popconfirm>
+                                 </SpaceItem>
+                             </Space>
+                        </ActionColumn>
+                    </Table>
+                </div>
+
+                <div data-panel="Mods">
+                    <Table TItem="Game" DataSource="@Game.DependentGames.Where(g => g.Type == GameType.Mod)" Context="mod" Responsive>
+                         <PropertyColumn Property="e => e.Title" Sortable Filterable />
+                         <PropertyColumn Property="e => e.SortTitle" Sortable Filterable />
+                         <PropertyColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
+                         <PropertyColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+                         <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Sortable Filterable />
+                         <PropertyColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+                         <PropertyColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Sortable Filterable />
+                         <ActionColumn Style="text-align: right">
+                             <Space Direction="DirectionVHType.Horizontal">
+                                 <SpaceItem>
+                                     <Button Type="@ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{mod.Id}", true))">Edit</Button>
+                                 </SpaceItem>
+                                 <SpaceItem>
+                                     <Popconfirm OnConfirm="() => Delete(mod)" Title="Are you sure you want to delete this mod?">
+                                         <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                     </Popconfirm>
+                                 </SpaceItem>
+                             </Space>
+                         </ActionColumn>
+                     </Table>
+                 </div>
+
+                <div data-panel="PlaySessions">
+                    <Table TItem="PlaySession" DataSource="@Game.PlaySessions" Context="session" Responsive>
+                        <PropertyColumn Property="e => e.Start" Sortable Filterable />
+                        <PropertyColumn Property="e => e.End" Sortable Filterable />
+                        <PropertyColumn Property="e => e.Duration" Sortable DefaultSortOrder="SortDirection.Descending">
+                            @if (session.Duration.HasValue)
+                            {
+                                <Text>@($"{(int)session.Duration.Value.TotalHours}:{session.Duration.Value.Minutes:D2}:{session.Duration.Value.Seconds:D2}")</Text>
+                            }
+                        </PropertyColumn>
+                        <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Title="Player" Sortable Filterable />
+                        <ActionColumn Style="text-align: right">
+                            <Space Direction="DirectionVHType.Horizontal">
+                                <SpaceItem>
+                                    <Popconfirm OnConfirm="() => DeleteSession(session)" Title="Are you sure you want to delete this session?">
+                                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                    </Popconfirm>
+                                </SpaceItem>
+                            </Space>
+                        </ActionColumn>
+                    </Table>
+                </div>
+
+                <div data-panel="Saves">
+                    <Table TItem="GameSave" DataSource="@Game.GameSaves" Context="save" Responsive>
+                        <PropertyColumn Property="g => g.User" Sortable>
+                            @save.User?.UserName
+                        </PropertyColumn>
+                        <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending" Sortable />
+                        <PropertyColumn Property="g => g.CreatedBy" Sortable>
+                            @save.CreatedBy?.UserName
+                        </PropertyColumn>
+                        <ActionColumn Title="">
+                            <Space Direction="DirectionVHType.Horizontal">
+                                <SpaceItem>
+                                    <a href="/Download/Save/@(save.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                                        <Icon Type="@IconType.Outline.Download" />
+                                    </a>
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Popconfirm OnConfirm="() => DeleteSave(save)" Title="Are you sure you want to delete this game save?">
+                                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                    </Popconfirm>
+                                </SpaceItem>
+                            </Space>
+                        </ActionColumn>
+                    </Table>
+                </div>
+
+                @if (Settings.Wiki.Enabled)
+                {
+                    <div data-panel="Wiki">
+                        <WikiEditor GameId="Game.Id" />
+                    </div>
+                }
+            }
+
+        </div>
+    </Content>
+</Layout>
+
+@if (!String.IsNullOrWhiteSpace(Panel))
+{
+    <style>
+        .panel-layout [data-panel="@Panel"] {
+            display: block;
+        }
+    </style>
+}
+else
+{
+    <style>
+        .panel-layout [data-panel="General"] {
+            display: block;
+        }
+    </style>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Panel { get; set; }
+
+    bool Loaded = false;
+    bool Success;
+    string[] Errors = { };
+
+    IEnumerable<Engine> Engines;
+    IEnumerable<Company> Companies;
+    IEnumerable<Genre> Genres;
+    IEnumerable<Platform> Platforms;
+    IEnumerable<Data.Models.Tag> Tags;
+    IEnumerable<Collection> Collections;
+    IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
+    IEnumerable<TransferItem> RedistributableTargetItems = new List<TransferItem>();
+    IEnumerable<string> TargetRedistributables = new List<string>();
+    IEnumerable<Game> Games = new List<Game>();
+
+    FilePickerDialog ArchiveFilePickerDialog;
+
+    Modal FileSelectorModal;
+
+    private string value = "blazor";
+
+    private Game Game;
+    private KeysEditor? KeysEditor;
+    private GameMetadataLookup? GameMetadataLookup;
+
+    private LANCommanderSettings Settings = SettingService.GetSettings();
+
+    private Dictionary<string, string> PanelDisplayNames = new Dictionary<string, string>
+    {
+        { "SavePaths", "Save Paths" }
+    };
+
+    private Guid LatestArchiveId
+    {
+        get
+        {
+            if (Game != null && Game.Archives != null && Game.Archives.Count > 0)
+                return Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
+            else
+                return Guid.Empty;
+        }
+    }
+
+    private int KeysAvailable { get {
+            return Game.Keys.Count(k =>
+            {
+                return (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
+                ||
+                (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null);
+            });
+        } }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Loaded)
+            await LoadData();
+    }
+
+    private async Task LoadData() {
+        if (Id == Guid.Empty)
+            Game = new Game();
+        else
+            Game = await GameService.Get(Id);
+
+        Engines = await EngineService.Get();
+        Companies = await CompanyService.Get();
+        Genres = await GenreService.Get();
+        Platforms = await PlatformService.Get();
+        Tags = await TagService.Get();
+        Collections = await CollectionService.Get();
+        Games = await GameService.Get(g => g.Type == GameType.MainGame).ToListAsync();
+        Redistributables = await RedistributableService.Get();
+        RedistributableTargetItems = Redistributables.Select(r => new TransferItem
+        {
+            Title = r.Name,
+            Description = r.Description,
+            Key = r.Id.ToString()
+        });
+
+        Loaded = true;
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Game.Id != Guid.Empty)
+            {
+                Game = await GameService.Update(Game);
+
+                await MessageService.Success("Game updated!");
+            }
+            else
+            {
+                Game = await GameService.Add(Game);
+
+                NavigationManager.LocationChanged += NotifyGameAdded;
+
+                NavigationManager.NavigateTo($"/Games/{Game.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save game!");
+            Logger.LogError(ex, "Could not save game!");
+        }
+    }
+
+    private void NotifyGameAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyGameAdded;
+
+        MessageService.Success("Game added!");
+    }
+
+    private async Task OnGameLookupResultSelected(GameLookupResult result)
+    {
+        var categoryMap = new Dictionary<IGDB.Models.Category, GameType>()
+        {
+            { IGDB.Models.Category.MainGame, GameType.MainGame },
+            { IGDB.Models.Category.Expansion, GameType.Expansion },
+            { IGDB.Models.Category.StandaloneExpansion, GameType.StandaloneExpansion },
+            { IGDB.Models.Category.Mod, GameType.Mod }
+        };
+
+        Game.IGDBId = result.IGDBMetadata.Id.GetValueOrDefault();
+        Game.Title = result.IGDBMetadata.Name;
+        Game.Description = result.IGDBMetadata.Summary;
+        Game.ReleasedOn = result.IGDBMetadata.FirstReleaseDate.GetValueOrDefault().UtcDateTime;
+        Game.MultiplayerModes = result.MultiplayerModes.ToList();
+        Game.Developers = new List<Company>();
+        Game.Publishers = new List<Company>();
+        Game.Genres = new List<Genre>();
+        Game.Tags = new List<Data.Models.Tag>();
+
+        if (result.IGDBMetadata.ParentGame != null && result.IGDBMetadata.ParentGame.Id.HasValue)
+        {
+            var baseGame = await GameService.Get(g => g.IGDBId == result.IGDBMetadata.ParentGame.Id).FirstOrDefaultAsync();
+
+            if (baseGame != null)
+                Game.BaseGameId = baseGame.Id;
+        }
+
+        if (result.IGDBMetadata.GameEngines != null && result.IGDBMetadata.GameEngines.Values != null)
+        {
+            var engineMetadata = result.IGDBMetadata.GameEngines.Values.FirstOrDefault();
+
+            var engine = await EngineService.AddMissing(e => e.Name == engineMetadata.Name, new Engine { Name = engineMetadata.Name });
+
+            if (!engine.Existing)
+                Engines = await EngineService.Get();
+
+            Game.Engine = engine.Value;
+            Game.EngineId = engine.Value.Id;
+        }
+
+        if (categoryMap.Keys.Contains(result.IGDBMetadata.Category.GetValueOrDefault()))
+            Game.Type = categoryMap[result.IGDBMetadata.Category.GetValueOrDefault()];
+
+        if (result.IGDBMetadata.GameModes != null && result.IGDBMetadata.GameModes.Values != null)
+            Game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Single player");
+
+        if (result.IGDBMetadata.InvolvedCompanies != null && result.IGDBMetadata.InvolvedCompanies.Values != null)
+        {
+            // Make sure companie
+            var developers = result.IGDBMetadata.InvolvedCompanies.Values.Where(c => c.Developer.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+            var publishers = result.IGDBMetadata.InvolvedCompanies.Values.Where(c => c.Publisher.GetValueOrDefault()).Select(c => c.Company.Value.Name);
+
+            foreach (var developer in developers)
+            {
+                var company = await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer });
+
+                if (!company.Existing)
+                    Companies = await CompanyService.Get();
+
+                Game.Developers.Add(company.Value);
+            }
+
+            foreach (var publisher in publishers)
+            {
+                var company = await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher });
+
+                if (!company.Existing)
+                    Companies = await CompanyService.Get();
+
+                Game.Publishers.Add(company.Value);
+            }
+        }
+
+        if (result.IGDBMetadata.Genres != null && result.IGDBMetadata.Genres.Values != null)
+        {
+            var genres = result.IGDBMetadata.Genres.Values.Select(g => g.Name);
+
+            foreach (var genre in genres)
+            {
+                var genreEntity = await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre });
+
+                if (!genreEntity.Existing)
+                    Genres = await GenreService.Get();
+
+                Game.Genres.Add(genreEntity.Value);
+            }
+        }
+
+        if (result.IGDBMetadata.Keywords != null && result.IGDBMetadata.Keywords.Values != null)
+        {
+            var tags = result.IGDBMetadata.Keywords.Values.Select(t => t.Name);
+
+            foreach (var tag in tags)
+            {
+                var tagEntity = await TagService.AddMissing(t => t.Name == tag, new Data.Models.Tag { Name = tag });
+
+                if (!tagEntity.Existing)
+                    Tags = await TagService.Get();
+
+                Game.Tags.Add(tagEntity.Value);
+            }
+        }
+    }
+
+    private string GetIcon(Game game)
+    {
+        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+
+        if (media != null)
+            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        else
+            return "/favicon.ico";
+    }
+
+    private async Task Delete(Game game)
+    {
+        Games = new List<Game>();
+
+        try
+        {
+            await GameService.Delete(game);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+            Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+        }
+    }
+
+    private async Task DeleteSession(PlaySession session)
+    {
+        try
+        {
+            await PlaySessionService.Delete(session);
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not delete play session!");
+            Logger.LogError(ex, "Could not delete the play session!");
+        }
+    }
+
+    private async Task DeleteSave(GameSave gameSave)
+    {
+        try
+        {
+            await GameSaveService.Delete(gameSave);
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not delete game save!");
+            Logger.LogError(ex, "Could not delete the game save!");
+        }
+    }
+}

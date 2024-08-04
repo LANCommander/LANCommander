@@ -1,0 +1,121 @@
+﻿@using LANCommander.Server.Models
+@using Microsoft.EntityFrameworkCore
+@inherits FeedbackComponent<AddToCollectionOptions, IEnumerable<Collection>>
+@inject CollectionService CollectionService
+@inject GameService GameService
+@inject IMessageService MessageService
+@inject ILogger<AddToCollectionDialog> Logger
+
+<Select
+    AllowClear
+    Mode="multiple"
+    TItem="Collection"
+    TItemValue="Guid"
+    DataSource="@Collections"
+    @bind-Values="SelectedCollections"
+    LabelName="@nameof(Collection.Name)"
+    ValueName="@nameof(Collection.Id)"
+    Placeholder="Select a Collection"
+    DropdownRender="@DropdownRender" />
+
+@code {
+    ICollection<Collection> Collections = new List<Collection>();
+
+    IEnumerable<Guid> SelectedCollections;
+
+    string NewCollectionName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        Collections = (await CollectionService.Get()).OrderBy(c => c.Name).ToList();
+    }
+
+    private RenderFragment DropdownRender(RenderFragment originNode)
+    {
+        RenderFragment customDropdownRender =
+            @<Template>
+                <div>
+                    @originNode
+                    <Divider Style="margin: 4px 0"></Divider>
+                    <Space Direction="@DirectionVHType.Horizontal" Style="padding: 4px 8px; width: 100%;">
+                        <SpaceItem Style="flex-grow: 1;">
+                            <Input Style="flex: auto;" @bind-Value="@NewCollectionName" BindOnInput="true" />
+                        </SpaceItem>
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(NewCollectionName))" OnClick="AddCollection">Add New Collection</Button>
+                        </SpaceItem>
+                    </Space>
+                </div>
+            </Template>
+    ;
+
+        return customDropdownRender;
+    }
+
+    private async Task AddCollection(MouseEventArgs args)
+    {
+        try
+        {
+            if (!String.IsNullOrWhiteSpace(NewCollectionName))
+            {
+                await CollectionService.Add(new Collection()
+                    {
+                        Name = NewCollectionName
+                    });
+
+                await LoadData();
+
+                MessageService.Success("Collection added!");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not add a new collection!");
+            Logger.LogError(ex, "Could not add a new collection!");
+        }
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        var collections = await CollectionService.Get(c => SelectedCollections.Contains(c.Id)).ToListAsync();
+
+        try
+        {
+            foreach (var collection in collections)
+            {
+                if (collection.Games == null)
+                    collection.Games = new List<Game>();
+
+                foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
+                {
+                    var game = await GameService.Get(gameId);
+
+                    collection.Games.Add(game);
+                }
+
+                await CollectionService.Update(collection);
+            }
+
+            if (collections.Count > 1)
+                MessageService.Success("Added to collections!");
+            else
+                MessageService.Success("Added to collection!");
+        }
+        catch (Exception ex)
+        {
+            if (collections.Count > 1)
+                MessageService.Error("Could not add to collections!");
+            else
+                MessageService.Error("Could not add to collection!");
+
+            Logger.LogError(ex, "Could not add to collection(s)!");
+        }
+
+        await base.OkCancelRefWithResult!.OnOk(collections);
+    }
+}

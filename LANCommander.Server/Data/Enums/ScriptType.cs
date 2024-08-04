@@ -1,0 +1,24 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace LANCommander.Server.Data.Enums
+{
+    public enum ScriptType
+    {
+        Install,
+        Uninstall,
+        [Display(Name = "Name Change")]
+        NameChange,
+        [Display(Name = "Key Change")]
+        KeyChange,
+        [Display(Name = "Save Upload")]
+        SaveUpload,
+        [Display(Name = "Save Download")]
+        SaveDownload,
+        [Display(Name = "Detect Install")]
+        DetectInstall,
+        [Display(Name = "Before Start")]
+        BeforeStart,
+        [Display(Name = "After Stop")]
+        AfterStop,
+    }
+}

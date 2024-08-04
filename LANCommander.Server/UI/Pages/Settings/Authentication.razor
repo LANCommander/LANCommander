@@ -1,0 +1,74 @@
+﻿@page "/Settings/Authentication"
+@using LANCommander.Server.Models;
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject IMessageService MessageService
+@inject ILogger<Authentication> Logger
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Authentication" />
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Require Account Approval">
+            <Switch @bind-Checked="context.Authentication.RequireApproval" />
+        </FormItem>
+
+        <FormItem Label="Token Secret">
+            <InputPassword @bind-Value="context.Authentication.TokenSecret" />
+        </FormItem>
+        <FormItem Label="Token Lifetime">
+            <AntDesign.InputNumber @bind-Value="context.Authentication.TokenLifetime" Formatter="FormatTokenLifetime" Min="1" />
+        </FormItem>
+
+        <Divider Text="Password Requirements" />
+
+        <FormItem Label="Require non-alphanumeric characters">
+            <Switch @bind-Checked="@context.Authentication.PasswordRequireNonAlphanumeric" />
+        </FormItem>
+        <FormItem Label="Require Lowercase characters">
+            <Switch @bind-Checked="context.Authentication.PasswordRequireLowercase" />
+        </FormItem>
+        <FormItem Label="Require Uppercase characters">
+            <Switch @bind-Checked="context.Authentication.PasswordRequireUppercase" />
+        </FormItem>
+        <FormItem Label="Require digits">
+            <Switch @bind-Checked="context.Authentication.PasswordRequireDigit" />
+        </FormItem>
+        <FormItem Label="Minimum Length">
+            <AntDesign.InputNumber @bind-Value="context.Authentication.PasswordRequiredLength" Min="1" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    LANCommanderSettings Settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    private string FormatTokenLifetime(int value)
+    {
+        return value.ToString() + " days";
+    }
+
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

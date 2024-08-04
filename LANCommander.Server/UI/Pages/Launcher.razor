@@ -1,0 +1,36 @@
+﻿@page "/Launcher"
+@layout BasicLayout
+@using LANCommander.Server.Models
+@inject UpdateService UpdateService
+@inject NavigationManager NavigationManager
+
+<div class="launcher-download">
+    @switch (Settings.Theme)
+    {
+        case LANCommanderTheme.Light:
+            <img src="/static/logo.svg" />
+            break;
+
+        case LANCommanderTheme.Dark:
+            <img src="/static/logo-dark.svg" />
+            break;
+    }
+
+    <h1>Grab the Launcher!</h1>
+
+    <a href="/Download/Launcher" class="ant-btn ant-btn-primary ant-btn-lg">
+        <Icon Type="@IconType.Outline.Download" />
+        <span>Download</span>
+    </a>
+
+    <Space>
+        <SpaceItem>
+            <Button Type="@ButtonType.Link" OnClick="@(() => NavigationManager.NavigateTo("Identity/Account/Login"))">Login</Button>
+            <Button Type="@ButtonType.Link" OnClick="@(() => NavigationManager.NavigateTo("Identity/Account/Register"))">Register</Button>
+        </SpaceItem>
+    </Space>
+</div>
+
+@code {
+    LANCommanderSettings Settings = SettingService.GetSettings();
+}

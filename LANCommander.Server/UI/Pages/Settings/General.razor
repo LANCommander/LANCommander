@@ -1,0 +1,65 @@
+﻿@page "/Settings"
+@page "/Settings/General"
+@using LANCommander.Server.Models;
+@using LANCommander.Server.Extensions;
+@layout SettingsLayout
+@inject SettingService SettingService
+@inject IGDBService IGDBService
+@inject IMessageService MessageService
+@inject ILogger<General> Logger
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="General" />
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Theme">
+            <Select @bind-Value="context.Theme" TItem="LANCommanderTheme" TItemValue="LANCommanderTheme" DataSource="Enum.GetValues<LANCommanderTheme>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+
+        <Divider Text="IGDB Credentials" />
+
+        <Text Type="@TextElementType.Secondary">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
+
+        <FormItem Label="Client ID">
+            <Input @bind-Value="context.IGDBClientId" />
+        </FormItem>
+        <FormItem Label="Client Secret">
+            <InputPassword @bind-Value="context.IGDBClientSecret" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</div>
+
+
+@code {
+    private LANCommanderSettings Settings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+
+            IGDBService.Authenticate();
+
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

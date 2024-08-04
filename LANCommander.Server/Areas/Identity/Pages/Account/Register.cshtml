@@ -1,0 +1,106 @@
+﻿@page
+@using LANCommander.Server.Models;
+@using LANCommander.Server.Services;
+@model RegisterModel
+@{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
+@{
+    ViewData["Title"] = "Register";
+
+    var errors = ModelState.Where(x => x.Value != null && x.Value.Errors != null && x.Value.Errors.Count > 0).SelectMany(kvp => kvp.Value.Errors.Select(e => e.ErrorMessage)).ToList();
+}
+
+<div class="ant-row ant-row-middle ant-row-space-around" style="min-height: 100vh; margin-top: -24px;">
+    <div class="ant-col ant-col-xs-24 ant-col-md-10">
+
+        <div style="text-align: center; margin-bottom: 24px;">
+            @switch (SettingService.GetSettings().Theme)
+            {
+                case LANCommanderTheme.Light:
+                    <img src="~/static/logo.svg" />
+                    break;
+
+                case LANCommanderTheme.Dark:
+                    <img src="~/static/logo-dark.svg" />
+                    break;
+            }
+        </div>
+
+        <div class="ant-card ant-card-bordered">
+            <div class="ant-card-head">
+                <div class="ant-card-head-wrapper">
+                    <div class="ant-card-head-title">Create An Account</div>
+                </div>
+            </div>
+            <form id="registerForm" method="post" class="ant-card-body" autocomplete="off">
+                @foreach (var error in errors)
+                {
+                    <div data-show="true" class="ant-alert ant-alert-error ant-alert-no-icon" style="margin-bottom: 12px">
+                        <div class="ant-alert-content">
+                            <div class="ant-alert-message">@error</div>
+                        </div>
+                    </div>
+                }
+
+                <div class="ant-form ant-form-vertical">
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Input.UserName" class="form-label"></label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.UserName" class="ant-input" autocomplete="username" aria-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Input.Password" class="form-label"></label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.Password" class="ant-input" autocomplete="current-password" aria-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Input.ConfirmPassword" class="form-label"></label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Input.ConfirmPassword" class="ant-input" autocomplete="new-password" aria-required="true" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ant-form-item" style="margin-bottom: 0;">
+                        <div class="ant-form-item-row ant-row">
+                            <button id="register-submit" type="submit" class="ant-btn ant-btn-primary ant-btn-block">Register</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div style="text-align: center; margin-top: 16px;">
+            Already have an account? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl" tabindex="-1">Login</a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,146 @@
+﻿@using System.Net;
+@using System.Diagnostics;
+@using Hangfire;
+@using LANCommander.Server.Jobs.Background;
+@using Microsoft.EntityFrameworkCore;
+@inject NavigationManager Navigator
+@inject GameService GameService
+@inject IMessageService MessageService
+@inject IJSRuntime JS
+
+@{
+    RenderFragment Footer =
+    @<Template>
+        <FilePickerButton
+            EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
+            OnSelected="OnLocalFileSelected"
+            Root="@RootPath"
+            Disabled="@(Status != "")">
+            Use Local File
+        </FilePickerButton>
+        <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="Cancel">Cancel</Button>
+    </Template>;
+}
+
+<Modal Visible="@Visible" Title="Import Game" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
+    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+        <Text>
+            <p>Drag and Drop</p>
+            <p>or</p>
+            <p>
+                <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
+            </p>
+        </Text>
+        <Hint>@Hint</Hint>
+    </ChunkUploader>
+</Modal>
+
+@code {
+    [Parameter] public EventCallback<Guid> OnGameImported { get; set; }
+    [Parameter] public RenderFragment Hint { get; set; }
+
+    NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+
+    IBrowserFile File;
+    ChunkUploader ChunkUploader;
+
+    bool IsValid = false;
+    bool Visible = false;
+
+    string Filename;
+
+    string Status;
+
+    private async Task Start()
+    {
+        await ChunkUploader.Start();
+    }
+
+    private async Task Clear()
+    {
+        await ChunkUploader.Clear();
+    }
+
+    private async Task Cancel()
+    {
+        await ChunkUploader.Clear();
+        Visible = false;
+    }
+
+    public async Task Open()
+    {
+        Visible = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task OnUploadCompleted(string data)
+    {
+        if (Guid.TryParse(data, out var objectKey))
+        {
+            try
+            {
+                var game = await GameService.Import(objectKey);
+
+                Visible = false;
+
+                await InvokeAsync(StateHasChanged);
+
+                if (OnGameImported.HasDelegate)
+                    await OnGameImported.InvokeAsync(game.Id);
+
+                MessageService.Success($"{game.Title} successfully imported!");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "An unknown error occurred while trying to import");
+                MessageService.Error("An unknown error occurred while trying to import");
+            }
+        }
+        else
+        {
+            Visible = false;
+
+            await InvokeAsync(StateHasChanged);
+
+            MessageService.Error("Import file failed to upload!");
+        }
+
+        await Clear();
+    }
+
+    public async Task OnUploadError(string message)
+    {
+        Visible = false;
+
+        await InvokeAsync(StateHasChanged);
+
+        MessageService.Error("An error occurred while trying to import");
+        Logger?.Error($"An error occurred while trying to import: {message}");
+    }
+
+    public async Task OnLocalFileSelected(string path)
+    {
+        try
+        {
+            var game = await GameService.ImportLocalFile(path);
+
+            Visible = false;
+
+            await InvokeAsync(StateHasChanged);
+
+            if (OnGameImported.HasDelegate)
+                await OnGameImported.InvokeAsync(game.Id);
+
+            MessageService.Success($"{game.Title} successfully imported!");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error(ex, "An unknown error occurred while trying to import");
+            MessageService.Error("An unknown error occurred while trying to import");
+        }
+    }
+}

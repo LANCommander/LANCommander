@@ -1,0 +1,59 @@
+﻿@page "/Settings/Roles/{id:guid}"
+@using LANCommander.Server.Models;
+@layout SettingsLayout
+@inject CollectionService CollectionService
+@inject RoleManager<Role> RoleManager
+@inject UserManager<User> UserManager
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ILogger<Edit> Logger
+@attribute [Authorize(Roles = "Administrator")]
+
+<PageHeader Title="Edit Role">
+    <PageHeaderExtra>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+            </SpaceItem>
+        </Space>
+    </PageHeaderExtra>
+</PageHeader>
+
+<div style="padding: 0 24px;">
+    <Form Model="@Role" Layout="@FormLayout.Vertical">
+        <FormItem Label="Name">
+            <Input @bind-Value="Role.Name" />
+        </FormItem>
+        <FormItem Label="Collections">
+            <TransferInput LeftTitle="Available" RightTitle="Allowed" DataSource="Collections" TitleSelector="c => c.Name" @bind-Values="Role.Collections" />
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Role Role;
+    IEnumerable<Collection> Collections = new List<Collection>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Role = await RoleManager.FindByIdAsync(Id.ToString());
+        Collections = await CollectionService.Get();
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            await RoleManager.UpdateAsync(Role);
+
+            MessageService.Success("Role updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Role could not be updated!");
+            Logger.LogError(ex, "Role could not be updated!");
+        }
+    }
+}

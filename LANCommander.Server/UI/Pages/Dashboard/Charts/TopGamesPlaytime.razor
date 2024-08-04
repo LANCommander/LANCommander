@@ -1,0 +1,68 @@
+﻿@using AntDesign.Charts
+@using ByteSizeLib
+@inject PlaySessionService PlaySessionService
+
+<Spin Spinning="Loading">
+    <Pie Data="Data" Config="Config" JsConfig="@JsConfig" />
+</Spin>
+
+@code {
+    object[] Data;
+
+    bool Loading = true;
+
+    string JsConfig = @"{
+        meta: {
+            value: {
+                alias: 'Total Playtime',
+                formatter: (v) => Math.floor(v / 3600) > 0 ? `${Math.floor(v / 3600)}h ${Math.floor((v % 3600) / 60)}m` : `${Math.floor((v % 3600) / 60)}m`
+            }
+        },
+        label: {
+            visible: true,
+            type: 'outer-center',
+            style: {
+                fontSize: '1px'
+            }
+        }
+    }";
+
+    PieConfig Config = new PieConfig
+    {
+        Radius = 0.8,
+        AngleField = "value",
+        ColorField = "type",
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
+
+            var sessions = await PlaySessionService.Get();
+
+            foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
+            {
+                var total = new TimeSpan();
+
+                foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
+                {
+                    total = total.Add(session.End.Value.Subtract(session.Start.Value));
+                }
+
+                playtimes[gameSessions.First().Game.Title] = total;
+            }
+
+            Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
+            {
+                type = pt.Key,
+                value = (int)pt.Value.TotalSeconds
+            }).ToArray();
+
+            Loading = false;
+
+            StateHasChanged();
+        }
+    }
+}

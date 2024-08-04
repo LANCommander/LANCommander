@@ -1,0 +1,81 @@
+﻿@using LANCommander.Server.Data.Enums
+@using LANCommander.Server.Data.Models
+@using LANCommander.Server.Extensions;
+@using LANCommander.SDK.Enums
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    <SpaceItem>
+        <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true" Responsive>
+            <PropertyColumn Property="m => m.Type">
+                <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.MinPlayers" Title="Min Players">
+                <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.MaxPlayers" Title="Max Players">
+                <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.Description">
+                <Input Type="text" @bind-Value="context.Description" />
+            </PropertyColumn>
+            <ActionColumn>
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        <Button OnClick="() => RemoveMode(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </SpaceItem>
+
+    <SpaceItem>
+        <GridRow Justify="end">
+            <GridCol>
+                <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
+            </GridCol>
+        </GridRow>
+    </SpaceItem>
+</Space>
+
+@code {
+    [Parameter] public ICollection<MultiplayerMode> Value { get; set; }
+    [Parameter] public EventCallback<ICollection<MultiplayerMode>> ValueChanged { get; set; }
+    [Parameter] public Game Game { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Value == null)
+            Value = new List<MultiplayerMode>();
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
+    }
+
+    private async Task AddMode()
+    {
+        if (Value == null)
+            Value = new List<MultiplayerMode>();
+
+        Value.Add(new MultiplayerMode());
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
+    }
+
+    private async Task RemoveMode(MultiplayerMode mode)
+    {
+        Value.Remove(mode);
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        StateHasChanged();
+    }
+}

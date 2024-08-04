@@ -1,0 +1,113 @@
+﻿@page "/Redistributables"
+@using Microsoft.EntityFrameworkCore;
+@using LANCommander.Server.UI.Pages.Redistributables.Components
+@attribute [Authorize(Roles = "Administrator")]
+@inject RedistributableService RedistributableService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+
+<PageHeader Title="Redistributables">
+    <PageHeaderExtra>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
+            </SpaceItem>
+             <SpaceItem>
+                 <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
+             </SpaceItem>
+            <SpaceItem>
+                 <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Redistributable</Button>
+            </SpaceItem>
+        </Space>
+    </PageHeaderExtra>
+</PageHeader>
+
+<TableColumnPicker @ref="Picker" Key="Redistributables" @bind-Visible="ColumnPickerVisible" />
+
+<Table TItem="Redistributable" DataSource="@Redistributables" Loading="@Loading" PageSize="25" Responsive>
+    <PropertyColumn Property="r => r.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
+    <PropertyColumn Property="r => r.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
+    <PropertyColumn Property="r => r.CreatedBy != null ? r.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
+    <PropertyColumn Property="r => r.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
+    <PropertyColumn Property="r => r.UpdatedBy != null ? r.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
+    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
+        <TitleTemplate>
+            <div style="text-align: right">
+                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
+            </div>
+        </TitleTemplate>
+        <ChildContent>
+            <Space Direction="DirectionVHType.Horizontal">
+                <SpaceItem>
+                    <a href="/Redistributables/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+                </SpaceItem>
+                <SpaceItem>
+                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this redistributable?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                    </Popconfirm>
+                </SpaceItem>
+            </Space>
+        </ChildContent>
+    </ActionColumn>
+</Table>
+
+ <ImportUploadDialog @ref="ImportUploadDialog" OnRedistributableImported="LoadData" />
+
+ @code {
+    IEnumerable<Redistributable> Redistributables { get; set; } = new List<Redistributable>();
+
+    bool Loading = true;
+
+    string Search = "";
+
+    TableColumnPicker Picker;
+    ImportUploadDialog ImportUploadDialog;
+    bool ColumnPickerVisible = false;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            LoadData();
+
+            Loading = false;
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        var fuzzySearch = Search.ToLower().Trim();
+
+        Redistributables = await RedistributableService.Get(r => r.Name.ToLower().Contains(fuzzySearch)).OrderBy(r => r.Name).ToListAsync();
+    }
+
+    private void Add()
+    {
+        NavigationManager.NavigateTo("/Redistributables/Add");
+    }
+
+    private async Task Delete(Redistributable redistributable)
+    {
+        Redistributables = new List<Redistributable>();
+
+        Loading = true;
+
+        await RedistributableService.Delete(redistributable);
+
+        Redistributables = await RedistributableService.Get(x => true).OrderBy(r => r.Name).ToListAsync();
+
+        Loading = false;
+    }
+
+    private async Task OpenColumnPicker()
+    {
+        ColumnPickerVisible = true;
+    }
+
+    private async Task CloseColumnPicker()
+    {
+        ColumnPickerVisible = false;
+    }
+}

@@ -1,0 +1,43 @@
+﻿@using LANCommander.Server.Data.Enums
+@model LANCommander.Server.Data.Models.Redistributable
+
+@{
+    var latestArchive = Model.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+    Dictionary<string, ScriptType> scriptTypes = new Dictionary<string, ScriptType>()
+    {
+        { "Install Detection Script", ScriptType.DetectInstall },
+        { "Install Script", ScriptType.Install },
+        { "Uninstall Script", ScriptType.Uninstall }
+    };
+}
+
+[[Category:Redistributables]]
+
+{{Redistributable.DownloadBox
+|Downloads =
+{{Redistributable.DownloadBox.Row|Version = 3.5|File = @(Model.Name).zip|ReleaseDate = }}
+}}
+
+@if (Model.Scripts != null)
+{
+    foreach (var scriptType in scriptTypes)
+    {
+        var script = Model.Scripts.FirstOrDefault(s => s.Type == scriptType.Value);
+
+        if (script != null)
+        {
+            <text>
+{{Redistributable.Scripts.@scriptType.Value
+|Name = @scriptType.Key
+|Description = @script.Description
+|RequiresAdmin = @(script.RequiresAdmin ? "True" : "False")
+|Contents =
+<syntaxhighlight lang="powershell" line>
+@Html.Raw(script.Contents)
+</syntaxhighlight>
+}}
+            </text>
+        }
+    }
+}

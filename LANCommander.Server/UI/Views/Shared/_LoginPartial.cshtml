@@ -1,0 +1,28 @@
+﻿@using LANCommander.Server.Data.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<User> SignInManager
+@inject UserManager<User> UserManager
+
+<div class="navbar-nav flex-row order-md-last">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <div class="nav-item dropdown">
+		    <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">
+			    <div class="d-none d-xl-block ps-2">
+				    <div>Hello @User.Identity?.Name!</div>
+			    </div>
+		    </a>
+		    <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a asp-controller="Settings" asp-controller="General" class="dropdown-item">Settings</a>
+			    <a asp-area="Identity" asp-page="/Account/Manage/Index" class="dropdown-item">Profile & account</a>
+			    <a asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" class="dropdown-item">Logout</a>
+		    </div>
+        </div>
+    }
+    else
+    {
+        <div class="nav-item">
+            <a asp-area="Identity" asp-page="/Account/Login">Login</a>
+        </div>
+    }
+</div>

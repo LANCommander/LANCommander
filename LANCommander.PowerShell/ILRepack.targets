@@ -7,11 +7,9 @@
             <InputAssemblies Include="$(OutputPath)\PeanutButter.INI.dll" />
             <InputAssemblies Include="$(OutputPath)\LANCommander.SDK.dll" />
 			<InputAssemblies Include="$(OutputPath)\Crc32.NET.dll" />
-			<InputAssemblies Include="$(OutputPath)\Microsoft.Extensions.Logging.Abstractions.dll" />
 			<InputAssemblies Include="$(OutputPath)\RestSharp.dll" />
 			<InputAssemblies Include="$(OutputPath)\Semver.dll" />
 			<InputAssemblies Include="$(OutputPath)\SharpCompress.dll" />
-			<InputAssemblies Include="$(OutputPath)\System.Management.Automation.dll" />
         </ItemGroup>
 
         <ILRepack

@@ -42,7 +42,7 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: Restore Packages
-      run: dotnet restore "./LANCommander.PowerShell/LANCommander.PowerShell.csproj"
+      run: nuget restore "./LANCommander.PowerShell/LANCommander.PowerShell.csproj"
 
     - name: Build PowerShell Module
       run: dotnet build "./LANCommander.PowerShell/LANCommander.PowerShell.csproj" -c Release -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"

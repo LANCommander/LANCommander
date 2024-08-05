@@ -3,7 +3,7 @@
 
 # make our folders for LANCommander
 mkdir -p \
-    /config/{Uploads,Updates,Saves,Media,Logs,Backups}
+    /config/{Uploads,Updates,Saves,Media,Launcher,Logs,Backups}
 
 # files needed by LANCommander
 if [[ ! -f /config/Settings.yml ]]; then

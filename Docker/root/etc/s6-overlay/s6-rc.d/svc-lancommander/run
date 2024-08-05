@@ -3,4 +3,4 @@
 
 exec \
     s6-notifyoncheck -d -n 300 -w 1000 \
-        cd /app/LANCommander s6-setuidgid abc /app/LANCommander/LANCommander
+        cd /app/LANCommander s6-setuidgid abc /app/LANCommander/LANCommander.Server

@@ -26,7 +26,7 @@ RUN \
       python3 && \
   echo "**** setup lancommander ****" && \
     unzip "/tmp/LANCommander.Server-Linux-x64-${VERSION}.zip" -d /app/LANCommander && \
-    chmod +x /app/LANCommander/LANCommander && \
+    chmod +x /app/LANCommander/LANCommander.Server && \
     ls -alh /app/LANCommander && \
   echo "**** setup symlinks ****" && \
     ln -s /config/Uploads/ /app/LANCommander/Uploads && \

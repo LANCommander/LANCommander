@@ -47,18 +47,6 @@ namespace LANCommander.SDK
             return await Client.GetRequestAsync<User>("/api/Profile");
         }
 
-        public string ChangeAlias(string alias)
-        {
-            Logger?.LogTrace("Requesting to change player alias...");
-
-            var response = Client.PostRequest<string>("/api/Profile/ChangeAlias", new
-            {
-                Alias = alias
-            });
-
-            return response;
-        }
-
         public async Task<string> ChangeAliasAsync(string alias)
         {
             Logger?.LogTrace("Requesting to change player alias...");
@@ -78,24 +66,6 @@ namespace LANCommander.SDK
             var tempFile = Path.GetTempFileName();
 
             return await Client.DownloadRequestAsync("/api/Profile/Avatar", tempFile);
-        }
-
-        public IEnumerable<PlaySession> GetPlaySessions()
-        {
-            Logger?.LogTrace("Requesting all play sessions for user...");
-
-            var response = Client.GetRequest<IEnumerable<PlaySession>>("/api/PlaySessions");
-
-            return response;
-        }
-
-        public IEnumerable<PlaySession> GetPlaySessions(Guid gameId)
-        {
-            Logger?.LogTrace("Requesting play sessions for game {GameId}...", gameId);
-
-            var response = Client.GetRequest<IEnumerable<PlaySession>>($"/api/PlaySessions/{gameId}");
-
-            return response;
         }
     }
 }

@@ -49,11 +49,6 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public IEnumerable<Game> Get()
-        {
-            return Client.GetRequest<IEnumerable<Game>>("/api/Games");
-        }
-
         public async Task<IEnumerable<Game>> GetAsync()
         {
             return await Client.GetRequestAsync<IEnumerable<Game>>("/api/Games");
@@ -74,26 +69,9 @@ namespace LANCommander.SDK
             return Client.GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
         }
 
-        public async Task<GameManifest> GetManifestAsync(Guid id)
-        {
-            return await Client.GetRequestAsync<GameManifest>($"/api/Games/{id}/Manifest");
-        }
-
-        public IEnumerable<GameManifest> GetManifests()
-        {
-            return Client.GetRequest<IEnumerable<GameManifest>>($"/api/Games/Manifests");
-        }
-
         private TrackableStream Stream(Guid id)
         {
             return Client.StreamRequest($"/api/Games/{id}/Download");
-        }
-
-        public void StartPlaySession(Guid id)
-        {
-            Logger?.LogTrace("Starting a game session...");
-
-            Client.PostRequest<object>($"/api/PlaySessions/Start/{id}");
         }
 
         public async Task StartPlaySessionAsync(Guid id)
@@ -101,13 +79,6 @@ namespace LANCommander.SDK
             Logger?.LogTrace("Starting a game session...");
 
             await Client.PostRequestAsync<object>($"/api/PlaySessions/Start/{id}");
-        }
-
-        public void EndPlaySession(Guid id)
-        {
-            Logger?.LogTrace("Ending a game session...");
-
-            Client.PostRequest<object>($"/api/PlaySessions/End/{id}");
         }
 
         public async Task EndPlaySessionAsync(Guid id)

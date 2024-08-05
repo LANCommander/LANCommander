@@ -434,33 +434,6 @@ namespace LANCommander.SDK
             return response.StatusCode == HttpStatusCode.OK;
         }
 
-        public AuthToken RefreshToken(AuthToken token, bool ignoreVersion = false)
-        {
-            Logger?.LogTrace("Refreshing token...");
-
-            var request = new RestRequest("/api/Auth/Refresh")
-                .AddJsonBody(token);
-
-            if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
-
-            var response = ApiClient.Post<AuthResponse>(request);
-
-            if (response.StatusCode != HttpStatusCode.OK)
-                throw new WebException(response.ErrorMessage);
-
-            Token = new AuthToken
-            {
-                AccessToken = response.Data.AccessToken,
-                RefreshToken = response.Data.RefreshToken,
-                Expiration = response.Data.Expiration
-            };
-
-            Connected = true;
-
-            return Token;
-        }
-
         public bool ValidateToken()
         {
             return ValidateToken(Token);

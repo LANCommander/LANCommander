@@ -5,8 +5,6 @@ VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server", "LANCommander.Server\LANCommander.Server.csproj", "{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.PlaynitePlugin", "LANCommander.Playnite.Extension\LANCommander.PlaynitePlugin.csproj", "{F9EB13D4-8FD9-4095-B934-F7EC681E6901}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.SDK", "LANCommander.SDK\LANCommander.SDK.csproj", "{4C2A71FD-A30B-4D62-888A-4EF843D8E506}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.PCGamingWiki", "LANCommander.PCGamingWiki\LANCommander.PCGamingWiki.csproj", "{2436B817-4475-4E70-9BB2-E1E7866DB79F}"
@@ -42,10 +40,6 @@ Global
 		{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C64D17A8-CDB3-4D1E-858F-6CF05B6FED4D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F9EB13D4-8FD9-4095-B934-F7EC681E6901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F9EB13D4-8FD9-4095-B934-F7EC681E6901}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F9EB13D4-8FD9-4095-B934-F7EC681E6901}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F9EB13D4-8FD9-4095-B934-F7EC681E6901}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4C2A71FD-A30B-4D62-888A-4EF843D8E506}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4C2A71FD-A30B-4D62-888A-4EF843D8E506}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4C2A71FD-A30B-4D62-888A-4EF843D8E506}.Release|Any CPU.ActiveCfg = Release|Any CPU

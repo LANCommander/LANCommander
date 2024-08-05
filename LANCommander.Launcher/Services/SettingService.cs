@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using LANCommander.Launcher.Models;
 
@@ -28,7 +27,7 @@ namespace LANCommander.Launcher.Services
             {
                 var contents = File.ReadAllText(SettingsFilePath);
 
-                var deserializer = new DeserializerBuilder()
+                var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
                     .IgnoreUnmatchedProperties()
                     .WithNamingConvention(new PascalCaseNamingConvention())
                     .Build();
@@ -57,7 +56,7 @@ namespace LANCommander.Launcher.Services
         {
             if (settings != null)
             {
-                var serializer = new SerializerBuilder()
+                var serializer = new YamlDotNet.Serialization.SerializerBuilder()
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 

@@ -3,6 +3,7 @@ using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using RestSharp;
+using RestSharp.Interceptors;
 using Semver;
 using System;
 using System.Collections.Generic;
@@ -115,7 +116,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = ApiClient.Post<T>(request);
 
@@ -132,7 +133,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = ApiClient.Post<T>(request);
 
@@ -150,7 +151,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.PostAsync<T>(request);
 
@@ -167,7 +168,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.PostAsync<T>(request);
 
@@ -184,7 +185,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = ApiClient.Get<T>(request);
 
@@ -201,7 +202,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.GetAsync<T>(request);
 
@@ -280,7 +281,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             request.AddFile(fileName, data, fileName);
 
@@ -296,7 +297,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             request.AddFile(fileName, data, fileName);
 
@@ -316,7 +317,7 @@ namespace LANCommander.SDK
             });
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.ExecuteAsync<AuthToken>(request);
 
@@ -420,7 +421,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {
@@ -471,7 +472,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.Interceptors.Add(new VersionInterceptor());
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {

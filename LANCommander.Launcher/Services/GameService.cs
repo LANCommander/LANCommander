@@ -91,7 +91,7 @@ namespace LANCommander.Launcher.Services
 
             await Task.Run(() => Client.Games.Uninstall(game.InstallDirectory, game.Id));
 
-            ScriptService.RunUninstallScript(game, game.Id);
+            ScriptService.RunUninstallScriptAsync(game, game.Id);
 
             var metadataPath = SDK.GameService.GetMetadataDirectoryPath(game.InstallDirectory, game.Id);
 

@@ -17,7 +17,7 @@ namespace LANCommander.Launcher.Services
             Client = client;
         }
 
-        internal int RunInstallScript(Game game, Guid gameId)
+        internal async Task<int> RunInstallScriptAsync(Game game, Guid gameId)
         {
             try
             {
@@ -41,7 +41,7 @@ namespace LANCommander.Launcher.Services
                     if (settings.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
-                    return script.Execute();
+                    return await script.ExecuteAsync();
                 }
 
                 Logger?.Trace("No install script found for game {GameTitle} ({GameId})", game.Title, gameId);
@@ -54,7 +54,7 @@ namespace LANCommander.Launcher.Services
             return 0;
         }
 
-        internal int RunUninstallScript(Game game, Guid gameId)
+        internal async Task<int> RunUninstallScriptAsync(Game game, Guid gameId)
         {
             try
             {
@@ -77,7 +77,7 @@ namespace LANCommander.Launcher.Services
                     if (settings.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
-                    return script.Execute();
+                    return await script.ExecuteAsync();
                 }
 
                 Logger?.Trace("No uninstall script found for game {GameTitle} ({GameId})", game.Title, gameId);
@@ -90,7 +90,7 @@ namespace LANCommander.Launcher.Services
             return 0;
         }
 
-        internal void RunBeforeStartScript(Game game, Guid gameId)
+        internal async Task RunBeforeStartScript(Game game, Guid gameId)
         {
 
             try
@@ -115,7 +115,7 @@ namespace LANCommander.Launcher.Services
                     if (settings.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
-                    script.Execute();
+                    await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)
@@ -124,7 +124,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        internal void RunAfterStopScript(Game game, Guid gameId)
+        internal async Task RunAfterStopScript(Game game, Guid gameId)
         {
             try
             {
@@ -148,7 +148,7 @@ namespace LANCommander.Launcher.Services
                     if (settings.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
-                    script.Execute();
+                    await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)
@@ -157,7 +157,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        internal void RunNameChangeScript(Game game, Guid gameId)
+        internal async Task RunNameChangeScript(Game game, Guid gameId)
         {
             try
             {
@@ -194,7 +194,7 @@ namespace LANCommander.Launcher.Services
                     if (settings.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
-                    script.Execute();
+                    await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)
@@ -235,7 +235,7 @@ namespace LANCommander.Launcher.Services
                     if (settings.Debug.EnableScriptDebugging)
                         script.EnableDebug();
 
-                    script.Execute();
+                    await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)

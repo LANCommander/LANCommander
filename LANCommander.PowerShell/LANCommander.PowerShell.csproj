@@ -102,9 +102,6 @@
     <Compile Include="Cmdlets\Convert-AspectRatio.cs" />
     <Compile Include="Cmdlets\Get-GameManifest.cs" />
     <Compile Include="Cmdlets\Write-GameManifest.cs" />
-    <Compile Include="Extensions\ScreenExtensions.cs" />
-    <Compile Include="Models\Bounds.cs" />
-    <Compile Include="Models\Screen.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -120,6 +117,9 @@
       <Project>{4c2a71fd-a30b-4d62-888a-4ef843d8e506}</Project>
       <Name>LANCommander.SDK</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Extensions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\ILRepack.Lib.MSBuild.Task.2.0.34\build\ILRepack.Lib.MSBuild.Task.targets" Condition="Exists('..\packages\ILRepack.Lib.MSBuild.Task.2.0.34\build\ILRepack.Lib.MSBuild.Task.targets')" />

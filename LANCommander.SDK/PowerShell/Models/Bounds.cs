@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.PowerShell.Models
+namespace LANCommander.SDK.PowerShell.Models
 {
     public class Bounds
     {

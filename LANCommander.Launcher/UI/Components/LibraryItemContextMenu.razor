@@ -161,7 +161,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            ScriptService.RunInstallScript(Game, manifest.Id);
+            ScriptService.RunInstallScriptAsync(Game, manifest.Id);
         }
     }
 

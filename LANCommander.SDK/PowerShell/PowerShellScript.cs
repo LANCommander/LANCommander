@@ -1,12 +1,15 @@
 ﻿using LANCommander.SDK.Helpers;
+using LANCommander.SDK.PowerShell.Cmdlets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management.Automation.Runspaces;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -22,25 +25,28 @@ namespace LANCommander.SDK.PowerShell
         private bool Debug { get; set; }                = false;
         private ICollection<PowerShellVariable> Variables { get; set; }
         private Dictionary<string, string> Arguments { get; set; }
-        private List<string> Modules { get; set; }
-        private Process Process { get; set; }
+
+        private InitialSessionState InitialSessionState { get; set; }
 
         public PowerShellScript()
         {
             Variables = new List<PowerShellVariable>();
             Arguments = new Dictionary<string, string>();
-            Modules = new List<string>();
-            Process = new Process();
 
-            Process.StartInfo.FileName = "powershell";
-            Process.StartInfo.RedirectStandardOutput = false;
+            InitialSessionState = InitialSessionState.CreateDefault();
 
-            AddArgument("ExecutionPolicy", "Unrestricted");
-
-            var moduleManifests = Directory.EnumerateFiles(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), "LANCommander.PowerShell.psd1", SearchOption.AllDirectories);
-
-            if (moduleManifests.Any())
-                AddModule(moduleManifests.First());
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Convert-AspectRatio", typeof(ConvertAspectRatioCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertFrom-SerializedBase64", typeof(ConvertFromSerializedBase64Cmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertTo-SerializedBase64", typeof(ConvertToSerializedBase64Cmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertTo-StringBytes", typeof(ConvertToStringBytesCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Edit-PatchBinary", typeof(EditPatchBinaryCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-GameManifest", typeof(GetGameManifestCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-PrimaryDisplay", typeof(GetPrimaryDisplayCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Install-Game", typeof(InstallGameCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Uninstall-Game", typeof(UninstallGameCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-IniValue", typeof(UpdateIniValueCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-GameManifest", typeof(WriteGameManifestCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-ReplaceContentInFile", typeof(ReplaceContentInFileCmdlet), null));
 
             IgnoreWow64Redirection();
         }
@@ -101,19 +107,9 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public PowerShellScript AddModule(string path)
-        {
-            Modules.Add(path);
-
-            return this;
-        }
-
         public PowerShellScript RunAsAdmin()
         {
             AsAdmin = true;
-
-            Process.StartInfo.Verb = "runas";
-            Process.StartInfo.UseShellExecute = true;
 
             return this;
         }
@@ -132,7 +128,7 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public int Execute()
+        public async Task<int> ExecuteAsync()
         {
             var scriptBuilder = new StringBuilder();
 
@@ -140,11 +136,6 @@ namespace LANCommander.SDK.PowerShell
 
             if (Contents.StartsWith("# Requires Admin"))
                 RunAsAdmin();
-
-            foreach (var module in Modules)
-            {
-                scriptBuilder.AppendLine($"Import-Module \"{module}\"");
-            }
 
             foreach (var variable in Variables)
             {
@@ -165,43 +156,32 @@ namespace LANCommander.SDK.PowerShell
 
                 scriptBuilder.AppendLine("Write-Host ''");
 
-                Process.StartInfo.Arguments += " -NoExit";
+                // Process.StartInfo.Arguments += " -NoExit";
             }
-
-            var path = ScriptHelper.SaveTempScript(scriptBuilder.ToString());
-
-            AddArgument("File", path);
 
             if (IgnoreWow64)
                 Wow64DisableWow64FsRedirection(ref wow64Value);
 
-            foreach (var argument in Arguments)
+            using (Runspace runspace = RunspaceFactory.CreateRunspace(InitialSessionState))
             {
-                Process.StartInfo.Arguments += $" -{argument.Key} {argument.Value}";
+                runspace.Open();
+
+                runspace.SessionStateProxy.Path.SetLocation(WorkingDirectory);
+
+                using (var ps = System.Management.Automation.PowerShell.Create())
+                {
+                    ps.Runspace = runspace;
+
+                    ps.AddScript(scriptBuilder.ToString());
+
+                    var results = await ps.InvokeAsync();
+                }
             }
-
-            if (!String.IsNullOrEmpty(WorkingDirectory))
-                Process.StartInfo.WorkingDirectory = WorkingDirectory;
-
-            if (ShellExecute)
-                Process.StartInfo.UseShellExecute = true;
-
-            if (AsAdmin)
-            {
-                Process.StartInfo.Verb = "runas";
-                Process.StartInfo.UseShellExecute = true;
-            }
-
-            Process.Start();
-            Process.WaitForExit();
 
             if (IgnoreWow64)
                 Wow64RevertWow64FsRedirection(ref wow64Value);
 
-            if (File.Exists(path))
-                File.Delete(path);
-
-            return Process.ExitCode;
+            return 0;
         }
 
         public static string Serialize<T>(T input)

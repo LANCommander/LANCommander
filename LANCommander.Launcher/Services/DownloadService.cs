@@ -180,7 +180,7 @@ namespace LANCommander.Launcher.Services
 
                 Logger?.Trace("Installing redistributables");
 
-                await Task.Run(() => Client.Redistributables.Install(gameInfo));
+                await Client.Redistributables.InstallAsync(gameInfo);
             }
             #endregion
 
@@ -200,7 +200,7 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    ScriptService.RunInstallScript(game, gameInfo.Id);
+                    ScriptService.RunInstallScriptAsync(game, gameInfo.Id);
                     await ScriptService.RunKeyChangeScript(game, gameInfo.Id);
                     ScriptService.RunNameChangeScript(game, gameInfo.Id);
                 }
@@ -251,7 +251,7 @@ namespace LANCommander.Launcher.Services
                     if (dependentGame.BaseGame == null)
                         dependentGame.BaseGame = gameInfo;
 
-                    ScriptService.RunInstallScript(game, dependentGame.Id);
+                    ScriptService.RunInstallScriptAsync(game, dependentGame.Id);
                     ScriptService.RunNameChangeScript(game, dependentGame.Id);
                     ScriptService.RunKeyChangeScript(game, dependentGame.Id);
                 }

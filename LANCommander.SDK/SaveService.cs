@@ -202,7 +202,7 @@ namespace LANCommander.SDK
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
                             script.RunAsAdmin();
 
-                        script.Execute();
+                        await script.ExecuteAsync();
                     }
                     #endregion
 
@@ -221,7 +221,7 @@ namespace LANCommander.SDK
             }
         }
 
-        public void Upload(string installDirectory, Guid gameId)
+        public async Task UploadAsync(string installDirectory, Guid gameId)
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
@@ -271,7 +271,7 @@ namespace LANCommander.SDK
 
                         script.UseInline(exportCommand.ToString());
 
-                        script.Execute();
+                        await script.ExecuteAsync();
 
                         var exportFile = new StringBuilder();
 

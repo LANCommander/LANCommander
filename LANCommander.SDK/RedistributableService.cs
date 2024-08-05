@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LANCommander.SDK
 {
@@ -41,15 +42,15 @@ namespace LANCommander.SDK
             return Client.StreamRequest($"/api/Redistributables/{id}/Download");
         }
 
-        public void Install(Game game)
+        public async Task InstallAsync(Game game)
         {
             foreach (var redistributable in game.Redistributables)
             {
-                Install(redistributable);
+                await InstallAsync(redistributable);
             }
         }
 
-        public void Install(Redistributable redistributable)
+        public async Task InstallAsync(Redistributable redistributable)
         {
             string installScriptTempFile = null;
             string detectionScriptTempFile = null;
@@ -65,7 +66,7 @@ namespace LANCommander.SDK
                 detectionScriptTempFile = ScriptHelper.SaveTempScript(detectionScript);
                 Logger?.LogTrace("Redistributable install detection script saved to {Path}", detectionScriptTempFile);
 
-                var detectionResult = RunScript(detectionScriptTempFile, redistributable, detectionScript.RequiresAdmin);
+                var detectionResult = await RunScriptAsync(detectionScriptTempFile, redistributable, detectionScript.RequiresAdmin);
 
                 Logger?.LogTrace("Redistributable install detection returned error code {ErrorCode}", detectionResult);
 
@@ -87,7 +88,7 @@ namespace LANCommander.SDK
                             Logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
                             Logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
-                            RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
+                            RunScriptAsync(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
                         }
                         else
                         {
@@ -98,7 +99,7 @@ namespace LANCommander.SDK
                     {
                         Logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
 
-                        RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin);
+                        RunScriptAsync(installScriptTempFile, redistributable, installScript.RequiresAdmin);
                     }
                 }
             }
@@ -188,7 +189,7 @@ namespace LANCommander.SDK
             return extractionResult;
         }
 
-        private int RunScript(string path, Redistributable redistributable, bool requiresAdmin = false, string workingDirectory = "")
+        private async Task<int> RunScriptAsync(string path, Redistributable redistributable, bool requiresAdmin = false, string workingDirectory = "")
         {
             var script = new PowerShellScript();
 
@@ -200,7 +201,7 @@ namespace LANCommander.SDK
             if (requiresAdmin)
                 script.RunAsAdmin();
 
-            return script.Execute();
+            return await script.ExecuteAsync();
         }
     }
 }

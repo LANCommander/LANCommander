@@ -29,7 +29,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task UploadAsync(string installDirectory, Guid gameId)
         {
-            await Task.Run(() => Client.Saves.Upload(installDirectory, gameId));
+            await Task.Run(() => Client.Saves.UploadAsync(installDirectory, gameId));
         }
     }
 }

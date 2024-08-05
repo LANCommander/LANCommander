@@ -219,3 +219,9 @@ Packages:
     PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.8.3/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_8_3.pext
     Changelog:
       - Updates to PowerShell cmdlets, review full LANCommander release for more details
+  - Version: 0.9.0
+    RequiredApiVersion: 6.0.0
+    PackageUrl: https://github.com/LANCommander/LANCommander/releases/download/v0.9.0/LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_0_9_0.pext
+    Changelog:
+      - 'Added: Basic validation to check that fields are not blank on the authentication dialog have been added'
+      - 'Note: v0.9.x is the last version of LANCommander that will officially support Playnite. Migration to the new LANCommander launcher will be required.'

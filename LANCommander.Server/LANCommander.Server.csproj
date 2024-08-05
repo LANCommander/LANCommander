@@ -74,7 +74,7 @@
     <PackageReference Include="Syncfusion.PdfToImageConverter.Net" Version="26.2.5" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
     <PackageReference Include="XtermBlazor" Version="1.10.2" />
-    <PackageReference Include="YamlDotNet" Version="5.4.0" />
+    <PackageReference Include="YamlDotNet" Version="16.0.0" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="1.2.0" />
   </ItemGroup>
 

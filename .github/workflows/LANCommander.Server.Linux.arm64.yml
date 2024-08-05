@@ -56,7 +56,7 @@ jobs:
 
     # Linux arm64
     - name: Publish Linux
-      run: dotnet publish "./LANCommander.Server/LANCommander.csproj" -c Release --self-contained --runtime linux-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime linux-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
     - name: Remove Extra Files
       run: |

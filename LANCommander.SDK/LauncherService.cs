@@ -39,7 +39,7 @@ namespace LANCommander.SDK
         {
             try
             {
-                var request = new RestRequest("/api/Launcher", Method.GET);
+                var request = new RestRequest("/api/Launcher", Method.Get);
 
                 return await Client.GetRequestAsync<CheckForUpdateResponse>("/api/Launcher/CheckForUpdate", true);
             }

@@ -86,9 +86,11 @@ namespace LANCommander.SDK
             if (!String.IsNullOrWhiteSpace(baseUrl))
             {
                 BaseUrl = new Uri(baseUrl);
-                ApiClient = new RestClient(BaseUrl);
-
-                ApiClient.ThrowOnAnyError = true;
+                ApiClient = new RestClient(new RestClientOptions
+                {
+                    BaseUrl = BaseUrl,
+                    ThrowOnAnyError = true
+                });
             }
         }
 
@@ -102,42 +104,6 @@ namespace LANCommander.SDK
             return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
         }
 
-        private void ValidateVersion(IRestResponse response)
-        {
-            try
-            {
-                var version = GetCurrentVersion();
-                var header = response.Headers.FirstOrDefault(h => h.Name == "X-API-Version");
-
-                if (response.IsSuccessful && header == null)
-                {
-                    response.ErrorException = new ApiVersionMismatchException(version, null, $"The server is out of date and does not support client version {version}.");
-
-                    return;
-                }
-
-                var apiVersion = SemVersion.Parse((string)header.Value, SemVersionStyles.Any);
-
-                if (version.Major != apiVersion.Major || version.Minor != apiVersion.Minor)
-                {
-                    switch (version.ComparePrecedenceTo(apiVersion))
-                    {
-                        case -1:
-                            response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is out of date and is not supported by the server (v{apiVersion})");
-                            break;
-
-                        case 1:
-                            response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is on a version not supported by the server (v{apiVersion})");
-                            break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Could not validate API version");
-            }
-        }
-
         internal T PostRequest<T>(string route, object body, bool ignoreVersion = false)
         {
             if (Token == null)
@@ -149,11 +115,11 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             var response = ApiClient.Post<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal T PostRequest<T>(string route, bool ignoreVersion = false)
@@ -166,11 +132,11 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             var response = ApiClient.Post<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal async Task<T> PostRequestAsync<T>(string route, object body, bool ignoreVersion = false)
@@ -184,7 +150,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             var response = await ApiClient.PostAsync<T>(request);
 
@@ -201,7 +167,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             var response = await ApiClient.PostAsync<T>(request);
 
@@ -218,11 +184,11 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             var response = ApiClient.Get<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal async Task<T> GetRequestAsync<T>(string route, bool ignoreVersion = false)
@@ -235,7 +201,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             var response = await ApiClient.GetAsync<T>(request);
 
@@ -309,28 +275,28 @@ namespace LANCommander.SDK
 
         internal T UploadRequest<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
-            var request = new RestRequest(route, Method.POST)
+            var request = new RestRequest(route, Method.Post)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             request.AddFile(fileName, data, fileName);
 
             var response = ApiClient.Post<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal async Task<T> UploadRequestAsync<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
-            var request = new RestRequest(route, Method.POST)
+            var request = new RestRequest(route, Method.Post)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             request.AddFile(fileName, data, fileName);
 
@@ -341,7 +307,7 @@ namespace LANCommander.SDK
 
         public async Task<AuthToken> AuthenticateAsync(string username, string password, bool ignoreVersion = false)
         {
-            var request = new RestRequest("/api/Auth", Method.POST);
+            var request = new RestRequest("/api/Auth", Method.Post);
 
             request.AddJsonBody(new AuthRequest()
             {
@@ -350,7 +316,7 @@ namespace LANCommander.SDK
             });
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             var response = await ApiClient.ExecuteAsync<AuthToken>(request);
 
@@ -387,7 +353,7 @@ namespace LANCommander.SDK
 
         public async Task LogoutAsync()
         {
-            await ApiClient.ExecuteAsync(new RestRequest("/api/Auth/Logout", Method.POST));
+            await ApiClient.ExecuteAsync(new RestRequest("/api/Auth/Logout", Method.Post));
 
             Connected = false;
             Token = null;
@@ -395,7 +361,7 @@ namespace LANCommander.SDK
 
         public async Task<AuthToken> RegisterAsync(string username, string password)
         {
-            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.POST).AddJsonBody(new AuthRequest()
+            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.Post).AddJsonBody(new AuthRequest()
             {
                 UserName = username,
                 Password = password
@@ -429,7 +395,7 @@ namespace LANCommander.SDK
 
         public async Task<bool> PingAsync()
         {
-            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.GET));
+            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.Get));
 
             return response.StatusCode == HttpStatusCode.OK;
         }
@@ -454,7 +420,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {
@@ -505,7 +471,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors.Add(new VersionInterceptor());
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {

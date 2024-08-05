@@ -403,7 +403,7 @@ namespace LANCommander.Launcher.Services
                     foreach (var staleFile in staleFiles)
                         File.Delete(staleFile);
 
-                    await Client.Media.Download(new SDK.Models.Media
+                    await Client.Media.DownloadAsync(new SDK.Models.Media
                     {
                         Id = media.Id,
                         FileId = media.FileId

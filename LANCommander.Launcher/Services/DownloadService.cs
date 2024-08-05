@@ -201,7 +201,7 @@ namespace LANCommander.Launcher.Services
                 try
                 {
                     ScriptService.RunInstallScript(game, gameInfo.Id);
-                    ScriptService.RunKeyChangeScript(game, gameInfo.Id);
+                    await ScriptService.RunKeyChangeScript(game, gameInfo.Id);
                     ScriptService.RunNameChangeScript(game, gameInfo.Id);
                 }
                 catch (Exception ex) {
@@ -274,7 +274,7 @@ namespace LANCommander.Launcher.Services
                     foreach (var staleFile in staleFiles)
                         File.Delete(staleFile);
 
-                    await Client.Media.Download(new SDK.Models.Media
+                    await Client.Media.DownloadAsync(new SDK.Models.Media
                     {
                         Id = manual.Id,
                         FileId = manual.FileId

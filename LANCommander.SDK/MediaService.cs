@@ -41,7 +41,7 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public async Task<string> Download(Media media, string destination)
+        public async Task<string> DownloadAsync(Media media, string destination)
         {
             return await Client.DownloadRequestAsync(GetDownloadPath(media), destination);
         }

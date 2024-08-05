@@ -203,7 +203,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        internal void RunKeyChangeScript(Game game, Guid gameId)
+        internal async Task RunKeyChangeScript(Game game, Guid gameId)
         {
             try
             {
@@ -218,7 +218,7 @@ namespace LANCommander.Launcher.Services
 
                     var script = new PowerShellScript();
 
-                    var key = Client.Games.GetAllocatedKey(manifest.Id);
+                    var key = await Client.Games.GetAllocatedKeyAsync(manifest.Id);
 
                     Logger?.Trace("New key is {Key}", key);
 

@@ -19,3 +19,5 @@ fi
 # permissions
 lsiown -R abc:abc \
      /config
+lsiown -R abc:abc \
+     /app/LANCommander

@@ -34,6 +34,7 @@ namespace LANCommander.SDK
         public readonly SaveService Saves;
         public readonly RedistributableService Redistributables;
         public readonly ActionService Actions;
+        public readonly ScriptService Scripts;
         public readonly ProfileService Profile;
         public readonly MediaService Media;
         public readonly LauncherService Launcher;
@@ -58,6 +59,7 @@ namespace LANCommander.SDK
             Saves = new SaveService(this);
             Redistributables = new RedistributableService(this);
             Actions = new ActionService(this);
+            Scripts = new ScriptService(this);
             Profile = new ProfileService(this);
             Media = new MediaService(this);
             Launcher = new LauncherService(this);
@@ -75,6 +77,7 @@ namespace LANCommander.SDK
             Saves = new SaveService(this, logger);
             Redistributables = new RedistributableService(this, logger);
             Actions = new ActionService(this);
+            Scripts = new ScriptService(this, logger);
             Profile = new ProfileService(this, logger);
             Media = new MediaService(this, logger);
             Launcher = new LauncherService(this);

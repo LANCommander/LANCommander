@@ -171,7 +171,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            ScriptService.RunNameChangeScript(Game, manifest.Id);
+            await Client.Scripts.RunNameChangeScriptAsync(Game, Settings.Profile.Alias);
         }
     }
 
@@ -181,7 +181,9 @@ else
 
         foreach (var manifest in manifests)
         {
-            ScriptService.RunKeyChangeScript(Game, manifest.Id);
+            var key = Client.Games.GetAllocatedKey(manifest.Id);
+
+            await Client.Scripts.RunKeyChangeScriptAsync(Game, key);
         }
     }
 

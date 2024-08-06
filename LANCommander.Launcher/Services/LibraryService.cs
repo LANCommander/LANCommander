@@ -283,13 +283,17 @@ namespace LANCommander.Launcher.Services
                 var currentGameKey = SDK.GameService.GetCurrentKey(game.InstallDirectory, manifest.Id);
 
                 #region Check Game's Player Name
-                ScriptService.RunNameChangeScript(game, manifest.Id);
+                if (currentGamePlayerAlias != settings.Profile.Alias)
+                    await Client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, settings.Profile.Alias);
                 #endregion
 
                 #region Check Key Allocation
                 if (!settings.Authentication.OfflineMode && Client.IsConnected())
                 {
-                    ScriptService.RunKeyChangeScript(game, manifest.Id);
+                    var newKey = Client.Games.GetAllocatedKey(game.Id);
+
+                    if (currentGameKey != newKey)
+                        await Client.Scripts.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, newKey);
                 }
                 #endregion
 
@@ -314,7 +318,7 @@ namespace LANCommander.Launcher.Services
                 #endregion
 
                 #region Run Before Start Script
-                ScriptService.RunBeforeStartScript(game, manifest.Id);
+                await Client.Scripts.RunBeforeStartScriptAsync(game.InstallDirectory, game.Id);
                 #endregion
             }
             #endregion
@@ -352,7 +356,7 @@ namespace LANCommander.Launcher.Services
                 }
                 #endregion
 
-                ScriptService.RunAfterStopScript(game, manifest.Id);
+                await Client.Scripts.RunAfterStopScriptAsync(game.InstallDirectory, game.Id);
             }
         }
     }

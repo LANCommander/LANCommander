@@ -89,7 +89,6 @@ namespace LANCommander.Launcher
             builder.Services.AddScoped<ProfileService>();
             builder.Services.AddScoped<PlaySessionService>();
             builder.Services.AddScoped<RedistributableService>();
-            builder.Services.AddScoped<ScriptService>();
             builder.Services.AddScoped<SaveService>();
             builder.Services.AddScoped<ImportService>();
             builder.Services.AddScoped<LibraryService>();

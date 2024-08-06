@@ -21,7 +21,6 @@ namespace LANCommander.Launcher.Services
         private readonly SDK.Client Client;
         private readonly GameService GameService;
         private readonly SaveService SaveService;
-        private readonly ScriptService ScriptService;
 
         private Settings Settings;
 
@@ -38,12 +37,11 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnInstallFailHandler(Game game);
         public event OnInstallFailHandler OnInstallFail;
 
-        public DownloadService(SDK.Client client, GameService gameService, SaveService saveService, ScriptService scriptService) : base()
+        public DownloadService(SDK.Client client, GameService gameService, SaveService saveService) : base()
         {
             Client = client;
             GameService = gameService;
             SaveService = saveService;
-            ScriptService = scriptService;
             Stopwatch = new Stopwatch();
             Settings = SettingService.GetSettings();
 
@@ -200,9 +198,11 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    ScriptService.RunInstallScriptAsync(game, gameInfo.Id);
-                    await ScriptService.RunKeyChangeScript(game, gameInfo.Id);
-                    ScriptService.RunNameChangeScript(game, gameInfo.Id);
+                    var allocatedKey = Client.Games.GetAllocatedKey(game.Id);
+
+                    await Client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id);
+                    await Client.Scripts.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
+                    await Client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, Settings.Profile.Alias);
                 }
                 catch (Exception ex) {
                     Logger?.Error(ex, "Scripts failed to execute for mod/expansion {GameTitle} ({GameId})", game.Title, game.Id);
@@ -251,9 +251,11 @@ namespace LANCommander.Launcher.Services
                     if (dependentGame.BaseGame == null)
                         dependentGame.BaseGame = gameInfo;
 
-                    ScriptService.RunInstallScriptAsync(game, dependentGame.Id);
-                    ScriptService.RunNameChangeScript(game, dependentGame.Id);
-                    ScriptService.RunKeyChangeScript(game, dependentGame.Id);
+                    var key = Client.Games.GetAllocatedKey(game.Id);
+
+                    await Client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id);
+                    await Client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, Settings.Profile.Alias);
+                    await Client.Scripts.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, key);
                 }
                 catch (Exception ex)
                 {

@@ -63,6 +63,11 @@ jobs:
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/LANCommander.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/LANCommanderDark.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/package-lock.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/package.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/*.pdb
 
     # Create ZIP file
     - name: Package Launcher Build

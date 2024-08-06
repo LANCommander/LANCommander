@@ -17,16 +17,13 @@ namespace LANCommander.Launcher.Services
         private readonly SDK.Client Client;
         private Settings Settings { get; set; }
 
-        private readonly ScriptService ScriptService;
-
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;
 
-        public GameService(DatabaseContext dbContext, SDK.Client client, ScriptService scriptService) : base(dbContext)
+        public GameService(DatabaseContext dbContext, SDK.Client client) : base(dbContext)
         {
             Client = client;
             Settings = SettingService.GetSettings();
-            ScriptService = scriptService;
         }
 
         public async Task<IEnumerable<SDK.Models.Action>> GetActionsAsync(Game game)

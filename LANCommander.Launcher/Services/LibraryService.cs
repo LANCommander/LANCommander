@@ -28,7 +28,6 @@ namespace LANCommander.Launcher.Services
         private readonly SaveService SaveService;
         private readonly PlaySessionService PlaySessionService;
         private readonly RedistributableService RedistributableService;
-        private readonly ScriptService ScriptService;
         private readonly ImportService ImportService;
         private readonly MessageBusService MessageBusService;
         private readonly PhotinoWindow Window;
@@ -56,7 +55,6 @@ namespace LANCommander.Launcher.Services
             PlaySessionService playSessionService,
             PhotinoWindow window,
             RedistributableService redistributableService,
-            ScriptService scriptService,
             ImportService importService,
             MessageBusService messageBusService) : base()
         {
@@ -67,7 +65,6 @@ namespace LANCommander.Launcher.Services
             PlaySessionService = playSessionService;
             Window = window;
             RedistributableService = redistributableService;
-            ScriptService = scriptService;
             ImportService = importService;
             MessageBusService = messageBusService;
 

@@ -1,6 +1,9 @@
-﻿using Emzi0767.NtfsDataStreams;
+﻿using CommandLine;
+using CommandLine.Text;
+using Emzi0767.NtfsDataStreams;
 using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Extensions;
+using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +17,7 @@ using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
 using System.Diagnostics;
 using System.IO;
+using System.Management.Automation.Language;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -32,15 +36,7 @@ namespace LANCommander.Launcher
             Logger?.Debug("Loading settings from file");
             var settings = SettingService.GetSettings();
 
-
             var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
-
-            builder.RootComponents.Add<App>("app");
-
-            builder.Services.AddLogging();
-            builder.Services.AddCustomWindow();
-            builder.Services.AddAntDesign();
-            builder.Services.AddDbContext<DbContext, DatabaseContext>();
 
             #region Configure Logging
             Logger?.Debug("Configuring logging...");
@@ -60,41 +56,13 @@ namespace LANCommander.Launcher
             });
             #endregion
 
-            #region Register Client
-            Logger?.Debug("Registering LANCommander client...");
-            var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);
+            builder.RootComponents.Add<App>("app");
 
-            client.UseToken(new SDK.Models.AuthToken
-            {
-                AccessToken = settings.Authentication.AccessToken,
-                RefreshToken = settings.Authentication.RefreshToken,
-            });
-
-            builder.Services.AddSingleton(client);
-            builder.Services.AddSingleton<MessageBusService>();
-            #endregion
-
-            #region Register Services
             Logger?.Debug("Registering services...");
 
-            builder.Services.AddScoped<CollectionService>();
-            builder.Services.AddScoped<CompanyService>();
-            builder.Services.AddScoped<EngineService>();
-            builder.Services.AddScoped<GameService>();
-            builder.Services.AddScoped<GenreService>();
-            builder.Services.AddScoped<PlatformService>();
-            builder.Services.AddScoped<MultiplayerModeService>();
-            builder.Services.AddScoped<TagService>();
-            builder.Services.AddScoped<MediaService>();
-            builder.Services.AddScoped<ProfileService>();
-            builder.Services.AddScoped<PlaySessionService>();
-            builder.Services.AddScoped<RedistributableService>();
-            builder.Services.AddScoped<SaveService>();
-            builder.Services.AddScoped<ImportService>();
-            builder.Services.AddScoped<LibraryService>();
-            builder.Services.AddScoped<DownloadService>();
-            builder.Services.AddScoped<UpdateService>();
-            #endregion
+            builder.Services.AddCustomWindow();
+            builder.Services.AddAntDesign();
+            builder.Services.AddLANCommander();
 
             #region Build Application
             Logger?.Debug("Building application...");
@@ -273,15 +241,33 @@ namespace LANCommander.Launcher
                 #endregion
             }
 
-            settings.LaunchCount++;
+            if (args.Length > 0)
+            {
+                ParseCommandLine(args);
 
-            SettingService.SaveSettings(settings);
+                return;
+            }
+            else
+            {
+                settings.LaunchCount++;
 
-            Logger?.Debug("Starting application...");
+                SettingService.SaveSettings(settings);
 
-            app.Run();
+                Logger?.Debug("Starting application...");
 
-            Logger?.Debug("Closing application...");
+                app.Run();
+
+                Logger?.Debug("Closing application...");
+            }
+        }
+
+        static void ParseCommandLine(string[] args)
+        {
+            var result = CommandLine.Parser.Default.ParseArguments<RunScriptCommandLineOptions>(args)
+                .WithParsed<RunScriptCommandLineOptions>(options =>
+                {
+                    
+                });
         }
     }
 }

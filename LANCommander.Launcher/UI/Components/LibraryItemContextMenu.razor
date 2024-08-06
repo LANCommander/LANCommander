@@ -6,9 +6,9 @@
 @inject GameService GameService
 @inject LibraryService LibraryService
 @inject DownloadService DownloadService
-@inject ScriptService ScriptService
 @inject ModalService ModalService
 @inject MessageBusService MessageBusService
+@inject SDK.Client Client
 
 @if (GameActions != null && GameActions.Count() > 0)
 {
@@ -161,7 +161,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            ScriptService.RunInstallScriptAsync(Game, manifest.Id);
+            await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 
@@ -171,7 +171,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game, Settings.Profile.Alias);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, Settings.Profile.Alias);
         }
     }
 
@@ -183,7 +183,7 @@ else
         {
             var key = Client.Games.GetAllocatedKey(manifest.Id);
 
-            await Client.Scripts.RunKeyChangeScriptAsync(Game, key);
+            await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
         }
     }
 

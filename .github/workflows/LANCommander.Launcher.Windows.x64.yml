@@ -64,12 +64,12 @@ jobs:
 
     - name: Remove Extra Files
       run: |
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander/bin/Release/net8.0/win-x64/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/wwwroot/_content/AntDesign/less
 
     # Create ZIP file
     - name: Package Launcher Build

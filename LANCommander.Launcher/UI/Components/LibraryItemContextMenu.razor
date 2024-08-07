@@ -148,7 +148,7 @@ else
         });
 
         if (confirmed)
-            await GameService.Uninstall(Game);
+            await GameService.UninstallAsync(Game);
 
         DownloadService.Remove(Game.Id);
 

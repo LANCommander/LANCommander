@@ -465,15 +465,18 @@ namespace LANCommander.SDK
 
                 DownloadStream.OnProgress += (pos, len) =>
                 {
-                    var bytesThisInterval = pos - len;
+                    if (stopwatch.ElapsedMilliseconds > 500)
+                    {
+                        var bytesThisInterval = pos - len;
 
-                    GameInstallProgress.BytesDownloaded = pos;
-                    GameInstallProgress.TotalBytes = len;
-                    GameInstallProgress.TransferSpeed = (double)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
+                        GameInstallProgress.BytesDownloaded = pos;
+                        GameInstallProgress.TotalBytes = len;
+                        GameInstallProgress.TransferSpeed = (double)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
 
-                    OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+                        OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
 
-                    stopwatch.Reset();
+                        stopwatch.Reset();
+                    }
                 };
 
                 Reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>

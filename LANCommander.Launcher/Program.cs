@@ -30,7 +30,7 @@ namespace LANCommander.Launcher
         static Logger Logger = LogManager.GetCurrentClassLogger();
 
         [STAThread]
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             Logger?.Debug("Starting up launcher...");
             Logger?.Debug("Loading settings from file");
@@ -243,7 +243,7 @@ namespace LANCommander.Launcher
 
             if (args.Length > 0)
             {
-                await ParseCommandLineAsync(args, app);
+                Task.Run(async () => await ParseCommandLineAsync(args, app)).GetAwaiter().GetResult();
 
                 return;
             }

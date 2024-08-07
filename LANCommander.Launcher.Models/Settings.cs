@@ -1,4 +1,4 @@
-﻿using LANCommander.Launcher.Enums;
+﻿using LANCommander.Launcher.Models.Enums;
 using Microsoft.Extensions.Logging;
 using NLog.Targets;
 using System;

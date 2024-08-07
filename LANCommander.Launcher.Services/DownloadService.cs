@@ -1,12 +1,10 @@
 ﻿using LANCommander.Launcher.Data.Models;
-using LANCommander.Launcher.Enums;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
-using Microsoft.Toolkit.Uwp.Notifications;
-using NLog;
+// using Microsoft.Toolkit.Uwp.Notifications;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -208,7 +206,7 @@ namespace LANCommander.Launcher.Services
 
                 Logger?.Trace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
 
-                ShowCompletedNotification(currentItem);
+                // ShowCompletedNotification(currentItem);
 
                 OnInstallComplete?.Invoke(game);
             }
@@ -216,7 +214,7 @@ namespace LANCommander.Launcher.Services
             await Install();
         }
 
-        private void ShowCompletedNotification(IDownloadQueueItem queueItem)
+        /*private void ShowCompletedNotification(IDownloadQueueItem queueItem)
         {
             var builder = new ToastContentBuilder();
 
@@ -241,6 +239,6 @@ namespace LANCommander.Launcher.Services
                 //.Show
                 // .AddAppLogoOverride()
                 //.Show();
-        }
+        }*/
     }
 }

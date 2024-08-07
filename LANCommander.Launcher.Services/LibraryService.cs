@@ -1,13 +1,11 @@
-﻿using AntDesign;
-using LANCommander.Launcher.Data;
+﻿using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
-using LANCommander.Launcher.Extensions;
 using LANCommander.Launcher.Models;
+using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
 using Microsoft.EntityFrameworkCore;
-using Photino.NET;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -30,7 +28,6 @@ namespace LANCommander.Launcher.Services
         private readonly RedistributableService RedistributableService;
         private readonly ImportService ImportService;
         private readonly MessageBusService MessageBusService;
-        private readonly PhotinoWindow Window;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
@@ -53,7 +50,6 @@ namespace LANCommander.Launcher.Services
             GameService gameService,
             SaveService saveService,
             PlaySessionService playSessionService,
-            PhotinoWindow window,
             RedistributableService redistributableService,
             ImportService importService,
             MessageBusService messageBusService) : base()
@@ -63,7 +59,6 @@ namespace LANCommander.Launcher.Services
             GameService = gameService;
             SaveService = saveService;
             PlaySessionService = playSessionService;
-            Window = window;
             RedistributableService = redistributableService;
             ImportService = importService;
             MessageBusService = messageBusService;
@@ -106,16 +101,16 @@ namespace LANCommander.Launcher.Services
 
             switch (settings.Filter.GroupBy)
             {
-                case Enums.GroupBy.None:
+                case Models.Enums.GroupBy.None:
                     GroupSelector = (g) => new string[] { };
                     break;
-                case Enums.GroupBy.Collection:
+                case Models.Enums.GroupBy.Collection:
                     GroupSelector = (g) => (g.DataItem as Game).Collections.Select(c => c.Name).ToArray();
                     break;
-                case Enums.GroupBy.Genre:
+                case Models.Enums.GroupBy.Genre:
                     GroupSelector = (g) => (g.DataItem as Game).Genres.Select(ge => ge.Name).ToArray();
                     break;
-                case Enums.GroupBy.Platform:
+                case Models.Enums.GroupBy.Platform:
                     GroupSelector = (g) => (g.DataItem as Game).Platforms.Select(p => p.Name).ToArray();
                     break;
             }
@@ -255,10 +250,10 @@ namespace LANCommander.Launcher.Services
             var process = new Process();
             var settings = SettingService.GetSettings();
 
-            var monitor = Window.Monitors.First(m => m.MonitorArea.X == 0 && m.MonitorArea.Y == 0);
+            /*var monitor = Window.Monitors.First(m => m.MonitorArea.X == 0 && m.MonitorArea.Y == 0);
 
             Client.Actions.AddVariable("DisplayWidth", monitor.MonitorArea.Width.ToString());
-            Client.Actions.AddVariable("DisplayHeight", monitor.MonitorArea.Height.ToString());
+            Client.Actions.AddVariable("DisplayHeight", monitor.MonitorArea.Height.ToString());*/
             // Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
 
             process.StartInfo.Arguments = Client.Actions.ExpandVariables(action.Arguments, game.InstallDirectory, skipSlashes: true);

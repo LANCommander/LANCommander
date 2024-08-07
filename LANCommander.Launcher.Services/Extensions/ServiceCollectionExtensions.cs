@@ -1,5 +1,4 @@
 ﻿using LANCommander.Launcher.Data;
-using LANCommander.Launcher.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -8,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.Launcher.Extensions
+namespace LANCommander.Launcher.Services.Extensions
 {
     public static class ServiceCollectionExtensions
     {

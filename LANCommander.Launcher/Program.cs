@@ -2,9 +2,9 @@
 using CommandLine.Text;
 using Emzi0767.NtfsDataStreams;
 using LANCommander.Launcher.Data;
-using LANCommander.Launcher.Extensions;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

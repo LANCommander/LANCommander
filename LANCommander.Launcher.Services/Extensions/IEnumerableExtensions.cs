@@ -5,13 +5,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace LANCommander.Launcher.Extensions
+namespace LANCommander.Launcher.Services.Extensions
 {
-    internal static class IEnumerableExtensions
+    public static class IEnumerableExtensions
     {
         static Regex TitleComparisonExpression = new Regex(@"^(?:a|the|an)\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-        internal static IOrderedEnumerable<T> OrderByTitle<T>(this IEnumerable<T> items, Func<T, string> keySelector)
+        public static IOrderedEnumerable<T> OrderByTitle<T>(this IEnumerable<T> items, Func<T, string> keySelector)
         {
             return items.OrderBy(i =>
             {

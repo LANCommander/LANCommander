@@ -3,12 +3,6 @@ using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
-using LANCommander.SDK.PowerShell;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {

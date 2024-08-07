@@ -1,5 +1,4 @@
-﻿using LANCommander.Launcher.Enums;
-using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;

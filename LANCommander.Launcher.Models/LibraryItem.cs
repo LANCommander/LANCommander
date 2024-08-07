@@ -1,5 +1,4 @@
 ﻿using LANCommander.Launcher.Data.Models;
-using LANCommander.Launcher.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

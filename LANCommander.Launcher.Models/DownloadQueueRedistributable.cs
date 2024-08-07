@@ -1,5 +1,4 @@
-﻿using LANCommander.Launcher.Enums;
-using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    internal class DownloadQueueGame : IDownloadQueueItem
+    public class DownloadQueueRedistributable : IDownloadQueueItem
     {
         public Guid Id { get; set; }
         public string Title { get; set; }
@@ -18,7 +17,8 @@ namespace LANCommander.Launcher.Models
         public DateTime QueuedOn { get; set; }
         public DateTime? CompletedOn { get; set; }
         public bool IsUpdate { get; set; }
-        public bool State {
+        public bool State
+        {
             get
             {
                 switch (Status)
@@ -37,36 +37,18 @@ namespace LANCommander.Launcher.Models
             }
         }
         public GameInstallStatus Status { get; set; }
-        public SDK.Models.Game Game { get; set; }
-        public float Progress {
-            get
-            {
-                return BytesDownloaded / (float)TotalBytes;
-            }
-            set { }
-        }
-        public double TransferSpeed { get; set; }
-        public long BytesDownloaded { get; set; }
-        public long TotalBytes { get; set; }
+        public SDK.Models.Redistributable Redistributable { get; set; }
+        public float Progress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public double TransferSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public long BytesDownloaded { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public long TotalBytes { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
-        public DownloadQueueGame(SDK.Models.Game game)
+        public DownloadQueueRedistributable(SDK.Models.Redistributable redistributable)
         {
-            Game = game;
-            Id = game.Id;
-            Title = game.Title;
-            Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
-            QueuedOn = DateTime.Now;
-            Status = GameInstallStatus.Idle;
-
-            var cover = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
-
-            if (cover != null)
-                CoverId = cover.Id;
-
-            var icon = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
-
-            if (icon != null)
-                IconId = icon.Id;
+            Redistributable = redistributable;
+            Id = redistributable.Id;
+            Title = redistributable.Name;
+            Version = redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
         }
     }
 }

@@ -27,6 +27,13 @@ namespace LANCommander.Launcher.Models
         public string NewKey { get; set; }
     }
 
+    [Verb("Install", HelpText = "Install a game from the server")]
+    public class InstallCommandLineOptions
+    {
+        [Option("GameId", HelpText = "The GUID of the game to install")]
+        public Guid GameId { get; set; }
+    }
+
     [Verb("Import", HelpText = "Import library items from the server")]
     public class ImportCommandLineOptions { }
 

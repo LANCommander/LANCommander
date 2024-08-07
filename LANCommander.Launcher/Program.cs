@@ -270,7 +270,14 @@ namespace LANCommander.Launcher
 
                 await client.ValidateTokenAsync();
 
-                var result = CommandLine.Parser.Default.ParseArguments<RunScriptCommandLineOptions, ImportCommandLineOptions>(args);
+                var result = CommandLine.Parser.Default.ParseArguments
+                    <
+                        RunScriptCommandLineOptions,
+                        InstallCommandLineOptions,
+                        ImportCommandLineOptions,
+                        LoginCommandLineOptions,
+                        LogoutCommandLineOptions
+                    >(args);
 
                 await result.WithParsedAsync<RunScriptCommandLineOptions>(async (options) =>
                 {
@@ -301,6 +308,24 @@ namespace LANCommander.Launcher
                         case SDK.Enums.ScriptType.KeyChange:
                             await client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewKey);
                             break;
+                    }
+                });
+
+                await result.WithParsedAsync<InstallCommandLineOptions>(async (options) =>
+                {
+                    var client = scope.ServiceProvider.GetService<SDK.Client>();
+
+                    Console.WriteLine($"Downloading and installing game with ID {options.GameId}...");
+
+                    try
+                    {
+                        var installDirectory = await client.Games.InstallAsync(options.GameId);
+
+                        Console.WriteLine($"Game successfully installed to {installDirectory}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Game could not be installed: {ex.Message}");
                     }
                 });
 

@@ -28,8 +28,21 @@ namespace LANCommander.Launcher.Models
     }
 
     [Verb("Import", HelpText = "Import library items from the server")]
-    public class ImportCommandLineOptions
-    {
+    public class ImportCommandLineOptions { }
 
+    [Verb("Login", HelpText = "Login to a LANCommander server")]
+    public class LoginCommandLineOptions
+    {
+        [Option("Username", Required = true)]
+        public string Username { get; set; }
+
+        [Option("Password", Required = true)]
+        public string Password { get; set; }
+
+        [Option("ServerAddress")]
+        public string ServerAddress { get; set; }
     }
+
+    [Verb("Logout", HelpText = "Logout and clear local credentials")]
+    public class LogoutCommandLineOptions { }
 }

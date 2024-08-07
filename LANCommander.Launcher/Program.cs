@@ -265,6 +265,7 @@ namespace LANCommander.Launcher
         {
             using (var scope = app.Services.CreateScope())
             {
+                var settings = SettingService.GetSettings();
                 var client = scope.ServiceProvider.GetService<SDK.Client>();
 
                 await client.ValidateTokenAsync();
@@ -320,6 +321,39 @@ namespace LANCommander.Launcher
                     };
 
                     await importService.ImportAsync();
+                });
+
+                await result.WithParsedAsync<LoginCommandLineOptions>(async (options) =>
+                {
+                    try
+                    {
+                        if (String.IsNullOrWhiteSpace(options.ServerAddress))
+                            options.ServerAddress = settings.Authentication.ServerAddress;
+
+                        if (String.IsNullOrWhiteSpace(options.ServerAddress))
+                            throw new ArgumentException("A server address must be specified");
+
+                        client.UseServerAddress(options.ServerAddress);
+
+                        await client.AuthenticateAsync(options.Username, options.Password);
+
+                        Console.WriteLine("Logged in!");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                });
+
+                await result.WithParsedAsync<LogoutCommandLineOptions>(async (options) =>
+                {
+                    await client.LogoutAsync();
+
+                    settings.Authentication.AccessToken = "";
+                    settings.Authentication.RefreshToken = "";
+                    settings.Authentication.OfflineMode = false;
+
+                    SettingService.SaveSettings(settings);
                 });
             }
         }

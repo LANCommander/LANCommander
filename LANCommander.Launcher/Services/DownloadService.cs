@@ -1,6 +1,7 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Enums;
 using LANCommander.Launcher.Models;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
@@ -52,6 +53,21 @@ namespace LANCommander.Launcher.Services
                 OnQueueChanged?.Invoke();
             };
 
+            Client.Games.OnGameInstallProgressUpdate += (e) =>
+            {
+                var currentItem = Queue.FirstOrDefault(i => i.Id == e.Game.Id);
+
+                if (currentItem == null)
+                    return;
+
+                currentItem.Status = e.Status;
+                currentItem.BytesDownloaded = e.BytesDownloaded;
+                currentItem.TotalBytes = e.TotalBytes;
+                currentItem.TransferSpeed = e.TransferSpeed;
+
+                OnQueueChanged?.Invoke();
+            };
+
             // Client.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
             // Client.Games.OnArchiveEntryExtractionProgress += Games_OnArchiveEntryExtractionProgress;
         }
@@ -81,7 +97,7 @@ namespace LANCommander.Launcher.Services
                 }
             }
 
-            if (!Queue.Any(i => i.Id == game.Id && i.Status == DownloadStatus.Idle))
+            if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Idle))
             {
                 var queueItem = new DownloadQueueGame(gameInfo);
 
@@ -89,7 +105,7 @@ namespace LANCommander.Launcher.Services
                     Queue.Add(queueItem);
                 else
                 {
-                    queueItem.Status = DownloadStatus.Downloading;
+                    queueItem.Status = GameInstallStatus.Downloading;
 
                     Queue.Add(queueItem);
 
@@ -131,15 +147,11 @@ namespace LANCommander.Launcher.Services
             if (gameInfo == null)
                 return;
 
-            currentItem.Status = DownloadStatus.Downloading;
-
-            OnQueueChanged?.Invoke();
-
             string installDirectory;
 
             try
             {
-                installDirectory = await Task.Run(() => Client.Games.Install(gameInfo.Id));
+                installDirectory = await Client.Games.InstallAsync(gameInfo.Id);
 
                 game.InstallDirectory = installDirectory;
                 game.Installed = true;
@@ -148,10 +160,7 @@ namespace LANCommander.Launcher.Services
             }
             catch (InstallCanceledException ex)
             {
-                // OnInstallCancelled?.Invoke(currentItem);
-
                 Queue.Remove(currentItem);
-
                 return;
             }
             catch (InstallException ex)
@@ -164,105 +173,6 @@ namespace LANCommander.Launcher.Services
                 Queue.Remove(currentItem);
                 return;
             }
-
-            currentItem.Progress = 1;
-            currentItem.BytesDownloaded = currentItem.TotalBytes;
-
-            OnQueueChanged?.Invoke();
-
-            #region Install Redistributables
-            if (gameInfo.Redistributables != null && gameInfo.Redistributables.Any())
-            {
-                currentItem.Status = DownloadStatus.InstallingRedistributables;
-                OnQueueChanged?.Invoke();
-
-                Logger?.Trace("Installing redistributables");
-
-                await Client.Redistributables.InstallAsync(gameInfo);
-            }
-            #endregion
-
-            #region Download Latest Save
-            Logger?.Trace("Attempting to download the latest save");
-            currentItem.Status = DownloadStatus.DownloadingSaves;
-            OnQueueChanged?.Invoke();
-
-            await SaveService.DownloadLatest(game.InstallDirectory, game.Id);
-            #endregion
-
-            #region Run Scripts
-            if (gameInfo.Scripts != null && gameInfo.Scripts.Any())
-            {
-                currentItem.Status = DownloadStatus.RunningScripts;
-                OnQueueChanged?.Invoke();
-
-                try
-                {
-                    var allocatedKey = Client.Games.GetAllocatedKey(game.Id);
-
-                    await Client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id);
-                    await Client.Scripts.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, allocatedKey);
-                    await Client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, Settings.Profile.Alias);
-                }
-                catch (Exception ex) {
-                    Logger?.Error(ex, "Scripts failed to execute for mod/expansion {GameTitle} ({GameId})", game.Title, game.Id);
-                }
-            }
-            #endregion
-
-            #region Install Expansions/Mods
-            foreach (var dependentGame in gameInfo.DependentGames.Where(g => g.Type == SDK.Enums.GameType.Expansion || g.Type == SDK.Enums.GameType.Mod))
-            {
-                if (dependentGame.Type == SDK.Enums.GameType.Expansion)
-                    currentItem.Status = DownloadStatus.InstallingExpansions;
-                else if (dependentGame.Type == SDK.Enums.GameType.Mod)
-                    currentItem.Status = DownloadStatus.InstallingMods;
-
-                OnQueueChanged?.Invoke();
-
-                try
-                {
-                    await Task.Run(() => Client.Games.Install(dependentGame.Id));
-                }
-                catch (InstallCanceledException ex)
-                {
-                    Logger?.Debug("Install canceled");
-                }
-                catch (Exception ex)
-                {
-                    OnInstallFail?.Invoke(game);
-
-                    currentItem.Status = DownloadStatus.Failed;
-
-                    OnQueueChanged?.Invoke();
-
-                    game.Installed = false;
-                    game.InstalledOn = null;
-                    game.InstallDirectory = null;
-                    game.InstalledVersion = null;
-
-                    await GameService.Update(game);
-
-                    return;
-                }
-
-                try
-                {
-                    if (dependentGame.BaseGame == null)
-                        dependentGame.BaseGame = gameInfo;
-
-                    var key = Client.Games.GetAllocatedKey(game.Id);
-
-                    await Client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id);
-                    await Client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, Settings.Profile.Alias);
-                    await Client.Scripts.RunKeyChangeScriptAsync(game.InstallDirectory, game.Id, key);
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Scripts failed to execute for mod/expansion {GameTitle} ({GameId})", dependentGame.Title, dependentGame.Id);
-                }
-            }
-            #endregion
 
             #region Download Manuals
             foreach (var manual in gameInfo.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
@@ -288,7 +198,7 @@ namespace LANCommander.Launcher.Services
             if (currentItem is DownloadQueueGame)
             {
                 currentItem.CompletedOn = DateTime.Now;
-                currentItem.Status = DownloadStatus.Complete;
+                currentItem.Status = GameInstallStatus.Complete;
                 currentItem.Progress = 1;
                 currentItem.BytesDownloaded = currentItem.TotalBytes;
 

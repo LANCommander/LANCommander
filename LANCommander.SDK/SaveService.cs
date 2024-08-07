@@ -54,12 +54,12 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        private async Task<string> Download(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        private async Task<string> DownloadAsync(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return await Client.DownloadRequestAsync($"/api/Saves/Download/{id}", progressHandler, completeHandler);
         }
 
-        public async Task<string> DownloadLatest(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        public async Task<string> DownloadLatestAsync(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return await Client.DownloadRequestAsync($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
         }
@@ -86,7 +86,7 @@ namespace LANCommander.SDK
             return Client.UploadRequest<GameSave>($"/api/Saves/Upload/{gameId}", gameId.ToString(), data);
         }
 
-        public async Task Download(string installDirectory, Guid gameId, Guid? saveId = null)
+        public async Task DownloadAsync(string installDirectory, Guid gameId, Guid? saveId = null)
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
@@ -99,7 +99,7 @@ namespace LANCommander.SDK
 
                 if (!saveId.HasValue)
                 {
-                    destination = await DownloadLatest(manifest.Id, (changed) =>
+                    destination = await DownloadLatestAsync(manifest.Id, (changed) =>
                     {
                         OnDownloadProgress?.Invoke(changed);
                     }, (complete) =>
@@ -109,7 +109,7 @@ namespace LANCommander.SDK
                 }
                 else
                 {
-                    destination = await Download(saveId.Value, (changed) =>
+                    destination = await DownloadAsync(saveId.Value, (changed) =>
                     {
                         OnDownloadProgress?.Invoke(changed);
                     }, (complete) =>

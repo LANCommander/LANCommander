@@ -18,13 +18,13 @@ namespace LANCommander.Launcher.Services
 
         public async Task DownloadLatestAsync(string installDirectory, Guid gameId)
         {
-            await Task.Run(() => Client.Saves.Download(installDirectory, gameId));
+            await Task.Run(() => Client.Saves.DownloadAsync(installDirectory, gameId));
         }
 
         public async Task DownloadLatest(string installDirectory, Guid gameId)
         {
 
-            await Task.Run(() => Client.Saves.Download(installDirectory, gameId));
+            await Task.Run(() => Client.Saves.DownloadAsync(installDirectory, gameId));
         }
 
         public async Task UploadAsync(string installDirectory, Guid gameId)

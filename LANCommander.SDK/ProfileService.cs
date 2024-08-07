@@ -22,6 +22,8 @@ namespace LANCommander.SDK
         private readonly ILogger Logger;
         private Client Client { get; set; }
 
+        private User User { get; set; }
+
         public ProfileService(Client client)
         {
             Client = client;
@@ -33,18 +35,31 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public User Get()
+        public User Get(bool forceLoad = false)
         {
             Logger?.LogTrace("Requesting player's profile...");
 
-            return Client.GetRequest<User>("/api/Profile");
+            if (User == null || forceLoad)
+                User = Client.GetRequest<User>("/api/Profile");
+
+            return User;
         }
 
-        public async Task<User> GetAsync()
+        public async Task<User> GetAsync(bool forceLoad = false)
         {
             Logger?.LogTrace("Requesting player's profile...");
 
-            return await Client.GetRequestAsync<User>("/api/Profile");
+            if (User == null || forceLoad)
+                User = await Client.GetRequestAsync<User>("/api/Profile");
+
+            return User;
+        }
+
+        public async Task<string> GetAliasAsync()
+        {
+            var user = await GetAsync();
+
+            return user.Alias;
         }
 
         public async Task<string> ChangeAliasAsync(string alias)

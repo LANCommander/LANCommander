@@ -1,4 +1,5 @@
 ﻿using LANCommander.Launcher.Enums;
+using LANCommander.SDK.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace LANCommander.Launcher.Models
         DateTime? CompletedOn { get; set; }
         bool IsUpdate { get; set; }
         bool State { get; }
-        DownloadStatus Status { get; set; }
+        GameInstallStatus Status { get; set; }
         float Progress { get; set; }
         double TransferSpeed { get; set; }
         long BytesDownloaded { get; set; }

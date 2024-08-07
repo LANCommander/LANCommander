@@ -45,15 +45,15 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                 }
             };
 
-            var installDirectory = Client.Games.Install(Id);
+            //var installDirectory = Client.Games.InstallAsync(Id);
 
             stopwatch.Stop();
 
-            RunInstallScriptAsync(installDirectory);
+            /*RunInstallScriptAsync(installDirectory);
             RunNameChangeScriptAsync(installDirectory);
-            RunKeyChangeScript(installDirectory);
+            RunKeyChangeScript(installDirectory);*/
 
-            WriteObject(installDirectory);
+            WriteObject("");
         }
 
         private async Task<int> RunInstallScriptAsync(string installDirectory)

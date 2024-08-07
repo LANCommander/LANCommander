@@ -1,4 +1,5 @@
 ﻿using LANCommander.Launcher.Enums;
+using LANCommander.SDK.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,12 +24,12 @@ namespace LANCommander.Launcher.Models
             {
                 switch (Status)
                 {
-                    case DownloadStatus.Downloading:
-                    case DownloadStatus.InstallingRedistributables:
-                    case DownloadStatus.InstallingMods:
-                    case DownloadStatus.InstallingExpansions:
-                    case DownloadStatus.RunningScripts:
-                    case DownloadStatus.DownloadingSaves:
+                    case GameInstallStatus.Downloading:
+                    case GameInstallStatus.InstallingRedistributables:
+                    case GameInstallStatus.InstallingMods:
+                    case GameInstallStatus.InstallingExpansions:
+                    case GameInstallStatus.RunningScripts:
+                    case GameInstallStatus.DownloadingSaves:
                         return true;
 
                     default:
@@ -36,7 +37,7 @@ namespace LANCommander.Launcher.Models
                 }
             }
         }
-        public DownloadStatus Status { get; set; }
+        public GameInstallStatus Status { get; set; }
         public SDK.Models.Redistributable Redistributable { get; set; }
         public float Progress { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public double TransferSpeed { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }

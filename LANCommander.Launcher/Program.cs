@@ -313,15 +313,21 @@ namespace LANCommander.Launcher
 
                 await result.WithParsedAsync<InstallCommandLineOptions>(async (options) =>
                 {
-                    var client = scope.ServiceProvider.GetService<SDK.Client>();
+                    var gameService = scope.ServiceProvider.GetService<GameService>();
+                    var downloadService = scope.ServiceProvider.GetService<DownloadService>();
 
                     Console.WriteLine($"Downloading and installing game with ID {options.GameId}...");
 
                     try
                     {
-                        var installDirectory = await client.Games.InstallAsync(options.GameId);
+                        var game = await gameService.Get(options.GameId);
 
-                        Console.WriteLine($"Game successfully installed to {installDirectory}");
+                        await downloadService.Add(game);
+                        await downloadService.Install();
+
+                        game = await gameService.Get(options.GameId);
+
+                        Console.WriteLine($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
                     }
                     catch (Exception ex)
                     {

@@ -34,6 +34,13 @@ namespace LANCommander.Launcher.Models
         public Guid GameId { get; set; }
     }
 
+    [Verb("Uninstall", HelpText = "Uninstall a game from the local device")]
+    public class UninstallCommandLineOptions
+    {
+        [Option("GameId", HelpText = "The GUID of the game to uninstall")]
+        public Guid GameId { get; set; }
+    }
+
     [Verb("Import", HelpText = "Import library items from the server")]
     public class ImportCommandLineOptions { }
 

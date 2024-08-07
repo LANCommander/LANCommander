@@ -74,37 +74,25 @@ namespace LANCommander.Launcher.Services
             return manifests;
         }
 
-        public async Task Uninstall(Game game)
+        public async Task UninstallAsync(Game game)
         {
-            Settings = SettingService.GetSettings();
-
-            if (game.DependentGames != null)
+            try
             {
-                foreach (var dependentGame in game.DependentGames.Where(g => g.Installed))
-                {
-                    await Uninstall(dependentGame);
-                }
+                await Client.Games.UninstallAsync(game.InstallDirectory, game.Id);
+
+                game.InstallDirectory = null;
+                game.Installed = false;
+                game.InstalledOn = null;
+                game.InstalledVersion = null;
+
+                await Update(game);
+
+                OnUninstallComplete?.Invoke(game);
             }
-
-            await Task.Run(() => Client.Games.Uninstall(game.InstallDirectory, game.Id));
-
-            await Client.Scripts.RunUninstallScriptAsync(game.InstallDirectory, game.Id);
-
-            var metadataPath = SDK.GameService.GetMetadataDirectoryPath(game.InstallDirectory, game.Id);
-
-            if (Directory.Exists(metadataPath))
-                Directory.Delete(metadataPath, true);
-
-            DirectoryHelper.DeleteEmptyDirectories(game.InstallDirectory);
-
-            game.InstallDirectory = null;
-            game.Installed = false;
-            game.InstalledOn = null;
-            game.InstalledVersion = null;
-
-            await Update(game);
-
-            OnUninstallComplete?.Invoke(game);
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Game {GameTitle} ({GameId}) could not be uninstalled", game.Title, game.Id);
+            }
         }
     }
 }

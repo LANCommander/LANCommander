@@ -368,16 +368,29 @@ namespace LANCommander.SDK
             return game.InstallDirectory;
         }
 
-        public void Uninstall(string installDirectory, Guid gameId)
+        public async Task UninstallAsync(string installDirectory, Guid gameId)
         {
+            var manifest = ManifestHelper.Read(installDirectory, gameId);
+
+            #region Uninstall Dependent Games
+            if (manifest.DependentGames != null)
+            {
+                foreach (var dependentGame in manifest.DependentGames)
+                {
+                    await UninstallAsync(installDirectory, dependentGame);
+                }
+            }
+            #endregion
+
+            #region Delete Files
             var fileListPath = GameService.GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
 
             if (File.Exists(fileListPath))
             {
-                var fileList = File.ReadAllLines(fileListPath);
+                var fileList = await File.ReadAllLinesAsync(fileListPath);
                 var files = fileList.Select(l => l.Split('|').FirstOrDefault().Trim());
 
-                Logger?.LogTrace("Attempting to delete the install files");
+                Logger?.LogDebug("Attempting to delete the install files");
 
                 foreach (var file in files.Where(f => !f.EndsWith("/")))
                 {
@@ -387,6 +400,8 @@ namespace LANCommander.SDK
                     {
                         if (File.Exists(localPath))
                             File.Delete(localPath);
+
+                        Logger?.LogTrace("Deleted file {LocalPath}", localPath);
                     }
                     catch (Exception ex)
                     {
@@ -394,19 +409,31 @@ namespace LANCommander.SDK
                     }
                 }
 
-                Logger?.LogTrace("Attempting to delete any empty directories");
+                Logger?.LogDebug("Attempting to delete any empty directories");
 
                 DirectoryHelper.DeleteEmptyDirectories(installDirectory);
 
                 if (!Directory.Exists(installDirectory))
-                    Logger?.LogTrace("Deleted install directory {InstallDirectory}", installDirectory);
+                    Logger?.LogDebug("Deleted install directory {InstallDirectory}", installDirectory);
                 else
-                    Logger?.LogTrace("Removed game files for {GameId}", gameId);
+                    Logger?.LogTrace("Removed game files for {GameTitle} ({GameId})", manifest.Title, gameId);
             }
             else
             {
                 Directory.Delete(installDirectory, true);
             }
+            #endregion
+
+            await Client.Scripts.RunUninstallScriptAsync(installDirectory, gameId);
+
+            #region Cleanup Install Directory
+            var metadataPath = GetMetadataDirectoryPath(installDirectory, gameId);
+
+            if (Directory.Exists(metadataPath))
+                Directory.Delete(metadataPath, true);
+
+            DirectoryHelper.DeleteEmptyDirectories(installDirectory);
+            #endregion
         }
 
         private ExtractionResult DownloadAndExtract(Game game, string destination)

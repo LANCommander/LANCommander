@@ -329,6 +329,26 @@ namespace LANCommander.Launcher
                     }
                 });
 
+                await result.WithParsedAsync<UninstallCommandLineOptions>(async (options) =>
+                {
+                    var gameService = scope.ServiceProvider.GetService<GameService>();
+
+                    Console.WriteLine($"Uninstalling game with ID {options.GameId}...");
+
+                    try
+                    {
+                        var game = await gameService.Get(options.GameId);
+
+                        await gameService.UninstallAsync(game);
+
+                        Console.WriteLine($"Game successfully uninstalled from {game.InstallDirectory}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Game could not be uninstalled: {ex.Message}");
+                    }
+                });
+
                 await result.WithParsedAsync<ImportCommandLineOptions>(async (options) =>
                 {
                     var importService = scope.ServiceProvider.GetService<ImportService>();

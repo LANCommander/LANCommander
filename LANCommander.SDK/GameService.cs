@@ -222,11 +222,11 @@ namespace LANCommander.SDK
             Logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
 
             // Download and extract
-            var result = RetryHelper.RetryOnException<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), () =>
+            var result = await RetryHelper.RetryOnExceptionAsync<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
             {
                 Logger?.LogTrace("Attempting to download and extract game");
 
-                return DownloadAndExtract(game, destination);
+                return await Task.Run(() => DownloadAndExtract(game, destination));
             });
 
             if (!result.Success && !result.Canceled)
@@ -463,11 +463,13 @@ namespace LANCommander.SDK
                 DownloadStream = Stream(game.Id);
                 Reader = ReaderFactory.Open(DownloadStream);
 
+                long lastPosition = 0;
+
                 DownloadStream.OnProgress += (pos, len) =>
                 {
                     if (stopwatch.ElapsedMilliseconds > 500)
                     {
-                        var bytesThisInterval = pos - len;
+                        var bytesThisInterval = pos - lastPosition;
 
                         GameInstallProgress.BytesDownloaded = pos;
                         GameInstallProgress.TotalBytes = len;
@@ -475,7 +477,9 @@ namespace LANCommander.SDK
 
                         OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
 
-                        stopwatch.Reset();
+                        lastPosition = pos;
+
+                        stopwatch.Restart();
                     }
                 };
 

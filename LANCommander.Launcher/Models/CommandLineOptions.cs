@@ -59,4 +59,11 @@ namespace LANCommander.Launcher.Models
 
     [Verb("Logout", HelpText = "Logout and clear local credentials")]
     public class LogoutCommandLineOptions { }
+
+    [Verb("ChangeAlias", HelpText = "Change the current logged in user's alias")]
+    public class ChangeAliasCommandLineOptions
+    {
+        [Option("Alias", Required = true)]
+        public string Alias { get; set; }
+    }
 }

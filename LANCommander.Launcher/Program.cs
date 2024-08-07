@@ -276,7 +276,8 @@ namespace LANCommander.Launcher
                         InstallCommandLineOptions,
                         ImportCommandLineOptions,
                         LoginCommandLineOptions,
-                        LogoutCommandLineOptions
+                        LogoutCommandLineOptions,
+                        ChangeAliasCommandLineOptions
                     >(args);
 
                 await result.WithParsedAsync<RunScriptCommandLineOptions>(async (options) =>
@@ -405,6 +406,17 @@ namespace LANCommander.Launcher
                     settings.Authentication.OfflineMode = false;
 
                     SettingService.SaveSettings(settings);
+                });
+
+                await result.WithParsedAsync<ChangeAliasCommandLineOptions>(async (options) =>
+                {
+                    var settings = SettingService.GetSettings();
+
+                    var profileService = scope.ServiceProvider.GetService<ProfileService>();
+
+                    await profileService.ChangeAlias(options.Alias);
+
+                    Console.WriteLine($"Changed current user's alias from {settings.Profile.Alias} to {options.Alias}");
                 });
             }
         }

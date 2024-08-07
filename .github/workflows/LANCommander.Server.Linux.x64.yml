@@ -66,6 +66,11 @@ jobs:
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/appsettings.Development.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/appsettings.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/libman.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/runtimeconfig.template.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-x64/publish/tsconfig.json
 
     # Create Linux x64 ZIP file
     - name: Package Linux Build

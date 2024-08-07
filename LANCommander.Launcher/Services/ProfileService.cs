@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class ProfileService
+    public class ProfileService : BaseService
     {
         private readonly SDK.Client Client;
         private readonly MediaService MediaService;
@@ -41,24 +41,34 @@ namespace LANCommander.Launcher.Services
             Settings.Profile.Id = remoteProfile.Id;
             Settings.Profile.Alias = String.IsNullOrWhiteSpace(remoteProfile.Alias) ? remoteProfile.UserName : remoteProfile.Alias;
 
-            var tempAvatarPath = await Client.Profile.DownloadAvatar();
-
-            var media = new Media
+            try
             {
-                FileId = Guid.NewGuid(),
-                Type = SDK.Enums.MediaType.Avatar,
-                MimeType = MediaTypeNames.Image.Png,
-                Crc32 = SDK.MediaService.CalculateChecksum(tempAvatarPath),
-            };
+                var tempAvatarPath = await Client.Profile.DownloadAvatar();
 
-            media = await MediaService.Add(media);
+                if (!String.IsNullOrWhiteSpace(tempAvatarPath))
+                {
+                    var media = new Media
+                    {
+                        FileId = Guid.NewGuid(),
+                        Type = SDK.Enums.MediaType.Avatar,
+                        MimeType = MediaTypeNames.Image.Png,
+                        Crc32 = SDK.MediaService.CalculateChecksum(tempAvatarPath),
+                    };
 
-            var localPath = MediaService.GetImagePath(media);
+                    media = await MediaService.Add(media);
 
-            if (File.Exists(tempAvatarPath))
-                File.Move(tempAvatarPath, localPath);
+                    var localPath = MediaService.GetImagePath(media);
 
-            Settings.Profile.AvatarId = media.Id;
+                    if (File.Exists(tempAvatarPath))
+                        File.Move(tempAvatarPath, localPath);
+
+                    Settings.Profile.AvatarId = media.Id;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Could not download avatar");
+            }
 
             SettingService.SaveSettings(Settings);
         }

@@ -66,6 +66,11 @@ jobs:
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/appsettings.Development.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/appsettings.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/libman.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/runtimeconfig.template.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/tsconfig.json
 
     # Create macOS arm64 ZIP file
     - name: Package macOS Build

@@ -19,5 +19,17 @@ namespace LANCommander.Launcher.Models
 
         [Option("Type", HelpText = "The type of script to run")]
         public ScriptType Type { get; set; }
+
+        [Option("NewName", HelpText = "The new name to use in a name change script")]
+        public string NewName { get; set; }
+
+        [Option("NewKey", HelpText = "The new key to use in a key change script")]
+        public string NewKey { get; set; }
+    }
+
+    [Verb("Import", HelpText = "Import library items from the server")]
+    public class ImportCommandLineOptions
+    {
+
     }
 }

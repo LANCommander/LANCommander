@@ -30,7 +30,7 @@ namespace LANCommander.Launcher
         static Logger Logger = LogManager.GetCurrentClassLogger();
 
         [STAThread]
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Logger?.Debug("Starting up launcher...");
             Logger?.Debug("Loading settings from file");
@@ -243,7 +243,7 @@ namespace LANCommander.Launcher
 
             if (args.Length > 0)
             {
-                ParseCommandLine(args);
+                await ParseCommandLineAsync(args, app);
 
                 return;
             }
@@ -261,13 +261,67 @@ namespace LANCommander.Launcher
             }
         }
 
-        static void ParseCommandLine(string[] args)
+        static async Task ParseCommandLineAsync(string[] args, PhotinoBlazorApp app)
         {
-            var result = CommandLine.Parser.Default.ParseArguments<RunScriptCommandLineOptions>(args)
-                .WithParsed<RunScriptCommandLineOptions>(options =>
+            using (var scope = app.Services.CreateScope())
+            {
+                var client = scope.ServiceProvider.GetService<SDK.Client>();
+
+                await client.ValidateTokenAsync();
+
+                var result = CommandLine.Parser.Default.ParseArguments<RunScriptCommandLineOptions, ImportCommandLineOptions>(args);
+
+                await result.WithParsedAsync<RunScriptCommandLineOptions>(async (options) =>
                 {
-                    
+                    var client = scope.ServiceProvider.GetService<SDK.Client>();
+
+                    switch (options.Type)
+                    {
+                        case SDK.Enums.ScriptType.Install:
+                            await client.Scripts.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
+                            break;
+
+                        case SDK.Enums.ScriptType.Uninstall:
+                            await client.Scripts.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
+                            break;
+
+                        case SDK.Enums.ScriptType.BeforeStart:
+                            await client.Scripts.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
+                            break;
+
+                        case SDK.Enums.ScriptType.AfterStop:
+                            await client.Scripts.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
+                            break;
+
+                        case SDK.Enums.ScriptType.NameChange:
+                            await client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewName);
+                            break;
+
+                        case SDK.Enums.ScriptType.KeyChange:
+                            await client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewKey);
+                            break;
+                    }
                 });
+
+                await result.WithParsedAsync<ImportCommandLineOptions>(async (options) =>
+                {
+                    var importService = scope.ServiceProvider.GetService<ImportService>();
+
+                    Console.WriteLine("Importing games from server...");
+
+                    importService.OnImportComplete += async () =>
+                    {
+                        Console.WriteLine("Import complete!");
+                    };
+
+                    importService.OnImportFailed += async () =>
+                    {
+                        Console.WriteLine("Import failed!");
+                    };
+
+                    await importService.ImportAsync();
+                });
+            }
         }
     }
 }

@@ -39,7 +39,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                 script.ExecuteAsync().Wait();
             }
 
-            Client.Games.Uninstall(InstallDirectory, Id);
+            // Client.Games.UninstallAsync(InstallDirectory, Id);
 
             var metadataPath = GameService.GetMetadataDirectoryPath(InstallDirectory, Id);
 

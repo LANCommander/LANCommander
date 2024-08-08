@@ -59,11 +59,11 @@ namespace LANCommander.SDK
             try
             {
                 var installScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.Install);
-                installScriptTempFile = ScriptHelper.SaveTempScript(installScript);
+                installScriptTempFile = await ScriptHelper.SaveTempScriptAsync(installScript);
                 Logger?.LogTrace("Redistributable install script saved to {Path}", installScriptTempFile);
 
                 var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.DetectInstall);
-                detectionScriptTempFile = ScriptHelper.SaveTempScript(detectionScript);
+                detectionScriptTempFile = await ScriptHelper.SaveTempScriptAsync(detectionScript);
                 Logger?.LogTrace("Redistributable install detection script saved to {Path}", detectionScriptTempFile);
 
                 var detectionResult = await RunScriptAsync(detectionScriptTempFile, redistributable, detectionScript.RequiresAdmin);
@@ -192,6 +192,9 @@ namespace LANCommander.SDK
         private async Task<int> RunScriptAsync(string path, Redistributable redistributable, bool requiresAdmin = false, string workingDirectory = "")
         {
             var script = new PowerShellScript(ScriptType.Install);
+
+            if (requiresAdmin)
+                script.AsAdmin();
 
             script.AddVariable("Redistributable", redistributable);
 

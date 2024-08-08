@@ -255,7 +255,7 @@ namespace LANCommander.SDK
 
             foreach (var script in game.Scripts)
             {
-                ScriptHelper.SaveScript(game, script.Type);
+                ScriptHelper.SaveScriptAsync(game, script.Type);
             }
 
             GameInstallProgress.Progress = 1;

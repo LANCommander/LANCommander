@@ -20,11 +20,14 @@ namespace LANCommander.Launcher.Models
         [Option("Type", HelpText = "The type of script to run")]
         public ScriptType Type { get; set; }
 
-        [Option("NewName", HelpText = "The new name to use in a name change script")]
-        public string NewName { get; set; }
+        [Option("OldPlayerAlias", HelpText = "The old name to use in a name change script")]
+        public string OldPlayerAlias { get; set; }
 
-        [Option("NewKey", HelpText = "The new key to use in a key change script")]
-        public string NewKey { get; set; }
+        [Option("NewPlayerAlias", HelpText = "The new name to use in a name change script")]
+        public string NewPlayerAlias { get; set; }
+
+        [Option("AllocatedKey", HelpText = "The new key to use in a key change script")]
+        public string AllocatedKey { get; set; }
     }
 
     [Verb("Install", HelpText = "Install a game from the server")]

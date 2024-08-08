@@ -72,11 +72,11 @@ namespace LANCommander.Launcher.Services
                     break;
 
                 case SDK.Enums.ScriptType.NameChange:
-                    await Client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewName);
+                    await Client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias);
                     break;
 
                 case SDK.Enums.ScriptType.KeyChange:
-                    await Client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewKey);
+                    await Client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
                     break;
             }
         }

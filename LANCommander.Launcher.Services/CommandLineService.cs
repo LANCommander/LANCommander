@@ -35,137 +35,146 @@ namespace LANCommander.Launcher.Services
                 <
                     RunScriptCommandLineOptions,
                     InstallCommandLineOptions,
+                    UninstallCommandLineOptions,
                     ImportCommandLineOptions,
                     LoginCommandLineOptions,
                     LogoutCommandLineOptions,
                     ChangeAliasCommandLineOptions
                 >(args);
 
-            await result.WithParsedAsync<RunScriptCommandLineOptions>(async (options) =>
+            await result.WithParsedAsync<RunScriptCommandLineOptions>(RunScript);
+            await result.WithParsedAsync<InstallCommandLineOptions>(Install);
+            await result.WithParsedAsync<UninstallCommandLineOptions>(Uninstall);
+            await result.WithParsedAsync<ImportCommandLineOptions>(Import);
+            await result.WithParsedAsync<LoginCommandLineOptions>(Login);
+            await result.WithParsedAsync<LogoutCommandLineOptions>(Logout);
+            await result.WithParsedAsync<ChangeAliasCommandLineOptions>(ChangeAlias);
+        }
+
+        private async Task RunScript(RunScriptCommandLineOptions options)
+        {
+            switch (options.Type)
             {
-                switch (options.Type)
-                {
-                    case SDK.Enums.ScriptType.Install:
-                        await Client.Scripts.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
-                        break;
+                case SDK.Enums.ScriptType.Install:
+                    await Client.Scripts.RunInstallScriptAsync(options.InstallDirectory, options.GameId);
+                    break;
 
-                    case SDK.Enums.ScriptType.Uninstall:
-                        await Client.Scripts.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
-                        break;
+                case SDK.Enums.ScriptType.Uninstall:
+                    await Client.Scripts.RunUninstallScriptAsync(options.InstallDirectory, options.GameId);
+                    break;
 
-                    case SDK.Enums.ScriptType.BeforeStart:
-                        await Client.Scripts.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
-                        break;
+                case SDK.Enums.ScriptType.BeforeStart:
+                    await Client.Scripts.RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId);
+                    break;
 
-                    case SDK.Enums.ScriptType.AfterStop:
-                        await Client.Scripts.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
-                        break;
+                case SDK.Enums.ScriptType.AfterStop:
+                    await Client.Scripts.RunAfterStopScriptAsync(options.InstallDirectory, options.GameId);
+                    break;
 
-                    case SDK.Enums.ScriptType.NameChange:
-                        await Client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewName);
-                        break;
+                case SDK.Enums.ScriptType.NameChange:
+                    await Client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewName);
+                    break;
 
-                    case SDK.Enums.ScriptType.KeyChange:
-                        await Client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewKey);
-                        break;
-                }
-            });
+                case SDK.Enums.ScriptType.KeyChange:
+                    await Client.Scripts.RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewKey);
+                    break;
+            }
+        }
 
-            await result.WithParsedAsync<InstallCommandLineOptions>(async (options) =>
+        private async Task Install(InstallCommandLineOptions options)
+        {
+            Console.WriteLine($"Downloading and installing game with ID {options.GameId}...");
+
+            try
             {
-                Console.WriteLine($"Downloading and installing game with ID {options.GameId}...");
+                var game = await GameService.Get(options.GameId);
 
-                try
-                {
-                    var game = await GameService.Get(options.GameId);
+                await DownloadService.Add(game);
+                await DownloadService.Install();
 
-                    await DownloadService.Add(game);
-                    await DownloadService.Install();
+                game = await GameService.Get(options.GameId);
 
-                    game = await GameService.Get(options.GameId);
-
-                    Console.WriteLine($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Game could not be installed: {ex.Message}");
-                }
-            });
-
-            await result.WithParsedAsync<UninstallCommandLineOptions>(async (options) =>
+                Console.WriteLine($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
+            }
+            catch (Exception ex)
             {
-                Console.WriteLine($"Uninstalling game with ID {options.GameId}...");
+                Console.WriteLine($"Game could not be installed: {ex.Message}");
+            }
+        }
 
-                try
-                {
-                    var game = await GameService.Get(options.GameId);
+        private async Task Uninstall(UninstallCommandLineOptions options)
+        {
+            Console.WriteLine($"Uninstalling game with ID {options.GameId}...");
 
-                    await GameService.UninstallAsync(game);
-
-                    Console.WriteLine($"Game successfully uninstalled from {game.InstallDirectory}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Game could not be uninstalled: {ex.Message}");
-                }
-            });
-
-            await result.WithParsedAsync<ImportCommandLineOptions>(async (options) =>
+            try
             {
-                Console.WriteLine("Importing games from server...");
+                var game = await GameService.Get(options.GameId);
 
-                ImportService.OnImportComplete += async () =>
-                {
-                    Console.WriteLine("Import complete!");
-                };
+                await GameService.UninstallAsync(game);
 
-                ImportService.OnImportFailed += async () =>
-                {
-                    Console.WriteLine("Import failed!");
-                };
-
-                await ImportService.ImportAsync();
-            });
-
-            await result.WithParsedAsync<LoginCommandLineOptions>(async (options) =>
+                Console.WriteLine($"Game successfully uninstalled from {game.InstallDirectory}");
+            }
+            catch (Exception ex)
             {
-                try
-                {
-                    if (String.IsNullOrWhiteSpace(options.ServerAddress))
-                        options.ServerAddress = Settings.Authentication.ServerAddress;
+                Console.WriteLine($"Game could not be uninstalled: {ex.Message}");
+            }
+        }
 
-                    if (String.IsNullOrWhiteSpace(options.ServerAddress))
-                        throw new ArgumentException("A server address must be specified");
+        private async Task Import(ImportCommandLineOptions options)
+        {
+            Console.WriteLine("Importing games from server...");
 
-                    Client.UseServerAddress(options.ServerAddress);
-
-                    await Client.AuthenticateAsync(options.Username, options.Password);
-
-                    Console.WriteLine("Logged in!");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-            });
-
-            await result.WithParsedAsync<LogoutCommandLineOptions>(async (options) =>
+            ImportService.OnImportComplete += async () =>
             {
-                await Client.LogoutAsync();
+                Console.WriteLine("Import complete!");
+            };
 
-                Settings.Authentication.AccessToken = "";
-                Settings.Authentication.RefreshToken = "";
-                Settings.Authentication.OfflineMode = false;
-
-                SettingService.SaveSettings(Settings);
-            });
-
-            await result.WithParsedAsync<ChangeAliasCommandLineOptions>(async (options) =>
+            ImportService.OnImportFailed += async () =>
             {
-                await ProfileService.ChangeAlias(options.Alias);
+                Console.WriteLine("Import failed!");
+            };
 
-                Console.WriteLine($"Changed current user's alias from {Settings.Profile.Alias} to {options.Alias}");
-            });
+            await ImportService.ImportAsync();
+        }
+
+        private async Task Login(LoginCommandLineOptions options)
+        {
+            try
+            {
+                if (String.IsNullOrWhiteSpace(options.ServerAddress))
+                    options.ServerAddress = Settings.Authentication.ServerAddress;
+
+                if (String.IsNullOrWhiteSpace(options.ServerAddress))
+                    throw new ArgumentException("A server address must be specified");
+
+                Client.UseServerAddress(options.ServerAddress);
+
+                await Client.AuthenticateAsync(options.Username, options.Password);
+
+                Console.WriteLine("Logged in!");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        private async Task Logout(LogoutCommandLineOptions options)
+        {
+            await Client.LogoutAsync();
+
+            Settings.Authentication.AccessToken = "";
+            Settings.Authentication.RefreshToken = "";
+            Settings.Authentication.OfflineMode = false;
+
+            SettingService.SaveSettings(Settings);
+        }
+
+        private async Task ChangeAlias(ChangeAliasCommandLineOptions options)
+        {
+            await ProfileService.ChangeAlias(options.Alias);
+
+            Console.WriteLine($"Changed current user's alias from {Settings.Profile.Alias} to {options.Alias}");
         }
     }
 }

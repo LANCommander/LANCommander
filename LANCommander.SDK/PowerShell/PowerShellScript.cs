@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Helpers;
+﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell.Cmdlets;
 using System;
 using System.Collections.Generic;
@@ -17,20 +18,22 @@ namespace LANCommander.SDK.PowerShell
 {
     public class PowerShellScript
     {
+        public ScriptType Type { get; private set; }
         private string Contents { get; set; }           = "";
-        private string WorkingDirectory { get; set; }   = "";
-        private bool AsAdmin { get; set; }              = false;
+        public string WorkingDirectory { get; private set; }   = "";
         private bool ShellExecute { get; set; }         = false;
+        public bool RunAsAdmin { get; private set; }       = false;
         private bool IgnoreWow64 { get; set; }          = false;
         private bool Debug { get; set; }                = false;
-        private ICollection<PowerShellVariable> Variables { get; set; }
-        private Dictionary<string, string> Arguments { get; set; }
+        public PowerShellVariableList Variables { get; private set; }
+        public Dictionary<string, string> Arguments { get; private set; }
 
         private InitialSessionState InitialSessionState { get; set; }
 
-        public PowerShellScript()
+        public PowerShellScript(ScriptType type)
         {
-            Variables = new List<PowerShellVariable>();
+            Type = type;
+            Variables = new PowerShellVariableList();
             Arguments = new Dictionary<string, string>();
 
             InitialSessionState = InitialSessionState.CreateDefault();
@@ -55,12 +58,18 @@ namespace LANCommander.SDK.PowerShell
         {
             Contents = File.ReadAllText(path);
 
+            if (Contents.StartsWith("# Requires Admin"))
+                RunAsAdmin = true;
+
             return this;
         }
 
         public PowerShellScript UseInline(string contents)
         {
             Contents = contents;
+
+            if (Contents.StartsWith("# Requires Admin"))
+                RunAsAdmin = true;
 
             return this;
         }
@@ -107,13 +116,6 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public PowerShellScript RunAsAdmin()
-        {
-            AsAdmin = true;
-
-            return this;
-        }
-
         public PowerShellScript IgnoreWow64Redirection()
         {
             IgnoreWow64 = true;
@@ -128,14 +130,18 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
+        public PowerShellScript AsAdmin()
+        {
+            RunAsAdmin = true;
+
+            return this;
+        }
+
         public async Task<int> ExecuteAsync()
         {
             var scriptBuilder = new StringBuilder();
 
             var wow64Value = IntPtr.Zero;
-
-            if (Contents.StartsWith("# Requires Admin"))
-                RunAsAdmin();
 
             foreach (var variable in Variables)
             {

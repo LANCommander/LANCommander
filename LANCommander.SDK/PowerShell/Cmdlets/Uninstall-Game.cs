@@ -29,7 +29,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
             if (!String.IsNullOrEmpty(scriptPath) && File.Exists(scriptPath))
             {
                 var manifest = ManifestHelper.Read(InstallDirectory, Id);
-                var script = new PowerShellScript();
+                var script = new PowerShellScript(Enums.ScriptType.Uninstall);
 
                 script.AddVariable("InstallDirectory", InstallDirectory);
                 script.AddVariable("GameManifest", manifest);

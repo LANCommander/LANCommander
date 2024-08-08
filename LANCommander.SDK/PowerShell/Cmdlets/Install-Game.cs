@@ -63,7 +63,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
             if (File.Exists(path))
             {
-                var script = new PowerShellScript();
+                var script = new PowerShellScript(Enums.ScriptType.Install);
 
                 script.AddVariable("InstallDirectory", installDirectory);
                 script.AddVariable("GameManifest", manifest);
@@ -86,7 +86,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
             
             if (File.Exists(path))
             {
-                var script = new PowerShellScript();
+                var script = new PowerShellScript(Enums.ScriptType.NameChange);
 
                 script.AddVariable("InstallDirectory", installDirectory);
                 script.AddVariable("GameManifest", manifest);
@@ -110,7 +110,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
             if (File.Exists(path))
             {
-                var script = new PowerShellScript();
+                var script = new PowerShellScript(Enums.ScriptType.KeyChange);
 
                 var key = Client.Games.GetAllocatedKey(manifest.Id);
 

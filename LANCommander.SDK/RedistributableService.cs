@@ -191,15 +191,12 @@ namespace LANCommander.SDK
 
         private async Task<int> RunScriptAsync(string path, Redistributable redistributable, bool requiresAdmin = false, string workingDirectory = "")
         {
-            var script = new PowerShellScript();
+            var script = new PowerShellScript(ScriptType.Install);
 
             script.AddVariable("Redistributable", redistributable);
 
             script.UseWorkingDirectory(workingDirectory);
             script.UseFile(path);
-
-            if (requiresAdmin)
-                script.RunAsAdmin();
 
             return await script.ExecuteAsync();
         }

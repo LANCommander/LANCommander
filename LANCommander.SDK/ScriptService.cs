@@ -19,6 +19,9 @@ namespace LANCommander.SDK
 
         private readonly Client Client;
 
+        public delegate Task<bool> ExternalScriptRunnerHandler(PowerShellScript script);
+        public event ExternalScriptRunnerHandler ExternalScriptRunner;
+
         public ScriptService(Client client)
         {
             Client = client;
@@ -41,7 +44,7 @@ namespace LANCommander.SDK
                 {
                     Logger?.LogTrace("Running install script for game {GameTitle} ({gameId})", manifest.Title, gameId);
 
-                    var script = new PowerShellScript();
+                    var script = new PowerShellScript(Enums.ScriptType.Install);
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
@@ -53,7 +56,13 @@ namespace LANCommander.SDK
                     if (debug)
                         script.EnableDebug();
 
-                    return await script.ExecuteAsync();
+                    bool handled = false;
+
+                    if (ExternalScriptRunner != null)
+                        handled = await ExternalScriptRunner.Invoke(script);
+
+                    if (!handled)
+                        await script.ExecuteAsync();
                 }
 
                 Logger?.LogTrace("No install script found for game {GameTitle} ({gameId})", manifest.Title, gameId);
@@ -66,16 +75,18 @@ namespace LANCommander.SDK
             return 0;
         }
 
-        public async Task<int> RunUninstallScriptAsync(string installDirectory, Guid gameId, bool debug = false)
+        public async Task RunUninstallScriptAsync(string installDirectory, Guid gameId, bool debug = false)
         {
             try
             {
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Uninstall);
 
+                var contents = await File.ReadAllTextAsync(path);
+
                 if (File.Exists(path))
                 {
-                    var script = new PowerShellScript();
+                    var script = new PowerShellScript(Enums.ScriptType.Uninstall);
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
@@ -86,17 +97,21 @@ namespace LANCommander.SDK
                     if (debug)
                         script.EnableDebug();
 
-                    return await script.ExecuteAsync();
+                    bool handled = false;
+
+                    if (ExternalScriptRunner != null)
+                        handled = await ExternalScriptRunner.Invoke(script);
+
+                    if (!handled)
+                        await script.ExecuteAsync();
                 }
 
                 Logger?.LogTrace("No uninstall script found for game {GameTitle} ({gameId})", manifest.Title, gameId);
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Ran into an unexpected error when attempting to run an Uninstall script");
+                Logger?.LogError(ex, "Ran into an unexpected error when attempting to get an Uninstall script");
             }
-
-            return 0;
         }
 
         public async Task RunBeforeStartScriptAsync(string installDirectory, Guid gameId, bool debug = false)
@@ -110,7 +125,7 @@ namespace LANCommander.SDK
                 {
                     var manifest = ManifestHelper.Read(installDirectory, gameId);
 
-                    var script = new PowerShellScript();
+                    var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
@@ -123,7 +138,13 @@ namespace LANCommander.SDK
                     if (debug)
                         script.EnableDebug();
 
-                    await script.ExecuteAsync();
+                    bool handled = false;
+
+                    if (ExternalScriptRunner != null)
+                        handled = await ExternalScriptRunner.Invoke(script);
+
+                    if (!handled)
+                        await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)
@@ -142,7 +163,7 @@ namespace LANCommander.SDK
                 {
                     var manifest = ManifestHelper.Read(installDirectory, gameId);
 
-                    var script = new PowerShellScript();
+                    var script = new PowerShellScript(Enums.ScriptType.AfterStop);
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
@@ -155,7 +176,13 @@ namespace LANCommander.SDK
                     if (debug)
                         script.EnableDebug();
 
-                    await script.ExecuteAsync();
+                    bool handled = false;
+
+                    if (ExternalScriptRunner != null)
+                        handled = await ExternalScriptRunner.Invoke(script);
+
+                    if (!handled)
+                        await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)
@@ -182,7 +209,7 @@ namespace LANCommander.SDK
 
                     Logger?.LogTrace("New Name: {NewName}", newName);
 
-                    var script = new PowerShellScript();
+                    var script = new PowerShellScript(Enums.ScriptType.NameChange);
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
@@ -198,7 +225,13 @@ namespace LANCommander.SDK
                     if (debug)
                         script.EnableDebug();
 
-                    await script.ExecuteAsync();
+                    bool handled = false;
+
+                    if (ExternalScriptRunner != null)
+                        handled = await ExternalScriptRunner.Invoke(script);
+
+                    if (!handled)
+                        await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)
@@ -211,14 +244,14 @@ namespace LANCommander.SDK
         {
             try
             {
-                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.NameChange);
+                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.KeyChange);
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
 
                 if (File.Exists(path))
                 {
                     Logger?.LogTrace("Running key change script for game {GameTitle} ({gameId})", manifest.Title, gameId);
 
-                    var script = new PowerShellScript();
+                    var script = new PowerShellScript(Enums.ScriptType.KeyChange);
 
                     Logger?.LogTrace("New key is {Key}", key);
 
@@ -235,7 +268,13 @@ namespace LANCommander.SDK
                     if (debug)
                         script.EnableDebug();
 
-                    await script.ExecuteAsync();
+                    bool handled = false;
+
+                    if (ExternalScriptRunner != null)
+                        handled = await ExternalScriptRunner.Invoke(script);
+
+                    if (!handled)
+                        await script.ExecuteAsync();
                 }
             }
             catch (Exception ex)

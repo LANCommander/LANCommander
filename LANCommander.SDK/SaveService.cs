@@ -195,12 +195,12 @@ namespace LANCommander.SDK
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        var script = new PowerShellScript();
+                        var script = new PowerShellScript(Enums.ScriptType.Install);
 
                         script.UseInline($"regedit.exe /s \"{registryImportFilePath}\"");
 
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
-                            script.RunAsAdmin();
+                            script.AsAdmin();
 
                         await script.ExecuteAsync();
                     }
@@ -267,7 +267,7 @@ namespace LANCommander.SDK
                             tempRegFiles.Add(tempRegFile);
                         }
 
-                        var script = new PowerShellScript();
+                        var script = new PowerShellScript(Enums.ScriptType.SaveUpload);
 
                         script.UseInline(exportCommand.ToString());
 

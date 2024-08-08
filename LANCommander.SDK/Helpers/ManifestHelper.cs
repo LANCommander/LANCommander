@@ -36,13 +36,19 @@ namespace LANCommander.SDK.Helpers
         public static GameManifest Read(string installDirectory, Guid gameId)
         {
             var source = GetPath(installDirectory, gameId);
-            var yaml = File.ReadAllText(source);
 
-            Logger?.LogTrace("Deserializing manifest");
+            if (File.Exists(source))
+            {
+                var yaml = File.ReadAllText(source);
 
-            var manifest = Deserialize<GameManifest>(yaml);
+                Logger?.LogTrace("Deserializing manifest");
 
-            return manifest;
+                var manifest = Deserialize<GameManifest>(yaml);
+
+                return manifest;
+            }
+
+            return null;
         }
 
         public static string Write(GameManifest manifest, string installDirectory)

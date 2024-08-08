@@ -1,5 +1,6 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Extensions;
+using LANCommander.SDK.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -51,9 +52,11 @@ namespace LANCommander.Launcher.Models
             SortName = game.SortTitle;
             DataItem = game;
 
+            var manifestPath = ManifestHelper.GetPath(game.InstallDirectory, game.Id);
+
             if (game.Installed && !String.IsNullOrWhiteSpace(game.LatestVersion) && game.InstalledVersion != game.LatestVersion)
                 State = LibraryItemState.UpdateAvailable;
-            else if (game.Installed)
+            else if (game.Installed && File.Exists(manifestPath))
                 State = LibraryItemState.Installed;
             else
                 State = LibraryItemState.NotInstalled;

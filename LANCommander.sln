@@ -32,7 +32,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Steam", "LANCo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Launcher.Services", "LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj", "{8719E821-2D43-4780-B13F-D4BD2EA17BFB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Launcher.Models", "LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj", "{DEF4735D-DF0A-4CE7-931B-7CCE91191FF9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher.Services", "LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj", "{8719E821-2D43-4780-B13F-D4BD2EA17BFB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher.Models", "LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj", "{DEF4735D-DF0A-4CE7-931B-7CCE91191FF9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Launcher.CLI", "LANCommander.Launcher.CLI\LANCommander.Launcher.CLI.csproj", "{7453725F-00C9-4FBD-A395-E8BF1D945E44}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -96,6 +100,10 @@ Global
 		{DEF4735D-DF0A-4CE7-931B-7CCE91191FF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DEF4735D-DF0A-4CE7-931B-7CCE91191FF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DEF4735D-DF0A-4CE7-931B-7CCE91191FF9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7453725F-00C9-4FBD-A395-E8BF1D945E44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7453725F-00C9-4FBD-A395-E8BF1D945E44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7453725F-00C9-4FBD-A395-E8BF1D945E44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7453725F-00C9-4FBD-A395-E8BF1D945E44}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

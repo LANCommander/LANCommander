@@ -2,7 +2,7 @@
 @inject DownloadService DownloadService
 @inject NavigationManager NavigationManager
 
-<Drawer Placement="bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="() => Visible = false">
+<Drawer Placement="bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
 
     @if (DownloadService.Queue.Any(qi => qi.State))
     {
@@ -72,8 +72,7 @@
 </Drawer>
 
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    bool Visible { get; set; } = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -92,5 +91,19 @@
     {
         Visible = false;
         NavigationManager.NavigateTo("/" + queueItem.Id);
+    }
+
+    public async Task Show()
+    {
+        Visible = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Hide()
+    {
+        Visible = false;
+
+        await InvokeAsync(StateHasChanged);
     }
 }

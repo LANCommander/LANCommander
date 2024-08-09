@@ -19,10 +19,12 @@
     }
 </footer>
 
-<DownloadQueue @bind-Visible="@DownloadQueueVisible" />
+<DownloadQueue @ref="DownloadQueue" />
 
 @code {
     bool DownloadQueueVisible = false;
+
+    DownloadQueue DownloadQueue;
 
     protected override async Task OnInitializedAsync()
     {
@@ -34,6 +36,6 @@
 
     async Task ShowDownloadQueue()
     {
-        DownloadQueueVisible = true;
+        await DownloadQueue.Show();
     }
 }

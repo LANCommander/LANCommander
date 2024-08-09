@@ -16,11 +16,13 @@ Console.WriteLine("Waiting for LANCommander to stop...");
 int delay = 500;
 int maxAttempts = 30 * (1000 / delay);
 
+string processName = Path.GetFileNameWithoutExtension(arguments["Executable"]);
+
 for (int i = 0; i < maxAttempts; i++)
 {
-    var processes = Process.GetProcessesByName("LANCommander");
+    var stillRunning = Process.GetProcessesByName(processName).Any();
 
-    if (processes.Length == 0)
+    if (!stillRunning)
         break;
     else if (i == maxAttempts - 1)
         throw new Exception("Cannot update! LANCommander is still running!");

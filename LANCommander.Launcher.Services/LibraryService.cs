@@ -250,11 +250,12 @@ namespace LANCommander.Launcher.Services
             var process = new Process();
             var settings = SettingService.GetSettings();
 
-            /*var monitor = Window.Monitors.First(m => m.MonitorArea.X == 0 && m.MonitorArea.Y == 0);
+            var screen = DisplayHelper.GetScreen();
 
-            Client.Actions.AddVariable("DisplayWidth", monitor.MonitorArea.Width.ToString());
-            Client.Actions.AddVariable("DisplayHeight", monitor.MonitorArea.Height.ToString());*/
-            // Client.Actions.AddVariable("DisplayRefreshRate", ((int)DeviceDisplay.Current.MainDisplayInfo.RefreshRate).ToString());
+            Client.Actions.AddVariable("DisplayWidth", screen.Width.ToString());
+            Client.Actions.AddVariable("DisplayHeight", screen.Height.ToString());
+            Client.Actions.AddVariable("DisplayRefreshRate", screen.RefreshRate.ToString());
+            Client.Actions.AddVariable("DisplayBitDepth", screen.BitsPerPixel.ToString());
 
             process.StartInfo.Arguments = Client.Actions.ExpandVariables(action.Arguments, game.InstallDirectory, skipSlashes: true);
             process.StartInfo.FileName = Client.Actions.ExpandVariables(action.Path, game.InstallDirectory);

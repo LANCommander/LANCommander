@@ -45,6 +45,7 @@ namespace LANCommander.Server.Services
                 server.ProcessTerminationMethod = manifest.ProcessTerminationMethod;
                 server.OnStartScriptPath = manifest.OnStartScriptPath;
                 server.OnStopScriptPath = manifest.OnStopScriptPath;
+                server.Port = manifest.Port;
 
                 if (manifest.Game.Id != Guid.Empty)
                 {

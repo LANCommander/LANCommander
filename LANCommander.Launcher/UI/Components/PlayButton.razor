@@ -58,7 +58,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         if (LibraryItem == null && LibraryItemId != Guid.Empty)
-            LibraryService.GetLibraryItemAsync(LibraryItemId);
+            LibraryItem = await LibraryService.GetLibraryItemAsync(LibraryItemId);
     }
 
     async Task UpdateState(Game game)

@@ -31,9 +31,11 @@ namespace LANCommander.Server.Services
                 var exists = server != null;
 
                 if (!exists)
-                    server = new Data.Models.Server();
+                    server = new Data.Models.Server()
+                    {
+                        Id = manifest.Id,
+                    };
 
-                server.Id = manifest.Id;
                 server.Name = manifest.Name;
                 server.Autostart = manifest.Autostart;
                 server.AutostartMethod = (Data.Enums.ServerAutostartMethod)(int)manifest.AutostartMethod;
@@ -49,10 +51,10 @@ namespace LANCommander.Server.Services
 
                 if (manifest.Game.Id != Guid.Empty)
                 {
-                    var gameExists = GameService.Exists(manifest.Game.Id);
+                    var game = await GameService.Get(manifest.Game.Id);
 
-                    if (gameExists)
-                        server.GameId = manifest.Game.Id;
+                    if (game != null)
+                        server.Game = game;
                 }
 
                 #region Consoles

@@ -616,6 +616,9 @@ namespace LANCommander.SDK
 
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)
         {
+            if (String.IsNullOrWhiteSpace(installDirectory))
+                return "";
+
             return Path.Combine(installDirectory, ".lancommander", gameId.ToString());
         }
 

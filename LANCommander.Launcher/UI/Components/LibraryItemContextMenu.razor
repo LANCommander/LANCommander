@@ -97,7 +97,8 @@ else
             {
                 var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
 
-                GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
+                if (manifest != null)
+                    GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
             }
         }
     }

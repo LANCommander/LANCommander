@@ -304,7 +304,9 @@ namespace LANCommander.Launcher.Services
                         #endregion
 
                         #region Update Play Sessions
-                        foreach (var session in remoteGame.PlaySessions.Where(rps => !localGame.PlaySessions.Any(lps => lps.Start == rps.Start && lps.End == lps.End)))
+                        // This needs to be fixed, the profile ID should _not_ pull out of settings
+                        // It'd be better to pull directly from the authenticated client
+                        foreach (var session in remoteGame.PlaySessions.Where(rps => rps.UserId == Settings.Profile.Id && !localGame.PlaySessions.Any(lps => lps.Start == rps.Start && lps.End == lps.End)))
                         {
                             localGame.PlaySessions.Add(new PlaySession
                             {

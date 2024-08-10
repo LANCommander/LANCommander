@@ -161,7 +161,7 @@
                 return new string[] { };
         };
 
-        LoadData();
+        await LoadData();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -172,11 +172,11 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    void LoadData()
+    async Task LoadData()
     {
-        LibraryService.RefreshLibraryItemsAsync().Wait();
+        await LibraryService.RefreshLibraryItemsAsync();
 
-        InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task OnLibraryItemSelected(LibraryItem item)
@@ -188,6 +188,8 @@
 
             if (SelectedItem.State == LibraryItemState.Installed)
                 SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame)).Where(a => !a.IsPrimaryAction);
+
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -237,7 +239,7 @@
 
     async Task OnInstallComplete(Data.Models.Game game)
     {
-        LoadData();
+        await LoadData();
 
         if (SelectedItem.DataItem is Game selectedGame)
         {
@@ -267,7 +269,7 @@
 
     async Task OnUninstallComplete(Data.Models.Game game)
     {
-        LoadData();
+        await LoadData();
 
         if (SelectedItem.DataItem is Game selectedGame)
         {

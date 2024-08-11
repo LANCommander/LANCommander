@@ -37,6 +37,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<ServerConsole>();
             builder.ConfigureBaseRelationships<ServerHttpPath>();
             builder.ConfigureBaseRelationships<Tag>();
+            builder.ConfigureBaseRelationships<Issue>();
 
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
@@ -248,6 +249,14 @@ namespace LANCommander.Server.Data
                     rc => rc.HasOne<Role>().WithMany().HasForeignKey("RoleId")
                 );
             #endregion
+
+            #region Issue Relationships
+            builder.Entity<Issue>()
+                .HasOne(i => i.Game)
+                .WithMany(g => g.Issues)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.SetNull);
+            #endregion
         }
 
         public DbSet<Game>? Games { get; set; }
@@ -273,5 +282,6 @@ namespace LANCommander.Server.Data
         public DbSet<Redistributable>? Redistributables { get; set; }
 
         public DbSet<Media>? Media { get; set; }
+        public DbSet<Issue>? Issues { get; set; }
     }
 }

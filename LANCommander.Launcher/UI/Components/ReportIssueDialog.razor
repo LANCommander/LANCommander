@@ -1,0 +1,34 @@
+﻿@using BootstrapBlazor.Components
+@inherits FeedbackComponent<Data.Models.Game, SDK.Models.Issue>
+@inject SDK.Client Client
+@inject IMessageService MessageService
+
+<Form Model="Issue">
+    <FormItem>
+        <TextArea @bind-Value="@context.Description" MinRows="10" />
+    </FormItem>
+</Form>
+
+@code {
+    SDK.Models.Issue Issue { get; set; } = new SDK.Models.Issue();
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        Issue.GameId = Options.Id;
+
+        var success = await Client.Issues.Open(Issue.Description, Issue.GameId);
+
+        if (success)
+        {
+            MessageService.Success("Issue reported!");
+
+            await base.FeedbackRef.CloseAsync();
+        }
+        else
+        {
+            MessageService.Error("Issue could not be reported!");
+
+            args.Reject();
+        }
+    }
+}

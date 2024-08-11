@@ -189,6 +189,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
             builder.Services.AddScoped<WikiService>();
             builder.Services.AddScoped<UpdateService>();
+            builder.Services.AddScoped<IssueService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();

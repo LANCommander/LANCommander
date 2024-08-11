@@ -67,6 +67,10 @@ else
     </MenuItem>
 }
 
+<MenuItem OnClick="() => ReportIssue()">
+    Report Issue
+</MenuItem>
+
 @MenuExtra
 
 @code {
@@ -203,6 +207,22 @@ else
         };
 
         var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+    }
+
+    async Task ReportIssue()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Report Issue",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Submit",
+            Draggable = true,
+            Resizable = true
+        };
+
+        var modalRef = ModalService.CreateModal<ReportIssueDialog, Game, SDK.Models.Issue>(modalOptions, Game);
     }
 
     public void Dispose()

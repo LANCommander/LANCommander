@@ -1,0 +1,106 @@
+﻿@page "/Issues"
+@using Microsoft.EntityFrameworkCore;
+@attribute [Authorize(Roles = "Administrator")]
+@inject IssueService IssueService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+
+<PageHeader Title="Issues">
+    <PageHeaderExtra>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
+            </SpaceItem>
+            <SpaceItem>
+                 <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Issue</Button>
+            </SpaceItem>
+        </Space>
+    </PageHeaderExtra>
+</PageHeader>
+
+<TableColumnPicker @ref="Picker" Key="Issues" @bind-Visible="ColumnPickerVisible" />
+
+<Table TItem="Issue" DataSource="@Issues" Loading="@Loading" PageSize="25" Responsive>
+    <PropertyColumn Property="r => r.Game" Sortable Hidden="@(Picker.IsColumnHidden("Game"))" />
+    <PropertyColumn Property="r => r.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
+    <PropertyColumn Property="r => r.CreatedBy != null ? r.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
+    <PropertyColumn Property="r => r.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
+    <PropertyColumn Property="r => r.UpdatedBy != null ? r.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
+    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
+        <TitleTemplate>
+            <div style="text-align: right">
+                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
+            </div>
+        </TitleTemplate>
+        <ChildContent>
+            <Space Direction="DirectionVHType.Horizontal">
+                <SpaceItem>
+                    <a href="/Issues/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+                </SpaceItem>
+                <SpaceItem>
+                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this redistributable?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                    </Popconfirm>
+                </SpaceItem>
+            </Space>
+        </ChildContent>
+    </ActionColumn>
+</Table>
+
+ @code {
+    IEnumerable<Issue> Issues { get; set; } = new List<Issue>();
+
+    bool Loading = true;
+
+    string Search = "";
+
+    TableColumnPicker Picker;
+    bool ColumnPickerVisible = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadData();
+
+            Loading = false;
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        var fuzzySearch = Search.ToLower().Trim();
+
+        Issues = await IssueService.Get(r => r.Game.Title.ToLower().Contains(fuzzySearch)).OrderByDescending(r => r.CreatedOn).ToListAsync();
+    }
+
+    private void Add()
+    {
+        NavigationManager.NavigateTo("/Issues/Add");
+    }
+
+    private async Task Delete(Issue redistributable)
+    {
+        Issues = new List<Issue>();
+
+        Loading = true;
+
+        await IssueService.Delete(redistributable);
+
+        Issues = await IssueService.Get(x => true).OrderByDescending(r => r.CreatedOn).ToListAsync();
+
+        Loading = false;
+    }
+
+    private async Task OpenColumnPicker()
+    {
+        ColumnPickerVisible = true;
+    }
+
+    private async Task CloseColumnPicker()
+    {
+        ColumnPickerVisible = false;
+    }
+}

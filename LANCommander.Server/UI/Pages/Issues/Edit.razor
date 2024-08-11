@@ -1,0 +1,154 @@
+﻿@page "/Issues/{id:guid}"
+@page "/Issues/Add"
+@attribute [Authorize(Roles = "Administrator")]
+@inject IssueService IssueService
+@inject GameService GameService
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ILogger<Edit> Logger
+
+<Layout Class="panel-layout">
+    <Content>
+        <PageHeader>
+            <PageHeaderTitle>
+                @if (Id == null || Id == Guid.Empty)
+                {
+                    <Text>Add New Issue</Text>
+                }
+                else
+                {
+                    <Text>Edit Issue</Text>
+                }
+            </PageHeaderTitle>
+            <PageHeaderExtra>
+                <Space Direction="DirectionVHType.Horizontal">
+                    <SpaceItem>
+                        Submitted on @Issue.CreatedOn
+
+                        @if (Issue.CreatedBy != null)
+                        {
+                            <Text> by @Issue.CreatedBy.UserName</Text>
+                        }
+                    </SpaceItem>
+
+                    @if (Id != Guid.Empty)
+                    {
+                        <SpaceItem>
+                            <Button OnClick="Resolve">Resolve</Button>
+                        </SpaceItem>
+                    }
+
+                    <SpaceItem>
+                        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                    </SpaceItem>
+                </Space>
+            </PageHeaderExtra>
+        </PageHeader>
+
+        <div class="panel-layout-content">
+            @if (Issue?.ResolvedOn != null)
+            {
+                <Alert Type="@AlertType.Success" Message="@($"This issue was resolved on {Issue.ResolvedOn} by {Issue?.ResolvedBy?.UserName}")" ShowIcon="true" />
+            }
+
+            <Form Model="@Issue" Layout="@FormLayout.Vertical">
+                <FormItem Label="Description">
+                    <TextArea @bind-Value="@context.Description" ShowCount MinRows="30" Disabled="context?.ResolvedOn != null" />
+                </FormItem>
+                <FormItem Label="Game">
+                    <Select TItem="Game"
+                            TItemValue="Guid"
+                            DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                            @bind-Value="@context.GameId"
+                            LabelName="Title"
+                            ValueName="Id"
+                            Placeholder="Select a Game"
+                            DefaultActiveFirstOption="false"
+                            EnableSearch
+                            Disabled="context?.ResolvedOn != null">
+                        <ItemTemplate Context="game">
+                            <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
+                            @game.Title
+                        </ItemTemplate>
+                    </Select>
+                </FormItem>
+            </Form>
+        </div>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Issue Issue = new Issue();
+
+    IEnumerable<Game> Games = new List<Game>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+            Issue = new Issue();
+        else
+            Issue = await IssueService.Get(Id);
+
+        Games = await GameService.Get();
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Issue.Id != Guid.Empty)
+            {
+                Issue = await IssueService.Update(Issue);
+
+                await MessageService.Success("Game updated!");
+            }
+            else
+            {
+                Issue = await IssueService.Add(Issue);
+
+                NavigationManager.LocationChanged += NotifyIssueAdded;
+
+                NavigationManager.NavigateTo($"/Issues/{Issue.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save issue!");
+            Logger?.LogError(ex, "Could not save issue!");
+        }
+    }
+
+    private async Task Resolve()
+    {
+        try
+        {
+            await IssueService.ResolveAsync(Issue.Id);
+
+            MessageService.Success("Issue resolved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not resolve issue!");
+            Logger?.LogError(ex, "Could not resolve issue!");
+        }
+    }
+
+    private string GetIcon(Game game)
+    {
+        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+
+        if (media != null)
+            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        else
+            return "/favicon.ico";
+    }
+
+    private void NotifyIssueAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyIssueAdded;
+
+        MessageService.Success("Issue added!");
+    }
+}

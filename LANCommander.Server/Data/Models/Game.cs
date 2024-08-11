@@ -52,5 +52,6 @@ namespace LANCommander.Server.Data.Models
         public virtual ICollection<Key>? Keys { get; set; } = new List<Key>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
         public virtual ICollection<Game> DependentGames { get; set; } = new List<Game>();
+        public virtual ICollection<Issue> Issues { get; set; } = new List<Issue>();
     }
 }

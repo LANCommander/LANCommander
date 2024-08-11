@@ -38,6 +38,7 @@ namespace LANCommander.SDK
         public readonly ProfileService Profile;
         public readonly MediaService Media;
         public readonly LauncherService Launcher;
+        public readonly IssueService Issues;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -63,6 +64,7 @@ namespace LANCommander.SDK
             Profile = new ProfileService(this);
             Media = new MediaService(this);
             Launcher = new LauncherService(this);
+            Issues = new IssueService(this);
 
             ChangeServerAddress(baseUrl);
         }
@@ -81,6 +83,7 @@ namespace LANCommander.SDK
             Profile = new ProfileService(this, logger);
             Media = new MediaService(this, logger);
             Launcher = new LauncherService(this);
+            Issues = new IssueService(this);
 
             Logger = logger;
         }

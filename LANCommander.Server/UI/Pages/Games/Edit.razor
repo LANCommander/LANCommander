@@ -33,12 +33,12 @@
             @if (Game != null && Game.Id != Guid.Empty)
             {
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Media")">Media</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Archives")">Archives</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Actions")">Actions</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Multiplayer")">Multiplayer</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/SavePaths")">Save Paths</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Keys")">Keys</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Scripts")">Scripts</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Archives")">Archives</MenuItem>
 
                 if (Game.DependentGames.Any(g => g.Type == GameType.Expansion))
                 {
@@ -201,6 +201,10 @@
                     <MediaEditor @bind-Values="Game.Media" GameId="Game.Id" GameTitle="@Game.Title" />
                 </div>
 
+                <div data-panel="Archives">
+                    <ArchiveEditor GameId="Game.Id" />
+                </div>
+
                 <div data-panel="Actions">
                     <ActionEditor @bind-Actions="Game.Actions" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
                 </div>
@@ -221,10 +225,6 @@
 
                 <div data-panel="Scripts">
                     <ScriptEditor GameId="Game.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop }" />
-                </div>
-
-                <div data-panel="Archives">
-                    <ArchiveEditor GameId="Game.Id" />
                 </div>
 
                 <div data-panel="Expansions">

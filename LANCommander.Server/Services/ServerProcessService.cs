@@ -175,31 +175,27 @@ namespace LANCommander.Server.Services
 
                 Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-                await Task.Run(() =>
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.BeforeStart))
                 {
-                    foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.BeforeStart))
+                    try
                     {
-                        try
-                        {
-                            var script = new PowerShellScript();
+                        var script = new PowerShellScript(SDK.Enums.ScriptType.BeforeStart);
 
-                            // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
 
-                            script.UseWorkingDirectory(server.WorkingDirectory);
-                            script.UseInline(serverScript.Contents);
-                            script.UseShellExecute();
+                        script.UseWorkingDirectory(server.WorkingDirectory);
+                        script.UseInline(serverScript.Contents);
+                        script.UseShellExecute();
 
-                            Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                            script.Execute();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
-                        }
+                        await script.ExecuteAsync();
                     }
-                });
-
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                    }
+                }
 
                 var process = new Process();
 
@@ -319,30 +315,27 @@ namespace LANCommander.Server.Services
                     LogFileMonitors.Remove(server.Id);
                 }
 
-                await Task.Run(() =>
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.AfterStop))
                 {
-                    foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.AfterStop))
+                    try
                     {
-                        try
-                        {
-                            var script = new PowerShellScript();
+                        var script = new PowerShellScript(SDK.Enums.ScriptType.AfterStop);
 
-                            // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
 
-                            script.UseWorkingDirectory(server.WorkingDirectory);
-                            script.UseInline(serverScript.Contents);
-                            script.UseShellExecute();
+                        script.UseWorkingDirectory(server.WorkingDirectory);
+                        script.UseInline(serverScript.Contents);
+                        script.UseShellExecute();
 
-                            Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                            script.Execute();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
-                        }
+                        await script.ExecuteAsync();
                     }
-                });
+                    catch (Exception ex)
+                    {
+                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                    }
+                }
 
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
             }

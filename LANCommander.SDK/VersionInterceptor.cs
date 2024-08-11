@@ -21,7 +21,7 @@ namespace LANCommander.SDK
             try
             {
                 var version = Client.GetCurrentVersion();
-                var header = response.Headers.FirstOrDefault(h => h.Name == "X-API-Version");
+                var header = response.Headers.FirstOrDefault(h => h.Name.Equals("X-API-Version", StringComparison.OrdinalIgnoreCase));
 
                 if (response.IsSuccessful && header == null)
                 {

@@ -47,6 +47,9 @@ namespace LANCommander.Launcher.Services
             var manifests = new List<GameManifest>();
             var mainManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
 
+            if (mainManifest == null)
+                return manifests;
+
             manifests.Add(mainManifest);
 
             if (mainManifest.DependentGames != null)

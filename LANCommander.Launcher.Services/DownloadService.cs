@@ -200,9 +200,9 @@ namespace LANCommander.Launcher.Services
                 currentItem.Progress = 1;
                 currentItem.BytesDownloaded = currentItem.TotalBytes;
 
-                OnQueueChanged?.Invoke();
-
                 await GameService.Update(game);
+
+                OnQueueChanged?.Invoke();
 
                 Logger?.Trace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
 

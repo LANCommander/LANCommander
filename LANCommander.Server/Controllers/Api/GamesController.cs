@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using LANCommander.Server.Data;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Models;
@@ -38,7 +37,7 @@ namespace LANCommander.Server.Controllers.Api
         public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
             var accessibleGames = new List<SDK.Models.Game>();
-            var games = await GameService.Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod).ToListAsync();
+            var games = await GameService.Get(g => g.Type == SDK.Enums.GameType.MainGame || g.Type == SDK.Enums.GameType.StandaloneExpansion || g.Type == SDK.Enums.GameType.StandaloneMod).ToListAsync();
 
             var mappedGames = Cache.GetOrSet<IEnumerable<SDK.Models.Game>>("MappedGames", _ => {
                 return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);

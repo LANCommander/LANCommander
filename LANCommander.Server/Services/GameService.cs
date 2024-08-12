@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using LANCommander.Server.Data;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Models;
@@ -423,7 +422,7 @@ namespace LANCommander.Server.Services
                         path.Path = manifestSavePath.Path;
                         path.WorkingDirectory = manifestSavePath.WorkingDirectory;
                         path.IsRegex = manifestSavePath.IsRegex;
-                        path.Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type);
+                        path.Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type);
                     }
                     else
                         game.SavePaths.Remove(path);
@@ -437,7 +436,7 @@ namespace LANCommander.Server.Services
                             Path = manifestSavePath.Path,
                             WorkingDirectory = manifestSavePath.WorkingDirectory,
                             IsRegex = manifestSavePath.IsRegex,
-                            Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type)
+                            Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type)
                         });
                     }
                 #endregion
@@ -477,7 +476,7 @@ namespace LANCommander.Server.Services
                         script.Description = manifestScript.Description;
                         script.Name = manifestScript.Name;
                         script.RequiresAdmin = manifestScript.RequiresAdmin;
-                        script.Type = (Data.Enums.ScriptType)(int)manifestScript.Type;
+                        script.Type = (ScriptType)(int)manifestScript.Type;
                     }
                     else
                         game.Scripts.Remove(script);
@@ -493,7 +492,7 @@ namespace LANCommander.Server.Services
                             Description = manifestScript.Description,
                             Name = manifestScript.Name,
                             RequiresAdmin = manifestScript.RequiresAdmin,
-                            Type = (Data.Enums.ScriptType)(int)manifestScript.Type,
+                            Type = (ScriptType)(int)manifestScript.Type,
                             CreatedOn = manifestScript.CreatedOn,
                         });
                     }

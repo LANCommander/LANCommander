@@ -1,4 +1,4 @@
-﻿using LANCommander.Server.Data.Enums;
+﻿using LANCommander.SDK.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 

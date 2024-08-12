@@ -14,6 +14,7 @@ using LANCommander.Server.Services.MediaGrabbers;
 using Microsoft.Data.Sqlite;
 using LANCommander.Server.Extensions;
 using Microsoft.AspNetCore.Http.Features;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server
 {
@@ -347,7 +348,7 @@ namespace LANCommander.Server
             var serverService = scope.ServiceProvider.GetService<ServerService>();
             var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
 
-            foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == Data.Enums.ServerAutostartMethod.OnApplicationStart).ToListAsync())
+            foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart).ToListAsync())
             {
                 try
                 {

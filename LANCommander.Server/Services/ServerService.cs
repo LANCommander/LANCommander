@@ -4,6 +4,7 @@ using LANCommander.Server.Extensions;
 using LANCommander.SDK.Helpers;
 using System.Diagnostics;
 using System.IO.Compression;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Services
 {
@@ -38,7 +39,7 @@ namespace LANCommander.Server.Services
 
                 server.Name = manifest.Name;
                 server.Autostart = manifest.Autostart;
-                server.AutostartMethod = (Data.Enums.ServerAutostartMethod)(int)manifest.AutostartMethod;
+                server.AutostartMethod = (ServerAutostartMethod)(int)manifest.AutostartMethod;
                 server.AutostartDelay = manifest.AutostartDelay;
                 server.WorkingDirectory = Path.Combine(settings.Servers.StoragePath, server.Name.SanitizeFilename());
                 server.Path = manifest.Path.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
@@ -68,7 +69,7 @@ namespace LANCommander.Server.Services
                     if (manifestConsole != null)
                     {
                         serverConsole.Name = manifestConsole.Name;
-                        serverConsole.Type = (Data.Enums.ServerConsoleType)(int)manifestConsole.Type;
+                        serverConsole.Type = (ServerConsoleType)(int)manifestConsole.Type;
                         serverConsole.Path = manifestConsole.Path;
                         serverConsole.Host = manifestConsole.Host;
                         serverConsole.Port = manifestConsole.Port;
@@ -86,7 +87,7 @@ namespace LANCommander.Server.Services
                         {
                             Id = manifestConsole.Id,
                             Name = manifestConsole.Name,
-                            Type = (Data.Enums.ServerConsoleType)(int)manifestConsole.Type,
+                            Type = (ServerConsoleType)(int)manifestConsole.Type,
                             Path = manifestConsole.Path,
                             Host = manifestConsole.Host,
                             Port = manifestConsole.Port,
@@ -141,7 +142,7 @@ namespace LANCommander.Server.Services
                         script.Description = manifestScript.Description;
                         script.Name = manifestScript.Name;
                         script.RequiresAdmin = manifestScript.RequiresAdmin;
-                        script.Type = (Data.Enums.ScriptType)(int)manifestScript.Type;
+                        script.Type = (ScriptType)(int)manifestScript.Type;
                     }
                     else
                         server.Scripts.Remove(script);
@@ -158,7 +159,7 @@ namespace LANCommander.Server.Services
                             Description = manifestScript.Description,
                             Name = manifestScript.Name,
                             RequiresAdmin = manifestScript.RequiresAdmin,
-                            Type = (Data.Enums.ScriptType)(int)manifestScript.Type,
+                            Type = (ScriptType)(int)manifestScript.Type,
                             CreatedOn = manifestScript.CreatedOn,
                         });
                     }

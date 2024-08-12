@@ -1,9 +1,9 @@
 ﻿using LANCommander.Server.Data;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Server.Models;
 using Microsoft.EntityFrameworkCore;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Services
 {

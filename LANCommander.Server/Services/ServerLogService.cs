@@ -1,6 +1,6 @@
 ﻿using CoreRCON;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using System.Diagnostics;
 using System.Net;

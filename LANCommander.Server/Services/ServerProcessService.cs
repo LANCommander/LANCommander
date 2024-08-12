@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using CoreRCON;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Hubs;
 using LANCommander.SDK.Enums;
@@ -175,7 +174,7 @@ namespace LANCommander.Server.Services
 
                 Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-                foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.BeforeStart))
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
                 {
                     try
                     {
@@ -235,7 +234,7 @@ namespace LANCommander.Server.Services
 
                     Processes[server.Id] = process;
 
-                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == Data.Enums.ServerConsoleType.LogFile))
+                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
                     {
                         StartMonitoringLog(logFile, server);
                     }
@@ -315,7 +314,7 @@ namespace LANCommander.Server.Services
                     LogFileMonitors.Remove(server.Id);
                 }
 
-                foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.AfterStop))
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
                 {
                     try
                     {

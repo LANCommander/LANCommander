@@ -44,7 +44,6 @@
     <PackageReference Include="Hangfire.InMemory" Version="0.10.3" />
     <PackageReference Include="IGDB" Version="3.0.0" />
     <PackageReference Include="IPXRelayDotNet" Version="1.1.0" />
-    <PackageReference Include="Markdig" Version="0.37.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.7" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.7" />

@@ -62,7 +62,7 @@
             await Task.Delay(100);
 
             if (Terminal != null)
-                await Terminal.InvokeAddonFunctionVoidAsync("xterm-addon-fit", "fit");
+                await Terminal.Addon("xterm-addon-fit").InvokeVoidAsync("fit");
 
             if (ServerConsoleId != Guid.Empty)
             {

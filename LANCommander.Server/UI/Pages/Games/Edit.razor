@@ -59,11 +59,6 @@
                 {
                     <MenuItem RouterLink="@($"/Games/{Game.Id}/Saves")">Saves</MenuItem>
                 }
-
-                if (Settings.Wiki.Enabled)
-                {
-                    <MenuItem RouterLink="@($"/Games/{Game.Id}/Wiki")">Wiki</MenuItem>
-                }
             }
         </Menu>
     </Sider>
@@ -323,13 +318,6 @@
                         </ActionColumn>
                     </Table>
                 </div>
-
-                @if (Settings.Wiki.Enabled)
-                {
-                    <div data-panel="Wiki">
-                        <WikiEditor GameId="Game.Id" />
-                    </div>
-                }
             }
 
         </div>

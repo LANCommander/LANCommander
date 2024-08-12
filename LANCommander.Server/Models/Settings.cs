@@ -24,7 +24,6 @@ namespace LANCommander.Server.Models
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
         public LANCommanderServerSettings Servers { get; set; } = new LANCommanderServerSettings();
-        public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
         public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
         public LANCommanderLauncherSettings Launcher { get; set; } = new LANCommanderLauncherSettings();
         public LANCommanderLogSettings Logs { get; set; } = new LANCommanderLogSettings();
@@ -96,13 +95,6 @@ namespace LANCommander.Server.Models
     public class LANCommanderServerSettings
     {
         public string StoragePath { get; set; } = "Servers";
-    }
-
-    public class LANCommanderWikiSettings
-    {
-        public bool Enabled { get; set; } = false;
-        public string Username { get; set; } = "";
-        public string Password { get; set; } = "";
     }
 
     public class LANCommanderUpdateSettings

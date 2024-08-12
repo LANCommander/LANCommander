@@ -188,7 +188,6 @@ namespace LANCommander.Server
             builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<RedistributableService>();
             builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
-            builder.Services.AddScoped<WikiService>();
             builder.Services.AddScoped<UpdateService>();
             builder.Services.AddScoped<IssueService>();
 

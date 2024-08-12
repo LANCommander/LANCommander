@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Security.Cryptography.X509Certificates;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Services
 {
@@ -49,7 +50,7 @@ namespace LANCommander.Server.Services
                         script.Description = manifestScript.Description;
                         script.Name = manifestScript.Name;
                         script.RequiresAdmin = manifestScript.RequiresAdmin;
-                        script.Type = (Data.Enums.ScriptType)(int)manifestScript.Type;
+                        script.Type = (ScriptType)(int)manifestScript.Type;
                     }
                     else
                         redistributable.Scripts.Remove(script);
@@ -66,7 +67,7 @@ namespace LANCommander.Server.Services
                             Description = manifestScript.Description,
                             Name = manifestScript.Name,
                             RequiresAdmin = manifestScript.RequiresAdmin,
-                            Type = (Data.Enums.ScriptType)(int)manifestScript.Type,
+                            Type = (ScriptType)(int)manifestScript.Type,
                             CreatedOn = manifestScript.CreatedOn,
                         });
                     }

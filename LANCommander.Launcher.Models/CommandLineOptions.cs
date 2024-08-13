@@ -8,6 +8,12 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
+    public enum ImportArchiveType {
+        Game,
+        Redistributable,
+        Server
+    }
+
     [Verb("RunScript", HelpText = "Run a script for a game")]
     public class RunScriptCommandLineOptions
     {
@@ -44,8 +50,18 @@ namespace LANCommander.Launcher.Models
         public Guid GameId { get; set; }
     }
 
-    [Verb("Import", HelpText = "Import library items from the server")]
-    public class ImportCommandLineOptions { }
+    [Verb("Sync", HelpText = "Sync library items from the server")]
+    public class SyncCommandLineOptions { }
+
+    [Verb("Import", HelpText = "Upload and import an archive to the server (Admin Only)")]
+    public class ImportCommandLineOptions
+    {
+        [Option("Path", HelpText = "Path to the archive file", Required = true)]
+        public string Path { get; set; }
+
+        [Option("Type", HelpText = "The type of archive to import", Required = true)]
+        public ImportArchiveType Type { get; set; }
+    }
 
     [Verb("Login", HelpText = "Login to a LANCommander server")]
     public class LoginCommandLineOptions

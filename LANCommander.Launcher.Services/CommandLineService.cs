@@ -36,7 +36,7 @@ namespace LANCommander.Launcher.Services
                     RunScriptCommandLineOptions,
                     InstallCommandLineOptions,
                     UninstallCommandLineOptions,
-                    ImportCommandLineOptions,
+                    SyncCommandLineOptions,
                     LoginCommandLineOptions,
                     LogoutCommandLineOptions,
                     ChangeAliasCommandLineOptions
@@ -45,6 +45,7 @@ namespace LANCommander.Launcher.Services
             await result.WithParsedAsync<RunScriptCommandLineOptions>(RunScript);
             await result.WithParsedAsync<InstallCommandLineOptions>(Install);
             await result.WithParsedAsync<UninstallCommandLineOptions>(Uninstall);
+            await result.WithParsedAsync<SyncCommandLineOptions>(Sync);
             await result.WithParsedAsync<ImportCommandLineOptions>(Import);
             await result.WithParsedAsync<LoginCommandLineOptions>(Login);
             await result.WithParsedAsync<LogoutCommandLineOptions>(Logout);
@@ -120,7 +121,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        private async Task Import(ImportCommandLineOptions options)
+        private async Task Sync(SyncCommandLineOptions options)
         {
             Console.WriteLine("Importing games from server...");
 

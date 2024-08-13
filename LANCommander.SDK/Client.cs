@@ -6,6 +6,7 @@ using RestSharp;
 using RestSharp.Interceptors;
 using Semver;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -310,6 +311,41 @@ namespace LANCommander.SDK
             var response = await ApiClient.PostAsync<T>(request);
 
             return response;
+        }
+
+        internal async Task<Guid> ChunkedUploadRequestAsync(string fileName, Stream stream, bool ignoreVersion = false)
+        {
+            var maxChunkSize = 1024 * 1024 * 50;
+            var initResponse = await PostRequestAsync<UploadInitResponse>("/Upload/Init", ignoreVersion);
+
+            var buffer = new byte[maxChunkSize];
+
+            while (stream.Position < stream.Length)
+            {
+                var chunkRequest = new UploadChunkRequest();
+
+                chunkRequest.Start = stream.Position;
+
+                if (stream.Position + maxChunkSize > stream.Length)
+                {
+                    var bytes = stream.Length - stream.Position;
+
+                    buffer = new byte[bytes];
+
+                    await stream.ReadAsync(buffer, 0, (int)(stream.Length - stream.Position));
+                }
+                else
+                    await stream.ReadAsync(buffer, 0, maxChunkSize);
+
+                chunkRequest.End = stream.Position;
+                chunkRequest.Total = stream.Length;
+                chunkRequest.File = buffer;
+                chunkRequest.Key = initResponse.Key;
+
+                await PostRequestAsync<object>("/Upload/Chunk", chunkRequest, ignoreVersion);
+            }
+
+            return initResponse.Key;
         }
 
         public async Task<AuthToken> AuthenticateAsync(string username, string password, bool ignoreVersion = false)

@@ -614,6 +614,17 @@ namespace LANCommander.SDK
             Reader?.Cancel();
         }
 
+        public async Task ImportAsync(string archivePath)
+        {
+            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
+            {
+                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
+
+                if (objectKey != Guid.Empty)
+                    await Client.PostRequestAsync<object>($"/api/Games/Import/{objectKey}");
+            }
+        }
+
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)
         {
             if (String.IsNullOrWhiteSpace(installDirectory))

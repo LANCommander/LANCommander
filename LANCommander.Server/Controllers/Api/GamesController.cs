@@ -110,5 +110,21 @@ namespace LANCommander.Server.Controllers.Api
 
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{game.Title.SanitizeFilename()}.zip");
         }
+
+        [Authorize(Roles = "Administrator")]
+        [HttpPost("Import/{objectKey}")]
+        public async Task<IActionResult> Import(Guid objectKey)
+        {
+            try
+            {
+                var game = await GameService.Import(objectKey);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

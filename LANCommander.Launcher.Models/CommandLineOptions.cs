@@ -63,6 +63,16 @@ namespace LANCommander.Launcher.Models
         public ImportArchiveType Type { get; set; }
     }
 
+    [Verb("Export", HelpText = "Export an archive from the server (Admin Only)")]
+    public class ExportCommandLineOptions
+    {
+        [Option("Path", HelpText = "The destination path for the LCX export file", Required = true)]
+        public string Path { get; set; }
+
+        [Option("Type", HelpText = "The type of archive to export", Required = true)]
+        public ImportArchiveType Type { get; set; }
+    }
+
     [Verb("Login", HelpText = "Login to a LANCommander server")]
     public class LoginCommandLineOptions
     {

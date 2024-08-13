@@ -123,16 +123,16 @@ namespace LANCommander.Launcher.Services
 
         private async Task Sync(SyncCommandLineOptions options)
         {
-            Console.WriteLine("Importing games from server...");
+            Console.WriteLine("Syncing games from server...");
 
             ImportService.OnImportComplete += async () =>
             {
-                Console.WriteLine("Import complete!");
+                Console.WriteLine("Sync complete!");
             };
 
             ImportService.OnImportFailed += async () =>
             {
-                Console.WriteLine("Import failed!");
+                Console.WriteLine("Sync failed!");
             };
 
             await ImportService.ImportAsync();

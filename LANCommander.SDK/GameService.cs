@@ -625,6 +625,11 @@ namespace LANCommander.SDK
             }
         }
 
+        public async Task ExportAsync(string destinationPath, Guid gameId)
+        {
+            await Client.DownloadRequestAsync($"/Games/{gameId}/Export/Full", destinationPath);
+        }
+
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)
         {
             if (String.IsNullOrWhiteSpace(installDirectory))

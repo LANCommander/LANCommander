@@ -138,6 +138,25 @@ namespace LANCommander.Launcher.Services
             await ImportService.ImportAsync();
         }
 
+        private async Task Import(ImportCommandLineOptions options)
+        {
+            if (!File.Exists(options.Path))
+            {
+                Console.WriteLine("File not found! Check your path!");
+                return;
+            }
+
+            switch (options.Type)
+            {
+                case ImportArchiveType.Game:
+                    Console.WriteLine("Uploading game import file to server...");
+
+                    await Client.Games.ImportAsync(options.Path);
+                    break;
+            }
+
+            Console.WriteLine("Import complete!");
+        }
         private async Task Login(LoginCommandLineOptions options)
         {
             try

@@ -171,7 +171,7 @@ namespace LANCommander.Launcher.Services
                 case ImportArchiveType.Game:
                     Console.WriteLine("Exporting game from server...");
 
-                    await Client.Games.ExportAsync(options.Path);
+                    await Client.Games.ExportAsync(options.Path, options.Id);
                     break;
             }
 

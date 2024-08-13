@@ -69,6 +69,9 @@ namespace LANCommander.Launcher.Models
         [Option("Path", HelpText = "The destination path for the LCX export file", Required = true)]
         public string Path { get; set; }
 
+        [Option("Id", HelpText = "The ID of the entity to export", Required = true)]
+        public Guid Id { get; set; }
+
         [Option("Type", HelpText = "The type of archive to export", Required = true)]
         public ImportArchiveType Type { get; set; }
     }

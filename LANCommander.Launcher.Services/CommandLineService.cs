@@ -157,6 +157,27 @@ namespace LANCommander.Launcher.Services
 
             Console.WriteLine("Import complete!");
         }
+
+        private async Task Export(ExportCommandLineOptions options)
+        {
+            if (File.Exists(options.Path))
+            {
+                Console.WriteLine("A file at the specific path already exists!");
+                return;
+            }
+
+            switch (options.Type)
+            {
+                case ImportArchiveType.Game:
+                    Console.WriteLine("Exporting game from server...");
+
+                    await Client.Games.ExportAsync(options.Path);
+                    break;
+            }
+
+            Console.WriteLine($"Successfully exported game to {options.Path}");
+        }
+
         private async Task Login(LoginCommandLineOptions options)
         {
             try

@@ -22,6 +22,8 @@ namespace LANCommander.SDK
         public delegate Task<bool> ExternalScriptRunnerHandler(PowerShellScript script);
         public event ExternalScriptRunnerHandler ExternalScriptRunner;
 
+        public Func<System.Management.Automation.PowerShell, Task> OnDebug;
+
         public ScriptService(Client client)
         {
             Client = client;
@@ -54,7 +56,10 @@ namespace LANCommander.SDK
                     script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Install));
 
                     if (debug)
+                    {
                         script.EnableDebug();
+                        script.OnDebug = OnDebug;
+                    }
 
                     bool handled = false;
 
@@ -95,7 +100,10 @@ namespace LANCommander.SDK
                     script.UseFile(path);
 
                     if (debug)
+                    {
                         script.EnableDebug();
+                        script.OnDebug = OnDebug;
+                    }
 
                     bool handled = false;
 
@@ -136,7 +144,10 @@ namespace LANCommander.SDK
                     script.UseFile(path);
 
                     if (debug)
+                    {
                         script.EnableDebug();
+                        script.OnDebug = OnDebug;
+                    }
 
                     bool handled = false;
 
@@ -174,7 +185,10 @@ namespace LANCommander.SDK
                     script.UseFile(path);
 
                     if (debug)
+                    {
                         script.EnableDebug();
+                        script.OnDebug = OnDebug;
+                    }
 
                     bool handled = false;
 
@@ -223,7 +237,10 @@ namespace LANCommander.SDK
                     SDK.GameService.UpdatePlayerAlias(installDirectory, gameId, newName);
 
                     if (debug)
+                    {
                         script.EnableDebug();
+                        script.OnDebug = OnDebug;
+                    }
 
                     bool handled = false;
 
@@ -266,7 +283,10 @@ namespace LANCommander.SDK
                     GameService.UpdateCurrentKey(installDirectory, gameId, key);
 
                     if (debug)
+                    {
                         script.EnableDebug();
+                        script.OnDebug = OnDebug;
+                    }
 
                     bool handled = false;
 

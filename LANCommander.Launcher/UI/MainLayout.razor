@@ -66,6 +66,11 @@
     <WindowContent>
         @Body
 
+        @if (Settings.Debug.EnableScriptDebugging)
+        {
+            <PowerShellConsole />
+        }
+
         <AntContainer />
         <RedirectToLogin />
         <UpdateChecker />

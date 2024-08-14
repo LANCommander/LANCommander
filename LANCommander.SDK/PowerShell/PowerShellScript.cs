@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -29,6 +30,10 @@ namespace LANCommander.SDK.PowerShell
         public Dictionary<string, string> Arguments { get; private set; }
 
         private InitialSessionState InitialSessionState { get; set; }
+
+        private TaskCompletionSource<string> Input { get; set; }
+
+        public Func<System.Management.Automation.PowerShell, Task> OnDebug;
 
         public PowerShellScript(ScriptType type)
         {
@@ -179,6 +184,9 @@ namespace LANCommander.SDK.PowerShell
                     ps.AddScript(scriptBuilder.ToString());
 
                     var results = await ps.InvokeAsync();
+
+                    if (Debug)
+                        await OnDebug?.Invoke(ps);
                 }
             }
 

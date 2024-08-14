@@ -1,0 +1,158 @@
+﻿@using XtermBlazor
+@inject SDK.Client Client
+
+
+<Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" OnData="@OnData" OnResize="@OnResize" />
+
+@code {
+    private Xterm Terminal;
+    private TaskCompletionSource<string> InputTaskCompletionSource;
+
+    private string Command { get; set; } = "";
+    private int Position { get; set; } = 0;
+    private int Columns { get; set; } = 0;
+    private int Rows { get; set; } = 0;
+
+    private TerminalOptions _options = new TerminalOptions
+    {
+        CursorBlink = true,
+        CursorStyle = CursorStyle.Bar,
+        Theme =
+        {
+            Background = "#17615e",
+        },
+
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Client.Scripts.OnDebug = async (ps) =>
+        {
+            while (true)
+            {
+                InputTaskCompletionSource = new TaskCompletionSource<string>();
+
+                await InputTaskCompletionSource.Task;
+
+                await ps.InvokeAsync();
+            }
+        };
+    }
+
+    private async Task OnFirstRender()
+    {
+        Columns = await Terminal.GetColumns();
+        Rows = await Terminal.GetRows();
+    }
+
+    private async Task OnResize(ResizeEventArgs args)
+    {
+        Columns = args.Columns;
+        Rows = args.Rows;
+    }
+
+    private async Task OnData(string data)
+    {
+        var code = System.Text.Encoding.UTF8.GetBytes(data)[0];
+
+        switch (code)
+        {
+            case 13:
+                await Terminal.Write("\r\n");
+                await Terminal.WriteLine($"Output: {Command}");
+                Position = 0;
+                Command = "";
+                break;
+
+            case 8:
+            case 127:
+                await Backspace();
+                break;
+
+            case 27:
+                switch (data.Substring(1))
+                {
+                    case "[C":
+                        await CursorRight();
+                        break;
+
+                    case "[D":
+                        await CursorLeft();
+                        break;
+                }
+                break;
+
+            case < 32:
+            case > 127:
+                return;
+
+            default:
+                Command += data;
+                await Key(data);
+                break;
+        }
+    }
+
+    private async Task Key(string key)
+    {
+        Position++;
+        await Terminal.Write(key);
+    }
+
+    private async Task Backspace()
+    {
+        var originalPosition = Position;
+
+        if (originalPosition > 0)
+        {
+            // If at end of command
+            if (originalPosition == Command.Length)
+            {
+                await Terminal.Write("\x1b[D \x1b[D");
+
+                Command = Command.Substring(0, Command.Length - 1);
+                Position--;
+            }
+            else
+            {
+                var tail = Command.Substring(Position);
+
+                await Terminal.Write("\x1b[D");
+                await Terminal.Write(tail + " ");
+
+                for (int i = 0; i < tail.Length + 1; i++)
+                {
+                    await Terminal.Write("\x1b[D");
+                }
+
+                Position--;
+
+                Command = Command.Substring(0, Position) + tail;
+            }
+        }
+    }
+
+    private async Task CursorLeft(int count = 1)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            if (Position > 0)
+            {
+                Position--;
+                await Terminal.Write("\x1b[D");
+            }
+        }
+    }
+
+    private async Task CursorRight(int count = 1)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            if (Position < Columns && Position < Command.Length)
+            {
+                Position++;
+                await Terminal.Write("\x1b[C");
+            }
+        }
+    }
+}

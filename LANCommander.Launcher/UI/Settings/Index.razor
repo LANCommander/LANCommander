@@ -2,6 +2,7 @@
 @using LANCommander.Launcher.Models
 @inject NavigationManager NavigationManager
 @inject UpdateService UpdateService
+@inject SDK.Client Client
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -62,6 +63,9 @@
         try
         {
             SettingService.SaveSettings(Settings);
+
+            Client.DefaultInstallDirectory = Settings.Games.DefaultInstallDirectory;
+            Client.Scripts.Debug = Settings.Debug.EnableScriptDebugging;
 
             MessageService.Success("Settings saved!");
         }

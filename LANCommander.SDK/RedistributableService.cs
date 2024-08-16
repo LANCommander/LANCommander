@@ -196,6 +196,9 @@ namespace LANCommander.SDK
             if (requiresAdmin)
                 script.AsAdmin();
 
+            if (Client.Scripts.Debug)
+                script.EnableDebug();
+
             script.AddVariable("Redistributable", redistributable);
 
             script.UseWorkingDirectory(workingDirectory);

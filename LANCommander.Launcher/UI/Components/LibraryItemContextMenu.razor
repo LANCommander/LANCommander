@@ -166,7 +166,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id, Settings.Debug.EnableScriptDebugging);
+            await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 
@@ -176,7 +176,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, Settings.Profile.Alias, Settings.Debug.EnableScriptDebugging);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, Settings.Profile.Alias);
         }
     }
 
@@ -188,7 +188,7 @@ else
         {
             var key = Client.Games.GetAllocatedKey(manifest.Id);
 
-            await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key, Settings.Debug.EnableScriptDebugging);
+            await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
         }
     }
 

@@ -10,6 +10,7 @@ using NLog;
 using NLog.Fluent;
 using System.Diagnostics;
 using System.Net;
+using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
 {
@@ -148,12 +149,14 @@ namespace LANCommander.Server.Services
         private readonly IMapper Mapper;
         private readonly IHubContext<GameServerHub> HubContext;
         private readonly IServiceProvider ServiceProvider;
+        private readonly SDK.Client Client;
 
-        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext, IServiceProvider serviceProvider) : base()
+        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext, IServiceProvider serviceProvider, SDK.Client client) : base()
         {
             Mapper = mapper;
             HubContext = hubContext;
             ServiceProvider = serviceProvider;
+            Client = client;
         }
 
         public async Task StartServerAsync(Guid serverId)
@@ -187,6 +190,9 @@ namespace LANCommander.Server.Services
                         script.UseShellExecute();
 
                         Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
 
                         await script.ExecuteAsync();
                     }
@@ -327,6 +333,9 @@ namespace LANCommander.Server.Services
                         script.UseShellExecute();
 
                         Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
 
                         await script.ExecuteAsync();
                     }

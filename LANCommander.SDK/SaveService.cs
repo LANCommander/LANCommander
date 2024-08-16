@@ -202,6 +202,9 @@ namespace LANCommander.SDK
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
                             script.AsAdmin();
 
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
+
                         await script.ExecuteAsync();
                     }
                     #endregion
@@ -270,6 +273,9 @@ namespace LANCommander.SDK
                         var script = new PowerShellScript(Enums.ScriptType.SaveUpload);
 
                         script.UseInline(exportCommand.ToString());
+
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
 
                         await script.ExecuteAsync();
 

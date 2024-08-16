@@ -31,6 +31,7 @@ namespace LANCommander.Launcher.Services.Extensions
                 RefreshToken = settings.Authentication.RefreshToken,
             });
 
+            client.Scripts.Debug = settings.Debug.EnableScriptDebugging;
             client.Scripts.ExternalScriptRunner += Scripts_ExternalScriptRunner;
 
             services.AddSingleton(client);

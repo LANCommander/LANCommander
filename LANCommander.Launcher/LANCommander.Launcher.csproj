@@ -48,6 +48,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <None Remove="webpack.config.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="webpack.config.js" />
+	  <Content Include="index.js" />
 	  <Content Include="LANCommander.ico">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>

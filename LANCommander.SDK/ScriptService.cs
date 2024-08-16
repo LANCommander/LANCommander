@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management.Automation;
 using System.Text;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
@@ -23,6 +24,7 @@ namespace LANCommander.SDK
         public event ExternalScriptRunnerHandler ExternalScriptRunner;
 
         public Func<System.Management.Automation.PowerShell, Task> OnDebug;
+        public Func<LogLevel, string, Task> OnOutput;
 
         public ScriptService(Client client)
         {
@@ -59,6 +61,7 @@ namespace LANCommander.SDK
                     {
                         script.EnableDebug();
                         script.OnDebug = OnDebug;
+                        script.OnOutput = OnOutput;
                     }
 
                     bool handled = false;
@@ -103,6 +106,7 @@ namespace LANCommander.SDK
                     {
                         script.EnableDebug();
                         script.OnDebug = OnDebug;
+                        script.OnOutput = OnOutput;
                     }
 
                     bool handled = false;
@@ -147,6 +151,7 @@ namespace LANCommander.SDK
                     {
                         script.EnableDebug();
                         script.OnDebug = OnDebug;
+                        script.OnOutput = OnOutput;
                     }
 
                     bool handled = false;
@@ -188,6 +193,7 @@ namespace LANCommander.SDK
                     {
                         script.EnableDebug();
                         script.OnDebug = OnDebug;
+                        script.OnOutput = OnOutput;
                     }
 
                     bool handled = false;
@@ -240,6 +246,7 @@ namespace LANCommander.SDK
                     {
                         script.EnableDebug();
                         script.OnDebug = OnDebug;
+                        script.OnOutput = OnOutput;
                     }
 
                     bool handled = false;
@@ -286,6 +293,7 @@ namespace LANCommander.SDK
                     {
                         script.EnableDebug();
                         script.OnDebug = OnDebug;
+                        script.OnOutput = OnOutput;
                     }
 
                     bool handled = false;

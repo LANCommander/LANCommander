@@ -1,6 +1,7 @@
 ﻿using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell.Cmdlets;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,6 +35,7 @@ namespace LANCommander.SDK.PowerShell
         private TaskCompletionSource<string> Input { get; set; }
 
         public Func<System.Management.Automation.PowerShell, Task> OnDebug;
+        public Func<LogLevel, string, Task> OnOutput;
 
         public PowerShellScript(ScriptType type)
         {
@@ -183,10 +185,24 @@ namespace LANCommander.SDK.PowerShell
 
                     ps.AddScript(scriptBuilder.ToString());
 
+                    if (Debug)
+                    {
+                        if (OnOutput != null)
+                        {
+                            ps.Streams.Information.DataAdded += Information_DataAdded;
+                            ps.Streams.Verbose.DataAdded += Verbose_DataAdded;
+                            ps.Streams.Debug.DataAdded += Debug_DataAdded;
+                            ps.Streams.Warning.DataAdded += Warning_DataAdded;
+                            ps.Streams.Error.DataAdded += Error_DataAdded;
+                        }
+                    }
+
                     var results = await ps.InvokeAsync();
 
                     if (Debug)
+                    {
                         await OnDebug?.Invoke(ps);
+                    }
                 }
             }
 
@@ -194,6 +210,43 @@ namespace LANCommander.SDK.PowerShell
                 Wow64RevertWow64FsRedirection(ref wow64Value);
 
             return 0;
+        }
+
+        private void Error_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<ErrorRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Error, $"{record.InvocationInfo.InvocationName} : {record.Exception.Message}");
+            OnOutput?.Invoke(LogLevel.Error, record.InvocationInfo.PositionMessage);
+        }
+
+        private void Warning_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<WarningRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Warning, record.Message);
+        }
+
+        private void Debug_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<DebugRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Debug, record.Message);
+        }
+
+        private void Verbose_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<VerboseRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Trace, record.Message);
+        }
+
+        private void Information_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<InformationRecord>)sender)[e.Index];
+
+            if (record.MessageData != null && record.MessageData is HostInformationMessage)
+                OnOutput?.Invoke(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
         }
 
         public static string Serialize<T>(T input)

@@ -31,8 +31,14 @@
     <script src="_content/Photino.Blazor.CustomWindow/js/js-extensions.js"></script>
     <script src="_content/Photino.Blazor.CustomWindow/js/pb-custom-window.js"></script>
     <script src="scripts/dist/bundle.js"></script>
+    <script src="bundle.js"></script>
 
     <script>
+        XtermBlazor.registerAddons({
+            "readline": new XtermAddons.Readline(),
+            "addon-fit": new XtermAddons.Fit()
+        });
+
         window.sendMessage = function (message) {
             window.external.sendMessage(message);
         }

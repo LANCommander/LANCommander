@@ -1,38 +1,64 @@
 ﻿@using XtermBlazor
+@using LogLevel = Microsoft.Extensions.Logging.LogLevel
 @inject SDK.Client Client
 
-
-<Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" OnData="@OnData" OnResize="@OnResize" />
+<Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
 
 @code {
     private Xterm Terminal;
     private TaskCompletionSource<string> InputTaskCompletionSource;
 
-    private string Command { get; set; } = "";
-    private int Position { get; set; } = 0;
-    private int Columns { get; set; } = 0;
-    private int Rows { get; set; } = 0;
-
     private TerminalOptions _options = new TerminalOptions
     {
         CursorBlink = true,
         CursorStyle = CursorStyle.Bar,
-        Theme =
-        {
-            Background = "#17615e",
-        },
+    };
 
+    private HashSet<string> Addons = new HashSet<string>()
+    {
+        "readline",
+        "addon-fit"
     };
 
     protected override async Task OnInitializedAsync()
     {
+        Client.Scripts.OnOutput = async (level, message) =>
+        {
+            switch (level)
+            {
+                case LogLevel.Error:
+                    await Terminal.WriteLine($"\x1b[0;31m{message}");
+                    break;
+
+                case LogLevel.Warning:
+                    await Terminal.WriteLine($"\x1b[0;33m{message}");
+                    break;
+
+                case LogLevel.Debug:
+                    await Terminal.WriteLine($"\x1b[0;37m{message}");
+                    break;
+
+                case LogLevel.Trace:
+                    await Terminal.WriteLine($"\x1b[0;36m{message}");
+                    break;
+
+                case LogLevel.Information:
+                    await Terminal.WriteLine($"\x1b[0;37m{message}");
+                    break;
+            }
+        };
+
         Client.Scripts.OnDebug = async (ps) =>
         {
             while (true)
             {
-                InputTaskCompletionSource = new TaskCompletionSource<string>();
+                var input = await ReadLine();
 
-                await InputTaskCompletionSource.Task;
+                if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                ps.Commands.Clear();
+                ps.AddScript(input);
 
                 await ps.InvokeAsync();
             }
@@ -41,118 +67,11 @@
 
     private async Task OnFirstRender()
     {
-        Columns = await Terminal.GetColumns();
-        Rows = await Terminal.GetRows();
+        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
     }
 
-    private async Task OnResize(ResizeEventArgs args)
+    private async Task<string> ReadLine()
     {
-        Columns = args.Columns;
-        Rows = args.Rows;
-    }
-
-    private async Task OnData(string data)
-    {
-        var code = System.Text.Encoding.UTF8.GetBytes(data)[0];
-
-        switch (code)
-        {
-            case 13:
-                await Terminal.Write("\r\n");
-                await Terminal.WriteLine($"Output: {Command}");
-                Position = 0;
-                Command = "";
-                break;
-
-            case 8:
-            case 127:
-                await Backspace();
-                break;
-
-            case 27:
-                switch (data.Substring(1))
-                {
-                    case "[C":
-                        await CursorRight();
-                        break;
-
-                    case "[D":
-                        await CursorLeft();
-                        break;
-                }
-                break;
-
-            case < 32:
-            case > 127:
-                return;
-
-            default:
-                Command += data;
-                await Key(data);
-                break;
-        }
-    }
-
-    private async Task Key(string key)
-    {
-        Position++;
-        await Terminal.Write(key);
-    }
-
-    private async Task Backspace()
-    {
-        var originalPosition = Position;
-
-        if (originalPosition > 0)
-        {
-            // If at end of command
-            if (originalPosition == Command.Length)
-            {
-                await Terminal.Write("\x1b[D \x1b[D");
-
-                Command = Command.Substring(0, Command.Length - 1);
-                Position--;
-            }
-            else
-            {
-                var tail = Command.Substring(Position);
-
-                await Terminal.Write("\x1b[D");
-                await Terminal.Write(tail + " ");
-
-                for (int i = 0; i < tail.Length + 1; i++)
-                {
-                    await Terminal.Write("\x1b[D");
-                }
-
-                Position--;
-
-                Command = Command.Substring(0, Position) + tail;
-            }
-        }
-    }
-
-    private async Task CursorLeft(int count = 1)
-    {
-        for (var i = 0; i < count; i++)
-        {
-            if (Position > 0)
-            {
-                Position--;
-                await Terminal.Write("\x1b[D");
-            }
-        }
-    }
-
-    private async Task CursorRight(int count = 1)
-    {
-        for (var i = 0; i < count; i++)
-        {
-            if (Position < Columns && Position < Command.Length)
-            {
-                Position++;
-                await Terminal.Write("\x1b[C");
-            }
-        }
+        return await Terminal.Addon("readline").InvokeAsync<string>("read", "> ");
     }
 }

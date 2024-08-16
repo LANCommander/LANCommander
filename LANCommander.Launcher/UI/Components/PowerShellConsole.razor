@@ -2,9 +2,12 @@
 @using LogLevel = Microsoft.Extensions.Logging.LogLevel
 @inject SDK.Client Client
 
-<Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
+<div class="terminal @(Visible ? "" : "hidden")">
+    <Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
+</div>
 
 @code {
+    private bool Visible { get; set; } = false;
     private Xterm Terminal;
     private TaskCompletionSource<string> InputTaskCompletionSource;
 
@@ -22,6 +25,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Client.Scripts.OnDebugStart = async (ps) =>
+        {
+            Terminal?.Clear();
+            Visible = true;
+            await InvokeAsync(StateHasChanged);
+
+            await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+        };
+
         Client.Scripts.OnOutput = async (level, message) =>
         {
             switch (level)
@@ -48,7 +60,7 @@
             }
         };
 
-        Client.Scripts.OnDebug = async (ps) =>
+        Client.Scripts.OnDebugBreak = async (ps) =>
         {
             while (true)
             {
@@ -62,6 +74,9 @@
 
                 await ps.InvokeAsync();
             }
+
+            Visible = false;
+            await InvokeAsync(StateHasChanged);
         };
     }
 

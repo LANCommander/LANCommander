@@ -23,7 +23,8 @@ namespace LANCommander.SDK
         public delegate Task<bool> ExternalScriptRunnerHandler(PowerShellScript script);
         public event ExternalScriptRunnerHandler ExternalScriptRunner;
 
-        public Func<System.Management.Automation.PowerShell, Task> OnDebug;
+        public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
+        public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
         public Func<LogLevel, string, Task> OnOutput;
 
         public ScriptService(Client client)
@@ -50,6 +51,9 @@ namespace LANCommander.SDK
 
                     var script = new PowerShellScript(Enums.ScriptType.Install);
 
+                    if (debug)
+                        script.OnDebugStart = OnDebugStart;
+
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
@@ -60,7 +64,7 @@ namespace LANCommander.SDK
                     if (debug)
                     {
                         script.EnableDebug();
-                        script.OnDebug = OnDebug;
+                        script.OnDebugBreak = OnDebugBreak;
                         script.OnOutput = OnOutput;
                     }
 
@@ -96,6 +100,9 @@ namespace LANCommander.SDK
                 {
                     var script = new PowerShellScript(Enums.ScriptType.Uninstall);
 
+                    if (debug)
+                        script.OnDebugStart = OnDebugStart;
+
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
@@ -105,7 +112,7 @@ namespace LANCommander.SDK
                     if (debug)
                     {
                         script.EnableDebug();
-                        script.OnDebug = OnDebug;
+                        script.OnDebugBreak = OnDebugBreak;
                         script.OnOutput = OnOutput;
                     }
 
@@ -139,6 +146,9 @@ namespace LANCommander.SDK
 
                     var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
 
+                    if (debug)
+                        script.OnDebugStart = OnDebugStart;
+
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
@@ -150,7 +160,7 @@ namespace LANCommander.SDK
                     if (debug)
                     {
                         script.EnableDebug();
-                        script.OnDebug = OnDebug;
+                        script.OnDebugBreak = OnDebugBreak;
                         script.OnOutput = OnOutput;
                     }
 
@@ -181,6 +191,9 @@ namespace LANCommander.SDK
 
                     var script = new PowerShellScript(Enums.ScriptType.AfterStop);
 
+                    if (debug)
+                        script.OnDebugStart = OnDebugStart;
+
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
@@ -192,7 +205,7 @@ namespace LANCommander.SDK
                     if (debug)
                     {
                         script.EnableDebug();
-                        script.OnDebug = OnDebug;
+                        script.OnDebugBreak = OnDebugBreak;
                         script.OnOutput = OnOutput;
                     }
 
@@ -231,6 +244,9 @@ namespace LANCommander.SDK
 
                     var script = new PowerShellScript(Enums.ScriptType.NameChange);
 
+                    if (debug)
+                        script.OnDebugStart = OnDebugStart;
+
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", manifest);
                     script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
@@ -245,7 +261,7 @@ namespace LANCommander.SDK
                     if (debug)
                     {
                         script.EnableDebug();
-                        script.OnDebug = OnDebug;
+                        script.OnDebugBreak = OnDebugBreak;
                         script.OnOutput = OnOutput;
                     }
 
@@ -277,6 +293,9 @@ namespace LANCommander.SDK
 
                     var script = new PowerShellScript(Enums.ScriptType.KeyChange);
 
+                    if (debug)
+                        script.OnDebugStart = OnDebugStart;
+
                     Logger?.LogTrace("New key is {Key}", key);
 
                     script.AddVariable("InstallDirectory", installDirectory);
@@ -292,7 +311,7 @@ namespace LANCommander.SDK
                     if (debug)
                     {
                         script.EnableDebug();
-                        script.OnDebug = OnDebug;
+                        script.OnDebugBreak = OnDebugBreak;
                         script.OnOutput = OnOutput;
                     }
 

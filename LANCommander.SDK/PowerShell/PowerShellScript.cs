@@ -34,8 +34,17 @@ namespace LANCommander.SDK.PowerShell
 
         private TaskCompletionSource<string> Input { get; set; }
 
-        public Func<System.Management.Automation.PowerShell, Task> OnDebug;
+        public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
+        public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
         public Func<LogLevel, string, Task> OnOutput;
+
+        private const string Logo = @"
+   __   ___   _  _______                              __       
+  / /  / _ | / |/ / ___/__  __ _  __ _  ___ ____  ___/ /__ ____
+ / /__/ __ |/    / /__/ _ \/  ' \/  ' \/ _ `/ _ \/ _  / -_) __/
+/____/_/ |_/_/|_/\___/\___/_/_/_/_/_/_/\_,_/_//_/\_,_/\__/_/   
+
+";
 
         public PowerShellScript(ScriptType type)
         {
@@ -144,31 +153,7 @@ namespace LANCommander.SDK.PowerShell
 
         public async Task<int> ExecuteAsync()
         {
-            var scriptBuilder = new StringBuilder();
-
             var wow64Value = IntPtr.Zero;
-
-            foreach (var variable in Variables)
-            {
-                scriptBuilder.AppendLine($"${variable.Name} = ConvertFrom-SerializedBase64 \"{Serialize(variable.Value)}\"");
-            }
-
-            scriptBuilder.AppendLine(Contents);
-
-            if (Debug)
-            {
-                scriptBuilder.AppendLine("Write-Host '----- DEBUG -----'");
-                scriptBuilder.AppendLine("Write-Host 'Variables:'");
-                
-                foreach (var variable in Variables)
-                {
-                    scriptBuilder.AppendLine($"Write-Host '    ${variable.Name}'");
-                }
-
-                scriptBuilder.AppendLine("Write-Host ''");
-
-                // Process.StartInfo.Arguments += " -NoExit";
-            }
 
             if (IgnoreWow64)
                 Wow64DisableWow64FsRedirection(ref wow64Value);
@@ -179,14 +164,41 @@ namespace LANCommander.SDK.PowerShell
 
                 runspace.SessionStateProxy.Path.SetLocation(WorkingDirectory);
 
+                foreach (var variable in Variables)
+                {
+                    runspace.SessionStateProxy.SetVariable(variable.Name, variable.Value);
+                }
+
+                runspace.SessionStateProxy.SetVariable("Logo", Logo);
+                runspace.SessionStateProxy.SetVariable("ScriptType", Type);
+                runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
+
                 using (var ps = System.Management.Automation.PowerShell.Create())
                 {
                     ps.Runspace = runspace;
 
-                    ps.AddScript(scriptBuilder.ToString());
+                    if (Debug)
+                        OnDebugStart?.Invoke(ps);
+
+                    ps.AddScript("Write-Host $Logo");
+
+                    ps.AddScript(Contents);
 
                     if (Debug)
                     {
+                        ps.AddScript("Write-Host '--------- DEBUG ---------'");
+                        ps.AddScript("Write-Host \"Script Type: $ScriptType\"");
+                        ps.AddScript("Write-Host \"Working Directory: $WorkingDirectory\"");
+                        ps.AddScript("Write-Host 'Variables:'");
+
+                        foreach (var variable in Variables)
+                        {
+                            ps.AddScript($"Write-Host '    ${variable.Name}'");
+                        }
+
+                        ps.AddScript("Write-Host ''");
+                        ps.AddScript("Write-Host 'Enter \"exit\" to continue'");
+
                         if (OnOutput != null)
                         {
                             ps.Streams.Information.DataAdded += Information_DataAdded;
@@ -200,9 +212,7 @@ namespace LANCommander.SDK.PowerShell
                     var results = await ps.InvokeAsync();
 
                     if (Debug)
-                    {
-                        await OnDebug?.Invoke(ps);
-                    }
+                        await OnDebugBreak?.Invoke(ps);
                 }
             }
 

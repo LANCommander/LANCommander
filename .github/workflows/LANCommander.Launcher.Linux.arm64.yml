@@ -59,7 +59,7 @@ jobs:
     - run: cd ./LANCommander.Launcher.CLI
 
     - name: Publish CLI
-      run: dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c Release --self-contained --runtime linuc-arm64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c Release --self-contained --runtime linux-arm64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
     - name: Remove Extra Files
       run: |

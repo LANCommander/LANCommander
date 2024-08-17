@@ -44,9 +44,6 @@ jobs:
     - name: Restore Packages
       run: nuget restore
 
-    - name: Build PowerShell Module
-      run: dotnet build "./LANCommander.PowerShell/LANCommander.PowerShell.csproj" -c Release -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-
     - name: Restore dependencies
       run: dotnet restore
 

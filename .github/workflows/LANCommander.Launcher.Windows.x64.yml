@@ -59,6 +59,12 @@ jobs:
     - name: Publish Launcher
       run: dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c Release --self-contained --runtime win-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
+    # CLI
+    - run: cd ./LANCommander.Launcher.CLI
+
+    - name: Publish CLI
+      run: dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -C Release --self-contained --runtime win-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
     - name: Remove Extra Files
       run: |
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
@@ -77,7 +83,7 @@ jobs:
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.dll LANCommander.PowerShell/bin/Release/LANCommander.PowerShell.psd1
+        files: LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.Launcher.CLI/bin/Release/net8.0/win-x64/LANCommander.Launcher.CLI.exe
         recursive: true
         dest: LANCommander.Launcher-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 

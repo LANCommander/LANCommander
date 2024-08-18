@@ -1,6 +1,6 @@
 ﻿import Split from 'split.js'
 
-export default class SplitPane {
+export class SplitPane {
     SplitPanes: HTMLElement[] = [];
 
     Init(paneId: string) {

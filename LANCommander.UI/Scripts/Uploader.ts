@@ -1,8 +1,8 @@
-﻿import Chunk from './Chunk';
-import UploadInitResponse from './UploadInitResponse';
+﻿import { Chunk } from './Chunk';
+import { UploadInitResponse } from './UploadInitResponse';
 import axios, { AxiosProgressEvent } from 'axios';
 
-export default class Uploader {
+export class Uploader {
     FileInput: HTMLInputElement | undefined;
     UploadButton: HTMLButtonElement | undefined;
     ObjectKeyInput: HTMLInputElement | undefined;

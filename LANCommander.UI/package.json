@@ -17,11 +17,15 @@
   },
   "homepage": "https://github.com/LANCommander/LANCommander#readme",
   "devDependencies": {
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.5.4",
     "webpack": "^5.93.0",
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
+    "axios": "^1.7.4",
+    "split.js": "^1.6.5",
     "xterm-readline": "^1.1.1"
   }
 }

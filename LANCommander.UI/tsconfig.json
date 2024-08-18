@@ -1,4 +1,4 @@
-{
+﻿{
   "compilerOptions": {
     "target": "ES6",
     "module": "ESNext",

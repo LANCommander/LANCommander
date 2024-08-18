@@ -1,4 +1,4 @@
-export default class Chunk {
+export class Chunk {
     Index: number;
     Start: number;
     End: number;

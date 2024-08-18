@@ -26,7 +26,9 @@
                 break;
         }
 
-        <link href="_content/XtermBlazor/XtermBlazor.css" rel="stylesheet" />
+        <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.css" />
+        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css" />
+        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css" />
 
         <link href="~/css/site.css" rel="stylesheet" />
     </head>
@@ -42,9 +44,18 @@
         <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
         <script src="~/_framework/blazor.server.js"></script>
 
+        <script src="~/_content/LANCommander.UI/bundle.js"></script>
+        <script src="~/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
+        <script src="~/_content/PSD.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
+
         <script src="~/_content/XtermBlazor/XtermBlazor.min.js"></script>
-        <script src="~/lib/xterm-addon-fit/lib/xterm-addon-fit.min.js"></script>
-        <script>XtermBlazor.registerAddons({ "xterm-addon-fit": new FitAddon.FitAddon() });</script>
+
+        <script>
+            XtermBlazor.registerAddons({
+                "readline": new XtermAddons.Readline(),
+                "addon-fit": new XtermAddons.Fit()
+            });
+        </script>
 
         <script src="~/_content/BlazorMonaco/jsInterop.js"></script>
         <script src="~/_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>

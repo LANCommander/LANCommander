@@ -21,12 +21,6 @@
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))">
 	    <DefineConstants>MACOS</DefineConstants>
     </PropertyGroup>
-    <ItemGroup>
-      <TypeScriptCompile Remove="wwwroot\scripts\SplitPane.ts" />
-    </ItemGroup>
-    <ItemGroup>
-      <Content Include="wwwroot\scripts\SplitPane.ts" />
-    </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AntDesign.Charts" Version="0.5.5" />
@@ -84,15 +78,6 @@
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
     <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
     <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="wwwroot\scripts\package.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="wwwroot\scripts\tsconfig.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>

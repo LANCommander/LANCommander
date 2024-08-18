@@ -1,0 +1,23 @@
+{
+  "name": "lancommander.components",
+  "version": "1.0.0",
+  "description": "A component library for Blazor-based applications for the LANCommander platform",
+  "main": "main.js",
+  "scripts": {
+    "package": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LANCommander/LANCommander.git"
+  },
+  "author": "Pat Hartl <pat@pathar.tl>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LANCommander/LANCommander/issues"
+  },
+  "homepage": "https://github.com/LANCommander/LANCommander#readme",
+  "devDependencies": {
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

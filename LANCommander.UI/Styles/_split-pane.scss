@@ -1,0 +1,25 @@
+﻿.split-pane {
+    display: flex;
+    flex-direction: row;
+
+    .pane {
+        overflow-x: scroll;
+    }
+}
+
+.gutter {
+    cursor: e-resize;
+    margin-left: -4px;
+    margin-right: -5px;
+    position: relative;
+
+    &::before {
+        content: '';
+        width: 1px;
+        background-color: #303030;
+        position: absolute;
+        top: 0;
+        left: 4px;
+        bottom: 0;
+    }
+}

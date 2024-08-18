@@ -1,4 +1,5 @@
-﻿@inject IJSRuntime JS
+﻿@using Microsoft.JSInterop
+@inject IJSRuntime JS
 
 <CascadingValue Value="this" IsFixed="@true">
     <div id="split-pane-@(PaneId.ToString())" class="split-pane @Class">

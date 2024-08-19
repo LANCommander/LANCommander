@@ -1,7 +1,5 @@
 ﻿using LANCommander.Server.Data.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.Build.Framework;
 using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Data
@@ -17,7 +15,7 @@ namespace LANCommander.Server.Data
         {
             base.OnModelCreating(builder);
 
-            builder.ConfigureBaseRelationships<Data.Models.Action>();
+            builder.ConfigureBaseRelationships<Models.Action>();
             builder.ConfigureBaseRelationships<Archive>();
             builder.ConfigureBaseRelationships<Category>();
             builder.ConfigureBaseRelationships<Collection>();
@@ -33,11 +31,12 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Redistributable>();
             builder.ConfigureBaseRelationships<SavePath>();
             builder.ConfigureBaseRelationships<Script>();
-            builder.ConfigureBaseRelationships<Data.Models.Server>();
+            builder.ConfigureBaseRelationships<Models.Server>();
             builder.ConfigureBaseRelationships<ServerConsole>();
             builder.ConfigureBaseRelationships<ServerHttpPath>();
             builder.ConfigureBaseRelationships<Tag>();
             builder.ConfigureBaseRelationships<Issue>();
+            builder.ConfigureBaseRelationships<Page>();
 
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
@@ -257,6 +256,41 @@ namespace LANCommander.Server.Data
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.SetNull);
             #endregion
+
+            #region Page Relationships
+            builder.Entity<Page>()
+                .HasOne(p => p.Parent)
+                .WithMany(p => p.Children)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Page>()
+                .HasMany(p => p.Games)
+                .WithMany(g => g.Pages)
+                .UsingEntity<Dictionary<string, object>>(
+                    "PageGame",
+                    pg => pg.HasOne<Game>().WithMany().HasForeignKey("GameId"),
+                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId")
+                );
+
+            builder.Entity<Page>()
+                .HasMany(p => p.Redistributables)
+                .WithMany(g => g.Pages)
+                .UsingEntity<Dictionary<string, object>>(
+                    "PageRedistributable",
+                    pg => pg.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId"),
+                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId")
+                );
+
+            builder.Entity<Page>()
+                .HasMany(p => p.Servers)
+                .WithMany(g => g.Pages)
+                .UsingEntity<Dictionary<string, object>>(
+                    "PageServer",
+                    pg => pg.HasOne<Models.Server>().WithMany().HasForeignKey("ServerId"),
+                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId")
+                );
+            #endregion
         }
 
         public DbSet<Game>? Games { get; set; }
@@ -283,5 +317,6 @@ namespace LANCommander.Server.Data
 
         public DbSet<Media>? Media { get; set; }
         public DbSet<Issue>? Issues { get; set; }
+        public DbSet<Page>? Pages { get; set; }
     }
 }

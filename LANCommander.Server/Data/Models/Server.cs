@@ -33,5 +33,6 @@ namespace LANCommander.Server.Data.Models
         public virtual ICollection<ServerHttpPath>? HttpPaths { get; set; }
         public virtual ICollection<Script>? Scripts { get; set; }
         public virtual ICollection<Action>? Actions { get; set; } = new List<Action>();
+        public virtual ICollection<Page>? Pages { get; set; }
     }
 }

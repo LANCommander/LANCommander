@@ -1,0 +1,38 @@
+﻿.editor-toolbar {
+    border-color: #434343;
+    border-radius: 0;
+}
+
+.editor-preview {
+    background: none;
+
+    pre {
+        background: none;
+    }
+}
+
+.CodeMirror {
+    background: none;
+    color: inherit;
+}
+
+.EasyMDEContainer .CodeMirror,
+.editor-preview-side {
+    border-color: #434343;
+}
+
+.CodeMirror-cursor,
+.CodeMirror div.CodeMirror-secondarycursor {
+    border-color: #dcdcdc;
+}
+
+.CodeMirror-selected,
+.EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
+    color: #fff;
+    background: #177ddc;
+}
+
+.CodeMirror .cm-spell-error:not(.cm-url):not(.cm-comment):not(.cm-tag):not(.cm-word){
+    background: none;
+    border-bottom: 1px dotted #ff000000;
+}

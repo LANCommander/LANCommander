@@ -1,0 +1,207 @@
+﻿@page "/Pages"
+@page "/Pages/{id:guid}"
+@using LANCommander.Server.UI.Pages.Pages.Components
+@using Microsoft.EntityFrameworkCore
+@using PSC.Blazor.Components.MarkdownEditor
+@using System.Text.RegularExpressions
+@using LANCommander.Server.Extensions
+@inject PageService PageService
+@inject ConfirmService ConfirmService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<Layout Class="panel-layout" Style="padding: 16px 0;">
+    <Content>
+        <PageHeader>
+            <PageHeaderTitle>Pages</PageHeaderTitle>
+            <PageHeaderExtra>
+                @if (SelectedPage != null)
+                {
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Save" OnClick="Save">Save</Button>
+                }
+            </PageHeaderExtra>
+        </PageHeader>
+
+        <SplitPane Class="page-editor-body">
+            <Pane Size="25%" Class="page-editor-tree-pane">
+                <Tree Draggable
+                      BlockNode
+                      ShowIcon
+                      DefaultExpandAll="true"
+                      TItem="Page"
+                      DataSource="Pages"
+                      TitleExpression="p => p.DataItem.Title"
+                      ChildrenExpression="p => p.DataItem.Children"
+                      KeyExpression="p => p.DataItem.Id.ToString()"
+                      OnDrop="OnDrop"
+                      OnSelect="SelectPage"
+                      />
+            </Pane>
+
+            <Pane Size="75%" Class="page-editor-markdown-pane">
+                @if (SelectedPage != null)
+                {
+                    <Form @ref="Form" Model="SelectedPage">
+                        <FormItem>
+                            <Input @bind-Value="context.Title" Size="large" Placeholder="Page Title" />
+                        </FormItem>
+
+                        <FormItem Label="Route">
+                            <RouteEditorInput Page="context" @bind-Value="context.Route" />
+                        </FormItem>
+
+                        <FormItem>
+                            <FormItem Class="ant-typography">
+                                <MarkdownEditor @ref="MarkdownEditor" @bind-Value="context.Contents" SpellChecker="false" CSSClass="ant-typography" MinHeight="500px"/>
+                            </FormItem>
+                        </FormItem>
+                    </Form>
+                }
+                else
+                {
+                    <Empty>
+                        <DescriptionTemplate>
+                            No page is selected
+                        </DescriptionTemplate>
+                        <ChildContent>
+                            <Button Type="@ButtonType.Primary" OnClick="() => SelectedPage = new Page()">Add Page</Button>
+                        </ChildContent>
+                    </Empty>
+                }
+            </Pane>
+        </SplitPane>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    string NewPageTitle { get; set; }
+
+    Tree<Page> Tree { get; set; }
+    Form<Page> Form { get; set; }
+    Page SelectedPage { get; set; }
+    MarkdownEditor MarkdownEditor { get; set; }
+    ICollection<Page> Pages { get; set; } = new List<Page>();
+
+    string OriginalContent { get; set; }
+    string OriginalTitle { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id != Guid.Empty)
+        {
+            SelectedPage = await PageService.Get(p => p.Id == Id).AsNoTracking().FirstOrDefaultAsync();
+
+            OriginalContent = SelectedPage.Contents;
+            OriginalTitle = SelectedPage.Title;
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task LoadData()
+    {
+        Pages = await PageService.Get(p => p.ParentId == null).AsNoTracking().ToListAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task OnDrop(TreeEventArgs<Page> e)
+    {
+        await PageService.ChangeParent(e.Node.DataItem.Id, e.TargetNode.DataItem.Id);
+
+        await LoadData();
+    }
+
+    async Task Save()
+    {
+        try
+        {
+            if (SelectedPage.Id != Guid.Empty)
+            {
+                await PageService.Update(SelectedPage);
+                MessageService.Success("Page updated!");
+            }
+            else
+            {
+                await PageService.Add(SelectedPage);
+                MessageService.Success("Page added!");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save page!");
+            Logger.LogError(ex, "Could not save page!");
+        }
+    }
+
+    async Task SelectPage(TreeEventArgs<Page> e)
+    {
+        var modified = SelectedPage?.Contents != OriginalContent || SelectedPage?.Title != OriginalTitle;
+
+        if (Form != null && modified)
+        {
+            var confirmResult = await ConfirmNavigate();
+
+            if (confirmResult == ConfirmResult.Yes)
+            {
+                // Save
+                await Save();
+
+                NavigationManager.NavigateTo($"/Pages/{e.Node.DataItem.Id}");
+            }
+            else if (confirmResult == ConfirmResult.No)
+            {
+                // Discard
+                await LoadData();
+
+                NavigationManager.NavigateTo($"/Pages/{e.Node.DataItem.Id}");
+            }
+            else return;
+        }
+
+        NavigationManager.NavigateTo($"/Pages/{e.Node.DataItem.Id}");
+    }
+
+    async Task<ConfirmResult> ConfirmNavigate()
+    {
+        var confirmResult = await ConfirmService.Show(
+            "You are about to discard your unsaved changes.",
+            "Unsaved Changes",
+            ConfirmButtons.YesNoCancel,
+            ConfirmIcon.Warning,
+            new ConfirmButtonOptions
+                {
+                    Button1Props = new ButtonProps
+                    {
+                        Type = ButtonType.Primary,
+                        ChildContent = "Save",
+                    },
+                    Button2Props = new ButtonProps
+                    {
+                        Type = ButtonType.Default,
+                        ChildContent = "Discard",
+                        Danger = false,
+                    },
+                    Button3Props = new ButtonProps
+                    {
+                        Type = ButtonType.Text,
+                        ChildContent = "Cancel",
+                    }
+                }
+        );
+
+        return confirmResult;
+    }
+
+    void SanitizeRoute()
+    {
+        SelectedPage.Route = SelectedPage.Route.ToUrlSlug();
+    }
+}

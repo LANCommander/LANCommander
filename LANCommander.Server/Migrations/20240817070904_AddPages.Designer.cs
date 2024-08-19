@@ -3,6 +3,7 @@ using System;
 using LANCommander.Server.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20240817070904_AddPages")]
+    partial class AddPages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -758,9 +761,6 @@ namespace LANCommander.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("ParentId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Route")
                         .IsRequired()
                         .HasMaxLength(2048)
@@ -780,8 +780,6 @@ namespace LANCommander.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedById");
-
-                    b.HasIndex("ParentId");
 
                     b.HasIndex("UpdatedById");
 
@@ -1959,19 +1957,12 @@ namespace LANCommander.Migrations
                         .HasForeignKey("CreatedById")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("LANCommander.Server.Data.Models.Page", "Parent")
-                        .WithMany("Children")
-                        .HasForeignKey("ParentId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
-
-                    b.Navigation("Parent");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -2354,11 +2345,6 @@ namespace LANCommander.Migrations
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>
                 {
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("LANCommander.Server.Data.Models.Page", b =>
-                {
-                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Redistributable", b =>

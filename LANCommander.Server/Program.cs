@@ -97,7 +97,7 @@ namespace LANCommander.Server
             });
 
             Logger.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
-            builder.Services.AddDbContext<LANCommander.Server.Data.DatabaseContext>(b =>
+            builder.Services.AddDbContext<DatabaseContext>(b =>
             {
                 b.UseLazyLoadingProxies();
                 b.UseSqlite(settings.DatabaseConnectionString);
@@ -168,6 +168,7 @@ namespace LANCommander.Server
             builder.Services.AddHttpClient();
 
             Logger.Debug("Registering Services");
+            builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();
             builder.Services.AddScoped<CategoryService>();
@@ -190,6 +191,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
             builder.Services.AddScoped<UpdateService>();
             builder.Services.AddScoped<IssueService>();
+            builder.Services.AddScoped<PageService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();

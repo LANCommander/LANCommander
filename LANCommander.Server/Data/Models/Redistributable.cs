@@ -12,5 +12,6 @@ namespace LANCommander.Server.Data.Models
         public virtual ICollection<Archive>? Archives { get; set; }
         public virtual ICollection<Script>? Scripts { get; set; }
         public virtual ICollection<Game>? Games { get; set; }
+        public virtual ICollection<Page>? Pages { get; set; }
     }
 }

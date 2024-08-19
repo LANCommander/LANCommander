@@ -1,0 +1,60 @@
+﻿@using LANCommander.Server.Extensions
+
+<Space>
+    @if (!Editing)
+    {
+        <SpaceItem>
+            <a href="@ParentRoute/@Value">@ParentRoute/<strong>@Value</strong></a>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Button OnClick="Edit">Edit</Button>
+        </SpaceItem>
+    }
+    else
+    {
+        <SpaceItem>
+            <AntDesign.Input @bind-Value="Value" OnBlur="GenerateSlug">
+                <AddOnBefore>@ParentRoute</AddOnBefore>
+            </AntDesign.Input>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Button OnClick="Save">Save</Button>
+        </SpaceItem>
+    }
+</Space>
+
+@code {
+    [Parameter] public Page Page { get; set; }
+    [Parameter] public string Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    string ParentRoute { get; set; } = "";
+    bool Editing { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParentRoute = PageService.GetParentRoute(Page);
+    }
+
+    void Edit()
+    {
+        Editing = true;
+    }
+
+    void GenerateSlug()
+    {
+        Value = Value.ToUrlSlug();
+    }
+
+    async Task Save()
+    {
+        GenerateSlug();
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        Editing = false;
+    }
+}

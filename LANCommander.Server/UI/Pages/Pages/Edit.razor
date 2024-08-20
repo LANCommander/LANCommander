@@ -1,5 +1,5 @@
-﻿@page "/Pages"
-@page "/Pages/{id:guid}"
+﻿@page "/Pages/Edit"
+@page "/Pages/Edit/{id:guid}"
 @using LANCommander.Server.UI.Pages.Pages.Components
 @using Microsoft.EntityFrameworkCore
 @using PSC.Blazor.Components.MarkdownEditor
@@ -51,11 +51,14 @@
                             <RouteEditorInput Page="context" @bind-Value="context.Route" />
                         </FormItem>
 
-                        <FormItem>
-                            <FormItem Class="ant-typography">
-                                <MarkdownEditor @ref="MarkdownEditor" @bind-Value="context.Contents" SpellChecker="false" CSSClass="ant-typography" MinHeight="500px"/>
+                        @if (SelectedPage.Children.Any())
+                        {
+                            <FormItem>
+                                <FormItem Class="ant-typography">
+                                    <MarkdownEditor @ref="MarkdownEditor" @bind-Value="context.Contents" SpellChecker="false" CSSClass="ant-typography" MinHeight="500px" />
+                                </FormItem>
                             </FormItem>
-                        </FormItem>
+                        }
                     </Form>
                 }
                 else

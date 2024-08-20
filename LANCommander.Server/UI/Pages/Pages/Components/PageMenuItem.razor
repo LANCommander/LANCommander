@@ -1,0 +1,17 @@
+﻿@if (Page.Children != null && Page.Children.Any())
+{
+    <SubMenu Key="@(Page.Id.ToString())" Title="@Page.Title">
+        @foreach (var child in Page.Children)
+        {
+            <PageMenuItem Page="@child" />
+        }
+    </SubMenu>
+}
+else
+{
+    <MenuItem RouterLink="@($"/Pages/{PageService.GetParentRoute(Page)}/{Page.Route}")">@Page.Title</MenuItem>
+}
+
+@code {
+    [Parameter] public Page Page { get; set; }
+}

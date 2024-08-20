@@ -1,0 +1,60 @@
+﻿@page "/Pages/{*route}"
+@using LANCommander.Server.UI.Pages.Pages.Components
+@using Markdig
+@using Microsoft.EntityFrameworkCore
+@using ZiggyCreatures.Caching.Fusion
+@inject PageService PageService
+@inject IFusionCache Cache
+
+@if (Page != null)
+{
+    <Layout Class="panel-layout">
+        <Content>
+            <SplitPane Style="flex-grow: 1">
+                <Pane Size="25%">
+                    <PageMenu />
+                </Pane>
+
+                <Pane Size="75%">
+                    <PageHeader Title="@Page.Title" />
+
+                    <div style="padding: 0 24px;">
+                        @((MarkupString)Markdown.ToHtml(Page.Contents))
+                    </div>
+                </Pane>
+            </SplitPane>
+        </Content>
+    </Layout>
+}
+
+@code {
+    [Parameter] public string Route { get; set; }
+
+    Page Page;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var route = Route.TrimEnd('/').ToLower();
+
+        Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+        {
+            var parts = route.Split('/');
+            var potentials = await PageService.Get(p => p.Route.ToLower() == parts.Last()).ToListAsync();
+
+            Page page = null;
+
+            foreach (var potential in potentials)
+            {
+                var potentialFullRoute = $"{PageService.GetParentRoute(potential)}/{potential.Route}".ToLower();
+
+                if (potentialFullRoute == route)
+                {
+                    page = potential;
+                    break;
+                }
+            }
+
+            return page;
+        });
+    }
+}

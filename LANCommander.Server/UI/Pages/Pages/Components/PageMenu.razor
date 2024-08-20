@@ -1,0 +1,18 @@
+﻿@using Microsoft.EntityFrameworkCore
+@inject PageService PageService
+
+<Menu Mode="@MenuMode.Inline">
+    @foreach (var parent in ParentPages)
+    {
+        <PageMenuItem Page="@parent" />
+    }
+</Menu>
+
+@code {
+    ICollection<Page> ParentPages = new List<Page>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ParentPages = await PageService.Get(p => p.ParentId == null || p.ParentId == Guid.Empty).ToListAsync();
+    }
+}

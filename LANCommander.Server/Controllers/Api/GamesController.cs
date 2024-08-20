@@ -39,7 +39,7 @@ namespace LANCommander.Server.Controllers.Api
             var accessibleGames = new List<SDK.Models.Game>();
             var games = await GameService.Get(g => g.Type == SDK.Enums.GameType.MainGame || g.Type == SDK.Enums.GameType.StandaloneExpansion || g.Type == SDK.Enums.GameType.StandaloneMod).ToListAsync();
 
-            var mappedGames = Cache.GetOrSet<IEnumerable<SDK.Models.Game>>("MappedGames", _ => {
+            var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
                 return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
             }, TimeSpan.FromHours(1));
 

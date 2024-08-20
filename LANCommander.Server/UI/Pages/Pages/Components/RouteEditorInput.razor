@@ -8,13 +8,13 @@
         </SpaceItem>
 
         <SpaceItem>
-            <Button OnClick="Edit">Edit</Button>
+            <Button Size="@ButtonSize.Small" OnClick="Edit">Edit</Button>
         </SpaceItem>
     }
     else
     {
         <SpaceItem>
-            <AntDesign.Input @bind-Value="Value" OnBlur="GenerateSlug">
+            <AntDesign.Input @bind-Value="Value" OnBlur="GenerateSlug" Size="@InputSize.Small">
                 <AddOnBefore>@ParentRoute</AddOnBefore>
             </AntDesign.Input>
         </SpaceItem>

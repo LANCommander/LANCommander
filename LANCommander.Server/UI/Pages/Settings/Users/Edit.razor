@@ -1,0 +1,134 @@
+﻿@page "/Settings/Users/{username}"
+@using Microsoft.AspNetCore.Components.Authorization;
+@layout SettingsLayout
+@inject MediaService MediaService
+@inject UserService UserService
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+@inject IMessageService MessageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject ILogger<Index> Logger
+@attribute [Authorize]
+
+<PageHeader Title="Edit User">
+    <PageHeaderExtra>
+        <Button Type="@ButtonType.Primary" Disabled="!Form.IsModified && !FieldsModified" OnClick="Save">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<div style="padding: 0 24px;">
+    <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" OnFinish="Save" ValidateOnChange="true">
+        <FormItem Label="Avatar">
+            <AvatarUploader UserId="User.Id" />
+        </FormItem>
+
+        <FormItem Label="Username" Help="Username changes require a relog">
+            <Input @bind-Value="context.UserName" />
+        </FormItem>
+
+        <FormItem Label="Alias">
+            <Input @bind-Value="context.Alias" />
+        </FormItem>
+
+        <FormItem Label="Email Address" Help="Email changes require a relog">
+            <Input @bind-Value="context.Email" />
+        </FormItem>
+
+        <Divider>Custom Fields</Divider>
+
+        @if (!context.CustomFields.Any())
+        {
+            <Empty>
+                <DescriptionTemplate>
+                    No custom fields exist for this user
+                </DescriptionTemplate>
+                <ChildContent>
+                    <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
+                </ChildContent>
+            </Empty>
+        }
+        else
+        {
+            foreach (var customField in context.CustomFields)
+            {
+                <FormItem>
+                    <GridRow Gutter="(16, 16)">
+                        <GridCol Flex="@("auto")">
+                            <Input @bind-Value="customField.Name" Placeholder="Name" MaxLength="64" />
+                        </GridCol>
+                        <GridCol Flex="@("auto")">
+                            <Input @bind-Value="customField.Value" Placeholder="Value" MaxLength="1024" />
+                        </GridCol>
+                        <GridCol>
+                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => RemoveField(customField)" />
+                        </GridCol>
+                    </GridRow>
+                </FormItem>
+            }
+
+            <GridRow Justify="end">
+                <GridCol>
+                    <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
+                </GridCol>
+            </GridRow>
+        }
+
+
+    </Form>
+</div>
+
+@code {
+    [Parameter] public string Username { get; set; }
+
+    User User = new User();
+    Form<User> Form;
+
+    bool FieldsModified = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity.IsAuthenticated)
+        {
+            User = await UserService.Get(Username);
+
+            if (User.CustomFields == null)
+                User.CustomFields = new List<UserCustomField>();
+        }
+    }
+
+    private void AddField()
+    {
+        User.CustomFields.Add(new UserCustomField());
+
+        FieldsModified = true;
+    }
+
+    private async Task RemoveField(UserCustomField customField)
+    {
+        User.CustomFields.Remove(customField);
+
+        FieldsModified = true;
+    } 
+
+    private async Task Save()
+    {
+        try
+        {
+            if (Form.IsModified || FieldsModified)
+            {
+                await UserManager.UpdateAsync(User);
+
+                MessageService.Success("User updated!");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

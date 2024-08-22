@@ -179,6 +179,12 @@ namespace LANCommander.Server.Data
                 .WithOne(m => m.User)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<User>()
+                .HasMany(u => u.CustomFields)
+                .WithOne(cf => cf.User)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
             #region Server Relationships

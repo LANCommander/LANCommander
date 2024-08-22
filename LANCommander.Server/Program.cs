@@ -192,6 +192,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<UpdateService>();
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<PageService>();
+            builder.Services.AddScoped<UserService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();

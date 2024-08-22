@@ -1,0 +1,11 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <!-- Remove the files from being considered for compilation or packaging -->
+    <Content Remove="compilerconfig.json;package.json;package-lock.json;tsconfig.json;libman.json" />
+    <!-- Explicitly exclude them from the publish directory and any single-file packaging -->
+    <None Include="compilerconfig.json;package.json;package-lock.json;tsconfig.json;libman.json">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
+    </None>
+  </ItemGroup>
+</Project>

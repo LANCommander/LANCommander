@@ -31,6 +31,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher.CLI",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.UI", "LANCommander.UI\LANCommander.UI.csproj", "{D69FF032-2013-4C4A-8719-44B79E48F898}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{618B69EA-3F75-4BF6-83FF-3FE33705FDD6}"
+	ProjectSection(SolutionItems) = preProject
+		Microsoft.Common.props = Microsoft.Common.props
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

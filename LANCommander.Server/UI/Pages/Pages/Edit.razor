@@ -157,19 +157,19 @@
                 // Save
                 await Save();
 
-                NavigationManager.NavigateTo($"/Pages/{e.Node.DataItem.Id}");
+                NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
             }
             else if (confirmResult == ConfirmResult.No)
             {
                 // Discard
                 await LoadData();
 
-                NavigationManager.NavigateTo($"/Pages/{e.Node.DataItem.Id}");
+                NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
             }
             else return;
         }
 
-        NavigationManager.NavigateTo($"/Pages/{e.Node.DataItem.Id}");
+        NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
     }
 
     async Task<ConfirmResult> ConfirmNavigate()

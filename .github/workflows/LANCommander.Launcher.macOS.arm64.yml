@@ -49,6 +49,9 @@ jobs:
     - name: Rename Updater
       run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/osx-arm64/publish/LANCommander.AutoUpdater ./LANCommander.AutoUpdater/bin/Release/net8.0/osx-arm64/publish/LANCommander.AutoUpdater.Update
     
+    # UI
+    - run: cd ./LANCommander.UI; npm install; npm run package
+
     # Launcher
     - run: cd LANCommander.Launcher; npm install
 

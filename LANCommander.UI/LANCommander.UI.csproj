@@ -15,7 +15,10 @@
     <None Include="Components\StylesheetLoader.razor" />
   </ItemGroup>
 
-
+  <ItemGroup>
+    <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+  </ItemGroup>
+	
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
@@ -35,15 +38,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="package.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
-    <Content Update="tsconfig.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

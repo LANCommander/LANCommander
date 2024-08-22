@@ -46,11 +46,21 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <Content Include="LANCommander.ico">
 	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </Content>
 	  <Content Include="LANCommanderDark.ico" />
     </ItemGroup>
+
+	<ItemGroup>
+	  <None Include="package.json">
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
   
     <ItemGroup>
       <None Update="LANCommanderDark.ico">

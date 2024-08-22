@@ -16,16 +16,30 @@
         <PageHeader>
             <PageHeaderTitle>Pages</PageHeaderTitle>
             <PageHeaderExtra>
-                @if (SelectedPage != null)
-                {
-                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Save" OnClick="Save">Save</Button>
-                }
+                <Space>
+                    <SpaceItem>
+                        <Button Type="@ButtonType.Default" OnClick="AddNewPage">Add Page</Button>
+                    </SpaceItem>
+
+                    @if (SelectedPage != null)
+                    {
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Default" OnClick="Delete">Delete</Button>
+                        </SpaceItem>
+
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                        </SpaceItem>
+                    }
+                </Space>
             </PageHeaderExtra>
         </PageHeader>
 
         <SplitPane Class="page-editor-body">
             <Pane Size="25%" Class="page-editor-tree-pane">
-                <Tree Draggable
+                <Tree 
+                    @ref="Tree"
+                      Draggable
                       BlockNode
                       ShowIcon
                       DefaultExpandAll="true"
@@ -51,7 +65,7 @@
                             <RouteEditorInput Page="context" @bind-Value="context.Route" />
                         </FormItem>
 
-                        @if (SelectedPage.Children.Any())
+                        @if (!SelectedPage.Children.Any())
                         {
                             <FormItem>
                                 <FormItem Class="ant-typography">
@@ -68,7 +82,7 @@
                             No page is selected
                         </DescriptionTemplate>
                         <ChildContent>
-                            <Button Type="@ButtonType.Primary" OnClick="() => SelectedPage = new Page()">Add Page</Button>
+                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">Add Page</Button>
                         </ChildContent>
                     </Empty>
                 }
@@ -120,6 +134,56 @@
         await PageService.ChangeParent(e.Node.DataItem.Id, e.TargetNode.DataItem.Id);
 
         await LoadData();
+    }
+
+    async Task AddNewPage()
+    {
+        try
+        {
+            var newPage = new Page();
+
+            newPage.Title = "New Page";
+            newPage.Route = "new-page";
+            newPage.Contents = "";
+
+            if (SelectedPage != null && SelectedPage.Parent != null)
+                newPage.Parent = SelectedPage.Parent;
+            else
+                newPage.Parent = SelectedPage;
+
+            newPage = await PageService.Add(newPage);
+
+            NavigationManager.NavigateTo($"/Pages/Edit/{newPage.Id}");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "An error occurred while trying to add a new page");
+            MessageService.Error("Error adding new page!");
+        }
+    }
+
+    async Task Delete()
+    {
+        try
+        {
+            if (SelectedPage != null)
+            {
+                var parentId = SelectedPage.Parent?.Id ?? Guid.Empty;
+
+                await PageService.Delete(SelectedPage);
+
+                if (parentId != Guid.Empty)
+                    NavigationManager.NavigateTo($"/Pages/Edit/{parentId}");
+                else
+                    NavigationManager.NavigateTo($"/Pages/Edit");
+
+                MessageService.Success("Page deleted!");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Error deleting page!");
+        }
     }
 
     async Task Save()

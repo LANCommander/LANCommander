@@ -82,5 +82,19 @@ namespace LANCommander.SDK
 
             return await Client.DownloadRequestAsync("/api/Profile/Avatar", tempFile);
         }
+
+        public async Task<string> GetCustomField(string name)
+        {
+            Logger?.LogTrace("Getting player custom field with name {CustomFieldName}...", name);
+
+            return await Client.GetRequestAsync<string>($"/api/Profile/CustomField/{name}");
+        }
+
+        public async Task<string> UpdateCustomField(string name, string value)
+        {
+            Logger?.LogTrace("Updating player custom fields: {CustomFieldName} = {CustomFieldValue}", name, value);
+
+            return await Client.PostRequestAsync<string>($"/api/Profile/CustomField/{name}", value);
+        }
     }
 }

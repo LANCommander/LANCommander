@@ -1,6 +1,7 @@
 ﻿using LANCommander.SDK;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.PowerShell.Cmdlets;
 using Microsoft.Extensions.Logging;
 using RestSharp;
 using RestSharp.Interceptors;
@@ -67,6 +68,8 @@ namespace LANCommander.SDK
             Launcher = new LauncherService(this);
             Issues = new IssueService(this);
 
+            BaseCmdlet.Client = this;
+
             ChangeServerAddress(baseUrl);
         }
 
@@ -85,6 +88,8 @@ namespace LANCommander.SDK
             Media = new MediaService(this, logger);
             Launcher = new LauncherService(this);
             Issues = new IssueService(this);
+
+            BaseCmdlet.Client = this;
 
             Logger = logger;
         }

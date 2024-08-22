@@ -21,10 +21,12 @@ namespace LANCommander.Server.Controllers.Api
         protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
-        public ProfileController(UserManager<User> userManager)
+        public ProfileController(UserManager<User> userManager, UserService userService)
         {
             UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpGet]
@@ -96,6 +98,40 @@ namespace LANCommander.Server.Controllers.Api
                 var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
 
                 return File(fs, media.MimeType);
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
+
+        [HttpGet("CustomField/{name}")]
+        public async Task<IActionResult> CustomField(string name)
+        {
+            try
+            {
+                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+                var field = await UserService.GetCustomField(user.Id, name);
+
+                return Ok(field.Value);
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
+
+        [HttpPost("CustomField/{name}")]
+        public async Task<IActionResult> CustomField(string name, string value)
+        {
+            try
+            {
+                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+                await UserService.UpdateCustomField(user.Id, name, value);
+
+                return Ok(value);
             }
             catch (Exception ex)
             {

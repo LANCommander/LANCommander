@@ -53,6 +53,8 @@ jobs:
     - run: cd ./LANCommander.UI; npm install; npm run package
 
     # Launcher
+    - run: cd LANCommander.Launcher; npm install
+
     - name: Publish Launcher
       run: dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c Release --self-contained --runtime linux-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 

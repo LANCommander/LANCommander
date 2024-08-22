@@ -5,7 +5,7 @@
 
 <Space Style="display: flex">
     <SpaceItem Style="flex-grow: 1">
-        <Input TValue="string" Type="text" @bind-Value="InputValue" OnInput="OnInput" BindOnInput="true" />
+        <Input TValue="string" Type="text" @bind-Value="Value" OnInput="OnInput" BindOnInput="true" />
     </SpaceItem>
     <SpaceItem>
         <FilePickerButton
@@ -36,13 +36,6 @@
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
-    string InputValue { get; set; }
-
-    protected override async Task OnInitializedAsync()
-    {
-        InputValue = Value;
-    }
-
     async Task OnInput(ChangeEventArgs args)
     {
         var inputString = args?.Value.ToString();
@@ -56,7 +49,6 @@
     async Task OnFileSelected(string selectedFile)
     {
         Value = selectedFile;
-        InputValue = selectedFile;
 
         if (ValueChanged.HasDelegate)
             await ValueChanged.InvokeAsync(selectedFile);

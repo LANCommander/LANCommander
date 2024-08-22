@@ -57,6 +57,12 @@
 	  </Content>
 	  <Content Include="LANCommanderDark.ico" />
     </ItemGroup>
+
+	<ItemGroup>
+	  <Content Update="package.json">
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+	  </Content>
+	</ItemGroup>
   
     <ItemGroup>
       <None Update="LANCommanderDark.ico">

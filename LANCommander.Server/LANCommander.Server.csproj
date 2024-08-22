@@ -9,6 +9,13 @@
 	<Version>0.9.1</Version>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="wwwroot\scripts\**" />
+    <Content Remove="wwwroot\scripts\**" />
+    <EmbeddedResource Remove="wwwroot\scripts\**" />
+    <None Remove="wwwroot\scripts\**" />
+    <TypeScriptCompile Remove="wwwroot\scripts\**" />
+  </ItemGroup>
+  <ItemGroup>
     <Content Remove="wwwroot\js\Upload.ts" />
   </ItemGroup>
 
@@ -78,6 +85,15 @@
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
     <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
     <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="libman.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
+    <Content Update="runtimeconfig.template.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

@@ -57,19 +57,26 @@ namespace LANCommander.Server.Services
         {
             var settings = SettingService.GetSettings();
 
+            return await UploadMediaAsync(file.OpenReadStream(maxAllowedSize: settings.Media.MaxSize * 1024 * 1024), media);
+        }
+
+        public async Task<Media> UploadMediaAsync(Stream stream, Media media)
+        {
+            var settings = SettingService.GetSettings();
+
             var fileId = Guid.NewGuid();
 
             var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
 
             using (var fs = new FileStream(path, FileMode.Create))
             {
-                await file.OpenReadStream(maxAllowedSize: settings.Media.MaxSize * 1024 * 1024).CopyToAsync(fs);
+                await stream.CopyToAsync(fs);
 
                 if (media.MimeType == MediaTypeNames.Application.Pdf)
                 {
                     using (var ms = new MemoryStream())
                     {
-                        await file.OpenReadStream(maxAllowedSize: settings.Media.MaxSize * 1024 * 1024).CopyToAsync(ms);
+                        await stream.CopyToAsync(ms);
 
                         var thumbnail = await GeneratePdfThumbnailAsync(ms);
 

@@ -5,7 +5,9 @@
 @using PSC.Blazor.Components.MarkdownEditor
 @using System.Text.RegularExpressions
 @using LANCommander.Server.Extensions
+@using PSC.Blazor.Components.MarkdownEditor.Models
 @inject PageService PageService
+@inject MediaService MediaService
 @inject ConfirmService ConfirmService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
@@ -69,7 +71,15 @@
                         {
                             <FormItem>
                                 <FormItem Class="ant-typography">
-                                    <MarkdownEditor @ref="MarkdownEditor" @bind-Value="context.Contents" SpellChecker="false" CSSClass="ant-typography" MinHeight="500px" />
+                                    <MarkdownEditor
+                                        @ref="MarkdownEditor"
+                                        @bind-Value="context.Contents"
+                                        UploadImage="true"
+                                        ImageUploadEndpoint="/api/Media/Upload/PageImage"
+                                        CustomImageUpload="UploadImage"
+                                        SpellChecker="false"
+                                        CSSClass="ant-typography"
+                                        MinHeight="500px" />
                                 </FormItem>
                             </FormItem>
                         }
@@ -265,6 +275,26 @@
         );
 
         return confirmResult;
+    }
+
+    async Task<FileEntry> UploadImage(MarkdownEditor editor, FileEntry entry)
+    {
+        var stream = new MemoryStream(Convert.FromBase64String(entry.ContentBase64));
+
+        var media = new Media()
+        {
+            Type = SDK.Enums.MediaType.PageImage,
+            MimeType = entry.Type,
+            Crc32 = ""
+        };
+
+        media = await MediaService.Add(media);
+        media = await MediaService.UploadMediaAsync(stream, media);
+        media = await MediaService.Update(media);
+
+        entry.UploadUrl = $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+
+        return entry;
     }
 
     void SanitizeRoute()

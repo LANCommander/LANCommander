@@ -12,6 +12,7 @@ namespace LANCommander.SDK.Enums
         Avatar,
         Logo,
         Manual,
-        Thumbnail
+        Thumbnail,
+        PageImage
     }
 }

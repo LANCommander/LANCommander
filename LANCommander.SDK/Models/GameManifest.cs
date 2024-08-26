@@ -43,16 +43,6 @@ namespace LANCommander.SDK
         public string Description { get; set; }
     }
 
-    public class SavePath
-    {
-        public Guid Id { get; set; }
-        public string Type { get; set; }
-        public string Path { get; set; }
-        public string WorkingDirectory { get; set; }
-        public bool IsRegex { get; set; }
-        public IEnumerable<SavePathEntry> Entries { get; set; }
-    }
-
     public class SavePathEntry
     {
         public string ArchivePath { get; set; }

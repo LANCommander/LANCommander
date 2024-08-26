@@ -154,7 +154,7 @@ namespace LANCommander.SDK
                     if (!Directory.Exists(Path.Combine(tempLocation, tempLocationFilePath)))
                         tempLocationFilePath = "Saves";
 
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
+                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
                         foreach (var entry in savePath.Entries)
                         {
@@ -237,7 +237,7 @@ namespace LANCommander.SDK
                     archive.DeflateCompressionLevel = SharpCompress.Compressors.Deflate.CompressionLevel.BestCompression;
 
                     #region Add files from defined paths
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
+                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
                         savePath.Entries = GetFileSavePathEntries(savePath, installDirectory);
 
@@ -256,13 +256,13 @@ namespace LANCommander.SDK
                     #endregion
 
                     #region Export registry keys
-                    if (manifest.SavePaths.Any(sp => sp.Type == "Registry"))
+                    if (manifest.SavePaths.Any(sp => sp.Type == Enums.SavePathType.Registry))
                     {
                         List<string> tempRegFiles = new List<string>();
 
                         var exportCommand = new StringBuilder();
 
-                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "Registry"))
+                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.Registry))
                         {
                             var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
 

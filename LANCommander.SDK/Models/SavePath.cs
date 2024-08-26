@@ -11,5 +11,6 @@ namespace LANCommander.SDK.Models
         public string Path { get; set; }
         public string WorkingDirectory { get; set; }
         public bool IsRegex { get; set; }
+        public IEnumerable<SavePathEntry> Entries { get; set; }
     }
 }

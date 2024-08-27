@@ -76,7 +76,7 @@ namespace LANCommander.SDK.Tests
                 Id = Guid.NewGuid(),
                 Path = "base\\autoexec.cfg",
                 WorkingDirectory = "{InstallDir}",
-                Type = "File",
+                Type = Enums.SavePathType.File,
                 IsRegex = false
             };
 
@@ -101,7 +101,7 @@ namespace LANCommander.SDK.Tests
                 Id = Guid.NewGuid(),
                 Path = "base\\.*.cfg",
                 WorkingDirectory = "{InstallDir}",
-                Type = "File",
+                Type = Enums.SavePathType.File,
                 IsRegex = true
             };
             var installDirectory = Path.Combine(Path.GetTempPath(), savePath.Id.ToString());

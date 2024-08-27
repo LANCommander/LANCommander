@@ -3,21 +3,31 @@ using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
+using System.Diagnostics;
 
 namespace LANCommander.Launcher.Services
 {
     public class GameService : BaseDatabaseService<Game>
     {
         private readonly SDK.Client Client;
+        private readonly PlaySessionService PlaySessionService;
+        private readonly SaveService SaveService;
+        private readonly MessageBusService MessageBusService;
+
+        public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
+
         private Settings Settings { get; set; }
 
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;
 
-        public GameService(DatabaseContext dbContext, SDK.Client client) : base(dbContext)
+        public GameService(DatabaseContext dbContext, SDK.Client client, PlaySessionService playSessionService, SaveService saveService, MessageBusService messageBusService) : base(dbContext)
         {
             Client = client;
             Settings = SettingService.GetSettings();
+            PlaySessionService = playSessionService;
+            SaveService = saveService;
+            MessageBusService = messageBusService;
         }
 
         public async Task<IEnumerable<SDK.Models.Action>> GetActionsAsync(Game game)
@@ -89,6 +99,28 @@ namespace LANCommander.Launcher.Services
             catch (Exception ex)
             {
                 Logger?.Error(ex, "Game {GameTitle} ({GameId}) could not be uninstalled", game.Title, game.Id);
+            }
+        }
+
+        public async Task Run(Game game, Guid actionId)
+        {
+            var profile = await Client.Profile.GetAsync();
+
+            try
+            {
+                var latestSession = await PlaySessionService.GetLatestSession(game.Id, profile.Id);
+
+                await PlaySessionService.StartSession(game.Id, profile.Id);
+
+                await Client.Games.RunAsync(game.InstallDirectory, game.Id, actionId, latestSession.CreatedOn);
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Game failed to run");
+            }
+            finally
+            {
+                await PlaySessionService.EndSession(game.Id, profile.Id);
             }
         }
     }

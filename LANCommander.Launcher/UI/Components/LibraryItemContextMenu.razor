@@ -1,5 +1,4 @@
-﻿@implements IDisposable
-@using LANCommander.Launcher.Data.Models
+﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @using System.Diagnostics
 @using LANCommander.SDK.Helpers
@@ -67,6 +66,8 @@ else
     </MenuItem>
 }
 
+<MenuDivider />
+
 <MenuItem OnClick="() => ReportIssue()">
     Report Issue
 </MenuItem>
@@ -84,9 +85,6 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        MessageBusService.OnGameStarted += UpdateState;
-        MessageBusService.OnGameStopped += UpdateState;
-
         Settings = SettingService.GetSettings();
     }
 
@@ -107,17 +105,13 @@ else
         }
     }
 
-    async Task UpdateState(Game game)
-    {
-        if (Game.Id == game.Id)
-            await InvokeAsync(StateHasChanged);
-    }
-
     async Task Run(Game game, SDK.Models.Action action)
     {
-        LibraryService.Run(Game, action);
+        var task = GameService.Run(game, action.Id);
 
         await InvokeAsync(StateHasChanged);
+
+        await task;
     }
 
     async Task BrowseFiles()
@@ -223,11 +217,5 @@ else
         };
 
         var modalRef = ModalService.CreateModal<ReportIssueDialog, Game, SDK.Models.Issue>(modalOptions, Game);
-    }
-
-    public void Dispose()
-    {
-        MessageBusService.OnGameStarted -= UpdateState;
-        MessageBusService.OnGameStopped -= UpdateState;
     }
 }

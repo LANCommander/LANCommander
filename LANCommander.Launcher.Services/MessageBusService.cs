@@ -18,22 +18,6 @@ namespace LANCommander.Launcher.Services
             OnMediaChanged?.Invoke(media);
         }
 
-        public delegate Task OnGameStartedHander(Game game);
-        public event OnGameStartedHander OnGameStarted;
-
-        public void GameStarted(Game game)
-        {
-            OnGameStarted?.Invoke(game);
-        }
-
-        public delegate Task OnGameStoppedHander(Game game);
-        public event OnGameStoppedHander OnGameStopped;
-
-        public void GameStopped(Game game)
-        {
-            OnGameStopped?.Invoke(game);
-        }
-
         public delegate Task OnLibraryFilterAppliedHander();
         public event OnLibraryFilterAppliedHander OnLibraryFilterApplied;
 

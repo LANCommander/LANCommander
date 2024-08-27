@@ -35,7 +35,6 @@ namespace LANCommander.SDK
         public readonly GameService Games;
         public readonly SaveService Saves;
         public readonly RedistributableService Redistributables;
-        public readonly ActionService Actions;
         public readonly ScriptService Scripts;
         public readonly ProfileService Profile;
         public readonly MediaService Media;
@@ -61,7 +60,6 @@ namespace LANCommander.SDK
             Games = new GameService(this, DefaultInstallDirectory);
             Saves = new SaveService(this);
             Redistributables = new RedistributableService(this);
-            Actions = new ActionService(this);
             Scripts = new ScriptService(this);
             Profile = new ProfileService(this);
             Media = new MediaService(this);
@@ -82,7 +80,6 @@ namespace LANCommander.SDK
             Games = new GameService(this, DefaultInstallDirectory, logger);
             Saves = new SaveService(this, logger);
             Redistributables = new RedistributableService(this, logger);
-            Actions = new ActionService(this);
             Scripts = new ScriptService(this, logger);
             Profile = new ProfileService(this, logger);
             Media = new MediaService(this, logger);
@@ -577,6 +574,25 @@ namespace LANCommander.SDK
         internal string GetIpAddress()
         {
             return Dns.GetHostEntry(Dns.GetHostName()).AddressList[0].ToString();
+        }
+
+        internal async Task<string> GetIPXRelayHostAsync()
+        {
+            var host = Settings.IPXRelayHost;
+
+            if (String.IsNullOrWhiteSpace(host))
+            {
+                var serverAddress = new Uri(GetServerAddress());
+
+                host = serverAddress.DnsSafeHost;
+            }
+
+            var entry = await Dns.GetHostEntryAsync(host);
+
+            if (entry.AddressList.Length > 0)
+                host = entry.AddressList.First().ToString();
+
+            return host;
         }
     }
 }

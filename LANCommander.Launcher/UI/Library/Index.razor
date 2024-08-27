@@ -17,7 +17,7 @@
 
 <Layout>
     <Content Class="library">
-        <LibraryList SelectedItem="@(SelectedGame?.Id)" OnItemSelected="@((key) => NavigationManager.NavigateTo($"/{key}"))" />
+        <LibraryList SelectedItem="@(SelectedGame?.Id)" OnItemSelected="@((key) => SelectLibraryItem(key))" />
 
         <div class="game-details no-scrollbar">
             @if (SelectedGame != null)
@@ -177,6 +177,11 @@
         await LibraryService.RefreshLibraryItemsAsync();
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    async Task SelectLibraryItem(Guid id)
+    {
+        NavigationManager.NavigateTo($"/{id}");
     }
 
     async Task OnLibraryItemSelected(LibraryItem item)

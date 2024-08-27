@@ -177,13 +177,13 @@ namespace LANCommander.Server.Services
 
             if (game.SavePaths != null && game.SavePaths.Count > 0)
             {
-                manifest.SavePaths = game.SavePaths.Select(p => new SDK.SavePath()
+                manifest.SavePaths = game.SavePaths.Select(p => new SDK.Models.SavePath()
                 {
                     Id = p.Id,
                     Path = p.Path,
                     IsRegex = p.IsRegex,
                     WorkingDirectory = p.WorkingDirectory,
-                    Type = p.Type.ToString()
+                    Type = p.Type
                 });
             }
 
@@ -411,7 +411,7 @@ namespace LANCommander.Server.Services
 
                 #region Save Paths
                 if (game.SavePaths == null)
-                    game.SavePaths = new List<Data.Models.SavePath>();
+                    game.SavePaths = new List<SavePath>();
 
                 foreach (var path in game.SavePaths)
                 {
@@ -422,7 +422,7 @@ namespace LANCommander.Server.Services
                         path.Path = manifestSavePath.Path;
                         path.WorkingDirectory = manifestSavePath.WorkingDirectory;
                         path.IsRegex = manifestSavePath.IsRegex;
-                        path.Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type);
+                        path.Type = manifestSavePath.Type;
                     }
                     else
                         game.SavePaths.Remove(path);
@@ -431,12 +431,12 @@ namespace LANCommander.Server.Services
                 if (manifest.SavePaths != null)
                     foreach (var manifestSavePath in manifest.SavePaths.Where(msp => !game.SavePaths.Any(sp => sp.Id == msp.Id)))
                     {
-                        game.SavePaths.Add(new Data.Models.SavePath()
+                        game.SavePaths.Add(new SavePath()
                         {
                             Path = manifestSavePath.Path,
                             WorkingDirectory = manifestSavePath.WorkingDirectory,
                             IsRegex = manifestSavePath.IsRegex,
-                            Type = (SavePathType)Enum.Parse(typeof(SavePathType), manifestSavePath.Type)
+                            Type = manifestSavePath.Type
                         });
                     }
                 #endregion

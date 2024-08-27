@@ -251,6 +251,7 @@ footer {
   height: 100%;
   display: flex;
   position: relative;
+  flex-direction: row;
 }
 .library .pane {
   overflow-x: hidden;

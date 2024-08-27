@@ -20,7 +20,14 @@ namespace LANCommander.Server.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Beacon.BeaconData = Settings.Beacon?.Address;
+            string[] dataParts = new string[]
+            {
+                Settings.Beacon?.Address,
+                Settings.Beacon?.Name,
+                UpdateService.GetCurrentVersion().ToString(),
+            };
+
+            Beacon.BeaconData = String.Join('|', dataParts);
             Beacon.Start();
 
             return Task.CompletedTask;

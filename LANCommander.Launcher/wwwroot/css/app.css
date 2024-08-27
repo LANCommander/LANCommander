@@ -235,14 +235,35 @@ footer {
   max-width: 512px;
   width: 100%;
 }
-
-.authentication-form .ant-form {
-  max-width: 512px;
-  padding: 24px;
-  background: #000;
+.authentication-form .authentication-box {
+  width: 100%;
+  max-width: 800px;
   box-shadow: 0px 0px 32px rgba(255, 255, 255, 0.05);
 }
-.authentication-form .ant-form .ant-form-item:last-child {
+.authentication-form .discovered-servers-pane {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+}
+.authentication-form .discovered-servers-pane .ant-list-header {
+  padding: 12px;
+  text-align: center;
+  border: none;
+}
+.authentication-form .discovered-servers-pane .ant-list-item {
+  padding: 12px;
+}
+.authentication-form .discovered-servers-pane .ant-list-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+}
+.authentication-form .discovered-servers-pane .ant-list-item-meta-title {
+  margin-bottom: 0;
+}
+.authentication-form .login-form-pane {
+  padding: 24px;
+  background: #000;
+}
+.authentication-form .login-form-pane .ant-form-item:last-child {
   margin-bottom: 0;
 }
 

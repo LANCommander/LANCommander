@@ -41,6 +41,7 @@ namespace LANCommander.Server.Models
     public class LANCommanderBeaconSettings
     {
         public bool Enabled { get; set; } = true;
+        public string Name { get; set; } = "LANCommander";
         public string Address { get; set; } = "";
     }
 

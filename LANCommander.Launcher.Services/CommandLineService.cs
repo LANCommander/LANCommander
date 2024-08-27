@@ -45,6 +45,7 @@ namespace LANCommander.Launcher.Services
             await result.WithParsedAsync<RunScriptCommandLineOptions>(RunScript);
             await result.WithParsedAsync<InstallCommandLineOptions>(Install);
             await result.WithParsedAsync<UninstallCommandLineOptions>(Uninstall);
+            await result.WithParsedAsync<RunCommandLineOptions>(Run);
             await result.WithParsedAsync<SyncCommandLineOptions>(Sync);
             await result.WithParsedAsync<ImportCommandLineOptions>(Import);
             await result.WithParsedAsync<LoginCommandLineOptions>(Login);
@@ -118,6 +119,22 @@ namespace LANCommander.Launcher.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Game could not be uninstalled: {ex.Message}");
+            }
+        }
+
+        private async Task Run(RunCommandLineOptions options)
+        {
+            Console.WriteLine($"Running game with ID {options.GameId}...");
+
+            try
+            {
+                var game = await GameService.Get(options.GameId);
+
+                await GameService.Run(game, options.ActionId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Game could not run: {ex.Message}");
             }
         }
 

@@ -50,6 +50,16 @@ namespace LANCommander.Launcher.Models
         public Guid GameId { get; set; }
     }
 
+    [Verb("Run", HelpText = "Start a game")]
+    public class RunCommandLineOptions
+    {
+        [Option("GameId", HelpText = "The GUID of the game to run")]
+        public Guid GameId { get; set; }
+
+        [Option("ActionId", HelpText = "The GUID of the action to run")]
+        public Guid ActionId { get; set; }
+    }
+
     [Verb("Sync", HelpText = "Sync library items from the server")]
     public class SyncCommandLineOptions { }
 

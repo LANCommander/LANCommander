@@ -138,6 +138,9 @@
         {
             SelectedPage = await PageService.Get(p => p.Id == Id).AsNoTracking().FirstOrDefaultAsync();
 
+            if (SelectedPage == null)
+                NavigationManager.NavigateTo("/Pages/Edit");
+
             OriginalContent = SelectedPage.Contents;
             OriginalTitle = SelectedPage.Title;
 

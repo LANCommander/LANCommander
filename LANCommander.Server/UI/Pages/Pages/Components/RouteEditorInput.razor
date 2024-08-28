@@ -4,7 +4,7 @@
     @if (!Editing)
     {
         <SpaceItem>
-            <a href="/Pages/@ParentRoute/@Value">/Pages/@ParentRoute/<strong>@Value</strong></a>
+            <a href="@RenderedRoute">@RenderedRoute.Substring(0, RenderedRoute.Length - Value.Length)<strong>@Value</strong></a>
         </SpaceItem>
 
         <SpaceItem>
@@ -30,12 +30,19 @@
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
+    string RenderedRoute { get; set; } = "";
     string ParentRoute { get; set; } = "";
     bool Editing { get; set; } = false;
 
     protected override async Task OnInitializedAsync()
     {
         ParentRoute = PageService.GetParentRoute(Page);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ParentRoute = PageService.GetParentRoute(Page);
+        RenderedRoute = RenderRoute();
     }
 
     void Edit()
@@ -46,6 +53,18 @@
     void GenerateSlug()
     {
         Value = Value.ToUrlSlug();
+    }
+
+    string RenderRoute()
+    {
+        string[] parts = new string[]
+        {
+            "Pages",
+            ParentRoute,
+            Value
+        };
+
+        return String.Join('/', parts.Where(p => !String.IsNullOrWhiteSpace(p)));
     }
 
     async Task Save()

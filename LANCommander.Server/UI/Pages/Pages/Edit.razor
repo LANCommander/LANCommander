@@ -72,17 +72,17 @@
                 @if (SelectedPage != null)
                 {
                     <Form @ref="Form" Model="SelectedPage">
-                        <FormItem>
+                        <FormItem Style="margin-bottom: 8px">
                             <Input @bind-Value="context.Title" Size="large" Placeholder="Page Title" />
                         </FormItem>
 
-                        <FormItem Label="Slug">
+                        <FormItem Label="Slug" Style="margin-bottom: 8px; padding-left: 8px">
                             <SlugEditorInput Page="context" @bind-Value="context.Slug" />
                         </FormItem>
 
                         @if (!SelectedPage.Children.Any())
                         {
-                            <FormItem>
+                            <FormItem Style="margin-bottom: 8px">
                                 <FormItem Class="ant-typography">
                                     <MarkdownEditor
                                         @ref="MarkdownEditor"

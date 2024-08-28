@@ -19,18 +19,31 @@
             <PageHeaderTitle>Pages</PageHeaderTitle>
             <PageHeaderExtra>
                 <Space>
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Default" OnClick="AddNewPage">Add Page</Button>
-                    </SpaceItem>
-
                     @if (SelectedPage != null)
                     {
                         <SpaceItem>
-                            <Button Type="@ButtonType.Default" OnClick="Delete">Delete</Button>
+                            <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
                         </SpaceItem>
 
                         <SpaceItem>
-                            <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                            <Dropdown>
+                                <Overlay>
+                                    <Menu>
+                                        <MenuItem OnClick="Delete">Delete</MenuItem>
+                                        <MenuItem OnClick="AddNewPage">New Page</MenuItem>
+                                    </Menu>
+                                </Overlay>
+                                
+                                <ChildContent>
+                                    <Button Type="@ButtonType.Default" Icon="@IconType.Outline.Ellipsis" />
+                                </ChildContent>
+                            </Dropdown>
+                        </SpaceItem>
+                    }
+                    else
+                    {
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
                         </SpaceItem>
                     }
                 </Space>
@@ -92,7 +105,7 @@
                             No page is selected
                         </DescriptionTemplate>
                         <ChildContent>
-                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">Add Page</Button>
+                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
                         </ChildContent>
                     </Empty>
                 }
@@ -185,12 +198,16 @@
             newPage.Route = "new-page";
             newPage.Contents = "";
 
+            newPage = await PageService.Add(newPage);
+
             if (SelectedPage != null && SelectedPage.Parent != null)
                 newPage.Parent = SelectedPage.Parent;
             else
                 newPage.Parent = SelectedPage;
 
-            newPage = await PageService.Add(newPage);
+            await PageService.Update(newPage);
+
+            await LoadData();
 
             NavigationManager.NavigateTo($"/Pages/Edit/{newPage.Id}");
         }
@@ -239,6 +256,8 @@
                 await PageService.Add(SelectedPage);
                 MessageService.Success("Page added!");
             }
+
+            await LoadData();
         }
         catch (Exception ex)
         {

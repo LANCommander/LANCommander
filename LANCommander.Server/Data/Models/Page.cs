@@ -13,6 +13,8 @@ namespace LANCommander.Server.Data.Models
         public string Route { get; set; }
         public string Contents { get; set; }
 
+        public int SortOrder { get; set; }
+
         public Guid? ParentId { get; set; }
         [ForeignKey(nameof(ParentId))]
         public virtual Page? Parent { get; set; }

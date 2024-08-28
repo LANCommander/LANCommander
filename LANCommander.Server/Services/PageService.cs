@@ -25,6 +25,46 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public async Task UpdateOrder(Guid parentId, IEnumerable<Guid> childOrder)
+        {
+            var childOrderList = new List<Guid>(childOrder);
+            var children = new List<Page>();
+
+            int i = 0;
+
+            children = new List<Page>();
+
+            foreach (var childId in childOrder)
+            {
+                var child = await Get(childId);
+
+                child.SortOrder = i;
+
+                if (parentId == Guid.Empty)
+                    child.Parent = null;
+
+                children.Add(child);
+
+                i++;
+            }
+
+            if (parentId == Guid.Empty)
+            {
+                foreach (var child in children)
+                {
+                    await Update(child);
+                }
+            }
+            else
+            {
+                var parent = await Get(parentId);
+
+                parent.Children = children;
+
+                await Update(parent);
+            }
+        }
+
         public static string GetParentRoute(Page page)
         {
             var parts = new List<string>();

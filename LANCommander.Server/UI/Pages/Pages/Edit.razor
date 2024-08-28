@@ -48,7 +48,7 @@
                       TItem="Page"
                       DataSource="Pages"
                       TitleExpression="p => p.DataItem.Title"
-                      ChildrenExpression="p => p.DataItem.Children"
+                      ChildrenExpression="p => p.DataItem.Children.OrderBy(p => p.SortOrder)"
                       KeyExpression="p => p.DataItem.Id.ToString()"
                       OnDrop="OnDrop"
                       OnSelect="SelectPage"
@@ -134,14 +134,43 @@
 
     async Task LoadData()
     {
-        Pages = await PageService.Get(p => p.ParentId == null).AsNoTracking().ToListAsync();
+        Pages = await PageService.Get(p => p.ParentId == null).OrderBy(p => p.SortOrder).AsNoTracking().ToListAsync();
 
         await InvokeAsync(StateHasChanged);
     }
 
     async Task OnDrop(TreeEventArgs<Page> e)
     {
-        await PageService.ChangeParent(e.Node.DataItem.Id, e.TargetNode.DataItem.Id);
+        List<Guid> childOrder;
+
+        // DropBelow is true if a tree node is supposed to be placed beneath a sibling
+        if (e.DropBelow)
+        {
+            var parentId = e.TargetNode.DataItem.Parent?.Id ?? Guid.Empty;
+            var sibling = e.TargetNode;
+
+            if (parentId == Guid.Empty)
+                childOrder = await PageService.Get(p => p.Parent == null).Select(p => p.Id).ToListAsync();
+            else
+                childOrder = e.TargetNode.ParentNode.DataItem.Children.Select(c => c.Id).ToList();
+
+            childOrder.Remove(e.Node.DataItem.Id);
+
+            var targetPosition = childOrder.FindIndex(c => c == e.TargetNode.DataItem.Id);
+
+            childOrder.Insert(targetPosition + 1, e.Node.DataItem.Id);
+
+            await PageService.UpdateOrder(parentId, childOrder);
+        }
+        else
+        {
+            childOrder = e.TargetNode.DataItem.Children.Select(c => c.Id).ToList();
+
+            childOrder.Remove(e.Node.DataItem.Id);
+            childOrder.Insert(0, e.Node.DataItem.Id);
+
+            await PageService.UpdateOrder(e.TargetNode.DataItem.Id, childOrder);
+        }
 
         await LoadData();
     }

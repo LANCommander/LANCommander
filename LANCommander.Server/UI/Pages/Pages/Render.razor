@@ -38,23 +38,7 @@
 
         Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
         {
-            var parts = route.Split('/');
-            var potentials = await PageService.Get(p => p.Route.ToLower() == parts.Last()).ToListAsync();
-
-            Page page = null;
-
-            foreach (var potential in potentials)
-            {
-                var potentialFullRoute = $"{PageService.GetParentRoute(potential)}/{potential.Route}".ToLower();
-
-                if (potentialFullRoute == route)
-                {
-                    page = potential;
-                    break;
-                }
-            }
-
-            return page;
+            return await PageService.Get(p => p.Route == $"Pages/{route}").FirstOrDefaultAsync();
         });
     }
 }

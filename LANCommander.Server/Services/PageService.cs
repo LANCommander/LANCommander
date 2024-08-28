@@ -1,14 +1,55 @@
 ﻿using JetBrains.Annotations;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Extensions;
+using Microsoft.EntityFrameworkCore;
 using System.Text;
+using YamlDotNet.Core.Tokens;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
     public class PageService : BaseDatabaseService<Page>
     {
-        public PageService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
+        private readonly IFusionCache Cache;
+
+        public PageService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, IFusionCache cache) : base(dbContext, httpContextAccessor)
         {
+            Cache = cache;
+        }
+
+        public override async Task<Page> Add(Page entity)
+        {
+            if (entity.Parent != null && entity.Parent.Parent != null && entity.Parent.Parent.Id == entity.Id)
+                throw new Exception("Tried creating page with circular reference");
+
+            entity.Slug = entity.Slug.ToUrlSlug();
+
+            if (String.IsNullOrWhiteSpace(entity.Slug))
+                entity.Slug = entity.Title.ToUrlSlug();
+
+            entity.Route = RenderRoute(entity);
+
+            await Cache.ExpireAsync("MappedGames");
+
+            return await base.Add(entity);
+        }
+
+        public override async Task<Page> Update(Page entity)
+        {
+            if (entity.Parent != null && entity.Parent.Parent != null && entity.Parent.Parent.Id == entity.Id)
+                throw new Exception("Tried updating page with circular reference");
+
+            entity.Slug = entity.Slug.ToUrlSlug();
+
+            if (String.IsNullOrWhiteSpace(entity.Slug))
+                entity.Slug = entity.Title.ToUrlSlug();
+
+            entity.Route = RenderRoute(entity);
+
+            await Cache.ExpireAsync($"Page|{entity.Route}");
+
+            return await base.Update(entity);
         }
 
         public async Task ChangeParent(Guid childId, Guid parentId)
@@ -65,17 +106,38 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public static string GetParentRoute(Page page)
+        public async Task FixRoutes()
+        {
+            var parentPages = await Get(p => p.Parent == null).ToListAsync();
+
+            foreach (var page in parentPages)
+            {
+                await FixRoute(page);
+            }
+        }
+
+        private async Task FixRoute(Page page)
+        {
+            page.Route = RenderRoute(page);
+
+            await Update(page);
+
+            foreach (var child in page.Children)
+            {
+                await FixRoute(child);
+            }
+        }
+
+        public static string RenderRoute(Page page)
         {
             var parts = new List<string>();
-            var parent = page.Parent;
 
-            while (parent != null)
-            {
-                parts.Add(parent.Route);
+            if (page.Parent != null)
+                parts.Add(page.Parent.Route);
+            else
+                parts.Add("Pages");
 
-                parent = parent.Parent;
-            }
+            parts.Add(page.Slug);
 
             return String.Join('/', parts);
         }

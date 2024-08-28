@@ -76,8 +76,8 @@
                             <Input @bind-Value="context.Title" Size="large" Placeholder="Page Title" />
                         </FormItem>
 
-                        <FormItem Label="Route">
-                            <RouteEditorInput Page="context" @bind-Value="context.Route" />
+                        <FormItem Label="Slug">
+                            <SlugEditorInput Page="context" @bind-Value="context.Slug" />
                         </FormItem>
 
                         @if (!SelectedPage.Children.Any())
@@ -198,7 +198,7 @@
             var newPage = new Page();
 
             newPage.Title = "New Page";
-            newPage.Route = "new-page";
+            newPage.Slug = "new-page";
             newPage.Contents = "";
 
             newPage = await PageService.Add(newPage);
@@ -348,8 +348,9 @@
         return entry;
     }
 
-    void SanitizeRoute()
+    // 🐌🧼
+    void SanitizeSlug()
     {
-        SelectedPage.Route = SelectedPage.Route.ToUrlSlug();
+        SelectedPage.Slug = SelectedPage.Slug.ToUrlSlug();
     }
 }

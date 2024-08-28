@@ -1,7 +1,7 @@
 ﻿@if (Page.Children != null && Page.Children.Any())
 {
     <SubMenu Key="@(Page.Id.ToString())" Title="@Page.Title">
-        @foreach (var child in Page.Children)
+        @foreach (var child in Page.Children.OrderBy(p => p.SortOrder))
         {
             <PageMenuItem Page="@child" />
         }
@@ -9,7 +9,7 @@
 }
 else
 {
-    <MenuItem RouterLink="@($"/Pages/{PageService.GetParentRoute(Page)}/{Page.Route}")">@Page.Title</MenuItem>
+    <MenuItem RouterLink="@($"/{Page.Route}")">@Page.Title</MenuItem>
 }
 
 @code {

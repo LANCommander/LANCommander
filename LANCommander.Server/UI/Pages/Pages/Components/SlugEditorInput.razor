@@ -4,7 +4,7 @@
     @if (!Editing)
     {
         <SpaceItem>
-            <a href="@RenderedRoute">@RenderedRoute.Substring(0, RenderedRoute.Length - Value.Length)<strong>@Value</strong></a>
+            <a href="/@Page.Route" target="_blank">/@Page.Route.Substring(0, Page.Route.Length - Value.Length)<strong>@Value</strong></a>
         </SpaceItem>
 
         <SpaceItem>
@@ -15,7 +15,7 @@
     {
         <SpaceItem>
             <AntDesign.Input @bind-Value="Value" OnBlur="GenerateSlug" Size="@InputSize.Small">
-                <AddOnBefore>@ParentRoute</AddOnBefore>
+                <AddOnBefore>/@Page.Route.Substring(0, Page.Route.Length - Value.Length)</AddOnBefore>
             </AntDesign.Input>
         </SpaceItem>
 
@@ -30,20 +30,7 @@
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
-    string RenderedRoute { get; set; } = "";
-    string ParentRoute { get; set; } = "";
     bool Editing { get; set; } = false;
-
-    protected override async Task OnInitializedAsync()
-    {
-        ParentRoute = PageService.GetParentRoute(Page);
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        ParentRoute = PageService.GetParentRoute(Page);
-        RenderedRoute = RenderRoute();
-    }
 
     void Edit()
     {
@@ -53,18 +40,6 @@
     void GenerateSlug()
     {
         Value = Value.ToUrlSlug();
-    }
-
-    string RenderRoute()
-    {
-        string[] parts = new string[]
-        {
-            "Pages",
-            ParentRoute,
-            Value
-        };
-
-        return String.Join('/', parts.Where(p => !String.IsNullOrWhiteSpace(p)));
     }
 
     async Task Save()

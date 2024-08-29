@@ -13,6 +13,8 @@ using LANCommander.Server.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using LANCommander.SDK.Enums;
 using Serilog;
+using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
+using LANCommander.Server.Logging;
 
 namespace LANCommander.Server
 {
@@ -36,10 +38,19 @@ namespace LANCommander.Server
 
             Log.Debug("Configuring logging");
 
-            builder.Host.UseSerilog((ctx, lc) => lc
-                .WriteTo.Console()
-                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: settings.Logs.ArchiveEvery));
+            builder.Services.AddSignalR().AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+            });
 
+            builder.Services.AddSerilogHub<LoggingHub>();
+            builder.Services.AddSerilog((serviceProvider, config) => config
+                .WriteTo.Console()
+                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: settings.Logs.ArchiveEvery)
+                .WriteTo.SignalR<LoggingHub>(
+                    serviceProvider,
+                    (context, message, logEvent) => LoggingHub.Log(context, message, logEvent)
+                ));
 
             #region Validate Settings
             Log.Debug("Validating settings");
@@ -237,7 +248,6 @@ namespace LANCommander.Server
 
             app.UseCors("CorsPolicy");
 
-            app.MapHub<LoggingHub>("/hubs/logging");
             app.MapHub<GameServerHub>("/hubs/gameserver");
 
             app.Use(async (context, next) =>
@@ -288,6 +298,8 @@ namespace LANCommander.Server
             app.UseMvcWithDefaultRoute();
 
             Log.Debug("Registering Endpoints");
+
+            app.MapHub<LoggingHub>("/logging");
 
             app.UseEndpoints(endpoints =>
             {

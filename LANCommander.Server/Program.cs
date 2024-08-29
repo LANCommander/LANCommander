@@ -38,8 +38,7 @@ namespace LANCommander.Server
 
             builder.Host.UseSerilog((ctx, lc) => lc
                 .WriteTo.Console()
-                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: settings.Logs.ArchiveEvery)
-                .CreateLogger());
+                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: settings.Logs.ArchiveEvery));
 
 
             #region Validate Settings

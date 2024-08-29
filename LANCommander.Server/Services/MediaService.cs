@@ -11,15 +11,10 @@ namespace LANCommander.Server.Services
 {
     public class MediaService : BaseDatabaseService<Media>
     {
-        private readonly LANCommanderSettings Settings;
-
         public MediaService(
             ILogger<MediaService> logger,
             DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor)
-        {
-            Settings = SettingService.GetSettings();
-        }
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
 
         public override Task Delete(Media entity)
         {
@@ -58,15 +53,11 @@ namespace LANCommander.Server.Services
 
         public async Task<Media> UploadMediaAsync(IBrowserFile file, Media media)
         {
-            var settings = SettingService.GetSettings();
-
-            return await UploadMediaAsync(file.OpenReadStream(maxAllowedSize: settings.Media.MaxSize * 1024 * 1024), media);
+            return await UploadMediaAsync(file.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
         }
 
         public async Task<Media> UploadMediaAsync(Stream stream, Media media)
         {
-            var settings = SettingService.GetSettings();
-
             var fileId = Guid.NewGuid();
 
             var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
@@ -96,10 +87,9 @@ namespace LANCommander.Server.Services
 
         private async Task<Media> GeneratePdfThumbnailAsync(Stream inputStream)
         {
-            var settings = SettingService.GetSettings();
             var fileId = Guid.NewGuid();
 
-            var path = Path.Combine(settings.Media.StoragePath, fileId.ToString());
+            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
 
             PdfToImageConverter converter = new PdfToImageConverter();
 

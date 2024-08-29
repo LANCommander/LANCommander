@@ -39,7 +39,6 @@ namespace LANCommander.Server.Controllers.Api
         private readonly UserManager<User> UserManager;
         private readonly IUserStore<User> UserStore;
         private readonly RoleManager<Role> RoleManager;
-        private readonly LANCommanderSettings Settings;
 
         public AuthController(
             ILogger<AuthController> logger,
@@ -52,7 +51,6 @@ namespace LANCommander.Server.Controllers.Api
             UserManager = userManager;
             UserStore = userStore;
             RoleManager = roleManager;
-            Settings = SettingService.GetSettings();
         }
 
         [HttpPost]

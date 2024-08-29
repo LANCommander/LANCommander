@@ -9,8 +9,6 @@ namespace LANCommander.Server.Controllers
     [Authorize(Roles = "Administrator")]
     public class UploadController : BaseController
     {
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
-
         public UploadController(ILogger<UploadController> logger) : base(logger) { }
 
         public JsonResult Init()

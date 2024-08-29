@@ -7,15 +7,10 @@ namespace LANCommander.Server.Services
 {
     public class GameSaveService : BaseDatabaseService<GameSave>
     {
-        private readonly LANCommanderSettings Settings;
-
         public GameSaveService(
             ILogger<GameSaveService> logger,
             DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor)
-        {
-            Settings = SettingService.GetSettings();
-        }
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
 
         public override Task Delete(GameSave entity)
         {

@@ -21,7 +21,6 @@ namespace LANCommander.Server.Controllers.Api
         private readonly GameService GameService;
         private readonly UserManager<User> UserManager;
         private readonly RoleManager<Role> RoleManager;
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
         private readonly IFusionCache Cache;
 
         public GamesController(

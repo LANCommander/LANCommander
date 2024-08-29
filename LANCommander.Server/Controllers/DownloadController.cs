@@ -14,7 +14,6 @@ namespace LANCommander.Server.Controllers
         private readonly ArchiveService ArchiveService;
         private readonly GameSaveService GameSaveService;
         private readonly UpdateService UpdateService;
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public DownloadController(
             ILogger<DownloadController> logger,

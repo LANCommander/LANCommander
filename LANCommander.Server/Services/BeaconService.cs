@@ -6,11 +6,9 @@ namespace LANCommander.Server.Services
     public class BeaconService : BaseService, IHostedService, IDisposable
     {
         private Beacon Beacon;
-        private LANCommanderSettings Settings;
 
         public BeaconService(ILogger<BeaconService> logger) : base(logger)
         {
-            Settings = SettingService.GetSettings();
             Beacon = new Beacon("LANCommander", Convert.ToUInt16(Settings.Port));
         }
 

@@ -15,7 +15,6 @@ namespace LANCommander.Server.Controllers.Api
     public class ArchivesController : BaseApiController
     {
         private readonly DatabaseContext Context;
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public ArchivesController(
             ILogger<ArchivesController> logger,

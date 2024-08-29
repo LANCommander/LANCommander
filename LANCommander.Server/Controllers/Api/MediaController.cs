@@ -17,7 +17,6 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly Services.MediaService MediaService;
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public MediaController(
             ILogger<MediaController> logger,

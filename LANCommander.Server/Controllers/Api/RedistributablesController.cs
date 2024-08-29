@@ -15,7 +15,6 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger, 

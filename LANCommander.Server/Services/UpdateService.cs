@@ -11,7 +11,6 @@ namespace LANCommander.Server.Services
     public class UpdateService : BaseService
     {
         private GitHubClient GitHub;
-        private LANCommanderSettings Settings;
         private IHostApplicationLifetime ApplicationLifetime;
         private ServerService ServerService;
         private ServerProcessService ServerProcessService;
@@ -23,7 +22,6 @@ namespace LANCommander.Server.Services
             ServerService serverService) : base(logger)
         {
             GitHub = new GitHubClient(new ProductHeaderValue("LANCommander"));
-            Settings = SettingService.GetSettings();
             ApplicationLifetime = applicationLifetime;
             ServerService = serverService;
             ServerProcessService = serverProcessService;

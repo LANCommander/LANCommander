@@ -17,7 +17,6 @@ namespace LANCommander.Server.Controllers.Api
         private readonly GameSaveService GameSaveService;
         private readonly GameService GameService;
         private readonly UserManager<User> UserManager;
-        private readonly LANCommanderSettings Settings;
 
         public GameSavesController(
             ILogger<GameSavesController> logger,
@@ -28,7 +27,6 @@ namespace LANCommander.Server.Controllers.Api
             GameSaveService = gameSaveService;
             GameService = gameService;
             UserManager = userManager;
-            Settings = SettingService.GetSettings();
         }
 
         [HttpGet("{id}")]

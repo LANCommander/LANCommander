@@ -7,6 +7,7 @@
 @inject GameService GameService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
+@inject ILogger<ImportUploadDialog> Logger
 
 @{
     RenderFragment Footer =
@@ -39,8 +40,6 @@
 @code {
     [Parameter] public EventCallback<Guid> OnGameImported { get; set; }
     [Parameter] public RenderFragment Hint { get; set; }
-
-    NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
@@ -96,7 +95,7 @@
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "An unknown error occurred while trying to import");
+                Logger?.LogError(ex, "An unknown error occurred while trying to import");
                 MessageService.Error("An unknown error occurred while trying to import");
             }
         }
@@ -119,7 +118,7 @@
         await InvokeAsync(StateHasChanged);
 
         MessageService.Error("An error occurred while trying to import");
-        Logger?.Error($"An error occurred while trying to import: {message}");
+        Logger?.LogError($"An error occurred while trying to import: {message}");
     }
 
     public async Task OnLocalFileSelected(string path)
@@ -139,7 +138,7 @@
         }
         catch (Exception ex)
         {
-            Logger.Error(ex, "An unknown error occurred while trying to import");
+            Logger?.LogError(ex, "An unknown error occurred while trying to import");
             MessageService.Error("An unknown error occurred while trying to import");
         }
     }

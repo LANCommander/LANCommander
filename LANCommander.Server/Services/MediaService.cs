@@ -13,7 +13,10 @@ namespace LANCommander.Server.Services
     {
         private readonly LANCommanderSettings Settings;
 
-        public MediaService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
+        public MediaService(
+            ILogger<MediaService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor)
         {
             Settings = SettingService.GetSettings();
         }
@@ -113,7 +116,7 @@ namespace LANCommander.Server.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.Error(ex, "Could not write thumbnail for PDF");
+                    Logger?.LogError(ex, "Could not write thumbnail for PDF");
 
                     if (File.Exists(path))
                         File.Delete(path);

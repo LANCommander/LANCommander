@@ -3,9 +3,16 @@ using System.Text.Json;
 
 namespace LANCommander.Server.Controllers
 {
-    public class BaseController : Controller
+    public abstract class BaseController : Controller
     {
-        public void Alert(string message, string type = "info", bool dismissable = true)
+        protected readonly ILogger Logger;
+
+        public BaseController(ILogger logger)
+        {
+            Logger = logger;
+        }
+
+        protected void Alert(string message, string type = "info", bool dismissable = true)
         {
             List<AlertViewModel> alerts;
 

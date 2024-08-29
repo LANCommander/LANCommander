@@ -12,12 +12,14 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class ArchivesController : ControllerBase
+    public class ArchivesController : BaseApiController
     {
         private readonly DatabaseContext Context;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public ArchivesController(DatabaseContext context)
+        public ArchivesController(
+            ILogger<ArchivesController> logger,
+            DatabaseContext context) : base(logger)
         {
             Context = context;
         }

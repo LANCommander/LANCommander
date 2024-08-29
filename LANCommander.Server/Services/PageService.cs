@@ -13,7 +13,11 @@ namespace LANCommander.Server.Services
     {
         private readonly IFusionCache Cache;
 
-        public PageService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, IFusionCache cache) : base(dbContext, httpContextAccessor)
+        public PageService(
+            ILogger<PageService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor,
+            IFusionCache cache) : base(logger, dbContext, httpContextAccessor)
         {
             Cache = cache;
         }

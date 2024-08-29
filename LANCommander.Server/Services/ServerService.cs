@@ -12,7 +12,11 @@ namespace LANCommander.Server.Services
     {
         private readonly GameService GameService;
 
-        public ServerService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, GameService gameService) : base(dbContext, httpContextAccessor)
+        public ServerService(
+            ILogger<ServerService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor,
+            GameService gameService) : base(logger, dbContext, httpContextAccessor)
         {
             GameService = gameService;
         }

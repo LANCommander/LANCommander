@@ -13,13 +13,16 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class MediaController : ControllerBase
+    public class MediaController : BaseApiController
     {
         private readonly IMapper Mapper;
         private readonly Services.MediaService MediaService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public MediaController(IMapper mapper, Services.MediaService mediaService)
+        public MediaController(
+            ILogger<MediaController> logger,
+            IMapper mapper,
+            Services.MediaService mediaService) : base(logger)
         {
             Mapper = mapper;
             MediaService = mediaService;

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using NLog;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -16,14 +15,15 @@ namespace LANCommander.Server.Controllers.Api
     [Route("api/[controller]")]
     [Authorize(AuthenticationSchemes = "Bearer")]
     [ApiController]
-    public class ProfileController : ControllerBase
+    public class ProfileController : BaseApiController
     {
-        protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
         private readonly UserManager<User> UserManager;
         private readonly UserService UserService;
 
-        public ProfileController(UserManager<User> userManager, UserService userService)
+        public ProfileController(
+            ILogger<ProfileController> logger,
+            UserManager<User> userManager,
+            UserService userService) : base(logger)
         {
             UserManager = userManager;
             UserService = userService;

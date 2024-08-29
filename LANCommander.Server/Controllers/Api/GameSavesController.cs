@@ -12,14 +12,18 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class GameSavesController : ControllerBase
+    public class GameSavesController : BaseApiController
     {
         private readonly GameSaveService GameSaveService;
         private readonly GameService GameService;
         private readonly UserManager<User> UserManager;
         private readonly LANCommanderSettings Settings;
 
-        public GameSavesController(GameSaveService gameSaveService, GameService gameService, UserManager<User> userManager)
+        public GameSavesController(
+            ILogger<GameSavesController> logger,
+            GameSaveService gameSaveService,
+            GameService gameService,
+            UserManager<User> userManager) : base(logger)
         {
             GameSaveService = gameSaveService;
             GameService = gameService;

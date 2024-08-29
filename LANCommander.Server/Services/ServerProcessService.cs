@@ -6,8 +6,6 @@ using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using NLog;
-using NLog.Fluent;
 using System.Diagnostics;
 using System.Net;
 using LANCommander.SDK;
@@ -151,7 +149,12 @@ namespace LANCommander.Server.Services
         private readonly IServiceProvider ServiceProvider;
         private readonly SDK.Client Client;
 
-        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext, IServiceProvider serviceProvider, SDK.Client client) : base()
+        public ServerProcessService(
+            ILogger<ServerProcessService> logger,
+            IMapper mapper,
+            IHubContext<GameServerHub> hubContext,
+            IServiceProvider serviceProvider,
+            SDK.Client client) : base(logger)
         {
             Mapper = mapper;
             HubContext = hubContext;
@@ -175,7 +178,7 @@ namespace LANCommander.Server.Services
 
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
 
-                Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+                Logger?.LogInformation("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
                 foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
                 {
@@ -189,7 +192,7 @@ namespace LANCommander.Server.Services
                         script.UseInline(serverScript.Contents);
                         script.UseShellExecute();
 
-                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+                        Logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
                         if (Client.Scripts.Debug)
                             script.EnableDebug();
@@ -198,7 +201,7 @@ namespace LANCommander.Server.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                        Logger?.LogError(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
                     }
                 }
 
@@ -218,13 +221,13 @@ namespace LANCommander.Server.Services
                     process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
                     {
                         HubContext.Clients.All.SendAsync("Log", e.Data);
-                        Logger.Info("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
+                        Logger?.LogInformation("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
                     });
 
                     process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
                     {
                         HubContext.Clients.All.SendAsync("Log", e.Data);
-                        Logger.Error("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
+                        Logger?.LogError("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
                     });
                 }
 
@@ -253,7 +256,7 @@ namespace LANCommander.Server.Services
                 {
                     OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
 
-                    Logger.Error(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
+                    Logger?.LogError(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
                 }
             }
         }
@@ -267,7 +270,7 @@ namespace LANCommander.Server.Services
 
                 var server = await serverService.Get(serverId);
 
-                Logger.Info("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+                Logger?.LogInformation("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
 
@@ -332,7 +335,7 @@ namespace LANCommander.Server.Services
                         script.UseInline(serverScript.Contents);
                         script.UseShellExecute();
 
-                        Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+                        Logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
                         if (Client.Scripts.Debug)
                             script.EnableDebug();
@@ -341,7 +344,7 @@ namespace LANCommander.Server.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                        Logger?.LogError(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
                     }
                 }
 

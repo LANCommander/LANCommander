@@ -26,6 +26,7 @@ namespace LANCommander.Server.Services
         private readonly IFusionCache Cache;
 
         public GameService(
+            ILogger<GameService> logger,
             DatabaseContext dbContext,
             IHttpContextAccessor httpContextAccessor,
             IMapper mapper,
@@ -35,7 +36,7 @@ namespace LANCommander.Server.Services
             TagService tagService,
             CompanyService companyService,
             GenreService genreService,
-            IFusionCache cache) : base(dbContext, httpContextAccessor)
+            IFusionCache cache) : base(logger, dbContext, httpContextAccessor)
         {
             Mapper = mapper;
             ArchiveService = archiveService;

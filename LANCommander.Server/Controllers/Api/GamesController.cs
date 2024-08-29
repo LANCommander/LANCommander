@@ -15,7 +15,7 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class GamesController : ControllerBase
+    public class GamesController : BaseApiController
     {
         private readonly IMapper Mapper;
         private readonly GameService GameService;
@@ -24,7 +24,13 @@ namespace LANCommander.Server.Controllers.Api
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
         private readonly IFusionCache Cache;
 
-        public GamesController(IMapper mapper, GameService gameService, UserManager<User> userManager, RoleManager<Role> roleManager, IFusionCache cache)
+        public GamesController(
+            ILogger<GamesController> logger,
+            IMapper mapper,
+            IFusionCache cache,
+            GameService gameService,
+            UserManager<User> userManager,
+            RoleManager<Role> roleManager) : base(logger)
         {
             Mapper = mapper;
             GameService = gameService;

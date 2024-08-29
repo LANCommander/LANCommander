@@ -1,14 +1,12 @@
-﻿using NLog;
-
-namespace LANCommander.Server.Services
+﻿namespace LANCommander.Server.Services
 {
     public abstract class BaseService
     {
-        protected readonly Logger Logger;
+        protected readonly ILogger Logger;
 
-        protected BaseService()
+        protected BaseService(ILogger logger)
         {
-            Logger = LogManager.GetLogger(GetType().ToString());
+            Logger = logger;
         }
     }
 }

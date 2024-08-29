@@ -4,7 +4,7 @@ using System.Text;
 
 namespace LANCommander.Server.Services
 {
-    public class IGDBService
+    public class IGDBService : BaseService
     {
         private readonly SettingService SettingService;
         private const string DefaultFields = "*";
@@ -15,7 +15,9 @@ namespace LANCommander.Server.Services
         private string ClientId { get; set; }
         private string ClientSecret { get; set; }
 
-        public IGDBService(SettingService settingService)
+        public IGDBService(
+            ILogger<IGDBService> logger,
+            SettingService settingService) : base(logger)
         {
             SettingService = settingService;
 

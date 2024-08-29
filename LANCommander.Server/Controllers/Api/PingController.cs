@@ -4,8 +4,10 @@ namespace LANCommander.Server.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class PingController : ControllerBase
+    public class PingController : BaseApiController
     {
+        public PingController(ILogger<PingController> logger) : base(logger) { }
+
         [HttpGet]
         public IActionResult Index()
         {

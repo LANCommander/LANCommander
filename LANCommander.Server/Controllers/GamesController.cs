@@ -12,7 +12,10 @@ namespace LANCommander.Server.Controllers
         private GameService GameService;
         private MediaService MediaService;
 
-        public GamesController(GameService gameService, MediaService mediaService)
+        public GamesController(
+            ILogger<GamesController> logger,
+            GameService gameService,
+            MediaService mediaService) : base(logger)
         {
             GameService = gameService;
             MediaService = mediaService;

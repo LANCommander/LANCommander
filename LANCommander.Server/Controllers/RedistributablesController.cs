@@ -13,7 +13,10 @@ namespace LANCommander.Server.Controllers
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
 
-        public RedistributablesController(IMapper mapper, RedistributableService redistributableService)
+        public RedistributablesController(
+            ILogger<RedistributablesController> logger,
+            IMapper mapper,
+            RedistributableService redistributableService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;

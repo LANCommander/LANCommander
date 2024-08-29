@@ -16,7 +16,11 @@ namespace LANCommander.Server.Services
     {
         private readonly IFusionCache Cache;
 
-        public ArchiveService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor, IFusionCache cache) : base(dbContext, httpContextAccessor)
+        public ArchiveService(
+            ILogger<ArchiveService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor,
+            IFusionCache cache) : base(logger, dbContext, httpContextAccessor)
         {
             Cache = cache;
         }
@@ -178,7 +182,7 @@ namespace LANCommander.Server.Services
                     {
                         await alteredStream.CopyToAsync(updatedStream);
 
-                        Logger.Info("Added {EntryFullName} to base archive {ArchiveId} and new patch archive", entry.FullName, originalArchive.Id.ToString());
+                        Logger?.LogInformation("Added {EntryFullName} to base archive {ArchiveId} and new patch archive", entry.FullName, originalArchive.Id.ToString());
                     }
 
                     // Copy the contents of the entry from the altered archive to the patch archive
@@ -187,13 +191,13 @@ namespace LANCommander.Server.Services
                     {
                         await alteredStream.CopyToAsync(patchStream);
 
-                        Logger.Info("Updated {EntryFullName} in base archive {ArchiveId} and added to new patch archive", entry.FullName, originalArchive.Id.ToString());
+                        Logger?.LogInformation("Updated {EntryFullName} in base archive {ArchiveId} and added to new patch archive", entry.FullName, originalArchive.Id.ToString());
                     }
                 }
 
                 i++;
 
-                Logger.Info("Finished processing entry {EntryIndex}/{TotalEntries} for original archive {ArchiveId}", i.ToString(), originalZip.Entries.Count.ToString(), originalArchive.Id.ToString());
+                Logger?.LogInformation("Finished processing entry {EntryIndex}/{TotalEntries} for original archive {ArchiveId}", i.ToString(), originalZip.Entries.Count.ToString(), originalArchive.Id.ToString());
             }
 
             originalZip.Dispose();
@@ -212,7 +216,7 @@ namespace LANCommander.Server.Services
             await Update(alteredArchive);
             await Update(originalArchive);
 
-            Logger.Info("Finished merging original archive {ArchiveId} and rebuilt patch archive {PatchArchivePath}", originalArchive.Id.ToString(), alteredZipPath);
+            Logger?.LogInformation("Finished merging original archive {ArchiveId} and rebuilt patch archive {PatchArchivePath}", originalArchive.Id.ToString(), alteredZipPath);
         }
     }
 }

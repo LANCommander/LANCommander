@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using NLog;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -34,17 +33,20 @@ namespace LANCommander.Server.Controllers.Api
 
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseApiController
     {
-        protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
         private readonly SignInManager<User> SignInManager;
         private readonly UserManager<User> UserManager;
         private readonly IUserStore<User> UserStore;
         private readonly RoleManager<Role> RoleManager;
         private readonly LANCommanderSettings Settings;
 
-        public AuthController(SignInManager<User> signInManager, UserManager<User> userManager, IUserStore<User> userStore, RoleManager<Role> roleManager)
+        public AuthController(
+            ILogger<AuthController> logger,
+            SignInManager<User> signInManager,
+            UserManager<User> userManager,
+            IUserStore<User> userStore,
+            RoleManager<Role> roleManager) : base(logger)
         {
             SignInManager = signInManager;
             UserManager = userManager;
@@ -62,13 +64,13 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var token = await Login(user, model.Password);
 
-                Logger.Debug("Successfully logged in user {UserName}", user.UserName);
+                Logger?.LogDebug("Successfully logged in user {UserName}", user.UserName);
 
                 return Ok(token);
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "An error occurred while trying to log in {UserName}", model.UserName);
+                Logger?.LogError(ex, "An error occurred while trying to log in {UserName}", model.UserName);
 
                 return Unauthorized();
             }
@@ -98,7 +100,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (token == null)
             {
-                Logger.Debug("Null token passed when trying to refresh");
+                Logger?.LogDebug("Null token passed when trying to refresh");
                 return BadRequest("Invalid client request");
             }
 
@@ -106,7 +108,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (principal == null)
             {
-                Logger.Debug("Invalid access token or refresh token");
+                Logger?.LogDebug("Invalid access token or refresh token");
                 return BadRequest("Invalid access token or refresh token");
             }
 
@@ -114,7 +116,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (user == null || user.RefreshToken != token.RefreshToken || user.RefreshTokenExpiration <= DateTime.Now)
             {
-                Logger.Debug("Invalid access token or refresh token for user {UserName}", principal.Identity.Name);
+                Logger?.LogDebug("Invalid access token or refresh token for user {UserName}", principal.Identity.Name);
                 return BadRequest("Invalid access token or refresh token");
             }
 
@@ -125,7 +127,7 @@ namespace LANCommander.Server.Controllers.Api
 
             await UserManager.UpdateAsync(user);
 
-            Logger.Debug("Successfully refreshed token for user {UserName}", user.UserName);
+            Logger?.LogDebug("Successfully refreshed token for user {UserName}", user.UserName);
 
             return Ok(new
             {
@@ -142,7 +144,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (user != null)
             {
-                Logger.Debug("Cannot register user with username {UserName}, already exists", model.UserName);
+                Logger?.LogDebug("Cannot register user with username {UserName}, already exists", model.UserName);
 
                 return Unauthorized(new
                 {
@@ -170,13 +172,13 @@ namespace LANCommander.Server.Controllers.Api
 
                     var token = await Login(user, model.Password);
 
-                    Logger.Debug("Successfully registered user {UserName}", user.UserName);
+                    Logger?.LogDebug("Successfully registered user {UserName}", user.UserName);
 
                     return Ok(token);
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "Could not register user {UserName}", user.UserName);
+                    Logger?.LogError(ex, "Could not register user {UserName}", user.UserName);
                     return BadRequest(new
                     {
                         Message = "An unknown error occurred"
@@ -194,7 +196,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (user != null && await UserManager.CheckPasswordAsync(user, password))
             {
-                Logger.Debug("Password check for user {UserName} was successful", user.UserName);
+                Logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
                 if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserManager.IsInRoleAsync(user, "Administrator")))
                     throw new Exception("Account must be approved by an administrator");
@@ -212,7 +214,7 @@ namespace LANCommander.Server.Controllers.Api
                     authClaims.Add(new Claim(ClaimTypes.Role, userRole));
                 }
 
-                Logger.Debug("Generating authentication token for user {UserName}", user.UserName);
+                Logger?.LogDebug("Generating authentication token for user {UserName}", user.UserName);
 
                 var token = GetToken(authClaims);
                 var refreshToken = GenerateRefreshToken();

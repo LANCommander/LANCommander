@@ -9,7 +9,10 @@ namespace LANCommander.Server.Services
     {
         private readonly LANCommanderSettings Settings;
 
-        public GameSaveService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
+        public GameSaveService(
+            ILogger<GameSaveService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor)
         {
             Settings = SettingService.GetSettings();
         }

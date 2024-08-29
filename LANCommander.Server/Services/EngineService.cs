@@ -5,8 +5,9 @@ namespace LANCommander.Server.Services
 {
     public class EngineService : BaseDatabaseService<Engine>
     {
-        public EngineService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public EngineService(
+            ILogger<EngineService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
     }
 }

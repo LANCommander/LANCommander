@@ -1,4 +1,3 @@
-using BeaconLib;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Hubs;
@@ -6,15 +5,14 @@ using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using NLog.Web;
 using System.Text;
 using Hangfire;
-using NLog;
 using LANCommander.Server.Services.MediaGrabbers;
 using Microsoft.Data.Sqlite;
 using LANCommander.Server.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using LANCommander.SDK.Enums;
+using Serilog;
 
 namespace LANCommander.Server
 {
@@ -22,29 +20,40 @@ namespace LANCommander.Server
     {
         static async Task Main(string[] args)
         {
-            Logger Logger = LogManager.GetCurrentClassLogger();
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .CreateBootstrapLogger();
 
             var builder = WebApplication.CreateBuilder(args);
 
             ConfigurationManager configuration = builder.Configuration;
 
             // Add services to the container.
-            Logger.Debug("Loading settings");
+            Log.Debug("Loading settings");
             var settings = SettingService.GetSettings(true);
-            Logger.Debug("Loaded!");
+            Log.Debug("Loaded!");
+
+
+            Log.Debug("Configuring logging");
+
+            builder.Host.UseSerilog((ctx, lc) => lc
+                .WriteTo.Console()
+                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: settings.Logs.ArchiveEvery)
+                .CreateLogger());
+
 
             #region Validate Settings
-            Logger.Debug("Validating settings");
+            Log.Debug("Validating settings");
             if (settings?.Authentication?.TokenSecret?.Length < 16)
             {
-                Logger.Debug("JWT token secret is too short. Regenerating...");
+                Log.Debug("JWT token secret is too short. Regenerating...");
                 settings.Authentication.TokenSecret = Guid.NewGuid().ToString();
                 SettingService.SaveSettings(settings);
             }
-            Logger.Debug("Done validating settings");
+            Log.Debug("Done validating settings");
             #endregion
 
-            Logger.Debug("Configuring MVC and Blazor");
+            Log.Debug("Configuring MVC and Blazor");
             builder.Services
                 .AddMvc(options => options.EnableEndpointRouting = false)
                 .AddRazorOptions(options =>
@@ -89,14 +98,22 @@ namespace LANCommander.Server
 
             builder.Services.AddAutoMapper(typeof(AutoMapper));
 
-            Logger.Debug("Starting web server on port {Port}", settings.Port);
+            Log.Debug("Starting web server on port {Port}", settings.Port);
             builder.WebHost.ConfigureKestrel(options =>
             {
                 // Configure as HTTP only
                 options.ListenAnyIP(settings.Port);
             });
 
-            Logger.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
+            builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>
+            {
+                builder.AllowAnyHeader()
+                       .AllowAnyMethod()
+                       .SetIsOriginAllowed((host) => true)
+                       .AllowCredentials();
+            }));
+
+            Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
             builder.Services.AddDbContext<DatabaseContext>(b =>
             {
                 b.UseLazyLoadingProxies();
@@ -105,7 +122,7 @@ namespace LANCommander.Server
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-            Logger.Debug("Initializing Identity");
+            Log.Debug("Initializing Identity");
             builder.Services.AddDefaultIdentity<User>((IdentityOptions options) =>
             {
                 options.SignIn.RequireConfirmedAccount = false;
@@ -141,13 +158,13 @@ namespace LANCommander.Server
                     };
                 });
 
-            Logger.Debug("Initializing Controllers");
+            Log.Debug("Initializing Controllers");
             builder.Services.AddControllers().AddJsonOptions(x =>
             {
                 x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             });
 
-            Logger.Debug("Initializing Hangfire");
+            Log.Debug("Initializing Hangfire");
             builder.Services.AddHangfire(configuration =>
                 configuration
                     .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
@@ -158,16 +175,16 @@ namespace LANCommander.Server
 
             builder.Services.AddFusionCache();
 
-            Logger.Debug("Registering Swashbuckle");
+            Log.Debug("Registering Swashbuckle");
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            Logger.Debug("Registering AntDesign Blazor");
+            Log.Debug("Registering AntDesign Blazor");
             builder.Services.AddAntDesign();
             
             builder.Services.AddHttpClient();
 
-            Logger.Debug("Registering Services");
+            Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();
@@ -199,7 +216,7 @@ namespace LANCommander.Server
 
             if (settings.Beacon?.Enabled ?? false)
             {
-                Logger.Debug("The beacons have been lit! LANCommander calls for players!");
+                Log.Debug("The beacons have been lit! LANCommander calls for players!");
                 builder.Services.AddHostedService<BeaconService>();
             }
 
@@ -216,17 +233,13 @@ namespace LANCommander.Server
                 options.MultipartBodyLengthLimit = long.MaxValue;
             });
 
-            #region Configure NLog
-            NLog.GlobalDiagnosticsContext.Set("StoragePath", settings.Logs.StoragePath);
-            NLog.GlobalDiagnosticsContext.Set("ArchiveEvery", settings.Logs.ArchiveEvery.GetDisplayName());
-            NLog.GlobalDiagnosticsContext.Set("MaxArchiveFiles", settings.Logs.MaxArchiveFiles.ToString());
-            NLog.GlobalDiagnosticsContext.Set("PortNumber", settings.Port.ToString());
-
-            builder.Host.UseNLog();
-            #endregion
-
-            Logger.Debug("Building Application");
+            Log.Debug("Building Application");
             var app = builder.Build();
+
+            app.UseCors("CorsPolicy");
+
+            app.MapHub<LoggingHub>("/hubs/logging");
+            app.MapHub<GameServerHub>("/hubs/gameserver");
 
             app.Use(async (context, next) =>
             {
@@ -251,7 +264,7 @@ namespace LANCommander.Server
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
-                Logger.Debug("App has been run in a development environment");
+                Log.Debug("App has been run in a development environment");
                 app.UseMigrationsEndPoint();
                 app.UseSwagger();
                 app.UseSwaggerUI();
@@ -275,10 +288,7 @@ namespace LANCommander.Server
 
             app.UseMvcWithDefaultRoute();
 
-            app.MapHub<LoggingHub>("/hubs/logging");
-            app.MapHub<GameServerHub>("/hubs/gameserver");
-
-            Logger.Debug("Registering Endpoints");
+            Log.Debug("Registering Endpoints");
 
             app.UseEndpoints(endpoints =>
             {
@@ -287,7 +297,7 @@ namespace LANCommander.Server
                 endpoints.MapControllers();
             });
 
-            Logger.Debug("Ensuring required directories exist");
+            Log.Debug("Ensuring required directories exist");
             if (!Directory.Exists(settings.Archives.StoragePath))
                 Directory.CreateDirectory(settings.Archives.StoragePath);
 
@@ -307,7 +317,7 @@ namespace LANCommander.Server
                 Directory.CreateDirectory("Backups");
 
             // Migrate
-            Logger.Debug("Migrating database if required");
+            Log.Debug("Migrating database if required");
             await using var scope = app.Services.CreateAsyncScope();
             using var db = scope.ServiceProvider.GetService<DatabaseContext>();
 
@@ -319,14 +329,14 @@ namespace LANCommander.Server
 
                 if (File.Exists(dataSource))
                 {
-                    Logger.Info("Migrations pending, database will be backed up to {BackupName}", backupName);
+                    Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
                     File.Copy(dataSource, backupName);
                 }
 
                 await db.Database.MigrateAsync();
             }
             else
-                Logger.Debug("No pending migrations are available. Skipping database migration.");
+                Log.Debug("No pending migrations are available. Skipping database migration.");
 
             // Replace autoupdater executable
             if (File.Exists("LANCommander.AutoUpdater.exe.Update"))
@@ -346,7 +356,7 @@ namespace LANCommander.Server
             }
 
             // Autostart any server processes
-            Logger.Debug("Autostarting Servers");
+            Log.Debug("Autostarting Servers");
             var serverService = scope.ServiceProvider.GetService<ServerService>();
             var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
 
@@ -354,7 +364,7 @@ namespace LANCommander.Server
             {
                 try
                 {
-                    Logger.Debug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
+                    Log.Debug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
 
                     if (server.AutostartDelay > 0)
                         await Task.Delay(server.AutostartDelay);
@@ -363,11 +373,9 @@ namespace LANCommander.Server
                 }
                 catch (Exception ex)
                 {
-                    Logger.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
+                    Log.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
                 }
             }
-
-            var targets = NLog.LogManager.Configuration.AllTargets;
 
             app.Run();
         }

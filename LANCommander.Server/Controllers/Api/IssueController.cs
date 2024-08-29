@@ -4,22 +4,23 @@ using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using NLog;
 
 namespace LANCommander.Server.Controllers.Api
 {
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class IssueController : ControllerBase
+    public class IssueController : BaseApiController
     {
-        protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
         private readonly GameService GameService;
         private readonly IssueService IssueService;
         private readonly UserManager<User> UserManager;
 
-        public IssueController(GameService gameService, IssueService issueService, UserManager<User> userManager)
+        public IssueController(
+            ILogger<IssueController> logger,
+            GameService gameService,
+            IssueService issueService,
+            UserManager<User> userManager) : base(logger)
         {
             GameService = gameService;
             IssueService = issueService;
@@ -49,7 +50,7 @@ namespace LANCommander.Server.Controllers.Api
             }
             catch (Exception ex)
             {
-                Logger?.Error(ex, "Could not open new issue");
+                Logger?.LogError(ex, "Could not open new issue");
             }
 
             return false;

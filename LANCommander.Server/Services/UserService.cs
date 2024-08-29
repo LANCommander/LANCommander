@@ -10,7 +10,11 @@ namespace LANCommander.Server.Services
         private readonly UserManager<User> UserManager;
         private readonly HttpContext HttpContext;
 
-        public UserService(DatabaseContext databaseContext, UserManager<User> userManager, IHttpContextAccessor httpContextAccessor)
+        public UserService(
+            ILogger<UserService> logger,
+            DatabaseContext databaseContext,
+            IHttpContextAccessor httpContextAccessor,
+            UserManager<User> userManager) : base(logger)
         {
             DatabaseContext = databaseContext;
             UserManager = userManager;

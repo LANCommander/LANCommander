@@ -12,9 +12,10 @@ namespace LANCommander.Server.Services
 {
     public class RedistributableService : BaseDatabaseService<Redistributable>
     {
-        public RedistributableService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public RedistributableService(
+            ILogger<RedistributableService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
 
         public async Task<Redistributable> Import(Guid objectKey)
         {

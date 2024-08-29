@@ -8,11 +8,13 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class SettingsController : ControllerBase
+    public class SettingsController : BaseApiController
     {
         private readonly IMapper Mapper;
 
-        public SettingsController(IMapper mapper)
+        public SettingsController(
+            ILogger<SettingsController> logger,
+            IMapper mapper) : base(logger)
         {
             Mapper = mapper;
         }

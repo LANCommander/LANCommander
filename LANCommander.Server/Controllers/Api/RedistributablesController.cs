@@ -11,13 +11,16 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class RedistributablesController : ControllerBase
+    public class RedistributablesController : BaseApiController
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
         private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public RedistributablesController(IMapper mapper, RedistributableService redistributableService)
+        public RedistributablesController(
+            ILogger<RedistributablesController> logger, 
+            IMapper mapper,
+            RedistributableService redistributableService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;

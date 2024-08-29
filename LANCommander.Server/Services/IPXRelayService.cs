@@ -6,7 +6,7 @@ namespace LANCommander.Server.Services
     {
         private IPXRelay Relay;
 
-        public IPXRelayService() : base()
+        public IPXRelayService(ILogger<IPXRelayService> logger) : base(logger)
         {
             if (Relay == null)
                 Relay = new IPXRelay();

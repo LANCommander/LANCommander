@@ -5,9 +5,10 @@ namespace LANCommander.Server.Services
 {
     public class KeyService : BaseDatabaseService<Key>
     {
-        public KeyService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public KeyService(
+            ILogger<CollectionService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
 
         public async Task<Key> Allocate(Key key, User user)
         {

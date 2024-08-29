@@ -5,8 +5,9 @@ namespace LANCommander.Server.Services
 {
     public class CollectionService : BaseDatabaseService<Collection>
     {
-        public CollectionService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public CollectionService(
+            ILogger<CollectionService> logger,
+            DatabaseContext dbContext, 
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
     }
 }

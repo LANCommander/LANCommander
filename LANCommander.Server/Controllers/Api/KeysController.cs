@@ -12,12 +12,15 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class KeysController : ControllerBase
+    public class KeysController : BaseApiController
     {
         private readonly IMapper Mapper;
         private readonly KeyService KeyService;
 
-        public KeysController(IMapper mapper, KeyService keyService)
+        public KeysController(
+            ILogger<KeysController> logger,
+            IMapper mapper,
+            KeyService keyService) : base(logger)
         {
             Mapper = mapper;
             KeyService = keyService;

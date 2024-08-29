@@ -1,4 +1,4 @@
-﻿using NLog.Targets;
+﻿using Serilog;
 
 namespace LANCommander.Server.Models
 {
@@ -112,7 +112,7 @@ namespace LANCommander.Server.Models
     public class LANCommanderLogSettings
     {
         public string StoragePath { get; set; } = "Logs";
-        public FileArchivePeriod ArchiveEvery { get; set; } = FileArchivePeriod.Day;
+        public RollingInterval ArchiveEvery { get; set; } = RollingInterval.Day;
         public int MaxArchiveFiles { get; set; } = 10;
     }
 }

@@ -74,6 +74,7 @@ namespace LANCommander.Launcher
                 .SetUseOsDefaultLocation(true)
                 .SetChromeless(true)
                 .SetResizable(true)
+                .SetTransparent(true)
                 .RegisterCustomSchemeHandler("media", (object sender, string scheme, string url, out string contentType) =>
                 {
                     var uri = new Uri(url);

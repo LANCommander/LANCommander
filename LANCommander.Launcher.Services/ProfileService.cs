@@ -73,6 +73,69 @@ namespace LANCommander.Launcher.Services
             SettingService.SaveSettings(Settings);
         }
 
+        public async Task Register(string serverAddress, string username, string password, string confirmPassword)
+        {
+            if (String.IsNullOrWhiteSpace(serverAddress))
+                throw new Exception("Server address cannot be blank");
+
+            if (String.IsNullOrWhiteSpace(username))
+                throw new Exception("Username cannot be blank");
+
+            if (String.IsNullOrWhiteSpace(password))
+                throw new Exception("Password cannot be blank");
+
+            if (password != confirmPassword)
+                throw new Exception("Passwords do not match");
+
+            Client.ChangeServerAddress(serverAddress);
+
+            var token = await Client.RegisterAsync(username, password);
+
+            Settings = SettingService.GetSettings();
+
+            Settings.Authentication.ServerAddress = serverAddress;
+            Settings.Authentication.AccessToken = token.AccessToken;
+            Settings.Authentication.RefreshToken = token.RefreshToken;
+
+            SettingService.SaveSettings(Settings);
+
+            var remoteProfile = await Client.Profile.GetAsync();
+
+            Settings.Profile.Id = remoteProfile.Id;
+            Settings.Profile.Alias = String.IsNullOrWhiteSpace(remoteProfile.Alias) ? remoteProfile.UserName : remoteProfile.Alias;
+
+            try
+            {
+                var tempAvatarPath = await Client.Profile.DownloadAvatar();
+
+                if (!String.IsNullOrWhiteSpace(tempAvatarPath))
+                {
+                    var media = new Media
+                    {
+                        FileId = Guid.NewGuid(),
+                        Type = SDK.Enums.MediaType.Avatar,
+                        MimeType = MediaTypeNames.Image.Png,
+                        Crc32 = SDK.MediaService.CalculateChecksum(tempAvatarPath),
+                    };
+
+                    media = await MediaService.Add(media);
+
+                    var localPath = MediaService.GetImagePath(media);
+
+                    if (File.Exists(tempAvatarPath))
+                        File.Move(tempAvatarPath, localPath);
+
+                    Settings.Profile.AvatarId = media.Id;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.Error(ex, "Could not download avatar");
+            }
+
+            SettingService.SaveSettings(Settings);
+        }
+
         public void SetOfflineMode(bool state)
         {
             Settings = SettingService.GetSettings();

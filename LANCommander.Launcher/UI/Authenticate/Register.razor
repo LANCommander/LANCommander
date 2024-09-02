@@ -1,4 +1,4 @@
-﻿@page "/Authenticate"
+﻿@page "/Authenticate/Register"
 @using BeaconLib
 @using LANCommander.Launcher.Models
 @inject ProfileService ProfileService
@@ -40,20 +40,16 @@
                     <FormItem Label="Password">
                         <InputPassword @bind-Value="@context.Password" />
                     </FormItem>
+                    <FormItem Label="Confirm Password">
+                        <InputPassword @bind-Value="@context.ConfirmPassword" />
+                    </FormItem>
                     <FormItem>
                         <Button Type="@ButtonType.Primary" HtmlType="submit">
-                            Login
+                            Register
                         </Button>
 
-                        @if (Settings.Profile.Id != Guid.Empty && !String.IsNullOrWhiteSpace(Settings.Profile.Alias))
-                        {
-                            <Button OnClick="OfflineMode">
-                                Offline
-                            </Button>
-                        }
-
-                        <Button Type="@ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate/Register"))">
-                            Register
+                        <Button Type="@ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate"))">
+                            Login
                         </Button>
                     </FormItem>
                 </Form>
@@ -63,14 +59,15 @@
 </Layout>
 
 @code {
-    public class AuthenticationRequest
+    public class RegistrationRequest
     {
         public string ServerAddress { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
+        public string ConfirmPassword { get; set; }
     }
 
-    AuthenticationRequest Model = new AuthenticationRequest();
+    RegistrationRequest Model = new RegistrationRequest();
     bool Loading { get; set; } = false;
     List<DiscoveredServer> DiscoveredServers = new List<DiscoveredServer>();
 
@@ -91,7 +88,7 @@
                     if (!DiscoveredServers.Any(s => s.Address.ToString() == server.Address.ToString()))
                         DiscoveredServers.Add(server);
                 }
-                    
+
             }
         };
 
@@ -124,7 +121,7 @@
 
         try
         {
-            await ProfileService.Login(Model.ServerAddress, Model.Username, Model.Password);
+            await ProfileService.Register(Model.ServerAddress, Model.Username, Model.Password, Model.ConfirmPassword);
 
             MainLayout.Import();
 

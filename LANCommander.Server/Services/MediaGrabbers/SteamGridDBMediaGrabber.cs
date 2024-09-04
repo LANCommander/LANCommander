@@ -227,8 +227,9 @@ namespace LANCommander.Server.Services.MediaGrabbers
             switch (format)
             {
                 case SteamGridDbFormats.Png:
-                case SteamGridDbFormats.Ico:
                     return MediaTypeNames.Image.Png;
+                case SteamGridDbFormats.Ico:
+                    return MediaTypeNames.Image.Icon;
                 case SteamGridDbFormats.Jpeg:
                     return MediaTypeNames.Image.Jpeg;
                 case SteamGridDbFormats.Webp:

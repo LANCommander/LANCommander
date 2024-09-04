@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using LANCommander.Server.Models;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -37,7 +38,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpPost]
         public SDK.Models.Key Get(KeyRequest keyRequest)
         {
-            return Mapper.Map<SDK.Models.Key>(KeyService.Get(k => k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress).First());
+            return Mapper.Map<SDK.Models.Key>(KeyService.Get(k => k.AllocationMethod == KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress).First());
         }
 
         /// <summary>
@@ -56,12 +57,12 @@ namespace LANCommander.Server.Controllers.Api
 
             switch (game.KeyAllocationMethod)
             {
-                case Data.Models.KeyAllocationMethod.MacAddress:
-                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress);
+                case KeyAllocationMethod.MacAddress:
+                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress);
                     break;
 
-                case Data.Models.KeyAllocationMethod.UserAccount:
-                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == Data.Models.KeyAllocationMethod.UserAccount && k.ClaimedByUser?.Id == user.Id);
+                case KeyAllocationMethod.UserAccount:
+                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser?.Id == user.Id);
                     break;
             }
 
@@ -87,19 +88,19 @@ namespace LANCommander.Server.Controllers.Api
 
             switch (game.KeyAllocationMethod)
             {
-                case Data.Models.KeyAllocationMethod.MacAddress:
-                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress);
+                case KeyAllocationMethod.MacAddress:
+                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress == keyRequest.MacAddress);
                     break;
 
-                case Data.Models.KeyAllocationMethod.UserAccount:
-                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == Data.Models.KeyAllocationMethod.UserAccount && k.ClaimedByUser?.Id == user.Id);
+                case KeyAllocationMethod.UserAccount:
+                    key = game.Keys.FirstOrDefault(k => k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser?.Id == user.Id);
                     break;
             }
 
             var availableKey = game.Keys.FirstOrDefault(k =>
-                (k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
+                (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
                 ||
-                (k.AllocationMethod == Data.Models.KeyAllocationMethod.UserAccount && k.ClaimedByUser == null));
+                (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null));
 
             if (availableKey == null && key != null)
                 return Mapper.Map<SDK.Models.Key>(key);
@@ -112,11 +113,11 @@ namespace LANCommander.Server.Controllers.Api
 
                 switch (game.KeyAllocationMethod)
                 {
-                    case Data.Models.KeyAllocationMethod.MacAddress:
+                    case KeyAllocationMethod.MacAddress:
                         key = await KeyService.Allocate(availableKey, keyRequest.MacAddress);
                         break;
 
-                    case Data.Models.KeyAllocationMethod.UserAccount:
+                    case KeyAllocationMethod.UserAccount:
                         key = await KeyService.Allocate(availableKey, user);
                         break;
                 }
@@ -132,23 +133,23 @@ namespace LANCommander.Server.Controllers.Api
         /// <param name="keyRequest"></param>
         /// <param name="keyAllocationMethod"></param>
         /// <returns>Allocated key</returns>
-        private async Task<SDK.Models.Key> AllocateNewKey(Guid id, KeyRequest keyRequest, Data.Models.KeyAllocationMethod keyAllocationMethod)
+        private async Task<SDK.Models.Key> AllocateNewKey(Guid id, KeyRequest keyRequest, KeyAllocationMethod keyAllocationMethod)
         {
             var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
             var availableKey = KeyService.Get(k => k.Game.Id == id)
                 .Where(k =>
-                (k.AllocationMethod == Data.Models.KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
+                (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
                 ||
-                (k.AllocationMethod == Data.Models.KeyAllocationMethod.UserAccount && k.ClaimedByUser == null))
+                (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null))
                 .FirstOrDefault();
 
             if (availableKey == null)
                 return null;
 
-            if (keyAllocationMethod == Data.Models.KeyAllocationMethod.MacAddress)
+            if (keyAllocationMethod == KeyAllocationMethod.MacAddress)
                 return Mapper.Map<SDK.Models.Key>(await KeyService.Allocate(availableKey, keyRequest.MacAddress));
-            else if (keyAllocationMethod == Data.Models.KeyAllocationMethod.UserAccount)
+            else if (keyAllocationMethod == KeyAllocationMethod.UserAccount)
                 return Mapper.Map<SDK.Models.Key>(await KeyService.Allocate(availableKey, user));
             else
                 return null;

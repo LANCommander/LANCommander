@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using LANCommander.SDK.Enums;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
@@ -34,11 +35,5 @@ namespace LANCommander.Server.Data.Models
 
             return false; 
         }
-    }
-
-    public enum KeyAllocationMethod
-    {
-        UserAccount,
-        MacAddress
     }
 }

@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data;
+﻿using LANCommander.SDK.Enums;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 
 namespace LANCommander.Server.Services

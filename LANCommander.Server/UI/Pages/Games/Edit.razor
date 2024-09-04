@@ -160,6 +160,12 @@
                             </Select>
                         </FormItem>
                     }
+                    <FormItem Label="Key Allocation Method">
+                        <Select @bind-Value="@context.KeyAllocationMethod" TItem="KeyAllocationMethod" TItemValue="KeyAllocationMethod" DataSource="Enum.GetValues<KeyAllocationMethod>()">
+                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                        </Select>
+                    </FormItem>
                     <FormItem Label="Released On">
                         <DatePicker TValue="DateTime?" @bind-Value="@context.ReleasedOn" Picker="@DatePickerType.Date" />
                     </FormItem>

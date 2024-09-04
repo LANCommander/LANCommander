@@ -21,6 +21,8 @@ namespace LANCommander.Server.Data.Models
 
         public virtual ICollection<Action>? Actions { get; set; } = new List<Action>();
 
+        public KeyAllocationMethod KeyAllocationMethod { get; set; } = KeyAllocationMethod.UserAccount;
+
         public GameType Type { get; set; }
         public Guid? BaseGameId { get; set; }
         [ForeignKey(nameof(BaseGameId))]

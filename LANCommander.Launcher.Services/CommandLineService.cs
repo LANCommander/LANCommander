@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using LANCommander.Launcher.Models;
+using LANCommander.SDK.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -129,8 +130,13 @@ namespace LANCommander.Launcher.Services
             try
             {
                 var game = await GameService.Get(options.GameId);
+                var manifest = await ManifestHelper.ReadAsync(game.InstallDirectory, game.Id);
+                var action = manifest.Actions.FirstOrDefault(a => a.Id == options.ActionId);
 
-                await GameService.Run(game, options.ActionId);
+                if (action == null)
+                    action = manifest.Actions.OrderBy(a => a.SortOrder).FirstOrDefault(a => a.IsPrimaryAction);
+
+                await GameService.Run(game, action);
             }
             catch (Exception ex)
             {

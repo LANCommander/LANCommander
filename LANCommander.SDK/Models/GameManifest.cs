@@ -41,6 +41,7 @@ namespace LANCommander.SDK
         public int MinPlayers { get; set; }
         public int MaxPlayers { get; set; }
         public string Description { get; set; }
+        public NetworkProtocol NetworkProtocol { get; set; }
     }
 
     public class SavePathEntry

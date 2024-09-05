@@ -96,6 +96,80 @@ namespace LANCommander.SDK
             return Client.GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
         }
 
+        public async Task<IEnumerable<GameManifest>> GetManifestsAsync(string installDirectory, Guid id)
+        {
+            var manifests = new List<GameManifest>();
+            var mainManifest = await ManifestHelper.ReadAsync(installDirectory, id);
+
+            if (mainManifest == null)
+                return manifests;
+
+            manifests.Add(mainManifest);
+
+            if (mainManifest.DependentGames != null)
+            {
+                foreach (var dependentGameId in mainManifest.DependentGames)
+                {
+                    try
+                    {
+                        var dependentGameManifest = await ManifestHelper.ReadAsync(installDirectory, dependentGameId);
+
+                        if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
+                            manifests.Add(dependentGameManifest);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                    }
+                }
+            }
+
+            return manifests;
+        }
+
+        public async Task<IEnumerable<Models.Action>> GetActionsAsync(string installDirectory, Guid id)
+        {
+            var actions = new List<Models.Action>();
+            var manifests = await GetManifestsAsync(installDirectory, id);
+
+            foreach (var manifest in manifests.Where(m => m != null && m.Actions != null))
+            {
+                actions.AddRange(manifest.Actions.OrderBy(a => a.SortOrder).ToList());
+            }
+
+            if (Client.IsConnected())
+            {
+                var remoteGame = await Client.Games.GetAsync(id);
+
+                if (remoteGame != null && remoteGame.Servers != null)
+                    actions.AddRange(remoteGame.Servers.Where(s => s.Actions != null).SelectMany(s => s.Actions));
+            }
+
+            if (manifests.Any(m => (m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby) || (m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby)))
+            {
+                var primaryAction = actions.First();
+                var lobbies = Client.Lobbies.GetSteamLobbies(installDirectory, id);
+
+                foreach (var lobby in lobbies)
+                {
+                    var lobbyAction = new Models.Action
+                    {
+                        Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
+                        IsPrimaryAction = true,
+                        Name = $"Join {lobby.ExternalUsername}'s lobby",
+                        SortOrder = actions.Count,
+                        Variables = primaryAction.Variables,
+                        Path = primaryAction.Path,
+                        WorkingDirectory = primaryAction.WorkingDirectory
+                    };
+
+                    actions.Add(lobbyAction);
+                }
+            }
+
+            return actions;
+        }
+
         private TrackableStream Stream(Guid id)
         {
             return Client.StreamRequest($"/api/Games/{id}/Download");
@@ -654,7 +728,7 @@ namespace LANCommander.SDK
             return manifests;
         }
 
-        public async Task RunAsync(string installDirectory, Guid gameId, Guid actionId, DateTime lastRun)
+        public async Task RunAsync(string installDirectory, Guid gameId, Models.Action action, DateTime? lastRun, string args = "")
         {
             var profile = await Client.Profile.GetAsync();
             var screen = DisplayHelper.GetScreen();
@@ -718,7 +792,7 @@ namespace LANCommander.SDK
 
                 try
                 {
-                    var task = context.ExecuteAsync(installDirectory, gameId, actionId);
+                    var task = context.ExecuteAsync(installDirectory, gameId, action);
 
                     RunningProcesses[gameId] = context.Process;
 

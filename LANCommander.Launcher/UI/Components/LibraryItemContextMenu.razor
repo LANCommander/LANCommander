@@ -107,7 +107,7 @@ else
 
     async Task Run(Game game, SDK.Models.Action action)
     {
-        var task = GameService.Run(game, action.Id);
+        var task = GameService.Run(game, action);
 
         await InvokeAsync(StateHasChanged);
 
@@ -156,7 +156,7 @@ else
 
     async Task RunInstallScripts()
     {
-        var manifests = GameService.GetGameManifests(Game);
+        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
@@ -166,7 +166,7 @@ else
 
     async Task RunNameChangeScripts()
     {
-        var manifests = GameService.GetGameManifests(Game);
+        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
@@ -176,7 +176,7 @@ else
 
     async Task RunKeyChangeScripts()
     {
-        var manifests = GameService.GetGameManifests(Game);
+        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {

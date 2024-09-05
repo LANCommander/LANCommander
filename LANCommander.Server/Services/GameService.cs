@@ -159,6 +159,7 @@ namespace LANCommander.Server.Services
                         MinPlayers = local.MinPlayers,
                         MaxPlayers = local.MaxPlayers,
                         Description = local.Description,
+                        NetworkProtocol = local.NetworkProtocol,
                     };
 
                 if (lan != null)
@@ -166,6 +167,8 @@ namespace LANCommander.Server.Services
                     {
                         MinPlayers = lan.MinPlayers,
                         MaxPlayers = lan.MaxPlayers,
+                        Description = lan.Description,
+                        NetworkProtocol = lan.NetworkProtocol,
                     };
 
                 if (online != null)
@@ -173,6 +176,8 @@ namespace LANCommander.Server.Services
                     {
                         MinPlayers = online.MinPlayers,
                         MaxPlayers = online.MaxPlayers,
+                        Description = online.Description,
+                        NetworkProtocol = online.NetworkProtocol,
                     };
             }
 
@@ -389,6 +394,7 @@ namespace LANCommander.Server.Services
                         MinPlayers = manifest.LanMultiplayer.MinPlayers,
                         MaxPlayers = manifest.LanMultiplayer.MaxPlayers,
                         Description = manifest.LanMultiplayer.Description,
+                        NetworkProtocol = manifest.LanMultiplayer.NetworkProtocol,
                     });
 
                 if (manifest.LocalMultiplayer != null)
@@ -398,6 +404,7 @@ namespace LANCommander.Server.Services
                         MinPlayers = manifest.LocalMultiplayer.MinPlayers,
                         MaxPlayers = manifest.LocalMultiplayer.MaxPlayers,
                         Description = manifest.LocalMultiplayer.Description,
+                        NetworkProtocol = manifest.LocalMultiplayer.NetworkProtocol,
                     });
 
                 if (manifest.OnlineMultiplayer != null)
@@ -407,6 +414,7 @@ namespace LANCommander.Server.Services
                         MinPlayers = manifest.OnlineMultiplayer.MinPlayers,
                         MaxPlayers = manifest.OnlineMultiplayer.MaxPlayers,
                         Description = manifest.OnlineMultiplayer.Description,
+                        NetworkProtocol = manifest.OnlineMultiplayer.NetworkProtocol,
                     });
                 #endregion
 

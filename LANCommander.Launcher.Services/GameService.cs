@@ -30,57 +30,6 @@ namespace LANCommander.Launcher.Services
             MessageBusService = messageBusService;
         }
 
-        public async Task<IEnumerable<SDK.Models.Action>> GetActionsAsync(Game game)
-        {
-            var actions = new List<SDK.Models.Action>();
-            var manifests = GetGameManifests(game);
-
-            foreach (var manifest in manifests.Where(m => m != null && m.Actions != null))
-            {
-                actions.AddRange(manifest.Actions.OrderBy(a => a.SortOrder).ToList());
-            }
-
-            // Check for an active connection to the server
-            if (true)
-            {
-                var remoteGame = await Client.Games.GetAsync(game.Id);
-
-                if (remoteGame != null && remoteGame.Servers != null)
-                    actions.AddRange(remoteGame.Servers.Where(s => s.Actions != null).SelectMany(s => s.Actions));
-            }
-
-            return actions;
-        }
-
-        public IEnumerable<SDK.GameManifest> GetGameManifests(Game game)
-        {
-            var manifests = new List<GameManifest>();
-            var mainManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
-
-            if (mainManifest == null)
-                return manifests;
-
-            manifests.Add(mainManifest);
-
-            if (mainManifest.DependentGames != null)
-                foreach (var dependentGameId in mainManifest.DependentGames)
-                {
-                    try
-                    {
-                        var dependentGameManifest = ManifestHelper.Read(game.InstallDirectory, dependentGameId);
-
-                        if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
-                            manifests.Add(dependentGameManifest);
-                    }
-                    catch (Exception ex)
-                    {
-                         Logger?.Error(ex, $"Could not load manifest from dependent game {dependentGameId}");
-                    }
-                }
-
-            return manifests;
-        }
-
         public async Task UninstallAsync(Game game)
         {
             try
@@ -102,7 +51,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task Run(Game game, Guid actionId)
+        public async Task Run(Game game, SDK.Models.Action action)
         {
             var profile = await Client.Profile.GetAsync();
 
@@ -112,7 +61,7 @@ namespace LANCommander.Launcher.Services
 
                 await PlaySessionService.StartSession(game.Id, profile.Id);
 
-                await Client.Games.RunAsync(game.InstallDirectory, game.Id, actionId, latestSession.CreatedOn);
+                await Client.Games.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.CreatedOn);
             }
             catch (Exception ex)
             {

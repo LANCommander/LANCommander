@@ -8,6 +8,7 @@ namespace LANCommander.SDK.Enums
         TCPIP,
         IPX,
         Modem,
-        Serial
+        Serial,
+        Lobby
     }
 }

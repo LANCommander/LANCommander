@@ -80,7 +80,7 @@ else
     async Task Run()
     {
         var game = LibraryItem.DataItem as Game;
-        var actions = await GameService.GetActionsAsync(game);
+        var actions = await Client.Games.GetActionsAsync(game.InstallDirectory, game.Id);
 
         if (actions == null || actions.Count() == 0)
         {
@@ -98,7 +98,7 @@ else
 
         if (primaryActions.Count() == 1)
         {
-            var task = GameService.Run(game, primaryActions.First().Id);
+            var task = GameService.Run(game, primaryActions.First());
 
             await InvokeAsync(StateHasChanged);
 
@@ -114,7 +114,15 @@ else
                 Closable = true,
                 Footer = null,
                 Centered = true,
-                WrapClassName = "game-actions-dialog"
+                WrapClassName = "game-actions-dialog",
+                OnCancel = async (e) =>
+                {
+                    Client.Lobbies.ReleaseSteam();
+                },
+                AfterClose = async () =>
+                {
+                    Client.Lobbies.ReleaseSteam();
+                }
             };
 
             var model = new ActionSelectorDialogOptions

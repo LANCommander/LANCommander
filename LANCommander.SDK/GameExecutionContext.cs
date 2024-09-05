@@ -56,10 +56,9 @@ namespace LANCommander.SDK
             return input.ExpandEnvironmentVariables(installDirectory, skipSlashes);
         }
 
-        public async Task ExecuteAsync(string installDirectory, Guid gameId, Guid actionId)
+        public async Task ExecuteAsync(string installDirectory, Guid gameId, Models.Action action, string args = "")
         {
             var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
-            var action = manifest.Actions.FirstOrDefault(a => a.Id == actionId);
 
             if (action == null)
                 action = manifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
@@ -71,6 +70,9 @@ namespace LANCommander.SDK
 
             if (String.IsNullOrWhiteSpace(action.WorkingDirectory))
                 Process.StartInfo.WorkingDirectory = installDirectory;
+
+            if (!String.IsNullOrWhiteSpace(args))
+                Process.StartInfo.Arguments += " " + args;
 
             Process.Start();
 
@@ -86,6 +88,8 @@ namespace LANCommander.SDK
 
                 Process.Dispose();
             }
+
+            Client.Lobbies.ReleaseSteam();
         }
     }
 }

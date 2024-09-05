@@ -144,7 +144,6 @@
     LibraryItem SelectedItem { get; set; }
 
     Data.Models.Game SelectedGame { get; set; }
-    IEnumerable<SDK.Models.Action> SelectedGameActions { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -190,9 +189,6 @@
         {
             SelectedItem = item;
             SelectedGame = item.DataItem as Data.Models.Game;
-
-            if (SelectedItem.State == LibraryItemState.Installed)
-                SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame)).Where(a => !a.IsPrimaryAction);
 
             await InvokeAsync(StateHasChanged);
         }

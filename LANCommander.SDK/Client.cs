@@ -40,6 +40,7 @@ namespace LANCommander.SDK
         public readonly MediaService Media;
         public readonly LauncherService Launcher;
         public readonly IssueService Issues;
+        public readonly LobbyService Lobbies;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -65,6 +66,7 @@ namespace LANCommander.SDK
             Media = new MediaService(this);
             Launcher = new LauncherService(this);
             Issues = new IssueService(this);
+            Lobbies = new LobbyService(this);
 
             BaseCmdlet.Client = this;
 
@@ -85,6 +87,7 @@ namespace LANCommander.SDK
             Media = new MediaService(this, logger);
             Launcher = new LauncherService(this);
             Issues = new IssueService(this);
+            Lobbies = new LobbyService(this, logger);
 
             BaseCmdlet.Client = this;
 

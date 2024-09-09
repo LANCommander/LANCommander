@@ -43,7 +43,7 @@ namespace LANCommander.SDK
 
         public async Task<bool> Open(string description, Guid gameId)
         {
-            return await Client.PostRequestAsync<bool>("/Issue/Open", new Issue
+            return await Client.PostRequestAsync<bool>("/api/Issue/Open", new Issue
             {
                 Description = description,
                 GameId = gameId

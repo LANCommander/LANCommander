@@ -51,21 +51,28 @@
                     <TextArea @bind-Value="@context.Description" ShowCount MinRows="30" Disabled="context?.ResolvedOn != null" />
                 </FormItem>
                 <FormItem Label="Game">
-                    <Select TItem="Game"
-                            TItemValue="Guid"
-                            DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
-                            @bind-Value="@context.GameId"
-                            LabelName="Title"
-                            ValueName="Id"
-                            Placeholder="Select a Game"
-                            DefaultActiveFirstOption="false"
-                            EnableSearch
-                            Disabled="context?.ResolvedOn != null">
-                        <ItemTemplate Context="game">
-                            <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
-                            @game.Title
-                        </ItemTemplate>
-                    </Select>
+                    <GridRow Wrap="false" Gutter="16">
+                        <GridCol Flex=@("auto")>
+                            <Select TItem="Game"
+                                    TItemValue="Guid"
+                                    DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                                    @bind-Value="@context.GameId"
+                                    LabelName="Title"
+                                    ValueName="Id"
+                                    Placeholder="Select a Game"
+                                    DefaultActiveFirstOption="false"
+                                    EnableSearch
+                                    Disabled="context?.ResolvedOn != null">
+                                <ItemTemplate Context="game">
+                                    <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
+                                    @game.Title
+                                </ItemTemplate>
+                            </Select>
+                        </GridCol>
+                        <GridCol Flex=@("none")>
+                            <a href="/Games/@(context.Game.Id)" target="_blank" class="ant-btn ant-btn-primary">Edit</a>
+                        </GridCol>
+                    </GridRow>
                 </FormItem>
             </Form>
         </div>

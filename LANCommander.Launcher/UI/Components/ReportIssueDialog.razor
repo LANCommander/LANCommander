@@ -14,19 +14,27 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        Issue.GameId = Options.Id;
+        try {
+            Issue.GameId = Options.Id;
 
-        var success = await Client.Issues.Open(Issue.Description, Issue.GameId);
+            var success = await Client.Issues.Open(Issue.Description, Issue.GameId);
 
-        if (success)
-        {
-            MessageService.Success("Issue reported!");
+            if (success)
+            {
+                MessageService.Success("Issue reported!");
 
-            await base.FeedbackRef.CloseAsync();
+                await base.FeedbackRef.CloseAsync();
+            }
+            else
+            {
+                MessageService.Error("Unknown error: issue not reported");
+
+                args.Reject();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            MessageService.Error("Issue could not be reported!");
+            MessageService.Error("Unknown error: issue not reported");
 
             args.Reject();
         }

@@ -21,7 +21,7 @@
 <TableColumnPicker @ref="Picker" Key="Issues" @bind-Visible="ColumnPickerVisible" />
 
 <Table TItem="Issue" DataSource="@Issues" Loading="@Loading" PageSize="25" Responsive>
-    <PropertyColumn Property="r => r.Game" Sortable Hidden="@(Picker.IsColumnHidden("Game"))" />
+    <PropertyColumn Property="r => r.Game.Title" Sortable Hidden="@(Picker.IsColumnHidden("Game"))" />
     <PropertyColumn Property="r => r.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     <PropertyColumn Property="r => r.CreatedBy != null ? r.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
     <PropertyColumn Property="r => r.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />

@@ -22,15 +22,6 @@
             </PageHeaderTitle>
             <PageHeaderExtra>
                 <Space Direction="DirectionVHType.Horizontal">
-                    <SpaceItem>
-                        Submitted on @Issue.CreatedOn
-
-                        @if (Issue.CreatedBy != null)
-                        {
-                            <Text> by @Issue.CreatedBy.UserName</Text>
-                        }
-                    </SpaceItem>
-
                     @if (Id != Guid.Empty)
                     {
                         <SpaceItem>
@@ -48,7 +39,11 @@
         <div class="panel-layout-content">
             @if (Issue?.ResolvedOn != null)
             {
-                <Alert Type="@AlertType.Success" Message="@($"This issue was resolved on {Issue.ResolvedOn} by {Issue?.ResolvedBy?.UserName}")" ShowIcon="true" />
+                <Alert Type="@AlertType.Success" Message="@($"This issue was resolved on {Issue.ResolvedOn} by {Issue?.ResolvedBy?.UserName} and was reported by {Issue?.CreatedBy?.UserName} on {Issue.CreatedOn}")" ShowIcon="true" Style="margin-bottom: 16px" />
+            }
+            else
+            {
+                <Alert Type="@AlertType.Info" Message="@($"This issue was reported by {Issue?.CreatedBy?.UserName} on {Issue.CreatedOn}")" ShowIcon="true" Style="margin-bottom: 16px" />
             }
 
             <Form Model="@Issue" Layout="@FormLayout.Vertical">

@@ -239,6 +239,9 @@ namespace LANCommander.SDK
 
                     var oldName = GameService.GetPlayerAlias(installDirectory, gameId);
 
+                    if (oldName == newName)
+                        oldName = String.Empty;
+
                     if (!String.IsNullOrWhiteSpace(oldName))
                         Logger?.LogTrace("Old Name: {OldName}", oldName);
 

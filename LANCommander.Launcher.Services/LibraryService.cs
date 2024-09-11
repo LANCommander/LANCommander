@@ -95,9 +95,10 @@ namespace LANCommander.Launcher.Services
         public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
         {
             var settings = SettingService.GetSettings();
-            var items = new List<LibraryItem>();
 
-            var games = await GameService.Get(x => true).ToListAsync();
+            LibraryItems.Clear();
+
+            var games = await GameService.Get(x => true).AsNoTracking().ToListAsync();
 
             switch (settings.Filter.GroupBy)
             {
@@ -114,10 +115,13 @@ namespace LANCommander.Launcher.Services
                     GroupSelector = (g) => (g.DataItem as Game).Platforms.Select(p => p.Name).ToArray();
                     break;
             }
+            
+            foreach (var item in games.Select(g => new LibraryItem(g, GroupSelector)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
+            {
+                LibraryItems.Add(item);
+            }
 
-            items.AddRange(games.Select(g => new LibraryItem(g, GroupSelector)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name));
-
-            return await FilterLibraryItems(items);
+            return await FilterLibraryItems(LibraryItems);
         }
 
         async Task<IEnumerable<LibraryItem>> FilterLibraryItems(IEnumerable<LibraryItem> items)

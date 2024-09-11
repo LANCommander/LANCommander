@@ -1,11 +1,6 @@
 ﻿using LANCommander.Launcher.Models.Enums;
 using Microsoft.Extensions.Logging;
-using NLog.Targets;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Serilog;
 
 namespace LANCommander.Launcher.Models
 {
@@ -75,7 +70,7 @@ namespace LANCommander.Launcher.Models
         public bool EnableScriptDebugging { get; set; } = false;
         public LogLevel LoggingLevel { get; set; } = LogLevel.Warning;
         public string LoggingPath { get; set; } = "Logs";
-        public FileArchivePeriod LoggingArchivePeriod { get; set; } = FileArchivePeriod.Day;
+        public RollingInterval LoggingArchivePeriod { get; set; } = RollingInterval.Day;
         public int MaxArchiveFiles { get; set; } = 10;
     }
 

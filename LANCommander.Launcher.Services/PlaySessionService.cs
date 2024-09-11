@@ -2,6 +2,7 @@
 using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,12 +13,8 @@ namespace LANCommander.Launcher.Services
 {
     public class PlaySessionService : BaseDatabaseService<PlaySession>
     {
-        private readonly SDK.Client Client;
 
-        public PlaySessionService(DatabaseContext dbContext, SDK.Client client) : base(dbContext)
-        {
-            Client = client;
-        }
+        public PlaySessionService(DatabaseContext dbContext, SDK.Client client, ILogger<CollectionService> logger) : base(dbContext, client, logger) { }
 
         public async Task<PlaySession> GetLatestSession(Guid gameId, Guid userId)
         {

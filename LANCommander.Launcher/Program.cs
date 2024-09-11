@@ -8,13 +8,10 @@ using LANCommander.Launcher.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NLog;
-using NLog.Config;
-using NLog.Extensions.Logging;
-using NLog.Targets;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
+using Serilog;
 using System.Diagnostics;
 using System.IO;
 using System.Management.Automation.Language;
@@ -27,14 +24,17 @@ namespace LANCommander.Launcher
 {
     class Program
     {
-        static Logger Logger = LogManager.GetCurrentClassLogger();
-
         [STAThread]
         static void Main(string[] args)
         {
+            var settings = SettingService.GetSettings();
+
+            using var Logger = new LoggerConfiguration()
+                .WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)
+                .CreateLogger();
+
             Logger?.Debug("Starting up launcher...");
             Logger?.Debug("Loading settings from file");
-            var settings = SettingService.GetSettings();
 
             var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
@@ -43,16 +43,9 @@ namespace LANCommander.Launcher
 
             builder.Services.AddLogging(loggingBuilder =>
             {
-                var loggerConfig = new LoggingConfiguration();
-
-                NLog.GlobalDiagnosticsContext.Set("StoragePath", settings.Debug.LoggingPath);
-                NLog.GlobalDiagnosticsContext.Set("ArchiveEvery", settings.Debug.LoggingArchivePeriod);
-                NLog.GlobalDiagnosticsContext.Set("MaxArchiveFiles", settings.Debug.MaxArchiveFiles);
-                NLog.GlobalDiagnosticsContext.Set("LoggingLevel", settings.Debug.LoggingLevel);
-
                 loggingBuilder.ClearProviders();
                 loggingBuilder.SetMinimumLevel(settings.Debug.LoggingLevel);
-                loggingBuilder.AddNLog();
+                loggingBuilder.AddSerilog(Logger);
             });
             #endregion
 

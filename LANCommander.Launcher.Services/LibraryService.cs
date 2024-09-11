@@ -6,6 +6,7 @@ using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,7 +21,6 @@ namespace LANCommander.Launcher.Services
 {
     public class LibraryService : BaseService
     {
-        private readonly SDK.Client Client;
         private readonly DownloadService DownloadService;
         private readonly GameService GameService;
         private readonly SaveService SaveService;
@@ -46,15 +46,15 @@ namespace LANCommander.Launcher.Services
 
         public LibraryService(
             SDK.Client client,
+            ILogger<LibraryService> logger,
             DownloadService downloadService,
             GameService gameService,
             SaveService saveService,
             PlaySessionService playSessionService,
             RedistributableService redistributableService,
             ImportService importService,
-            MessageBusService messageBusService) : base()
+            MessageBusService messageBusService) : base(client, logger)
         {
-            Client = client;
             DownloadService = downloadService;
             GameService = gameService;
             SaveService = saveService;
@@ -97,7 +97,7 @@ namespace LANCommander.Launcher.Services
             var settings = SettingService.GetSettings();
             var items = new List<LibraryItem>();
 
-            var games = await GameService.Get();
+            var games = await GameService.Get(x => true).ToListAsync();
 
             switch (settings.Filter.GroupBy)
             {

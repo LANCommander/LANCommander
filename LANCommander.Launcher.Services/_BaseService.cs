@@ -1,14 +1,16 @@
-﻿using NLog;
+﻿using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Services
 {
     public abstract class BaseService
     {
-        protected readonly Logger Logger;
+        protected readonly SDK.Client Client;
+        protected readonly ILogger Logger;
 
-        protected BaseService()
+        protected BaseService(SDK.Client client, ILogger logger)
         {
-            Logger = LogManager.GetLogger(GetType().ToString());
+            Client = client;
+            Logger = logger;
         }
     }
 }

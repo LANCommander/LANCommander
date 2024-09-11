@@ -1,4 +1,5 @@
 ﻿using LANCommander.SDK.Models;
+using Microsoft.Extensions.Logging;
 using Semver;
 using System;
 using System.Collections.Generic;
@@ -12,15 +13,10 @@ namespace LANCommander.Launcher.Services
 {
     public class UpdateService : BaseService
     {
-        private readonly SDK.Client Client;
-
         public delegate Task OnUpdateAvailableHandler(CheckForUpdateResponse response);
         public event OnUpdateAvailableHandler OnUpdateAvailable;
 
-        public UpdateService(SDK.Client client)
-        {
-            Client = client;
-        }
+        public UpdateService(SDK.Client client, ILogger<UpdateService> logger) : base(client, logger) { }
 
         public async Task<CheckForUpdateResponse> CheckForUpdateAsync()
         {
@@ -36,7 +32,7 @@ namespace LANCommander.Launcher.Services
         {
             var settings = SettingService.GetSettings();
 
-            Logger?.Info("Updating launcher to v{Version}", version);
+            Logger?.LogInformation("Updating launcher to v{Version}", version);
 
             await Client.Launcher.DownloadAsync(Path.Combine(settings.Updates.StoragePath, $"{version}.zip"));
 
@@ -59,7 +55,7 @@ namespace LANCommander.Launcher.Services
 
             SettingService.SaveSettings(settings);
 
-            Logger?.Info("Shutting down to get out of the way");
+            Logger?.LogInformation("Shutting down to get out of the way");
 
             Environment.Exit(0);
         }

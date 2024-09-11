@@ -1,4 +1,5 @@
 ﻿using LANCommander.Launcher.Data.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,14 +8,9 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class SaveService
+    public class SaveService : BaseService
     {
-        private readonly SDK.Client Client;
-
-        public SaveService(SDK.Client client)
-        {
-            Client = client;
-        }
+        public SaveService(SDK.Client client, ILogger<SaveService> saveService) : base(client, saveService) { }
 
         public async Task DownloadLatestAsync(string installDirectory, Guid gameId)
         {

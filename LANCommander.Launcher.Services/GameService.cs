@@ -3,13 +3,13 @@ using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Helpers;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace LANCommander.Launcher.Services
 {
     public class GameService : BaseDatabaseService<Game>
     {
-        private readonly SDK.Client Client;
         private readonly PlaySessionService PlaySessionService;
         private readonly SaveService SaveService;
         private readonly MessageBusService MessageBusService;
@@ -21,9 +21,14 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;
 
-        public GameService(DatabaseContext dbContext, SDK.Client client, PlaySessionService playSessionService, SaveService saveService, MessageBusService messageBusService) : base(dbContext)
+        public GameService(
+            DatabaseContext dbContext,
+            SDK.Client client,
+            ILogger<GameService> logger,
+            PlaySessionService playSessionService,
+            SaveService saveService,
+            MessageBusService messageBusService) : base(dbContext, client, logger)
         {
-            Client = client;
             Settings = SettingService.GetSettings();
             PlaySessionService = playSessionService;
             SaveService = saveService;
@@ -47,7 +52,7 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
-                Logger?.Error(ex, "Game {GameTitle} ({GameId}) could not be uninstalled", game.Title, game.Id);
+                Logger?.LogError(ex, "Game {GameTitle} ({GameId}) could not be uninstalled", game.Title, game.Id);
             }
         }
 
@@ -65,7 +70,7 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
-                Logger?.Error(ex, "Game failed to run");
+                Logger?.LogError(ex, "Game failed to run");
             }
             finally
             {

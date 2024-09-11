@@ -4,6 +4,8 @@ using LANCommander.SDK.Enums;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
+using Microsoft.Extensions.Logging;
+
 // using Microsoft.Toolkit.Uwp.Notifications;
 using System;
 using System.Collections.Generic;
@@ -17,7 +19,6 @@ namespace LANCommander.Launcher.Services
 {
     public class DownloadService : BaseService
     {
-        private readonly SDK.Client Client;
         private readonly GameService GameService;
         private readonly SaveService SaveService;
 
@@ -36,9 +37,12 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnInstallFailHandler(Game game);
         public event OnInstallFailHandler OnInstallFail;
 
-        public DownloadService(SDK.Client client, GameService gameService, SaveService saveService) : base()
+        public DownloadService(
+            SDK.Client client,
+            ILogger<DownloadService> logger,
+            GameService gameService,
+            SaveService saveService) : base(client, logger)
         {
-            Client = client;
             GameService = gameService;
             SaveService = saveService;
             Stopwatch = new Stopwatch();
@@ -204,7 +208,7 @@ namespace LANCommander.Launcher.Services
 
                 OnQueueChanged?.Invoke();
 
-                Logger?.Trace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
+                Logger?.LogTrace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
 
                 // ShowCompletedNotification(currentItem);
 

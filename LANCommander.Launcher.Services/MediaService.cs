@@ -1,6 +1,7 @@
 ﻿using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,8 @@ namespace LANCommander.Launcher.Services
     {
         private readonly Settings Settings;
 
-        public MediaService(DatabaseContext context) : base(context) {
+        public MediaService(DatabaseContext dbContext, SDK.Client client, ILogger<CollectionService> logger) : base(dbContext, client, logger)
+        {
             Settings = SettingService.GetSettings();
         }
 

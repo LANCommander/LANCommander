@@ -3,6 +3,7 @@ using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,9 +13,8 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class ImportService
+    public class ImportService : BaseService
     {
-        private readonly SDK.Client Client;
         private readonly MediaService MediaService;
         private readonly CollectionService CollectionService;
         private readonly CompanyService CompanyService;
@@ -37,6 +37,7 @@ namespace LANCommander.Launcher.Services
 
         public ImportService(
             SDK.Client client,
+            ILogger<ImportService> logger,
             MediaService mediaService,
             CollectionService collectionService,
             CompanyService companyService,
@@ -48,9 +49,8 @@ namespace LANCommander.Launcher.Services
             RedistributableService redistributableService,
             TagService tagService,
             MessageBusService messageBusService,
-            DatabaseContext databaseContext) : base()
+            DatabaseContext databaseContext) : base(client, logger)
         {
-            Client = client;
             MediaService = mediaService;
             CollectionService = collectionService;
             CompanyService = companyService;
@@ -349,7 +349,7 @@ namespace LANCommander.Launcher.Services
                     }
                     catch (Exception ex)
                     {
-
+                        Logger.LogError(ex, "Could not import game {GameTitle}", remoteGame.Title);
                     }
                 }
 

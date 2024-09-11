@@ -1,5 +1,6 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,13 +12,15 @@ namespace LANCommander.Launcher.Services
 {
     public class ProfileService : BaseService
     {
-        private readonly SDK.Client Client;
         private readonly MediaService MediaService;
 
         private Settings Settings;
 
-        public ProfileService(SDK.Client client, MediaService mediaService) {
-            Client = client;
+        public ProfileService(
+            SDK.Client client,
+            ILogger<ProfileService> logger,
+            MediaService mediaService) : base(client, logger)
+        {
             MediaService = mediaService;
             Settings = SettingService.GetSettings();
         }
@@ -67,7 +70,7 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
-                Logger?.Error(ex, "Could not download avatar");
+                Logger?.LogError(ex, "Could not download avatar");
             }
 
             SettingService.SaveSettings(Settings);
@@ -130,7 +133,7 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
-                Logger?.Error(ex, "Could not download avatar");
+                Logger?.LogError(ex, "Could not download avatar");
             }
 
             SettingService.SaveSettings(Settings);

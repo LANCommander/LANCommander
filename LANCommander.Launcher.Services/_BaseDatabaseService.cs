@@ -2,6 +2,7 @@
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
 namespace LANCommander.Launcher.Services
@@ -10,7 +11,7 @@ namespace LANCommander.Launcher.Services
     {
         protected DatabaseContext Context { get; set; }
 
-        public BaseDatabaseService(DatabaseContext dbContext) : base()
+        public BaseDatabaseService(DatabaseContext dbContext, SDK.Client client, ILogger logger) : base(client, logger)
         {
             Context = dbContext;
         }

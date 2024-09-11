@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK.Helpers;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +10,8 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class CommandLineService
+    public class CommandLineService : BaseService
     {
-        private readonly SDK.Client Client;
         private readonly GameService GameService;
         private readonly DownloadService DownloadService;
         private readonly ImportService ImportService;
@@ -19,9 +19,13 @@ namespace LANCommander.Launcher.Services
 
         private Settings Settings = SettingService.GetSettings();
 
-        public CommandLineService(SDK.Client Client, GameService GameService, ImportService ImportService, ProfileService profileService)
+        public CommandLineService(
+            SDK.Client client,
+            ILogger<CommandLineService> logger,
+            GameService GameService,
+            ImportService ImportService,
+            ProfileService profileService) : base(client, logger)
         {
-            Client = Client;
             GameService = GameService;
             ImportService = ImportService;
             ProfileService = profileService;

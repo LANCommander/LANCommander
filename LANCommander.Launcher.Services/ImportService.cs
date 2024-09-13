@@ -377,20 +377,23 @@ namespace LANCommander.Launcher.Services
                             #endregion
 
                             #region Check Installation Status
-                            var installDirectory = Client.Games.GetInstallDirectory(remoteGame);
-
-                            if (Directory.Exists(installDirectory))
+                            foreach (var installDirectory in Settings.Games.InstallDirectories)
                             {
-                                var manifestLocation = ManifestHelper.GetPath(installDirectory, remoteGame.Id);
+                                var gameDirectory = Client.Games.GetInstallDirectory(remoteGame, installDirectory);
 
-                                if (File.Exists(manifestLocation))
+                                if (Directory.Exists(gameDirectory))
                                 {
-                                    var manifest = ManifestHelper.Read(installDirectory, remoteGame.Id);
+                                    var manifestLocation = ManifestHelper.GetPath(gameDirectory, remoteGame.Id);
 
-                                    localGame.Installed = true;
-                                    localGame.InstalledOn = DateTime.Now;
-                                    localGame.InstallDirectory = installDirectory;
-                                    localGame.InstalledVersion = manifest.Version;
+                                    if (File.Exists(manifestLocation))
+                                    {
+                                        var manifest = ManifestHelper.Read(gameDirectory, remoteGame.Id);
+
+                                        localGame.Installed = true;
+                                        localGame.InstalledOn = DateTime.Now;
+                                        localGame.InstallDirectory = gameDirectory;
+                                        localGame.InstalledVersion = manifest.Version;
+                                    }
                                 }
                             }
                             #endregion

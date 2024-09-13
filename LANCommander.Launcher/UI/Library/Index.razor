@@ -145,6 +145,8 @@
 
     Data.Models.Game SelectedGame { get; set; }
 
+    Settings Settings = SettingService.GetSettings();
+
     protected override async Task OnInitializedAsync()
     {
         DownloadService.OnQueueChanged += OnQueueChanged;
@@ -196,7 +198,25 @@
 
     async Task Install(LibraryItem item)
     {
-        await LibraryService.Install(item);
+        if (Settings.Games.InstallDirectories.Length > 1)
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = $"Install {item.Name}",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = "Install",
+                Draggable = true,
+                Centered = true
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDirectorySelectorDialog, LibraryItem, string>(modalOptions, item);
+        }
+        else
+        {
+            await LibraryService.Install(item);
+        }
     }
 
     async Task OnQueueChanged()

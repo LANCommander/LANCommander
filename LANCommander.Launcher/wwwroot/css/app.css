@@ -185,6 +185,23 @@ footer {
   border-radius: 0;
 }
 
+.radio-group-vertical .ant-radio-wrapper,
+.radio-group-vertical .ant-radio-button-wrapper {
+  display: block;
+}
+.radio-group-vertical .ant-radio-wrapper + .ant-radio-wrapper,
+.radio-group-vertical .ant-radio-button-wrapper + .ant-radio-button-wrapper {
+  margin-top: 16px;
+}
+
+.radio-group-block {
+  width: 100%;
+}
+.radio-group-block .ant-radio-wrapper,
+.radio-group-block .ant-radio-button-wrapper {
+  display: block;
+}
+
 .ant-modal-close,
 .ant-modal-max-btn {
   color: rgba(255, 255, 255, 0.45);

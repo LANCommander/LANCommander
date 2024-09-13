@@ -34,7 +34,8 @@ namespace LANCommander.Launcher.Models
 
     public class GameSettings
     {
-        public string DefaultInstallDirectory { get; set; } = "C:\\Games";
+        public string[] InstallDirectories { get; set; } = new string[] { };
+
         public Guid? LastSelected { get; set; } = null;
     }
 

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,10 +21,22 @@ namespace LANCommander.Launcher.Services.Extensions
         {
             var settings = SettingService.GetSettings();
 
+            if (settings.Games.InstallDirectories.Length == 0)
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    settings.Games.InstallDirectories = new string[] { "C:\\Games" };
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                    settings.Games.InstallDirectories = new string[] { "~/Games" };
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                    settings.Games.InstallDirectories = new string[] { "~/Games" };
+
+                SettingService.SaveSettings(settings);
+            }
+
             services.AddDbContext<DbContext, DatabaseContext>();
 
             #region Register Client
-            var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);
+            var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.InstallDirectories.First());
 
             client.UseToken(new SDK.Models.AuthToken
             {

@@ -84,7 +84,7 @@ namespace LANCommander.Launcher.Services
             OnQueueChanged?.Invoke();
         }
 
-        public async Task Add(Game game)
+        public async Task Add(Game game, string installDirectory = "")
         {
             var gameInfo = await Client.Games.GetAsync(game.Id);
 
@@ -95,13 +95,15 @@ namespace LANCommander.Launcher.Services
 
                 if (baseGame != null && !baseGame.Installed)
                 {
-                    await Add(baseGame);
+                    await Add(baseGame, installDirectory);
                 }
             }
 
             if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Idle))
             {
                 var queueItem = new DownloadQueueGame(gameInfo);
+
+                queueItem.InstallDirectory = installDirectory;
 
                 if (Queue.Any(i => i.State))
                     Queue.Add(queueItem);
@@ -153,7 +155,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                installDirectory = await Client.Games.InstallAsync(gameInfo.Id);
+                installDirectory = await Client.Games.InstallAsync(gameInfo.Id, currentItem.InstallDirectory);
 
                 game.InstallDirectory = installDirectory;
                 game.Installed = true;

@@ -96,7 +96,7 @@ namespace LANCommander.Launcher.Services
             {
                 var game = await GameService.Get(options.GameId);
 
-                await DownloadService.Add(game);
+                await DownloadService.Add(game, options.InstallDirectory);
                 await DownloadService.Install();
 
                 game = await GameService.Get(options.GameId);

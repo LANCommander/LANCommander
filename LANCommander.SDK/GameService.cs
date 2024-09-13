@@ -262,12 +262,15 @@ namespace LANCommander.SDK
         /// <param name="maxAttempts">Maximum attempts in case of transmission error</param>
         /// <returns>Final install path</returns>
         /// <exception cref="Exception"></exception>
-        public async Task<string> InstallAsync(Guid gameId, int maxAttempts = 10)
+        public async Task<string> InstallAsync(Guid gameId, string installDirectory = "", int maxAttempts = 10)
         {
             GameManifest manifest = null;
 
+            if (String.IsNullOrWhiteSpace(installDirectory))
+                installDirectory = Client.DefaultInstallDirectory;
+
             var game = Get(gameId);
-            var destination = GetInstallDirectory(game);
+            var destination = GetInstallDirectory(game, installDirectory);
 
             GameInstallProgress.Game = game;
             GameInstallProgress.Status = GameInstallStatus.Downloading;
@@ -281,10 +284,10 @@ namespace LANCommander.SDK
             // Handle Standalone Mods
             if (game.Type == GameType.StandaloneMod && game.BaseGame != null)
             {
-                destination = GetInstallDirectory(game.BaseGame);
+                destination = GetInstallDirectory(game.BaseGame, installDirectory);
 
                 if (!Directory.Exists(destination))
-                    destination = await InstallAsync(game.BaseGame.Id, maxAttempts);
+                    destination = await InstallAsync(game.BaseGame.Id, installDirectory, maxAttempts);
             }
 
             try
@@ -395,7 +398,7 @@ namespace LANCommander.SDK
 
                 try
                 {
-                    await InstallAsync(dependentGame.Id);
+                    await InstallAsync(dependentGame.Id, installDirectory);
                 }
                 catch (InstallCanceledException ex)
                 {
@@ -679,12 +682,15 @@ namespace LANCommander.SDK
             return extractionResult;
         }
 
-        public string GetInstallDirectory(Game game)
+        public string GetInstallDirectory(Game game, string installDirectory)
         {
+            if (String.IsNullOrWhiteSpace(installDirectory))
+                installDirectory = Client.DefaultInstallDirectory;
+
             if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGame != null)
-                return GetInstallDirectory(game.BaseGame);
+                return GetInstallDirectory(game.BaseGame, installDirectory);
             else
-                return Path.Combine(DefaultInstallDirectory, game.Title.SanitizeFilename());
+                return Path.Combine(installDirectory, game.Title.SanitizeFilename());
         }
 
         public void CancelInstall()

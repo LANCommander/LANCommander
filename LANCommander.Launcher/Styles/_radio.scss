@@ -1,0 +1,20 @@
+﻿.radio-group-vertical {
+    .ant-radio-wrapper,
+    .ant-radio-button-wrapper {
+        display: block;
+    }
+
+    .ant-radio-wrapper + .ant-radio-wrapper,
+    .ant-radio-button-wrapper + .ant-radio-button-wrapper {
+        margin-top: 16px;
+    }
+}
+
+.radio-group-block {
+    width: 100%;
+
+    .ant-radio-wrapper,
+    .ant-radio-button-wrapper {
+        display: block;
+    }
+}

@@ -22,8 +22,31 @@
 
     <Form Model="Settings" Layout="@FormLayout.Vertical" Style="padding: 0 24px">
         <Divider Orientation="left" Plain>Games</Divider>
-        <FormItem Label="Storage Path">
-            <Input @bind-Value="@context.Games.DefaultInstallDirectory" />
+        <FormItem Label="Storage Paths">
+            <Space Direction="DirectionVHType.Vertical" Size="@("middle")" Style="width: 100%">
+                @foreach (var installDirectory in InstallDirectories)
+                {
+                    <SpaceItem>
+                        <Space Style="width: 100%">
+                            <SpaceItem Style="flex-grow: 1">
+                                <Input @bind-Value="installDirectory.Path" />
+                            </SpaceItem>
+
+                            <SpaceItem>
+                                <Button OnClick="() => RemoveInstallDirectory(installDirectory)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" Disabled="InstallDirectories.Count == 1" />
+                            </SpaceItem>
+                        </Space>
+                    </SpaceItem>
+                }
+
+                <SpaceItem>
+                    <GridRow Justify="end">
+                        <GridCol>
+                            <Button OnClick="AddInstallDirectory" Type="@ButtonType.Primary">Add Path</Button>
+                        </GridCol>
+                    </GridRow>
+                </SpaceItem>
+            </Space>
         </FormItem>
 
         <Divider Orientation="left" Plain>Media</Divider>
@@ -53,18 +76,39 @@
 @code {
     Settings Settings;
 
+    List<InstallDirectory> InstallDirectories = new List<InstallDirectory>();
+
+    internal class InstallDirectory
+    {
+        internal Guid Id { get; set; }
+        internal string Path { get; set; }
+
+        public InstallDirectory(string path)
+        {
+            Id = Guid.NewGuid();
+            Path = path;
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
+
+        foreach (var installDirectory in Settings.Games.InstallDirectories)
+        {
+            InstallDirectories.Add(new InstallDirectory(installDirectory));
+        }
     }
 
     void Save()
     {
         try
         {
+            Settings.Games.InstallDirectories = InstallDirectories.Where(d => !String.IsNullOrWhiteSpace(d.Path)).Select(d => d.Path).ToArray();
+
             SettingService.SaveSettings(Settings);
 
-            Client.DefaultInstallDirectory = Settings.Games.DefaultInstallDirectory;
+            Client.DefaultInstallDirectory = Settings.Games.InstallDirectories.First();
             Client.Scripts.Debug = Settings.Debug.EnableScriptDebugging;
 
             MessageService.Success("Settings saved!");
@@ -82,5 +126,17 @@
 
         if (updateVersion == null)
             MessageService.Success("You are on the latest version!");
+    }
+
+    async Task AddInstallDirectory()
+    {
+        InstallDirectories.Add(new InstallDirectory(""));
+
+        StateHasChanged();
+    }
+
+    async Task RemoveInstallDirectory(InstallDirectory installDirectory)
+    {
+        InstallDirectories.Remove(installDirectory);
     }
 }

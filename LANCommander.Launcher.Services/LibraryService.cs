@@ -186,11 +186,11 @@ namespace LANCommander.Launcher.Services
             return new LibraryItem(game, GroupSelector);
         }
 
-        public async Task Install(LibraryItem libraryItem)
+        public async Task Install(LibraryItem libraryItem, string installDirectory = "")
         {
             var game = libraryItem.DataItem as Game;
 
-            await DownloadService.Add(game);
+            await DownloadService.Add(game, installDirectory);
         }
 
         public async Task LibraryChanged()

@@ -121,7 +121,25 @@ else
 
     async Task Install()
     {
-        await LibraryService.Install(Model);
+        if (Settings.Games.InstallDirectories.Length > 1)
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = $"Install {Model.Name}",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = "Install",
+                Draggable = true,
+                Centered = true
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDirectorySelectorDialog, LibraryItem, string>(modalOptions, Model);
+        }
+        else
+        {
+            await LibraryService.Install(Model);
+        }
     }
 
     async Task Uninstall()

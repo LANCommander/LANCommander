@@ -114,14 +114,15 @@ namespace LANCommander.Launcher
             {
                 Logger?.Debug("Scaffolding required directories...");
 
-                string[] requiredDirectories = new string[]
+                List<string> requiredDirectories = new List<string>()
                 {
 	                settings.Debug.LoggingPath,
 	                settings.Media.StoragePath,
-	                settings.Games.DefaultInstallDirectory,
 	                settings.Database.BackupsPath,
 	                settings.Updates.StoragePath
                 };
+
+                requiredDirectories.AddRange(settings.Games.InstallDirectories);
 
                 foreach (var directory in requiredDirectories)
                 {

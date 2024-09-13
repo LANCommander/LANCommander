@@ -12,6 +12,7 @@ namespace LANCommander.Launcher.Models
         Guid Id { get; set; }
         string Title { get; set; }
         string Version { get; set; }
+        string InstallDirectory { get; set; }
         Guid CoverId { get; set; }
         Guid IconId { get; set; }
         DateTime QueuedOn { get; set; }

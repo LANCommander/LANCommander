@@ -80,6 +80,8 @@ namespace LANCommander.Server.Controllers.Api
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
                 await SignInManager.SignOutAsync();
 
+            Logger?.LogInformation("Logged out user {UserName}", User.Identity.Name);
+
             return Ok();
         }
 

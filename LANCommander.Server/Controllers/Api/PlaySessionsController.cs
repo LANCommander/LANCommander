@@ -70,7 +70,7 @@ namespace LANCommander.Server.Controllers.Api
             var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
             if (user == null)
-                return BadRequest();
+                return Unauthorized();
 
             var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id).ToListAsync();
 
@@ -83,7 +83,7 @@ namespace LANCommander.Server.Controllers.Api
             var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
             if (user == null)
-                return BadRequest();
+                return Unauthorized();
 
             var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.GameId == id).ToListAsync();
 

@@ -45,6 +45,7 @@ namespace LANCommander.Server.Controllers.Api
             var games = await GameService.Get(g => g.Type == SDK.Enums.GameType.MainGame || g.Type == SDK.Enums.GameType.StandaloneExpansion || g.Type == SDK.Enums.GameType.StandaloneMod).ToListAsync();
 
             var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
+                Logger?.LogDebug("Mapped games cache is empty, repopulating");
                 return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
             }, TimeSpan.FromHours(1));
 
@@ -96,22 +97,34 @@ namespace LANCommander.Server.Controllers.Api
         public async Task<IActionResult> Download(Guid id)
         {
             if (!Settings.Archives.AllowInsecureDownloads && (User == null || User.Identity == null || !User.Identity.IsAuthenticated))
+            {
+                Logger?.LogError("User is not authorized to download game with ID {GameId}", id);
                 return Unauthorized();
+            }
 
             var game = await GameService.Get(id);
 
             if (game == null)
+            {
+                Logger?.LogError("Game not found with ID {GameId}", id);
                 return NotFound();
+            }
 
             if (game.Archives == null || game.Archives.Count == 0)
+            {
+                Logger?.LogError("No archives found for game with ID {GameId}", id);
                 return NotFound();
+            }
 
             var archive = game.Archives.OrderByDescending(a => a.CreatedOn).First();
 
             var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
 
             if (!System.IO.File.Exists(filename))
+            {
+                Logger?.LogError("No archive file exists for game with ID {GameId} at the expected path {FileName}", id, filename);
                 return NotFound();
+            }
 
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{game.Title.SanitizeFilename()}.zip");
         }
@@ -128,6 +141,7 @@ namespace LANCommander.Server.Controllers.Api
             }
             catch (Exception ex)
             {
+                Logger?.LogError(ex, "Could not import game from upload");
                 return BadRequest(ex.Message);
             }
         }

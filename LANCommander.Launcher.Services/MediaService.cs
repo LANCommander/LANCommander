@@ -64,10 +64,17 @@ namespace LANCommander.Launcher.Services
 
         public void DeleteLocalMediaFile(Media entity)
         {
-            var path = GetImagePath(entity);
+            try
+            {
+                var path = GetImagePath(entity);
 
-            if (File.Exists(path))
-                File.Delete(path);
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "An unknown error occurred while trying to delete a local file");
+            }
         }
     }
 }

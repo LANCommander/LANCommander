@@ -82,7 +82,7 @@ jobs:
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Launcher/bin/Release/net8.0/publish/osx-arm64/ LANCommander.AutoUpdater/bin/Release/net8.0/publish/osx-arm64/ LANCommander.Launcher.CLI/bin/Release/net8.0/publish/osx-arm64/LANCommander.Launcher.CLI
+        files: LANCommander.Launcher/bin/Release/net8.0/osx-arm64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/osx-arm64/publish/ LANCommander.Launcher.CLI/bin/Release/net8.0/osx-arm64/publish/LANCommander.Launcher.CLI
         recursive: true
         dest: LANCommander.Launcher-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 

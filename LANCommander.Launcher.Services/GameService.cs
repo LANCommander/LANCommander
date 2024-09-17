@@ -2,6 +2,7 @@
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using LANCommander.SDK;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
@@ -37,22 +38,27 @@ namespace LANCommander.Launcher.Services
 
         public async Task UninstallAsync(Game game)
         {
-            try
+            using (var operation = Logger.BeginOperation("Uninstalling game {GameTitle} ({GameId})", game.Title, game.Id))
             {
-                await Client.Games.UninstallAsync(game.InstallDirectory, game.Id);
+                try
+                {
+                    await Client.Games.UninstallAsync(game.InstallDirectory, game.Id);
 
-                game.InstallDirectory = null;
-                game.Installed = false;
-                game.InstalledOn = null;
-                game.InstalledVersion = null;
+                    game.InstallDirectory = null;
+                    game.Installed = false;
+                    game.InstalledOn = null;
+                    game.InstalledVersion = null;
 
-                await Update(game);
+                    await Update(game);
 
-                OnUninstallComplete?.Invoke(game);
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Game {GameTitle} ({GameId}) could not be uninstalled", game.Title, game.Id);
+                    OnUninstallComplete?.Invoke(game);
+
+                    operation.Complete();
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Game {GameTitle} ({GameId}) could not be uninstalled", game.Title, game.Id);
+                }
             }
         }
 

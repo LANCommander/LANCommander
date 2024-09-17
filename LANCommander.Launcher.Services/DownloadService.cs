@@ -186,7 +186,7 @@ namespace LANCommander.Launcher.Services
                 Logger?.LogError(ex, "An unknow error occured while trying to retrieve game info from the server");
             }
 
-            using (Logger.BeginOperation("Installing game {GameTitle} ({GameId})", game.Title, game.Id))
+            using (var operation = Logger.BeginOperation("Installing game {GameTitle} ({GameId})", game.Title, game.Id))
             {
                 string installDirectory;
 
@@ -269,6 +269,8 @@ namespace LANCommander.Launcher.Services
                     // ShowCompletedNotification(currentItem);
 
                     OnInstallComplete?.Invoke(game);
+
+                    operation.Complete();
                 }
             }
 

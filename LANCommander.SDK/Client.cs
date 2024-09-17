@@ -98,6 +98,8 @@ namespace LANCommander.SDK
         {
             if (!String.IsNullOrWhiteSpace(baseUrl))
             {
+                Logger?.LogTrace("Using server address {ServerAddress}", baseUrl);
+
                 BaseUrl = new Uri(baseUrl);
                 ApiClient = new RestClient(new RestClientOptions
                 {
@@ -239,6 +241,8 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
+                Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}", route);
+
                 if (File.Exists(tempFile))
                     File.Delete(tempFile);
 
@@ -263,6 +267,8 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
+                Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}", route);
+
                 if (File.Exists(destination))
                     File.Delete(destination);
 
@@ -369,7 +375,11 @@ namespace LANCommander.SDK
             var response = await ApiClient.ExecuteAsync<AuthToken>(request);
 
             if (response.ErrorException != null)
+            {
+                Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
+
                 throw response.ErrorException;
+            }
 
             switch (response.StatusCode)
             {
@@ -391,10 +401,12 @@ namespace LANCommander.SDK
                 case HttpStatusCode.BadRequest:
                 case HttpStatusCode.Unauthorized:
                     Connected = false;
+                    Logger?.LogError("Authentication failed for user {UserName}: invalid username or password", username);
                     throw new WebException("Invalid username or password");
 
                 default:
                     Connected = false;
+                    Logger?.LogError("Authentication failed for user {UserName}: could not communicate with the server", username);
                     throw new WebException("Could not communicate with the server");
             }
         }

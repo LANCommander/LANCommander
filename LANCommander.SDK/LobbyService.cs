@@ -50,6 +50,8 @@ namespace LANCommander.SDK
 
             try
             {
+                Logger?.LogTrace("Initializing Steamworks with app ID {AppId}", appId);
+
                 SteamClient.Init(appId, true);
 
                 foreach (var friend in SteamFriends.GetFriends())
@@ -66,11 +68,13 @@ namespace LANCommander.SDK
                         };
 
                         lobbies.Add(lobby);
+
+                        Logger?.LogTrace("Found lobby | {FriendName} ({FriendId}): {LobbyId}", lobby.ExternalUsername, lobby.ExternalUserId, lobby.Id);
                     }
                 }
             }
             catch (Exception ex) {
-
+                Logger?.LogError(ex, "Couldn't initialize Steamworks");
             }
 
             return lobbies;

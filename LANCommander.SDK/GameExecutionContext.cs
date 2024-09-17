@@ -39,21 +39,30 @@ namespace LANCommander.SDK
 
         public string ExpandVariables(string input, string installDirectory, Dictionary<string, string> additionalVariables = null, bool skipSlashes = false)
         {
-            if (input == null)
-                return input;
-
-            foreach (var variable in Variables)
+            try
             {
-                input = input.Replace($"{{{variable.Key}}}", variable.Value);
-            }
+                if (input == null)
+                    return input;
 
-            if (additionalVariables != null)
-                foreach (var variable in additionalVariables)
+                foreach (var variable in Variables)
                 {
                     input = input.Replace($"{{{variable.Key}}}", variable.Value);
                 }
 
-            return input.ExpandEnvironmentVariables(installDirectory, skipSlashes);
+                if (additionalVariables != null)
+                    foreach (var variable in additionalVariables)
+                    {
+                        input = input.Replace($"{{{variable.Key}}}", variable.Value);
+                    }
+
+                return input.ExpandEnvironmentVariables(installDirectory, skipSlashes);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not expand runtime variables");
+
+                return input;
+            }
         }
 
         public async Task ExecuteAsync(string installDirectory, Guid gameId, Models.Action action, string args = "")
@@ -73,6 +82,12 @@ namespace LANCommander.SDK
 
             if (!String.IsNullOrWhiteSpace(args))
                 Process.StartInfo.Arguments += " " + args;
+
+            Logger?.LogTrace("Running game executable");
+            Logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
+            Logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
+            Logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
+            Logger?.LogTrace("Manifest Path: {ManifestPath}", ManifestHelper.GetPath(installDirectory, gameId));
 
             Process.Start();
 

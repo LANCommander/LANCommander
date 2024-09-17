@@ -260,6 +260,8 @@ namespace LANCommander.SDK
                     {
                         List<string> tempRegFiles = new List<string>();
 
+                        Logger?.LogTrace("Building registry export file");
+
                         var exportCommand = new StringBuilder();
 
                         foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.Registry))
@@ -297,13 +299,16 @@ namespace LANCommander.SDK
 
                     archive.AddEntry(ManifestHelper.ManifestFilename, tempManifest);
 
-                    using (var ms = new MemoryStream())
+                    using (var op = Logger.BeginOperation("Pack and upload save"))
                     {
-                        archive.SaveTo(ms);
+                        using (var ms = new MemoryStream())
+                        {
+                            archive.SaveTo(ms);
 
-                        ms.Seek(0, SeekOrigin.Begin);
+                            ms.Seek(0, SeekOrigin.Begin);
 
-                        var save = Upload(manifest.Id, ms.ToArray());
+                            var save = Upload(manifest.Id, ms.ToArray());
+                        }
                     }
                 }
             }

@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Helpers;
+﻿using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
@@ -47,39 +48,49 @@ namespace LANCommander.SDK
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Install);
 
-                if (File.Exists(path))
+                using (var op = Logger.BeginOperation("Executing install script"))
                 {
-                    Logger?.LogTrace("Running install script for game {GameTitle} ({gameId})", manifest.Title, gameId);
-
-                    var script = new PowerShellScript(Enums.ScriptType.Install);
-
-                    if (Debug)
-                        script.OnDebugStart = OnDebugStart;
-
-                    script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", manifest);
-                    script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-
-                    script.UseFile(ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Install));
-
-                    if (Debug)
+                    if (File.Exists(path))
                     {
-                        script.EnableDebug();
-                        script.OnDebugBreak = OnDebugBreak;
-                        script.OnOutput = OnOutput;
+                        var script = new PowerShellScript(Enums.ScriptType.Install);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.UseFile(path);
+
+                        op.Enrich("InstallDirectory", installDirectory)
+                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                          .Enrich("ScriptPath", path)
+                          .Enrich("GameTitle", manifest.Title)
+                          .Enrich("GameId", manifest.Id);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            await script.ExecuteAsync();
+                    }
+                    else
+                    {
+                        Logger?.LogTrace("No install script found for game");
                     }
 
-                    bool handled = false;
-
-                    if (ExternalScriptRunner != null)
-                        handled = await ExternalScriptRunner.Invoke(script);
-
-                    if (!handled)
-                        await script.ExecuteAsync();
+                    op.Complete();
                 }
-
-                Logger?.LogTrace("No install script found for game {GameTitle} ({gameId})", manifest.Title, gameId);
             }
             catch (Exception ex)
             {
@@ -96,38 +107,49 @@ namespace LANCommander.SDK
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Uninstall);
 
-                var contents = await File.ReadAllTextAsync(path);
-
-                if (File.Exists(path))
+                using (var op = Logger.BeginOperation("Executing uninstall script"))
                 {
-                    var script = new PowerShellScript(Enums.ScriptType.Uninstall);
-
-                    if (Debug)
-                        script.OnDebugStart = OnDebugStart;
-
-                    script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", manifest);
-                    script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-                    script.UseFile(path);
-
-                    if (Debug)
+                    if (File.Exists(path))
                     {
-                        script.EnableDebug();
-                        script.OnDebugBreak = OnDebugBreak;
-                        script.OnOutput = OnOutput;
+                        var script = new PowerShellScript(Enums.ScriptType.Uninstall);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.UseFile(path);
+
+                        op.Enrich("InstallDirectory", installDirectory)
+                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                          .Enrich("ScriptPath", path)
+                          .Enrich("GameTitle", manifest.Title)
+                          .Enrich("GameId", manifest.Id);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            await script.ExecuteAsync();
+                    }
+                    else
+                    {
+                        Logger?.LogTrace("No uninstall script found");
                     }
 
-                    bool handled = false;
-
-                    if (ExternalScriptRunner != null)
-                        handled = await ExternalScriptRunner.Invoke(script);
-
-                    if (!handled)
-                        await script.ExecuteAsync();
+                    op.Complete();
                 }
-
-                Logger?.LogTrace("No uninstall script found for game {GameTitle} ({gameId})", manifest.Title, gameId);
             }
             catch (Exception ex)
             {
@@ -137,42 +159,56 @@ namespace LANCommander.SDK
 
         public async Task RunBeforeStartScriptAsync(string installDirectory, Guid gameId)
         {
-
             try
             {
+                var manifest = ManifestHelper.Read(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.BeforeStart);
 
-                if (File.Exists(path))
+                using (var op = Logger.BeginOperation("Executing before start script"))
                 {
-                    var manifest = ManifestHelper.Read(installDirectory, gameId);
-
-                    var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
-
-                    if (Debug)
-                        script.OnDebugStart = OnDebugStart;
-
-                    script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", manifest);
-                    script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-                    script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
-
-                    script.UseFile(path);
-
-                    if (Debug)
+                    if (File.Exists(path))
                     {
-                        script.EnableDebug();
-                        script.OnDebugBreak = OnDebugBreak;
-                        script.OnOutput = OnOutput;
+                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
+                        var playerAlias = GameService.GetPlayerAlias(installDirectory, gameId);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.AddVariable("PlayerAlias", playerAlias);
+                        script.UseFile(path);
+
+                        op.Enrich("InstallDirectory", installDirectory)
+                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                          .Enrich("ScriptPath", path)
+                          .Enrich("PlayerAlias", playerAlias)
+                          .Enrich("GameTitle", manifest.Title)
+                          .Enrich("GameId", manifest.Id);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            await script.ExecuteAsync();
+                    }
+                    else
+                    {
+                        Logger?.LogTrace("No before start script found");
                     }
 
-                    bool handled = false;
-
-                    if (ExternalScriptRunner != null)
-                        handled = await ExternalScriptRunner.Invoke(script);
-
-                    if (!handled)
-                        await script.ExecuteAsync();
+                    op.Complete();
                 }
             }
             catch (Exception ex)
@@ -185,40 +221,52 @@ namespace LANCommander.SDK
         {
             try
             {
+                var manifest = ManifestHelper.Read(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.AfterStop);
 
-                if (File.Exists(path))
+                using (var op = Logger.BeginOperation("Executing after stop script"))
                 {
-                    var manifest = ManifestHelper.Read(installDirectory, gameId);
-
-                    var script = new PowerShellScript(Enums.ScriptType.AfterStop);
-
-                    if (Debug)
-                        script.OnDebugStart = OnDebugStart;
-
-                    script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", manifest);
-                    script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-                    script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
-
-                    script.UseFile(path);
-
-                    if (Debug)
+                    if (File.Exists(path))
                     {
-                        script.EnableDebug();
-                        script.OnDebugBreak = OnDebugBreak;
-                        script.OnOutput = OnOutput;
+                        var script = new PowerShellScript(Enums.ScriptType.AfterStop);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
+                        script.UseFile(path);
+
+                        op.Enrich("InstallDirectory", installDirectory)
+                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                          .Enrich("ScriptPath", path)
+                          .Enrich("GameTitle", manifest.Title)
+                          .Enrich("GameId", manifest.Id);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            await script.ExecuteAsync();
                     }
-
-                    bool handled = false;
-
-                    if (ExternalScriptRunner != null)
-                        handled = await ExternalScriptRunner.Invoke(script);
-
-                    if (!handled)
-                        await script.ExecuteAsync();
+                    else
+                    {
+                        Logger?.LogTrace("No after stop script found");
+                    }
                 }
+
             }
             catch (Exception ex)
             {
@@ -233,50 +281,65 @@ namespace LANCommander.SDK
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.NameChange);
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
 
-                if (File.Exists(path))
+                using (var op = Logger.BeginOperation("Executing name change script"))
                 {
-                    Logger?.LogTrace("Running name change script for game {GameTitle} ({gameId})", manifest.Title, gameId);
-
-                    var oldName = GameService.GetPlayerAlias(installDirectory, gameId);
-
-                    if (oldName == newName)
-                        oldName = String.Empty;
-
-                    if (!String.IsNullOrWhiteSpace(oldName))
-                        Logger?.LogTrace("Old Name: {OldName}", oldName);
-
-                    Logger?.LogTrace("New Name: {NewName}", newName);
-
-                    var script = new PowerShellScript(Enums.ScriptType.NameChange);
-
-                    if (Debug)
-                        script.OnDebugStart = OnDebugStart;
-
-                    script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", manifest);
-                    script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-                    script.AddVariable("OldPlayerAlias", oldName);
-                    script.AddVariable("NewPlayerAlias", newName);
-
-                    script.UseFile(path);
-
-                    SDK.GameService.UpdatePlayerAlias(installDirectory, gameId, newName);
-
-                    if (Debug)
+                    if (File.Exists(path))
                     {
-                        script.EnableDebug();
-                        script.OnDebugBreak = OnDebugBreak;
-                        script.OnOutput = OnOutput;
+                        var oldName = GameService.GetPlayerAlias(installDirectory, gameId);
+
+                        if (oldName == newName)
+                            oldName = String.Empty;
+
+                        if (!String.IsNullOrWhiteSpace(oldName))
+                            Logger?.LogTrace("Old Name: {OldName}", oldName);
+
+                        Logger?.LogTrace("New Name: {NewName}", newName);
+
+                        var script = new PowerShellScript(Enums.ScriptType.NameChange);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.AddVariable("OldPlayerAlias", oldName);
+                        script.AddVariable("NewPlayerAlias", newName);
+
+                        op.Enrich("InstallDirectory", installDirectory)
+                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                          .Enrich("ScriptPath", path)
+                          .Enrich("OldPlayerAlias", oldName)
+                          .Enrich("NewPlayerAlias", newName)
+                          .Enrich("GameTitle", manifest.Title)
+                          .Enrich("GameId", manifest.Id);
+
+                        script.UseFile(path);
+
+                        SDK.GameService.UpdatePlayerAlias(installDirectory, gameId, newName);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            await script.ExecuteAsync();
+                    }
+                    else
+                    {
+                        Logger?.LogTrace("No name change script found");
                     }
 
-                    bool handled = false;
-
-                    if (ExternalScriptRunner != null)
-                        handled = await ExternalScriptRunner.Invoke(script);
-
-                    if (!handled)
-                        await script.ExecuteAsync();
+                    op.Complete();
                 }
             }
             catch (Exception ex)
@@ -292,41 +355,52 @@ namespace LANCommander.SDK
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.KeyChange);
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
 
-                if (File.Exists(path))
+                using (var op = Logger.BeginOperation("Executing key change script"))
                 {
-                    Logger?.LogTrace("Running key change script for game {GameTitle} ({gameId})", manifest.Title, gameId);
-
-                    var script = new PowerShellScript(Enums.ScriptType.KeyChange);
-
-                    if (Debug)
-                        script.OnDebugStart = OnDebugStart;
-
-                    Logger?.LogTrace("New key is {Key}", key);
-
-                    script.AddVariable("InstallDirectory", installDirectory);
-                    script.AddVariable("GameManifest", manifest);
-                    script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-                    script.AddVariable("AllocatedKey", key);
-
-                    script.UseFile(path);
-
-                    GameService.UpdateCurrentKey(installDirectory, gameId, key);
-
-                    if (Debug)
+                    if (File.Exists(path))
                     {
-                        script.EnableDebug();
-                        script.OnDebugBreak = OnDebugBreak;
-                        script.OnOutput = OnOutput;
+                        var script = new PowerShellScript(Enums.ScriptType.KeyChange);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        Logger?.LogTrace("New key is {Key}", key);
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", manifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.AddVariable("AllocatedKey", key);
+                        script.UseFile(path);
+
+                        op.Enrich("InstallDirectory", installDirectory)
+                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                          .Enrich("ScriptPath", path)
+                          .Enrich("AllocatedKey", key)
+                          .Enrich("GameTitle", manifest.Title)
+                          .Enrich("GameId", manifest.Id);
+
+                        GameService.UpdateCurrentKey(installDirectory, gameId, key);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            await script.ExecuteAsync();
                     }
-
-                    bool handled = false;
-
-                    if (ExternalScriptRunner != null)
-                        handled = await ExternalScriptRunner.Invoke(script);
-
-                    if (!handled)
-                        await script.ExecuteAsync();
+                    else
+                    {
+                        Logger?.LogTrace("No key change script found");
+                    }
                 }
             }
             catch (Exception ex)

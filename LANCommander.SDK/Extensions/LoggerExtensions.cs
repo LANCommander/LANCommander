@@ -15,6 +15,7 @@ namespace LANCommander.SDK.Extensions
         private LogLevel Level;
         private string Message;
         private object[] Parameters;
+        private Dictionary<string, object> AdditionalData;
 
         public LoggingOperation(ILogger logger, LogLevel level, string message, params object[] parameters)
         {
@@ -23,6 +24,14 @@ namespace LANCommander.SDK.Extensions
             Level = level;
             Message = message;
             Parameters = parameters;
+            AdditionalData = new Dictionary<string, object>();
+        }
+
+        public LoggingOperation Enrich(string name, object value)
+        {
+            AdditionalData[name] = value;
+
+            return this;
         }
 
         public void Complete()
@@ -41,12 +50,9 @@ namespace LANCommander.SDK.Extensions
 
             parameters[Parameters.Length] = Stopwatch.Elapsed;
 
-            var additionalData = new Dictionary<string, object>
-            {
-                ["ElapsedMilliseconds"] = Stopwatch.ElapsedMilliseconds
-            };
+            Enrich("ElapsedMilliseconds", Stopwatch.ElapsedMilliseconds);
 
-            using (Logger.BeginScope(additionalData))
+            using (Logger.BeginScope(AdditionalData))
             {
                 Logger.Log(Level, Message + " completed in {Elapsed}", parameters);
             }

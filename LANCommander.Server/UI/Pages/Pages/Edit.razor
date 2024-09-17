@@ -242,6 +242,7 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Error deleting page!");
             MessageService.Error("Error deleting page!");
         }
     }

@@ -99,7 +99,7 @@ namespace LANCommander.Launcher.Services
 
             LibraryItems.Clear();
 
-            using (var op = Logger.BeginOperation("Loading library items from local database"))
+            using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
                 var games = await GameService.Get(x => true).AsNoTracking().ToListAsync();
 

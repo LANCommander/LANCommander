@@ -2,6 +2,7 @@
 using LANCommander.Launcher.Models;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Exceptions;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
@@ -88,6 +89,8 @@ namespace LANCommander.Launcher.Services
         {
             var gameInfo = await Client.Games.GetAsync(game.Id);
 
+            Logger?.LogTrace("Adding game {GameTitle} to the queue", gameInfo.Title);
+
             // Check to see if we need to install the base game (this game is probably a mod or expansion)
             if (gameInfo.BaseGame != null)
             {
@@ -109,6 +112,8 @@ namespace LANCommander.Launcher.Services
                     Queue.Add(queueItem);
                 else
                 {
+                    Logger?.LogTrace("Download queue is empty, starting the game download immediately");
+
                     queueItem.Status = GameInstallStatus.Downloading;
 
                     Queue.Add(queueItem);
@@ -124,13 +129,22 @@ namespace LANCommander.Launcher.Services
         {
             var queueItem = Queue.FirstOrDefault(i => i.Id == id);
 
-            Remove(queueItem);
+            if (queueItem != null)
+            {
+                Logger?.LogTrace("Removing the game {GameTitle} from the queue", queueItem.Title);
+
+                Remove(queueItem);
+            }
         }
 
         public void Remove(IDownloadQueueItem queueItem)
         {
             if (queueItem != null)
+            {
+                Logger?.LogTrace("Removing the game {GameTitle} from the queue", queueItem.Title);
+
                 Queue.Remove(queueItem);
+            }
         }
 
         public async Task CancelInstall()
@@ -145,76 +159,117 @@ namespace LANCommander.Launcher.Services
             if (currentItem == null)
                 return;
 
-            var game = await GameService.Get(currentItem.Id);
-            var gameInfo = await Client.Games.GetAsync(currentItem.Id);
-
-            if (gameInfo == null)
-                return;
-
-            string installDirectory;
+            Game game = null;
+            SDK.Models.Game gameInfo = null;
 
             try
             {
-                installDirectory = await Client.Games.InstallAsync(gameInfo.Id, currentItem.InstallDirectory);
+                Logger?.LogTrace("Starting install for {GameTitle}", currentItem.Title);
 
-                game.InstallDirectory = installDirectory;
-                game.Installed = true;
-                game.InstalledVersion = currentItem.Version;
-                game.InstalledOn = DateTime.Now;
-            }
-            catch (InstallCanceledException ex)
-            {
-                Queue.Remove(currentItem);
-                return;
-            }
-            catch (InstallException ex)
-            {
-                Queue.Remove(currentItem);
-                return;
+                game = await GameService.Get(currentItem.Id);
+                gameInfo = await Client.Games.GetAsync(currentItem.Id);
+
+                if (game == null)
+                {
+                    Logger?.LogError("Game does not exist in local database, skipping");
+                    return;
+                }
+
+                if (gameInfo == null)
+                {
+                    Logger?.LogError("Game info could not be retrieved from the server");
+                    return;
+                }
             }
             catch (Exception ex)
             {
-                Queue.Remove(currentItem);
-                return;
+                Logger?.LogError(ex, "An unknow error occured while trying to retrieve game info from the server");
             }
 
-            #region Download Manuals
-            foreach (var manual in gameInfo.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
+            using (Logger.BeginOperation("Installing game {GameTitle} ({GameId})", game.Title, game.Id))
             {
-                var localPath = Path.Combine(MediaService.GetStoragePath(), $"{manual.FileId}-{manual.Crc32}");
+                string installDirectory;
 
-                if (!File.Exists(localPath))
+                try
                 {
-                    var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{manual.FileId}-*");
+                    installDirectory = await Client.Games.InstallAsync(gameInfo.Id, currentItem.InstallDirectory);
 
-                    foreach (var staleFile in staleFiles)
-                        File.Delete(staleFile);
-
-                    await Client.Media.DownloadAsync(new SDK.Models.Media
-                    {
-                        Id = manual.Id,
-                        FileId = manual.FileId
-                    }, localPath);
+                    game.InstallDirectory = installDirectory;
+                    game.Installed = true;
+                    game.InstalledVersion = currentItem.Version;
+                    game.InstalledOn = DateTime.Now;
                 }
-            }
-            #endregion
+                catch (InstallCanceledException ex)
+                {
+                    Logger?.LogError("Install canceled, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
+                catch (InstallException ex)
+                {
+                    Logger?.LogError(ex, "An error occurred during install, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred during install, removing from queue");
+                    Queue.Remove(currentItem);
+                    return;
+                }
 
-            if (currentItem is DownloadQueueGame)
-            {
-                currentItem.CompletedOn = DateTime.Now;
-                currentItem.Status = GameInstallStatus.Complete;
-                currentItem.Progress = 1;
-                currentItem.BytesDownloaded = currentItem.TotalBytes;
+                #region Download Manuals
+                try
+                {
+                    foreach (var manual in gameInfo.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
+                    {
+                        var localPath = Path.Combine(MediaService.GetStoragePath(), $"{manual.FileId}-{manual.Crc32}");
 
-                await GameService.Update(game);
+                        if (!File.Exists(localPath))
+                        {
+                            var staleFiles = Directory.EnumerateFiles(MediaService.GetStoragePath(), $"{manual.FileId}-*");
 
-                OnQueueChanged?.Invoke();
+                            foreach (var staleFile in staleFiles)
+                                File.Delete(staleFile);
 
-                Logger?.LogTrace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
+                            await Client.Media.DownloadAsync(new SDK.Models.Media
+                            {
+                                Id = manual.Id,
+                                FileId = manual.FileId
+                            }, localPath);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred while trying to download game manuals for game {GameTitle} ({GameId})", game.Title, game.Id);
+                }
+                #endregion
 
-                // ShowCompletedNotification(currentItem);
+                if (currentItem is DownloadQueueGame)
+                {
+                    currentItem.CompletedOn = DateTime.Now;
+                    currentItem.Status = GameInstallStatus.Complete;
+                    currentItem.Progress = 1;
+                    currentItem.BytesDownloaded = currentItem.TotalBytes;
 
-                OnInstallComplete?.Invoke(game);
+                    try
+                    {
+                        await GameService.Update(game);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "An unknown error occurred while trying to write changes to the database after install of game {GameTitle} ({GameId})", game.Title, game.Id);
+                    }
+
+                    OnQueueChanged?.Invoke();
+
+                    Logger?.LogTrace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
+
+                    // ShowCompletedNotification(currentItem);
+
+                    OnInstallComplete?.Invoke(game);
+                }
             }
 
             await Install();

@@ -23,35 +23,53 @@ namespace LANCommander.Launcher.Services
 
         public async Task StartSession(Guid gameId, Guid userId)
         {
-            var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
-
-            if (existingSession != null)
-                await Delete(existingSession);
-
-            var session = new PlaySession()
+            try
             {
-                GameId = gameId,
-                UserId = userId,
-                Start = DateTime.UtcNow
-            };
+                var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
 
-            await Add(session);
+                if (existingSession != null)
+                    await Delete(existingSession);
 
-            await Client.Games.StartPlaySessionAsync(gameId);
+                var session = new PlaySession()
+                {
+                    GameId = gameId,
+                    UserId = userId,
+                    Start = DateTime.UtcNow
+                };
+
+                await Add(session);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "An unknown error occurred while trying to start session recording for game with ID {GameId}", gameId);
+            }
+            finally
+            {
+                await Client.Games.StartPlaySessionAsync(gameId);
+            }
         }
 
         public async Task EndSession(Guid gameId, Guid userId)
         {
-            var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
-
-            if (existingSession != null)
+            try
             {
-                existingSession.End = DateTime.UtcNow;
+                var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
 
-                await Update(existingSession);
+                if (existingSession != null)
+                {
+                    existingSession.End = DateTime.UtcNow;
+
+                    await Update(existingSession);
+                }
             }
-
-            await Client.Games.EndPlaySessionAsync(gameId);
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "An unknown error occurred while trying to end session recording for game with ID {GameId}", gameId);
+            }
+            finally
+            {
+                await Client.Games.EndPlaySessionAsync(gameId);
+            }
         }
     }
 }

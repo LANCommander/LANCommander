@@ -30,13 +30,16 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<ActionResult<User>> Get()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
                 var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
-                return Ok(user);
+                if (user != null)
+                    return Ok(user);
+                else
+                    return NotFound();
             }
             else
                 return Unauthorized();
@@ -118,6 +121,8 @@ namespace LANCommander.Server.Controllers.Api
             }
             catch (Exception ex)
             {
+                Logger?.LogError(ex, "Could not get the custom field with the name {CustomFieldName}", name);
+
                 return NotFound();
             }
         }
@@ -135,7 +140,9 @@ namespace LANCommander.Server.Controllers.Api
             }
             catch (Exception ex)
             {
-                return NotFound();
+                Logger?.LogError(ex, "Could not update the custom field with the name {CustomFieldName}", name);
+
+                return BadRequest();
             }
         }
     }

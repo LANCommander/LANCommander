@@ -20,9 +20,11 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<SDK.Models.Settings> Get()
+        public async Task<ActionResult<SDK.Models.Settings>> Get()
         {
-            return Mapper.Map<SDK.Models.Settings>(SettingService.GetSettings());
+            var settings = SettingService.GetSettings();
+
+            return Ok(Mapper.Map<SDK.Models.Settings>(settings));
         }
     }
 }

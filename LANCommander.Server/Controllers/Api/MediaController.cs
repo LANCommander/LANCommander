@@ -28,15 +28,20 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Media>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Media>>> Get()
         {
-            return Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.Get());
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.Get()));
         }
 
         [HttpGet("{id}")]
-        public async Task<SDK.Models.Media> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Media>> Get(Guid id)
         {
-            return Mapper.Map<SDK.Models.Media>(await MediaService.Get(id));
+            var media = await MediaService.Get(id);
+
+            if (media == null)
+                return NotFound();
+            else
+                return Mapper.Map<SDK.Models.Media>(media);
         }
 
         [AllowAnonymous]

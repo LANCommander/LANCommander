@@ -26,15 +26,20 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Redistributable>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> Get()
         {
-            return Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.Get());
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.Get()));
         }
 
         [HttpGet("{id}")]
-        public async Task<SDK.Models.Redistributable> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Redistributable>> Get(Guid id)
         {
-            return Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.Get(id));
+            var redistributable = await RedistributableService.Get(id);
+
+            if (redistributable == null)
+                return NotFound();
+
+            return Ok(Mapper.Map<SDK.Models.Redistributable>(redistributable));
         }
 
         [HttpGet("{id}/Download")]

@@ -24,20 +24,25 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<Archive>> Get()
+        public async Task<ActionResult<IEnumerable<Archive>>> Get()
         {
             using (var repo = new Repository<Archive>(Context, HttpContext))
             {
-                return await repo.Get(a => true).ToListAsync();
+                return Ok(await repo.Get(a => true).ToListAsync());
             }
         }
 
         [HttpGet("{id}")]
-        public async Task<Archive> Get(Guid id)
+        public async Task<ActionResult<Archive>> Get(Guid id)
         {
             using (var repo = new Repository<Archive>(Context, HttpContext))
             {
-                return await repo.Find(id);
+                var archive = await repo.Find(id);
+
+                if (archive != null)
+                    return Ok(archive);
+                else
+                    return NotFound();
             }
         }
 
@@ -49,12 +54,18 @@ namespace LANCommander.Server.Controllers.Api
                 var archive = await repo.Find(id);
 
                 if (archive == null)
+                {
+                    Logger?.LogError("No archive found with ID {ArchiveId}", id);
                     return NotFound();
+                }  
 
                 var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
 
                 if (!System.IO.File.Exists(filename))
+                {
+                    Logger?.LogError("Archive ({ArchiveId}) file not found at {FileName}", filename);
                     return NotFound();
+                }
 
                 return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{archive.Game.Title.SanitizeFilename()}.zip");
             }

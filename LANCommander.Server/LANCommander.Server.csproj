@@ -154,10 +154,16 @@
     <None Update="Snippets\Functions\Get-GameManifest.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Snippets\Functions\Get-UserCustomField.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Snippets\Functions\Update-IniValue.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Functions\Get-PrimaryDisplay.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Snippets\Functions\Update-UserCustomField.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Functions\Write-ReplaceContentInFile.ps1">

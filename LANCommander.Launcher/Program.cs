@@ -104,6 +104,21 @@ namespace LANCommander.Launcher
                 });
             #endregion
 
+            #region Restore Window Positioning
+            if (settings.Window.Maximized)
+                app.MainWindow.SetMaximized(true);
+            else
+            {
+                if (settings.Window.X == 0 && settings.Window.Y == 0)
+                    app.MainWindow.SetUseOsDefaultLocation(true);
+                else
+                    app.MainWindow.SetLocation(new System.Drawing.Point(settings.Window.X, settings.Window.Y));
+
+                if (settings.Window.Width != 0 && settings.Window.Height != 0)
+                    app.MainWindow.SetSize(settings.Window.Width, settings.Window.Height);
+            }
+            #endregion
+
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
                 app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
@@ -254,10 +269,29 @@ namespace LANCommander.Launcher
 
                 Logger?.Debug("Starting application...");
 
+                app.MainWindow.WindowClosing += MainWindow_WindowClosing;
+
                 app.Run();
 
                 Logger?.Debug("Closing application...");
             }
+        }
+
+        private static bool MainWindow_WindowClosing(object sender, EventArgs e)
+        {
+            var window = sender as PhotinoWindow;
+
+            var settings = SettingService.GetSettings();
+
+            settings.Window.Maximized = window.Maximized;
+            settings.Window.Width = window.Width;
+            settings.Window.Height = window.Height;
+            settings.Window.X = window.Left;
+            settings.Window.Y = window.Top;
+
+            SettingService.SaveSettings(settings);
+
+            return true;
         }
     }
 }

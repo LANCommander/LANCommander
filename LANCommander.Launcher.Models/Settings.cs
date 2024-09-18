@@ -16,6 +16,7 @@ namespace LANCommander.Launcher.Models
         public FilterSettings Filter { get; set; } = new FilterSettings();
         public DebugSettings Debug { get; set; } = new DebugSettings();
         public UpdateSettings Updates { get; set; } = new UpdateSettings();
+        public WindowSettings Window { get; set; } = new WindowSettings();
     }
 
     public class DatabaseSettings
@@ -78,5 +79,14 @@ namespace LANCommander.Launcher.Models
     public class UpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
+    }
+
+    public class WindowSettings
+    {
+        public bool Maximized { get; set; } = false;
+        public int Width { get; set; } = 1024;
+        public int Height { get; set; } = 768;
+        public int X { get; set; } = 0;
+        public int Y { get; set; } = 0;
     }
 }

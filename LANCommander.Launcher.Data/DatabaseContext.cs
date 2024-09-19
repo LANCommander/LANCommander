@@ -1,21 +1,26 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Launcher.Data
 {
     public class DatabaseContext : DbContext
     {
+        private readonly ILoggerFactory LoggerFactory;
+
         public DatabaseContext() { }
 
-        public DatabaseContext(DbContextOptions options)
+        public DatabaseContext(ILoggerFactory loggerFactory, DbContextOptions options)
             : base(options)
         {
+            LoggerFactory = loggerFactory;
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
 
+            optionsBuilder.UseLoggerFactory(LoggerFactory);
             optionsBuilder.UseSqlite($"Data Source={dbPath};Cache=Shared");
             optionsBuilder.UseLazyLoadingProxies();
         }

@@ -31,6 +31,7 @@ namespace LANCommander.Launcher
             var settings = SettingService.GetSettings();
 
             using var Logger = new LoggerConfiguration()
+                .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Serilog.Events.LogEventLevel.Warning)
                 .Enrich.WithProperty("Application", typeof(Program).Assembly.GetName().Name)
                 .WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)
 #if DEBUG

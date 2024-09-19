@@ -9,6 +9,7 @@ using Serilog;
 var settings = SettingService.GetSettings();
 
 using var logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Serilog.Events.LogEventLevel.Warning)
     .Enrich.WithProperty("Application", typeof(Program).Assembly.GetName().Name)
     .WriteTo.Console()
     .WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)

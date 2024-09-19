@@ -52,21 +52,22 @@ namespace LANCommander.Launcher.Services.Extensions
             #endregion
 
             services.AddScoped<CollectionService>();
+            services.AddScoped<CommandLineService>();
             services.AddScoped<CompanyService>();
+            services.AddScoped<DownloadService>();
             services.AddScoped<EngineService>();
             services.AddScoped<GameService>();
             services.AddScoped<GenreService>();
-            services.AddScoped<PlatformService>();
-            services.AddScoped<MultiplayerModeService>();
-            services.AddScoped<TagService>();
-            services.AddScoped<MediaService>();
-            services.AddScoped<ProfileService>();
-            services.AddScoped<PlaySessionService>();
-            services.AddScoped<RedistributableService>();
-            services.AddScoped<SaveService>();
             services.AddScoped<ImportService>();
             services.AddScoped<LibraryService>();
-            services.AddScoped<DownloadService>();
+            services.AddScoped<MediaService>();
+            services.AddScoped<MultiplayerModeService>();
+            services.AddScoped<PlatformService>();
+            services.AddScoped<PlaySessionService>();
+            services.AddScoped<ProfileService>();
+            services.AddScoped<RedistributableService>();
+            services.AddScoped<SaveService>();
+            services.AddScoped<TagService>();
             services.AddScoped<UpdateService>();
 
             return services;

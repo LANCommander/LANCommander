@@ -22,12 +22,14 @@ namespace LANCommander.Launcher.Services
         public CommandLineService(
             SDK.Client client,
             ILogger<CommandLineService> logger,
-            GameService GameService,
-            ImportService ImportService,
+            GameService gameService,
+            DownloadService downloadService,
+            ImportService importService,
             ProfileService profileService) : base(client, logger)
         {
-            GameService = GameService;
-            ImportService = ImportService;
+            GameService = gameService;
+            DownloadService = downloadService;
+            ImportService = importService;
             ProfileService = profileService;
         }
 

@@ -492,6 +492,8 @@ namespace LANCommander.Launcher.Services
                         MessageBusService.MediaChanged(media);
                     }
                 }
+
+                op.Complete();
             }
             #endregion
         }

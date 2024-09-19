@@ -92,7 +92,7 @@ namespace LANCommander.Launcher.Services
 
         private async Task Install(InstallCommandLineOptions options)
         {
-            Console.WriteLine($"Downloading and installing game with ID {options.GameId}...");
+            Logger.LogInformation($"Downloading and installing game with ID {options.GameId}...");
 
             try
             {
@@ -103,17 +103,17 @@ namespace LANCommander.Launcher.Services
 
                 game = await GameService.Get(options.GameId);
 
-                Console.WriteLine($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
+                Logger.LogInformation($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Game could not be installed: {ex.Message}");
+                Logger.LogError(ex, "Game could not be installed");
             }
         }
 
         private async Task Uninstall(UninstallCommandLineOptions options)
         {
-            Console.WriteLine($"Uninstalling game with ID {options.GameId}...");
+            Logger.LogInformation($"Uninstalling game with ID {options.GameId}...");
 
             try
             {
@@ -121,17 +121,17 @@ namespace LANCommander.Launcher.Services
 
                 await GameService.UninstallAsync(game);
 
-                Console.WriteLine($"Game successfully uninstalled from {game.InstallDirectory}");
+                Logger.LogInformation($"Game successfully uninstalled from {game.InstallDirectory}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Game could not be uninstalled: {ex.Message}");
+                Logger.LogError(ex, "Game could not be uninstalled");
             }
         }
 
         private async Task Run(RunCommandLineOptions options)
         {
-            Console.WriteLine($"Running game with ID {options.GameId}...");
+            Logger.LogInformation($"Running game with ID {options.GameId}...");
 
             try
             {
@@ -146,22 +146,22 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Game could not run: {ex.Message}");
+                Logger.LogError(ex, "Game could not run");
             }
         }
 
         private async Task Sync(SyncCommandLineOptions options)
         {
-            Console.WriteLine("Syncing games from server...");
+            Logger.LogInformation("Syncing games from server...");
 
             ImportService.OnImportComplete += async () =>
             {
-                Console.WriteLine("Sync complete!");
+                Logger.LogInformation("Sync complete!");
             };
 
-            ImportService.OnImportFailed += async () =>
+            ImportService.OnImportFailed += async (Exception ex) =>
             {
-                Console.WriteLine("Sync failed!");
+                Logger.LogError(ex, "Sync failed!");
             };
 
             await ImportService.ImportAsync();
@@ -171,40 +171,40 @@ namespace LANCommander.Launcher.Services
         {
             if (!File.Exists(options.Path))
             {
-                Console.WriteLine("File not found! Check your path!");
+                Logger.LogInformation("File not found! Check your path!");
                 return;
             }
 
             switch (options.Type)
             {
                 case ImportArchiveType.Game:
-                    Console.WriteLine("Uploading game import file to server...");
+                    Logger.LogInformation("Uploading game import file to server...");
 
                     await Client.Games.ImportAsync(options.Path);
                     break;
             }
 
-            Console.WriteLine("Import complete!");
+            Logger.LogInformation("Import complete!");
         }
 
         private async Task Export(ExportCommandLineOptions options)
         {
             if (File.Exists(options.Path))
             {
-                Console.WriteLine("A file at the specific path already exists!");
+                Logger.LogInformation("A file at the specific path already exists!");
                 return;
             }
 
             switch (options.Type)
             {
                 case ImportArchiveType.Game:
-                    Console.WriteLine("Exporting game from server...");
+                    Logger.LogInformation("Exporting game from server...");
 
                     await Client.Games.ExportAsync(options.Path, options.Id);
                     break;
             }
 
-            Console.WriteLine($"Successfully exported game to {options.Path}");
+            Logger.LogInformation($"Successfully exported game to {options.Path}");
         }
 
         private async Task Login(LoginCommandLineOptions options)
@@ -221,11 +221,11 @@ namespace LANCommander.Launcher.Services
 
                 await Client.AuthenticateAsync(options.Username, options.Password);
 
-                Console.WriteLine("Logged in!");
+                Logger.LogInformation("Logged in!");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Logger.LogError(ex, "Failed to log in!");
             }
         }
 
@@ -244,7 +244,7 @@ namespace LANCommander.Launcher.Services
         {
             await ProfileService.ChangeAlias(options.Alias);
 
-            Console.WriteLine($"Changed current user's alias from {Settings.Profile.Alias} to {options.Alias}");
+            Logger.LogInformation($"Changed current user's alias from {Settings.Profile.Alias} to {options.Alias}");
         }
     }
 }

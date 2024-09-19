@@ -418,13 +418,15 @@ namespace LANCommander.Launcher.Services
                 // Potentially delete any games that no longer exist on the server or have been revoked
                 foreach (var localGame in localGames)
                 {
-                    using (var op = Logger.BeginOperation("Deleting game {GameTitle}", localGame.Title))
-                    {
-                        var remoteGame = remoteGames.FirstOrDefault(g => g.Id == localGame.Id);
+                    var remoteGame = remoteGames.FirstOrDefault(g => g.Id == localGame.Id);
 
-                        if (remoteGame == null && !localGame.Installed)
+                    if (remoteGame == null && !localGame.Installed)
+                    {
+                        using (var op = Logger.BeginOperation("Deleting game {GameTitle}", localGame.Title))
                         {
                             await GameService.Delete(localGame);
+
+                            op.Complete();
                         }
                     }
                 }

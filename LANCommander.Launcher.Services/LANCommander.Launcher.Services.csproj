@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Emzi0767.NtfsDataStreams" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />

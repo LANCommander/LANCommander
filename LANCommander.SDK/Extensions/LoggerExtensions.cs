@@ -16,6 +16,7 @@ namespace LANCommander.SDK.Extensions
         private string Message;
         private object[] Parameters;
         private Dictionary<string, object> AdditionalData;
+        bool Completed = false;
 
         public LoggingOperation(ILogger logger, LogLevel level, string message, params object[] parameters)
         {
@@ -36,6 +37,8 @@ namespace LANCommander.SDK.Extensions
 
         public void Complete()
         {
+            Completed = true;
+
             Complete(Level);
         }
 
@@ -54,13 +57,14 @@ namespace LANCommander.SDK.Extensions
 
             using (Logger.BeginScope(AdditionalData))
             {
-                Logger.Log(Level, Message + " completed in {Elapsed}", parameters);
+                Logger.Log(level, Message + " completed in {Elapsed}", parameters);
             }
         }
 
         public void Dispose()
         {
-            Complete(LogLevel.Error);
+            if (!Completed)
+                Complete(LogLevel.Error);
         }
     }
 

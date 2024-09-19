@@ -39,8 +39,8 @@
 
 <TableColumnPicker @ref="Picker" Key="Games" @bind-Visible="ColumnPickerVisible" />
 
-<Table @ref="Table" TItem="Game" DataSource="@Games" @bind-SelectedRows="Selected" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
-    <Selection Key="@(context.Id.ToString())" />
+<Table @ref="Table" TItem="Game" DataSource="@Games" TreeChildren="game => game.DependentGames.Where(g => (g.Type == GameType.Mod || g.Type == GameType.Expansion) && g.Id != game.Id)" @bind-SelectedRows="Selected" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
+    <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
     <Column TData="string" Title="Icon" Hidden="@(Picker.IsColumnHidden("Icon"))">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
     </Column>

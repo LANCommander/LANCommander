@@ -199,6 +199,20 @@ label.ant-btn-icon-only {
     padding: 0 16px;
 }
 
+.ant-table-cell-with-append {
+    display: flex;
+    align-items: center;
+    padding-left: 8px !important;
+}
+
+.ant-table-row-indent + .ant-table-row-expand-icon {
+    margin-right: 16px;
+}
+
+.ant-table-row-level-1 {
+    background: #0a0a0a;
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

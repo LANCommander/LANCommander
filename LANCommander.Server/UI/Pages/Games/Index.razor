@@ -181,7 +181,7 @@
     private async Task LoadData()
     {
         Games = await GameService
-            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod)
+            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null)
             .Where(g => g.Title.ToLower().Contains(Search.ToLower().Trim()) || g.SortTitle.ToLower().Contains(Search.ToLower().Trim()))
             .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
             .ToListAsync();

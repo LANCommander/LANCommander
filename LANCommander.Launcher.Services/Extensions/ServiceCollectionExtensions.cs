@@ -26,9 +26,9 @@ namespace LANCommander.Launcher.Services.Extensions
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     settings.Games.InstallDirectories = new string[] { "C:\\Games" };
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                    settings.Games.InstallDirectories = new string[] { "~/Games" };
+                    settings.Games.InstallDirectories = new string[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games") };
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                    settings.Games.InstallDirectories = new string[] { "~/Games" };
+                    settings.Games.InstallDirectories = new string[] { Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Games") };
 
                 SettingService.SaveSettings(settings);
             }

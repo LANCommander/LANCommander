@@ -33,7 +33,7 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnImportCompleteHandler();
         public event OnImportCompleteHandler OnImportComplete;
 
-        public delegate void OnImportFailedHandler();
+        public delegate void OnImportFailedHandler(Exception ex);
         public event OnImportFailedHandler OnImportFailed;
 
         public ImportService(
@@ -84,7 +84,7 @@ namespace LANCommander.Launcher.Services
             }
             catch (Exception ex)
             {
-                OnImportFailed?.Invoke();
+                OnImportFailed?.Invoke(ex);
             }
         }
 

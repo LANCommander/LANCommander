@@ -219,7 +219,13 @@ namespace LANCommander.Launcher.Services
 
                 Client.UseServerAddress(options.ServerAddress);
 
-                await Client.AuthenticateAsync(options.Username, options.Password);
+                var token = await Client.AuthenticateAsync(options.Username, options.Password);
+
+                Settings.Authentication.AccessToken = token.AccessToken;
+                Settings.Authentication.RefreshToken = token.RefreshToken;
+                Settings.Authentication.ServerAddress = Client.GetServerAddress();
+
+                SettingService.SaveSettings(Settings);
 
                 Logger.LogInformation("Logged in!");
             }

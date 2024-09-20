@@ -197,7 +197,7 @@ namespace LANCommander.Server.Services
                         if (Client.Scripts.Debug)
                             script.EnableDebug();
 
-                        await script.ExecuteAsync();
+                        await script.ExecuteAsync<int>();
                     }
                     catch (Exception ex)
                     {
@@ -340,7 +340,7 @@ namespace LANCommander.Server.Services
                         if (Client.Scripts.Debug)
                             script.EnableDebug();
 
-                        await script.ExecuteAsync();
+                        await script.ExecuteAsync<int>();
                     }
                     catch (Exception ex)
                     {

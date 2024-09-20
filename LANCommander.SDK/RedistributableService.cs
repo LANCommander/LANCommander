@@ -52,26 +52,15 @@ namespace LANCommander.SDK
 
         public async Task InstallAsync(Redistributable redistributable)
         {
-            string installScriptTempFile = null;
-            string detectionScriptTempFile = null;
             string extractTempPath = null;
 
             try
             {
-                var installScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.Install);
-                installScriptTempFile = await ScriptHelper.SaveTempScriptAsync(installScript);
-                Logger?.LogTrace("Redistributable install script saved to {Path}", installScriptTempFile);
+                var installed = await Client.Scripts.RunDetectInstallScriptAsync(redistributable);
 
-                var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.DetectInstall);
-                detectionScriptTempFile = await ScriptHelper.SaveTempScriptAsync(detectionScript);
-                Logger?.LogTrace("Redistributable install detection script saved to {Path}", detectionScriptTempFile);
+                Logger?.LogTrace("Redistributable install detection returned {Result}", installed);
 
-                var detectionResult = await RunScriptAsync(detectionScriptTempFile, redistributable, detectionScript.RequiresAdmin);
-
-                Logger?.LogTrace("Redistributable install detection returned error code {ErrorCode}", detectionResult);
-
-                // Redistributable is not installed
-                if (detectionResult == 0)
+                if (!installed)
                 {
                     Logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
 
@@ -88,7 +77,7 @@ namespace LANCommander.SDK
                             Logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
                             Logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
-                            RunScriptAsync(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
+                            await Client.Scripts.RunInstallScriptAsync(redistributable);
                         }
                         else
                         {
@@ -99,7 +88,7 @@ namespace LANCommander.SDK
                     {
                         Logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
 
-                        RunScriptAsync(installScriptTempFile, redistributable, installScript.RequiresAdmin);
+                        await Client.Scripts.RunInstallScriptAsync(redistributable);
                     }
                 }
             }
@@ -109,12 +98,6 @@ namespace LANCommander.SDK
             }
             finally
             {
-                if (File.Exists(installScriptTempFile))
-                    File.Delete(installScriptTempFile);
-
-                if (File.Exists(detectionScriptTempFile))
-                    File.Delete(detectionScriptTempFile);
-
                 if (Directory.Exists(extractTempPath))
                     Directory.Delete(extractTempPath, true);
             }
@@ -187,24 +170,6 @@ namespace LANCommander.SDK
             }
 
             return extractionResult;
-        }
-
-        private async Task<int> RunScriptAsync(string path, Redistributable redistributable, bool requiresAdmin = false, string workingDirectory = "")
-        {
-            var script = new PowerShellScript(ScriptType.Install);
-
-            if (requiresAdmin)
-                script.AsAdmin();
-
-            if (Client.Scripts.Debug)
-                script.EnableDebug();
-
-            script.AddVariable("Redistributable", redistributable);
-
-            script.UseWorkingDirectory(workingDirectory);
-            script.UseFile(path);
-
-            return await script.ExecuteAsync();
         }
     }
 }

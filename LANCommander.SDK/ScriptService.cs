@@ -41,6 +41,110 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
+        #region Redistributables
+        public async Task<bool> RunDetectInstallScriptAsync(Redistributable redistributable)
+        {
+            bool result = default;
+
+            try
+            {
+                var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == Enums.ScriptType.DetectInstall);
+
+                if (detectionScript != null)
+                {
+                    using (var op = Logger.BeginOperation("Executing install detection script"))
+                    {
+                        var script = new PowerShellScript(Enums.ScriptType.DetectInstall);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("Redistributable", redistributable);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.UseInline(detectionScript.Contents);
+
+                        op.Enrich("RedistributableId", redistributable.Id)
+                          .Enrich("RedistributableName", redistributable.Name);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            result = await script.ExecuteAsync<bool>();
+
+                        op.Complete();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Detect Install script");
+            }
+
+            return result;
+        }
+
+        public async Task<int> RunInstallScriptAsync(Redistributable redistributable)
+        {
+            int result = default;
+
+            try
+            {
+                var installScript = redistributable.Scripts.FirstOrDefault(s => s.Type == Enums.ScriptType.Install);
+
+                if (installScript != null)
+                {
+                    using (var op = Logger.BeginOperation("Executing install detection script"))
+                    {
+                        var script = new PowerShellScript(Enums.ScriptType.Install);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("Redistributable", redistributable);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.UseInline(installScript.Contents);
+
+                        op.Enrich("RedistributableId", redistributable.Id)
+                          .Enrich("RedistributableName", redistributable.Name);
+
+                        if (Debug)
+                        {
+                            script.EnableDebug();
+                            script.OnDebugBreak = OnDebugBreak;
+                            script.OnOutput = OnOutput;
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            result = await script.ExecuteAsync<int>();
+
+                        op.Complete();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Detect Install script");
+            }
+
+            return result;
+        }
+        #endregion
+
         public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId)
         {
             int result = default;

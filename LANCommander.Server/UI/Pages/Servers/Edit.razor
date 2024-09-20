@@ -220,7 +220,7 @@
 
     bool PortInUse = false;
 
-    Server Server;
+    Server Server = new Server();
     Guid GameId;
 
     IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods
@@ -246,9 +246,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id == Guid.Empty)
-            Server = new Server();
-        else
+        if (Id != Guid.Empty && Panel == null)
+            NavigationManager.NavigateTo($"/Servers/{Id}/General");
+        else if (Id != Guid.Empty)
             Server = await ServerService.Get(Id);
 
         if (Server.GameId.HasValue)

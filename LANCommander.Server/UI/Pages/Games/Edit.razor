@@ -372,7 +372,7 @@ else
 
     private string value = "blazor";
 
-    private Game Game;
+    private Game Game = new Game();
     private KeysEditor? KeysEditor;
     private GameMetadataLookup? GameMetadataLookup;
 
@@ -409,10 +409,11 @@ else
             await LoadData();
     }
 
-    private async Task LoadData() {
-        if (Id == Guid.Empty)
-            Game = new Game();
-        else
+    private async Task LoadData()
+    {
+        if (Id != Guid.Empty && Panel == null)
+            NavigationManager.NavigateTo($"/Games/{Id}/General");
+        else if (Id != Guid.Empty)
             Game = await GameService.Get(Id);
 
         Engines = await EngineService.Get();

@@ -14,7 +14,7 @@
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
             <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/General")">General</MenuItem>
 
-            @if (Redistributable.Id != Guid.Empty)
+            @if (Redistributable?.Id != Guid.Empty)
             {
                 <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
                 <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Archives")">Archives</MenuItem>
@@ -25,7 +25,7 @@
     <Content>
         <PageHeader>
             <PageHeaderTitle>
-                @if (Panel == null)
+                @if (Id == Guid.Empty)
                 {
                     <Text>Add New Redistributable</Text>
                 }
@@ -100,7 +100,7 @@ else
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Panel { get; set; }
 
-    Redistributable Redistributable;
+    Redistributable Redistributable = new Redistributable();
 
     LANCommanderSettings Settings = SettingService.GetSettings();
 
@@ -117,9 +117,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id == Guid.Empty)
-            Redistributable = new Redistributable();
-        else
+        if (Id != Guid.Empty && Panel == null)
+            NavigationManager.NavigateTo($"/Redistributables/{Id}/General");
+        else if (Id != Guid.Empty)
             Redistributable = await RedistributableService.Get(Id);
     }
 

@@ -118,7 +118,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         if (Id != Guid.Empty && Panel == null)
-            NavigationManager.NavigateTo($"/Redistributables/{Id}/General");
+            NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
         else if (Id != Guid.Empty)
             Redistributable = await RedistributableService.Get(Id);
     }

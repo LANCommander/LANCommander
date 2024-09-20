@@ -247,7 +247,7 @@
     protected override async Task OnInitializedAsync()
     {
         if (Id != Guid.Empty && Panel == null)
-            NavigationManager.NavigateTo($"/Servers/{Id}/General");
+            NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
         else if (Id != Guid.Empty)
             Server = await ServerService.Get(Id);
 

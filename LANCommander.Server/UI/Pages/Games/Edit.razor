@@ -412,7 +412,7 @@ else
     private async Task LoadData()
     {
         if (Id != Guid.Empty && Panel == null)
-            NavigationManager.NavigateTo($"/Games/{Id}/General");
+            NavigationManager.NavigateTo($"/Games/{Id}/General", true);
         else if (Id != Guid.Empty)
             Game = await GameService.Get(Id);
 

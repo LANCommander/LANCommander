@@ -205,7 +205,7 @@ namespace LANCommander.SDK
                         if (Client.Scripts.Debug)
                             script.EnableDebug();
 
-                        await script.ExecuteAsync();
+                        await script.ExecuteAsync<int>();
                     }
                     #endregion
 
@@ -279,7 +279,7 @@ namespace LANCommander.SDK
                         if (Client.Scripts.Debug)
                             script.EnableDebug();
 
-                        await script.ExecuteAsync();
+                        await script.ExecuteAsync<int>();
 
                         var exportFile = new StringBuilder();
 

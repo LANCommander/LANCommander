@@ -43,6 +43,8 @@ namespace LANCommander.SDK
 
         public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId)
         {
+            int result = default;
+
             try
             {
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
@@ -82,7 +84,7 @@ namespace LANCommander.SDK
                             handled = await ExternalScriptRunner.Invoke(script);
 
                         if (!handled)
-                            await script.ExecuteAsync();
+                            result = await script.ExecuteAsync<int>();
                     }
                     else
                     {
@@ -97,11 +99,13 @@ namespace LANCommander.SDK
                 Logger?.LogError(ex, "Ran into an unexpected error when attempting to run an Install script");
             }
 
-            return 0;
+            return result;
         }
 
-        public async Task RunUninstallScriptAsync(string installDirectory, Guid gameId)
+        public async Task<int> RunUninstallScriptAsync(string installDirectory, Guid gameId)
         {
+            int result = default;
+
             try
             {
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
@@ -141,7 +145,7 @@ namespace LANCommander.SDK
                             handled = await ExternalScriptRunner.Invoke(script);
 
                         if (!handled)
-                            await script.ExecuteAsync();
+                            result = await script.ExecuteAsync<int>();
                     }
                     else
                     {
@@ -155,10 +159,14 @@ namespace LANCommander.SDK
             {
                 Logger?.LogError(ex, "Ran into an unexpected error when attempting to get an Uninstall script");
             }
+
+            return result;
         }
 
-        public async Task RunBeforeStartScriptAsync(string installDirectory, Guid gameId)
+        public async Task<int> RunBeforeStartScriptAsync(string installDirectory, Guid gameId)
         {
+            int result = default;
+
             try
             {
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
@@ -201,7 +209,7 @@ namespace LANCommander.SDK
                             handled = await ExternalScriptRunner.Invoke(script);
 
                         if (!handled)
-                            await script.ExecuteAsync();
+                            result = await script.ExecuteAsync<int>();
                     }
                     else
                     {
@@ -215,10 +223,14 @@ namespace LANCommander.SDK
             {
                 Logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Before Start script");
             }
+
+            return result;
         }
 
-        public async Task RunAfterStopScriptAsync(string installDirectory, Guid gameId)
+        public async Task<int> RunAfterStopScriptAsync(string installDirectory, Guid gameId)
         {
+            int result = default;
+
             try
             {
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
@@ -259,7 +271,7 @@ namespace LANCommander.SDK
                             handled = await ExternalScriptRunner.Invoke(script);
 
                         if (!handled)
-                            await script.ExecuteAsync();
+                            result = await script.ExecuteAsync<int>();
                     }
                     else
                     {
@@ -272,10 +284,14 @@ namespace LANCommander.SDK
             {
                 Logger?.LogError(ex, "Ran into an unexpected error when attempting to run an After Stop script");
             }
+
+            return result;
         }
 
-        public async Task RunNameChangeScriptAsync(string installDirectory, Guid gameId, string newName)
+        public async Task<int> RunNameChangeScriptAsync(string installDirectory, Guid gameId, string newName)
         {
+            int result = default;
+
             try
             {
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.NameChange);
@@ -332,7 +348,7 @@ namespace LANCommander.SDK
                             handled = await ExternalScriptRunner.Invoke(script);
 
                         if (!handled)
-                            await script.ExecuteAsync();
+                            result = await script.ExecuteAsync<int>();
                     }
                     else
                     {
@@ -346,10 +362,14 @@ namespace LANCommander.SDK
             {
                 Logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Name Change script");
             }
+
+            return result;
         }
 
-        public async Task RunKeyChangeScriptAsync(string installDirectory, Guid gameId, string key)
+        public async Task<int> RunKeyChangeScriptAsync(string installDirectory, Guid gameId, string key)
         {
+            int result = default;
+
             try
             {
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.KeyChange);
@@ -395,7 +415,7 @@ namespace LANCommander.SDK
                             handled = await ExternalScriptRunner.Invoke(script);
 
                         if (!handled)
-                            await script.ExecuteAsync();
+                            result = await script.ExecuteAsync<int>();
                     }
                     else
                     {
@@ -407,6 +427,8 @@ namespace LANCommander.SDK
             {
                 Logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Key Change script");
             }
+
+            return result;
         }
     }
 }

@@ -151,8 +151,9 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public async Task<int> ExecuteAsync()
+        public async Task<T> ExecuteAsync<T>()
         {
+            T result = default;
             var wow64Value = IntPtr.Zero;
 
             if (IgnoreWow64)
@@ -213,13 +214,22 @@ namespace LANCommander.SDK.PowerShell
 
                     if (Debug)
                         await OnDebugBreak?.Invoke(ps);
+
+                    try
+                    {
+                        result = (T)ps.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
+                    }
+                    catch
+                    {
+                        // Couldn't case properly, fallback to default
+                    }
                 }
             }
 
             if (IgnoreWow64)
                 Wow64RevertWow64FsRedirection(ref wow64Value);
 
-            return 0;
+            return result;
         }
 
         private void Error_DataAdded(object sender, DataAddedEventArgs e)

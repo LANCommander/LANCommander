@@ -55,9 +55,9 @@ namespace LANCommander.SDK.Extensions
 
             Enrich("ElapsedMilliseconds", Stopwatch.ElapsedMilliseconds);
 
-            using (Logger.BeginScope(AdditionalData))
+            using (Logger?.BeginScope(AdditionalData))
             {
-                Logger.Log(level, Message + " completed in {Elapsed}", parameters);
+                Logger?.Log(level, Message + " completed in {Elapsed}", parameters);
             }
         }
 

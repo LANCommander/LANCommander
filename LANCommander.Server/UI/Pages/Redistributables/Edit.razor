@@ -3,8 +3,10 @@
 @page "/Redistributables/Add"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Models
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = "Administrator")]
 @inject RedistributableService RedistributableService
+@inject GameService GameService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -56,11 +58,17 @@
                     <FormItem Label="Name">
                         <Input @bind-Value="@context.Name" />
                     </FormItem>
+
                     <FormItem Label="Notes">
                         <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
                     </FormItem>
+
                     <FormItem Label="Description">
                         <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                    </FormItem>
+
+                    <FormItem Label="Games">
+                        <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Games" TitleSelector="r => r.Title" @bind-Values="Redistributable.Games" />
                     </FormItem>
                 </Form>
              </div>
@@ -102,6 +110,8 @@ else
 
     Redistributable Redistributable = new Redistributable();
 
+    ICollection<Game> Games;
+
     LANCommanderSettings Settings = SettingService.GetSettings();
 
     private Guid LatestArchiveId
@@ -121,6 +131,11 @@ else
             NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
         else if (Id != Guid.Empty)
             Redistributable = await RedistributableService.Get(Id);
+
+        Games = await GameService
+            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null)
+            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+            .ToListAsync();
     }
 
     private async Task Save()

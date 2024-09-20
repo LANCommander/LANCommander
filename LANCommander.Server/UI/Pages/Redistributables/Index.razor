@@ -26,6 +26,9 @@
 
 <Table TItem="Redistributable" DataSource="@Redistributables" Loading="@Loading" PageSize="25" Responsive>
     <PropertyColumn Property="r => r.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
+    <Column TData="int" Title="Games" Sortable Hidden="@(Picker.IsColumnHidden("Games"))">
+        @context.Games?.Count
+    </Column>
     <PropertyColumn Property="r => r.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     <PropertyColumn Property="r => r.CreatedBy != null ? r.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
     <PropertyColumn Property="r => r.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />

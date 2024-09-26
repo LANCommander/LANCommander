@@ -381,6 +381,8 @@ namespace LANCommander.SDK
                     {
                         Logger?.LogTrace("No after stop script found");
                     }
+
+                    op.Complete();
                 }
 
             }
@@ -525,6 +527,8 @@ namespace LANCommander.SDK
                     {
                         Logger?.LogTrace("No key change script found");
                     }
+
+                    op.Complete();
                 }
             }
             catch (Exception ex)

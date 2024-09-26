@@ -123,6 +123,8 @@ namespace LANCommander.Launcher.Services
                 {
                     LibraryItems.Add(item);
                 }
+
+                op.Complete();
             }
 
             return await FilterLibraryItems(LibraryItems);
@@ -166,6 +168,8 @@ namespace LANCommander.Launcher.Services
 
                 if (OnLibraryItemsFiltered != null)
                     await OnLibraryItemsFiltered.Invoke(items);
+
+                op.Complete();
             }
 
             return items;

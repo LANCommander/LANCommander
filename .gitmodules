@@ -4,6 +4,3 @@
 [submodule "SharpCompress"]
 	path = SharpCompress
 	url = https://github.com/LANCommander/SharpCompress
-[submodule "BlazorMarkdownEditor"]
-	path = BlazorMarkdownEditor
-	url = https://github.com/erossini/BlazorMarkdownEditor.git

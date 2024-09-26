@@ -5,6 +5,7 @@ using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,9 +16,15 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
+    public class LANCommanderOptions
+    {
+        public ILogger Logger { get; set; }
+        public string ServerAddress { get; set; }
+    }
+
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddLANCommander(this IServiceCollection services)
+        public static IServiceCollection AddLANCommander(this IServiceCollection services, Action<LANCommanderOptions> configure)
         {
             var settings = SettingService.GetSettings();
 
@@ -36,7 +43,11 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddDbContext<DbContext, DatabaseContext>();
 
             #region Register Client
-            var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.InstallDirectories.First());
+            var options = new LANCommanderOptions();
+
+            configure(options);
+
+            var client = new SDK.Client(options.ServerAddress, settings.Games.InstallDirectories.First(), options.Logger);
 
             client.UseToken(new SDK.Models.AuthToken
             {

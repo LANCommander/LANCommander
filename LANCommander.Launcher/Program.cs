@@ -12,6 +12,7 @@ using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
 using Serilog;
+using Serilog.Extensions.Logging;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -61,7 +62,11 @@ namespace LANCommander.Launcher
 
             builder.Services.AddCustomWindow();
             builder.Services.AddAntDesign();
-            builder.Services.AddLANCommander();
+            builder.Services.AddLANCommander(options =>
+            {
+                options.ServerAddress = settings.Authentication.ServerAddress;
+                options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
+            });
 
             #region Build Application
             Logger?.Debug("Building application...");

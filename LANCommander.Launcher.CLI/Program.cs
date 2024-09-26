@@ -5,6 +5,8 @@ using LANCommander.Launcher.Services;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Core;
+using Serilog.Extensions.Logging;
 
 var settings = SettingService.GetSettings();
 
@@ -27,7 +29,11 @@ builder.Services.AddLogging(loggingBuilder =>
     loggingBuilder.AddSerilog(logger);
 });
 
-builder.Services.AddLANCommander();
+builder.Services.AddLANCommander(options =>
+{
+    options.ServerAddress = settings.Authentication.ServerAddress;
+    options.Logger = new SerilogLoggerFactory(logger).CreateLogger<LANCommander.SDK.Client>();
+});
 
 using IHost host = builder.Build();
 

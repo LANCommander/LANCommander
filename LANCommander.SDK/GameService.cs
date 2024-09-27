@@ -776,17 +776,17 @@ namespace LANCommander.SDK
                     #region Download Latest Saves
                     if (Client.IsConnected())
                     {
-                        try
+                        await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                         {
+                            Logger?.LogTrace("Attempting to download save");
+
                             var latestSave = await Client.Saves.GetLatestAsync(manifest.Id);
 
                             if (latestSave != null && (latestSave.CreatedOn > lastRun || lastRun == null))
                                 await Client.Saves.DownloadAsync(installDirectory, manifest.Id);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger?.LogError(ex, "Could not download save");
-                        }
+
+                            return true;
+                        });
                     }
                     #endregion
 
@@ -812,14 +812,14 @@ namespace LANCommander.SDK
                 foreach (var manifest in manifests)
                 {
                     #region Upload Saves
-                    try
+                    await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                     {
+                        Logger?.LogTrace("Attempting to upload save");
+
                         await Client.Saves.UploadAsync(installDirectory, manifest.Id);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger?.LogError(ex, "Could not upload save");
-                    }
+
+                        return true;
+                    });
                     #endregion
 
                     await Client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId);

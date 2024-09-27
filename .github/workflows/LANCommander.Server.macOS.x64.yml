@@ -1,0 +1,88 @@
+name: LANCommander macOS x64
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - uses: frabert/replace-string-action@v2
+      name: Trim Tag Ref
+      id: trim_tag_ref
+      with:
+        string: '${{ github.ref }}'
+        pattern: 'refs/tags/v'
+        replace-with: ''
+
+    - uses: frabert/replace-string-action@v2
+      name: Swap Path Backslashes
+      id: swap_path_backslashes
+      with:
+        string: '${{ github.workspace }}'
+        pattern: '\\'
+        replace-with: '/'
+        flags: g
+
+    # dotnet
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # Auto Updater
+    - name: Publish macOS x64 Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime osx-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename macOS x64 Updater
+      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/osx-x64/publish/LANCommander.AutoUpdater ./LANCommander.AutoUpdater/bin/Release/net8.0/osx-x64/publish/LANCommander.AutoUpdater.Update
+
+    # Node.js
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v3.8.1
+
+    # UI
+    - run: cd ./LANCommander.UI; npm install; npm run package
+
+    # macOS x64
+    - name: Publish macOS
+      run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime osx-x64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
+    - name: Remove Extra Files
+      run: |
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/appsettings.Development.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/appsettings.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/libman.json
+        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/osx-x64/publish/runtimeconfig.template.json
+
+    # Create macOS x64 ZIP file
+    - name: Package macOS Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: LANCommander.Server/bin/Release/net8.0/osx-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/osx-x64/publish/
+        recursive: true
+        dest: LANCommander.Server-macOS-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        path: LANCommander.Server-macOS-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Server-macOS-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip

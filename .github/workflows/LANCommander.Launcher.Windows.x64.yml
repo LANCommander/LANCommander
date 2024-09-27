@@ -86,7 +86,7 @@ jobs:
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.Launcher.CLI/bin/Release/net8.0/win-x64/publish/LANCommander.Launcher.CLI.exe
+        files: LANCommander.Launcher/bin/Release/net8.0/win-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-x64/publish/ LANCommander.Launcher.CLI/bin/Release/net8.0/win-x64/publish/
         recursive: true
         dest: LANCommander.Launcher-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 

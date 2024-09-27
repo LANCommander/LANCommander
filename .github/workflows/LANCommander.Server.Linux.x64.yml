@@ -75,7 +75,7 @@ jobs:
 
     - name: Bundle
       run: |
-        mv LANCommander.AutoUpdater/bin/Release/net8.0/linux-x64/publish/* LANCommander.Server/bin/Release/net8.0/linux-x64/publish/
+        mv -Force LANCommander.AutoUpdater/bin/Release/net8.0/linux-x64/publish/* LANCommander.Server/bin/Release/net8.0/linux-x64/publish/
 
     # Create Linux x64 ZIP file
     - name: Package Linux Build

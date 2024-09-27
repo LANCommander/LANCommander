@@ -75,7 +75,7 @@ jobs:
 
     - name: Bundle
       run: |
-        mv LANCommander.AutoUpdater/bin/Release/net8.0/linux-arm64/publish/* LANCommander.Server/bin/Release/net8.0/linux-arm64/publish/
+        mv -Force LANCommander.AutoUpdater/bin/Release/net8.0/linux-arm64/publish/* LANCommander.Server/bin/Release/net8.0/linux-arm64/publish/
 
     # Create Linux arm64 ZIP file
     - name: Package Linux Build

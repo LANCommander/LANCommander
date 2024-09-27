@@ -75,7 +75,7 @@ jobs:
 
     - name: Bundle
       run: |
-        mv -Force LANCommander.AutoUpdater/bin/Release/net8.0/osx-arm64/publish/* LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/
+        Copy-Item -Force LANCommander.AutoUpdater/bin/Release/net8.0/osx-arm64/publish/* LANCommander.Server/bin/Release/net8.0/osx-arm64/publish/
 
     # Create macOS arm64 ZIP file
     - name: Package macOS Build

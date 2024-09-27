@@ -80,8 +80,8 @@ jobs:
 
     - name: Bundle
       run: |
-        mv -Force LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/* LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/
-        mv -Force LANCommander.Launcher.CLI/bin/Release/net8.0/win-arm64/publish/* LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/
+        Copy-Item -Force LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/* LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/
+        Copy-Item -Force LANCommander.Launcher.CLI/bin/Release/net8.0/win-arm64/publish/* LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/
 
     # Create ZIP file
     - name: Package Launcher Build

@@ -62,17 +62,6 @@ jobs:
         replace-with: '/'
         flags: g
 
-    # dotnet
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-
     # Draft Release
     - name: Download Server Linux ARM64
       uses: actions/download-artifact@v3

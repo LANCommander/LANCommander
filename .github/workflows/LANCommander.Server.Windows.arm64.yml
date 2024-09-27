@@ -13,6 +13,9 @@ jobs:
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_RUNTIME: win-arm64
+      BUILD_ARCH: arm64
+      BUILD_PLATFORM: Windows
 
     steps:
     - uses: frabert/replace-string-action@v2
@@ -44,10 +47,10 @@ jobs:
       run: dotnet restore
 
     # Auto Updater
-    - name: Publish Windows arm64 Updater
-      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime win-arm64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Rename Windows arm64 Updater
-      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/LANCommander.AutoUpdater.exe ./LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/LANCommander.AutoUpdater.exe.Update
+    - name: Publish Linux arm64 Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime $BUILD_RUNTIME -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Rename Linux arm64 Updater
+      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/$BUILD_RUNTIME/publish/LANCommander.AutoUpdater.exe ./LANCommander.AutoUpdater/bin/Release/net8.0/$BUILD_RUNTIME/publish/LANCommander.AutoUpdater.Update.exe
 
     # Node.js
     - name: Setup Node.js environment
@@ -56,37 +59,41 @@ jobs:
     # UI
     - run: cd ./LANCommander.UI; npm install; npm run package
 
-    # Windows arm64
-    - name: Publish Windows
-      run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime win-arm64 -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    # Linux arm64
+    - name: Publish Linux
+      run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime $BUILD_RUNTIME -p:PublishSingleFile=true -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
     - name: Remove Extra Files
       run: |
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/wwwroot/_content/AntDesign/less
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/appsettings.Development.json
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/appsettings.json
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/libman.json
-        rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/win-arm64/publish/runtimeconfig.template.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/LANCommander.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/LANCommanderDark.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/package-lock.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/package.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/*.pdb
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/hostfxr.dll.bak
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/$BUILD_RUNTIME/publish/Libraries/locales
 
     - name: Bundle
       run: |
-        Copy-Item -Force LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/* LANCommander.Server/bin/Release/net8.0/win-arm64/publish/
+        Copy-Item -Force LANCommander.AutoUpdater/bin/Release/net8.0/$BUILD_RUNTIME/publish/* LANCommander.Server/bin/Release/net8.0/$BUILD_RUNTIME/publish/
 
-    # Create Windows arm64 ZIP file
-    - name: Package Windows Build
+    # Create Linux arm64 ZIP file
+    - name: Package Linux Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Server/bin/Release/net8.0/win-arm64/publish/
+        files: LANCommander.Server/bin/Release/net8.0/$BUILD_RUNTIME/publish/
         recursive: true
-        dest: LANCommander.Server-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        dest: LANCommander.Server-$BUILD_PLATFORM-$BUILD_ARCH-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
-        path: LANCommander.Server-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-        name: LANCommander.Server-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        path: LANCommander.Server-$BUILD_PLATFORM-$BUILD_ARCH-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Server-$BUILD_PLATFORM-$BUILD_ARCH-v${{ steps.trim_tag_ref.outputs.replaced }}.zip

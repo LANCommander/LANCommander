@@ -73,11 +73,15 @@ jobs:
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-arm64/publish/libman.json
         rm -Recurse -Force ./LANCommander.Server/bin/Release/net8.0/linux-arm64/publish/runtimeconfig.template.json
 
+    - name: Bundle
+      run: |
+        mv LANCommander.AutoUpdater/bin/Release/net8.0/linux-arm64/publish/* LANCommander.Server/bin/Release/net8.0/linux-arm64/publish/
+
     # Create Linux arm64 ZIP file
     - name: Package Linux Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Server/bin/Release/net8.0/linux-arm64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/linux-arm64/publish/
+        files: LANCommander.Server/bin/Release/net8.0/linux-arm64/publish/
         recursive: true
         dest: LANCommander.Server-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 

@@ -78,11 +78,16 @@ jobs:
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/package.json
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/*.pdb
 
+    - name: Bundle
+      run: |
+        mv LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/* LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/
+        mv LANCommander.Launcher.CLI/bin/Release/net8.0/win-arm64/publish/* LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/
+
     # Create ZIP file
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/win-arm64/publish/ LANCommander.Launcher.CLI/bin/Release/net8.0/win-arm64/publish/
+        files: LANCommander.Launcher/bin/Release/net8.0/win-arm64/publish/
         recursive: true
         dest: LANCommander.Launcher-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 

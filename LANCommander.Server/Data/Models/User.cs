@@ -52,6 +52,8 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         public virtual ICollection<Media>? Media { get; set; }
 
+        public virtual ICollection<UserCustomField>? CustomFields { get; set; }
+
         [JsonIgnore]
         public bool Approved { get; set; }
 

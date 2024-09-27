@@ -1,0 +1,19 @@
+﻿.panel-layout {
+    background: #fff;
+
+    [data-panel] {
+        display: none;
+    }
+
+    &-content {
+        padding: 0 24px;
+    }
+
+    .ant-layout-content > .ant-page-header-heading {
+        padding-top: 0;
+    }
+}
+
+[data-theme="Dark"] .panel-layout {
+    background: #141414;
+}

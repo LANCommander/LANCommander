@@ -1,0 +1,95 @@
+﻿@using XtermBlazor
+@using LogLevel = Microsoft.Extensions.Logging.LogLevel
+@inject SDK.Client Client
+
+<div class="terminal @(Visible ? "" : "hidden")">
+    <Xterm @ref="Terminal" Options="_options" OnFirstRender="@OnFirstRender" Addons="@Addons" />
+</div>
+
+@code {
+    private bool Visible { get; set; } = false;
+    private Xterm Terminal;
+    private TaskCompletionSource<string> InputTaskCompletionSource;
+
+    private TerminalOptions _options = new TerminalOptions
+    {
+        CursorBlink = true,
+        CursorStyle = CursorStyle.Bar,
+    };
+
+    private HashSet<string> Addons = new HashSet<string>()
+    {
+        "readline",
+        "addon-fit"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        Client.Scripts.OnDebugStart = async (ps) =>
+        {
+            Terminal?.Clear();
+            Visible = true;
+            await InvokeAsync(StateHasChanged);
+
+            await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+        };
+
+        Client.Scripts.OnOutput = async (level, message) =>
+        {
+            switch (level)
+            {
+                case LogLevel.Error:
+                    await Terminal.WriteLine($"\x1b[0;31m{message}");
+                    break;
+
+                case LogLevel.Warning:
+                    await Terminal.WriteLine($"\x1b[0;33m{message}");
+                    break;
+
+                case LogLevel.Debug:
+                    await Terminal.WriteLine($"\x1b[0;37m{message}");
+                    break;
+
+                case LogLevel.Trace:
+                    await Terminal.WriteLine($"\x1b[0;36m{message}");
+                    break;
+
+                case LogLevel.Information:
+                    await Terminal.WriteLine($"\x1b[0;37m{message}");
+                    break;
+            }
+        };
+
+        Client.Scripts.OnDebugBreak = async (ps) =>
+        {
+            while (true)
+            {
+                var input = await ReadLine();
+
+                if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
+                    break;
+
+                if (input.StartsWith('$'))
+                    input = "Write-Host " + input;
+
+                ps.Commands.Clear();
+                ps.AddScript(input);
+
+                await ps.InvokeAsync();
+            }
+
+            Visible = false;
+            await InvokeAsync(StateHasChanged);
+        };
+    }
+
+    private async Task OnFirstRender()
+    {
+        await Terminal.Addon("addon-fit").InvokeVoidAsync("fit");
+    }
+
+    private async Task<string> ReadLine()
+    {
+        return await Terminal.Addon("readline").InvokeAsync<string>("read", "> ");
+    }
+}

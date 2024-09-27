@@ -1,10 +1,13 @@
 ﻿using LANCommander.SDK;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.PowerShell.Cmdlets;
 using Microsoft.Extensions.Logging;
 using RestSharp;
+using RestSharp.Interceptors;
 using Semver;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -32,10 +35,12 @@ namespace LANCommander.SDK
         public readonly GameService Games;
         public readonly SaveService Saves;
         public readonly RedistributableService Redistributables;
-        public readonly ActionService Actions;
+        public readonly ScriptService Scripts;
         public readonly ProfileService Profile;
         public readonly MediaService Media;
         public readonly LauncherService Launcher;
+        public readonly IssueService Issues;
+        public readonly LobbyService Lobbies;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -56,10 +61,14 @@ namespace LANCommander.SDK
             Games = new GameService(this, DefaultInstallDirectory);
             Saves = new SaveService(this);
             Redistributables = new RedistributableService(this);
-            Actions = new ActionService(this);
+            Scripts = new ScriptService(this);
             Profile = new ProfileService(this);
             Media = new MediaService(this);
             Launcher = new LauncherService(this);
+            Issues = new IssueService(this);
+            Lobbies = new LobbyService(this);
+
+            BaseCmdlet.Client = this;
 
             ChangeServerAddress(baseUrl);
         }
@@ -73,10 +82,14 @@ namespace LANCommander.SDK
             Games = new GameService(this, DefaultInstallDirectory, logger);
             Saves = new SaveService(this, logger);
             Redistributables = new RedistributableService(this, logger);
-            Actions = new ActionService(this);
+            Scripts = new ScriptService(this, logger);
             Profile = new ProfileService(this, logger);
             Media = new MediaService(this, logger);
             Launcher = new LauncherService(this);
+            Issues = new IssueService(this);
+            Lobbies = new LobbyService(this, logger);
+
+            BaseCmdlet.Client = this;
 
             Logger = logger;
         }
@@ -85,10 +98,14 @@ namespace LANCommander.SDK
         {
             if (!String.IsNullOrWhiteSpace(baseUrl))
             {
-                BaseUrl = new Uri(baseUrl);
-                ApiClient = new RestClient(BaseUrl);
+                Logger?.LogTrace("Using server address {ServerAddress}", baseUrl);
 
-                ApiClient.ThrowOnAnyError = true;
+                BaseUrl = new Uri(baseUrl);
+                ApiClient = new RestClient(new RestClientOptions
+                {
+                    BaseUrl = BaseUrl,
+                    ThrowOnAnyError = true
+                });
             }
         }
 
@@ -102,42 +119,6 @@ namespace LANCommander.SDK
             return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
         }
 
-        private void ValidateVersion(IRestResponse response)
-        {
-            try
-            {
-                var version = GetCurrentVersion();
-                var header = response.Headers.FirstOrDefault(h => h.Name.Equals("X-API-Version", StringComparison.OrdinalIgnoreCase));
-
-                if (response.IsSuccessful && header == null)
-                {
-                    response.ErrorException = new ApiVersionMismatchException(version, null, $"The server is out of date and does not support client version {version}.");
-
-                    return;
-                }
-
-                var apiVersion = SemVersion.Parse((string)header.Value, SemVersionStyles.Any);
-
-                if (version.Major != apiVersion.Major || version.Minor != apiVersion.Minor)
-                {
-                    switch (version.ComparePrecedenceTo(apiVersion))
-                    {
-                        case -1:
-                            response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is out of date and is not supported by the server (v{apiVersion})");
-                            break;
-
-                        case 1:
-                            response.ErrorException = new ApiVersionMismatchException(version, apiVersion, $"Your client (v{version}) is on a version not supported by the server (v{apiVersion})");
-                            break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Could not validate API version");
-            }
-        }
-
         internal T PostRequest<T>(string route, object body, bool ignoreVersion = false)
         {
             if (Token == null)
@@ -149,11 +130,11 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = ApiClient.Post<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal T PostRequest<T>(string route, bool ignoreVersion = false)
@@ -166,11 +147,11 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = ApiClient.Post<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal async Task<T> PostRequestAsync<T>(string route, object body, bool ignoreVersion = false)
@@ -184,7 +165,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.PostAsync<T>(request);
 
@@ -201,7 +182,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.PostAsync<T>(request);
 
@@ -218,11 +199,11 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = ApiClient.Get<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal async Task<T> GetRequestAsync<T>(string route, bool ignoreVersion = false)
@@ -235,7 +216,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.GetAsync<T>(request);
 
@@ -260,6 +241,8 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
+                Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}", route);
+
                 if (File.Exists(tempFile))
                     File.Delete(tempFile);
 
@@ -284,6 +267,8 @@ namespace LANCommander.SDK
             }
             catch (Exception ex)
             {
+                Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}", route);
+
                 if (File.Exists(destination))
                     File.Delete(destination);
 
@@ -309,28 +294,28 @@ namespace LANCommander.SDK
 
         internal T UploadRequest<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
-            var request = new RestRequest(route, Method.POST)
+            var request = new RestRequest(route, Method.Post)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             request.AddFile(fileName, data, fileName);
 
             var response = ApiClient.Post<T>(request);
 
-            return response.Data;
+            return response;
         }
 
         internal async Task<T> UploadRequestAsync<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
-            var request = new RestRequest(route, Method.POST)
+            var request = new RestRequest(route, Method.Post)
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             request.AddFile(fileName, data, fileName);
 
@@ -339,9 +324,44 @@ namespace LANCommander.SDK
             return response;
         }
 
+        internal async Task<Guid> ChunkedUploadRequestAsync(string fileName, Stream stream, bool ignoreVersion = false)
+        {
+            var maxChunkSize = 1024 * 1024 * 50;
+            var initResponse = await PostRequestAsync<UploadInitResponse>("/Upload/Init", ignoreVersion);
+
+            var buffer = new byte[maxChunkSize];
+
+            while (stream.Position < stream.Length)
+            {
+                var chunkRequest = new UploadChunkRequest();
+
+                chunkRequest.Start = stream.Position;
+
+                if (stream.Position + maxChunkSize > stream.Length)
+                {
+                    var bytes = stream.Length - stream.Position;
+
+                    buffer = new byte[bytes];
+
+                    await stream.ReadAsync(buffer, 0, (int)(stream.Length - stream.Position));
+                }
+                else
+                    await stream.ReadAsync(buffer, 0, maxChunkSize);
+
+                chunkRequest.End = stream.Position;
+                chunkRequest.Total = stream.Length;
+                chunkRequest.File = buffer;
+                chunkRequest.Key = initResponse.Key;
+
+                await PostRequestAsync<object>("/Upload/Chunk", chunkRequest, ignoreVersion);
+            }
+
+            return initResponse.Key;
+        }
+
         public async Task<AuthToken> AuthenticateAsync(string username, string password, bool ignoreVersion = false)
         {
-            var request = new RestRequest("/api/Auth", Method.POST);
+            var request = new RestRequest("/api/Auth", Method.Post);
 
             request.AddJsonBody(new AuthRequest()
             {
@@ -350,12 +370,16 @@ namespace LANCommander.SDK
             });
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.ExecuteAsync<AuthToken>(request);
 
             if (response.ErrorException != null)
+            {
+                Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
+
                 throw response.ErrorException;
+            }
 
             switch (response.StatusCode)
             {
@@ -377,17 +401,19 @@ namespace LANCommander.SDK
                 case HttpStatusCode.BadRequest:
                 case HttpStatusCode.Unauthorized:
                     Connected = false;
+                    Logger?.LogError("Authentication failed for user {UserName}: invalid username or password", username);
                     throw new WebException("Invalid username or password");
 
                 default:
                     Connected = false;
+                    Logger?.LogError("Authentication failed for user {UserName}: could not communicate with the server", username);
                     throw new WebException("Could not communicate with the server");
             }
         }
 
         public async Task LogoutAsync()
         {
-            await ApiClient.ExecuteAsync(new RestRequest("/api/Auth/Logout", Method.POST));
+            await ApiClient.ExecuteAsync(new RestRequest("/api/Auth/Logout", Method.Post));
 
             Connected = false;
             Token = null;
@@ -395,7 +421,7 @@ namespace LANCommander.SDK
 
         public async Task<AuthToken> RegisterAsync(string username, string password)
         {
-            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.POST).AddJsonBody(new AuthRequest()
+            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.Post).AddJsonBody(new AuthRequest()
             {
                 UserName = username,
                 Password = password
@@ -429,36 +455,9 @@ namespace LANCommander.SDK
 
         public async Task<bool> PingAsync()
         {
-            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.GET));
+            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.Get));
 
             return response.StatusCode == HttpStatusCode.OK;
-        }
-
-        public AuthToken RefreshToken(AuthToken token, bool ignoreVersion = false)
-        {
-            Logger?.LogTrace("Refreshing token...");
-
-            var request = new RestRequest("/api/Auth/Refresh")
-                .AddJsonBody(token);
-
-            if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
-
-            var response = ApiClient.Post<AuthResponse>(request);
-
-            if (response.StatusCode != HttpStatusCode.OK)
-                throw new WebException(response.ErrorMessage);
-
-            Token = new AuthToken
-            {
-                AccessToken = response.Data.AccessToken,
-                RefreshToken = response.Data.RefreshToken,
-                Expiration = response.Data.Expiration
-            };
-
-            Connected = true;
-
-            return Token;
         }
 
         public bool ValidateToken()
@@ -481,7 +480,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {
@@ -532,7 +531,7 @@ namespace LANCommander.SDK
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)
-                request.OnBeforeDeserialization += ValidateVersion;
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             if (String.IsNullOrEmpty(token.AccessToken) || String.IsNullOrEmpty(token.RefreshToken))
             {
@@ -590,6 +589,25 @@ namespace LANCommander.SDK
         internal string GetIpAddress()
         {
             return Dns.GetHostEntry(Dns.GetHostName()).AddressList[0].ToString();
+        }
+
+        internal async Task<string> GetIPXRelayHostAsync()
+        {
+            var host = Settings.IPXRelayHost;
+
+            if (String.IsNullOrWhiteSpace(host))
+            {
+                var serverAddress = new Uri(GetServerAddress());
+
+                host = serverAddress.DnsSafeHost;
+            }
+
+            var entry = await Dns.GetHostEntryAsync(host);
+
+            if (entry.AddressList.Length > 0)
+                host = entry.AddressList.First().ToString();
+
+            return host;
         }
     }
 }

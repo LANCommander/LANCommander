@@ -13,6 +13,9 @@ jobs:
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_RUNTIME: linux-x64
+      BUILD_ARCH: x64
+      BUILD_PLATFORM: Linux
 
     steps:
     - uses: frabert/replace-string-action@v2
@@ -45,40 +48,58 @@ jobs:
 
     # Auto Updater
     - name: Publish Updater
-      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime linux-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Rename Updater
-      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/linux-x64/publish/LANCommander.AutoUpdater ./LANCommander.AutoUpdater/bin/Release/net8.0/linux-x64/publish/LANCommander.AutoUpdater.Update
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     
+    # UI
+    - run: cd ./LANCommander.UI; npm install; npm run package
+
     # Launcher
-    - run: cd LANCommander.Launcher; npm install
+    - run: cd ./LANCommander.Launcher; npm install
 
     - name: Publish Launcher
-      run: dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c Release --self-contained --runtime linux-x64 -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
+    # CLI
+    - run: cd ./LANCommander.Launcher.CLI
+
+    - name: Publish CLI
+      run: dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
+    - name: Bundle
+      run: |
+        Copy-Item -Force LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
+        Copy-Item -Force LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
 
     - name: Remove Extra Files
       run: |
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/wwwroot/_content/AntDesign/less
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/LANCommander.ico
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/LANCommanderDark.ico
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/package-lock.json
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/package.json
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/*.pdb
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommanderDark.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/package-lock.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/package.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/*.pdb
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/hostfxr.dll.bak
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/Libraries/locales
+
+    - name: Rename Updater
+      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.Update
 
     # Create ZIP file
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Launcher/bin/Release/net8.0/linux-x64/publish/ LANCommander.AutoUpdater/bin/Release/net8.0/linux-x64/publish/ LANCommander.PowerShell/Build/LANCommander.PowerShell.dll LANCommander.PowerShell/Build/LANCommander.PowerShell.psd1
+        files: LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
         recursive: true
-        dest: LANCommander.Launcher-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        dest: LANCommander.Launcher-${{ env.BUILD_PLATFORM }}-${{ env.BUILD_ARCH }}-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v3
       with:
-        path: LANCommander.Launcher-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
-        name: LANCommander.Launcher-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        path: LANCommander.Launcher-${{ env.BUILD_PLATFORM }}-${{ env.BUILD_ARCH }}-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+        name: LANCommander.Launcher-${{ env.BUILD_PLATFORM }}-${{ env.BUILD_ARCH }}-v${{ steps.trim_tag_ref.outputs.replaced }}.zip

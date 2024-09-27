@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LANCommander.SDK.Helpers
 {
@@ -13,16 +14,16 @@ namespace LANCommander.SDK.Helpers
     {
         public static readonly ILogger Logger;
 
-        public static string SaveTempScript(Script script)
+        public static async Task<string> SaveTempScriptAsync(Script script)
         {
-            var tempPath = SaveTempScript(script.Contents);
+            var tempPath = await SaveTempScriptAsync(script.Contents);
 
             Logger?.LogTrace("Wrote script {Script} to {Destination}", script.Name, tempPath);
 
             return tempPath;
         }
 
-        public static string SaveTempScript(string contents)
+        public static async Task<string> SaveTempScriptAsync(string contents)
         {
             var tempPath = Path.GetTempFileName();
 
@@ -31,12 +32,12 @@ namespace LANCommander.SDK.Helpers
 
             tempPath = tempPath + ".ps1";
 
-            File.WriteAllText(tempPath, contents);
+            await File.WriteAllTextAsync(tempPath, contents);
 
             return tempPath;
         }
 
-        public static void SaveScript(Game game, ScriptType type)
+        public static async Task SaveScriptAsync(Game game, ScriptType type)
         {
             var scriptContents = GetScriptContents(game, type);
 
@@ -52,7 +53,7 @@ namespace LANCommander.SDK.Helpers
 
                 Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, filename);
 
-                File.WriteAllText(filename, scriptContents);
+                await File.WriteAllTextAsync(filename, scriptContents);
             }
         }
 

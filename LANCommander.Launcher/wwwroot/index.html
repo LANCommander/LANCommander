@@ -5,10 +5,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LANCommander</title>
+    <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css" />
+    <link rel="stylesheet" href="/_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css" />
+    <link rel="stylesheet" href="/_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css" />
     <link rel="stylesheet" href="_content/Photino.blazor.CustomWindow/css/pb-custom-window.css" />
     <link rel="stylesheet" href="_content/AntDesign/css/ant-design-blazor.dark.css" />
+    <link rel="stylesheet" href="_content/LANCommander.UI/ui.css" />
     <link rel="stylesheet" href="css/app.css" />
-    <link rel="stylesheet" href="LANCommander.Launcher.styles.css" />
 </head>
 <body>
 
@@ -26,11 +29,19 @@
 
     <script src="_content/AntDesign/js/ant-design-blazor.js"></script>
     <script src="_framework/blazor.webview.js"></script>
+    <script src="_content/XtermBlazor/XtermBlazor.min.js"></script>
     <script src="_content/Photino.Blazor.CustomWindow/js/js-extensions.js"></script>
     <script src="_content/Photino.Blazor.CustomWindow/js/pb-custom-window.js"></script>
-    <script src="scripts/dist/bundle.js"></script>
+    <script src="_content/LANCommander.UI/bundle.js"></script>
+    <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
+    <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
 
     <script>
+        XtermBlazor.registerAddons({
+            "readline": new XtermAddons.Readline(),
+            "addon-fit": new XtermAddons.Fit()
+        });
+
         window.sendMessage = function (message) {
             window.external.sendMessage(message);
         }

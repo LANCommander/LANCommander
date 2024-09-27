@@ -1,5 +1,4 @@
-﻿@using LANCommander.Server.Data.Enums
-@using LANCommander.Server.Data.Models
+﻿@using LANCommander.Server.Data.Models
 @using LANCommander.Server.Extensions;
 @using LANCommander.SDK.Enums
 
@@ -17,6 +16,12 @@
             </PropertyColumn>
             <PropertyColumn Property="m => m.MaxPlayers" Title="Max Players">
                 <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
+            </PropertyColumn>
+            <PropertyColumn Property="m => m.NetworkProtocol" Title="Protocol">
+                <Select @bind-Value="@context.NetworkProtocol" TItem="NetworkProtocol" TItemValue="NetworkProtocol" DataSource="Enum.GetValues<NetworkProtocol>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
             </PropertyColumn>
             <PropertyColumn Property="m => m.Description">
                 <Input Type="text" @bind-Value="context.Description" />

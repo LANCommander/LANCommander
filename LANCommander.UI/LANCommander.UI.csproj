@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="webpack.config.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Components\ScriptLoader.razor" />
+    <None Include="Components\StylesheetLoader.razor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AntDesign" Version="0.20.4.2" />
+    <PackageReference Include="BlazorMonaco" Version="3.2.0" />
+    <PackageReference Include="BootstrapBlazor.PdfReader" Version="8.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.8" />
+    <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" Version="8.0.5" />
+    <PackageReference Include="XtermBlazor" Version="2.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+  </ItemGroup>
+
+</Project>

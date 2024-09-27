@@ -24,26 +24,6 @@
     font-size: 24px;
 }
 
-.panel-layout {
-    background: #fff;
-}
-
-.panel-layout-content {
-    padding: 0 24px;
-}
-
-.panel-layout .ant-layout-content > .ant-page-header-heading {
-    padding-top: 0;
-}
-
-.panel-layout [data-panel] {
-    display: none;
-}
-
-[data-theme="Dark"] .panel-layout {
-    background: #141414;
-}
-
 .ant-page-header-heading-title {
     padding-bottom: 4px;
     line-height: 26px;
@@ -111,116 +91,6 @@ label.ant-btn-icon-only {
     margin-right: 8px;
 }
 
-.file-manager {
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-}
-
-.file-manager-nav {
-    border-bottom: 1px solid #f0f0f0;
-    padding-left: 8px;
-    padding-right: 8px;
-    height: 58px;
-}
-
-.file-manager-nav .ant-space {
-    flex-grow: 1;
-}
-
-.file-manager-nav-breadcrumbs {
-    flex-grow: 1;
-}
-
-.file-manager-nav .ant-breadcrumb {
-    font-size: 16px;
-    padding: 8px;
-    background: rgba(0, 0, 0, 0.018);
-}
-
-.file-manager-nav .ant-breadcrumb-link {
-    border-radius: 2px;
-    border: 1px solid transparent;
-    padding: 4px 8px;
-    cursor: pointer;
-}
-
-.file-manager-nav .ant-breadcrumb-link:hover,
-.file-manager-nav .ant-breadcrumb-link:active {
-    background: rgba(0, 0, 0, 0.018);
-}
-
-.file-manager .file-manager-body {
-    flex-grow: 1;
-}
-
-[data-theme="Dark"] .file-manager .pane {
-    background: #141414;
-}
-
-.file-manager .ant-tree-treenode {
-    padding-left: 4px;
-}
-
-.file-manager .ant-tree-title {
-    white-space: nowrap;
-}
-
-.file-manager .ant-tree-treenode:hover,
-.file-manager .ant-tree-treenode:active {
-    background: rgba(0, 0, 0, 0.018);
-}
-
-.file-manager-tree {
-    padding-top: 8px;
-    border-right: 1px solid #f0f0f0;
-}
-
-.file-manager .ant-tree-node-content-wrapper {
-    flex-grow: 1;
-    padding-top: 4px;
-    padding-bottom: 4px;
-}
-
-.file-manager .ant-tree-node-content-wrapper:hover {
-    background: none;
-}
-
-.file-manager .ant-tree-switcher .ant-tree-switcher-icon {
-    vertical-align: middle;
-    margin-top: 4px;
-}
-
-.file-manager .ant-tree-treenode-selected {
-    background-color: #11263c;
-}
-
-.split-pane {
-    display: flex;
-    flex-direction: row;
-}
-
-.split-pane .pane {
-    overflow-x: scroll;
-}
-
-.gutter {
-    cursor: e-resize;
-    margin-left: -4px;
-    margin-right: -5px;
-    position: relative;
-}
-
-.gutter::before {
-    content: '';
-    width: 1px;
-    background-color: #303030;
-    position: absolute;
-    top: 0;
-    left: 4px;
-    bottom: 0;
-}
-
 .file-picker-dialog .ant-modal-body {
     padding: 0;
 }
@@ -231,25 +101,6 @@ label.ant-btn-icon-only {
 
 .file-manager-selector-hidden .ant-radio-wrapper {
     display: none;
-}
-
-[data-theme="Dark"] .file-manager,
-[data-theme="Dark"] .file-manager-list,
-[data-theme="Dark"] .file-picker-dialog .file-manager tbody tr {
-    background: #141414;
-}
-
-[data-theme="Dark"] .file-manager-tree,
-[data-theme="Dark"] .file-manager-nav {
-    border-color: #303030;
-    background: #141414;
-}
-
-[data-theme="Dark"] .file-manager .ant-tree-treenode:hover,
-[data-theme="Dark"] .file-manager .ant-tree-treenode:active,
-[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:hover,
-[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:active {
-    background: rgba(255, 255, 255, 0.03);
 }
 
 .game-metadata-lookup-modal .ant-modal-body {
@@ -317,39 +168,6 @@ label.ant-btn-icon-only {
     border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.ant-transfer {
-    display: flex;
-}
-
-.ant-transfer-list {
-    flex-grow: 1;
-}
-
-.pdf-reader-dialog .ant-modal-content {
-    resize: both !important;
-}
-
-.pdf-reader-dialog .ant-modal-body {
-    padding: 0;
-    height: 100%;
-}
-
-.pdf-reader-dialog .ant-modal-close-x,
-.pdf-reader-dialog .ant-modal-max-btn-x {
-    width: 32px;
-    height: 32px;
-    line-height: 32px;
-}
-
-.pdf-reader-dialog .ant-modal-max-btn {
-    right: 32px;
-    color: rgba(255, 255, 255, 0.45);
-}
-
-.pdf-reader-dialog .ant-modal-header {
-    padding: 6px 8px;
-}
-
 .launcher-download {
     display: flex;
     flex-direction: column;
@@ -367,6 +185,32 @@ label.ant-btn-icon-only {
 .launcher-download h1 {
     font-size: 32px;
     margin-bottom: 0;
+}
+
+.page-editor-body {
+    flex-grow: 1;
+}
+
+.page-editor-tree-pane {
+
+}
+
+.page-editor-markdown-pane {
+    padding: 0 16px;
+}
+
+.ant-table-cell-with-append {
+    display: flex;
+    align-items: center;
+    padding-left: 8px !important;
+}
+
+.ant-table-row-indent + .ant-table-row-expand-icon {
+    margin-right: 16px;
+}
+
+.ant-table-row-level-1 {
+    background: #0a0a0a;
 }
 
 @media screen and (min-width: 768px) {

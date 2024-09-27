@@ -1,4 +1,4 @@
-﻿using NLog.Targets;
+﻿using Serilog;
 
 namespace LANCommander.Server.Models
 {
@@ -24,7 +24,6 @@ namespace LANCommander.Server.Models
         public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
         public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
         public LANCommanderServerSettings Servers { get; set; } = new LANCommanderServerSettings();
-        public LANCommanderWikiSettings Wiki { get; set; } = new LANCommanderWikiSettings();
         public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
         public LANCommanderLauncherSettings Launcher { get; set; } = new LANCommanderLauncherSettings();
         public LANCommanderLogSettings Logs { get; set; } = new LANCommanderLogSettings();
@@ -42,6 +41,7 @@ namespace LANCommander.Server.Models
     public class LANCommanderBeaconSettings
     {
         public bool Enabled { get; set; } = true;
+        public string Name { get; set; } = "LANCommander";
         public string Address { get; set; } = "";
     }
 
@@ -98,13 +98,6 @@ namespace LANCommander.Server.Models
         public string StoragePath { get; set; } = "Servers";
     }
 
-    public class LANCommanderWikiSettings
-    {
-        public bool Enabled { get; set; } = false;
-        public string Username { get; set; } = "";
-        public string Password { get; set; } = "";
-    }
-
     public class LANCommanderUpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
@@ -119,7 +112,7 @@ namespace LANCommander.Server.Models
     public class LANCommanderLogSettings
     {
         public string StoragePath { get; set; } = "Logs";
-        public FileArchivePeriod ArchiveEvery { get; set; } = FileArchivePeriod.Day;
+        public RollingInterval ArchiveEvery { get; set; } = RollingInterval.Day;
         public int MaxArchiveFiles { get; set; } = 10;
     }
 }

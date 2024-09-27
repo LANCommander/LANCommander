@@ -35,17 +35,23 @@ namespace LANCommander.Steam
 
             foreach (var match in matches)
             {
-                var appId = match.Attributes["data-ds-appid"].Value;
-                var matchNameElement = match.SelectSingleNode(".//div[@class = 'match_name']");
-
-                if (matchNameElement != null)
+                try
                 {
-                    results.Add(new GameSearchResult
+                    var appId = match.Attributes["data-ds-appid"].Value;
+                    var matchNameElement = match.SelectSingleNode(".//div[@class = 'match_name']");
+
+                    appId = appId.Split(',').First();
+
+                    if (matchNameElement != null)
                     {
-                        Name = matchNameElement.InnerText,
-                        AppId = Convert.ToInt32(appId)
-                    });
+                        results.Add(new GameSearchResult
+                        {
+                            Name = matchNameElement.InnerText,
+                            AppId = Convert.ToInt32(appId)
+                        });
+                    }
                 }
+                catch (Exception ex) { }
             }
 
             return results;

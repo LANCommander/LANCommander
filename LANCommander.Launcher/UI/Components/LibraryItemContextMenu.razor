@@ -1,14 +1,13 @@
-﻿@implements IDisposable
-@using LANCommander.Launcher.Data.Models
+﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @using System.Diagnostics
 @using LANCommander.SDK.Helpers
 @inject GameService GameService
 @inject LibraryService LibraryService
 @inject DownloadService DownloadService
-@inject ScriptService ScriptService
 @inject ModalService ModalService
 @inject MessageBusService MessageBusService
+@inject SDK.Client Client
 
 @if (GameActions != null && GameActions.Count() > 0)
 {
@@ -67,6 +66,12 @@ else
     </MenuItem>
 }
 
+<MenuDivider />
+
+<MenuItem OnClick="() => ReportIssue()">
+    Report Issue
+</MenuItem>
+
 @MenuExtra
 
 @code {
@@ -80,9 +85,6 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        MessageBusService.OnGameStarted += UpdateState;
-        MessageBusService.OnGameStopped += UpdateState;
-
         Settings = SettingService.GetSettings();
     }
 
@@ -103,17 +105,13 @@ else
         }
     }
 
-    async Task UpdateState(Game game)
-    {
-        if (Game.Id == game.Id)
-            await InvokeAsync(StateHasChanged);
-    }
-
     async Task Run(Game game, SDK.Models.Action action)
     {
-        LibraryService.Run(Game, action);
+        var task = GameService.Run(game, action);
 
         await InvokeAsync(StateHasChanged);
+
+        await task;
     }
 
     async Task BrowseFiles()
@@ -123,7 +121,25 @@ else
 
     async Task Install()
     {
-        await LibraryService.Install(Model);
+        if (Settings.Games.InstallDirectories.Length > 1)
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = $"Install {Model.Name}",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = "Install",
+                Draggable = true,
+                Centered = true
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDirectorySelectorDialog, LibraryItem, string>(modalOptions, Model);
+        }
+        else
+        {
+            await LibraryService.Install(Model);
+        }
     }
 
     async Task Uninstall()
@@ -149,7 +165,7 @@ else
         });
 
         if (confirmed)
-            await GameService.Uninstall(Game);
+            await GameService.UninstallAsync(Game);
 
         DownloadService.Remove(Game.Id);
 
@@ -158,31 +174,33 @@ else
 
     async Task RunInstallScripts()
     {
-        var manifests = GameService.GetGameManifests(Game);
+        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            ScriptService.RunInstallScript(Game, manifest.Id);
+            await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 
     async Task RunNameChangeScripts()
     {
-        var manifests = GameService.GetGameManifests(Game);
+        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            ScriptService.RunNameChangeScript(Game, manifest.Id);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, Settings.Profile.Alias);
         }
     }
 
     async Task RunKeyChangeScripts()
     {
-        var manifests = GameService.GetGameManifests(Game);
+        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            ScriptService.RunKeyChangeScript(Game, manifest.Id);
+            var key = Client.Games.GetAllocatedKey(manifest.Id);
+
+            await Client.Scripts.RunKeyChangeScriptAsync(Game.InstallDirectory, Game.Id, key);
         }
     }
 
@@ -203,9 +221,18 @@ else
         var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
     }
 
-    public void Dispose()
+    async Task ReportIssue()
     {
-        MessageBusService.OnGameStarted -= UpdateState;
-        MessageBusService.OnGameStopped -= UpdateState;
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Report Issue",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Submit",
+            Draggable = true
+        };
+
+        var modalRef = ModalService.CreateModal<ReportIssueDialog, Game, SDK.Models.Issue>(modalOptions, Game);
     }
 }

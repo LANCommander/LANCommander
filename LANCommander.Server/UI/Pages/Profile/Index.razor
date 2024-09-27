@@ -12,30 +12,16 @@
 @inject ILogger<Index> Logger
 @attribute [Authorize]
 
-<PageHeader Title="Profile" />
+<PageHeader Title="Profile">
+    <PageHeaderExtra>
+        <Button Type="@ButtonType.Primary" Disabled="!Form.IsModified" OnClick="Save">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <div style="padding: 0 24px;">
-    <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" OnFinish="Save" ValidateOnChange="true">
+    <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" ValidateOnChange="true">
         <FormItem Label="Avatar">
-            <InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png" />
-
-            <label for="AvatarUpload" style="cursor: pointer;">
-                @if (String.IsNullOrWhiteSpace(AvatarUrl))
-                {
-                    <div class="ant-upload ant-upload-select-picture-card ant-upload-select">
-                        <span class="ant-upload" tabindex="0" style="display: grid;">
-                            <div>
-                                <Icon Type="@IconType.Outline.Plus" />
-                                <div class="ant-upload-text">Upload</div>
-                            </div>
-                        </span>
-                    </div>
-                }
-                else
-                {
-                    <Image Width="104px" Src="@AvatarUrl" Preview="false" />
-                }
-            </label>
+            <AvatarUploader UserId="User.Id" />
         </FormItem>
 
         <FormItem Label="Username" Help="Username changes require a relog">
@@ -49,10 +35,6 @@
         <FormItem Label="Email Address" Help="Email changes require a relog">
             <Input @bind-Value="context.Email" />
         </FormItem>
-
-        <FormItem>
-            <Button HtmlType="submit" Type="@ButtonType.Primary" Disabled="!Form.IsModified">Save</Button>
-        </FormItem>
     </Form>
 </div>
 
@@ -60,23 +42,12 @@
     User User = new User();
     Form<User> Form;
 
-    bool LoadingAvatar = false;
-    string AvatarUrl;
-
-    string[] ValidMimeTypes = new string[]
-    {
-        "image/png",
-        "image/jpeg"
-    };
-
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
             User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
-
-        LoadAvatar();
     }
 
     private async Task Save()
@@ -97,57 +68,5 @@
             MessageService.Error("An unknown error occurred.");
             Logger.LogError(ex, "An unknown error occurred.");
         }
-    }
-
-    void LoadAvatar()
-    {
-        var avatar = User.Media.FirstOrDefault(a => a.Type == SDK.Enums.MediaType.Avatar);
-
-        if (avatar != null)
-            AvatarUrl = $"/api/Media/{avatar.Id}/Download?fileId={avatar.FileId}";
-        else
-            AvatarUrl = String.Empty;
-    }
-
-    async Task UploadAvatar(InputFileChangeEventArgs e)
-    {
-        var media = User.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
-
-        if (media == null)
-            media = new Media
-            {
-                Type = SDK.Enums.MediaType.Avatar,
-                UserId = User.Id
-            };
-
-        if (!ValidMimeTypes.Contains(e.File.ContentType))
-        {
-            MessageService.Error("Unsupported file type");
-            return;
-        }
-
-        if ((e.File.Size / 1024) > 512)
-        {
-            MessageService.Error($"File size must be smaller than 512KB");
-            return;
-        }
-
-        media.SourceUrl = "";
-        media.MimeType = e.File.ContentType;
-
-        if (media.Id == Guid.Empty)
-        {
-            media = await MediaService.UploadMediaAsync(e.File, media);
-
-            await MediaService.Add(media);
-        }
-        else
-        {
-            MediaService.DeleteLocalMediaFile(media.FileId);
-            media = await MediaService.UploadMediaAsync(e.File, media);
-            await MediaService.Update(media);
-        }
-
-        LoadAvatar();
     }
 }

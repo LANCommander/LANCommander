@@ -16,6 +16,8 @@ jobs:
     uses: ./.github/workflows/LANCommander.Server.Linux.x64.yml
   build_server_osx-arm64:
     uses: ./.github/workflows/LANCommander.Server.macOS.arm64.yml
+  build_server_osx-x64:
+    uses: ./.github/workflows/LANCommander.Server.macOS.x64.yml
   build_server_win-arm64:
     uses: ./.github/workflows/LANCommander.Server.Windows.arm64.yml
   build_server_win-x64:
@@ -28,6 +30,8 @@ jobs:
     uses: ./.github/workflows/LANCommander.Launcher.Linux.x64.yml
   build_launcher_osx-arm64:
     uses: ./.github/workflows/LANCommander.Launcher.macOS.arm64.yml
+  build_launcher_osx-x64:
+    uses: ./.github/workflows/LANCommander.Launcher.macOS.x64.yml
   build_launcher_win-arm64:
     uses: ./.github/workflows/LANCommander.Launcher.Windows.arm64.yml
   build_launcher_win-x64:
@@ -35,7 +39,7 @@ jobs:
 
   build_release:
     runs-on: windows-latest
-    needs: [build_server_linux-arm64, build_server_linux-x64, build_server_osx-arm64, build_server_win-arm64, build_server_win-x64, build_launcher_linux-arm64, build_launcher_linux-x64, build_launcher_osx-arm64, build_launcher_win-arm64, build_launcher_win-x64]
+    needs: [build_server_linux-arm64, build_server_linux-x64, build_server_osx-arm64, build_server_osx-x64, build_server_win-arm64, build_server_win-x64, build_launcher_linux-arm64, build_launcher_linux-x64, build_launcher_osx-arm64, build_launcher_osx-x64, build_launcher_win-arm64, build_launcher_win-x64]
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,50 +62,6 @@ jobs:
         replace-with: '/'
         flags: g
 
-    # dotnet
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 8.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-
-    # Playnite
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.3.1
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v1.1.1
-    - name: Restore NuGet packages
-      run: nuget restore LANCommander.sln
-
-    - name: Build and Publish PowerShell Module
-      run: msbuild LANCommander.PowerShell/LANCommander.PowerShell.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-
-    - name: Build and Publish Library
-      run: msbuild LANCommander.Playnite.Extension/LANCommander.PlaynitePlugin.csproj /p:Configuration=Release /p:OutputPath=Build /p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" /p:InformationalVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-    - name: Download Playnite Release
-      uses: robinraju/release-downloader@v1.7
-      with:
-        repository: JosefNemec/Playnite
-        tag: 10.32
-        fileName: Playnite1032.zip
-    - name: Extract Playnite
-      run: Expand-Archive -Path Playnite1032.zip -DestinationPath Playnite
-    - name: Update Manifest Versioning
-      uses: fjogeleit/yaml-update-action@main
-      with:
-        valueFile: "LANCommander.Playnite.Extension/Build/extension.yaml"
-        propertyPath: "Version"
-        value: "${{ steps.trim_tag_ref.outputs.replaced }}"
-        commitChange: false
-    - name: Copy PowerShell Module to Playnite Extension
-      run: Copy-Item LANCommander.PowerShell/Build/LANCommander.PowerShell.* -Destination LANCommander.Playnite.Extension/Build
-    - name: Run Playnite Toolbox
-      run: Playnite/Toolbox.exe pack LANCommander.Playnite.Extension/Build .
-
     # Draft Release
     - name: Download Server Linux ARM64
       uses: actions/download-artifact@v3
@@ -115,6 +75,10 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: LANCommander.Server-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+    - name: Download Server macOS x64
+      uses: actions/download-artifact@v3
+      with:
+        name: LANCommander.Server-macOS-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server Windows ARM64
       uses: actions/download-artifact@v3
       with:
@@ -131,6 +95,10 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: LANCommander.Launcher-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
+    - name: Download Launcher macOS x64
+      uses: actions/download-artifact@v3
+      with:
+        name: LANCommander.Launcher-macOS-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher macOS ARM64
       uses: actions/download-artifact@v3
       with:
@@ -156,9 +124,10 @@ jobs:
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-Linux-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-Linux-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-macOS-arm64-*.zip
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Server-macOS-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Windows-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Windows-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Linux-x64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-Linux-arm64-*.zip
           ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-macOS-arm64-*.zip
-          LANCommander.PlaynitePlugin_48e1bac7-e0a0-45d7-ba83-36f5e9e959fc_*.pext
+          ${{ steps.swap_path_backslashes.outputs.replaced }}/LANCommander.Launcher-macOS-x64-*.zip

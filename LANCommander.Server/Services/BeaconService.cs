@@ -3,13 +3,12 @@ using LANCommander.Server.Models;
 
 namespace LANCommander.Server.Services
 {
-    public class BeaconService : IHostedService, IDisposable
+    public class BeaconService : BaseService, IHostedService, IDisposable
     {
         private Beacon Beacon;
-        private LANCommanderSettings Settings;
 
-        public BeaconService() {
-            Settings = SettingService.GetSettings();
+        public BeaconService(ILogger<BeaconService> logger) : base(logger)
+        {
             Beacon = new Beacon("LANCommander", Convert.ToUInt16(Settings.Port));
         }
 
@@ -20,7 +19,14 @@ namespace LANCommander.Server.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Beacon.BeaconData = Settings.Beacon?.Address;
+            string[] dataParts = new string[]
+            {
+                Settings.Beacon?.Address,
+                Settings.Beacon?.Name,
+                UpdateService.GetCurrentVersion().ToString(),
+            };
+
+            Beacon.BeaconData = String.Join('|', dataParts);
             Beacon.Start();
 
             return Task.CompletedTask;

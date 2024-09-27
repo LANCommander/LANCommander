@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using LANCommander.Server.Data;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Models;
@@ -27,6 +26,7 @@ namespace LANCommander.Server.Services
         private readonly IFusionCache Cache;
 
         public GameService(
+            ILogger<GameService> logger,
             DatabaseContext dbContext,
             IHttpContextAccessor httpContextAccessor,
             IMapper mapper,
@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
             TagService tagService,
             CompanyService companyService,
             GenreService genreService,
-            IFusionCache cache) : base(dbContext, httpContextAccessor)
+            IFusionCache cache) : base(logger, dbContext, httpContextAccessor)
         {
             Mapper = mapper;
             ArchiveService = archiveService;
@@ -159,6 +159,7 @@ namespace LANCommander.Server.Services
                         MinPlayers = local.MinPlayers,
                         MaxPlayers = local.MaxPlayers,
                         Description = local.Description,
+                        NetworkProtocol = local.NetworkProtocol,
                     };
 
                 if (lan != null)
@@ -166,6 +167,8 @@ namespace LANCommander.Server.Services
                     {
                         MinPlayers = lan.MinPlayers,
                         MaxPlayers = lan.MaxPlayers,
+                        Description = lan.Description,
+                        NetworkProtocol = lan.NetworkProtocol,
                     };
 
                 if (online != null)
@@ -173,18 +176,20 @@ namespace LANCommander.Server.Services
                     {
                         MinPlayers = online.MinPlayers,
                         MaxPlayers = online.MaxPlayers,
+                        Description = online.Description,
+                        NetworkProtocol = online.NetworkProtocol,
                     };
             }
 
             if (game.SavePaths != null && game.SavePaths.Count > 0)
             {
-                manifest.SavePaths = game.SavePaths.Select(p => new SDK.SavePath()
+                manifest.SavePaths = game.SavePaths.Select(p => new SDK.Models.SavePath()
                 {
                     Id = p.Id,
                     Path = p.Path,
                     IsRegex = p.IsRegex,
                     WorkingDirectory = p.WorkingDirectory,
-                    Type = p.Type.ToString()
+                    Type = p.Type
                 });
             }
 
@@ -389,6 +394,7 @@ namespace LANCommander.Server.Services
                         MinPlayers = manifest.LanMultiplayer.MinPlayers,
                         MaxPlayers = manifest.LanMultiplayer.MaxPlayers,
                         Description = manifest.LanMultiplayer.Description,
+                        NetworkProtocol = manifest.LanMultiplayer.NetworkProtocol,
                     });
 
                 if (manifest.LocalMultiplayer != null)
@@ -398,6 +404,7 @@ namespace LANCommander.Server.Services
                         MinPlayers = manifest.LocalMultiplayer.MinPlayers,
                         MaxPlayers = manifest.LocalMultiplayer.MaxPlayers,
                         Description = manifest.LocalMultiplayer.Description,
+                        NetworkProtocol = manifest.LocalMultiplayer.NetworkProtocol,
                     });
 
                 if (manifest.OnlineMultiplayer != null)
@@ -407,12 +414,13 @@ namespace LANCommander.Server.Services
                         MinPlayers = manifest.OnlineMultiplayer.MinPlayers,
                         MaxPlayers = manifest.OnlineMultiplayer.MaxPlayers,
                         Description = manifest.OnlineMultiplayer.Description,
+                        NetworkProtocol = manifest.OnlineMultiplayer.NetworkProtocol,
                     });
                 #endregion
 
                 #region Save Paths
                 if (game.SavePaths == null)
-                    game.SavePaths = new List<Data.Models.SavePath>();
+                    game.SavePaths = new List<SavePath>();
 
                 foreach (var path in game.SavePaths)
                 {
@@ -423,7 +431,7 @@ namespace LANCommander.Server.Services
                         path.Path = manifestSavePath.Path;
                         path.WorkingDirectory = manifestSavePath.WorkingDirectory;
                         path.IsRegex = manifestSavePath.IsRegex;
-                        path.Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type);
+                        path.Type = manifestSavePath.Type;
                     }
                     else
                         game.SavePaths.Remove(path);
@@ -432,12 +440,12 @@ namespace LANCommander.Server.Services
                 if (manifest.SavePaths != null)
                     foreach (var manifestSavePath in manifest.SavePaths.Where(msp => !game.SavePaths.Any(sp => sp.Id == msp.Id)))
                     {
-                        game.SavePaths.Add(new Data.Models.SavePath()
+                        game.SavePaths.Add(new SavePath()
                         {
                             Path = manifestSavePath.Path,
                             WorkingDirectory = manifestSavePath.WorkingDirectory,
                             IsRegex = manifestSavePath.IsRegex,
-                            Type = (Data.Enums.SavePathType)Enum.Parse(typeof(Data.Enums.SavePathType), manifestSavePath.Type)
+                            Type = manifestSavePath.Type
                         });
                     }
                 #endregion
@@ -477,7 +485,7 @@ namespace LANCommander.Server.Services
                         script.Description = manifestScript.Description;
                         script.Name = manifestScript.Name;
                         script.RequiresAdmin = manifestScript.RequiresAdmin;
-                        script.Type = (Data.Enums.ScriptType)(int)manifestScript.Type;
+                        script.Type = (ScriptType)(int)manifestScript.Type;
                     }
                     else
                         game.Scripts.Remove(script);
@@ -493,7 +501,7 @@ namespace LANCommander.Server.Services
                             Description = manifestScript.Description,
                             Name = manifestScript.Name,
                             RequiresAdmin = manifestScript.RequiresAdmin,
-                            Type = (Data.Enums.ScriptType)(int)manifestScript.Type,
+                            Type = (ScriptType)(int)manifestScript.Type,
                             CreatedOn = manifestScript.CreatedOn,
                         });
                     }

@@ -5,7 +5,6 @@
 @attribute [Authorize(Roles = "Administrator")]
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
-@using LANCommander.Server.Data.Enums
 @using LANCommander.Server.Extensions
 @using Microsoft.EntityFrameworkCore
 @using System.Runtime.InteropServices
@@ -147,7 +146,7 @@
                     </FormItem>
 
                     <FormItem Label="Method">
-                        <Select @bind-Value="context.AutostartMethod" TItem="Data.Enums.ServerAutostartMethod" TItemValue="Data.Enums.ServerAutostartMethod" DataSource="Enum.GetValues<Data.Enums.ServerAutostartMethod>()">
+                        <Select @bind-Value="context.AutostartMethod" TItem="ServerAutostartMethod" TItemValue="ServerAutostartMethod" DataSource="Enum.GetValues<ServerAutostartMethod>()">
                             <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
                             <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
                         </Select>
@@ -199,7 +198,7 @@
 
             @if (Panel == "Scripts")
             {
-                <ScriptEditor ServerId="@Server.Id" AllowedTypes="new Data.Enums.ScriptType[] { Data.Enums.ScriptType.BeforeStart, Data.Enums.ScriptType.AfterStop }" />
+                <ScriptEditor ServerId="@Server.Id" AllowedTypes="new ScriptType[] { ScriptType.BeforeStart, ScriptType.AfterStop }" />
             }
 
             @if (Panel == "Files")
@@ -221,7 +220,7 @@
 
     bool PortInUse = false;
 
-    Server Server;
+    Server Server = new Server();
     Guid GameId;
 
     IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods
@@ -247,9 +246,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id == Guid.Empty)
-            Server = new Server();
-        else
+        if (Id != Guid.Empty && Panel == null)
+            NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
+        else if (Id != Guid.Empty)
             Server = await ServerService.Get(Id);
 
         if (Server.GameId.HasValue)

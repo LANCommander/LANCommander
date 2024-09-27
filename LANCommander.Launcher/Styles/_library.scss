@@ -3,6 +3,7 @@
     height: 100%;
     display: flex;
     position: relative;
+    flex-direction: row;
 
     .pane {
         overflow-x: hidden;

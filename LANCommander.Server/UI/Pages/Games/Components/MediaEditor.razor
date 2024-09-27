@@ -1,5 +1,4 @@
-﻿@using LANCommander.Server.Data.Enums;
-@using LANCommander.Server.Models;
+﻿@using LANCommander.Server.Models;
 @using LANCommander.SDK.Enums
 @using System.Net.Mime
 @inject MediaService MediaService
@@ -43,7 +42,7 @@
                         @{
                             var fileInputId = Guid.NewGuid();
                         }
-                        <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden accept=".jpg,.jpeg,.png,.gif,.pdf" />
+                        <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden accept=".jpg,.jpeg,.png,.gif,.pdf,.ico" />
                         <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
                             <Icon Type="@IconType.Outline.Upload" />
                         </label>
@@ -111,7 +110,8 @@
         MediaTypeNames.Image.Png,
         MediaTypeNames.Image.Jpeg,
         MediaTypeNames.Image.Gif,
-        MediaTypeNames.Application.Pdf
+        MediaTypeNames.Application.Pdf,
+        MediaTypeNames.Image.Icon
     };
 
     private async Task Update(Media media)

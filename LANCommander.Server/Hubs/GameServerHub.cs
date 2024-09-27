@@ -1,6 +1,5 @@
 ﻿using LANCommander.Server.Services;
 using Microsoft.AspNetCore.SignalR;
-using NLog;
 
 namespace LANCommander.Server.Hubs
 {

@@ -1,14 +1,16 @@
 ﻿using LANCommander.SDK;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.SignalR;
+using Serilog.Events;
 
 namespace LANCommander.Server.Hubs
 {
     public class LoggingHub : Hub
     {
-        public async Task Log(string message)
+        public static async Task Log(IHubContext<LoggingHub> context, string message, LogEvent logEvent)
         {
-            await Clients.All.SendAsync("Log", message);
+
+            await context.Clients.All.SendAsync("Log", message, logEvent.Level, logEvent.Timestamp.DateTime);
         }
     }
 }

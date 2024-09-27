@@ -1,6 +1,5 @@
 ﻿using LANCommander.Server.Services;
 using Microsoft.AspNetCore.SignalR.Client;
-using NLog;
 
 namespace LANCommander.Logging
 {
@@ -51,7 +50,7 @@ namespace LANCommander.Logging
                 }
                 catch (Exception ex)
                 {
-                    NLog.Common.InternalLogger.Error(ex, "Exception in LoggingHubConnection.DisposeAsync");
+                    // NLog.Common.InternalLogger?.LogError(ex, "Exception in LoggingHubConnection.DisposeAsync");
                 }
                 finally
                 {

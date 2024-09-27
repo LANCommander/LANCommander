@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
+using System.Threading.Tasks;
 
 namespace LANCommander.SDK.Helpers
 {
@@ -42,6 +43,36 @@ namespace LANCommander.SDK.Helpers
                 var yaml = File.ReadAllText(source);
 
                 Logger?.LogTrace("Deserializing manifest");
+
+                var manifest = Deserialize<GameManifest>(yaml);
+
+                return manifest;
+            }
+
+            return null;
+        }
+
+        public static async Task<GameManifest> ReadAsync(string installDirectory)
+        {
+            var source = Path.Combine(installDirectory, ManifestFilename);
+            var yaml = await File.ReadAllTextAsync(source);
+
+            Logger?.LogTrace("Deserializing manifest from path {ManifestPath}", source);
+
+            var manifest = Deserialize<GameManifest>(yaml);
+
+            return manifest;
+        }
+
+        public static async Task<GameManifest> ReadAsync(string installDirectory, Guid gameId)
+        {
+            var source = GetPath(installDirectory, gameId);
+
+            if (File.Exists(source))
+            {
+                var yaml = await File.ReadAllTextAsync(source);
+
+                Logger?.LogTrace("Deserializing manifest from {ManifestPath}", source);
 
                 var manifest = Deserialize<GameManifest>(yaml);
 

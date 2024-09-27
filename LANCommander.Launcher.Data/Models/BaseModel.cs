@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using LANCommander.SDK.Models;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LANCommander.Launcher.Data.Models
 {
-    public abstract class BaseModel
+    public abstract class BaseModel : IKeyedModel
     {
         [Key]
         public Guid Id { get; set; }

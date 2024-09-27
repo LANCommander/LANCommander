@@ -4,9 +4,8 @@ using System.Text;
 
 namespace LANCommander.Server.Services
 {
-    public class IGDBService
+    public class IGDBService : BaseService
     {
-        private readonly SettingService SettingService;
         private const string DefaultFields = "*";
         private IGDBClient Client;
 
@@ -15,19 +14,15 @@ namespace LANCommander.Server.Services
         private string ClientId { get; set; }
         private string ClientSecret { get; set; }
 
-        public IGDBService(SettingService settingService)
+        public IGDBService(ILogger<IGDBService> logger) : base(logger)
         {
-            SettingService = settingService;
-
             Authenticate();
         }
 
         public void Authenticate()
         {
-            var settings = SettingService.GetSettings();
-
-            ClientId = settings.IGDBClientId;
-            ClientSecret = settings.IGDBClientSecret;
+            ClientId = Settings.IGDBClientId;
+            ClientSecret = Settings.IGDBClientSecret;
 
             try
             {

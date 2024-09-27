@@ -1,5 +1,6 @@
 ﻿@page "/Settings/Updates"
 @using LANCommander.Server.Models;
+@using Markdig
 @using Octokit
 @using Semver
 @layout SettingsLayout
@@ -53,7 +54,7 @@
                             <a href="@release.HtmlUrl" target="_blank">View Release</a>
                         </Extra>
                         <Body>
-                            @((MarkupString)Markdig.Markdown.ToHtml(release.Body))
+                            @((MarkupString)Markdown.ToHtml(release.Body))
                         </Body>
                     </Card>
                 </SpaceItem>

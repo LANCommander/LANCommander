@@ -1,14 +1,16 @@
-﻿using NLog;
+﻿using LANCommander.Server.Models;
 
 namespace LANCommander.Server.Services
 {
     public abstract class BaseService
     {
-        protected readonly Logger Logger;
+        protected readonly ILogger Logger;
+        protected readonly LANCommanderSettings Settings;
 
-        protected BaseService()
+        protected BaseService(ILogger logger)
         {
-            Logger = LogManager.GetLogger(GetType().ToString());
+            Logger = logger;
+            Settings = SettingService.GetSettings();
         }
     }
 }

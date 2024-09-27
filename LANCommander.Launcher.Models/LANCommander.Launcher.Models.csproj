@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(TargetFramework.Contains('-windows'))">
+	<DefineConstants>WINDOWS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(TargetFramework.Contains('-linux'))">
+	<DefineConstants>LINUX</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(TargetFramework.Contains('-mac'))">
+    <DefineConstants>MAC</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
+  </ItemGroup>
+
+</Project>

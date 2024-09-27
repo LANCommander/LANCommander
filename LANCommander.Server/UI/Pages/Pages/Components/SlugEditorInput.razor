@@ -1,0 +1,54 @@
+﻿@using LANCommander.Server.Extensions
+
+<Space>
+    @if (!Editing)
+    {
+        <SpaceItem>
+            <a href="/@Page.Route" target="_blank">/@Page.Route.Substring(0, Page.Route.Length - Value.Length)<strong>@Value</strong></a>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Button Size="@ButtonSize.Small" OnClick="Edit">Edit</Button>
+        </SpaceItem>
+    }
+    else
+    {
+        <SpaceItem>
+            <AntDesign.Input @bind-Value="Value" OnBlur="GenerateSlug" Size="@InputSize.Small">
+                <AddOnBefore>/@Page.Route.Substring(0, Page.Route.Length - Value.Length)</AddOnBefore>
+            </AntDesign.Input>
+        </SpaceItem>
+
+        <SpaceItem>
+            <Button OnClick="Save">Save</Button>
+        </SpaceItem>
+    }
+</Space>
+
+@code {
+    [Parameter] public Page Page { get; set; }
+    [Parameter] public string Value { get; set; }
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    bool Editing { get; set; } = false;
+
+    void Edit()
+    {
+        Editing = true;
+    }
+
+    void GenerateSlug()
+    {
+        Value = Value.ToUrlSlug();
+    }
+
+    async Task Save()
+    {
+        GenerateSlug();
+
+        if (ValueChanged.HasDelegate)
+            await ValueChanged.InvokeAsync(Value);
+
+        Editing = false;
+    }
+}

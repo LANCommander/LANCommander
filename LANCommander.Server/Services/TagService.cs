@@ -5,8 +5,9 @@ namespace LANCommander.Server.Services
 {
     public class TagService : BaseDatabaseService<Tag>
     {
-        public TagService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public TagService(
+            ILogger<TagService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
     }
 }

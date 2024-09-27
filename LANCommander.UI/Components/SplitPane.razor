@@ -1,0 +1,24 @@
+﻿@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+<CascadingValue Value="this" IsFixed="@true">
+    <div id="split-pane-@(PaneId.ToString())" class="split-pane @Class" style="@Style">
+        @ChildContent
+    </div>
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "";
+
+    private IList<Pane> Panes = new List<Pane>();
+
+    private Guid PaneId = Guid.NewGuid();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await JS.InvokeVoidAsync("SplitPane.Init", PaneId);
+    }
+}

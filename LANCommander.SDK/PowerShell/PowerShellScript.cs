@@ -1,12 +1,18 @@
-﻿using LANCommander.SDK.Helpers;
+﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
+using LANCommander.SDK.PowerShell.Cmdlets;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -14,33 +20,50 @@ namespace LANCommander.SDK.PowerShell
 {
     public class PowerShellScript
     {
+        public ScriptType Type { get; private set; }
         private string Contents { get; set; }           = "";
-        private string WorkingDirectory { get; set; }   = "";
-        private bool AsAdmin { get; set; }              = false;
+        public string WorkingDirectory { get; private set; }   = "";
         private bool ShellExecute { get; set; }         = false;
+        public bool RunAsAdmin { get; private set; }       = false;
         private bool IgnoreWow64 { get; set; }          = false;
         private bool Debug { get; set; }                = false;
-        private ICollection<PowerShellVariable> Variables { get; set; }
-        private Dictionary<string, string> Arguments { get; set; }
-        private List<string> Modules { get; set; }
-        private Process Process { get; set; }
+        public PowerShellVariableList Variables { get; private set; }
+        public Dictionary<string, string> Arguments { get; private set; }
 
-        public PowerShellScript()
+        private InitialSessionState InitialSessionState { get; set; }
+
+        private TaskCompletionSource<string> Input { get; set; }
+
+        public Func<System.Management.Automation.PowerShell, Task> OnDebugStart;
+        public Func<System.Management.Automation.PowerShell, Task> OnDebugBreak;
+        public Func<LogLevel, string, Task> OnOutput;
+
+        private const string Logo = @"
+   __   ___   _  _______                              __       
+  / /  / _ | / |/ / ___/__  __ _  __ _  ___ ____  ___/ /__ ____
+ / /__/ __ |/    / /__/ _ \/  ' \/  ' \/ _ `/ _ \/ _  / -_) __/
+/____/_/ |_/_/|_/\___/\___/_/_/_/_/_/_/\_,_/_//_/\_,_/\__/_/   
+
+";
+
+        public PowerShellScript(ScriptType type)
         {
-            Variables = new List<PowerShellVariable>();
+            Type = type;
+            Variables = new PowerShellVariableList();
             Arguments = new Dictionary<string, string>();
-            Modules = new List<string>();
-            Process = new Process();
 
-            Process.StartInfo.FileName = "powershell";
-            Process.StartInfo.RedirectStandardOutput = false;
+            InitialSessionState = InitialSessionState.CreateDefault();
 
-            AddArgument("ExecutionPolicy", "Unrestricted");
-
-            var moduleManifests = Directory.EnumerateFiles(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), "LANCommander.PowerShell.psd1", SearchOption.AllDirectories);
-
-            if (moduleManifests.Any())
-                AddModule(moduleManifests.First());
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Convert-AspectRatio", typeof(ConvertAspectRatioCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertFrom-SerializedBase64", typeof(ConvertFromSerializedBase64Cmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertTo-SerializedBase64", typeof(ConvertToSerializedBase64Cmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("ConvertTo-StringBytes", typeof(ConvertToStringBytesCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Edit-PatchBinary", typeof(EditPatchBinaryCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-GameManifest", typeof(GetGameManifestCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-PrimaryDisplay", typeof(GetPrimaryDisplayCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-IniValue", typeof(UpdateIniValueCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-GameManifest", typeof(WriteGameManifestCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-ReplaceContentInFile", typeof(ReplaceContentInFileCmdlet), null));
 
             IgnoreWow64Redirection();
         }
@@ -49,12 +72,18 @@ namespace LANCommander.SDK.PowerShell
         {
             Contents = File.ReadAllText(path);
 
+            if (Contents.StartsWith("# Requires Admin"))
+                RunAsAdmin = true;
+
             return this;
         }
 
         public PowerShellScript UseInline(string contents)
         {
             Contents = contents;
+
+            if (Contents.StartsWith("# Requires Admin"))
+                RunAsAdmin = true;
 
             return this;
         }
@@ -101,23 +130,6 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public PowerShellScript AddModule(string path)
-        {
-            Modules.Add(path);
-
-            return this;
-        }
-
-        public PowerShellScript RunAsAdmin()
-        {
-            AsAdmin = true;
-
-            Process.StartInfo.Verb = "runas";
-            Process.StartInfo.UseShellExecute = true;
-
-            return this;
-        }
-
         public PowerShellScript IgnoreWow64Redirection()
         {
             IgnoreWow64 = true;
@@ -132,76 +144,129 @@ namespace LANCommander.SDK.PowerShell
             return this;
         }
 
-        public int Execute()
+        public PowerShellScript AsAdmin()
         {
-            var scriptBuilder = new StringBuilder();
+            RunAsAdmin = true;
 
+            return this;
+        }
+
+        public async Task<T> ExecuteAsync<T>()
+        {
+            T result = default;
             var wow64Value = IntPtr.Zero;
-
-            if (Contents.StartsWith("# Requires Admin"))
-                RunAsAdmin();
-
-            foreach (var module in Modules)
-            {
-                scriptBuilder.AppendLine($"Import-Module \"{module}\"");
-            }
-
-            foreach (var variable in Variables)
-            {
-                scriptBuilder.AppendLine($"${variable.Name} = ConvertFrom-SerializedBase64 \"{Serialize(variable.Value)}\"");
-            }
-
-            scriptBuilder.AppendLine(Contents);
-
-            if (Debug)
-            {
-                scriptBuilder.AppendLine("Write-Host '----- DEBUG -----'");
-                scriptBuilder.AppendLine("Write-Host 'Variables:'");
-                
-                foreach (var variable in Variables)
-                {
-                    scriptBuilder.AppendLine($"Write-Host '    ${variable.Name}'");
-                }
-
-                scriptBuilder.AppendLine("Write-Host ''");
-
-                Process.StartInfo.Arguments += " -NoExit";
-            }
-
-            var path = ScriptHelper.SaveTempScript(scriptBuilder.ToString());
-
-            AddArgument("File", path);
 
             if (IgnoreWow64)
                 Wow64DisableWow64FsRedirection(ref wow64Value);
 
-            foreach (var argument in Arguments)
+            using (Runspace runspace = RunspaceFactory.CreateRunspace(InitialSessionState))
             {
-                Process.StartInfo.Arguments += $" -{argument.Key} {argument.Value}";
+                runspace.Open();
+
+                runspace.SessionStateProxy.Path.SetLocation(WorkingDirectory);
+
+                foreach (var variable in Variables)
+                {
+                    runspace.SessionStateProxy.SetVariable(variable.Name, variable.Value);
+                }
+
+                runspace.SessionStateProxy.SetVariable("Logo", Logo);
+                runspace.SessionStateProxy.SetVariable("ScriptType", Type);
+                runspace.SessionStateProxy.SetVariable("WorkingDirectory", WorkingDirectory);
+
+                using (var ps = System.Management.Automation.PowerShell.Create())
+                {
+                    ps.Runspace = runspace;
+
+                    if (Debug)
+                        OnDebugStart?.Invoke(ps);
+
+                    ps.AddScript("Write-Host $Logo");
+
+                    ps.AddScript(Contents);
+
+                    if (Debug)
+                    {
+                        ps.AddScript("Write-Host '--------- DEBUG ---------'");
+                        ps.AddScript("Write-Host \"Script Type: $ScriptType\"");
+                        ps.AddScript("Write-Host \"Working Directory: $WorkingDirectory\"");
+                        ps.AddScript("Write-Host 'Variables:'");
+
+                        foreach (var variable in Variables)
+                        {
+                            ps.AddScript($"Write-Host '    ${variable.Name}'");
+                        }
+
+                        ps.AddScript("Write-Host ''");
+                        ps.AddScript("Write-Host 'Enter \"exit\" to continue'");
+
+                        if (OnOutput != null)
+                        {
+                            ps.Streams.Information.DataAdded += Information_DataAdded;
+                            ps.Streams.Verbose.DataAdded += Verbose_DataAdded;
+                            ps.Streams.Debug.DataAdded += Debug_DataAdded;
+                            ps.Streams.Warning.DataAdded += Warning_DataAdded;
+                            ps.Streams.Error.DataAdded += Error_DataAdded;
+                        }
+                    }
+
+                    var results = await ps.InvokeAsync();
+
+                    if (Debug)
+                        await OnDebugBreak?.Invoke(ps);
+
+                    try
+                    {
+                        result = (T)ps.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
+                    }
+                    catch
+                    {
+                        // Couldn't case properly, fallback to default
+                    }
+                }
             }
-
-            if (!String.IsNullOrEmpty(WorkingDirectory))
-                Process.StartInfo.WorkingDirectory = WorkingDirectory;
-
-            if (ShellExecute)
-                Process.StartInfo.UseShellExecute = true;
-
-            if (AsAdmin)
-            {
-                Process.StartInfo.Verb = "runas";
-                Process.StartInfo.UseShellExecute = true;
-            }
-
-            Process.Start();
-            Process.WaitForExit();
 
             if (IgnoreWow64)
                 Wow64RevertWow64FsRedirection(ref wow64Value);
 
-            if (File.Exists(path))
-                File.Delete(path);
+            return result;
+        }
 
-            return Process.ExitCode;
+        private void Error_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<ErrorRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Error, $"{record.InvocationInfo.InvocationName} : {record.Exception.Message}");
+            OnOutput?.Invoke(LogLevel.Error, record.InvocationInfo.PositionMessage);
+        }
+
+        private void Warning_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<WarningRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Warning, record.Message);
+        }
+
+        private void Debug_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<DebugRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Debug, record.Message);
+        }
+
+        private void Verbose_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<VerboseRecord>)sender)[e.Index];
+
+            OnOutput?.Invoke(LogLevel.Trace, record.Message);
+        }
+
+        private void Information_DataAdded(object sender, DataAddedEventArgs e)
+        {
+            var record = ((PSDataCollection<InformationRecord>)sender)[e.Index];
+
+            if (record.MessageData != null && record.MessageData is HostInformationMessage)
+                OnOutput?.Invoke(LogLevel.Information, (record.MessageData as HostInformationMessage).Message);
         }
 
         public static string Serialize<T>(T input)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LANCommander.SDK.Enums;
+using System;
 
 namespace LANCommander.SDK.Models
 {
@@ -10,11 +11,5 @@ namespace LANCommander.SDK.Models
         public string ClaimedByIpv4Address { get; set; }
         public string ClaimedByComputerName { get; set; }
         public DateTime? ClaimedOn { get; set; }
-    }
-
-    public enum KeyAllocationMethod
-    {
-        UserAccount,
-        MacAddress
     }
 }

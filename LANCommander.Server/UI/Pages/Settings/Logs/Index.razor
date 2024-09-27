@@ -1,0 +1,70 @@
+﻿@page "/Settings/Logs"
+@layout SettingsLayout
+@using LANCommander.Server.Extensions
+@using LANCommander.Server.Models
+@using Serilog
+@inject SettingService SettingService
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<PageHeader Title="Logs" />
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Storage Path">
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Logs.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+        </FormItem>
+
+        <FormItem Label="Archive Every">
+            <Select @bind-Value="@context.Logs.ArchiveEvery" TItem="RollingInterval" TItemValue="RollingInterval" DataSource="Enum.GetValues<RollingInterval>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+
+        <FormItem Label="Max Archive Files">
+            <AntDesign.InputNumber @bind-Value="context.Logs.MaxArchiveFiles" Min="0" DefaultValue="10" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+
+    <LANCommander.Server.UI.Pages.Settings.Logs.Components.LogViewer />
+</div>
+
+@code {
+    LANCommanderSettings Settings;
+
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    private void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+
+    private void OnPathSelected(string path)
+    {
+        var appPath = Directory.GetCurrentDirectory();
+
+        if (path != null && path.StartsWith(appPath))
+            path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+
+        Settings.Logs.StoragePath = path;
+    }
+}

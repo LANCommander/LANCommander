@@ -1,17 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-	  <Version>0.9.0</Version>
+    <TargetFramework>net8.0</TargetFramework>
+	  <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommandLineParser" Version="2.9.1" />
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-    <PackageReference Include="PowerShellStandard.Library" Version="5.1.1" />
-    <PackageReference Include="RestSharp" Version="106.15.0" />
+    <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.5" />
+    <PackageReference Include="PeanutButter.INI" Version="3.0.319" />
+    <PackageReference Include="RestSharp" Version="112.0.0" />
     <PackageReference Include="Semver" Version="2.3.0" />
-	  <PackageReference Include="YamlDotNet" Version="5.4.0" />
+    <PackageReference Include="System.Management.Automation" Version="7.4.5" />
+	  <PackageReference Include="YamlDotNet" Version="16.1.2" />
   </ItemGroup>
 
   <ItemGroup>

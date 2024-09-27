@@ -5,8 +5,9 @@ namespace LANCommander.Server.Services
 {
     public class PlatformService : BaseDatabaseService<Platform>
     {
-        public PlatformService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public PlatformService(
+            ILogger<PlatformService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
     }
 }

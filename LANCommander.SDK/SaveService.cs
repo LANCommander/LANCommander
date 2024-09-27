@@ -54,12 +54,12 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        private async Task<string> Download(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        private async Task<string> DownloadAsync(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return await Client.DownloadRequestAsync($"/api/Saves/Download/{id}", progressHandler, completeHandler);
         }
 
-        public async Task<string> DownloadLatest(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
+        public async Task<string> DownloadLatestAsync(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             return await Client.DownloadRequestAsync($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
         }
@@ -86,7 +86,7 @@ namespace LANCommander.SDK
             return Client.UploadRequest<GameSave>($"/api/Saves/Upload/{gameId}", gameId.ToString(), data);
         }
 
-        public async Task Download(string installDirectory, Guid gameId, Guid? saveId = null)
+        public async Task DownloadAsync(string installDirectory, Guid gameId, Guid? saveId = null)
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
@@ -99,7 +99,7 @@ namespace LANCommander.SDK
 
                 if (!saveId.HasValue)
                 {
-                    destination = await DownloadLatest(manifest.Id, (changed) =>
+                    destination = await DownloadLatestAsync(manifest.Id, (changed) =>
                     {
                         OnDownloadProgress?.Invoke(changed);
                     }, (complete) =>
@@ -109,7 +109,7 @@ namespace LANCommander.SDK
                 }
                 else
                 {
-                    destination = await Download(saveId.Value, (changed) =>
+                    destination = await DownloadAsync(saveId.Value, (changed) =>
                     {
                         OnDownloadProgress?.Invoke(changed);
                     }, (complete) =>
@@ -154,7 +154,7 @@ namespace LANCommander.SDK
                     if (!Directory.Exists(Path.Combine(tempLocation, tempLocationFilePath)))
                         tempLocationFilePath = "Saves";
 
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
+                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
                         foreach (var entry in savePath.Entries)
                         {
@@ -195,14 +195,17 @@ namespace LANCommander.SDK
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        var script = new PowerShellScript();
+                        var script = new PowerShellScript(Enums.ScriptType.Install);
 
                         script.UseInline($"regedit.exe /s \"{registryImportFilePath}\"");
 
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
-                            script.RunAsAdmin();
+                            script.AsAdmin();
 
-                        script.Execute();
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
+
+                        await script.ExecuteAsync<int>();
                     }
                     #endregion
 
@@ -221,7 +224,7 @@ namespace LANCommander.SDK
             }
         }
 
-        public void Upload(string installDirectory, Guid gameId)
+        public async Task UploadAsync(string installDirectory, Guid gameId)
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
@@ -234,7 +237,7 @@ namespace LANCommander.SDK
                     archive.DeflateCompressionLevel = SharpCompress.Compressors.Deflate.CompressionLevel.BestCompression;
 
                     #region Add files from defined paths
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "File"))
+                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
                         savePath.Entries = GetFileSavePathEntries(savePath, installDirectory);
 
@@ -253,13 +256,15 @@ namespace LANCommander.SDK
                     #endregion
 
                     #region Export registry keys
-                    if (manifest.SavePaths.Any(sp => sp.Type == "Registry"))
+                    if (manifest.SavePaths.Any(sp => sp.Type == Enums.SavePathType.Registry))
                     {
                         List<string> tempRegFiles = new List<string>();
 
+                        Logger?.LogTrace("Building registry export file");
+
                         var exportCommand = new StringBuilder();
 
-                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == "Registry"))
+                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.Registry))
                         {
                             var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
 
@@ -267,11 +272,14 @@ namespace LANCommander.SDK
                             tempRegFiles.Add(tempRegFile);
                         }
 
-                        var script = new PowerShellScript();
+                        var script = new PowerShellScript(Enums.ScriptType.SaveUpload);
 
                         script.UseInline(exportCommand.ToString());
 
-                        script.Execute();
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
+
+                        await script.ExecuteAsync<int>();
 
                         var exportFile = new StringBuilder();
 
@@ -291,13 +299,16 @@ namespace LANCommander.SDK
 
                     archive.AddEntry(ManifestHelper.ManifestFilename, tempManifest);
 
-                    using (var ms = new MemoryStream())
+                    using (var op = Logger.BeginOperation("Pack and upload save"))
                     {
-                        archive.SaveTo(ms);
+                        using (var ms = new MemoryStream())
+                        {
+                            archive.SaveTo(ms);
 
-                        ms.Seek(0, SeekOrigin.Begin);
+                            ms.Seek(0, SeekOrigin.Begin);
 
-                        var save = Upload(manifest.Id, ms.ToArray());
+                            var save = Upload(manifest.Id, ms.ToArray());
+                        }
                     }
                 }
             }

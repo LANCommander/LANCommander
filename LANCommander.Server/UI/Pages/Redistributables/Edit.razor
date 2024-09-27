@@ -1,10 +1,12 @@
 ﻿@page "/Redistributables/{id:guid}"
 @page "/Redistributables/{id:guid}/{panel}"
 @page "/Redistributables/Add"
-@using LANCommander.Server.Data.Enums;
+@using LANCommander.SDK.Enums
 @using LANCommander.Server.Models
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = "Administrator")]
 @inject RedistributableService RedistributableService
+@inject GameService GameService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -14,15 +16,10 @@
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
             <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/General")">General</MenuItem>
 
-            @if (Redistributable.Id != Guid.Empty)
+            @if (Redistributable?.Id != Guid.Empty)
             {
                 <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
                 <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Archives")">Archives</MenuItem>
-
-                if (Settings.Wiki.Enabled)
-                {
-                    <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Wiki")">Wiki</MenuItem>
-                }
             }
         </Menu>
     </Sider>
@@ -30,7 +27,7 @@
     <Content>
         <PageHeader>
             <PageHeaderTitle>
-                @if (Panel == null)
+                @if (Id == Guid.Empty)
                 {
                     <Text>Add New Redistributable</Text>
                 }
@@ -61,11 +58,17 @@
                     <FormItem Label="Name">
                         <Input @bind-Value="@context.Name" />
                     </FormItem>
+
                     <FormItem Label="Notes">
                         <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
                     </FormItem>
+
                     <FormItem Label="Description">
                         <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                    </FormItem>
+
+                    <FormItem Label="Games">
+                        <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Games" TitleSelector="r => r.Title" @bind-Values="Redistributable.Games" />
                     </FormItem>
                 </Form>
              </div>
@@ -79,13 +82,6 @@
                 <div data-panel="Archives">
                     <ArchiveEditor RedistributableId="Redistributable.Id" />
                 </div>
-
-                @if (Settings.Wiki.Enabled)
-                {
-                    <div data-panel="Wiki">
-                        <WikiEditor RedistributableId="Redistributable.Id" />
-                    </div>
-                }
             }
         </div>
     </Content>
@@ -112,7 +108,9 @@ else
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Panel { get; set; }
 
-    Redistributable Redistributable;
+    Redistributable Redistributable = new Redistributable();
+
+    ICollection<Game> Games;
 
     LANCommanderSettings Settings = SettingService.GetSettings();
 
@@ -129,10 +127,15 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id == Guid.Empty)
-            Redistributable = new Redistributable();
-        else
+        if (Id != Guid.Empty && Panel == null)
+            NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
+        else if (Id != Guid.Empty)
             Redistributable = await RedistributableService.Get(Id);
+
+        Games = await GameService
+            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null)
+            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+            .ToListAsync();
     }
 
     private async Task Save()

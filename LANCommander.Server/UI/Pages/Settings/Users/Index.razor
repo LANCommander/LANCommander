@@ -34,6 +34,10 @@
                 </SpaceItem>
 
                 <SpaceItem>
+                    <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))" />
+                </SpaceItem>
+
+                <SpaceItem>
                     <Tooltip Title="Change Password">
                         <Button Icon="@IconType.Outline.Lock" Type="@ButtonType.Text" OnClick="() => ChangePassword(context)" />
                     </Tooltip>

@@ -1,9 +1,9 @@
 ﻿@page "/Games/{id:guid}"
 @page "/Games/{id:guid}/{panel}"
 @page "/Games/Add"
+@using LANCommander.SDK.Enums
 @using LANCommander.Server.Extensions
 @using LANCommander.Server.UI.Pages.Games.Components;
-@using LANCommander.Server.Data.Enums;
 @using LANCommander.Server.Models;
 @using System.IO.Compression;
 @using Microsoft.EntityFrameworkCore
@@ -33,12 +33,12 @@
             @if (Game != null && Game.Id != Guid.Empty)
             {
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Media")">Media</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Game.Id}/Archives")">Archives</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Actions")">Actions</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Multiplayer")">Multiplayer</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/SavePaths")">Save Paths</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Keys")">Keys</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Game.Id}/Scripts")">Scripts</MenuItem>
-                <MenuItem RouterLink="@($"/Games/{Game.Id}/Archives")">Archives</MenuItem>
 
                 if (Game.DependentGames.Any(g => g.Type == GameType.Expansion))
                 {
@@ -58,11 +58,6 @@
                 if (Game.GameSaves != null && Game.GameSaves.Any())
                 {
                     <MenuItem RouterLink="@($"/Games/{Game.Id}/Saves")">Saves</MenuItem>
-                }
-
-                if (Settings.Wiki.Enabled)
-                {
-                    <MenuItem RouterLink="@($"/Games/{Game.Id}/Wiki")">Wiki</MenuItem>
                 }
             }
         </Menu>
@@ -165,6 +160,12 @@
                             </Select>
                         </FormItem>
                     }
+                    <FormItem Label="Key Allocation Method">
+                        <Select @bind-Value="@context.KeyAllocationMethod" TItem="KeyAllocationMethod" TItemValue="KeyAllocationMethod" DataSource="Enum.GetValues<KeyAllocationMethod>()">
+                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                        </Select>
+                    </FormItem>
                     <FormItem Label="Released On">
                         <DatePicker TValue="DateTime?" @bind-Value="@context.ReleasedOn" Picker="@DatePickerType.Date" />
                     </FormItem>
@@ -201,6 +202,10 @@
                     <MediaEditor @bind-Values="Game.Media" GameId="Game.Id" GameTitle="@Game.Title" />
                 </div>
 
+                <div data-panel="Archives">
+                    <ArchiveEditor GameId="Game.Id" />
+                </div>
+
                 <div data-panel="Actions">
                     <ActionEditor @bind-Actions="Game.Actions" GameId="Game.Id" ArchiveId="@LatestArchiveId" />
                 </div>
@@ -221,10 +226,6 @@
 
                 <div data-panel="Scripts">
                     <ScriptEditor GameId="Game.Id" ArchiveId="@LatestArchiveId" AllowedTypes="new ScriptType[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop }" />
-                </div>
-
-                <div data-panel="Archives">
-                    <ArchiveEditor GameId="Game.Id" />
                 </div>
 
                 <div data-panel="Expansions">
@@ -323,13 +324,6 @@
                         </ActionColumn>
                     </Table>
                 </div>
-
-                @if (Settings.Wiki.Enabled)
-                {
-                    <div data-panel="Wiki">
-                        <WikiEditor GameId="Game.Id" />
-                    </div>
-                }
             }
 
         </div>
@@ -378,7 +372,7 @@ else
 
     private string value = "blazor";
 
-    private Game Game;
+    private Game Game = new Game();
     private KeysEditor? KeysEditor;
     private GameMetadataLookup? GameMetadataLookup;
 
@@ -415,10 +409,11 @@ else
             await LoadData();
     }
 
-    private async Task LoadData() {
-        if (Id == Guid.Empty)
-            Game = new Game();
-        else
+    private async Task LoadData()
+    {
+        if (Id != Guid.Empty && Panel == null)
+            NavigationManager.NavigateTo($"/Games/{Id}/General", true);
+        else if (Id != Guid.Empty)
             Game = await GameService.Get(Id);
 
         Engines = await EngineService.Get();

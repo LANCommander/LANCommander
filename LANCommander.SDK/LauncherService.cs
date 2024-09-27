@@ -39,7 +39,7 @@ namespace LANCommander.SDK
         {
             try
             {
-                var request = new RestRequest("/api/Launcher", Method.GET);
+                var request = new RestRequest("/api/Launcher", Method.Get);
 
                 return await Client.GetRequestAsync<CheckForUpdateResponse>("/api/Launcher/CheckForUpdate", true);
             }
@@ -53,7 +53,7 @@ namespace LANCommander.SDK
 
         public async Task<string> DownloadAsync(string destination)
         {
-            Logger?.LogTrace("Downloading the launcher...");
+            Logger?.LogTrace("Downloading the launcher");
 
             return await Client.DownloadRequestAsync("/api/Launcher/Download", destination);
         }

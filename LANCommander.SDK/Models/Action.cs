@@ -4,7 +4,7 @@ using System.Text;
 
 namespace LANCommander.SDK.Models
 {
-    public class Action
+    public class Action : KeyedModel
     {
         public string Name { get; set; }
         public string Arguments { get; set; }

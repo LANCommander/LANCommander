@@ -7,9 +7,9 @@ namespace LANCommander.Server.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UploadController : ControllerBase
+    public class UploadController : BaseApiController
     {
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
+        public UploadController(ILogger<UploadController> logger) : base(logger) { }
 
         [HttpPost("Init")]
         public string Init()

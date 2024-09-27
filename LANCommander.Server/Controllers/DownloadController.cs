@@ -9,14 +9,17 @@ using Microsoft.AspNetCore.Mvc;
 namespace LANCommander.Server.Controllers
 {
     [Authorize]
-    public class DownloadController : Controller
+    public class DownloadController : BaseController
     {
         private readonly ArchiveService ArchiveService;
         private readonly GameSaveService GameSaveService;
         private readonly UpdateService UpdateService;
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public DownloadController(ArchiveService archiveService, GameSaveService gameSaveService, UpdateService updateService)
+        public DownloadController(
+            ILogger<DownloadController> logger,
+            ArchiveService archiveService,
+            GameSaveService gameSaveService,
+            UpdateService updateService) : base(logger)
         {
             ArchiveService = archiveService;
             GameSaveService = gameSaveService;

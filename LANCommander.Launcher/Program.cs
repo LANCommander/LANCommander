@@ -1,19 +1,22 @@
-﻿using Emzi0767.NtfsDataStreams;
+﻿using CommandLine;
+using CommandLine.Text;
+using Emzi0767.NtfsDataStreams;
 using LANCommander.Launcher.Data;
-using LANCommander.Launcher.Extensions;
+using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NLog;
-using NLog.Config;
-using NLog.Extensions.Logging;
-using NLog.Targets;
 using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
+using Serilog;
+using Serilog.Extensions.Logging;
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Management.Automation.Language;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -23,79 +26,47 @@ namespace LANCommander.Launcher
 {
     class Program
     {
-        static Logger Logger = LogManager.GetCurrentClassLogger();
-
         [STAThread]
         static void Main(string[] args)
         {
-            Logger?.Debug("Starting up launcher...");
-            Logger?.Debug("Loading settings from file");
             var settings = SettingService.GetSettings();
 
+            using var Logger = new LoggerConfiguration()
+                .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Serilog.Events.LogEventLevel.Warning)
+                .Enrich.WithProperty("Application", typeof(Program).Assembly.GetName().Name)
+                .WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)
+#if DEBUG
+                .WriteTo.Seq("http://localhost:5341")
+#endif
+                .CreateLogger();
+
+            Logger?.Debug("Starting up launcher...");
+            Logger?.Debug("Loading settings from file");
 
             var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
-
-            builder.RootComponents.Add<App>("app");
-
-            builder.Services.AddLogging();
-            builder.Services.AddCustomWindow();
-            builder.Services.AddAntDesign();
-            builder.Services.AddDbContext<DbContext, DatabaseContext>();
 
             #region Configure Logging
             Logger?.Debug("Configuring logging...");
 
             builder.Services.AddLogging(loggingBuilder =>
             {
-                var loggerConfig = new LoggingConfiguration();
-
-                NLog.GlobalDiagnosticsContext.Set("StoragePath", settings.Debug.LoggingPath);
-                NLog.GlobalDiagnosticsContext.Set("ArchiveEvery", settings.Debug.LoggingArchivePeriod);
-                NLog.GlobalDiagnosticsContext.Set("MaxArchiveFiles", settings.Debug.MaxArchiveFiles);
-                NLog.GlobalDiagnosticsContext.Set("LoggingLevel", settings.Debug.LoggingLevel);
-
                 loggingBuilder.ClearProviders();
                 loggingBuilder.SetMinimumLevel(settings.Debug.LoggingLevel);
-                loggingBuilder.AddNLog();
+                loggingBuilder.AddSerilog(Logger);
             });
             #endregion
 
-            #region Register Client
-            Logger?.Debug("Registering LANCommander client...");
-            var client = new SDK.Client(settings.Authentication.ServerAddress, settings.Games.DefaultInstallDirectory);
+            builder.RootComponents.Add<App>("app");
 
-            client.UseToken(new SDK.Models.AuthToken
-            {
-                AccessToken = settings.Authentication.AccessToken,
-                RefreshToken = settings.Authentication.RefreshToken,
-            });
-
-            builder.Services.AddSingleton(client);
-            builder.Services.AddSingleton<MessageBusService>();
-            #endregion
-
-            #region Register Services
             Logger?.Debug("Registering services...");
 
-            builder.Services.AddScoped<CollectionService>();
-            builder.Services.AddScoped<CompanyService>();
-            builder.Services.AddScoped<EngineService>();
-            builder.Services.AddScoped<GameService>();
-            builder.Services.AddScoped<GenreService>();
-            builder.Services.AddScoped<PlatformService>();
-            builder.Services.AddScoped<MultiplayerModeService>();
-            builder.Services.AddScoped<TagService>();
-            builder.Services.AddScoped<MediaService>();
-            builder.Services.AddScoped<ProfileService>();
-            builder.Services.AddScoped<PlaySessionService>();
-            builder.Services.AddScoped<RedistributableService>();
-            builder.Services.AddScoped<ScriptService>();
-            builder.Services.AddScoped<SaveService>();
-            builder.Services.AddScoped<ImportService>();
-            builder.Services.AddScoped<LibraryService>();
-            builder.Services.AddScoped<DownloadService>();
-            builder.Services.AddScoped<UpdateService>();
-            #endregion
+            builder.Services.AddCustomWindow();
+            builder.Services.AddAntDesign();
+            builder.Services.AddLANCommander(options =>
+            {
+                options.ServerAddress = settings.Authentication.ServerAddress;
+                options.Logger = new SerilogLoggerFactory(Logger).CreateLogger<SDK.Client>();
+            });
 
             #region Build Application
             Logger?.Debug("Building application...");
@@ -106,7 +77,6 @@ namespace LANCommander.Launcher
                 .SetTitle("LANCommander")
                 .SetUseOsDefaultLocation(true)
                 .SetChromeless(true)
-                .SetResizable(true)
                 .RegisterCustomSchemeHandler("media", (object sender, string scheme, string url, out string contentType) =>
                 {
                     var uri = new Uri(url);
@@ -141,148 +111,70 @@ namespace LANCommander.Launcher
                 });
             #endregion
 
+            #region Restore Window Positioning
+            if (settings.Window.Maximized)
+                app.MainWindow.SetMaximized(true);
+            else
+            {
+                if (settings.Window.X == 0 && settings.Window.Y == 0)
+                    app.MainWindow.SetUseOsDefaultLocation(true);
+                else
+                    app.MainWindow.SetLocation(new System.Drawing.Point(settings.Window.X, settings.Window.Y));
+
+                if (settings.Window.Width != 0 && settings.Window.Height != 0)
+                    app.MainWindow.SetSize(settings.Window.Width, settings.Window.Height);
+            }
+            #endregion
+
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
                 app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
             };
 
-            #region Scaffold Required Directories
-            try
+            app.Services.InitializeLANCommander();
+
+            if (args.Length > 0)
             {
-                Logger?.Debug("Scaffolding required directories...");
-
-                string[] requiredDirectories = new string[]
+                using (var scope = app.Services.CreateScope())
                 {
-	                settings.Debug.LoggingPath,
-	                settings.Media.StoragePath,
-	                settings.Games.DefaultInstallDirectory,
-	                settings.Database.BackupsPath,
-	                settings.Updates.StoragePath
-                };
+                    var commandLineService = scope.ServiceProvider.GetService<CommandLineService>();
 
-                foreach (var directory in requiredDirectories)
-                {
-                    var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directory);
-
-                    if (!Directory.Exists(path))
-                    {
-                        Logger?.Debug("Creating path {Path}", path);
-                        Directory.CreateDirectory(path);
-                    }
+                    Task.Run(async () => await commandLineService.ParseCommandLineAsync(args)).GetAwaiter().GetResult();
                 }
+
+                return;
             }
-            catch (Exception ex)
+            else
             {
-                Logger?.Error(ex, "Could not scaffold required directories");
+                settings.LaunchCount++;
+
+                SettingService.SaveSettings(settings);
+
+                Logger?.Debug("Starting application...");
+
+                app.MainWindow.WindowClosing += MainWindow_WindowClosing;
+
+                app.Run();
+
+                Logger?.Debug("Closing application...");
             }
-            #endregion
+        }
 
-            #region Migrate Database
-            using var scope = app.Services.CreateScope();
+        private static bool MainWindow_WindowClosing(object sender, EventArgs e)
+        {
+            var window = sender as PhotinoWindow;
 
-            using var db = scope.ServiceProvider.GetService<DatabaseContext>();
+            var settings = SettingService.GetSettings();
 
-            if (db.Database.GetPendingMigrations().Any())
-            {
-                Logger?.Debug("Migrations are pending!");
-
-                var backupPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Backups");
-                var dataSource = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
-                var backupName = Path.Combine(backupPath, $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
-
-                if (File.Exists(dataSource))
-                {
-                    Logger?.Debug("Database already exists, backing up as {BackupName}", backupName);
-                    File.Copy(dataSource, backupName);
-                }
-
-                Logger?.Debug("Migrating database...");
-                db.Database.Migrate();
-            }
-            #endregion
-
-            if (settings.LaunchCount == 0)
-            {
-                var workingDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-
-                Logger?.Debug("Current working directory is {WorkingDirectory}", workingDirectory);
-
-                #region Fix Zone Identifier
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    try
-                    {
-                        Logger?.Debug("Attempting to fix security zone identifier all files...");
-
-                        var files = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories);
-
-                        foreach (var file in files)
-                        {
-                            try
-                            {
-                                var fileInfo = new FileInfo(file);
-
-                                fileInfo.GetDataStream("Zone.Identifier")?.Delete();
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger?.Error(ex, "Could not fix zone identifier");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger?.Error(ex, "Could not get files to fix zone identifier");
-                    }
-                }
-                #endregion
-
-                #region Rename Autoupdater
-                var updaterPath = Path.Combine(workingDirectory, "LANCommander.AutoUpdater.exe");
-
-                try
-                {
-                    if (File.Exists($"{updaterPath}.Update"))
-                    {
-                        if (File.Exists(updaterPath))
-                            File.Delete(updaterPath);
-
-                        File.Move($"{updaterPath}.Update", updaterPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Could not rename updater");
-                }
-
-                updaterPath = Path.Combine(workingDirectory, "LANCommander.AutoUpdater");
-
-                try
-                {
-                    if (File.Exists($"{updaterPath}.Update"))
-                    {
-                        if (File.Exists(updaterPath))
-                            File.Delete(updaterPath);
-
-                        File.Move($"{updaterPath}.Update", updaterPath);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger?.Error(ex, "Could not rename updater");
-                }
-                #endregion
-            }
-
-            settings.LaunchCount++;
+            settings.Window.Maximized = window.Maximized;
+            settings.Window.Width = window.Width;
+            settings.Window.Height = window.Height;
+            settings.Window.X = window.Left;
+            settings.Window.Y = window.Top;
 
             SettingService.SaveSettings(settings);
 
-            Logger?.Debug("Starting application...");
-
-            app.Run();
-
-            Logger?.Debug("Closing application...");
+            return true;
         }
     }
 }

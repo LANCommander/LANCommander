@@ -5,8 +5,9 @@ namespace LANCommander.Server.Services
 {
     public class CategoryService : BaseDatabaseService<Category>
     {
-        public CategoryService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public CategoryService(
+            ILogger<CategoryService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
     }
 }

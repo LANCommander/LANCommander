@@ -11,28 +11,35 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class RedistributablesController : ControllerBase
+    public class RedistributablesController : BaseApiController
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
 
-        public RedistributablesController(IMapper mapper, RedistributableService redistributableService)
+        public RedistributablesController(
+            ILogger<RedistributablesController> logger, 
+            IMapper mapper,
+            RedistributableService redistributableService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Redistributable>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> Get()
         {
-            return Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.Get());
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.Get()));
         }
 
         [HttpGet("{id}")]
-        public async Task<SDK.Models.Redistributable> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Redistributable>> Get(Guid id)
         {
-            return Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.Get(id));
+            var redistributable = await RedistributableService.Get(id);
+
+            if (redistributable == null)
+                return NotFound();
+
+            return Ok(Mapper.Map<SDK.Models.Redistributable>(redistributable));
         }
 
         [HttpGet("{id}/Download")]

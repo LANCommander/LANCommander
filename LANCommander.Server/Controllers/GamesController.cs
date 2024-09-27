@@ -9,10 +9,13 @@ namespace LANCommander.Server.Controllers
     [Authorize(Roles = "Administrator")]
     public class GamesController : BaseController
     {
-        private GameService GameService;
-        private MediaService MediaService;
+        private readonly GameService GameService;
+        private readonly MediaService MediaService;
 
-        public GamesController(GameService gameService, MediaService mediaService)
+        public GamesController(
+            ILogger<GamesController> logger,
+            GameService gameService,
+            MediaService mediaService) : base(logger)
         {
             GameService = gameService;
             MediaService = mediaService;

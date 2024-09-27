@@ -1,7 +1,7 @@
 ﻿@page "/"
 @page "/{id:guid}"
 @using LANCommander.Launcher.Data.Models
-@using LANCommander.Launcher.Enums
+@using LANCommander.Launcher.Models.Enums
 @using LANCommander.Launcher.Models
 @using System.Diagnostics
 @using LANCommander.Launcher.UI.Library.Components
@@ -17,7 +17,7 @@
 
 <Layout>
     <Content Class="library">
-        <LibraryList SelectedItem="@(SelectedGame?.Id)" OnItemSelected="@((key) => NavigationManager.NavigateTo($"/{key}"))" />
+        <LibraryList SelectedItem="@(SelectedGame?.Id)" OnItemSelected="@((key) => SelectLibraryItem(key))" />
 
         <div class="game-details no-scrollbar">
             @if (SelectedGame != null)
@@ -144,7 +144,8 @@
     LibraryItem SelectedItem { get; set; }
 
     Data.Models.Game SelectedGame { get; set; }
-    IEnumerable<SDK.Models.Action> SelectedGameActions { get; set; }
+
+    Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {
@@ -179,6 +180,11 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    async Task SelectLibraryItem(Guid id)
+    {
+        NavigationManager.NavigateTo($"/{id}");
+    }
+
     async Task OnLibraryItemSelected(LibraryItem item)
     {
         if (item != null && item.DataItem is Data.Models.Game)
@@ -186,16 +192,31 @@
             SelectedItem = item;
             SelectedGame = item.DataItem as Data.Models.Game;
 
-            if (SelectedItem.State == LibraryItemState.Installed)
-                SelectedGameActions = (await GameService.GetActionsAsync(SelectedGame)).Where(a => !a.IsPrimaryAction);
-
             await InvokeAsync(StateHasChanged);
         }
     }
 
     async Task Install(LibraryItem item)
     {
-        await LibraryService.Install(item);
+        if (Settings.Games.InstallDirectories.Length > 1)
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = $"Install {item.Name}",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = "Install",
+                Draggable = true,
+                Centered = true
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDirectorySelectorDialog, LibraryItem, string>(modalOptions, item);
+        }
+        else
+        {
+            await LibraryService.Install(item);
+        }
     }
 
     async Task OnQueueChanged()
@@ -208,25 +229,25 @@
 
             switch (queueItem.Status)
             {
-                case DownloadStatus.Downloading:
-                case DownloadStatus.InstallingRedistributables:
-                case DownloadStatus.InstallingMods:
-                case DownloadStatus.InstallingExpansions:
-                case DownloadStatus.RunningScripts:
-                case DownloadStatus.DownloadingSaves:
+                case SDK.Enums.GameInstallStatus.Downloading:
+                case SDK.Enums.GameInstallStatus.InstallingRedistributables:
+                case SDK.Enums.GameInstallStatus.InstallingMods:
+                case SDK.Enums.GameInstallStatus.InstallingExpansions:
+                case SDK.Enums.GameInstallStatus.RunningScripts:
+                case SDK.Enums.GameInstallStatus.DownloadingSaves:
                     SelectedItem.State = LibraryItemState.Installing;
                     break;
 
-                case DownloadStatus.Idle:
+                case SDK.Enums.GameInstallStatus.Idle:
                     SelectedItem.State = LibraryItemState.Queued;
                     break;
 
-                case DownloadStatus.Failed:
-                case DownloadStatus.Canceled:
+                case SDK.Enums.GameInstallStatus.Failed:
+                case SDK.Enums.GameInstallStatus.Canceled:
                     SelectedItem.State = LibraryItemState.NotInstalled;
                     break;
 
-                case DownloadStatus.Complete:
+                case SDK.Enums.GameInstallStatus.Complete:
                     SelectedItem.State = LibraryItemState.Installed;
                     break;
             }

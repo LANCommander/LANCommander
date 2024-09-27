@@ -1,4 +1,4 @@
-﻿using LANCommander.Server.Data.Enums;
+﻿using LANCommander.SDK.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -20,6 +20,8 @@ namespace LANCommander.Server.Data.Models
         public DateTime? ReleasedOn { get; set; }
 
         public virtual ICollection<Action>? Actions { get; set; } = new List<Action>();
+
+        public KeyAllocationMethod KeyAllocationMethod { get; set; } = KeyAllocationMethod.UserAccount;
 
         public GameType Type { get; set; }
         public Guid? BaseGameId { get; set; }
@@ -52,5 +54,7 @@ namespace LANCommander.Server.Data.Models
         public virtual ICollection<Key>? Keys { get; set; } = new List<Key>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
         public virtual ICollection<Game> DependentGames { get; set; } = new List<Game>();
+        public virtual ICollection<Issue> Issues { get; set; } = new List<Issue>();
+        public virtual ICollection<Page>? Pages { get; set; }
     }
 }

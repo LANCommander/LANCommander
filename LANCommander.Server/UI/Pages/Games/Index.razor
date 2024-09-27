@@ -1,6 +1,6 @@
 ﻿@page "/Games"
 @using AntDesign.TableModels;
-@using LANCommander.Server.Data.Enums
+@using LANCommander.SDK.Enums
 @using LANCommander.Server.Extensions;
 @using System.ComponentModel.DataAnnotations;
 @using LANCommander.Server.Models
@@ -39,8 +39,8 @@
 
 <TableColumnPicker @ref="Picker" Key="Games" @bind-Visible="ColumnPickerVisible" />
 
-<Table @ref="Table" TItem="Game" DataSource="@Games" @bind-SelectedRows="Selected" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
-    <Selection Key="@(context.Id.ToString())" />
+<Table @ref="Table" TItem="Game" DataSource="@Games" TreeChildren="game => game.DependentGames.Where(g => (g.Type == GameType.Mod || g.Type == GameType.Expansion) && g.Id != game.Id)" @bind-SelectedRows="Selected" Loading="@Loading" PageSize="@PageSize" PageIndex="@PageIndex" OnPageIndexChange="PageIndexChanged" OnPageSizeChange="PageSizeChanged" Responsive>
+    <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
     <Column TData="string" Title="Icon" Hidden="@(Picker.IsColumnHidden("Icon"))">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
     </Column>
@@ -181,7 +181,7 @@
     private async Task LoadData()
     {
         Games = await GameService
-            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod)
+            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null)
             .Where(g => g.Title.ToLower().Contains(Search.ToLower().Trim()) || g.SortTitle.ToLower().Contains(Search.ToLower().Trim()))
             .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
             .ToListAsync();

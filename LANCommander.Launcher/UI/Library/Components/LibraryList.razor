@@ -1,4 +1,5 @@
 ﻿@using LANCommander.Launcher.Models
+@using LANCommander.Launcher.Services.Extensions
 @inject LibraryService LibraryService
 @inject ImportService ImportService
 @inject MessageBusService MessageBusService
@@ -64,6 +65,5 @@
     {
         LibraryService.OnLibraryChanged -= UpdateGroups;
         LibraryService.OnLibraryItemsFiltered -= UpdateGroups;
-        ImportService.OnImportComplete -= LibraryService.LibraryChanged;
     }
 }

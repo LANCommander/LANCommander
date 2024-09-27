@@ -6,12 +6,15 @@ using System.IO.Compression;
 
 namespace LANCommander.Server.Controllers
 {
-    public class ServerController : Controller
+    public class ServerController : BaseController
     {
         private readonly ServerService ServerService;
         private readonly IMapper Mapper;
 
-        public ServerController(ServerService serverService, IMapper mapper)
+        public ServerController(
+            ILogger<ServerController> logger,
+            IMapper mapper,
+            ServerService serverService) : base(logger)
         {
             ServerService = serverService;
             Mapper = mapper;

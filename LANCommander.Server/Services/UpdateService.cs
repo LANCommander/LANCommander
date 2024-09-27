@@ -11,15 +11,17 @@ namespace LANCommander.Server.Services
     public class UpdateService : BaseService
     {
         private GitHubClient GitHub;
-        private LANCommanderSettings Settings;
         private IHostApplicationLifetime ApplicationLifetime;
         private ServerService ServerService;
         private ServerProcessService ServerProcessService;
 
-        public UpdateService(IHostApplicationLifetime applicationLifetime, ServerProcessService serverProcessService, ServerService serverService) : base()
+        public UpdateService(
+            ILogger<UpdateService> logger,
+            IHostApplicationLifetime applicationLifetime,
+            ServerProcessService serverProcessService,
+            ServerService serverService) : base(logger)
         {
             GitHub = new GitHubClient(new ProductHeaderValue("LANCommander"));
-            Settings = SettingService.GetSettings();
             ApplicationLifetime = applicationLifetime;
             ServerService = serverService;
             ServerProcessService = serverProcessService;
@@ -73,7 +75,7 @@ namespace LANCommander.Server.Services
             if (String.IsNullOrWhiteSpace(releaseFile))
                 throw new NotImplementedException("Your platform is not supported");
 
-            Logger?.Info("Stopping all servers");
+            Logger?.LogInformation("Stopping all servers");
 
             var servers = await ServerService.Get();
 
@@ -83,8 +85,8 @@ namespace LANCommander.Server.Services
                     ServerProcessService.StopServer(server.Id);
             }
 
-            Logger?.Info("Servers stopped");
-            Logger?.Info("Downloading release version {Version}", release.TagName);
+            Logger?.LogInformation("Servers stopped");
+            Logger?.LogInformation("Downloading release version {Version}", release.TagName);
 
             if (!String.IsNullOrWhiteSpace(releaseFile))
             {
@@ -100,11 +102,11 @@ namespace LANCommander.Server.Services
         {
             var releaseFiles = release.Assets.Where(a => a.Name.StartsWith("LANCommander.Launcher-")).Select(a => a.BrowserDownloadUrl);
 
-            Logger?.Info("Downloading release version {Version}", release.TagName);
+            Logger?.LogInformation("Downloading release version {Version}", release.TagName);
 
             foreach (var releaseFile in releaseFiles)
             {
-                Logger?.Info($"Downloading launcher from {releaseFile}");
+                Logger?.LogInformation($"Downloading launcher from {releaseFile}");
 
                 if (!String.IsNullOrWhiteSpace(releaseFile))
                 {
@@ -149,8 +151,8 @@ namespace LANCommander.Server.Services
         {
             string version = ((WebClient)sender).QueryString["Version"];
 
-            Logger?.Info("Update version {Version} has been downloaded", version);
-            Logger?.Info("Running auto updater application");
+            Logger?.LogInformation("Update version {Version} has been downloaded", version);
+            Logger?.LogInformation("Running auto updater application");
 
             string processExecutable = String.Empty;
 
@@ -167,7 +169,7 @@ namespace LANCommander.Server.Services
 
             Process.Start(process);
 
-            Logger?.Info("Shutting down to get out of the way");
+            Logger?.LogInformation("Shutting down to get out of the way");
 
             ApplicationLifetime.StopApplication();
         }

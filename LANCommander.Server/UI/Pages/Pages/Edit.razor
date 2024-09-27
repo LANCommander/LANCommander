@@ -1,0 +1,358 @@
+﻿@page "/Pages/Edit"
+@page "/Pages/Edit/{id:guid}"
+@using LANCommander.Server.UI.Pages.Pages.Components
+@using Microsoft.EntityFrameworkCore
+@using PSC.Blazor.Components.MarkdownEditor
+@using System.Text.RegularExpressions
+@using LANCommander.Server.Extensions
+@using PSC.Blazor.Components.MarkdownEditor.Models
+@inject PageService PageService
+@inject MediaService MediaService
+@inject ConfirmService ConfirmService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<Layout Class="panel-layout" Style="padding: 16px 0;">
+    <Content>
+        <PageHeader>
+            <PageHeaderTitle>Pages</PageHeaderTitle>
+            <PageHeaderExtra>
+                <Space>
+                    @if (SelectedPage != null)
+                    {
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                        </SpaceItem>
+
+                        <SpaceItem>
+                            <Dropdown>
+                                <Overlay>
+                                    <Menu>
+                                        <MenuItem OnClick="Delete">Delete</MenuItem>
+                                        <MenuItem OnClick="AddNewPage">New Page</MenuItem>
+                                    </Menu>
+                                </Overlay>
+                                
+                                <ChildContent>
+                                    <Button Type="@ButtonType.Default" Icon="@IconType.Outline.Ellipsis" />
+                                </ChildContent>
+                            </Dropdown>
+                        </SpaceItem>
+                    }
+                    else
+                    {
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
+                        </SpaceItem>
+                    }
+                </Space>
+            </PageHeaderExtra>
+        </PageHeader>
+
+        <SplitPane Class="page-editor-body">
+            <Pane Size="25%" Class="page-editor-tree-pane">
+                <Tree 
+                    @ref="Tree"
+                      Draggable
+                      BlockNode
+                      ShowIcon
+                      DefaultExpandAll="true"
+                      TItem="Page"
+                      DataSource="Pages"
+                      TitleExpression="p => p.DataItem.Title"
+                      ChildrenExpression="p => p.DataItem.Children.OrderBy(p => p.SortOrder)"
+                      KeyExpression="p => p.DataItem.Id.ToString()"
+                      OnDrop="OnDrop"
+                      OnSelect="SelectPage"
+                      />
+            </Pane>
+
+            <Pane Size="75%" Class="page-editor-markdown-pane">
+                @if (SelectedPage != null)
+                {
+                    <Form @ref="Form" Model="SelectedPage">
+                        <FormItem Style="margin-bottom: 8px">
+                            <Input @bind-Value="context.Title" Size="large" Placeholder="Page Title" />
+                        </FormItem>
+
+                        <FormItem Label="Slug" Style="margin-bottom: 8px; padding-left: 8px">
+                            <SlugEditorInput Page="context" @bind-Value="context.Slug" />
+                        </FormItem>
+
+                        @if (!SelectedPage.Children.Any())
+                        {
+                            <FormItem Style="margin-bottom: 8px">
+                                <FormItem Class="ant-typography">
+                                    <MarkdownEditor
+                                        @ref="MarkdownEditor"
+                                        @bind-Value="context.Contents"
+                                        UploadImage="true"
+                                        ImageUploadEndpoint="/api/Media/Upload/PageImage"
+                                        CustomImageUpload="UploadImage"
+                                        SpellChecker="false"
+                                        CSSClass="ant-typography"
+                                        MinHeight="500px" />
+                                </FormItem>
+                            </FormItem>
+                        }
+                    </Form>
+                }
+                else
+                {
+                    <Empty>
+                        <DescriptionTemplate>
+                            No page is selected
+                        </DescriptionTemplate>
+                        <ChildContent>
+                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
+                        </ChildContent>
+                    </Empty>
+                }
+            </Pane>
+        </SplitPane>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    string NewPageTitle { get; set; }
+
+    Tree<Page> Tree { get; set; }
+    Form<Page> Form { get; set; }
+    Page SelectedPage { get; set; }
+    MarkdownEditor MarkdownEditor { get; set; }
+    ICollection<Page> Pages { get; set; } = new List<Page>();
+
+    string OriginalContent { get; set; }
+    string OriginalTitle { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id != Guid.Empty)
+        {
+            SelectedPage = await PageService.Get(p => p.Id == Id).AsNoTracking().FirstOrDefaultAsync();
+
+            if (SelectedPage == null)
+                NavigationManager.NavigateTo("/Pages/Edit");
+
+            OriginalContent = SelectedPage.Contents;
+            OriginalTitle = SelectedPage.Title;
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task LoadData()
+    {
+        Pages = await PageService.Get(p => p.ParentId == null).OrderBy(p => p.SortOrder).AsNoTracking().ToListAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task OnDrop(TreeEventArgs<Page> e)
+    {
+        List<Guid> childOrder = new List<Guid>();
+
+        // DropBelow is true if a tree node is supposed to be placed beneath a sibling
+        if (e.DropBelow)
+        {
+            var parentId = e.TargetNode.DataItem.Parent?.Id ?? Guid.Empty;
+            var parentNode = Tree.GetNode(parentId.ToString());
+            var sibling = e.TargetNode;
+
+            if (parentId == Guid.Empty)
+                childOrder = await PageService.Get(p => p.Parent == null).Select(p => p.Id).ToListAsync();
+            else
+                childOrder = parentNode.DataItem.Children.Select(c => c.Id).ToList();
+
+            childOrder.Remove(e.Node.DataItem.Id);
+
+            var targetPosition = childOrder.FindIndex(c => c == e.TargetNode.DataItem.Id);
+
+            childOrder.Insert(targetPosition + 1, e.Node.DataItem.Id);
+
+            await PageService.UpdateOrder(parentId, childOrder);
+        }
+        else
+        {
+            childOrder = e.TargetNode.DataItem.Children.Select(c => c.Id).ToList();
+
+            childOrder.Remove(e.Node.DataItem.Id);
+            childOrder.Insert(0, e.Node.DataItem.Id);
+
+            await PageService.UpdateOrder(e.TargetNode.DataItem.Id, childOrder);
+        }
+
+        await LoadData();
+    }
+
+    async Task AddNewPage()
+    {
+        try
+        {
+            var newPage = new Page();
+
+            newPage.Title = "New Page";
+            newPage.Slug = "new-page";
+            newPage.Contents = "";
+
+            newPage = await PageService.Add(newPage);
+
+            if (SelectedPage != null && SelectedPage.Parent != null)
+                newPage.Parent = SelectedPage.Parent;
+            else
+                newPage.Parent = SelectedPage;
+
+            await PageService.Update(newPage);
+
+            await LoadData();
+
+            NavigationManager.NavigateTo($"/Pages/Edit/{newPage.Id}");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "An error occurred while trying to add a new page");
+            MessageService.Error("Error adding new page!");
+        }
+    }
+
+    async Task Delete()
+    {
+        try
+        {
+            if (SelectedPage != null)
+            {
+                var parentId = SelectedPage.Parent?.Id ?? Guid.Empty;
+
+                await PageService.Delete(SelectedPage);
+
+                if (parentId != Guid.Empty)
+                    NavigationManager.NavigateTo($"/Pages/Edit/{parentId}");
+                else
+                    NavigationManager.NavigateTo($"/Pages/Edit");
+
+                MessageService.Success("Page deleted!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting page!");
+            MessageService.Error("Error deleting page!");
+        }
+    }
+
+    async Task Save()
+    {
+        try
+        {
+            if (SelectedPage.Id != Guid.Empty)
+            {
+                await PageService.Update(SelectedPage);
+                MessageService.Success("Page updated!");
+            }
+            else
+            {
+                await PageService.Add(SelectedPage);
+                MessageService.Success("Page added!");
+            }
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save page!");
+            Logger.LogError(ex, "Could not save page!");
+        }
+    }
+
+    async Task SelectPage(TreeEventArgs<Page> e)
+    {
+        var modified = SelectedPage?.Contents != OriginalContent || SelectedPage?.Title != OriginalTitle;
+
+        if (Form != null && modified)
+        {
+            var confirmResult = await ConfirmNavigate();
+
+            if (confirmResult == ConfirmResult.Yes)
+            {
+                // Save
+                await Save();
+
+                NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
+            }
+            else if (confirmResult == ConfirmResult.No)
+            {
+                // Discard
+                await LoadData();
+
+                NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
+            }
+            else return;
+        }
+
+        NavigationManager.NavigateTo($"/Pages/Edit/{e.Node.DataItem.Id}");
+    }
+
+    async Task<ConfirmResult> ConfirmNavigate()
+    {
+        var confirmResult = await ConfirmService.Show(
+            "You are about to discard your unsaved changes.",
+            "Unsaved Changes",
+            ConfirmButtons.YesNoCancel,
+            ConfirmIcon.Warning,
+            new ConfirmButtonOptions
+                {
+                    Button1Props = new ButtonProps
+                    {
+                        Type = ButtonType.Primary,
+                        ChildContent = "Save",
+                    },
+                    Button2Props = new ButtonProps
+                    {
+                        Type = ButtonType.Default,
+                        ChildContent = "Discard",
+                        Danger = false,
+                    },
+                    Button3Props = new ButtonProps
+                    {
+                        Type = ButtonType.Text,
+                        ChildContent = "Cancel",
+                    }
+                }
+        );
+
+        return confirmResult;
+    }
+
+    async Task<FileEntry> UploadImage(MarkdownEditor editor, FileEntry entry)
+    {
+        var stream = new MemoryStream(Convert.FromBase64String(entry.ContentBase64));
+
+        var media = new Media()
+        {
+            Type = SDK.Enums.MediaType.PageImage,
+            MimeType = entry.Type,
+            Crc32 = ""
+        };
+
+        media = await MediaService.Add(media);
+        media = await MediaService.UploadMediaAsync(stream, media);
+        media = await MediaService.Update(media);
+
+        entry.UploadUrl = $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+
+        return entry;
+    }
+
+    // 🐌🧼
+    void SanitizeSlug()
+    {
+        SelectedPage.Slug = SelectedPage.Slug.ToUrlSlug();
+    }
+}

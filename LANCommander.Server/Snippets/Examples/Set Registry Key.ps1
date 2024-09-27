@@ -1,2 +1,1 @@
-﻿# Creates or updates a key in the registry
-New-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\<Path>" -Name "KeyName" -Value "New Value" -Force
+﻿New-ItemProperty -Path "registry::\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\<Path>" -Name "KeyName" -Value "New Value" -Force

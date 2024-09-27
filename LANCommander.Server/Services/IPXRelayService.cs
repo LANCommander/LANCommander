@@ -6,7 +6,7 @@ namespace LANCommander.Server.Services
     {
         private IPXRelay Relay;
 
-        public IPXRelayService() : base()
+        public IPXRelayService(ILogger<IPXRelayService> logger) : base(logger)
         {
             if (Relay == null)
                 Relay = new IPXRelay();
@@ -16,18 +16,16 @@ namespace LANCommander.Server.Services
 
         public void Init()
         {
-            var settings = SettingService.GetSettings();
-
             if (Relay != null)
                 Stop();
 
             if (Relay == null)
-                Relay = new IPXRelay(settings.IPXRelay.Port);
+                Relay = new IPXRelay(Settings.IPXRelay.Port);
 
-            if (!settings.IPXRelay.Logging)
+            if (!Settings.IPXRelay.Logging)
                 Relay.DisableLogging();
 
-            if (settings.IPXRelay.Enabled)
+            if (Settings.IPXRelay.Enabled)
                 Relay.StartAsync();
         }
 

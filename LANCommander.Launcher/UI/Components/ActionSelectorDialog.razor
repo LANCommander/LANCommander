@@ -2,7 +2,7 @@
 @using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @inherits FeedbackComponent<ActionSelectorDialogOptions, Process>
-@inject LibraryService LibraryService
+@inject GameService GameService
 
 <AntList DataSource="Options.Actions" TItem="SDK.Models.Action" Class="ant-list-clickable" Size="small">
     <ListItem OnClick="() => Run(Options.Game, context)">
@@ -13,7 +13,7 @@
 @code {
     void Run(Game game, SDK.Models.Action action)
     {
-        LibraryService.Run(game, action);
+        GameService.Run(game, action);
 
         CloseFeedbackAsync();
     }

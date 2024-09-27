@@ -1,9 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace LANCommander.SDK.PowerShell
 {
+    public class PowerShellVariableList : List<PowerShellVariable>
+    {
+        public T GetValue<T>(string variableName)
+        {
+            var variable = this.FirstOrDefault(v => v.Name == variableName);
+
+            return (T)variable.Value;
+        }
+    }
+
     public class PowerShellVariable
     {
         public string Name { get; set; }

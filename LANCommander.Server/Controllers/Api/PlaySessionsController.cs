@@ -11,14 +11,19 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class PlaySessionsController : ControllerBase
+    public class PlaySessionsController : BaseApiController
     {
         private readonly IMapper Mapper;
         private readonly PlaySessionService PlaySessionService;
         private readonly GameService GameService;
         private readonly UserManager<User> UserManager;
 
-        public PlaySessionsController(IMapper mapper, PlaySessionService playSessionService, GameService gameService, UserManager<User> userManager)
+        public PlaySessionsController(
+            ILogger<PlaySessionsController> logger,
+            IMapper mapper,
+            PlaySessionService playSessionService,
+            GameService gameService,
+            UserManager<User> userManager) : base(logger)
         {
             Mapper = mapper;
             PlaySessionService = playSessionService;
@@ -65,7 +70,7 @@ namespace LANCommander.Server.Controllers.Api
             var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
             if (user == null)
-                return BadRequest();
+                return Unauthorized();
 
             var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id).ToListAsync();
 
@@ -78,7 +83,7 @@ namespace LANCommander.Server.Controllers.Api
             var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
             if (user == null)
-                return BadRequest();
+                return Unauthorized();
 
             var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.GameId == id).ToListAsync();
 

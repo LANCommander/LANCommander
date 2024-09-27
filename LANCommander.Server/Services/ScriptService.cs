@@ -7,9 +7,10 @@ namespace LANCommander.Server.Services
 {
     public class ScriptService : BaseDatabaseService<Script>
     {
-        public ScriptService(DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(dbContext, httpContextAccessor)
-        {
-        }
+        public ScriptService(
+            ILogger<ScriptService> logger,
+            DatabaseContext dbContext,
+            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
 
         public static IEnumerable<Snippet> GetSnippets()
         {

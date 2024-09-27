@@ -1,0 +1,56 @@
+﻿@page "/Pages/{*route}"
+@using LANCommander.Server.UI.Pages.Pages.Components
+@using Markdig
+@using Microsoft.EntityFrameworkCore
+@using ZiggyCreatures.Caching.Fusion
+@inject PageService PageService
+@inject IFusionCache Cache
+@inject NavigationManager NavigationManager
+
+@if (Page != null)
+{
+    <Layout Class="panel-layout">
+        <Content>
+            <SplitPane Style="flex-grow: 1">
+                <Pane Size="25%">
+                    <PageMenu />
+                </Pane>
+
+                <Pane Size="75%">
+                    <PageHeader Title="@Page.Title" />
+
+                    <div style="padding: 0 24px;">
+                        @((MarkupString)Markdown.ToHtml(Page.Contents))
+                    </div>
+                </Pane>
+            </SplitPane>
+        </Content>
+    </Layout>
+}
+
+@code {
+    [Parameter] public string Route { get; set; }
+
+    Page Page;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Route == null) {
+            var firstParent = await PageService.Get(p => p.Parent == null).OrderBy(p => p.SortOrder).FirstOrDefaultAsync();
+
+            if (firstParent == null)
+                NavigationManager.NavigateTo("/");
+            else
+                NavigationManager.NavigateTo($"/{firstParent.Route}");
+        }
+        else
+        {
+            var route = Route.TrimEnd('/').ToLower();
+
+            Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+            {
+                return await PageService.Get(p => p.Route == $"Pages/{route}").FirstOrDefaultAsync();
+            });
+        }
+    }
+}

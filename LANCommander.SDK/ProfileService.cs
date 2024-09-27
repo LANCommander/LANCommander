@@ -22,6 +22,8 @@ namespace LANCommander.SDK
         private readonly ILogger Logger;
         private Client Client { get; set; }
 
+        private User User { get; set; }
+
         public ProfileService(Client client)
         {
             Client = client;
@@ -33,30 +35,31 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public User Get()
+        public User Get(bool forceLoad = false)
         {
             Logger?.LogTrace("Requesting player's profile...");
 
-            return Client.GetRequest<User>("/api/Profile");
+            if (User == null || forceLoad)
+                User = Client.GetRequest<User>("/api/Profile");
+
+            return User;
         }
 
-        public async Task<User> GetAsync()
+        public async Task<User> GetAsync(bool forceLoad = false)
         {
             Logger?.LogTrace("Requesting player's profile...");
 
-            return await Client.GetRequestAsync<User>("/api/Profile");
+            if (User == null || forceLoad)
+                User = await Client.GetRequestAsync<User>("/api/Profile");
+
+            return User;
         }
 
-        public string ChangeAlias(string alias)
+        public async Task<string> GetAliasAsync()
         {
-            Logger?.LogTrace("Requesting to change player alias...");
+            var user = await GetAsync();
 
-            var response = Client.PostRequest<string>("/api/Profile/ChangeAlias", new
-            {
-                Alias = alias
-            });
-
-            return response;
+            return user.Alias;
         }
 
         public async Task<string> ChangeAliasAsync(string alias)
@@ -80,22 +83,18 @@ namespace LANCommander.SDK
             return await Client.DownloadRequestAsync("/api/Profile/Avatar", tempFile);
         }
 
-        public IEnumerable<PlaySession> GetPlaySessions()
+        public async Task<string> GetCustomField(string name)
         {
-            Logger?.LogTrace("Requesting all play sessions for user...");
+            Logger?.LogTrace("Getting player custom field with name {CustomFieldName}...", name);
 
-            var response = Client.GetRequest<IEnumerable<PlaySession>>("/api/PlaySessions");
-
-            return response;
+            return await Client.GetRequestAsync<string>($"/api/Profile/CustomField/{name}");
         }
 
-        public IEnumerable<PlaySession> GetPlaySessions(Guid gameId)
+        public async Task<string> UpdateCustomField(string name, string value)
         {
-            Logger?.LogTrace("Requesting play sessions for game {GameId}...", gameId);
+            Logger?.LogTrace("Updating player custom fields: {CustomFieldName} = {CustomFieldValue}", name, value);
 
-            var response = Client.GetRequest<IEnumerable<PlaySession>>($"/api/PlaySessions/{gameId}");
-
-            return response;
+            return await Client.PostRequestAsync<string>($"/api/Profile/CustomField/{name}", value);
         }
     }
 }

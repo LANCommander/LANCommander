@@ -16,6 +16,11 @@
             <Switch @bind-Checked="context.Beacon.Enabled" />
         </FormItem>
 
+        <FormItem Label="Name">
+            <Text Type="@TextElementType.Secondary">Use this to customize the name that is broadcasted to clients.</Text>
+            <Input @bind-Value="Settings.Beacon.Name" />
+        </FormItem>
+
         <FormItem Label="Address">
             <Text Type="@TextElementType.Secondary">Use this to customize the address that is broadcasted to clients. Default: http://&lt;Server IP&gt;:@context.Port</Text>
             <Input @bind-Value="Settings.Beacon.Address" />

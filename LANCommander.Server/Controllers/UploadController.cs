@@ -3,15 +3,13 @@ using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using NLog;
 
 namespace LANCommander.Server.Controllers
 {
     [Authorize(Roles = "Administrator")]
-    public class UploadController : Controller
+    public class UploadController : BaseController
     {
-        protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private readonly LANCommanderSettings Settings = SettingService.GetSettings();
+        public UploadController(ILogger<UploadController> logger) : base(logger) { }
 
         public JsonResult Init()
         {
@@ -76,7 +74,7 @@ namespace LANCommander.Server.Controllers
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "An error occurred while uploading the file");
+                Logger?.LogError(ex, "An error occurred while uploading the file");
 
                 return BadRequest("An error occurred while uploading the file.");
             }

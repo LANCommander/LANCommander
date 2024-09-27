@@ -1,16 +1,14 @@
 ﻿using AutoMapper;
 using CoreRCON;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Hubs;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using NLog;
-using NLog.Fluent;
 using System.Diagnostics;
 using System.Net;
+using LANCommander.SDK;
 
 namespace LANCommander.Server.Services
 {
@@ -149,12 +147,19 @@ namespace LANCommander.Server.Services
         private readonly IMapper Mapper;
         private readonly IHubContext<GameServerHub> HubContext;
         private readonly IServiceProvider ServiceProvider;
+        private readonly SDK.Client Client;
 
-        public ServerProcessService(IMapper mapper, IHubContext<GameServerHub> hubContext, IServiceProvider serviceProvider) : base()
+        public ServerProcessService(
+            ILogger<ServerProcessService> logger,
+            IMapper mapper,
+            IHubContext<GameServerHub> hubContext,
+            IServiceProvider serviceProvider,
+            SDK.Client client) : base(logger)
         {
             Mapper = mapper;
             HubContext = hubContext;
             ServiceProvider = serviceProvider;
+            Client = client;
         }
 
         public async Task StartServerAsync(Guid serverId)
@@ -173,33 +178,32 @@ namespace LANCommander.Server.Services
 
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
 
-                Logger.Info("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+                Logger?.LogInformation("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-                await Task.Run(() =>
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.BeforeStart))
                 {
-                    foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.BeforeStart))
+                    try
                     {
-                        try
-                        {
-                            var script = new PowerShellScript();
+                        var script = new PowerShellScript(SDK.Enums.ScriptType.BeforeStart);
 
-                            // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
 
-                            script.UseWorkingDirectory(server.WorkingDirectory);
-                            script.UseInline(serverScript.Contents);
-                            script.UseShellExecute();
+                        script.UseWorkingDirectory(server.WorkingDirectory);
+                        script.UseInline(serverScript.Contents);
+                        script.UseShellExecute();
 
-                            Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+                        Logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                            script.Execute();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
-                        }
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
+
+                        await script.ExecuteAsync<int>();
                     }
-                });
-
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                    }
+                }
 
                 var process = new Process();
 
@@ -217,13 +221,13 @@ namespace LANCommander.Server.Services
                     process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
                     {
                         HubContext.Clients.All.SendAsync("Log", e.Data);
-                        Logger.Info("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
+                        Logger?.LogInformation("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
                     });
 
                     process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
                     {
                         HubContext.Clients.All.SendAsync("Log", e.Data);
-                        Logger.Error("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
+                        Logger?.LogError("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
                     });
                 }
 
@@ -239,7 +243,7 @@ namespace LANCommander.Server.Services
 
                     Processes[server.Id] = process;
 
-                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == Data.Enums.ServerConsoleType.LogFile))
+                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
                     {
                         StartMonitoringLog(logFile, server);
                     }
@@ -252,7 +256,7 @@ namespace LANCommander.Server.Services
                 {
                     OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
 
-                    Logger.Error(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
+                    Logger?.LogError(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
                 }
             }
         }
@@ -266,7 +270,7 @@ namespace LANCommander.Server.Services
 
                 var server = await serverService.Get(serverId);
 
-                Logger.Info("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
+                Logger?.LogInformation("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
 
@@ -319,30 +323,30 @@ namespace LANCommander.Server.Services
                     LogFileMonitors.Remove(server.Id);
                 }
 
-                await Task.Run(() =>
+                foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
                 {
-                    foreach (var serverScript in server.Scripts.Where(s => s.Type == Data.Enums.ScriptType.AfterStop))
+                    try
                     {
-                        try
-                        {
-                            var script = new PowerShellScript();
+                        var script = new PowerShellScript(SDK.Enums.ScriptType.AfterStop);
 
-                            // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
 
-                            script.UseWorkingDirectory(server.WorkingDirectory);
-                            script.UseInline(serverScript.Contents);
-                            script.UseShellExecute();
+                        script.UseWorkingDirectory(server.WorkingDirectory);
+                        script.UseInline(serverScript.Contents);
+                        script.UseShellExecute();
 
-                            Logger.Info("Executing script \"{ScriptName}\"", serverScript.Name);
+                        Logger?.LogInformation("Executing script \"{ScriptName}\"", serverScript.Name);
 
-                            script.Execute();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Error(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
-                        }
+                        if (Client.Scripts.Debug)
+                            script.EnableDebug();
+
+                        await script.ExecuteAsync<int>();
                     }
-                });
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Error running script \"{ScriptName}\" for server \"{ServerName}\"", serverScript.Name, server.Name);
+                    }
+                }
 
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
             }

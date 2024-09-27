@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using NLog;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -16,25 +15,31 @@ namespace LANCommander.Server.Controllers.Api
     [Route("api/[controller]")]
     [Authorize(AuthenticationSchemes = "Bearer")]
     [ApiController]
-    public class ProfileController : ControllerBase
+    public class ProfileController : BaseApiController
     {
-        protected readonly Logger Logger = LogManager.GetCurrentClassLogger();
-
         private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
-        public ProfileController(UserManager<User> userManager)
+        public ProfileController(
+            ILogger<ProfileController> logger,
+            UserManager<User> userManager,
+            UserService userService) : base(logger)
         {
             UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<ActionResult<User>> Get()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
                 var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
-                return Ok(user);
+                if (user != null)
+                    return Ok(user);
+                else
+                    return NotFound();
             }
             else
                 return Unauthorized();
@@ -100,6 +105,44 @@ namespace LANCommander.Server.Controllers.Api
             catch (Exception ex)
             {
                 return NotFound();
+            }
+        }
+
+        [HttpGet("CustomField/{name}")]
+        public async Task<IActionResult> CustomField(string name)
+        {
+            try
+            {
+                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+                var field = await UserService.GetCustomField(user.Id, name);
+
+                return Ok(field.Value);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not get the custom field with the name {CustomFieldName}", name);
+
+                return NotFound();
+            }
+        }
+
+        [HttpPost("CustomField/{name}")]
+        public async Task<IActionResult> CustomField(string name, string value)
+        {
+            try
+            {
+                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+
+                await UserService.UpdateCustomField(user.Id, name, value);
+
+                return Ok(value);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not update the custom field with the name {CustomFieldName}", name);
+
+                return BadRequest();
             }
         }
     }

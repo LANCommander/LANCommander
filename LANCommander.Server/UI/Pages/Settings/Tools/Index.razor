@@ -5,6 +5,7 @@
 @inject IMessageService MessageService
 @inject ArchiveService ArchiveService
 @inject UpdateService UpdateService
+@inject PageService PageService
 @inject IFusionCache FusionCache
 @attribute [Authorize(Roles = "Administrator")]
 
@@ -48,12 +49,19 @@
     <h3>Active Sessions</h3>
     <p>List and delete any active user play sessions.</p>
     <a href="/Settings/Tools/ActiveSessions" class="ant-btn ant-btn-primary">View Active Sessions</a>
+
+    <Divider />
+
+    <h3>Regenerate Page Routes</h3>
+    <p>Fix any page routes that seem to be out of date or corrupt.</p>
+    <Button Type="@ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
 </div>
 
 
 @code {
     bool RecalculatingFileSizes = false;
     bool DownloadingClients = false;
+    bool FixingPageRoutes = false;
 
     async Task RecalculateFileSizes()
     {
@@ -108,5 +116,25 @@
         }
 
         DownloadingClients = false;
+    }
+
+    async Task FixPageRoutes()
+    {
+        FixingPageRoutes = true;
+
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await PageService.FixRoutes();
+
+            MessageService.Success("Routes fixed!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not fix all routes!");
+        }
+
+        FixingPageRoutes = false;
     }
 }

@@ -15,55 +15,70 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class SavesController : ControllerBase
+    public class SavesController : BaseApiController
     {
         private readonly IMapper Mapper;
         private readonly GameService GameService;
         private readonly GameSaveService GameSaveService;
         private readonly UserManager<User> UserManager;
-        private readonly LANCommanderSettings Settings;
 
-        public SavesController(IMapper mapper, GameService gameService, GameSaveService gameSaveService, UserManager<User> userManager)
+        public SavesController(
+            ILogger<SavesController> logger,
+            IMapper mapper,
+            GameService gameService,
+            GameSaveService gameSaveService,
+            UserManager<User> userManager) : base(logger)
         {
             Mapper = mapper;
             GameService = gameService;
             GameSaveService = gameSaveService;
             UserManager = userManager;
-            Settings = SettingService.GetSettings();
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.GameSave>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> Get()
         {
-            return Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.Get());
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.Get()));
         }
 
         [HttpGet("{id}")]
-        public async Task<SDK.Models.GameSave> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.GameSave>> Get(Guid id)
         {
-            return Mapper.Map<SDK.Models.GameSave>(await GameSaveService.Get(id));
+            var gameSave = await GameSaveService.Get(id);
+
+            if (gameSave == null)
+                return NotFound();
+
+            return Ok(Mapper.Map<SDK.Models.GameSave>(gameSave));
         }
 
         [HttpGet("Game/{gameId}")]
-        public async Task<IEnumerable<SDK.Models.GameSave>> GetGameSaves(Guid gameId)
+        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetGameSaves(Guid gameId)
         {
             var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
             if (user == null)
-                return null;
+                return Unauthorized();
 
-            return Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).ToListAsync());
+            var userSaves = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).ToListAsync();
+
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.GameSave>>(userSaves));
         }
 
         [HttpGet("Latest/{gameId}")]
-        public async Task<SDK.Models.GameSave> Latest(Guid gameId)
+        public async Task<ActionResult<SDK.Models.GameSave>> Latest(Guid gameId)
         {
             var user = await UserManager.FindByNameAsync(User.Identity.Name);
 
             if (user == null)
-                return null;
+                return Unauthorized();
 
-            return Mapper.Map<SDK.Models.GameSave>(await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).OrderByDescending(gs => gs.CreatedOn).FirstOrDefaultAsync());
+            var latestSave = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).OrderByDescending(gs => gs.CreatedOn).FirstOrDefaultAsync();
+
+            // Should probably return 404 if no latest save exists
+            // Not sure if this will affect launcher stability
+
+            return Ok(Mapper.Map<SDK.Models.GameSave>(latestSave));
         }
 
         [HttpGet("DownloadLatest/{gameId}")]
@@ -147,7 +162,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Delete/{id}")]
-        public async Task<bool> Delete(Guid id)
+        public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
@@ -155,11 +170,12 @@ namespace LANCommander.Server.Controllers.Api
 
                 await GameSaveService.Delete(save);
 
-                return true;
+                return Ok();
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                Logger.LogError(ex, "An unknown error occurred while trying to delete a game save with the ID {GameSaveId}", id);
+                return BadRequest();
             }
         }
     }

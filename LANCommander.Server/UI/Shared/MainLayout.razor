@@ -23,6 +23,11 @@
                 </SubMenu>
                 <MenuItem RouterLink="/Redistributables">Redistributables</MenuItem>
                 <MenuItem RouterLink="/Servers">Servers</MenuItem>
+                <SubMenu Title="Pages">
+                    <MenuItem RouterLink="/Pages/Edit">Edit</MenuItem>
+                    <MenuItem RouterLink="/Pages">View</MenuItem>
+                </SubMenu>
+                <MenuItem RouterLink="/Issues">Issues</MenuItem>
                 <MenuItem RouterLink="/Files">Files</MenuItem>
                 <SubMenu Title="Settings">
                     <MenuItem RouterLink="/Settings/General">General</MenuItem>
@@ -40,6 +45,10 @@
                     <MenuItem RouterLink="/Settings/Launcher">Launcher</MenuItem>
                     <MenuItem RouterLink="/Settings/Updates">Updates</MenuItem>
                 </SubMenu>
+            }
+            else
+            {
+                <MenuItem RouterLink="/Pages">Pages</MenuItem>
             }
         </LeftContent>
         <RightContent>

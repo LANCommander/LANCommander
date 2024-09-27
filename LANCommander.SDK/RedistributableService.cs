@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LANCommander.SDK
 {
@@ -41,36 +42,25 @@ namespace LANCommander.SDK
             return Client.StreamRequest($"/api/Redistributables/{id}/Download");
         }
 
-        public void Install(Game game)
+        public async Task InstallAsync(Game game)
         {
             foreach (var redistributable in game.Redistributables)
             {
-                Install(redistributable);
+                await InstallAsync(redistributable);
             }
         }
 
-        public void Install(Redistributable redistributable)
+        public async Task InstallAsync(Redistributable redistributable)
         {
-            string installScriptTempFile = null;
-            string detectionScriptTempFile = null;
             string extractTempPath = null;
 
             try
             {
-                var installScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.Install);
-                installScriptTempFile = ScriptHelper.SaveTempScript(installScript);
-                Logger?.LogTrace("Redistributable install script saved to {Path}", installScriptTempFile);
+                var installed = await Client.Scripts.RunDetectInstallScriptAsync(redistributable);
 
-                var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == ScriptType.DetectInstall);
-                detectionScriptTempFile = ScriptHelper.SaveTempScript(detectionScript);
-                Logger?.LogTrace("Redistributable install detection script saved to {Path}", detectionScriptTempFile);
+                Logger?.LogTrace("Redistributable install detection returned {Result}", installed);
 
-                var detectionResult = RunScript(detectionScriptTempFile, redistributable, detectionScript.RequiresAdmin);
-
-                Logger?.LogTrace("Redistributable install detection returned error code {ErrorCode}", detectionResult);
-
-                // Redistributable is not installed
-                if (detectionResult == 0)
+                if (!installed)
                 {
                     Logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
 
@@ -87,7 +77,7 @@ namespace LANCommander.SDK
                             Logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
                             Logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
-                            RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin, extractTempPath);
+                            await Client.Scripts.RunInstallScriptAsync(redistributable);
                         }
                         else
                         {
@@ -98,7 +88,7 @@ namespace LANCommander.SDK
                     {
                         Logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
 
-                        RunScript(installScriptTempFile, redistributable, installScript.RequiresAdmin);
+                        await Client.Scripts.RunInstallScriptAsync(redistributable);
                     }
                 }
             }
@@ -108,12 +98,6 @@ namespace LANCommander.SDK
             }
             finally
             {
-                if (File.Exists(installScriptTempFile))
-                    File.Delete(installScriptTempFile);
-
-                if (File.Exists(detectionScriptTempFile))
-                    File.Delete(detectionScriptTempFile);
-
                 if (Directory.Exists(extractTempPath))
                     Directory.Delete(extractTempPath, true);
             }
@@ -186,21 +170,6 @@ namespace LANCommander.SDK
             }
 
             return extractionResult;
-        }
-
-        private int RunScript(string path, Redistributable redistributable, bool requiresAdmin = false, string workingDirectory = "")
-        {
-            var script = new PowerShellScript();
-
-            script.AddVariable("Redistributable", redistributable);
-
-            script.UseWorkingDirectory(workingDirectory);
-            script.UseFile(path);
-
-            if (requiresAdmin)
-                script.RunAsAdmin();
-
-            return script.Execute();
         }
     }
 }

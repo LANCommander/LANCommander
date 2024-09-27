@@ -1,0 +1,100 @@
+﻿.file-manager {
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+
+    &-nav {
+        border-bottom: 1px solid #f0f0f0;
+        padding-left: 8px;
+        padding-right: 8px;
+        height: 58px;
+
+        .ant-space,
+        &-breadcrumbs {
+            flex-grow: 1;
+        }
+
+        .ant-breadcrumb {
+            font-size: 16px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.018);
+
+            &-link {
+                border-radius: 2px;
+                border: 1px solid transparent;
+                padding: 4px 8px;
+                cursor: pointer;
+
+                &:hover,
+                &:active {
+                    background: rgba(0, 0, 0, 0.018);
+                }
+            }
+        }
+    }
+
+    &-body {
+        flex-grow: 1;
+    }
+
+    .ant-tree-treenode {
+        padding-left: 4px;
+
+        &-selected {
+            background-color: #11263c;
+        }
+
+        &:hover,
+        &:active {
+            background: rgba(0, 0, 0, 0.018);
+        }
+    }
+
+    .ant-tree-title {
+        white-space: nowrap;
+    }
+
+    &-tree {
+        padding-top: 8px;
+        border-right: 1px solid #f0f0f0;
+    }
+
+    .ant-tree-node-content-wrapper {
+        flex-grow: 1;
+        padding-top: 4px;
+        padding-bottom: 4px;
+
+        &:hover,
+        &:active {
+            background: none;
+        }
+    }
+
+    .ant-tree-switcher-icon {
+        vertical-align: middle;
+        margin-top: 4px;
+    }
+}
+
+[data-theme="Dark"] .file-manager .pane {
+    background: #141414;
+}
+
+[data-theme="Dark"] .file-manager,
+[data-theme="Dark"] .file-manager-list,
+[data-theme="Dark"] .file-picker-dialog .file-manager tbody tr {
+    background: #141414;
+}
+
+[data-theme="Dark"] .file-manager-tree,
+[data-theme="Dark"] .file-manager-nav {
+    border-color: #303030;
+    background: #141414;
+}
+
+[data-theme="Dark"] .file-manager .ant-tree-treenode:hover,
+[data-theme="Dark"] .file-manager .ant-tree-treenode:active,
+[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:hover,
+[data-theme="Dark"] .file-manager-nav .ant-breadcrumb-link:active {
+    background: rgba(255, 255, 255, 0.03);
+}

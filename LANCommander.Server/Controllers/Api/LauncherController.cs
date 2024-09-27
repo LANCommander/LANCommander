@@ -9,11 +9,13 @@ namespace LANCommander.Server.Controllers.Api
     [Authorize(AuthenticationSchemes = "Bearer")]
     [Route("api/[controller]")]
     [ApiController]
-    public class LauncherController : ControllerBase
+    public class LauncherController : BaseApiController
     {
-        private UpdateService UpdateService;
+        private readonly UpdateService UpdateService;
 
-        public LauncherController(UpdateService updateService)
+        public LauncherController(
+            ILogger<LauncherController> logger,
+            UpdateService updateService) : base(logger)
         {
             UpdateService = updateService;
         }

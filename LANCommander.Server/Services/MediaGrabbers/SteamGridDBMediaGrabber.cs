@@ -1,9 +1,7 @@
 ﻿using craftersmine.SteamGridDBNet;
-using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Models;
 using LANCommander.SDK.Enums;
 using LANCommander.Steam;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Net.Mime;
 
 namespace LANCommander.Server.Services.MediaGrabbers
@@ -229,8 +227,9 @@ namespace LANCommander.Server.Services.MediaGrabbers
             switch (format)
             {
                 case SteamGridDbFormats.Png:
-                case SteamGridDbFormats.Ico:
                     return MediaTypeNames.Image.Png;
+                case SteamGridDbFormats.Ico:
+                    return MediaTypeNames.Image.Icon;
                 case SteamGridDbFormats.Jpeg:
                     return MediaTypeNames.Image.Jpeg;
                 case SteamGridDbFormats.Webp:

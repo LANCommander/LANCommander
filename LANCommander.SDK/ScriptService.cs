@@ -3,6 +3,7 @@ using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
+using Steamworks.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -63,14 +64,28 @@ namespace LANCommander.SDK
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.UseInline(detectionScript.Contents);
 
-                        op.Enrich("RedistributableId", redistributable.Id)
-                          .Enrich("RedistributableName", redistributable.Name);
-
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            op.Enrich("RedistributableId", redistributable.Id)
+                              .Enrich("RedistributableName", redistributable.Name);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -114,14 +129,28 @@ namespace LANCommander.SDK
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.UseInline(installScript.Contents);
 
-                        op.Enrich("RedistributableId", redistributable.Id)
-                          .Enrich("RedistributableName", redistributable.Name);
-
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            op.Enrich("RedistributableId", redistributable.Id)
+                              .Enrich("RedistributableName", redistributable.Name);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -169,17 +198,31 @@ namespace LANCommander.SDK
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.UseFile(path);
 
-                        op.Enrich("InstallDirectory", installDirectory)
-                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                          .Enrich("ScriptPath", path)
-                          .Enrich("GameTitle", manifest.Title)
-                          .Enrich("GameId", manifest.Id);
-
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            op.Enrich("InstallDirectory", installDirectory)
+                              .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                              .Enrich("ScriptPath", path)
+                              .Enrich("GameTitle", manifest.Title)
+                              .Enrich("GameId", manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -230,17 +273,31 @@ namespace LANCommander.SDK
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.UseFile(path);
 
-                        op.Enrich("InstallDirectory", installDirectory)
-                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                          .Enrich("ScriptPath", path)
-                          .Enrich("GameTitle", manifest.Title)
-                          .Enrich("GameId", manifest.Id);
-
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            op.Enrich("InstallDirectory", installDirectory)
+                              .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                              .Enrich("ScriptPath", path)
+                              .Enrich("GameTitle", manifest.Title)
+                              .Enrich("GameId", manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -300,11 +357,32 @@ namespace LANCommander.SDK
                           .Enrich("GameTitle", manifest.Title)
                           .Enrich("GameId", manifest.Id);
 
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            op.Enrich("InstallDirectory", installDirectory)
+                              .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                              .Enrich("ScriptPath", path)
+                              .Enrich("PlayerAlias", playerAlias)
+                              .Enrich("GameTitle", manifest.Title)
+                              .Enrich("GameId", manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -356,17 +434,31 @@ namespace LANCommander.SDK
                         script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
                         script.UseFile(path);
 
-                        op.Enrich("InstallDirectory", installDirectory)
-                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                          .Enrich("ScriptPath", path)
-                          .Enrich("GameTitle", manifest.Title)
-                          .Enrich("GameId", manifest.Id);
-
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            op.Enrich("InstallDirectory", installDirectory)
+                              .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                              .Enrich("ScriptPath", path)
+                              .Enrich("GameTitle", manifest.Title)
+                              .Enrich("GameId", manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -429,23 +521,37 @@ namespace LANCommander.SDK
                         script.AddVariable("OldPlayerAlias", oldName);
                         script.AddVariable("NewPlayerAlias", newName);
 
-                        op.Enrich("InstallDirectory", installDirectory)
-                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                          .Enrich("ScriptPath", path)
-                          .Enrich("OldPlayerAlias", oldName)
-                          .Enrich("NewPlayerAlias", newName)
-                          .Enrich("GameTitle", manifest.Title)
-                          .Enrich("GameId", manifest.Id);
+                        try
+                        {
+                            op.Enrich("InstallDirectory", installDirectory)
+                              .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                              .Enrich("ScriptPath", path)
+                              .Enrich("OldPlayerAlias", oldName)
+                              .Enrich("NewPlayerAlias", newName)
+                              .Enrich("GameTitle", manifest.Title)
+                              .Enrich("GameId", manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
 
                         script.UseFile(path);
 
                         SDK.GameService.UpdatePlayerAlias(installDirectory, gameId, newName);
 
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;
@@ -499,20 +605,34 @@ namespace LANCommander.SDK
                         script.AddVariable("AllocatedKey", key);
                         script.UseFile(path);
 
-                        op.Enrich("InstallDirectory", installDirectory)
-                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                          .Enrich("ScriptPath", path)
-                          .Enrich("AllocatedKey", key)
-                          .Enrich("GameTitle", manifest.Title)
-                          .Enrich("GameId", manifest.Id);
+                        try
+                        {
+                            op.Enrich("InstallDirectory", installDirectory)
+                              .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                              .Enrich("ScriptPath", path)
+                              .Enrich("AllocatedKey", key)
+                              .Enrich("GameTitle", manifest.Title)
+                              .Enrich("GameId", manifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
 
                         GameService.UpdateCurrentKey(installDirectory, gameId, key);
 
-                        if (Debug)
+                        try
                         {
-                            script.EnableDebug();
-                            script.OnDebugBreak = OnDebugBreak;
-                            script.OnOutput = OnOutput;
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
                         }
 
                         bool handled = false;

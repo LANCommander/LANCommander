@@ -44,6 +44,8 @@ namespace LANCommander.Launcher.Services
                     InstallCommandLineOptions,
                     UninstallCommandLineOptions,
                     SyncCommandLineOptions,
+                    ImportCommandLineOptions,
+                    ExportCommandLineOptions,
                     LoginCommandLineOptions,
                     LogoutCommandLineOptions,
                     ChangeAliasCommandLineOptions
@@ -55,6 +57,7 @@ namespace LANCommander.Launcher.Services
             await result.WithParsedAsync<RunCommandLineOptions>(Run);
             await result.WithParsedAsync<SyncCommandLineOptions>(Sync);
             await result.WithParsedAsync<ImportCommandLineOptions>(Import);
+            await result.WithParsedAsync<ExportCommandLineOptions>(Export);
             await result.WithParsedAsync<LoginCommandLineOptions>(Login);
             await result.WithParsedAsync<LogoutCommandLineOptions>(Logout);
             await result.WithParsedAsync<ChangeAliasCommandLineOptions>(ChangeAlias);

@@ -57,6 +57,10 @@ else
         Run Install Scripts
     </MenuItem>
 
+    <MenuItem OnClick="() => RunUninstallScripts()">
+        Run Uninstall Scripts
+    </MenuItem>
+
     <MenuItem OnClick="() => RunNameChangeScripts()">
         Run Name Change Scripts
     </MenuItem>
@@ -179,6 +183,16 @@ else
         foreach (var manifest in manifests)
         {
             await Client.Scripts.RunInstallScriptAsync(Game.InstallDirectory, manifest.Id);
+        }
+    }
+
+    async Task RunUninstallScripts()
+    {
+        var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
+
+        foreach (var manifest in manifests)
+        {
+            await Client.Scripts.RunUninstallScriptAsync(Game.InstallDirectory, manifest.Id);
         }
     }
 

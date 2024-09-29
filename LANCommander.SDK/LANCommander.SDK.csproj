@@ -14,12 +14,9 @@
     <PackageReference Include="PeanutButter.INI" Version="3.0.319" />
     <PackageReference Include="RestSharp" Version="112.0.0" />
     <PackageReference Include="Semver" Version="2.3.0" />
+    <PackageReference Include="SharpCompress" Version="0.38.0" />
     <PackageReference Include="System.Management.Automation" Version="7.4.5" />
 	  <PackageReference Include="YamlDotNet" Version="16.1.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\SharpCompress\src\SharpCompress\SharpCompress.csproj" />
   </ItemGroup>
 
 </Project>

@@ -17,8 +17,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher.Data"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher", "LANCommander.Launcher\LANCommander.Launcher.csproj", "{28D73284-B55A-4468-B96D-394C39BA162D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Photino.Blazor.CustomWindow", "Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow\Photino.Blazor.CustomWindow.csproj", "{7EF5AB60-84C3-47FC-A845-AE669A314CFE}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Steam", "LANCommander.Steam\LANCommander.Steam.csproj", "{9CFBF137-0277-41BA-A7EB-C0DDCF119E85}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Launcher.Services", "LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj", "{8719E821-2D43-4780-B13F-D4BD2EA17BFB}"
@@ -69,10 +67,6 @@ Global
 		{28D73284-B55A-4468-B96D-394C39BA162D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{28D73284-B55A-4468-B96D-394C39BA162D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{28D73284-B55A-4468-B96D-394C39BA162D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7EF5AB60-84C3-47FC-A845-AE669A314CFE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9CFBF137-0277-41BA-A7EB-C0DDCF119E85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9CFBF137-0277-41BA-A7EB-C0DDCF119E85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9CFBF137-0277-41BA-A7EB-C0DDCF119E85}.Release|Any CPU.ActiveCfg = Release|Any CPU

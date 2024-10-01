@@ -62,5 +62,22 @@ namespace LANCommander.Server.Controllers.Api
 
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{redistributable.Name.SanitizeFilename()}.zip");
         }
+
+        [Authorize(Roles = "Administrator")]
+        [HttpPost("Import/{objectKey}")]
+        public async Task<IActionResult> Import(Guid objectKey)
+        {
+            try
+            {
+                var game = await RedistributableService.Import(objectKey);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not import redistributable from upload");
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

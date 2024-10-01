@@ -180,10 +180,22 @@ namespace LANCommander.Launcher.Services
 
             switch (options.Type)
             {
-                case ImportArchiveType.Game:
+                case ArchiveType.Game:
                     Logger.LogInformation("Uploading game import file to server...");
 
                     await Client.Games.ImportAsync(options.Path);
+                    break;
+
+                case ArchiveType.Redistributable:
+                    Logger.LogInformation("Uploading redistributable archive file to server...");
+
+                    await Client.Redistributables.ImportAsync(options.Path);
+                    break;
+
+                case ArchiveType.Server:
+                    Logger.LogInformation("Uploading server archive file to server...");
+
+                    await Client.Servers.ImportAsync(options.Path);
                     break;
             }
 

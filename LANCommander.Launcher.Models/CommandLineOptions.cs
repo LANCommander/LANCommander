@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    public enum ImportArchiveType {
+    public enum ArchiveType
+    {
         Game,
         Redistributable,
         Server
@@ -66,17 +67,17 @@ namespace LANCommander.Launcher.Models
     [Verb("Sync", HelpText = "Sync library items from the server")]
     public class SyncCommandLineOptions { }
 
-    [Verb("Import", HelpText = "Upload and import an archive to the server (Admin Only)")]
+    [Verb("Import", HelpText = "Upload and import a game/redistributable/server to the server (Admin Only)")]
     public class ImportCommandLineOptions
     {
-        [Option("Path", HelpText = "Path to the archive file", Required = true)]
+        [Option("Path", HelpText = "Path to the import file", Required = true)]
         public string Path { get; set; }
 
-        [Option("Type", HelpText = "The type of archive to import", Required = true)]
-        public ImportArchiveType Type { get; set; }
+        [Option("Type", HelpText = "The type of import file", Required = true)]
+        public ArchiveType Type { get; set; }
     }
 
-    [Verb("Export", HelpText = "Export an archive from the server (Admin Only)")]
+    [Verb("Export", HelpText = "Export a game/redistributable/server from the server (Admin Only)")]
     public class ExportCommandLineOptions
     {
         [Option("Path", HelpText = "The destination path for the LCX export file", Required = true)]

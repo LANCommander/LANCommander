@@ -171,5 +171,16 @@ namespace LANCommander.SDK
 
             return extractionResult;
         }
+
+        public async Task ImportAsync(string archivePath)
+        {
+            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
+            {
+                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
+
+                if (objectKey != Guid.Empty)
+                    await Client.PostRequestAsync<object>($"/api/Redistributables/Import/{objectKey}");
+            }
+        }
     }
 }

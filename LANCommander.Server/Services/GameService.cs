@@ -66,6 +66,9 @@ namespace LANCommander.Server.Services
         {
             await Cache.ExpireAsync("MappedGames");
 
+            foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
+                entity.Media.Remove(media);
+
             return await base.Update(entity);
         }
 

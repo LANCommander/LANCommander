@@ -219,39 +219,46 @@ else
     {
         var multiplayerModes = new List<MultiplayerMode>();
 
-        var playerCounts = await PCGamingWikiClient.GetMultiplayerPlayerCounts(gameTitle);
-
-        if (playerCounts != null)
+        try
         {
-            foreach (var playerCount in playerCounts)
+            var playerCounts = await PCGamingWikiClient.GetMultiplayerPlayerCounts(gameTitle);
+
+            if (playerCounts != null)
             {
-                MultiplayerType type;
-
-                switch (playerCount.Key)
+                foreach (var playerCount in playerCounts)
                 {
-                    case "Local Play":
-                        type = MultiplayerType.Local;
-                        break;
+                    MultiplayerType type;
 
-                    case "LAN Play":
-                        type = MultiplayerType.LAN;
-                        break;
+                    switch (playerCount.Key)
+                    {
+                        case "Local Play":
+                            type = MultiplayerType.Local;
+                            break;
 
-                    case "Online Play":
-                        type = MultiplayerType.Online;
-                        break;
+                        case "LAN Play":
+                            type = MultiplayerType.LAN;
+                            break;
 
-                    default:
-                        continue;
+                        case "Online Play":
+                            type = MultiplayerType.Online;
+                            break;
+
+                        default:
+                            continue;
+                    }
+
+                    multiplayerModes.Add(new MultiplayerMode()
+                    {
+                        Type = type,
+                        MaxPlayers = playerCount.Value,
+                        MinPlayers = 2
+                    });
                 }
-
-                multiplayerModes.Add(new MultiplayerMode()
-                {
-                    Type = type,
-                    MaxPlayers = playerCount.Value,
-                    MinPlayers = 2
-                });
             }
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Could not retrieve multiplayer modes from PCGamingWiki");
         }
 
         return multiplayerModes;

@@ -3,6 +3,7 @@ using LANCommander.SDK;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace LANCommander.PCGamingWiki
         {
             Client = new HttpClient();
             Client.BaseAddress = new Uri("https://www.pcgamingwiki.com/");
+            Client.DefaultRequestHeaders.UserAgent.ParseAdd($"{AssemblyName.GetAssemblyName(Assembly.GetExecutingAssembly().Location).Name}/{Assembly.GetExecutingAssembly().GetName().Version.ToString()}");
         }
 
         public async Task<Uri> Search(string keyword)

@@ -1,12 +1,17 @@
 ﻿@using AntDesign.Charts
 @using ByteSizeLib
+@using LANCommander.Server.Models
 @inject PlaySessionService PlaySessionService
 
 <Spin Spinning="Loading">
-    <Bar Data="Data" Config="Config" JsConfig="@JsConfig" />
+    <div class="dashboard-chart">
+        <Bar Data="Data" Config="Config" JsConfig="@JsConfig" />
+    </div>
 </Spin>
 
 @code {
+    LANCommanderSettings Settings = SettingService.GetSettings();
+
     object[] Data;
 
     bool Loading = true;
@@ -43,6 +48,8 @@
     {
         if (firstRender)
         {
+            Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
+
             Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
 
             var sessions = await PlaySessionService.Get();

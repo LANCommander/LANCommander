@@ -213,6 +213,10 @@ label.ant-btn-icon-only {
     background: #0a0a0a;
 }
 
+.dashboard-chart > div {
+    background: none !important;
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

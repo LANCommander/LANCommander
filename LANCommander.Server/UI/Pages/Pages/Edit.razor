@@ -230,7 +230,9 @@
             {
                 var parentId = SelectedPage.Parent?.Id ?? Guid.Empty;
 
-                await PageService.Delete(SelectedPage);
+                var page = await PageService.Get(SelectedPage.Id);
+
+                await PageService.Delete(page);
 
                 if (parentId != Guid.Empty)
                     NavigationManager.NavigateTo($"/Pages/Edit/{parentId}");
@@ -238,6 +240,8 @@
                     NavigationManager.NavigateTo($"/Pages/Edit");
 
                 MessageService.Success("Page deleted!");
+
+                await LoadData();
             }
         }
         catch (Exception ex)

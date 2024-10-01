@@ -236,7 +236,8 @@
     {
         Values.Remove(media);
 
-        await MediaService.Delete(media);
+        if (media.Id != Guid.Empty)
+            await MediaService.Delete(media);
     }
 
     private async Task OpenManual(Media media)

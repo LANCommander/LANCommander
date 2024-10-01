@@ -19,6 +19,7 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly GameService GameService;
+        private readonly ArchiveService ArchiveService;
         private readonly UserManager<User> UserManager;
         private readonly RoleManager<Role> RoleManager;
         private readonly IFusionCache Cache;
@@ -28,11 +29,13 @@ namespace LANCommander.Server.Controllers.Api
             IMapper mapper,
             IFusionCache cache,
             GameService gameService,
+            ArchiveService archiveService,
             UserManager<User> userManager,
             RoleManager<Role> roleManager) : base(logger)
         {
             Mapper = mapper;
             GameService = gameService;
+            ArchiveService = archiveService;
             UserManager = userManager;
             RoleManager = roleManager;
             Cache = cache;
@@ -142,6 +145,49 @@ namespace LANCommander.Server.Controllers.Api
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "Could not import game from upload");
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [Authorize(Roles = "Administrator")]
+        [HttpPost("UploadArchive")]
+        public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
+        {
+            try
+            {
+                var archive = await ArchiveService.Get(a => a.GameId == request.Id && a.Version == request.Version).FirstOrDefaultAsync();
+                var archivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+
+                if (archive != null)
+                {
+                    var existingArchivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+
+                    System.IO.File.Delete(existingArchivePath);
+
+                    archive.ObjectKey = request.ObjectKey.ToString();
+                    archive.Changelog = request.Changelog;
+                    archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
+
+                    archive = await ArchiveService.Update(archive);
+                }
+                else
+                {
+                    archive = new Archive()
+                    {
+                        ObjectKey = request.ObjectKey.ToString(),
+                        Changelog = request.Changelog,
+                        GameId = request.Id,
+                        CompressedSize = new System.IO.FileInfo(archivePath).Length,
+                    };
+
+                    await ArchiveService.Add(archive);
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not upload game archive");
                 return BadRequest(ex.Message);
             }
         }

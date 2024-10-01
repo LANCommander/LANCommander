@@ -881,6 +881,23 @@ namespace LANCommander.SDK
             await Client.DownloadRequestAsync($"/Games/{gameId}/Export/Full", destinationPath);
         }
 
+        public async Task UploadArchiveAsync(string archivePath, Guid gameId, string version, string changelog = "")
+        {
+            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
+            {
+                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
+
+                if (objectKey != Guid.Empty)
+                    await Client.PostRequestAsync<object>($"/api/Games/UploadArchive", new UploadArchiveRequest
+                    {
+                        Id = gameId,
+                        ObjectKey = objectKey,
+                        Version = version,
+                        Changelog = changelog,
+                    });
+            }
+        }
+
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)
         {
             if (String.IsNullOrWhiteSpace(installDirectory))

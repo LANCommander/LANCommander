@@ -46,6 +46,7 @@ namespace LANCommander.Launcher.Services
                     SyncCommandLineOptions,
                     ImportCommandLineOptions,
                     ExportCommandLineOptions,
+                    UploadCommandLineOptions,
                     LoginCommandLineOptions,
                     LogoutCommandLineOptions,
                     ChangeAliasCommandLineOptions
@@ -58,6 +59,7 @@ namespace LANCommander.Launcher.Services
             await result.WithParsedAsync<SyncCommandLineOptions>(Sync);
             await result.WithParsedAsync<ImportCommandLineOptions>(Import);
             await result.WithParsedAsync<ExportCommandLineOptions>(Export);
+            await result.WithParsedAsync<UploadCommandLineOptions>(Upload);
             await result.WithParsedAsync<LoginCommandLineOptions>(Login);
             await result.WithParsedAsync<LogoutCommandLineOptions>(Logout);
             await result.WithParsedAsync<ChangeAliasCommandLineOptions>(ChangeAlias);
@@ -212,14 +214,50 @@ namespace LANCommander.Launcher.Services
 
             switch (options.Type)
             {
-                case ImportArchiveType.Game:
+                case ArchiveType.Game:
                     Logger.LogInformation("Exporting game from server...");
 
                     await Client.Games.ExportAsync(options.Path, options.Id);
                     break;
+
+                case ArchiveType.Redistributable:
+                    Logger.LogInformation("Exporting redistributable from server...");
+
+                    await Client.Redistributables.ExportAsync(options.Path, options.Id);
+                    break;
+
+                case ArchiveType.Server:
+                    Logger.LogInformation("Exporting server from server...");
+
+                    await Client.Servers.ExportAsync(options.Path, options.Id);
+                    break;
             }
 
             Logger.LogInformation($"Successfully exported game to {options.Path}");
+        }
+
+        private async Task Upload(UploadCommandLineOptions options)
+        {
+            if (!File.Exists(options.Path))
+            {
+                Logger.LogInformation("File not found! Check your path!");
+                return;
+            }
+
+            switch (options.Type)
+            {
+                case ArchiveType.Game:
+                    Logger.LogInformation("Uploading game archive to server...");
+
+                    await Client.Games.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
+                    break;
+
+                case ArchiveType.Redistributable:
+                    Logger.LogInformation("Uploading redistributable archive to server...");
+
+                    await Client.Redistributables.UploadArchiveAsync(options.Path, options.Id, options.Version, options.Changelog);
+                    break;
+            }
         }
 
         private async Task Login(LoginCommandLineOptions options)

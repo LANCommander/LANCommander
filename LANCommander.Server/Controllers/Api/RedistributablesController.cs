@@ -5,6 +5,7 @@ using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -15,14 +16,17 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
+        private readonly ArchiveService ArchiveService;
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger, 
             IMapper mapper,
-            RedistributableService redistributableService) : base(logger)
+            RedistributableService redistributableService,
+            ArchiveService archiveService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
+            ArchiveService = archiveService;
         }
 
         [HttpGet]
@@ -76,6 +80,49 @@ namespace LANCommander.Server.Controllers.Api
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "Could not import redistributable from upload");
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [Authorize(Roles = "Administrator")]
+        [HttpPost("UploadArchive")]
+        public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
+        {
+            try
+            {
+                var archive = await ArchiveService.Get(a => a.RedistributableId == request.Id && a.Version == request.Version).FirstOrDefaultAsync();
+                var archivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+
+                if (archive != null)
+                {
+                    var existingArchivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+
+                    System.IO.File.Delete(existingArchivePath);
+
+                    archive.ObjectKey = request.ObjectKey.ToString();
+                    archive.Changelog = request.Changelog;
+                    archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
+
+                    archive = await ArchiveService.Update(archive);
+                }
+                else
+                {
+                    archive = new Archive()
+                    {
+                        ObjectKey = request.ObjectKey.ToString(),
+                        Changelog = request.Changelog,
+                        RedistributableId = request.Id,
+                        CompressedSize = new System.IO.FileInfo(archivePath).Length,
+                    };
+
+                    await ArchiveService.Add(archive);
+                }
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not upload redistributable archive");
                 return BadRequest(ex.Message);
             }
         }

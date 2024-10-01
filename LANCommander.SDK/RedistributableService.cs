@@ -182,5 +182,27 @@ namespace LANCommander.SDK
                     await Client.PostRequestAsync<object>($"/api/Redistributables/Import/{objectKey}");
             }
         }
+
+        public async Task ExportAsync(string destinationPath, Guid redistributableId)
+        {
+            await Client.DownloadRequestAsync($"/Redistributables/{redistributableId}/Export/Full", destinationPath);
+        }
+
+        public async Task UploadArchiveAsync(string archivePath, Guid redistributableId, string version, string changelog = "")
+        {
+            using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
+            {
+                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
+
+                if (objectKey != Guid.Empty)
+                    await Client.PostRequestAsync<object>($"/api/Redistributables/UploadArchive", new UploadArchiveRequest
+                    {
+                        Id = redistributableId,
+                        ObjectKey = objectKey,
+                        Version = version,
+                        Changelog = changelog,
+                    });
+            }
+        }
     }
 }

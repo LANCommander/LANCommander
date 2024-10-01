@@ -86,8 +86,27 @@ namespace LANCommander.Launcher.Models
         [Option("Id", HelpText = "The ID of the entity to export", Required = true)]
         public Guid Id { get; set; }
 
-        [Option("Type", HelpText = "The type of archive to export", Required = true)]
-        public ImportArchiveType Type { get; set; }
+        [Option("Type", HelpText = "The type of export file", Required = true)]
+        public ArchiveType Type { get; set; }
+    }
+
+    [Verb("Upload", HelpText = "Upload an archive to the server (Admin Only)")]
+    public class UploadCommandLineOptions
+    {
+        [Option("Path", HelpText = "Path to the archive file")]
+        public string Path { get; set; }
+
+        [Option("Id", HelpText = "The ID of the entity associated with the archive")]
+        public Guid Id { get; set; }
+
+        [Option("Version", HelpText = "The version of the archive")]
+        public string Version { get; set; }
+
+        [Option("Changelog", HelpText = "Any changes introduces with the archive")]
+        public string Changelog { get; set; }
+
+        [Option("Type", HelpText = "The type of entity associated with the archive")]
+        public ArchiveType Type { get; set; }
     }
 
     [Verb("Login", HelpText = "Login to a LANCommander server")]

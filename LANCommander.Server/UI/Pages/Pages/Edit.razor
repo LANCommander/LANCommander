@@ -77,7 +77,7 @@
                         </FormItem>
 
                         <FormItem Label="Slug" Style="margin-bottom: 8px; padding-left: 8px">
-                            <SlugEditorInput Page="context" @bind-Value="context.Slug" />
+                            <SlugEditorInput @bind-Page="context" />
                         </FormItem>
 
                         @if (!SelectedPage.Children.Any())

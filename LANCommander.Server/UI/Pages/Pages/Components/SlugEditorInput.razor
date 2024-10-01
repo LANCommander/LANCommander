@@ -1,10 +1,11 @@
 ﻿@using LANCommander.Server.Extensions
+@inject PageService PageService
 
 <Space>
     @if (!Editing)
     {
         <SpaceItem>
-            <a href="/@Page.Route" target="_blank">/@Page.Route.Substring(0, Page.Route.Length - Value.Length)<strong>@Value</strong></a>
+            <a href="/@Page.Route" target="_blank">/@Page.Route.Substring(0, Page.Route.Length - Page.Slug.Length)<strong>@Page.Slug</strong></a>
         </SpaceItem>
 
         <SpaceItem>
@@ -14,8 +15,8 @@
     else
     {
         <SpaceItem>
-            <AntDesign.Input @bind-Value="Value" OnBlur="GenerateSlug" Size="@InputSize.Small">
-                <AddOnBefore>/@Page.Route.Substring(0, Page.Route.Length - Value.Length)</AddOnBefore>
+            <AntDesign.Input @bind-Value="Page.Slug" OnBlur="GenerateSlug" Size="@InputSize.Small">
+                <AddOnBefore>/@Page.Route.Substring(0, Page.Route.Length - Page.Slug.Length)</AddOnBefore>
             </AntDesign.Input>
         </SpaceItem>
 
@@ -27,8 +28,7 @@
 
 @code {
     [Parameter] public Page Page { get; set; }
-    [Parameter] public string Value { get; set; }
-    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback<Page> PageChanged { get; set; }
 
     bool Editing { get; set; } = false;
 
@@ -39,15 +39,17 @@
 
     void GenerateSlug()
     {
-        Value = Value.ToUrlSlug();
+        Page.Slug = Page.Slug.ToUrlSlug();
     }
 
     async Task Save()
     {
         GenerateSlug();
 
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
+        Page.Route = PageService.RenderRoute(Page);
+
+        if (PageChanged.HasDelegate)
+            await PageChanged.InvokeAsync(Page);
 
         Editing = false;
     }

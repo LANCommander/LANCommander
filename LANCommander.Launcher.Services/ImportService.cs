@@ -465,7 +465,7 @@ namespace LANCommander.Launcher.Services
                     media.GameId = mediaMap.ContainsKey(importMedia.Id) ? mediaMap[importMedia.Id] : Guid.Empty;
 
                     return media;
-                }, false);
+                }, true);
 
                 op.Complete();
             }

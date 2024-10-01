@@ -41,7 +41,7 @@
             {
                 <Alert Type="@AlertType.Success" Message="@($"This issue was resolved on {Issue.ResolvedOn} by {Issue?.ResolvedBy?.UserName} and was reported by {Issue?.CreatedBy?.UserName} on {Issue.CreatedOn}")" ShowIcon="true" Style="margin-bottom: 16px" />
             }
-            else
+            else if (Id != Guid.Empty)
             {
                 <Alert Type="@AlertType.Info" Message="@($"This issue was reported by {Issue?.CreatedBy?.UserName} on {Issue.CreatedOn}")" ShowIcon="true" Style="margin-bottom: 16px" />
             }
@@ -55,7 +55,7 @@
                         <GridCol Flex=@("auto")>
                             <Select TItem="Game"
                                     TItemValue="Guid"
-                                    DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                                    DataSource="@Games?.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
                                     @bind-Value="@context.GameId"
                                     LabelName="Title"
                                     ValueName="Id"
@@ -70,7 +70,14 @@
                             </Select>
                         </GridCol>
                         <GridCol Flex=@("none")>
-                            <a href="/Games/@(context.Game.Id)" target="_blank" class="ant-btn ant-btn-primary">Edit</a>
+                            @if (context.Game != null && context.GameId != Guid.Empty)
+                            {
+                                <a href="/Games/@(context.Game?.Id)" target="_blank" class="ant-btn ant-btn-primary">Edit</a>
+                            }
+                            else
+                            {
+                                <Button Type="@ButtonType.Primary" Disabled="true">Edit</Button>
+                            }
                         </GridCol>
                     </GridRow>
                 </FormItem>

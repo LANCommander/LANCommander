@@ -25,12 +25,12 @@
                     @if (Id != Guid.Empty)
                     {
                         <SpaceItem>
-                            <Button OnClick="Resolve">Resolve</Button>
+                            <Button OnClick="Resolve" Disabled="@(Issue?.ResolvedOn != null)">Resolve</Button>
                         </SpaceItem>
                     }
 
                     <SpaceItem>
-                        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                        <Button Type="@ButtonType.Primary" OnClick="Save" Disabled="@(Issue?.ResolvedOn != null)">Save</Button>
                     </SpaceItem>
                 </Space>
             </PageHeaderExtra>

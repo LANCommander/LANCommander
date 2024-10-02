@@ -82,7 +82,10 @@ jobs:
 
     - name: Bundle
       run: |
-        Copy-Item -Force LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
+
+    - name: Rename Updater
+      run: mv ./LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe ./LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe.Update
 
     # Create Linux arm64 ZIP file
     - name: Package Linux Build

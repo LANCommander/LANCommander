@@ -67,8 +67,8 @@ jobs:
 
     - name: Bundle
       run: |
-        Copy-Item -Force -Recurse LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
-        Copy-Item -Force -Recurse LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
 
     - name: Remove Extra Files
       run: |
@@ -88,7 +88,7 @@ jobs:
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/Libraries/locales
 
     - name: Rename Updater
-      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe.Update
+      run: mv ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe.Update
 
     # Create ZIP file
     - name: Package Launcher Build

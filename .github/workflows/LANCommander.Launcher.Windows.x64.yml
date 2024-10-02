@@ -47,8 +47,8 @@ jobs:
       run: dotnet restore
 
     # Auto Updater
-    - name: Publish Updater
-      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Build Updater
+      run: dotnet build "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     
     # UI
     - run: cd ./LANCommander.UI; npm install; npm run package
@@ -59,19 +59,19 @@ jobs:
     - name: Build Launcher
       run: dotnet build "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
-    - name: List Files
-      run: dir -r  | % { if ($_.PsIsContainer) { $_.FullName + "\" } else { $_.FullName } }
-
     # CLI
     - run: cd ./LANCommander.Launcher.CLI
 
-    - name: Publish CLI
-      run: dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+    - name: Build CLI
+      run: dotnet build "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+
+    - name: List Files
+      run: dir -r  | % { if ($_.PsIsContainer) { $_.FullName + "\" } else { $_.FullName } }
 
     - name: Bundle
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/
-        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/
+        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/
 
     - name: Remove Extra Files
       run: |

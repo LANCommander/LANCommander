@@ -84,9 +84,6 @@ jobs:
       run: |
         Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/* LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/
 
-    - name: Rename Updater
-      run: mv ./LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/LANCommander.AutoUpdater.exe ./LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/LANCommander.AutoUpdater.exe.Update
-
     # Create Linux arm64 ZIP file
     - name: Package Linux Build
       uses: vimtor/action-zip@v1.2

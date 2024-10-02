@@ -123,7 +123,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LANCommander.PCGamingWiki\LANCommander.PCGamingWiki.csproj" />
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
     <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
     <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />

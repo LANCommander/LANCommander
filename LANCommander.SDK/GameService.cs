@@ -186,7 +186,14 @@ namespace LANCommander.SDK
         {
             Logger?.LogTrace("Ending a game session...");
 
-            await Client.PostRequestAsync<object>($"/api/PlaySessions/End/{id}");
+            try
+            {
+                await Client.PostRequestAsync<object>($"/api/PlaySessions/End/{id}");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Failed sending end session request to server");
+            }
         }
 
         public string GetAllocatedKey(Guid id)

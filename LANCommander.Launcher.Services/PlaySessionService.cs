@@ -38,14 +38,12 @@ namespace LANCommander.Launcher.Services
                 };
 
                 await Add(session);
+
+                await Client.Games.StartPlaySessionAsync(gameId);
             }
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "An unknown error occurred while trying to start session recording for game with ID {GameId}", gameId);
-            }
-            finally
-            {
-                await Client.Games.StartPlaySessionAsync(gameId);
             }
         }
 

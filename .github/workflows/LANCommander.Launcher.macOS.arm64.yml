@@ -68,6 +68,7 @@ jobs:
     - name: Bundle
       run: |
         Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
 
     - name: Remove Extra Files
       run: |

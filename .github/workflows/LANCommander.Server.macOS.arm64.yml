@@ -48,7 +48,7 @@ jobs:
 
     # Auto Updater
     - name: Publish Linux arm64 Updater
-      run: dotnet build "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     - name: Rename Linux arm64 Updater
       run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/LANCommander.AutoUpdater ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/LANCommander.AutoUpdater.Update
 
@@ -61,7 +61,7 @@ jobs:
 
     # Linux arm64
     - name: Publish Linux
-      run: dotnet build "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
+      run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
     - name: Remove Extra Files
       run: |

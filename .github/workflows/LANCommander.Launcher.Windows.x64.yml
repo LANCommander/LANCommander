@@ -47,7 +47,7 @@ jobs:
       run: dotnet restore
 
     # Auto Updater
-    - name: Build Updater
+    - name: Publish Updater
       run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
     
     # UI
@@ -56,22 +56,19 @@ jobs:
     # Launcher
     - run: cd ./LANCommander.Launcher; npm install
 
-    - name: Build Launcher
+    - name: Publish Launcher
       run: dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
 
     # CLI
     - run: cd ./LANCommander.Launcher.CLI
 
-    - name: Build CLI
+    - name: Publish CLI
       run: dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c Release --self-contained --runtime ${{ env.BUILD_RUNTIME }} -p:Version="${{ steps.trim_tag_ref.outputs.replaced }}" -p:AssemblyVersion="${{ steps.trim_tag_ref.outputs.replaced }}"
-
-    - name: List Files
-      run: dir -r  | % { if ($_.PsIsContainer) { $_.FullName + "\" } else { $_.FullName } }
 
     - name: Bundle
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/
-        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/* LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
 
     - name: Remove Extra Files
       run: |
@@ -91,7 +88,7 @@ jobs:
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/Libraries/locales
 
     - name: Rename Updater
-      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/LANCommander.AutoUpdater.exe ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/LANCommander.AutoUpdater.exe.Update
+      run: mv ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe ./LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/LANCommander.AutoUpdater.exe.Update
 
     # Create ZIP file
     - name: Package Launcher Build

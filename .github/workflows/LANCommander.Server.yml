@@ -71,7 +71,7 @@ jobs:
 
     - name: Bundle
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/
 
     - name: Remove Extra Files
       run: |

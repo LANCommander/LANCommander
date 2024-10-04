@@ -3,26 +3,25 @@ name: LANCommander Server
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      version_tag:
+        description: 'Version Tag'
+        required: true
+      build_runtime:
+        description: 'Build Runtime'
+        required: false
+        default: 'win-x64'
+      build_arch:
+        description: 'Build Architecture'
+        required: false
+        default: 'x64'
+      build_platform:
+        description: 'Build Platform'
+        required: false
+        default: 'Windows'
 
 permissions:
   contents: write
-
-inputs:
-  version_tag:
-    description: 'Version Tag'
-    required: true
-  build_runtime:
-    description: 'Build Runtime'
-    required: false
-    default: 'win-x64'
-  build_arch:
-    description: 'Build Architecture'
-    required: false
-    default: 'x64'
-  build_platform:
-    description: 'Build Platform'
-    required: false
-    default: 'Windows'
 
 jobs:
   build:

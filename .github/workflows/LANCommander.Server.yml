@@ -82,6 +82,7 @@ jobs:
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/AntDesign/less
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/Identity/lib/bootstrap
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.ico
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommanderDark.ico
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package-lock.json

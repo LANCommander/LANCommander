@@ -4,6 +4,7 @@ using Semver;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -32,9 +33,15 @@ namespace LANCommander.Launcher.Services
         {
             var settings = SettingService.GetSettings();
 
-            Logger?.LogInformation("Updating launcher to v{Version}", version);
+            Logger?.LogInformation("Downloading launcher v{Version}", version);
 
-            await Client.Launcher.DownloadAsync(Path.Combine(settings.Updates.StoragePath, $"{version}.zip"));
+            string path = Path.Combine(settings.Updates.StoragePath, $"{version}.zip");
+
+            await Client.Launcher.DownloadAsync(path);
+
+            Logger?.LogInformation("Update version {Version} has been downloaded", version);
+
+            Logger?.LogInformation("New autoupdater is being extracted");
 
             string processExecutable = String.Empty;
 
@@ -42,6 +49,14 @@ namespace LANCommander.Launcher.Services
                 processExecutable = "LANCommander.AutoUpdater.exe";
             else if (File.Exists("LANCommander.AutoUpdater"))
                 processExecutable = "LANCommander.AutoUpdater";
+
+            using (ZipArchive archive = ZipFile.OpenRead(path))
+            {
+                foreach (ZipArchiveEntry entry in archive.Entries.Where(e => e.FullName == processExecutable))
+                {
+                    entry.ExtractToFile(Path.Combine(processExecutable, entry.FullName));
+                }
+            }
 
             var process = new ProcessStartInfo();
 

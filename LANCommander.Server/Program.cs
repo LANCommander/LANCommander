@@ -349,23 +349,6 @@ namespace LANCommander.Server
             else
                 Log.Debug("No pending migrations are available. Skipping database migration.");
 
-            // Replace autoupdater executable
-            if (File.Exists("LANCommander.AutoUpdater.exe.Update"))
-            {
-                if (File.Exists("LANCommander.AutoUpdater.exe"))
-                    File.Delete("LANCommander.AutoUpdater.exe");
-
-                File.Move("LANCommander.AutoUpdater.exe.Update", "LANCommander.AutoUpdater.exe");
-            }
-
-            if (File.Exists("LANCommander.AutoUpdater.Update"))
-            {
-                if (File.Exists("LANCommander.AutoUpdater"))
-                    File.Delete("LANCommander.AutoUpdater");
-
-                File.Move("LANCommander.AutoUpdater.Update", "LANCommander.AutoUpdater");
-            }
-
             // Autostart any server processes
             Log.Debug("Autostarting Servers");
             var serverService = scope.ServiceProvider.GetService<ServerService>();

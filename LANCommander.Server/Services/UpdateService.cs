@@ -1,7 +1,9 @@
 ﻿using LANCommander.Server.Models;
 using Octokit;
 using Semver;
+using System;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -94,6 +96,7 @@ namespace LANCommander.Server.Services
 
                 client.DownloadFileCompleted += ReleaseDownloaded;
                 client.QueryString.Add("Version", release.TagName);
+
                 await client.DownloadFileTaskAsync(new Uri(releaseFile), Path.Combine(Settings.Update.StoragePath, $"{release.TagName}.zip"));
             }
         }
@@ -115,7 +118,7 @@ namespace LANCommander.Server.Services
                     var uri = new Uri(releaseFile);
 
                     client.QueryString.Add("Version", release.TagName);
-                    await client.DownloadFileTaskAsync(uri, Path.Combine(Settings.Update.StoragePath, uri.Segments.Last()));
+                    await client.DownloadFileTaskAsync(uri, Path.Combine(Settings.Update.StoragePath, $"{release.TagName}.zip"));
                 }
             }
         }
@@ -150,9 +153,11 @@ namespace LANCommander.Server.Services
         private void ReleaseDownloaded(object? sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
             string version = ((WebClient)sender).QueryString["Version"];
+            string path = Path.Combine(Settings.Update.StoragePath, $"{version}.zip");
 
             Logger?.LogInformation("Update version {Version} has been downloaded", version);
-            Logger?.LogInformation("Running auto updater application");
+
+            Logger?.LogInformation("New autoupdater is being extracted");
 
             string processExecutable = String.Empty;
 
@@ -160,6 +165,16 @@ namespace LANCommander.Server.Services
                 processExecutable = "LANCommander.AutoUpdater.exe";
             else if (File.Exists("LANCommander.AutoUpdater"))
                 processExecutable = "LANCommander.AutoUpdater";
+
+            using (ZipArchive archive = ZipFile.OpenRead(path))
+            {
+                foreach (ZipArchiveEntry entry in archive.Entries.Where(e => e.FullName == processExecutable))
+                {
+                    entry.ExtractToFile(Path.Combine(processExecutable, entry.FullName));
+                }
+            }
+
+            Logger?.LogInformation("Running auto updater application");
 
             var process = new ProcessStartInfo();
 

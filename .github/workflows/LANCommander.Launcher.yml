@@ -96,11 +96,6 @@ jobs:
         rm -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/hostfxr.dll.bak
         rm -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/Libraries/locales
 
-    - name: Rename Updater
-      run: |
-        mv -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.exe ./LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.exe.Update
-        mv -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater ./LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.Update
-
     # Create ZIP file
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2

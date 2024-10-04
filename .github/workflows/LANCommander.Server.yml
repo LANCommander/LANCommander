@@ -90,11 +90,6 @@ jobs:
         rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
         rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/Libraries/locales
 
-    - name: Rename Updater
-      run: |
-        mv -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.exe ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.exe.Update
-        mv -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.Update
-
     # Create final ZIP file
     - name: Package Build
       uses: vimtor/action-zip@v1.2

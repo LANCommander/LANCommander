@@ -75,20 +75,20 @@ jobs:
 
     - name: Remove Extra Files
       run: |
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/AntDesign/less
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.ico
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommanderDark.ico
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package-lock.json
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package.json
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/*.pdb
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
-        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/Libraries/locales
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.ico
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommanderDark.ico
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package-lock.json
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package.json
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/*.pdb
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
+        rm -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/Libraries/locales
 
     - name: Rename Updater
       run: |

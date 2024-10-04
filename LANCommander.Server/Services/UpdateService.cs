@@ -164,7 +164,7 @@ namespace LANCommander.Server.Services
             var process = new ProcessStartInfo();
 
             process.FileName = processExecutable;
-            process.Arguments = $"-Version {version} -Path \"{Settings.Update.StoragePath}\"";
+            process.Arguments = $"-Version {version} -Path \"{Settings.Update.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
             process.UseShellExecute = true;
 
             Process.Start(process);

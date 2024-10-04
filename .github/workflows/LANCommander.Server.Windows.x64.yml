@@ -82,10 +82,6 @@ jobs:
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/hostfxr.dll.bak
         rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Launcher/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/Libraries/locales
 
-    - name: Bundle
-      run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/* LANCommander.Server/bin/Release/net8.0/${{ env.BUILD_RUNTIME }}/publish/
-
     # Create final ZIP file
     - name: Package Build
       uses: vimtor/action-zip@v1.2

@@ -1,0 +1,107 @@
+name: LANCommander Server
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: write
+
+inputs:
+  version_tag:
+    description: 'Version Tag'
+    required: true
+  build_runtime:
+    description: 'Build Runtime'
+    required: false
+    default: 'win-x64'
+  build_arch:
+    description: 'Build Architecture'
+    required: false
+    default: 'x64'
+  build_platform:
+    description: 'Build Platform'
+    required: false
+    default: 'Windows'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+    - uses: frabert/replace-string-action@v2
+      name: Swap Path Backslashes
+      id: swap_path_backslashes
+      with:
+        string: '${{ github.workspace }}'
+        pattern: '\\'
+        replace-with: '/'
+        flags: g
+
+    # dotnet
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+
+    # Auto Updater
+    - name: Publish Updater
+      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_tag }}"
+
+    # Node.js
+    - name: Setup Node.js environment
+      uses: actions/setup-node@v3.8.1
+
+    # UI
+    - run: cd ./LANCommander.UI; npm install; npm run package
+
+    - name: Publish Server
+      run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_tag }}"
+
+    - name: Bundle
+      run: |
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/
+
+    - name: Remove Extra Files
+      run: |
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/AntDesign/less
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommanderDark.ico
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package-lock.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package.json
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/*.pdb
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
+        rm -Recurse -Force -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/Libraries/locales
+
+    - name: Rename Updater
+      run: |
+        mv -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.exe ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.exe.Update
+        mv -ErrorAction Ignore ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater ./LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.AutoUpdater.Update
+
+    # Create final ZIP file
+    - name: Package Build
+      uses: vimtor/action-zip@v1.2
+      with:
+        files: LANCommander.Server/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/
+        recursive: true
+        dest: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        path: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        name: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

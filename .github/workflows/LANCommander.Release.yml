@@ -9,33 +9,103 @@ permissions:
   contents: write
 
 jobs:
+  prep:
+    steps:
+      - uses: frabert/replace-string-action@v2
+        name: Trim Tag Ref
+        id: trim_tag_ref
+        with:
+          string: '${{ github.ref }}'
+          pattern: 'refs/tags/v'
+          replace-with: ''
+
   # Server
   build_server_linux-arm64:
-    uses: ./.github/workflows/LANCommander.Server.Linux.arm64.yml
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
   build_server_linux-x64:
-    uses: ./.github/workflows/LANCommander.Server.Linux.x64.yml
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
   build_server_osx-arm64:
-    uses: ./.github/workflows/LANCommander.Server.macOS.arm64.yml
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
   build_server_osx-x64:
-    uses: ./.github/workflows/LANCommander.Server.macOS.x64.yml
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
   build_server_win-arm64:
-    uses: ./.github/workflows/LANCommander.Server.Windows.arm64.yml
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
   build_server_win-x64:
-    uses: ./.github/workflows/LANCommander.Server.Windows.x64.yml
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
 
   # Launcher
   build_launcher_linux-arm64:
-    uses: ./.github/workflows/LANCommander.Launcher.Linux.arm64.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
   build_launcher_linux-x64:
-    uses: ./.github/workflows/LANCommander.Launcher.Linux.x64.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
   build_launcher_osx-arm64:
-    uses: ./.github/workflows/LANCommander.Launcher.macOS.arm64.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
   build_launcher_osx-x64:
-    uses: ./.github/workflows/LANCommander.Launcher.macOS.x64.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
   build_launcher_win-arm64:
-    uses: ./.github/workflows/LANCommander.Launcher.Windows.arm64.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
   build_launcher_win-x64:
-    uses: ./.github/workflows/LANCommander.Launcher.Windows.x64.yml
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
 
   build_release:
     runs-on: windows-latest

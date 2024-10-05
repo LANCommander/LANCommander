@@ -743,7 +743,7 @@ namespace LANCommander.SDK.Services
 
         public async Task RunAsync(string installDirectory, Guid gameId, Models.Action action, DateTime? lastRun, string args = "")
         {
-            var profile = await Client.Profile.GetAsync();
+            var alias = await Client.Profile.GetAliasAsync();
             var screen = DisplayHelper.GetScreen();
 
             using (var context = new GameExecutionContext(Client, Logger))
@@ -766,8 +766,8 @@ namespace LANCommander.SDK.Services
                     var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
 
                     #region Check Game's Player Name
-                    if (currentGamePlayerAlias != await Client.Profile.GetAliasAsync())
-                        await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, profile.Alias);
+                    if (currentGamePlayerAlias != alias)
+                        await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, alias);
                     #endregion
 
                     #region Check Key Allocation

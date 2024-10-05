@@ -57,14 +57,26 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> GetAliasAsync()
         {
-            var user = await GetAsync();
+            try
+            {
+                User = await GetAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not get user alias from server");
+            }
 
-            return user.Alias;
+            return String.IsNullOrWhiteSpace(User.Alias) ? User.UserName : User.Alias;
         }
 
         public async Task<string> ChangeAliasAsync(string alias)
         {
             Logger?.LogTrace("Requesting to change player alias...");
+
+            if (User == null)
+                User = new User();
+
+            User.Alias = alias;
 
             var response = await Client.PostRequestAsync<string>("/api/Profile/ChangeAlias", new
             {

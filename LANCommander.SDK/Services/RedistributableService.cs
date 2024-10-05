@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.SDK
+namespace LANCommander.SDK.Services
 {
     public class RedistributableService
     {
@@ -127,7 +127,7 @@ namespace LANCommander.SDK
                         OnArchiveExtractionProgress?.Invoke(pos, len);
                     };
 
-                    reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>
+                    reader.EntryExtractionProgress += (sender, e) =>
                     {
                         OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
                         {

@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace LANCommander.SDK
+namespace LANCommander.SDK.Services
 {
     public class ScriptService
     {
@@ -331,7 +331,7 @@ namespace LANCommander.SDK
             try
             {
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
-                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.BeforeStart);
+                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.BeforeStart);
 
                 using (var op = Logger.BeginOperation("Executing before start script"))
                 {
@@ -416,7 +416,7 @@ namespace LANCommander.SDK
             try
             {
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
-                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.AfterStop);
+                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.AfterStop);
 
                 using (var op = Logger.BeginOperation("Executing after stop script"))
                 {
@@ -502,9 +502,9 @@ namespace LANCommander.SDK
                         var oldName = GameService.GetPlayerAlias(installDirectory, gameId);
 
                         if (oldName == newName)
-                            oldName = String.Empty;
+                            oldName = string.Empty;
 
-                        if (!String.IsNullOrWhiteSpace(oldName))
+                        if (!string.IsNullOrWhiteSpace(oldName))
                             Logger?.LogTrace("Old Name: {OldName}", oldName);
 
                         Logger?.LogTrace("New Name: {NewName}", newName);
@@ -538,7 +538,7 @@ namespace LANCommander.SDK
 
                         script.UseFile(path);
 
-                        SDK.GameService.UpdatePlayerAlias(installDirectory, gameId, newName);
+                        GameService.UpdatePlayerAlias(installDirectory, gameId, newName);
 
                         try
                         {
@@ -584,7 +584,7 @@ namespace LANCommander.SDK
 
             try
             {
-                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, SDK.Enums.ScriptType.KeyChange);
+                var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.KeyChange);
                 var manifest = ManifestHelper.Read(installDirectory, gameId);
 
                 using (var op = Logger.BeginOperation("Executing key change script"))

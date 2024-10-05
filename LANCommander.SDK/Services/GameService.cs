@@ -19,7 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace LANCommander.SDK
+namespace LANCommander.SDK.Services
 {
     public class GameInstallProgress
     {
@@ -114,7 +114,7 @@ namespace LANCommander.SDK
                     {
                         var dependentGameManifest = await ManifestHelper.ReadAsync(installDirectory, dependentGameId);
 
-                        if (dependentGameManifest.Type == SDK.Enums.GameType.Expansion || dependentGameManifest.Type == SDK.Enums.GameType.Mod)
+                        if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
                             manifests.Add(dependentGameManifest);
                     }
                     catch (Exception ex)
@@ -145,7 +145,7 @@ namespace LANCommander.SDK
                     actions.AddRange(remoteGame.Servers.Where(s => s.Actions != null).SelectMany(s => s.Actions));
             }
 
-            if (manifests.Any(m => (m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby) || (m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby)))
+            if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
             {
                 var primaryAction = actions.First();
                 var lobbies = Client.Lobbies.GetSteamLobbies(installDirectory, id);
@@ -213,7 +213,7 @@ namespace LANCommander.SDK
             var response = Client.PostRequest<Key>($"/api/Keys/GetAllocated/{id}", request);
 
             if (response == null)
-                return String.Empty;
+                return string.Empty;
 
             return response.Value;
         }
@@ -235,7 +235,7 @@ namespace LANCommander.SDK
             var response = await Client.PostRequestAsync<Key>($"/api/Keys/GetAllocated/{id}", request);
 
             if (response == null)
-                return String.Empty;
+                return string.Empty;
 
             return response.Value;
         }
@@ -257,7 +257,7 @@ namespace LANCommander.SDK
             var response = Client.PostRequest<Key>($"/api/Keys/Allocate/{id}", request);
 
             if (response == null)
-                return String.Empty;
+                return string.Empty;
 
             return response.Value;
         }
@@ -273,7 +273,7 @@ namespace LANCommander.SDK
         {
             GameManifest manifest = null;
 
-            if (String.IsNullOrWhiteSpace(installDirectory))
+            if (string.IsNullOrWhiteSpace(installDirectory))
                 installDirectory = Client.DefaultInstallDirectory;
 
             var game = Get(gameId);
@@ -310,7 +310,7 @@ namespace LANCommander.SDK
             Logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
 
             // Download and extract
-            var result = await RetryHelper.RetryOnExceptionAsync<ExtractionResult>(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
+            var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
             {
                 Logger?.LogTrace("Attempting to download and extract game");
 
@@ -471,7 +471,7 @@ namespace LANCommander.SDK
             #endregion
 
             #region Delete Files
-            var fileListPath = GameService.GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
+            var fileListPath = GetMetadataFilePath(installDirectory, gameId, "FileList.txt");
 
             if (File.Exists(fileListPath))
             {
@@ -571,7 +571,7 @@ namespace LANCommander.SDK
                     }
                 };
 
-                Reader.EntryExtractionProgress += (object sender, ReaderExtractionEventArgs<IEntry> e) =>
+                Reader.EntryExtractionProgress += (sender, e) =>
                 {
                     // Do we need this granular of control? If so, invocations should be rate limited
                     OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
@@ -691,7 +691,7 @@ namespace LANCommander.SDK
 
         public string GetInstallDirectory(Game game, string installDirectory)
         {
-            if (String.IsNullOrWhiteSpace(installDirectory))
+            if (string.IsNullOrWhiteSpace(installDirectory))
                 installDirectory = Client.DefaultInstallDirectory;
 
             if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGame != null)
@@ -907,7 +907,7 @@ namespace LANCommander.SDK
 
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)
         {
-            if (String.IsNullOrWhiteSpace(installDirectory))
+            if (string.IsNullOrWhiteSpace(installDirectory))
                 return "";
 
             return Path.Combine(installDirectory, ".lancommander", gameId.ToString());
@@ -920,62 +920,62 @@ namespace LANCommander.SDK
 
         public static string GetPlayerAlias(string installDirectory, Guid gameId)
         {
-            var aliasFilePath = GameService.GetMetadataFilePath(installDirectory, gameId, GameService.PlayerAliasFilename);
+            var aliasFilePath = GetMetadataFilePath(installDirectory, gameId, PlayerAliasFilename);
 
             if (File.Exists(aliasFilePath))
                 return File.ReadAllText(aliasFilePath);
             else
-                return String.Empty;
+                return string.Empty;
         }
 
         public static async Task<string> GetPlayerAliasAsync(string installDirectory, Guid gameId)
         {
-            var aliasFilePath = GameService.GetMetadataFilePath(installDirectory, gameId, GameService.PlayerAliasFilename);
+            var aliasFilePath = GetMetadataFilePath(installDirectory, gameId, PlayerAliasFilename);
 
             if (File.Exists(aliasFilePath))
                 return await File.ReadAllTextAsync(aliasFilePath);
             else
-                return String.Empty;
+                return string.Empty;
         }
 
         public static void UpdatePlayerAlias(string installDirectory, Guid gameId, string newName)
         {
-            File.WriteAllText(GameService.GetMetadataFilePath(installDirectory, gameId, GameService.PlayerAliasFilename), newName);
+            File.WriteAllText(GetMetadataFilePath(installDirectory, gameId, PlayerAliasFilename), newName);
         }
 
         public static async Task UpdatePlayerAliasAsync(string installDirectory, Guid gameId, string newName)
         {
-            await File.WriteAllTextAsync(GameService.GetMetadataFilePath(installDirectory, gameId, GameService.PlayerAliasFilename), newName);
+            await File.WriteAllTextAsync(GetMetadataFilePath(installDirectory, gameId, PlayerAliasFilename), newName);
         }
 
         public static string GetCurrentKey(string installDirectory, Guid gameId)
         {
-            var keyFilePath = GameService.GetMetadataFilePath(installDirectory, gameId, GameService.KeyFilename);
+            var keyFilePath = GetMetadataFilePath(installDirectory, gameId, KeyFilename);
 
             if (File.Exists(keyFilePath))
                 return File.ReadAllText(keyFilePath);
             else
-                return String.Empty;
+                return string.Empty;
         }
 
         public static async Task<string> GetCurrentKeyAsync(string installDirectory, Guid gameId)
         {
-            var keyFilePath = GameService.GetMetadataFilePath(installDirectory, gameId, GameService.KeyFilename);
+            var keyFilePath = GetMetadataFilePath(installDirectory, gameId, KeyFilename);
 
             if (File.Exists(keyFilePath))
                 return await File.ReadAllTextAsync(keyFilePath);
             else
-                return String.Empty;
+                return string.Empty;
         }
 
         public static void UpdateCurrentKey(string installDirectory, Guid gameId, string newKey)
         {
-            File.WriteAllText(GameService.GetMetadataFilePath(installDirectory, gameId, GameService.KeyFilename), newKey);
+            File.WriteAllText(GetMetadataFilePath(installDirectory, gameId, KeyFilename), newKey);
         }
 
         public static async Task UpdateCurrentKeyAsync(string installDirectory, Guid gameId, string newKey)
         {
-            await File.WriteAllTextAsync(GameService.GetMetadataFilePath(installDirectory, gameId, GameService.KeyFilename), newKey);
+            await File.WriteAllTextAsync(GetMetadataFilePath(installDirectory, gameId, KeyFilename), newKey);
         }
     }
 }

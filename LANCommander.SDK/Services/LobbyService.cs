@@ -10,7 +10,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.SDK
+namespace LANCommander.SDK.Services
 {
     public class LobbyService
     {
@@ -73,7 +73,8 @@ namespace LANCommander.SDK
                     }
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 Logger?.LogError(ex, "Couldn't initialize Steamworks");
             }
 
@@ -86,7 +87,8 @@ namespace LANCommander.SDK
             {
                 SteamClient.Shutdown();
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
 
             }
         }

@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.SDK
+namespace LANCommander.SDK.Services
 {
     public class LauncherService
     {

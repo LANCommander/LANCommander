@@ -1,5 +1,4 @@
 ﻿using Force.Crc32;
-using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
@@ -22,7 +21,7 @@ using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace LANCommander.SDK
+namespace LANCommander.SDK.Services
 {
     public class IssueService
     {

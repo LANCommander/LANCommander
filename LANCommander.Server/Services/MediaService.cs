@@ -79,7 +79,7 @@ namespace LANCommander.Server.Services
                 }
             }
 
-            media.Crc32 = SDK.MediaService.CalculateChecksum(path);
+            media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
             media.FileId = fileId;
 
             return media;
@@ -118,7 +118,7 @@ namespace LANCommander.Server.Services
                 FileId = fileId,
                 MimeType = MediaTypeNames.Application.Pdf,
                 Type = SDK.Enums.MediaType.Thumbnail,
-                Crc32 = SDK.MediaService.CalculateChecksum(path),
+                Crc32 = SDK.Services.MediaService.CalculateChecksum(path),
             };
 
             return media;
@@ -160,7 +160,7 @@ namespace LANCommander.Server.Services
                 }
             }
 
-            media.Crc32 = SDK.MediaService.CalculateChecksum(path);
+            media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
             media.FileId = fileId;
 
             return media;

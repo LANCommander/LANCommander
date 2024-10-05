@@ -6,6 +6,7 @@ using System.Text;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using System.Threading.Tasks;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.SDK.Helpers
 {

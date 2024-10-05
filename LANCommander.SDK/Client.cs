@@ -1,7 +1,7 @@
-﻿using LANCommander.SDK;
-using LANCommander.SDK.Exceptions;
+﻿using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell.Cmdlets;
+using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
 using RestSharp;
 using RestSharp.Interceptors;

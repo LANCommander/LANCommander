@@ -55,7 +55,7 @@ namespace LANCommander.Launcher.Services
                         FileId = Guid.NewGuid(),
                         Type = SDK.Enums.MediaType.Avatar,
                         MimeType = MediaTypeNames.Image.Png,
-                        Crc32 = SDK.MediaService.CalculateChecksum(tempAvatarPath),
+                        Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
                     };
 
                     media = await MediaService.Add(media);
@@ -118,7 +118,7 @@ namespace LANCommander.Launcher.Services
                         FileId = Guid.NewGuid(),
                         Type = SDK.Enums.MediaType.Avatar,
                         MimeType = MediaTypeNames.Image.Png,
-                        Crc32 = SDK.MediaService.CalculateChecksum(tempAvatarPath),
+                        Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
                     };
 
                     media = await MediaService.Add(media);

@@ -1,5 +1,4 @@
-﻿using LANCommander.SDK;
-using LANCommander.SDK.Extensions;
+﻿using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
@@ -29,7 +28,7 @@ using YamlDotNet.Serialization.NamingConventions;
 // Other notes:
 // - Entries in the ZIP are separated by save path ID to avoid collision
 
-namespace LANCommander.SDK
+namespace LANCommander.SDK.Services
 {
     public class SaveService
     {
@@ -90,8 +89,8 @@ namespace LANCommander.SDK
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
-            string tempFile = String.Empty;
-            string tempLocation = String.Empty;
+            string tempFile = string.Empty;
+            string tempLocation = string.Empty;
 
             if (manifest != null)
             {
@@ -117,9 +116,9 @@ namespace LANCommander.SDK
                         OnDownloadComplete?.Invoke(complete);
                     });
                 }
-                
 
-                if (String.IsNullOrWhiteSpace(destination))
+
+                if (string.IsNullOrWhiteSpace(destination))
                     return;
 
                 Logger?.LogTrace("Game save archive downloaded to {SaveTempLocation}", destination);
@@ -133,7 +132,7 @@ namespace LANCommander.SDK
 
                     Directory.CreateDirectory(tempLocation);
 
-                    bool success = RetryHelper.RetryOnException<bool>(10, TimeSpan.FromMilliseconds(200), false, () =>
+                    bool success = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(200), false, () =>
                     {
                         Logger?.LogTrace("Attempting to extracting save entries to the temporary location {TempPath}");
 
@@ -328,7 +327,7 @@ namespace LANCommander.SDK
                 var workingDirectory = GetLocalPath(savePath.WorkingDirectory, installDirectory);
                 var pattern = savePath.Path;
 
-                if (String.IsNullOrWhiteSpace(workingDirectory))
+                if (string.IsNullOrWhiteSpace(workingDirectory))
                     workingDirectory = installDirectory;
 
                 if (Path.DirectorySeparatorChar == '\\')

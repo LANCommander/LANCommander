@@ -5,6 +5,7 @@ using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
+using LANCommander.SDK;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -79,17 +80,34 @@ namespace LANCommander.Launcher
                 .SetChromeless(true)
                 .RegisterCustomSchemeHandler("media", (object sender, string scheme, string url, out string contentType) =>
                 {
-                    var uri = new Uri(url);
-                    var query = HttpUtility.ParseQueryString(uri.Query);
+                    try
+                    {
+                        var uri = new Uri(url);
 
-                    var filePath = Path.Combine(MediaService.GetStoragePath(), uri.Host);
+                        var query = HttpUtility.ParseQueryString(uri.Query);
 
-                    contentType = query["mime"];
+                        var id = query["id"];
+                        var fileId = query["fileId"];
+                        var crc32 = query["crc32"];
+                        var mime = query["mime"];
 
-                    if (File.Exists(filePath))
-                        return new FileStream(filePath, FileMode.Open, FileAccess.Read);
-                    else
-                        return null;
+                        contentType = mime;
+
+                        var filePath = Path.Combine(MediaService.GetStoragePath(), $"{fileId}-{crc32}");
+
+                        if (File.Exists(filePath))
+                            return new FileStream(filePath, FileMode.Open, FileAccess.Read);
+                        else
+                            return null;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.Warning(ex, "Image not found locally");
+
+                        contentType = "";
+                    }
+
+                    return null;
                 })
                 .RegisterWebMessageReceivedHandler(async (object sender, string message) =>
                 {

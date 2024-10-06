@@ -505,6 +505,59 @@ namespace LANCommander.Launcher.Services
 
         }
 
+        public async Task<Media> ImportMedia(Guid importMediaId, Guid? gameId = null)
+        {
+            SDK.Models.Game game = null;
+
+            if (gameId.HasValue)
+                game = await Client.Games.GetAsync(gameId.Value);
+
+            var media = await Client.Media.Get(importMediaId);
+
+            return await ImportMedia(media, game);
+        }
+
+        public async Task<Media> ImportMedia(SDK.Models.Media importMedia, SDK.Models.Game game = null)
+        {
+            var media = await MediaService.Get(importMedia.Id);
+
+            if (media == null)
+                media = new Media();
+
+            media.FileId = importMedia.FileId;
+            media.Type = importMedia.Type;
+            media.SourceUrl = importMedia.SourceUrl;
+            media.MimeType = importMedia.MimeType;
+            media.Crc32 = importMedia.Crc32;
+            media.Name = importMedia.Name ?? String.Empty;
+            media.GameId = game?.Id ?? Guid.Empty;
+
+            if (media.Id == Guid.Empty)
+            {
+                media.Id = importMedia.Id;
+
+                await MediaService.Add(media);
+            }
+            else
+                await MediaService.Update(media);
+
+            var mediaStoragePath = MediaService.GetStoragePath();
+            var localPath = MediaService.GetImagePath(media);
+
+            if (!File.Exists(localPath) && media.Type != SDK.Enums.MediaType.Manual)
+            {
+                await Client.Media.DownloadAsync(new SDK.Models.Media
+                {
+                    Id = media.Id,
+                    FileId = media.FileId
+                }, localPath);
+
+                MessageBusService.MediaChanged(media);
+            }
+
+            return media;
+        }
+
         // Could use something like automapper, but that's slow.
         public async Task<IEnumerable<T>> ImportBulk<T, U, V>(IEnumerable<U> importModels, V service, Func<T, U, T> additionalMapping, bool clean = true)
             where T : BaseModel

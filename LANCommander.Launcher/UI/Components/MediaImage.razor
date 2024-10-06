@@ -1,7 +1,10 @@
 ﻿@implements IDisposable
 @using LANCommander.Launcher.Data.Models
+@inject SDK.Client Client
 @inject MediaService MediaService
+@inject ImportService ImportService
 @inject MessageBusService MessageBusService
+@inject ILogger<MediaImage> Logger
 
 <img @ref="Ref" @key="Id" src="@MediaUrl" class="@Class @HiddenClass" @onerror="Hide" />
 
@@ -24,9 +27,15 @@
         try {
             var media = await MediaService.Get(Id);
 
+            if (media == null && Client.IsConnected())
+                media = await ImportService.ImportMedia(Id);
+
             UpdateMediaUrl(media);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Could not load media with ID {MediaId}", Id);
+        }
     }
 
     async Task OnMediaChanged(Media media)
@@ -46,7 +55,7 @@
 
     void UpdateMediaUrl(Media media)
     {
-        MediaUrl = $"media://{media?.FileId}-{media?.Crc32}?mime={media?.MimeType}";
+        MediaUrl = $"media://image?id={media?.Id}&fileId={media?.FileId}&crc32={media?.Crc32}&mime={media?.MimeType}";
     }
 
     public void Dispose()

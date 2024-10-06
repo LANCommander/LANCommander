@@ -1,0 +1,75 @@
+﻿@inject ProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject ModalService ModalService
+
+<Dropdown>
+    <Overlay>
+        <Menu>
+            <MenuItem OnClick="ChangeAlias" Disabled="Settings.Authentication.OfflineMode">
+                Change Name
+            </MenuItem>
+            <MenuItem OnClick="@(() => NavigationManager.NavigateTo("/Settings"))">
+                Settings
+            </MenuItem>
+
+            @if (!Settings.Authentication.OfflineMode)
+            {
+                <MenuItem OnClick="Logout">
+                    Logout
+                </MenuItem>
+            }
+        </Menu>
+    </Overlay>
+
+    <ChildContent>
+        <Button Type="@ButtonType.Primary" Class="appbar-profile-button">
+            @if (Settings.Profile.AvatarId != null && Settings.Profile.AvatarId != Guid.Empty)
+            {
+                <MediaImage Id="@Settings.Profile.AvatarId" />
+            }
+
+            <span>@Settings.Profile.Alias</span>
+        </Button>
+    </ChildContent>
+</Dropdown>
+
+@code {
+    Models.Settings Settings = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Settings = SettingService.GetSettings();
+    }
+
+    async Task ChangeAlias()
+    {
+        var settings = SettingService.GetSettings();
+
+        var modalOptions = new ModalOptions()
+            {
+                Title = "Change Name",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                Centered = true
+            };
+
+        var modalRef = ModalService.CreateModal<ChangeAliasDialog, string, string>(modalOptions, settings.Profile.Alias);
+
+        modalRef.OnOk = async (newName) =>
+        {
+            await ProfileService.ChangeAlias(newName);
+
+            Settings = SettingService.GetSettings();
+
+            await InvokeAsync(StateHasChanged);
+        };
+    }
+
+    async Task Logout()
+    {
+        await ProfileService.Logout();
+
+        NavigationManager.NavigateTo("/Authenticate");
+    }
+}

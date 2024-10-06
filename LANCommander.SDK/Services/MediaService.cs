@@ -40,6 +40,11 @@ namespace LANCommander.SDK.Services
             Logger = logger;
         }
 
+        public async Task<Media> Get(Guid mediaId)
+        {
+            return await Client.GetRequestAsync<Media>($"/api/Media/{mediaId}");
+        }
+
         public async Task<string> DownloadAsync(Media media, string destination)
         {
             return await Client.DownloadRequestAsync(GetDownloadPath(media), destination);

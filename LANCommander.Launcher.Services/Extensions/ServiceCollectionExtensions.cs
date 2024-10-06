@@ -50,12 +50,6 @@ namespace LANCommander.Launcher.Services.Extensions
 
             var client = new SDK.Client(options.ServerAddress, settings.Games.InstallDirectories.First(), options.Logger);
 
-            client.UseToken(new SDK.Models.AuthToken
-            {
-                AccessToken = settings.Authentication.AccessToken,
-                RefreshToken = settings.Authentication.RefreshToken,
-            });
-
             client.Scripts.Debug = settings.Debug.EnableScriptDebugging;
             client.Scripts.ExternalScriptRunner += Scripts_ExternalScriptRunner;
 

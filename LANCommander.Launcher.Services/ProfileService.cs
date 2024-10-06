@@ -1,4 +1,5 @@
-﻿using LANCommander.Launcher.Data.Models;
+﻿using JetBrains.Annotations;
+using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models;
 using Microsoft.Extensions.Logging;
 using System;
@@ -25,17 +26,27 @@ namespace LANCommander.Launcher.Services
             Settings = SettingService.GetSettings();
         }
 
-        public async Task Login(string serverAddress, string username, string password)
+        public async Task Login()
+        {
+            await Login(Settings.Authentication.ServerAddress, new SDK.Models.AuthToken
+            {
+                AccessToken = Settings.Authentication.AccessToken,
+                RefreshToken = Settings.Authentication.RefreshToken,
+            });
+        }
+
+        public async Task Login(string serverAddress, SDK.Models.AuthToken token)
         {
             Client.ChangeServerAddress(serverAddress);
-
-            var token = await Client.AuthenticateAsync(username, password);
 
             Settings = SettingService.GetSettings();
 
             Settings.Authentication.ServerAddress = serverAddress;
             Settings.Authentication.AccessToken = token.AccessToken;
             Settings.Authentication.RefreshToken = token.RefreshToken;
+
+            Client.UseToken(token);
+            await Client.ValidateTokenAsync(token);
 
             SettingService.SaveSettings(Settings);
 
@@ -74,6 +85,15 @@ namespace LANCommander.Launcher.Services
             }
 
             SettingService.SaveSettings(Settings);
+        }
+
+        public async Task Login(string serverAddress, string username, string password)
+        {
+            Client.ChangeServerAddress(serverAddress);
+
+            var token = await Client.AuthenticateAsync(username, password);
+
+            await Login(serverAddress, token);
         }
 
         public async Task Register(string serverAddress, string username, string password, string confirmPassword)

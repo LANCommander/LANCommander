@@ -13,6 +13,17 @@
 
 <div style="padding: 0 24px;">
     <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Database Provider">
+            <Select @bind-Value="context.DatabaseProvider" TItem="DatabaseProvider" TItemValue="DatabaseProvider" DataSource="Enum.GetValues<DatabaseProvider>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+
+        <FormItem Label="Database Connection String">
+            <InputPassword @bind-Value="context.DatabaseConnectionString" />
+        </FormItem>
+
         <FormItem Label="Theme">
             <Select @bind-Value="context.Theme" TItem="LANCommanderTheme" TItemValue="LANCommanderTheme" DataSource="Enum.GetValues<LANCommanderTheme>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>

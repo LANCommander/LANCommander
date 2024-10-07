@@ -38,6 +38,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Server.Data.SQ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Server.Services", "LANCommander.Server.Services\LANCommander.Server.Services.csproj", "{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Server.Data.MySQL", "LANCommander.Server.Data.MySQL\LANCommander.Server.Data.MySQL.csproj", "{D94610EE-EC17-4FB1-AFEA-64D365546413}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Server.Data.PostgreSQL", "LANCommander.Server.Data.PostgreSQL\LANCommander.Server.Data.PostgreSQL.csproj", "{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -104,6 +108,14 @@ Global
 		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Release|Any CPU.Build.0 = Release|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

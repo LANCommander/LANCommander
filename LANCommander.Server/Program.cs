@@ -9,6 +9,8 @@ using System.Text;
 using Hangfire;
 using LANCommander.Server.Services.MediaGrabbers;
 using Microsoft.Data.Sqlite;
+using Pomelo.EntityFrameworkCore.MySql;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using LANCommander.Server.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using LANCommander.SDK.Enums;
@@ -127,7 +129,21 @@ namespace LANCommander.Server
             builder.Services.AddDbContext<DatabaseContext>(b =>
             {
                 b.UseLazyLoadingProxies();
-                b.UseSqlite(settings.DatabaseConnectionString);
+
+                switch (settings.DatabaseProvider)
+                {
+                    case Services.Models.DatabaseProvider.SQLite:
+                        b.UseSqlite(settings.DatabaseConnectionString);
+                        break;
+
+                    case Services.Models.DatabaseProvider.MySQL:
+                        b.UseMySql(settings.DatabaseConnectionString, ServerVersion.AutoDetect(settings.DatabaseConnectionString));
+                        break;
+
+                    case Services.Models.DatabaseProvider.PostgreSQL:
+                        b.UseNpgsql(settings.DatabaseConnectionString);
+                        break;
+                }
             });
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -334,14 +350,17 @@ namespace LANCommander.Server
 
             if ((await db.Database.GetPendingMigrationsAsync()).Any())
             {
-                var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
-
-                var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
-
-                if (File.Exists(dataSource))
+                if (settings.DatabaseProvider == Services.Models.DatabaseProvider.SQLite)
                 {
-                    Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
-                    File.Copy(dataSource, backupName);
+                    var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
+
+                    var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+
+                    if (File.Exists(dataSource))
+                    {
+                        Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
+                        File.Copy(dataSource, backupName);
+                    }
                 }
 
                 await db.Database.MigrateAsync();

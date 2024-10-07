@@ -1,5 +1,12 @@
 ﻿namespace LANCommander.Server.Services.Models
 {
+    public enum DatabaseProvider
+    {
+        SQLite,
+        MySQL,
+        PostgreSQL
+    }
+
     public enum LANCommanderTheme
     {
         Light,
@@ -19,6 +26,7 @@
     public class Settings
     {
         public int Port { get; set; } = 1337;
+        public DatabaseProvider DatabaseProvider { get; set; } = DatabaseProvider.SQLite;
         public string DatabaseConnectionString { get; set; } = "Data Source=LANCommander.db;Cache=Shared";
         public string IGDBClientId { get; set; } = "";
         public string IGDBClientSecret { get; set; } = "";

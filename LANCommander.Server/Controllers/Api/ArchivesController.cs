@@ -26,7 +26,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Archive>>> Get()
         {
-            using (var repo = new Repository<Archive>(Context, HttpContext))
+            using (var repo = new Repository<Archive>(Context))
             {
                 return Ok(await repo.Get(a => true).ToListAsync());
             }
@@ -35,7 +35,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<ActionResult<Archive>> Get(Guid id)
         {
-            using (var repo = new Repository<Archive>(Context, HttpContext))
+            using (var repo = new Repository<Archive>(Context))
             {
                 var archive = await repo.Find(id);
 
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Download/{id}")]
         public async Task<IActionResult> Download(Guid id)
         {
-            using (var repo = new Repository<Archive>(Context, HttpContext))
+            using (var repo = new Repository<Archive>(Context))
             {
                 var archive = await repo.Find(id);
 

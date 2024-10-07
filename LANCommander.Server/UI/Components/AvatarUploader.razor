@@ -1,4 +1,5 @@
-﻿@inject UserService UserService
+﻿@using LANCommander.Server.Models
+@inject UserService UserService
 @inject MediaService MediaService
 @inject IMessageService MessageService
 
@@ -25,6 +26,8 @@
 @code {
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public string Width { get; set; } = "104px";
+
+    LANCommanderSettings Settings = SettingService.GetSettings();
 
     string AvatarUrl;
 
@@ -81,14 +84,14 @@
 
         if (media.Id == Guid.Empty)
         {
-            media = await MediaService.UploadMediaAsync(e.File, media);
+            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
 
             await MediaService.Add(media);
         }
         else
         {
             MediaService.DeleteLocalMediaFile(media.FileId);
-            media = await MediaService.UploadMediaAsync(e.File, media);
+            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
             await MediaService.Update(media);
         }
 

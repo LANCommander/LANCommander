@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Server.Models;
 @using LANCommander.SDK.Enums
 @using System.Net.Mime
+@using LANCommander.Server.Services.Models
 @inject MediaService MediaService
 @inject ModalService ModalService
 @inject IMessageService MessageService
@@ -215,14 +216,14 @@
 
         if (media.Id == Guid.Empty)
         {
-            media = await MediaService.UploadMediaAsync(e.File, media);
+            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
 
             await MediaService.Add(media);
         }
         else
         {
             MediaService.DeleteLocalMediaFile(media.FileId);
-            media = await MediaService.UploadMediaAsync(e.File, media);
+            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
             await MediaService.Update(media);
         }
 

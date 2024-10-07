@@ -46,7 +46,7 @@ namespace LANCommander.Server
             builder.Services.AddSerilogHub<LoggingHub>();
             builder.Services.AddSerilog((serviceProvider, config) => config
                 .WriteTo.Console()
-                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: settings.Logs.ArchiveEvery)
+                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery)
                 .WriteTo.SignalR<LoggingHub>(
                     serviceProvider,
                     (context, message, logEvent) => LoggingHub.Log(context, message, logEvent)

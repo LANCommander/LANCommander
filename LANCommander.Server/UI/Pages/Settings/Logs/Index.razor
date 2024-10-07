@@ -16,7 +16,7 @@
         </FormItem>
 
         <FormItem Label="Archive Every">
-            <Select @bind-Value="@context.Logs.ArchiveEvery" TItem="RollingInterval" TItemValue="RollingInterval" DataSource="Enum.GetValues<RollingInterval>()">
+            <Select @bind-Value="@context.Logs.ArchiveEvery" TItem="LogInterval" TItemValue="LogInterval" DataSource="Enum.GetValues<LogInterval>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
                 <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
             </Select>

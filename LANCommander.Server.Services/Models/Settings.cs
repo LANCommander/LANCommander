@@ -1,4 +1,4 @@
-﻿namespace LANCommander.Server.Models
+﻿namespace LANCommander.Server.Services.Models
 {
     public enum LANCommanderTheme
     {
@@ -16,7 +16,7 @@
         Minute
     }
 
-    public class LANCommanderSettings
+    public class Settings
     {
         public int Port { get; set; } = 1337;
         public string DatabaseConnectionString { get; set; } = "Data Source=LANCommander.db;Cache=Shared";
@@ -24,17 +24,17 @@
         public string IGDBClientSecret { get; set; } = "";
         public LANCommanderTheme Theme { get; set; } = LANCommanderTheme.Dark;
 
-        public LANCommanderBeaconSettings Beacon { get; set; } = new LANCommanderBeaconSettings();
-        public LANCommanderAuthenticationSettings Authentication { get; set; } = new LANCommanderAuthenticationSettings();
-        public LANCommanderRoleSettings Roles { get; set; } = new LANCommanderRoleSettings();
-        public LANCommanderUserSaveSettings UserSaves { get; set; } = new LANCommanderUserSaveSettings();
-        public LANCommanderArchiveSettings Archives { get; set; } = new LANCommanderArchiveSettings();
-        public LANCommanderMediaSettings Media { get; set; } = new LANCommanderMediaSettings();
-        public LANCommanderIPXRelaySettings IPXRelay { get; set; } = new LANCommanderIPXRelaySettings();
-        public LANCommanderServerSettings Servers { get; set; } = new LANCommanderServerSettings();
-        public LANCommanderUpdateSettings Update { get; set; } = new LANCommanderUpdateSettings();
-        public LANCommanderLauncherSettings Launcher { get; set; } = new LANCommanderLauncherSettings();
-        public LANCommanderLogSettings Logs { get; set; } = new LANCommanderLogSettings();
+        public BeaconSettings Beacon { get; set; } = new BeaconSettings();
+        public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();
+        public RoleSettings Roles { get; set; } = new RoleSettings();
+        public UserSaveSettings UserSaves { get; set; } = new UserSaveSettings();
+        public ArchiveSettings Archives { get; set; } = new ArchiveSettings();
+        public MediaSettings Media { get; set; } = new MediaSettings();
+        public IPXRelaySettings IPXRelay { get; set; } = new IPXRelaySettings();
+        public ServerSettings Servers { get; set; } = new ServerSettings();
+        public UpdateSettings Update { get; set; } = new UpdateSettings();
+        public LauncherSettings Launcher { get; set; } = new LauncherSettings();
+        public LogSettings Logs { get; set; } = new LogSettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
         public DriveInfo[] GetDrives()
@@ -46,14 +46,14 @@
         }
     }
 
-    public class LANCommanderBeaconSettings
+    public class BeaconSettings
     {
         public bool Enabled { get; set; } = true;
         public string Name { get; set; } = "LANCommander";
         public string Address { get; set; } = "";
     }
 
-    public class LANCommanderAuthenticationSettings
+    public class AuthenticationSettings
     {
         public bool RequireApproval { get; set; } = false;
         public string TokenSecret { get; set; } = Guid.NewGuid().ToString();
@@ -65,20 +65,20 @@
         public int PasswordRequiredLength { get; set; } = 8;
     }
 
-    public class LANCommanderRoleSettings
+    public class RoleSettings
     {
         public Guid DefaultRoleId { get; set; }
         public bool RestrictGamesByCollection { get; set; } = false;
     }
 
-    public class LANCommanderUserSaveSettings
+    public class UserSaveSettings
     {
         public string StoragePath { get; set; } = "Saves";
         public int MaxSize { get; set; } = 25;
         public int MaxSaves { get; set; } = 0;
     }
 
-    public class LANCommanderArchiveSettings
+    public class ArchiveSettings
     {
         public bool EnablePatching { get; set; } = false;
         public bool AllowInsecureDownloads { get; set; } = false;
@@ -86,14 +86,14 @@
         public int MaxChunkSize { get; set; } = 50;
     }
 
-    public class LANCommanderMediaSettings
+    public class MediaSettings
     {
         public string SteamGridDbApiKey { get; set; } = "";
         public string StoragePath { get; set; } = "Media";
         public long MaxSize { get; set; } = 25;
     }
 
-    public class LANCommanderIPXRelaySettings
+    public class IPXRelaySettings
     {
         public bool Enabled { get; set; } = false;
         public string Host { get; set; } = "";
@@ -101,23 +101,23 @@
         public bool Logging { get; set; } = false;
     }
 
-    public class LANCommanderServerSettings
+    public class ServerSettings
     {
         public string StoragePath { get; set; } = "Servers";
     }
 
-    public class LANCommanderUpdateSettings
+    public class UpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
     }
 
-    public class LANCommanderLauncherSettings
+    public class LauncherSettings
     {
         public string StoragePath { get; set; } = "Launcher";
         public bool HostUpdates { get; set; } = true;
     }
 
-    public class LANCommanderLogSettings
+    public class LogSettings
     {
         public string StoragePath { get; set; } = "Logs";
         public LogInterval ArchiveEvery { get; set; } = LogInterval.Day;

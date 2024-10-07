@@ -1,7 +1,5 @@
 ﻿@page "/Settings/Logs"
 @layout SettingsLayout
-@using LANCommander.Server.Extensions
-@using LANCommander.Server.Models
 @using Serilog
 @inject SettingService SettingService
 @inject IMessageService MessageService
@@ -35,7 +33,7 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 

@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services;
+using LANCommander.Server.Extensions;
 
 namespace LANCommander.Server.Areas.Identity.Pages.Account
 {
@@ -119,11 +120,16 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
             return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync(string returnUrl = null)
+        public async Task<IActionResult> OnPostAsync(string returnUrl = null, string provider = null)
         {
             returnUrl ??= Url.Content("~/");
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+
+            if (!String.IsNullOrWhiteSpace(provider) && await HttpContext.IsProviderSupportedAsync(provider))
+            {
+                return Challenge(new AuthenticationProperties { RedirectUri = returnUrl }, provider);
+            }
 
             if (ModelState.IsValid)
             {

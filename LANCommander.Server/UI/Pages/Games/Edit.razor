@@ -2,11 +2,8 @@
 @page "/Games/{id:guid}/{panel}"
 @page "/Games/Add"
 @using LANCommander.SDK.Enums
-@using LANCommander.Server.Extensions
-@using LANCommander.Server.Services.Models
-@using LANCommander.Server.UI.Pages.Games.Components;
-@using LANCommander.Server.Models;
-@using System.IO.Compression;
+@using LANCommander.Server.UI.Pages.Games.Components
+@using System.IO.Compression
 @using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = "Administrator")]
 @inject GameService GameService
@@ -377,7 +374,7 @@ else
     private KeysEditor? KeysEditor;
     private GameMetadataLookup? GameMetadataLookup;
 
-    private LANCommanderSettings Settings = SettingService.GetSettings();
+    private Settings Settings = SettingService.GetSettings();
 
     private Dictionary<string, string> PanelDisplayNames = new Dictionary<string, string>
     {

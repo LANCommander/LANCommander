@@ -1,6 +1,5 @@
 ﻿@page "/Launcher"
 @layout BasicLayout
-@using LANCommander.Server.Models
 @inject UpdateService UpdateService
 @inject NavigationManager NavigationManager
 
@@ -32,5 +31,5 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings = SettingService.GetSettings();
+    Services.Models.Settings Settings = SettingService.GetSettings();
 }

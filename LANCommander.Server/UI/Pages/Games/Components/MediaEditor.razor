@@ -1,7 +1,5 @@
-﻿@using LANCommander.Server.Models;
-@using LANCommander.SDK.Enums
+﻿@using LANCommander.SDK.Enums
 @using System.Net.Mime
-@using LANCommander.Server.Services.Models
 @inject MediaService MediaService
 @inject ModalService ModalService
 @inject IMessageService MessageService
@@ -86,7 +84,7 @@
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public string GameTitle { get; set; }
 
-    LANCommanderSettings Settings = SettingService.GetSettings();
+    Settings Settings = SettingService.GetSettings();
 
     MediaType[] AllowedMediaTypes = new MediaType[]
     {

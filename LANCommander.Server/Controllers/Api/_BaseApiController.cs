@@ -1,5 +1,5 @@
-﻿using LANCommander.Server.Models;
-using LANCommander.Server.Services;
+﻿using LANCommander.Server.Services;
+using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Server.Controllers.Api
@@ -7,7 +7,7 @@ namespace LANCommander.Server.Controllers.Api
     public abstract class BaseApiController : ControllerBase
     {
         protected readonly ILogger Logger;
-        protected readonly LANCommanderSettings Settings;
+        protected readonly Settings Settings;
 
         public BaseApiController(ILogger logger)
         {

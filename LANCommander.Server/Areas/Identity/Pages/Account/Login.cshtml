@@ -1,11 +1,15 @@
 ﻿@page
-@using LANCommander.Server.Models;
-@using LANCommander.Server.Services;
+@using LANCommander.Server.Extensions
+@using LANCommander.Server.Models
+@using LANCommander.Server.Services
+@using LANCommander.Server.Services.Models
 @model LoginModel
 @{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
 
 @{
     ViewData["Title"] = "Log in";
+
+    var providers = await HttpContext.GetExternalProvidersAsync();
 }
 
 <div class="ant-row ant-row-middle ant-row-space-around" style="min-height: 100vh; margin-top: -24px;">
@@ -102,6 +106,27 @@
                 </div>
             </form>
         </div>
+
+        @if (providers != null && providers.Count() > 0)
+        {
+            <span class="ant-divider ant-divider-horizontal ant-divider-with-text ant-divider-with-text-center">
+                <span class="ant-divider-inner-text">
+                    Or
+                </span>
+            </span>
+
+            @foreach (var provider in providers)
+            {
+                <form method="post">
+                    <input type="hidden" name="Provider" value="@provider.Name" />
+                    <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+
+                    <button class="ant-btn ant-btn-primary ant-btn-block" type="submit">
+                        <span>Sign in using @provider.DisplayName</span>
+                    </button>
+                </form>
+            }
+        }
 
         <div style="text-align: center; margin-top: 16px;">
             Don't have account yet? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" tabindex="-1">Register</a>

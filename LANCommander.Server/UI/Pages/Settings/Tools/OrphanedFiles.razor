@@ -42,7 +42,7 @@
     ICollection<OrphanedFile> Orphans = new List<OrphanedFile>();
     bool Loading = true;
 
-    private readonly LANCommanderSettings Settings = SettingService.GetSettings();
+    private readonly Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {

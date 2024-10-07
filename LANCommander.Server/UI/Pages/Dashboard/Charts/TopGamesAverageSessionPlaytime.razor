@@ -1,6 +1,5 @@
 ﻿@using AntDesign.Charts
 @using ByteSizeLib
-@using LANCommander.Server.Models
 @inject PlaySessionService PlaySessionService
 
 <Spin Spinning="Loading">
@@ -10,7 +9,7 @@
 </Spin>
 
 @code {
-    LANCommanderSettings Settings = SettingService.GetSettings();
+    Settings Settings = SettingService.GetSettings();
 
     object[] Data;
 

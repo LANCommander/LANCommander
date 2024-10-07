@@ -28,7 +28,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Tag, SDK.Models.Tag>();
             CreateMap<Data.Models.User, SDK.Models.User>();
 
-            CreateMap<Models.LANCommanderSettings, SDK.Models.Settings>()
+            CreateMap<Services.Models.Settings, SDK.Models.Settings>()
                 .ForMember(dest =>
                     dest.IPXRelayHost,
                     opt => opt.MapFrom(src => src.IPXRelay.Host))

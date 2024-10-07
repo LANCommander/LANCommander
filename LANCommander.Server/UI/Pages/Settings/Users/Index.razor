@@ -1,6 +1,4 @@
 ﻿@page "/Settings/Users"
-@using LANCommander.Server.Extensions
-@using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Settings.Users.Components
 @layout SettingsLayout
 @inject UserManager<User> UserManager
@@ -66,7 +64,7 @@
 @code {
     ICollection<UserViewModel> UserList { get; set; }
 
-    LANCommanderSettings Settings = SettingService.GetSettings();
+    Settings Settings = SettingService.GetSettings();
     bool Loading = true;
 
     protected override async Task OnInitializedAsync()

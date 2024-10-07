@@ -1,5 +1,4 @@
 ﻿@page "/Settings/Updates"
-@using LANCommander.Server.Models;
 @using Markdig
 @using Octokit
 @using Semver
@@ -71,7 +70,7 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 

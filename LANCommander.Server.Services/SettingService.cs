@@ -8,9 +8,9 @@ namespace LANCommander.Server.Services
     {
         private const string SettingsFilename = "Settings.yml";
 
-        private static LANCommanderSettings Settings { get; set; }
+        private static Models.Settings Settings { get; set; }
 
-        public static LANCommanderSettings LoadSettings()
+        public static Models.Settings LoadSettings()
         {
             if (File.Exists(SettingsFilename))
             {
@@ -21,11 +21,11 @@ namespace LANCommander.Server.Services
                     .WithNamingConvention(new PascalCaseNamingConvention())
                     .Build();
 
-                Settings = deserializer.Deserialize<LANCommanderSettings>(contents);
+                Settings = deserializer.Deserialize<Models.Settings>(contents);
             }
             else
             {
-                Settings = new LANCommanderSettings();
+                Settings = new Models.Settings();
 
                 SaveSettings(Settings);
             }
@@ -33,7 +33,7 @@ namespace LANCommander.Server.Services
             return Settings;
         }
 
-        public static LANCommanderSettings GetSettings(bool forceLoad = false)
+        public static Models.Settings GetSettings(bool forceLoad = false)
         {
             if (Settings == null || forceLoad)
                 Settings = LoadSettings();
@@ -41,7 +41,7 @@ namespace LANCommander.Server.Services
             return Settings;
         }
 
-        public static void SaveSettings(LANCommanderSettings settings)
+        public static void SaveSettings(Models.Settings settings)
         {
             if (settings != null)
             {

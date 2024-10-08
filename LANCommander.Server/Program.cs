@@ -133,15 +133,15 @@ namespace LANCommander.Server
                 switch (settings.DatabaseProvider)
                 {
                     case Services.Models.DatabaseProvider.SQLite:
-                        b.UseSqlite(settings.DatabaseConnectionString);
+                        b.UseSqlite(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
                         break;
 
                     case Services.Models.DatabaseProvider.MySQL:
-                        b.UseMySql(settings.DatabaseConnectionString, ServerVersion.AutoDetect(settings.DatabaseConnectionString));
+                        b.UseMySql(settings.DatabaseConnectionString, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
                         break;
 
                     case Services.Models.DatabaseProvider.PostgreSQL:
-                        b.UseNpgsql(settings.DatabaseConnectionString);
+                        b.UseNpgsql(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
                         break;
                 }
             });

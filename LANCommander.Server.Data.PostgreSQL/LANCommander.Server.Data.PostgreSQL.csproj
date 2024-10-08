@@ -11,4 +11,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.8" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
+  </ItemGroup>
+
 </Project>

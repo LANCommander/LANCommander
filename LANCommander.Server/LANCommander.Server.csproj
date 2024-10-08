@@ -116,6 +116,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Data.MySQL\LANCommander.Server.Data.MySQL.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Data.PostgreSQL\LANCommander.Server.Data.PostgreSQL.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data.SQLite\LANCommander.Server.Data.SQLite.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />

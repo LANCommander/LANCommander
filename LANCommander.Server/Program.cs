@@ -203,7 +203,10 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Swashbuckle");
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.CustomSchemaIds(type => type.ToString());
+            });
 
             Log.Debug("Registering AntDesign Blazor");
             builder.Services.AddAntDesign();
@@ -291,8 +294,6 @@ namespace LANCommander.Server
             {
                 Log.Debug("App has been run in a development environment");
                 app.UseMigrationsEndPoint();
-                app.UseSwagger();
-                app.UseSwaggerUI();
             }
             else
             {
@@ -301,6 +302,8 @@ namespace LANCommander.Server
                 app.UseHsts();
             }
 
+            app.UseSwagger();
+            app.UseSwaggerUI();
             app.UseHangfireDashboard();
 
             // app.UseHttpsRedirection();

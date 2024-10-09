@@ -166,6 +166,8 @@ namespace LANCommander.Launcher.Services
                 if (settings.Filter.Installed)
                     items = items.Where(i => (i.DataItem as Game).Installed);
 
+                items = items.Where(i => (i.DataItem as Game).Type.IsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
+
                 if (OnLibraryItemsFiltered != null)
                     await OnLibraryItemsFiltered.Invoke(items);
 

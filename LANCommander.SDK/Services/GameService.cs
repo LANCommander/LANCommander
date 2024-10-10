@@ -394,7 +394,7 @@ namespace LANCommander.SDK.Services
             #endregion
 
             #region Install Expansions/Mods
-            foreach (var dependentGame in game.DependentGames.Where(g => addonIds == null || (g.Type.IsIn(GameType.Expansion, GameType.Mod) && addonIds.Contains(g.Id))))
+            foreach (var dependentGame in game.DependentGames.Where(g => g != null && (addonIds == null || (g.Type.IsIn(GameType.Expansion, GameType.Mod) && addonIds.Contains(g.Id)))))
             {
                 if (dependentGame.Type == GameType.Expansion)
                     GameInstallProgress.Status = GameInstallStatus.InstallingExpansions;

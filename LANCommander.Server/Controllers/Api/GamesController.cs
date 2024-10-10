@@ -45,7 +45,7 @@ namespace LANCommander.Server.Controllers.Api
         public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
             var accessibleGames = new List<SDK.Models.Game>();
-            var games = await GameService.Get(g => g.Type == SDK.Enums.GameType.MainGame || g.Type == SDK.Enums.GameType.StandaloneExpansion || g.Type == SDK.Enums.GameType.StandaloneMod).ToListAsync();
+            var games = await GameService.Get();
 
             var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");

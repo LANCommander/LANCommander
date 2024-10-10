@@ -567,4 +567,8 @@ footer {
   display: none;
 }
 
+.install-dialog-addons-selector + .install-dialog-directory-selector {
+  margin-top: 16px;
+}
+
 /*# sourceMappingURL=app.css.map */

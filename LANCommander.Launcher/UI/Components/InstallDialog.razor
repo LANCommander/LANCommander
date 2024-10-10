@@ -7,19 +7,27 @@
 
 @if (Addons.Any())
 {
-    <Collapse Animation>
+    <Collapse Class="install-dialog-addons-selector">
         <Panel Header="Addons">
-            <CheckboxGroup Style="width:100%" TValue="string" ValueChanged="@OnAddonsSelectedChange">
-                @foreach (var addon in Addons)
-                {
-                    <Checkbox Label="@addon.Id.ToString()">@addon.Title</Checkbox>
-                }
-            </CheckboxGroup>
+            <ExtraTemplate>
+                @SelectedAddonIds.Length / @Addons.Count Selected
+            </ExtraTemplate>
+            <ChildContent>
+                <CheckboxGroup Style="width:100%" TValue="string" ValueChanged="@OnAddonsSelectedChange">
+                    @foreach (var addon in Addons)
+                    {
+                        <Checkbox Label="@addon.Id.ToString()">
+                            <Text>@addon.Title</Text>
+                            <Text Type="@TextElementType.Secondary">@addon.Description</Text>
+                        </Checkbox>
+                    }
+                </CheckboxGroup>
+            </ChildContent>
         </Panel>
     </Collapse>
 }
 
-<RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="large" Class="radio-group-vertical radio-group-block">
+<RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
     @foreach (var directory in Settings.Games.InstallDirectories)
     {
         <Radio RadioButton Value="@directory">

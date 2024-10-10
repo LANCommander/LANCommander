@@ -200,7 +200,7 @@
     {
         var game = item.DataItem as Game;
 
-        if (Settings.Games.InstallDirectories.Length > 1 && game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
+        if (Settings.Games.InstallDirectories.Length > 1 || game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
         {
             var modalOptions = new ModalOptions()
             {

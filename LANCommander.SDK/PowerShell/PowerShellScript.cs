@@ -219,7 +219,8 @@ namespace LANCommander.SDK.PowerShell
                     {
                         var returnValue = ps.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
 
-                        result = (T)returnValue;
+                        if (returnValue != null)
+                            result = (T)returnValue;
                     }
                     catch
                     {

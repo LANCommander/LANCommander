@@ -269,7 +269,7 @@ namespace LANCommander.SDK.Services
         /// <param name="maxAttempts">Maximum attempts in case of transmission error</param>
         /// <returns>Final install path</returns>
         /// <exception cref="Exception"></exception>
-        public async Task<string> InstallAsync(Guid gameId, string installDirectory = "", int maxAttempts = 10)
+        public async Task<string> InstallAsync(Guid gameId, string installDirectory = "", Guid[] addonIds = null, int maxAttempts = 10)
         {
             GameManifest manifest = null;
 
@@ -294,7 +294,7 @@ namespace LANCommander.SDK.Services
                 destination = GetInstallDirectory(game.BaseGame, installDirectory);
 
                 if (!Directory.Exists(destination))
-                    destination = await InstallAsync(game.BaseGame.Id, installDirectory, maxAttempts);
+                    destination = await InstallAsync(game.BaseGame.Id, installDirectory, null, maxAttempts);
             }
 
             try
@@ -394,7 +394,7 @@ namespace LANCommander.SDK.Services
             #endregion
 
             #region Install Expansions/Mods
-            foreach (var dependentGame in game.DependentGames.Where(g => g.Type == GameType.Expansion || g.Type == GameType.Mod))
+            foreach (var dependentGame in game.DependentGames.Where(g => addonIds == null || (g.Type.IsIn(GameType.Expansion, GameType.Mod) && addonIds.Contains(g.Id))))
             {
                 if (dependentGame.Type == GameType.Expansion)
                     GameInstallProgress.Status = GameInstallStatus.InstallingExpansions;

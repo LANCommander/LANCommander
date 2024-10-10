@@ -198,7 +198,9 @@
 
     async Task Install(LibraryItem item)
     {
-        if (Settings.Games.InstallDirectories.Length > 1)
+        var game = item.DataItem as Game;
+
+        if (Settings.Games.InstallDirectories.Length > 1 && game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
         {
             var modalOptions = new ModalOptions()
             {
@@ -211,7 +213,7 @@
                 Centered = true
             };
 
-            var modalRef = ModalService.CreateModal<InstallDirectorySelectorDialog, LibraryItem, string>(modalOptions, item);
+            var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, item);
         }
         else
         {

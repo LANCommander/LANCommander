@@ -199,11 +199,11 @@ namespace LANCommander.Launcher.Services
             return new LibraryItem(game, GroupSelector);
         }
 
-        public async Task Install(LibraryItem libraryItem, string installDirectory = "")
+        public async Task Install(LibraryItem libraryItem, string installDirectory = "", Guid[] addonIds = null)
         {
             var game = libraryItem.DataItem as Game;
 
-            await DownloadService.Add(game, installDirectory);
+            await DownloadService.Add(game, installDirectory, addonIds);
         }
 
         public async Task LibraryChanged()

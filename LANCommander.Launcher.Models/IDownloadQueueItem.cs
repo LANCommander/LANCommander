@@ -10,6 +10,7 @@ namespace LANCommander.Launcher.Models
     public interface IDownloadQueueItem
     {
         Guid Id { get; set; }
+        Guid[] AddonIds { get; set; }
         string Title { get; set; }
         string Version { get; set; }
         string InstallDirectory { get; set; }

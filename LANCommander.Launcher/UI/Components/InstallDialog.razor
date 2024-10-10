@@ -1,8 +1,23 @@
 ﻿@using System.Diagnostics
 @using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
+@using LANCommander.Launcher.Services.Extensions
 @inherits FeedbackComponent<LibraryItem, string>
 @inject LibraryService LibraryService
+
+@if (Addons.Any())
+{
+    <Collapse Animation>
+        <Panel Header="Addons">
+            <CheckboxGroup Style="width:100%" TValue="string" ValueChanged="@OnAddonsSelectedChange">
+                @foreach (var addon in Addons)
+                {
+                    <Checkbox Label="@addon.Id.ToString()">@addon.Title</Checkbox>
+                }
+            </CheckboxGroup>
+        </Panel>
+    </Collapse>
+}
 
 <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="large" Class="radio-group-vertical radio-group-block">
     @foreach (var directory in Settings.Games.InstallDirectories)
@@ -24,15 +39,34 @@
     Settings Settings = SettingService.GetSettings();
 
     string SelectedDirectory = "";
+    List<Game> Addons = new();
+
+    Guid[] SelectedAddonIds = new Guid[] { };
 
     protected override void OnInitialized()
     {
         SelectedDirectory = Settings.Games.InstallDirectories.First();
+
+        var game = Options.DataItem as Game;
+
+        Addons = game.DependentGames.Where(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        LibraryService.Install(Options, SelectedDirectory);
+        LibraryService.Install(Options, SelectedDirectory, SelectedAddonIds);
+    }
+
+    void OnAddonsSelectedChange(string[] selectedIds)
+    {
+        try
+        {
+            SelectedAddonIds = selectedIds.Select(id => Guid.Parse(id)).ToArray();
+        }
+        catch (Exception ex)
+        {
+            SelectedAddonIds = new Guid[] { };
+        }
     }
 
     long GetFreeSpace(string path)

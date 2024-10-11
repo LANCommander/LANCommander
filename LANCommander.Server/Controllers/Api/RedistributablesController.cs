@@ -16,16 +16,19 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
+        private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger, 
             IMapper mapper,
             RedistributableService redistributableService,
+            StorageLocationService storageLocationService,
             ArchiveService archiveService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
+            StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
         }
 
@@ -59,7 +62,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var archive = redistributable.Archives.OrderByDescending(a => a.CreatedOn).First();
 
-            var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
+            var filename = ArchiveService.GetArchiveFileLocation(archive);
 
             if (!System.IO.File.Exists(filename))
                 return NotFound();
@@ -90,18 +93,18 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
+                var storageLocation = await StorageLocationService.Get(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default).FirstOrDefaultAsync();
                 var archive = await ArchiveService.Get(a => a.RedistributableId == request.Id && a.Version == request.Version).FirstOrDefaultAsync();
-                var archivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+                var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (archive != null)
                 {
-                    var existingArchivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
-
-                    System.IO.File.Delete(existingArchivePath);
+                    System.IO.File.Delete(archivePath);
 
                     archive.ObjectKey = request.ObjectKey.ToString();
                     archive.Changelog = request.Changelog;
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
+                    archive.StorageLocation = storageLocation;
 
                     archive = await ArchiveService.Update(archive);
                 }
@@ -113,6 +116,7 @@ namespace LANCommander.Server.Controllers.Api
                         Changelog = request.Changelog,
                         RedistributableId = request.Id,
                         CompressedSize = new System.IO.FileInfo(archivePath).Length,
+                        StorageLocation = storageLocation,
                     };
 
                     await ArchiveService.Add(archive);

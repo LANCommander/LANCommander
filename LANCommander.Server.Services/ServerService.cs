@@ -12,20 +12,23 @@ namespace LANCommander.Server.Services
     public class ServerService : BaseDatabaseService<Data.Models.Server>
     {
         private readonly GameService GameService;
+        private readonly ArchiveService ArchiveService;
 
         public ServerService(
             ILogger<ServerService> logger,
             DatabaseContext dbContext,
-            GameService gameService) : base(logger, dbContext)
+            GameService gameService,
+            ArchiveService archiveService) : base(logger, dbContext)
         {
             GameService = gameService;
+            ArchiveService = archiveService;
         }
 
         public async Task<Data.Models.Server> Import(Guid objectKey)
         {
             var settings = SettingService.GetSettings();
 
-            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
+            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
             using (var importArchive = ZipFile.OpenRead(importArchivePath))
             {

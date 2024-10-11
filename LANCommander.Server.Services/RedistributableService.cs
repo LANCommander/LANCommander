@@ -8,22 +8,30 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Services
 {
     public class RedistributableService : BaseDatabaseService<Redistributable>
     {
+        private readonly ArchiveService ArchiveService;
+
         public RedistributableService(
             ILogger<RedistributableService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            DatabaseContext dbContext,
+            ArchiveService archiveService) : base(logger, dbContext)
+        {
+            ArchiveService = archiveService;
+        }
 
         public async Task<Redistributable> Import(Guid objectKey)
         {
-            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
+            var importArchive = await ArchiveService.Get(a => a.ObjectKey == objectKey.ToString()).FirstOrDefaultAsync();
+            var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
 
-            using (var importArchive = ZipFile.OpenRead(importArchivePath))
+            using (var importZip = ZipFile.OpenRead(importArchivePath))
             {
-                var manifest = ManifestHelper.Deserialize<Redistributable>(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+                var manifest = ManifestHelper.Deserialize<Redistributable>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
                 var redistributable = await Get(manifest.Id);
 
@@ -47,7 +55,7 @@ namespace LANCommander.Server.Services
 
                     if (manifestScript != null)
                     {
-                        script.Contents = await importArchive.ReadAllTextAsync($"Scripts/{script.Id}");
+                        script.Contents = await importZip.ReadAllTextAsync($"Scripts/{script.Id}");
                         script.Description = manifestScript.Description;
                         script.Name = manifestScript.Name;
                         script.RequiresAdmin = manifestScript.RequiresAdmin;
@@ -64,7 +72,7 @@ namespace LANCommander.Server.Services
                         redistributable.Scripts.Add(new Script()
                         {
                             Id = manifestScript.Id,
-                            Contents = await importArchive.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
+                            Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
                             Description = manifestScript.Description,
                             Name = manifestScript.Name,
                             RequiresAdmin = manifestScript.RequiresAdmin,
@@ -89,8 +97,13 @@ namespace LANCommander.Server.Services
                         archive.ObjectKey = manifestArchive.ObjectKey;
                         archive.Version = manifestArchive.Version;
                         archive.CreatedOn = manifestArchive.CreatedOn;
+                        archive.StorageLocation = importArchive.StorageLocation;
 
-                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
+                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
+
+                        importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
+
+                        archive.CompressedSize = new FileInfo(extractionLocation).Length;
                     }
                 }
 
@@ -104,11 +117,16 @@ namespace LANCommander.Server.Services
                             Changelog = manifestArchive.Changelog,
                             Version = manifestArchive.Version,
                             CreatedOn = manifestArchive.CreatedOn,
+                            StorageLocation = importArchive.StorageLocation,
                         };
 
-                        redistributable.Archives.Add(archive);
+                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
 
-                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
+                        importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
+
+                        archive.CompressedSize = new FileInfo(extractionLocation).Length;
+
+                        redistributable.Archives.Add(archive);
                     }
                 #endregion
 
@@ -116,6 +134,8 @@ namespace LANCommander.Server.Services
                     redistributable = await Update(redistributable);
                 else
                     redistributable = await Add(redistributable);
+
+                await ArchiveService.Delete(importArchive);
 
                 return redistributable;
             }

@@ -13,6 +13,7 @@ using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using System.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Services
 {
@@ -259,7 +260,7 @@ namespace LANCommander.Server.Services
         {
             Guid objectKey = Guid.NewGuid();
 
-            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
+            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
             File.Copy(path, importArchivePath, true);
 
@@ -268,14 +269,15 @@ namespace LANCommander.Server.Services
 
         public async Task<Game> Import(Guid objectKey)
         {
-            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
+            var importArchive = await ArchiveService.Get(a => a.ObjectKey == objectKey.ToString()).FirstOrDefaultAsync();
+            var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
 
             Game game;
 
-            using (var importArchive = ZipFile.OpenRead(importArchivePath))
+            using (var importZip = ZipFile.OpenRead(importArchivePath))
             {
                 // Read manifest
-                GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+                GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
                 game = await Get(manifest.Id);
 
@@ -488,7 +490,7 @@ namespace LANCommander.Server.Services
 
                     if (manifestScript != null)
                     {
-                        script.Contents = await importArchive.ReadAllTextAsync($"Scripts/{script.Id}");
+                        script.Contents = await importZip.ReadAllTextAsync($"Scripts/{script.Id}");
                         script.Description = manifestScript.Description;
                         script.Name = manifestScript.Name;
                         script.RequiresAdmin = manifestScript.RequiresAdmin;
@@ -504,7 +506,7 @@ namespace LANCommander.Server.Services
                         game.Scripts.Add(new Script()
                         {
                             Id = manifestScript.Id,
-                            Contents = await importArchive.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
+                            Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
                             Description = manifestScript.Description,
                             Name = manifestScript.Name,
                             RequiresAdmin = manifestScript.RequiresAdmin,
@@ -530,7 +532,7 @@ namespace LANCommander.Server.Services
                         media.MimeType = manifestMedia.MimeType;
                         media.CreatedOn = manifestMedia.CreatedOn;
 
-                        importArchive.ExtractEntry($"Media/{media.FileId}", MediaService.GetImagePath(media), true);
+                        importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetImagePath(media), true);
 
                         media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetImagePath(media));
                     }
@@ -549,7 +551,7 @@ namespace LANCommander.Server.Services
                             CreatedOn = manifestMedia.CreatedOn,
                         };
 
-                        importArchive.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetImagePath(media), true);
+                        importZip.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetImagePath(media), true);
 
                         media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetImagePath(media));
 
@@ -567,14 +569,16 @@ namespace LANCommander.Server.Services
 
                     if (manifestArchive != null)
                     {
-                        var extractionLocation = ArchiveService.GetArchiveFileLocation(manifestArchive.ObjectKey);
-
-                        importArchive.ExtractEntry($"Archives/{archive.ObjectKey}", ArchiveService.GetArchiveFileLocation(archive), true);
-
                         archive.Changelog = manifestArchive.Changelog;
                         archive.ObjectKey = manifestArchive.ObjectKey;
                         archive.Version = manifestArchive.Version;
                         archive.CreatedOn = manifestArchive.CreatedOn;
+                        archive.StorageLocation = importArchive.StorageLocation;
+
+                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
+
+                        importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
+
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
                     }
                 }
@@ -582,10 +586,6 @@ namespace LANCommander.Server.Services
                 if (manifest.Archives != null)
                     foreach (var manifestArchive in manifest.Archives.Where(ma => !game.Archives.Any(a => a.Id == ma.Id)))
                     {
-                        var extractionLocation = ArchiveService.GetArchiveFileLocation(manifestArchive.ObjectKey);
-
-                        importArchive.ExtractEntry($"Archives/{manifestArchive.ObjectKey}", extractionLocation, true);
-
                         var archive = new Archive()
                         {
                             Id = manifestArchive.Id,
@@ -593,8 +593,14 @@ namespace LANCommander.Server.Services
                             Changelog = manifestArchive.Changelog,
                             Version = manifestArchive.Version,
                             CreatedOn = manifestArchive.CreatedOn,
-                            CompressedSize = new FileInfo(extractionLocation).Length
+                            StorageLocation = importArchive.StorageLocation,
                         };
+
+                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
+
+                        importZip.ExtractEntry($"Archives/{manifestArchive.ObjectKey}", extractionLocation, true);
+
+                        archive.CompressedSize = new FileInfo(extractionLocation).Length;
 
                         game.Archives.Add(archive);
                     }
@@ -606,8 +612,7 @@ namespace LANCommander.Server.Services
                     game = await Add(game);
             }
 
-            if (File.Exists(importArchivePath))
-                File.Delete(importArchivePath);
+            await ArchiveService.Delete(importArchive);
 
             return game;
         }

@@ -11,14 +11,17 @@ namespace LANCommander.Server.Controllers
     {
         private readonly GameService GameService;
         private readonly MediaService MediaService;
+        private readonly ArchiveService ArchiveService;
 
         public GamesController(
             ILogger<GamesController> logger,
             GameService gameService,
-            MediaService mediaService) : base(logger)
+            MediaService mediaService,
+            ArchiveService archiveService) : base(logger)
         {
             GameService = gameService;
             MediaService = mediaService;
+            ArchiveService = archiveService;
         }
 
         [HttpGet("/Games/{id:guid}/Export/Full")]
@@ -71,7 +74,7 @@ namespace LANCommander.Server.Controllers
                 if (game.Archives != null)
                 foreach (var archive in game.Archives)
                 {
-                    var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+                    var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive);
                     var entry = export.CreateEntry($"Archives/{archive.ObjectKey}", CompressionLevel.NoCompression);
 
                     using (var entryStream = entry.Open())

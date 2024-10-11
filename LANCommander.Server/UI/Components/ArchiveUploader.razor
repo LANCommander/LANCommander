@@ -6,6 +6,7 @@
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ArchiveService ArchiveService
+@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ArchiveUploader> Logger
@@ -34,8 +35,20 @@
             <TextArea @bind-Value="@context.Changelog" MaxLength=500 ShowCount />
         </FormItem>
 
+        <FormItem Label="Path">
+            <Select TItem="StorageLocation"
+                TItemValue="Guid"
+                DataSource="@StorageLocations.OrderBy(l => l.Default)"
+                @bind-Value="@context.StorageLocationId"
+                LabelName="Path"
+                ValueName="Id"
+                Placeholder="Select a Path"
+                DefaultActiveFirstOption="true"
+                EnableSearch />
+        </FormItem>
+
         <FormItem>
-            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" @bind-Version="context.Version" @bind-Changelog="context.Changelog" @bind-StorageLocationId="context.StorageLocationId" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
                 <Text>
                     <p>Drag and Drop</p>
                     <p>or</p>
@@ -60,6 +73,8 @@
 
     IBrowserFile File;
     ChunkUploader ChunkUploader;
+
+    IEnumerable<StorageLocation> StorageLocations;
 
     bool IsValid = false;
     bool Visible = false;
@@ -88,6 +103,8 @@
 
     public async Task Open(Guid? archiveId = null)
     {
+        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).ToListAsync();
+
         if (archiveId.HasValue && archiveId != Guid.Empty)
         {
             Archive = await ArchiveService.Get(archiveId.Value);
@@ -113,16 +130,16 @@
 
         if (Guid.TryParse(data, out var objectKey))
         {
-            Archive.ObjectKey = objectKey.ToString();
+            var uploadedArchive = await ArchiveService.Get(a => a.ObjectKey == objectKey.ToString()).FirstOrDefaultAsync();
 
-            var archivePath = ArchiveService.GetArchiveFileLocation(Archive.ObjectKey);
+            uploadedArchive.GameId = Archive.GameId;
+            uploadedArchive.RedistributableId = Archive.RedistributableId;
+            uploadedArchive.Version = Archive.Version;
+            uploadedArchive.Changelog = Archive.Changelog;
+            uploadedArchive.CompressedSize = ArchiveService.GetCompressedSize(uploadedArchive);
+            uploadedArchive.UncompressedSize = ArchiveService.GetUncompressedSize(uploadedArchive);
 
-            Archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
-
-            if (Archive.Id != Guid.Empty)
-                Archive = await ArchiveService.Update(Archive);
-            else
-                Archive = await ArchiveService.Add(Archive);
+            await ArchiveService.Update(uploadedArchive);
 
             Visible = false;
 

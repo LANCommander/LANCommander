@@ -20,6 +20,9 @@
             <PropertyColumn Property="a => a.CompressedSize">
                 @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
             </PropertyColumn>
+            <PropertyColumn Property="a => a.UncompressedSize">
+                @ByteSizeLib.ByteSize.FromBytes(context.UncompressedSize)
+            </PropertyColumn>
             <PropertyColumn Property="a => a.CreatedBy">
                 @context.CreatedBy?.UserName
             </PropertyColumn>

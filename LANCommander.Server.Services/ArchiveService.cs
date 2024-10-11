@@ -10,31 +10,35 @@ using YamlDotNet.Serialization.NamingConventions;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Services
 {
     public class ArchiveService : BaseDatabaseService<Archive>
     {
+        private readonly StorageLocationService StorageLocationService;
         private readonly IFusionCache Cache;
 
         public ArchiveService(
             ILogger<ArchiveService> logger,
             DatabaseContext dbContext,
+            StorageLocationService storageLocationService,
             IFusionCache cache) : base(logger, dbContext)
         {
+            StorageLocationService = storageLocationService;
             Cache = cache;
         }
 
-        public static string GetArchiveFileLocation(Archive archive)
+        public string GetArchiveFileLocation(Archive archive)
         {
-            return GetArchiveFileLocation(archive.ObjectKey);
+            return Path.Combine(archive.StorageLocation.Path, archive.ObjectKey);
         }
 
-        public static string GetArchiveFileLocation(string objectKey)
+        public async Task<string> GetArchiveFileLocationAsync(string objectKey)
         {
-            var settings = SettingService.GetSettings();
+            var archive = await Get(a => a.ObjectKey == objectKey).FirstOrDefaultAsync();
 
-            return Path.Combine(settings.Archives.StoragePath, objectKey);
+            return GetArchiveFileLocation(archive);
         }
 
         public override async Task<Archive> Add(Archive entity)
@@ -67,9 +71,9 @@ namespace LANCommander.Server.Services
             await base.Delete(archive);
         }
 
-        public static GameManifest ReadManifest(string objectKey)
+        public async Task<GameManifest> ReadManifest(string objectKey)
         {
-            var upload = GetArchiveFileLocation(objectKey);
+            var upload = await GetArchiveFileLocationAsync(objectKey);
 
             string manifestContents = String.Empty;
 
@@ -99,9 +103,9 @@ namespace LANCommander.Server.Services
             return manifest;
         }
 
-        public static byte[] ReadFile(string objectKey, string path)
+        public async Task<byte[]> ReadFile(string objectKey, string path)
         {
-            var upload = GetArchiveFileLocation(objectKey);
+            var upload = await GetArchiveFileLocationAsync(objectKey);
 
             if (!File.Exists(upload))
                 throw new FileNotFoundException(upload);
@@ -135,7 +139,7 @@ namespace LANCommander.Server.Services
         {
             Guid objectKey = Guid.NewGuid();
 
-            var importArchivePath = ArchiveService.GetArchiveFileLocation(objectKey.ToString());
+            var importArchivePath = await GetArchiveFileLocationAsync(objectKey.ToString());
 
             File.Copy(path, importArchivePath, true);
 
@@ -152,6 +156,34 @@ namespace LANCommander.Server.Services
             {
                 return zip.Entries;
             }
+        }
+
+        public long GetCompressedSize(Archive archive)
+        {
+            long size = 0;
+
+            try
+            {
+                size = new FileInfo(GetArchiveFileLocation(archive)).Length;
+            }
+            catch { }
+
+            return size;
+        }
+
+        public long GetUncompressedSize(Archive archive)
+        {
+            long size = 0;
+
+            using (ZipArchive zip = ZipFile.OpenRead(GetArchiveFileLocation(archive)))
+            {
+                foreach (ZipArchiveEntry entry in zip.Entries)
+                {
+                    size += entry.Length;
+                }
+            }
+
+            return size;
         }
 
         public async Task PatchArchive(Archive originalArchive, Archive alteredArchive, CompressionLevel compressionLevel = CompressionLevel.Optimal)

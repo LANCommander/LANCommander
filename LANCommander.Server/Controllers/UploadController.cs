@@ -1,38 +1,67 @@
-﻿using LANCommander.Server.Models;
+﻿using HarfBuzzSharp;
+using LANCommander.Server.Data.Models;
+using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Controllers
 {
     [Authorize(Roles = "Administrator")]
     public class UploadController : BaseController
     {
-        public UploadController(ILogger<UploadController> logger) : base(logger) { }
+        private readonly StorageLocationService StorageLocationService;
+        private readonly ArchiveService ArchiveService;
+        private readonly IFusionCache Cache;
 
-        public JsonResult Init()
+        public UploadController(
+            ILogger<UploadController> logger,
+            StorageLocationService storageLocationService,
+            ArchiveService archiveService,
+            IFusionCache cache) : base(logger)
         {
-            var key = Guid.NewGuid().ToString();
+            StorageLocationService = storageLocationService;
+            ArchiveService = archiveService;
+            Cache = cache;
+        }
 
-            if (!Directory.Exists(Settings.Archives.StoragePath))
-                Directory.CreateDirectory(Settings.Archives.StoragePath);
+        public async Task<JsonResult> Init([FromBody]SDK.Models.UploadInitRequest request)
+        {
+            var storageLocation = await StorageLocationService.Get(request.StorageLocationId);
 
-            if (!System.IO.File.Exists(Path.Combine(Settings.Archives.StoragePath, key)))
-                System.IO.File.Create(Path.Combine(Settings.Archives.StoragePath, key)).Close();
+            if (!Directory.Exists(storageLocation.Path))
+                Directory.CreateDirectory(storageLocation.Path);
+
+            var archive = new Archive
+            {
+                ObjectKey = Guid.NewGuid().ToString(),
+                StorageLocation = storageLocation,
+                Version = "",
+            };
+
+            archive = await ArchiveService.Add(archive);
+
+            var archivePath = ArchiveService.GetArchiveFileLocation(archive);
+
+            await Cache.SetAsync($"ArchivePath|{archive.ObjectKey}", archivePath);
+
+            if (!System.IO.File.Exists(archivePath))
+                System.IO.File.Create(archivePath).Close();
             else
-                System.IO.File.Delete(Path.Combine(Settings.Archives.StoragePath, key));
+                System.IO.File.Delete(archivePath);
 
             return Json(new
             {
-                Key = key
+                Key = archive.ObjectKey
             });
         }
 
         [HttpPost]
         public async Task<IActionResult> Chunk([FromForm] ChunkUpload chunk)
         {
-            var filePath = Path.Combine(Settings.Archives.StoragePath, chunk.Key.ToString());
+            var filePath = await Cache.GetOrDefaultAsync($"ArchivePath|{chunk.Key}", String.Empty);
 
             if (!System.IO.File.Exists(filePath))
                 return BadRequest("Destination file not initialized.");

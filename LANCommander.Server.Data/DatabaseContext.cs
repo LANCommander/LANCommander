@@ -324,5 +324,6 @@ namespace LANCommander.Server.Data
         public DbSet<Media>? Media { get; set; }
         public DbSet<Issue>? Issues { get; set; }
         public DbSet<Page>? Pages { get; set; }
+        public DbSet<StorageLocation> StorageLocations { get; set; }
     }
 }

@@ -37,7 +37,7 @@ namespace LANCommander.Migrations
                         migrationBuilder.Sql(sql);
                     }
 
-                    File.Move(file, Path.Combine(settings.Media.StoragePath, fileId.ToString()));
+                    File.Move(file, Path.Combine("Media", fileId.ToString()));
                 }
 
             migrationBuilder.DropColumn(

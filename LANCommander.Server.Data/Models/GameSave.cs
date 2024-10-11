@@ -6,6 +6,12 @@ namespace LANCommander.Server.Data.Models
     [Table("GameSaves")]
     public class GameSave : BaseModel
     {
+        public Guid StorageLocationId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(StorageLocationId))]
+        [InverseProperty(nameof(StorageLocation.GameSaves))]
+        public virtual StorageLocation StorageLocation { get; set; }
+
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

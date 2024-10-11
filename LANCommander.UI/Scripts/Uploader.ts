@@ -1,5 +1,6 @@
 ﻿import { Chunk } from './Chunk';
 import { UploadInitResponse } from './UploadInitResponse';
+import { UploadInitRequest } from './UploadInitRequest';
 import axios, { AxiosProgressEvent } from 'axios';
 
 export class Uploader {
@@ -21,9 +22,10 @@ export class Uploader {
     Chunks: Chunk[] = [];
 
     Key: string = "";
+    StorageLocationId: string = "";
     Id: string = "";
 
-    async Init(fileInputId: string, objectKey: string) {
+    async Init(fileInputId: string, storageLocationId: string, objectKey: string) {
         this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
         this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-circle-path');
         this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
@@ -31,7 +33,12 @@ export class Uploader {
 
         if (objectKey == undefined || objectKey == "") {
             try {
-                var response = await axios.post<UploadInitResponse>(this.InitRoute);
+                var request = new UploadInitRequest();
+
+                request.storageLocationId = storageLocationId;
+                request.key = objectKey;
+
+                var response = await axios.post<UploadInitResponse>(this.InitRoute, request);
 
                 this.Key = response.data.key;
             }
@@ -101,7 +108,7 @@ export class Uploader {
             if (currentChunk == this.TotalChunks)
                 end = this.File.size;
 
-            this.Chunks.push(new Chunk(start, end, currentChunk));
+            this.Chunks.push(new Chunk(this.Key, start, end, currentChunk));
         }
     }
 

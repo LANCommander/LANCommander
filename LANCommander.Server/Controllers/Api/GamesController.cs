@@ -19,6 +19,7 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly GameService GameService;
+        private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
         private readonly UserManager<User> UserManager;
         private readonly RoleManager<Role> RoleManager;
@@ -29,12 +30,14 @@ namespace LANCommander.Server.Controllers.Api
             IMapper mapper,
             IFusionCache cache,
             GameService gameService,
+            StorageLocationService storageLocationService,
             ArchiveService archiveService,
             UserManager<User> userManager,
             RoleManager<Role> roleManager) : base(logger)
         {
             Mapper = mapper;
             GameService = gameService;
+            StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
             UserManager = userManager;
             RoleManager = roleManager;
@@ -121,7 +124,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var archive = game.Archives.OrderByDescending(a => a.CreatedOn).First();
 
-            var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
+            var filename = ArchiveService.GetArchiveFileLocation(archive);
 
             if (!System.IO.File.Exists(filename))
             {
@@ -155,18 +158,20 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
+                var storageLocation = await StorageLocationService.Get(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default).FirstOrDefaultAsync();
                 var archive = await ArchiveService.Get(a => a.GameId == request.Id && a.Version == request.Version).FirstOrDefaultAsync();
-                var archivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+                var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (archive != null)
                 {
-                    var existingArchivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+                    var existingArchivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                     System.IO.File.Delete(existingArchivePath);
 
                     archive.ObjectKey = request.ObjectKey.ToString();
                     archive.Changelog = request.Changelog;
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
+                    archive.StorageLocation = storageLocation;
 
                     archive = await ArchiveService.Update(archive);
                 }
@@ -178,6 +183,7 @@ namespace LANCommander.Server.Controllers.Api
                         Changelog = request.Changelog,
                         GameId = request.Id,
                         CompressedSize = new System.IO.FileInfo(archivePath).Length,
+                        StorageLocation = storageLocation
                     };
 
                     await ArchiveService.Add(archive);

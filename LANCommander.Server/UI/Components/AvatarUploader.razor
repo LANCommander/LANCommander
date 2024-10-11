@@ -89,7 +89,7 @@
         }
         else
         {
-            MediaService.DeleteLocalMediaFile(media.FileId);
+            MediaService.DeleteLocalMediaFile(media);
             media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
             await MediaService.Update(media);
         }

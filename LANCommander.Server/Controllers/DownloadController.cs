@@ -57,7 +57,7 @@ namespace LANCommander.Server.Controllers
             if (archive == null)
                 return NotFound();
 
-            var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
+            var filename = ArchiveService.GetArchiveFileLocation(archive);
 
             if (!System.IO.File.Exists(filename))
                 return NotFound();

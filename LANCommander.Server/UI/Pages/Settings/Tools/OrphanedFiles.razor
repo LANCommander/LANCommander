@@ -4,6 +4,7 @@
 @layout SettingsLayout
 @inject ArchiveService ArchiveService;
 @inject MediaService MediaService;
+@inject StorageLocationService StorageLocationService;
 @attribute [Authorize(Roles = "Administrator")]
 
 <PageHeader>
@@ -55,37 +56,47 @@
 
         Orphans = new List<OrphanedFile>();
 
+        var storageLocations = await StorageLocationService.Get();
         var archives = await ArchiveService.Get();
         var archiveFiles = archives.Select(a => ArchiveService.GetArchiveFileLocation(a));
-        var localArchiveFiles = Directory.GetFiles(Settings.Archives.StoragePath);
 
-        foreach (var file in localArchiveFiles.Where(f => !archiveFiles.Contains(f)))
+        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
         {
-            var fileInfo = new FileInfo(file);
+            var localArchiveFiles = Directory.GetFiles(storageLocation.Path);
 
-            Orphans.Add(new OrphanedFile
+            foreach (var file in localArchiveFiles.Where(f => !archiveFiles.Contains(f)))
             {
-                Path = file,
-                Size = fileInfo.Length,
-                CreatedOn = fileInfo.CreationTime
-            });
+                var fileInfo = new FileInfo(file);
+
+                Orphans.Add(new OrphanedFile
+                {
+                    Path = file,
+                    Size = fileInfo.Length,
+                    CreatedOn = fileInfo.CreationTime
+                });
+            }
         }
 
         var media = await MediaService.Get();
         var mediaFiles = media.Select(m => MediaService.GetImagePath(m));
-        var localMediaFiles = Directory.GetFiles(Settings.Media.StoragePath);
 
-        foreach (var file in localMediaFiles.Where(f => !mediaFiles.Contains(f)))
+        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
         {
-            var fileInfo = new FileInfo(file);
+            var localMediaFiles = Directory.GetFiles(storageLocation.Path);
 
-            Orphans.Add(new OrphanedFile
+            foreach (var file in localMediaFiles.Where(f => !mediaFiles.Contains(f)))
             {
-                Path = file,
-                Size = fileInfo.Length,
-                CreatedOn = fileInfo.CreationTime
-            });
+                var fileInfo = new FileInfo(file);
+
+                Orphans.Add(new OrphanedFile
+                {
+                    Path = file,
+                    Size = fileInfo.Length,
+                    CreatedOn = fileInfo.CreationTime
+                });
+            }
         }
+
 
         Orphans = Orphans.OrderByDescending(f => f.Size).ToList();
 

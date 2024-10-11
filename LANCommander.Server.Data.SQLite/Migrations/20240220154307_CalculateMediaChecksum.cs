@@ -14,7 +14,7 @@ namespace LANCommander.Migrations
         {
             var settings = SettingService.GetSettings();
 
-            var files = Directory.EnumerateFiles(settings.Media.StoragePath);
+            var files = Directory.EnumerateFiles("Media");
 
             foreach (var file in files)
             {
@@ -37,7 +37,7 @@ namespace LANCommander.Migrations
                         }
                     }
 
-                    migrationBuilder.Sql($"UPDATE Media SET Crc32 = '{crc.ToString("X")}' WHERE FileId = '{file.Replace(settings.Media.StoragePath + Path.DirectorySeparatorChar, "").ToUpper()}'");
+                    migrationBuilder.Sql($"UPDATE Media SET Crc32 = '{crc.ToString("X")}' WHERE FileId = '{file.Replace("Media" + Path.DirectorySeparatorChar, "").ToUpper()}'");
                 }
                 catch (Exception ex)
                 {

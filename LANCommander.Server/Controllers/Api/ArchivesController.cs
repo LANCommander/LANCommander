@@ -15,12 +15,15 @@ namespace LANCommander.Server.Controllers.Api
     public class ArchivesController : BaseApiController
     {
         private readonly DatabaseContext Context;
+        private readonly ArchiveService ArchiveService;
 
         public ArchivesController(
             ILogger<ArchivesController> logger,
-            DatabaseContext context) : base(logger)
+            DatabaseContext context,
+            ArchiveService archiveService) : base(logger)
         {
             Context = context;
+            ArchiveService = archiveService;
         }
 
         [HttpGet]
@@ -57,9 +60,9 @@ namespace LANCommander.Server.Controllers.Api
                 {
                     Logger?.LogError("No archive found with ID {ArchiveId}", id);
                     return NotFound();
-                }  
+                }
 
-                var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
+                var filename = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (!System.IO.File.Exists(filename))
                 {

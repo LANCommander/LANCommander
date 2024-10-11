@@ -12,14 +12,17 @@ namespace LANCommander.Server.Controllers
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
+        private readonly ArchiveService ArchiveService;
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger,
             IMapper mapper,
-            RedistributableService redistributableService) : base(logger)
+            RedistributableService redistributableService,
+            ArchiveService archiveService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
+            ArchiveService = archiveService;
         }
 
         [HttpGet("/Redistributables/{id:guid}/Export")]
@@ -60,7 +63,7 @@ namespace LANCommander.Server.Controllers
                 if (redistributable.Archives != null)
                 foreach (var archive in redistributable.Archives)
                 {
-                    var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+                    var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive);
                     var entry = export.CreateEntry($"Archives/{archive.ObjectKey}", CompressionLevel.NoCompression);
 
                     using (var entryStream = entry.Open())

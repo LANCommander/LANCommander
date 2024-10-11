@@ -5,14 +5,21 @@ using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Services
 {
     public class MediaService : BaseDatabaseService<Media>
     {
+        private readonly StorageLocationService StorageLocationService;
+
         public MediaService(
             ILogger<MediaService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            DatabaseContext dbContext,
+            StorageLocationService storageLocationService) : base(logger, dbContext)
+        {
+            StorageLocationService = storageLocationService;
+        }
 
         public override Task Delete(Media entity)
         {
@@ -44,9 +51,7 @@ namespace LANCommander.Server.Services
 
         public static string GetImagePath(Media entity)
         {
-            var settings = SettingService.GetSettings();
-
-            return Path.Combine(settings.Media.StoragePath, entity.FileId.ToString());
+            return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
         }
 
         /*public async Task<Media> UploadMediaAsync(Stream stream, Media media)
@@ -58,8 +63,12 @@ namespace LANCommander.Server.Services
         public async Task<Media> UploadMediaAsync(Stream stream, Media media)
         {
             var fileId = Guid.NewGuid();
+            var storageLocation = await StorageLocationService.Get(l => l.Default).FirstOrDefaultAsync();
 
-            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+            media.FileId = fileId;
+            media.StorageLocation = storageLocation;
+
+            var path = GetImagePath(media);
 
             using (var fs = new FileStream(path, FileMode.Create))
             {
@@ -79,7 +88,6 @@ namespace LANCommander.Server.Services
             }
 
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
-            media.FileId = fileId;
 
             return media;
         }
@@ -87,8 +95,17 @@ namespace LANCommander.Server.Services
         private async Task<Media> GeneratePdfThumbnailAsync(Stream inputStream)
         {
             var fileId = Guid.NewGuid();
+            var storageLocation = await StorageLocationService.Get(l => l.Default).FirstOrDefaultAsync();
 
-            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+            var media = new Media
+            {
+                FileId = fileId,
+                MimeType = MediaTypeNames.Application.Pdf,
+                Type = SDK.Enums.MediaType.Thumbnail,
+                StorageLocation = storageLocation
+            };
+
+            var path = GetImagePath(media);
 
             PdfToImageConverter converter = new PdfToImageConverter();
 
@@ -112,20 +129,14 @@ namespace LANCommander.Server.Services
                 }
             }
 
-            var media = new Media
-            {
-                FileId = fileId,
-                MimeType = MediaTypeNames.Application.Pdf,
-                Type = SDK.Enums.MediaType.Thumbnail,
-                Crc32 = SDK.Services.MediaService.CalculateChecksum(path),
-            };
+            media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
 
             return media;
         }
 
-        public void DeleteLocalMediaFile(Guid fileId)
+        public void DeleteLocalMediaFile(Media media)
         {
-            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+            var path = GetImagePath(media);
 
             if (File.Exists(path))
                 File.Delete(path);
@@ -134,8 +145,12 @@ namespace LANCommander.Server.Services
         public async Task<Media> DownloadMediaAsync(string sourceUrl, Media media)
         {
             var fileId = Guid.NewGuid();
+            var storageLocation = await StorageLocationService.Get(l => l.Default).FirstOrDefaultAsync();
 
-            var path = Path.Combine(Settings.Media.StoragePath, fileId.ToString());
+            media.FileId = fileId;
+            media.StorageLocation = storageLocation;
+
+            var path = GetImagePath(media);
 
             using (var http = new HttpClient())
             using (var fs = new FileStream(path, FileMode.Create))
@@ -160,7 +175,6 @@ namespace LANCommander.Server.Services
             }
 
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
-            media.FileId = fileId;
 
             return media;
         }

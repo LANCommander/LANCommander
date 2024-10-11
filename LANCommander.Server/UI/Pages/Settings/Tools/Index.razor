@@ -77,7 +77,8 @@
 
             if (File.Exists(path))
             {
-                archive.CompressedSize = new FileInfo(path).Length;
+                archive.CompressedSize = ArchiveService.GetCompressedSize(archive);
+                archive.UncompressedSize = ArchiveService.GetUncompressedSize(archive);
 
                 await ArchiveService.Update(archive);
             }

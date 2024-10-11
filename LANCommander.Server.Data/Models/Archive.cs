@@ -13,6 +13,12 @@ namespace LANCommander.Server.Data.Models
         [Required]
         public string Version { get; set; }
 
+        public Guid StorageLocationId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(StorageLocationId))]
+        [InverseProperty(nameof(StorageLocation.Archives))]
+        public virtual StorageLocation StorageLocation { get; set; }
+
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

@@ -232,6 +232,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid?>("RedistributableId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("StorageLocationId")
+                        .HasColumnType("char(36)");
+
                     b.Property<long>("UncompressedSize")
                         .HasColumnType("bigint");
 
@@ -254,6 +257,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("LastVersionId");
 
                     b.HasIndex("RedistributableId");
+
+                    b.HasIndex("StorageLocationId");
 
                     b.HasIndex("UpdatedById");
 
@@ -475,6 +480,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid>("StorageLocationId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
 
@@ -489,6 +497,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("StorageLocationId");
 
                     b.HasIndex("UpdatedById");
 
@@ -667,6 +677,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("varchar(2048)");
 
+                    b.Property<Guid>("StorageLocationId")
+                        .HasColumnType("char(36)");
+
                     b.Property<Guid?>("ThumbnailId")
                         .HasColumnType("char(36)");
 
@@ -687,6 +700,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("StorageLocationId");
 
                     b.HasIndex("ThumbnailId")
                         .IsUnique();
@@ -1228,6 +1243,43 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("ServerHttpPath");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.StorageLocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("Default")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("StorageLocations");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Tag", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1721,6 +1773,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasForeignKey("RedistributableId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
+                        .WithMany("Archives")
+                        .HasForeignKey("StorageLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -1733,6 +1791,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("LastVersion");
 
                     b.Navigation("Redistributable");
+
+                    b.Navigation("StorageLocation");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -1852,6 +1912,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
+                        .WithMany("GameSaves")
+                        .HasForeignKey("StorageLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -1866,6 +1932,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("StorageLocation");
 
                     b.Navigation("UpdatedBy");
 
@@ -1963,6 +2031,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
+                        .WithMany("Media")
+                        .HasForeignKey("StorageLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("LANCommander.Server.Data.Models.Media", "Thumbnail")
                         .WithOne("Parent")
                         .HasForeignKey("LANCommander.Server.Data.Models.Media", "ThumbnailId")
@@ -1981,6 +2055,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("StorageLocation");
 
                     b.Navigation("Thumbnail");
 
@@ -2248,6 +2324,21 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.StorageLocation", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById");
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Tag", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -2462,6 +2553,15 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Scripts");
 
                     b.Navigation("ServerConsoles");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.StorageLocation", b =>
+                {
+                    b.Navigation("Archives");
+
+                    b.Navigation("GameSaves");
+
+                    b.Navigation("Media");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.User", b =>

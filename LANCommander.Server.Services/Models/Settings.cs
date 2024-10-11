@@ -90,14 +90,12 @@
     {
         public bool EnablePatching { get; set; } = false;
         public bool AllowInsecureDownloads { get; set; } = false;
-        public string StoragePath { get; set; } = "Uploads";
         public int MaxChunkSize { get; set; } = 50;
     }
 
     public class MediaSettings
     {
         public string SteamGridDbApiKey { get; set; } = "";
-        public string StoragePath { get; set; } = "Media";
         public long MaxSize { get; set; } = 25;
     }
 

@@ -217,6 +217,7 @@ namespace LANCommander.Server
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();
+            builder.Services.AddScoped<StorageLocationService>();
             builder.Services.AddScoped<CategoryService>();
             builder.Services.AddScoped<CollectionService>();
             builder.Services.AddScoped<GameService>();
@@ -328,14 +329,9 @@ namespace LANCommander.Server
             });
 
             Log.Debug("Ensuring required directories exist");
-            if (!Directory.Exists(settings.Archives.StoragePath))
-                Directory.CreateDirectory(settings.Archives.StoragePath);
 
             if (!Directory.Exists(settings.UserSaves.StoragePath))
                 Directory.CreateDirectory(settings.UserSaves.StoragePath);
-
-            if (!Directory.Exists(settings.Media.StoragePath))
-                Directory.CreateDirectory(settings.Media.StoragePath);
 
             if (!Directory.Exists(settings.Update.StoragePath))
                 Directory.CreateDirectory(settings.Update.StoragePath);

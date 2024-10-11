@@ -27,6 +27,12 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         public virtual Media? Parent { get; set; }
 
+        public Guid StorageLocationId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(StorageLocationId))]
+        [InverseProperty(nameof(StorageLocation.Media))]
+        public virtual StorageLocation StorageLocation { get; set; }
+
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

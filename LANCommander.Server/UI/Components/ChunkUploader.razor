@@ -106,6 +106,12 @@
     [Parameter] public EventCallback<string> StatusChanged { get; set; }
     [Parameter] public IBrowserFile File { get; set; }
     [Parameter] public EventCallback<IBrowserFile> FileChanged { get; set; }
+    [Parameter] public string Version { get; set; }
+    [Parameter] public EventCallback<string> VersionChanged { get; set; }
+    [Parameter] public string Changelog { get; set; }
+    [Parameter] public EventCallback<string> ChangelogChanged { get; set; }
+    [Parameter] public Guid StorageLocationId { get; set; }
+    [Parameter] public EventCallback<Guid> StorageLocationIdChanged { get; set; }
 
     Guid UploaderId = Guid.NewGuid();
 
@@ -139,6 +145,13 @@
     protected override async Task OnInitializedAsync()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+    }
+
+    public async Task Start()
+    {
+        Uploading = true;
+
+        await ChangeStatus("Uploading");
 
         ushort i = 0;
 
@@ -147,9 +160,9 @@
             if (FileInput != null)
             {
                 if (!String.IsNullOrWhiteSpace(ObjectKey) && ObjectKey != Guid.Empty.ToString())
-                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", ObjectKey);
+                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", StorageLocationId, ObjectKey);
                 else
-                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", "");
+                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", StorageLocationId, "");
 
                 break;
             }
@@ -158,12 +171,6 @@
 
             await Task.Delay(500);
         }
-    }
-
-    public async Task Start()
-    {
-        Uploading = true;
-        await ChangeStatus("Uploading");
 
         var dotNetReference = DotNetObjectReference.Create(this);
 

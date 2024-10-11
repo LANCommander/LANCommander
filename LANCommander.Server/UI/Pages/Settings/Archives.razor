@@ -1,5 +1,6 @@
 ﻿@page "/Settings/Archives"
 @using LANCommander.Server.Models;
+@using Microsoft.EntityFrameworkCore
 @layout SettingsLayout
 @inject SettingService SettingService
 @inject StorageLocationService StorageLocationService
@@ -70,7 +71,7 @@
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
-        StorageLocations = await StorageLocationService.Get();
+        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).ToListAsync();
     }
 
     private async Task Save()

@@ -85,7 +85,10 @@
                 if (!StorageLocations.Any(l => l.Default))
                     storageLocation.Default = true;
 
-                await StorageLocationService.Update(storageLocation);
+                if (storageLocation.Id != Guid.Empty)
+                    await StorageLocationService.Update(storageLocation);
+                else
+                    await StorageLocationService.Add(storageLocation);
             }
 
             MessageService.Success("Settings saved!");

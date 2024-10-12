@@ -17,6 +17,7 @@ using LANCommander.SDK.Enums;
 using Serilog;
 using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 using LANCommander.Server.Logging;
+using LANCommander.Server.Data.Enums;
 
 namespace LANCommander.Server
 {
@@ -130,17 +131,17 @@ namespace LANCommander.Server
             {
                 b.UseLazyLoadingProxies();
 
-                switch (settings.DatabaseProvider)
+                switch (DatabaseContext.Provider)
                 {
-                    case Services.Models.DatabaseProvider.SQLite:
+                    case DatabaseProvider.SQLite:
                         b.UseSqlite(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
                         break;
 
-                    case Services.Models.DatabaseProvider.MySQL:
+                    case DatabaseProvider.MySQL:
                         b.UseMySql(settings.DatabaseConnectionString, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
                         break;
 
-                    case Services.Models.DatabaseProvider.PostgreSQL:
+                    case DatabaseProvider.PostgreSQL:
                         b.UseNpgsql(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
                         break;
                 }
@@ -240,6 +241,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<PageService>();
             builder.Services.AddScoped<UserService>();
+            builder.Services.AddScoped<SetupService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
@@ -344,50 +346,56 @@ namespace LANCommander.Server
 
             // Migrate
             Log.Debug("Migrating database if required");
-            await using var scope = app.Services.CreateAsyncScope();
-            using var db = scope.ServiceProvider.GetService<DatabaseContext>();
 
-            if ((await db.Database.GetPendingMigrationsAsync()).Any())
+            if (DatabaseContext.Provider != DatabaseProvider.Unknown)
             {
-                if (settings.DatabaseProvider == Services.Models.DatabaseProvider.SQLite)
+                await using var scope = app.Services.CreateAsyncScope();
+                using var db = scope.ServiceProvider.GetService<DatabaseContext>();
+
+                if ((await db.Database.GetPendingMigrationsAsync()).Any())
                 {
-                    var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
-
-                    var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
-
-                    if (File.Exists(dataSource))
+                    if (DatabaseContext.Provider == DatabaseProvider.SQLite)
                     {
-                        Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
-                        File.Copy(dataSource, backupName);
+                        var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
+
+                        var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+
+                        if (File.Exists(dataSource))
+                        {
+                            Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
+                            File.Copy(dataSource, backupName);
+                        }
+                    }
+
+                    await db.Database.MigrateAsync();
+                }
+                else
+                    Log.Debug("No pending migrations are available. Skipping database migration.");
+
+                // Autostart any server processes
+                Log.Debug("Autostarting Servers");
+                var serverService = scope.ServiceProvider.GetService<ServerService>();
+                var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
+
+                foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart).ToListAsync())
+                {
+                    try
+                    {
+                        Log.Debug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
+
+                        if (server.AutostartDelay > 0)
+                            await Task.Delay(server.AutostartDelay);
+
+                        serverProcessService.StartServerAsync(server.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
                     }
                 }
-
-                await db.Database.MigrateAsync();
             }
             else
-                Log.Debug("No pending migrations are available. Skipping database migration.");
-
-            // Autostart any server processes
-            Log.Debug("Autostarting Servers");
-            var serverService = scope.ServiceProvider.GetService<ServerService>();
-            var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
-
-            foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart).ToListAsync())
-            {
-                try
-                {
-                    Log.Debug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
-
-                    if (server.AutostartDelay > 0)
-                        await Task.Delay(server.AutostartDelay);
-
-                    serverProcessService.StartServerAsync(server.Id);
-                }
-                catch (Exception ex)
-                {
-                    Log.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
-                }
-            }
+                Log.Debug("No database provider has been setup, application is fresh and needs first time setup");
 
             app.Run();
         }

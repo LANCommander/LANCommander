@@ -1,0 +1,134 @@
+﻿@page "/FirstTimeSetup"
+@page "/FirstTimeSetup/Database"
+@layout FirstTimeSetupLayout
+@using LANCommander.Server.Data
+@using LANCommander.Server.Data.Enums
+@using Microsoft.Data.Sqlite
+@using Microsoft.EntityFrameworkCore
+@using MySqlConnector
+@using Npgsql
+@inject SetupService SetupService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<Form Model="@Settings" Loading="Loading" OnFinish="ValidateDatabaseConnection" Layout="@FormLayout.Vertical">
+    <FormItem>
+        LANCommander requires a database to run. If you require something other than SQLite, configure that here.
+    </FormItem>
+    <FormItem Label="Database Provider">
+        <Select
+            @bind-Value="context.DatabaseProvider"
+            TItem="DatabaseProvider"
+            TItemValue="DatabaseProvider"
+            DataSource="Enum.GetValues<DatabaseProvider>()"
+            OnSelectedItemChanged="OnDatabaseProviderChanged">
+            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+        </Select>
+    </FormItem>
+    <FormItem Label="Connection String">
+        <Input @bind-Value="context.DatabaseConnectionString" />
+    </FormItem>
+    <FormItem WrapperColOffset="8" WrapperColSpan="16">
+        <GridRow Justify="end" Style="margin-top: 16px;">
+            <GridCol>
+                <Button Type="@ButtonType.Primary" HtmlType="submit">
+                    Connect
+                </Button>
+            </GridCol>
+        </GridRow>
+    </FormItem>
+</Form>
+
+@code {
+    [CascadingParameter]
+    FirstTimeSetupLayout Layout { get; set; }
+
+    Settings Settings;
+
+    bool Loading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
+
+        Settings = SettingService.GetSettings();
+    }
+
+    async Task OnDatabaseProviderChanged()
+    {
+        switch (Settings.DatabaseProvider)
+        {
+            case DatabaseProvider.SQLite:
+                Settings.DatabaseConnectionString = "Data Source=LANCommander.db;Cache=Shared";
+                break;
+
+            case DatabaseProvider.MySQL:
+                Settings.DatabaseConnectionString = "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
+                break;
+
+            case DatabaseProvider.PostgreSQL:
+                Settings.DatabaseConnectionString = "Host=localhost;Port=5432;Database=LANCommander;User Id=username;Password=password";
+                break;
+        }
+    }
+
+    async Task ValidateDatabaseConnection()
+    {
+        bool valid = false;
+
+        Loading = true;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            SetupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+
+            valid = true;
+        }
+        catch (SqliteException ex)
+        {
+            Logger?.LogError(ex, "Could not use SQLite database connection");
+            MessageService.Error($"Could not use SQLite database: {ex.Message}", 10);
+        }
+        catch (MySqlException ex)
+        {
+            Logger?.LogError(ex, "Could not connect to MySQL database");
+            MessageService.Error($"Could not connect to MySQL database: {ex.Message}", 10);
+        }
+        catch (NpgsqlException ex)
+        {
+            Logger?.LogError(ex, "Could not connect to PostgreSQL database");
+            MessageService.Error($"Could not connect to PostgreSQL database: {ex.Message}", 10);
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "An unknown error occurred trying to access the database", 10);
+            MessageService.Error("Could not validate the connection string!");
+        }
+
+        if (valid)
+        {
+            try
+            {
+                await InvokeAsync(async () =>
+                {
+                    await SetupService.ChangeProvider(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+
+                    SettingService.SaveSettings(Settings);
+
+                    NavigationManager.NavigateTo("/FirstTimeSetup/Paths", true);
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not initialize database!");
+                MessageService.Error($"Could not initialize database: {ex.Message}", 10);
+            }
+        }
+
+        Loading = false;
+    }
+}

@@ -217,6 +217,10 @@ label.ant-btn-icon-only {
     background: none !important;
 }
 
+.ant-steps {
+    margin-bottom: 16px;
+}
+
 @media screen and (min-width: 768px) {
     .mobile-menu {
         display: none;

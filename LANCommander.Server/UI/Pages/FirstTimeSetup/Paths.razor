@@ -1,0 +1,150 @@
+﻿@page "/FirstTimeSetup/Paths"
+@layout FirstTimeSetupLayout
+@using Microsoft.EntityFrameworkCore
+@inject StorageLocationService StorageLocationService
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<Form Model="@this" Loading="Loading" OnFinish="ValidatePaths" Layout="@FormLayout.Vertical">
+    <FormItem>
+        Configure where archives, saves, and media get stored.
+    </FormItem>
+
+    <Divider Text="Archives" />
+
+    <FormItem>
+        <Space Direction="DirectionVHType.Vertical" Size="@("middle")" Style="width: 100%">
+            <SpaceItem>
+                <Table TItem="Data.Models.StorageLocation" DataSource="@ArchiveStorageLocations" HidePagination="true" Responsive Context="storageLocation" Size="@TableSize.Small">
+                    <PropertyColumn Property="l => l.Path">
+                        <FilePicker @bind-Value="storageLocation.Path" AllowDirectories="true" Title="Select Storage Location" Root="@RootPath" OnSelected="(path) => OnPathSelected(storageLocation, path)" />
+                    </PropertyColumn>
+                    <PropertyColumn Property="l => l.Default" Title="Default" Align="ColumnAlign.Right">
+                        <Radio TValue="bool" Checked="storageLocation.Default" CheckedChanged="() => SetDefault(storageLocation)" />
+                    </PropertyColumn>
+                    <ActionColumn>
+                        <Space Style="display: flex; justify-content: end">
+                            <SpaceItem>
+                                <Popconfirm OnConfirm="() => RemoveArchiveStorageLocation(storageLocation)" Title="Are you sure you want to remove this storage location?">
+                                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                </Popconfirm>
+                            </SpaceItem>
+                        </Space>
+                    </ActionColumn>
+                </Table>
+            </SpaceItem>
+
+            <SpaceItem>
+                <GridRow Justify="end">
+                    <GridCol>
+                        <Button OnClick="AddArchiveStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
+                    </GridCol>
+                </GridRow>
+            </SpaceItem>
+        </Space>
+    </FormItem>
+
+    <Divider Text="Saves" />
+
+    <FormItem>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@SavesStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(SavesStorageLocation, path)" />
+    </FormItem>
+
+    <Divider Text="Media" />
+
+    <FormItem>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@MediaStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(MediaStorageLocation, path)" />
+    </FormItem>
+
+    <FormItem>
+        <GridRow Justify="end" Style="margin-top: 16px;">
+            <GridCol>
+                <Button Type="@ButtonType.Primary" HtmlType="submit">
+                    Next
+                </Button>
+            </GridCol>
+        </GridRow>
+    </FormItem>
+</Form>
+
+@code {
+    [CascadingParameter]
+    FirstTimeSetupLayout Layout { get; set; }
+
+    ICollection<StorageLocation> ArchiveStorageLocations;
+    StorageLocation MediaStorageLocation;
+    StorageLocation SavesStorageLocation;
+
+    bool Loading = false;
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Layout.ChangeCurrentStep(FirstTimeSetupStep.Paths);
+
+        ArchiveStorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).ToListAsync();
+        SavesStorageLocation = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default).FirstOrDefaultAsync();
+        MediaStorageLocation = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default).FirstOrDefaultAsync();
+    }
+
+    async Task ValidatePaths()
+    {
+        var valid = false;
+
+        try
+        {
+            foreach (var storageLocation in ArchiveStorageLocations)
+            {
+                if (!Directory.Exists(storageLocation.Path))
+                    Directory.CreateDirectory(storageLocation.Path);
+            }
+
+            if (!Directory.Exists(SavesStorageLocation.Path))
+                Directory.CreateDirectory(SavesStorageLocation.Path);
+
+            if (!Directory.Exists(MediaStorageLocation.Path))
+                Directory.CreateDirectory(MediaStorageLocation.Path);
+
+            valid = true;
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, $"Error validating path");
+            MessageService.Error($"Error validating path: {ex.Message}", 10);
+        }
+
+        if (valid)
+            NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
+    }
+
+    async Task SetDefault(StorageLocation storageLocation)
+    {
+        foreach (var archiveStorageLocation in ArchiveStorageLocations)
+        {
+            archiveStorageLocation.Default = archiveStorageLocation.Id == storageLocation.Id;
+        }
+    }
+
+    void OnPathSelected(StorageLocation storageLocation, string path)
+    {
+        var appPath = Directory.GetCurrentDirectory();
+
+        if (path != null && path.StartsWith(appPath))
+            path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
+
+        storageLocation.Path = path;
+    }
+
+    async Task AddArchiveStorageLocation()
+    {
+        ArchiveStorageLocations.Add(new StorageLocation());
+
+        StateHasChanged();
+    }
+
+    async Task RemoveArchiveStorageLocation(StorageLocation storageLocation)
+    {
+        ArchiveStorageLocations.Remove(storageLocation);
+    }
+}

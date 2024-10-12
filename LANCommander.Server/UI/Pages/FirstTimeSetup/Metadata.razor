@@ -1,0 +1,67 @@
+﻿@page "/FirstTimeSetup/Metadata"
+@layout FirstTimeSetupLayout
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+
+<Form Model="@Settings" Loading="Loading" OnFinish="ValidateMetadataConnections" Layout="@FormLayout.Vertical">
+    <FormItem>
+        LANCommander has the ability to pull metadata and media from external sources. Required credentials can be added here, or can be set later in Settings.
+    </FormItem>
+
+    <Divider Text="IGDB Credentials" />
+
+    <p>
+        <Text Type="@TextElementType.Secondary">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
+    </p>
+
+    <FormItem Label="Client ID">
+        <Input @bind-Value="context.IGDBClientId" />
+    </FormItem>
+    <FormItem Label="Client Secret">
+        <InputPassword @bind-Value="context.IGDBClientSecret" />
+    </FormItem>
+
+    <Divider Text="SteamGridDB Credentials" />
+
+    <p>
+        <Text Type="@TextElementType.Secondary">In order to automatically search SteamGridDB for media, you need an API key. <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank">Click here</a> to get your key.</Text>
+    </p>
+
+    <FormItem Label="API Key">
+        <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" />
+    </FormItem>
+
+    <FormItem>
+        <GridRow Justify="end" Style="margin-top: 16px;">
+            <GridCol>
+                <Button Type="@ButtonType.Primary" HtmlType="submit">
+                    Save
+                </Button>
+            </GridCol>
+        </GridRow>
+    </FormItem>
+</Form>
+
+@code {
+    [CascadingParameter]
+    FirstTimeSetupLayout Layout { get; set; }
+
+    Settings Settings;
+
+    bool Loading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Layout.ChangeCurrentStep(FirstTimeSetupStep.Metadata);
+
+        Settings = SettingService.GetSettings();
+    }
+
+    async Task ValidateMetadataConnections()
+    {
+        SettingService.SaveSettings(Settings);
+
+        NavigationManager.NavigateTo("/FirstTimeSetup/Administrator");
+    }
+}

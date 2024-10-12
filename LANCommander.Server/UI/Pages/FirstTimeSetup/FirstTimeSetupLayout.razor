@@ -1,0 +1,58 @@
+﻿@using LANCommander.Server.Data
+@inherits LayoutComponentBase
+@layout BasicLayout
+@inject UserManager<User> UserManager
+@inject RoleManager<Role> RoleManager
+@inject IUserStore<User> UserStore
+@inject NavigationManager NavigationManager
+
+<GridRow Align="center" Class="ant-row-middle ant-row-space-around" Style="min-height: 100vh; margin-top: -96px;">
+    <GridCol Xs="24" Md="10">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <img src="/static/logo-dark.svg" />
+        </div>
+
+        <Card Title="First Time Setup">
+            <Steps Current="CurrentStep" Size="small">
+                @foreach (var step in Enum.GetValues(typeof(FirstTimeSetupStep)))
+                {
+                    <Step Title="@step.ToString()" />
+                }
+            </Steps>
+
+            <CascadingValue Value="this">
+                @Body
+            </CascadingValue>
+        </Card>
+    </GridCol>
+</GridRow>
+
+@code {
+    private int CurrentStep = (int)FirstTimeSetupStep.Database;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (DatabaseContext.Provider != Data.Enums.DatabaseProvider.Unknown)
+        {
+            var role = await RoleManager.FindByNameAsync("Administrator");
+
+            if (role == null)
+                await RoleManager.CreateAsync(new Role
+                    {
+                        Name = "Administrator"
+                    });
+
+            var administrators = await UserManager.GetUsersInRoleAsync("Administrator");
+
+            if (administrators.Count > 0)
+                NavigationManager.NavigateTo("/");
+        }
+    }
+
+    internal async Task ChangeCurrentStep(FirstTimeSetupStep step)
+    {
+        CurrentStep = (int)step;
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

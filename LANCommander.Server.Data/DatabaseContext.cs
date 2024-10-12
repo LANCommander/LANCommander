@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data.Models;
+﻿using LANCommander.Server.Data.Enums;
+using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,9 +7,12 @@ namespace LANCommander.Server.Data
 {
     public class DatabaseContext : IdentityDbContext<User, Role, Guid>
     {
+        public static DatabaseProvider Provider = DatabaseProvider.Unknown;
+
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)
         {
+            
         }
 
         protected override void OnModelCreating(ModelBuilder builder)

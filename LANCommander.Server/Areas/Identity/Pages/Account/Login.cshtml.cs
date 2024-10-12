@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services;
 using LANCommander.Server.Extensions;
+using LANCommander.Server.Data;
 
 namespace LANCommander.Server.Areas.Identity.Pages.Account
 {
@@ -110,12 +111,13 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
 
             ReturnUrl = returnUrl;
 
+            if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown)
+                return Redirect("/FirstTimeSetup");
+
             var administrators = await _userManager.GetUsersInRoleAsync("Administrator");
 
             if (administrators.Count == 0)
-            {
-                return RedirectToPage("./FirstTimeSetup");
-            }
+                return Redirect("/FirstTimeSetup");
 
             return Page();
         }

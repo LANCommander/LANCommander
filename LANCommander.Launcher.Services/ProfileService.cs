@@ -50,38 +50,41 @@ namespace LANCommander.Launcher.Services
 
             SettingService.SaveSettings(Settings);
 
-            var remoteProfile = await Client.Profile.GetAsync();
-
-            Settings.Profile.Id = remoteProfile.Id;
-            Settings.Profile.Alias = String.IsNullOrWhiteSpace(remoteProfile.Alias) ? remoteProfile.UserName : remoteProfile.Alias;
-
-            try
+            if (Client.IsConnected())
             {
-                var tempAvatarPath = await Client.Profile.DownloadAvatar();
+                var remoteProfile = await Client.Profile.GetAsync();
 
-                if (!String.IsNullOrWhiteSpace(tempAvatarPath))
+                Settings.Profile.Id = remoteProfile.Id;
+                Settings.Profile.Alias = String.IsNullOrWhiteSpace(remoteProfile.Alias) ? remoteProfile.UserName : remoteProfile.Alias;
+
+                try
                 {
-                    var media = new Media
+                    var tempAvatarPath = await Client.Profile.DownloadAvatar();
+
+                    if (!String.IsNullOrWhiteSpace(tempAvatarPath))
                     {
-                        FileId = Guid.NewGuid(),
-                        Type = SDK.Enums.MediaType.Avatar,
-                        MimeType = MediaTypeNames.Image.Png,
-                        Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
-                    };
+                        var media = new Media
+                        {
+                            FileId = Guid.NewGuid(),
+                            Type = SDK.Enums.MediaType.Avatar,
+                            MimeType = MediaTypeNames.Image.Png,
+                            Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
+                        };
 
-                    media = await MediaService.Add(media);
+                        media = await MediaService.Add(media);
 
-                    var localPath = MediaService.GetImagePath(media);
+                        var localPath = MediaService.GetImagePath(media);
 
-                    if (File.Exists(tempAvatarPath))
-                        File.Move(tempAvatarPath, localPath);
+                        if (File.Exists(tempAvatarPath))
+                            File.Move(tempAvatarPath, localPath);
 
-                    Settings.Profile.AvatarId = media.Id;
+                        Settings.Profile.AvatarId = media.Id;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Could not download avatar");
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Could not download avatar");
+                }
             }
 
             SettingService.SaveSettings(Settings);

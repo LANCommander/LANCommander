@@ -4,6 +4,16 @@
 @using LANCommander.Launcher.Services.Extensions
 @inherits FeedbackComponent<LibraryItem, string>
 @inject LibraryService LibraryService
+@inject SDK.Client Client
+
+<Row Gutter="16">
+    <Col Span="12">
+        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
+    </Col>
+    <Col Span="12">
+        <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" />
+    </Col>
+</Row>
 
 @if (Addons.Any())
 {
@@ -13,7 +23,7 @@
                 @SelectedAddonIds.Length / @Addons.Count Selected
             </ExtraTemplate>
             <ChildContent>
-                <CheckboxGroup Style="width:100%" TValue="string" ValueChanged="@OnAddonsSelectedChange">
+                <CheckboxGroup Style="width: 100%" TValue="string" ValueChanged="@OnAddonsSelectedChange">
                     @foreach (var addon in Addons)
                     {
                         <Checkbox Label="@addon.Id.ToString()">
@@ -47,17 +57,20 @@
     Settings Settings = SettingService.GetSettings();
 
     string SelectedDirectory = "";
-    List<Game> Addons = new();
+    List<SDK.Models.Game> Addons = new();
+    SDK.Models.Game RemoteGame;
 
     Guid[] SelectedAddonIds = new Guid[] { };
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         SelectedDirectory = Settings.Games.InstallDirectories.First();
 
         var game = Options.DataItem as Game;
 
-        Addons = game.DependentGames.Where(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
+        RemoteGame = await Client.Games.GetAsync(Options.Key);
+
+        Addons = RemoteGame.DependentGames.Where(g => g.Type.IsIn(SDK.Enums.GameType.Expansion, SDK.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
@@ -75,6 +88,40 @@
         {
             SelectedAddonIds = new Guid[] { };
         }
+    }
+
+    long GetDownloadSize()
+    {
+        long size = 0;
+
+        if (RemoteGame != null && RemoteGame.Archives.Any())
+        {
+            size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+
+            foreach (var dependentGame in RemoteGame.DependentGames.Where(dg => SelectedAddonIds.Contains(dg.Id)))
+            {
+                size += dependentGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+            }
+        }
+
+        return size;
+    }
+
+    long GetSpaceRequired()
+    {
+        long size = 0;
+
+        if (RemoteGame != null && RemoteGame.Archives.Any())
+        {
+            size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
+
+            foreach (var dependentGame in RemoteGame.DependentGames)
+            {
+                size += dependentGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
+            }
+        }
+
+        return size;
     }
 
     long GetFreeSpace(string path)

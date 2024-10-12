@@ -63,6 +63,14 @@
                                         <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
                                     }
                                 </SpaceItem>
+
+                                @if (SelectedItem.State == LibraryItemState.NotInstalled && Client.IsConnected())
+                                {
+                                    <SpaceItem>
+                                        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
+                                    </SpaceItem>
+                                }
+
                                 <SpaceItem>
                                     <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
                                 </SpaceItem>
@@ -144,6 +152,7 @@
     LibraryItem SelectedItem { get; set; }
 
     Data.Models.Game SelectedGame { get; set; }
+    SDK.Models.Game RemoteGame { get; set; }
 
     Settings Settings = SettingService.GetSettings();
 
@@ -168,7 +177,12 @@
     protected override async Task OnParametersSetAsync()
     {
         if (Id != Guid.Empty)
+        {
             await OnLibraryItemSelected(LibraryService.GetLibraryItem(Id));
+
+            if (SelectedGame != null && Client.IsConnected())
+                RemoteGame = await Client.Games.GetAsync(SelectedGame.Id);
+        }
 
         await InvokeAsync(StateHasChanged);
     }
@@ -299,6 +313,16 @@
             if (selectedGame.Id == game.Id)
                 await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
         }
+    }
+
+    long GetDownloadSize()
+    {
+        long size = 0;
+
+        if (RemoteGame != null && RemoteGame.Archives.Any())
+            size = RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+
+        return size;
     }
 
     string GetPlayTime(Data.Models.Game game)

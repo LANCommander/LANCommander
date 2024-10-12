@@ -13,9 +13,12 @@
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
     <PackageReference Include="IGDB" Version="5.1.0" />
     <PackageReference Include="IPXRelayDotNet" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.8" />
     <PackageReference Include="Octokit" Version="12.0.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
     <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
     <PackageReference Include="Semver" Version="2.3.0" />
     <PackageReference Include="Syncfusion.PdfToImageConverter.Net" Version="26.2.14" />

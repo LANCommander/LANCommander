@@ -5,13 +5,15 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Server.Data
 {
-    public class Repository<T> : IDisposable where T : BaseModel
+    public class Repository<T> where T : BaseModel
     {
         private readonly DbContext Context;
+        private readonly IHttpContextAccessor HttpContextAccessor;
 
-        public Repository(DatabaseContext context)
+        public Repository(DatabaseContext context, IHttpContextAccessor httpContextAccessor)
         {
             Context = context;
+            HttpContextAccessor = httpContextAccessor;
         }
 
         private DbSet<T> DbSet
@@ -34,9 +36,9 @@ namespace LANCommander.Server.Data
             return await DbSet.FindAsync(id);
         }
 
-        public T FirstOrDefault(Expression<Func<T, bool>> predicate)
+        public async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
         {
-            return Get(predicate).FirstOrDefault();
+            return await Get(predicate).FirstOrDefaultAsync();
         }
 
         public async Task<T> Add(T entity)
@@ -82,21 +84,17 @@ namespace LANCommander.Server.Data
 
         private User GetCurrentUser()
         {
-            /*if (HttpContext != null && HttpContext.User != null && HttpContext.User.Identity != null && HttpContext.User.Identity.IsAuthenticated)
+            if (HttpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated == true)
             {
-                var user = GetUser(HttpContext.User.Identity.Name);
+                var user = GetUser(HttpContextAccessor.HttpContext.User.Identity.Name);
 
                 if (user == null)
                     return null;
                 else
                     return user;
             }
-            else*/
+            else
                 return null;
-        }
-
-        public void Dispose()
-        {
         }
     }
 }

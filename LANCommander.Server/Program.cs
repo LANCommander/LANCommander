@@ -164,7 +164,7 @@ namespace LANCommander.Server
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
             builder.Services.AddDbContext<DatabaseContext>(b =>
             {
-                //b.UseLazyLoadingProxies();
+                b.UseLazyLoadingProxies();
 
                 settings = SettingService.GetSettings();
 

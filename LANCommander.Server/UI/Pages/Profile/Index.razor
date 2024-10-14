@@ -2,9 +2,8 @@
 @page "/Profile/General"
 @using Microsoft.AspNetCore.Components.Authorization;
 @layout ProfileLayout
+@inject UserService UserService
 @inject MediaService MediaService
-@inject UserManager<User> UserManager
-@inject SignInManager<User> SignInManager
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -47,7 +46,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
-            User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
+            User = await UserService.Get(authState.User.Identity.Name);
     }
 
     private async Task Save()
@@ -56,7 +55,7 @@
         {
             if (Form.IsModified)
             {
-                await UserManager.UpdateAsync(User);
+                await UserService.Update(User);
 
                 MessageService.Success("Profile updated!");
 

@@ -15,9 +15,9 @@ namespace LANCommander.Server.Services
 
         public PlaySessionService(
             ILogger<PlaySessionService> logger,
-            DatabaseContext dbContext,
+            Repository<PlaySession> repository,
             ServerService serverService,
-            ServerProcessService serverProcessService) : base(logger, dbContext)
+            ServerProcessService serverProcessService) : base(logger, repository)
         {
             ServerService = serverService;
             ServerProcessService = serverProcessService;
@@ -25,7 +25,7 @@ namespace LANCommander.Server.Services
 
         public async Task StartSession(Guid gameId, Guid userId)
         {
-            var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
+            var existingSession = await FirstOrDefault(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null);
 
             if (existingSession != null)
                 await Delete(existingSession);
@@ -39,7 +39,7 @@ namespace LANCommander.Server.Services
 
             await Add(session);
 
-            var servers = ServerService.Get(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+            var servers = await ServerService.Get(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
 
             foreach (var server in servers)
             {
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Services
 
         public async Task EndSession(Guid gameId, Guid userId)
         {
-            var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
+            var existingSession = await FirstOrDefault(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null);
 
             if (existingSession != null)
             {
@@ -58,11 +58,11 @@ namespace LANCommander.Server.Services
                 await Update(existingSession);
             }
 
-            var activeSessions = await Get(ps => ps.GameId == gameId && ps.End == null).AnyAsync();
+            var activeSessions = (await Get(ps => ps.GameId == gameId && ps.End == null)).Any();
 
             if (!activeSessions)
             {
-                var servers = ServerService.Get(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+                var servers = await ServerService.Get(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
 
                 foreach (var server in servers)
                 {

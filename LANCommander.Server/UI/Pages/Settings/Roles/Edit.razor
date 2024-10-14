@@ -2,8 +2,7 @@
 @using LANCommander.Server.Models;
 @layout SettingsLayout
 @inject CollectionService CollectionService
-@inject RoleManager<Role> RoleManager
-@inject UserManager<User> UserManager
+@inject RoleService RoleService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -38,7 +37,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Role = await RoleManager.FindByIdAsync(Id.ToString());
+        Role = await RoleService.Get(Id);
         Collections = await CollectionService.Get();
     }
 
@@ -46,7 +45,7 @@
     {
         try
         {
-            await RoleManager.UpdateAsync(Role);
+            await RoleService.Update(Role);
 
             MessageService.Success("Role updated!");
         }

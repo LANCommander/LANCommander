@@ -71,7 +71,7 @@
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
-        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).ToListAsync();
+        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
     }
 
     private async Task Save()

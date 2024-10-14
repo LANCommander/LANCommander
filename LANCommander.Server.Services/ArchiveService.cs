@@ -21,9 +21,9 @@ namespace LANCommander.Server.Services
 
         public ArchiveService(
             ILogger<ArchiveService> logger,
-            DatabaseContext dbContext,
+            Repository<Archive> repository,
             StorageLocationService storageLocationService,
-            IFusionCache cache) : base(logger, dbContext)
+            IFusionCache cache) : base(logger, repository)
         {
             StorageLocationService = storageLocationService;
             Cache = cache;
@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
 
         public async Task<string> GetArchiveFileLocationAsync(string objectKey)
         {
-            var archive = await Get(a => a.ObjectKey == objectKey).FirstOrDefaultAsync();
+            var archive = await FirstOrDefault(a => a.ObjectKey == objectKey);
 
             return GetArchiveFileLocation(archive);
         }

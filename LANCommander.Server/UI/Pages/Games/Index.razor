@@ -180,11 +180,25 @@
 
     private async Task LoadData()
     {
-        Games = await GameService
-            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null)
-            .Where(g => g.Title.ToLower().Contains(Search.ToLower().Trim()) || g.SortTitle.ToLower().Contains(Search.ToLower().Trim()))
-            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
-            .ToListAsync();
+        Games = (await GameService
+            .Get(g =>
+                (
+                    g.Type == GameType.MainGame
+                    ||
+                    g.Type == GameType.StandaloneExpansion
+                    ||
+                    g.Type == GameType.StandaloneMod
+                    ||
+                    g.BaseGame == null
+                )
+                &&
+                (
+                    g.Title.ToLower().Contains(Search.ToLower().Trim())
+                    ||
+                    g.SortTitle.ToLower().Contains(Search.ToLower().Trim())
+                )
+            ))
+            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
         if (Table != null)
             Table.ReloadData();
@@ -266,7 +280,7 @@
             Logger.LogError(ex, "Could not delete the game!");
         }
 
-        Games = await GameService.Get(x => true).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToListAsync();
+        Games = (await GameService.Get(x => true)).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
         Loading = false;
     }

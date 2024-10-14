@@ -8,6 +8,6 @@ namespace LANCommander.Server.Services
     {
         public CollectionService(
             ILogger<CollectionService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<Collection> repository) : base(logger, repository) { }
     }
 }

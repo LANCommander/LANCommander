@@ -2,17 +2,28 @@
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace LANCommander.Server.Data
 {
     public class DatabaseContext : IdentityDbContext<User, Role, Guid>
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
+        public static Dictionary<Guid, Stopwatch> ContextTracker;
 
-        public DatabaseContext(DbContextOptions<DatabaseContext> options)
+        private readonly ILogger Logger;
+
+        public DatabaseContext(DbContextOptions<DatabaseContext> options, ILogger<DatabaseContext> logger)
             : base(options)
         {
-            
+            Logger = logger;
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.AddInterceptors(new ConnectionInterceptor(Logger));
+            base.OnConfiguring(optionsBuilder);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -109,7 +120,7 @@ namespace LANCommander.Server.Data
                 .HasMany(g => g.PlaySessions)
                 .WithOne(ps => ps.Game)
                 .IsRequired(false)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Game>()
                 .HasMany(g => g.GameSaves)
@@ -122,8 +133,8 @@ namespace LANCommander.Server.Data
                 .WithMany(c => c.DevelopedGames)
                 .UsingEntity<Dictionary<string, object>>(
                     "GameDeveloper",
-                    g => g.HasOne<Company>().WithMany().HasForeignKey("DeveloperId"),
-                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId")
+                    g => g.HasOne<Company>().WithMany().HasForeignKey("DeveloperId").OnDelete(DeleteBehavior.Cascade),
+                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade)
                 );
 
             builder.Entity<Game>()
@@ -131,8 +142,8 @@ namespace LANCommander.Server.Data
                 .WithMany(c => c.PublishedGames)
                 .UsingEntity<Dictionary<string, object>>(
                     "GamePublisher",
-                    g => g.HasOne<Company>().WithMany().HasForeignKey("PublisherId"),
-                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId")
+                    g => g.HasOne<Company>().WithMany().HasForeignKey("PublisherId").OnDelete(DeleteBehavior.Cascade),
+                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade)
                 );
 
             builder.Entity<Game>()
@@ -140,8 +151,8 @@ namespace LANCommander.Server.Data
                 .WithMany(r => r.Games)
                 .UsingEntity<Dictionary<string, object>>(
                     "GameRedistributable",
-                    gr => gr.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId"),
-                    gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId")
+                    gr => gr.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId").OnDelete(DeleteBehavior.Cascade),
+                    gr => gr.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade)
                 );
 
             builder.Entity<Game>()
@@ -243,8 +254,8 @@ namespace LANCommander.Server.Data
                 .WithMany(g => g.Collections)
                 .UsingEntity<Dictionary<string, object>>(
                     "CollectionGame",
-                    cg => cg.HasOne<Game>().WithMany().HasForeignKey("GameId"),
-                    cg => cg.HasOne<Collection>().WithMany().HasForeignKey("CollectionId")
+                    cg => cg.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
+                    cg => cg.HasOne<Collection>().WithMany().HasForeignKey("CollectionId").OnDelete(DeleteBehavior.Cascade)
                 );
             #endregion
 
@@ -254,8 +265,8 @@ namespace LANCommander.Server.Data
                 .WithMany(c => c.Roles)
                 .UsingEntity<Dictionary<string, object>>(
                     "RoleCollection",
-                    rc => rc.HasOne<Collection>().WithMany().HasForeignKey("CollectionId"),
-                    rc => rc.HasOne<Role>().WithMany().HasForeignKey("RoleId")
+                    rc => rc.HasOne<Collection>().WithMany().HasForeignKey("CollectionId").OnDelete(DeleteBehavior.Cascade),
+                    rc => rc.HasOne<Role>().WithMany().HasForeignKey("RoleId").OnDelete(DeleteBehavior.Cascade)
                 );
             #endregion
 
@@ -264,7 +275,7 @@ namespace LANCommander.Server.Data
                 .HasOne(i => i.Game)
                 .WithMany(g => g.Issues)
                 .IsRequired(true)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
             #region Page Relationships
@@ -279,8 +290,8 @@ namespace LANCommander.Server.Data
                 .WithMany(g => g.Pages)
                 .UsingEntity<Dictionary<string, object>>(
                     "PageGame",
-                    pg => pg.HasOne<Game>().WithMany().HasForeignKey("GameId"),
-                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId")
+                    pg => pg.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
+                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId").OnDelete(DeleteBehavior.Cascade)
                 );
 
             builder.Entity<Page>()
@@ -288,8 +299,8 @@ namespace LANCommander.Server.Data
                 .WithMany(g => g.Pages)
                 .UsingEntity<Dictionary<string, object>>(
                     "PageRedistributable",
-                    pg => pg.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId"),
-                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId")
+                    pg => pg.HasOne<Redistributable>().WithMany().HasForeignKey("RedistributableId").OnDelete(DeleteBehavior.Cascade),
+                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId").OnDelete(DeleteBehavior.Cascade)
                 );
 
             builder.Entity<Page>()
@@ -297,8 +308,8 @@ namespace LANCommander.Server.Data
                 .WithMany(g => g.Pages)
                 .UsingEntity<Dictionary<string, object>>(
                     "PageServer",
-                    pg => pg.HasOne<Models.Server>().WithMany().HasForeignKey("ServerId"),
-                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId")
+                    pg => pg.HasOne<Models.Server>().WithMany().HasForeignKey("ServerId").OnDelete(DeleteBehavior.Cascade),
+                    pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId").OnDelete(DeleteBehavior.Cascade)
                 );
             #endregion
         }

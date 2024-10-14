@@ -21,19 +21,19 @@ namespace LANCommander.Server.Controllers.Api
         private readonly IMapper Mapper;
         private readonly KeyService KeyService;
         private readonly GameService GameService;
-        private readonly UserManager<Data.Models.User> UserManager;
+        private readonly UserService UserService;
 
         public KeysController(
             ILogger<KeysController> logger,
             IMapper mapper,
             KeyService keyService,
             GameService gameService,
-            UserManager<Data.Models.User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             Mapper = mapper;
             KeyService = keyService;
             GameService = gameService;
-            UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpPost]
@@ -55,7 +55,7 @@ namespace LANCommander.Server.Controllers.Api
             {
                 Data.Models.Key key = null;
 
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
                 var game = await GameService.Get(id);
 
                 if (game == null)
@@ -105,7 +105,7 @@ namespace LANCommander.Server.Controllers.Api
             {
                 Data.Models.Key key = null;
 
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
                 var game = await GameService.Get(id);
 
                 if (game == null)
@@ -174,10 +174,10 @@ namespace LANCommander.Server.Controllers.Api
         /// <returns>Allocated key</returns>
         private async Task<SDK.Models.Key> AllocateNewKey(Guid id, KeyRequest keyRequest, KeyAllocationMethod keyAllocationMethod)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
 
-            var availableKey = KeyService.Get(k => k.Game.Id == id)
-                .Where(k =>
+            var keys = await KeyService.Get(k => k.Game.Id == id);
+            var availableKey = keys.Where(k =>
                 (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
                 ||
                 (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null))

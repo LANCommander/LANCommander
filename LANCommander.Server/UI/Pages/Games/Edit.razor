@@ -420,7 +420,7 @@ else
         Platforms = await PlatformService.Get();
         Tags = await TagService.Get();
         Collections = await CollectionService.Get();
-        Games = await GameService.Get(g => g.Type == GameType.MainGame).ToListAsync();
+        Games = await GameService.Get(g => g.Type == GameType.MainGame);
         Redistributables = await RedistributableService.Get();
         RedistributableTargetItems = Redistributables.Select(r => new TransferItem
         {
@@ -487,7 +487,7 @@ else
 
         if (result.IGDBMetadata.ParentGame != null && result.IGDBMetadata.ParentGame.Id.HasValue)
         {
-            var baseGame = await GameService.Get(g => g.IGDBId == result.IGDBMetadata.ParentGame.Id).FirstOrDefaultAsync();
+            var baseGame = await GameService.FirstOrDefault(g => g.IGDBId == result.IGDBMetadata.ParentGame.Id);
 
             if (baseGame != null)
                 Game.BaseGameId = baseGame.Id;

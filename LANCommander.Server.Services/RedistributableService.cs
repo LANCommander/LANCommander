@@ -18,15 +18,15 @@ namespace LANCommander.Server.Services
 
         public RedistributableService(
             ILogger<RedistributableService> logger,
-            DatabaseContext dbContext,
-            ArchiveService archiveService) : base(logger, dbContext)
+            Repository<Redistributable> repository,
+            ArchiveService archiveService) : base(logger, repository)
         {
             ArchiveService = archiveService;
         }
 
         public async Task<Redistributable> Import(Guid objectKey)
         {
-            var importArchive = await ArchiveService.Get(a => a.ObjectKey == objectKey.ToString()).FirstOrDefaultAsync();
+            var importArchive = await ArchiveService.FirstOrDefault(a => a.ObjectKey == objectKey.ToString());
             var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
 
             using (var importZip = ZipFile.OpenRead(importArchivePath))

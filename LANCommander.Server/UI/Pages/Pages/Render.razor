@@ -36,7 +36,7 @@
     protected override async Task OnParametersSetAsync()
     {
         if (Route == null) {
-            var firstParent = await PageService.Get(p => p.Parent == null).OrderBy(p => p.SortOrder).FirstOrDefaultAsync();
+            var firstParent = await PageService.FirstOrDefault(p => p.Parent == null, p => p.SortOrder);
 
             if (firstParent == null)
                 NavigationManager.NavigateTo("/");
@@ -49,7 +49,7 @@
 
             Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
             {
-                return await PageService.Get(p => p.Route == $"Pages/{route}").FirstOrDefaultAsync();
+                return await PageService.FirstOrDefault(p => p.Route == $"Pages/{route}");
             });
         }
     }

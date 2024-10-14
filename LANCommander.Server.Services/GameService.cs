@@ -30,7 +30,7 @@ namespace LANCommander.Server.Services
 
         public GameService(
             ILogger<GameService> logger,
-            DatabaseContext dbContext,
+            Repository<Game> repository,
             IMapper mapper,
             ArchiveService archiveService,
             MediaService mediaService,
@@ -38,7 +38,7 @@ namespace LANCommander.Server.Services
             TagService tagService,
             CompanyService companyService,
             GenreService genreService,
-            IFusionCache cache) : base(logger, dbContext)
+            IFusionCache cache) : base(logger, repository)
         {
             Mapper = mapper;
             ArchiveService = archiveService;
@@ -269,7 +269,7 @@ namespace LANCommander.Server.Services
 
         public async Task<Game> Import(Guid objectKey)
         {
-            var importArchive = await ArchiveService.Get(a => a.ObjectKey == objectKey.ToString()).FirstOrDefaultAsync();
+            var importArchive = await ArchiveService.FirstOrDefault(a => a.ObjectKey == objectKey.ToString());
             var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
 
             Game game;

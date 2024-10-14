@@ -16,17 +16,17 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly GameSaveService GameSaveService;
         private readonly GameService GameService;
-        private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
         public GameSavesController(
             ILogger<GameSavesController> logger,
             GameSaveService gameSaveService,
             GameService gameService,
-            UserManager<User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             GameSaveService = gameSaveService;
             GameService = gameService;
-            UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpGet("{id}")]
@@ -60,7 +60,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var user = await UserManager.GetUserAsync(User);
+            var user = await UserService.Get(User?.Identity?.Name);
 
             if (user == null)
             {
@@ -68,7 +68,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
                 
-            var path = GameSaveService.GetSavePath(game.Id, user.Id);
+            var path = await GameSaveService.GetSavePath(game.Id, user.Id);
 
             if (!System.IO.File.Exists(path))
             {
@@ -98,7 +98,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var user = await UserManager.GetUserAsync(User);
+            var user = await UserService.Get(User?.Identity?.Name);
 
             if (user == null)
             {
@@ -106,7 +106,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var path = GameSaveService.GetSavePath(game.Id, user.Id);
+            var path = await GameSaveService.GetSavePath(game.Id, user.Id);
 
             var fileInfo = new FileInfo(path);
 

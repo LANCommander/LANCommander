@@ -8,6 +8,6 @@ namespace LANCommander.Server.Services
     {
         public TagService(
             ILogger<TagService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<Tag> repository) : base(logger, repository) { }
     }
 }

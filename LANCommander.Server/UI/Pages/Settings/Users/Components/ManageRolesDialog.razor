@@ -1,9 +1,9 @@
 ﻿@using LANCommander.Server.Models
 @using Microsoft.EntityFrameworkCore
 @using Components
+@inject UserService UserService
+@inject RoleService RoleService
 @inherits FeedbackComponent<Guid, Guid>
-@inject UserManager<User> UserManager
-@inject RoleManager<Role> RoleManager
 @inject IMessageService MessageService
 @inject ILogger<ManageRolesDialog> Logger
 
@@ -38,12 +38,12 @@
 
     private async Task LoadData()
     {
-        User = await UserManager.FindByIdAsync(Options.ToString());
-        Roles = await RoleManager.Roles.ToListAsync();
+        User = await UserService.Get(Options);
+        Roles = (await RoleService.Get()).ToList();
 
-        var currentRoles = await UserManager.GetRolesAsync(User);
+        var currentRoles = await UserService.GetRoles(User);
 
-        SelectedRoles = Roles.Where(r => currentRoles.Contains(r.Name)).ToList();
+        SelectedRoles = Roles.Where(r => currentRoles.Any(cr => r.Name == cr.Name)).ToList();
     }
 
     async Task OnChange(TransferChangeArgs e)
@@ -53,22 +53,22 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        var currentAdmins = await UserManager.GetUsersInRoleAsync("Administrator");
+        var currentAdmins = await UserService.GetUsersInRole("Administrator");
 
         try
         {
-            var currentRoles = await UserManager.GetRolesAsync(User);
+            var currentRoles = await UserService.GetRoles(User);
 
-            await UserManager.AddToRolesAsync(User, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Contains(r)));
+            await UserService.AddToRoles(User, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
 
             foreach (var role in currentRoles)
             {
-                if (!SelectedRoles.Any(r => r.Name == role))
+                if (!SelectedRoles.Any(r => r.Name == role.Name))
                 {
-                    if (role == "Administrator" && currentAdmins.Count == 1)
+                    if (role.Name == "Administrator" && currentAdmins.Any())
                         MessageService.Warning("Cannot demote the only administrator!");
                     else
-                        await UserManager.RemoveFromRoleAsync(User, role);
+                        await UserService.RemoveFromRole(User, role);
                 }
             }
 

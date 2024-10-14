@@ -1,8 +1,7 @@
 ﻿@page "/FirstTimeSetup/Administrator"
 @layout FirstTimeSetupLayout
-@inject UserManager<User> UserManager
-@inject RoleManager<Role> RoleManager
-@inject IUserStore<User> UserStore
+@inject RoleService RoleService
+@inject UserService UserService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -52,17 +51,17 @@
 
         try
         {
-            var role = await RoleManager.FindByNameAsync("Administrator");
+            var role = await RoleService.Get("Administrator");
 
             if (role == null)
-                await RoleManager.CreateAsync(new Role
+                await RoleService.Add(new Role
                 {
                     Name = "Administrator"
                 });
 
-            var administrators = await UserManager.GetUsersInRoleAsync("Administrator");
+            var administrators = await UserService.GetUsersInRole("Administrator");
 
-            if (administrators.Count > 0)
+            if (administrators.Any())
                 NavigationManager.NavigateTo("/");
             else
             {
@@ -70,18 +69,16 @@
 
                 user.Approved = true;
                 user.ApprovedOn = DateTime.Now;
+                user.UserName = Model.Username;
 
-                await UserStore.SetUserNameAsync(user, Model.Username, CancellationToken.None);
+                user = await UserService.Add(user);
 
-                var result = await UserManager.CreateAsync(user, Model.Password);
-
-                if (result.Succeeded)
+                if (user != null)
                 {
-                    var something = await UserManager.AddToRoleAsync(user, "Administrator");
+                    await UserService.ChangePassword(user, Model.Password);
+                    await UserService.AddToRole(user, "Administrator");
 
                     Logger?.LogInformation("Administrator created a new account with password.");
-
-                    var userId = await UserManager.GetUserIdAsync(user);
 
                     await MessageService.Success("Setup completed! Redirecting...", 5);
 

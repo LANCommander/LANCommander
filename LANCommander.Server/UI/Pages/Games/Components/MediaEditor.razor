@@ -187,7 +187,7 @@
                 await MediaService.Update(media);
             }
 
-            Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
+            Values = await MediaService.Get(m => m.GameId == media.GameId);
 
             if (ValuesChanged.HasDelegate)
                 await ValuesChanged.InvokeAsync(Values);
@@ -225,7 +225,7 @@
             await MediaService.Update(media);
         }
 
-        Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
+        Values = await MediaService.Get(m => m.GameId == media.GameId);
 
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(Values);

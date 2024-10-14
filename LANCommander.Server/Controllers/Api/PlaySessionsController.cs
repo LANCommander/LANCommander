@@ -16,31 +16,31 @@ namespace LANCommander.Server.Controllers.Api
         private readonly IMapper Mapper;
         private readonly PlaySessionService PlaySessionService;
         private readonly GameService GameService;
-        private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
         public PlaySessionsController(
             ILogger<PlaySessionsController> logger,
             IMapper mapper,
             PlaySessionService playSessionService,
             GameService gameService,
-            UserManager<User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             Mapper = mapper;
             PlaySessionService = playSessionService;
             GameService = gameService;
-            UserManager = userManager;
+            UserService = UserService;
         }
 
         [HttpPost("Start/{id}")]
         public async Task<IActionResult> Start(Guid id)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
             var game = await GameService.Get(id);
 
             if (game == null || user == null)
                 return BadRequest();
 
-            var activeSessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.End == null).ToListAsync();
+            var activeSessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.End == null);
 
             foreach (var activeSession in activeSessions)
                 await PlaySessionService.EndSession(activeSession.Game.Id, activeSession.UserId);
@@ -53,7 +53,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpPost("End/{id}")]
         public async Task<IActionResult> End(Guid id)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
             var game = await GameService.Get(id);
 
             if (game == null || user == null)
@@ -67,12 +67,12 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id).ToListAsync();
+            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }
@@ -80,12 +80,12 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(Guid id)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.GameId == id).ToListAsync();
+            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.GameId == id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }

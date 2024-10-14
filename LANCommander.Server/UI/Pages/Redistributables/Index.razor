@@ -83,7 +83,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Redistributables = await RedistributableService.Get(r => r.Name.ToLower().Contains(fuzzySearch)).OrderBy(r => r.Name).ToListAsync();
+        Redistributables = (await RedistributableService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private void Add()
@@ -99,7 +99,7 @@
 
         await RedistributableService.Delete(redistributable);
 
-        Redistributables = await RedistributableService.Get(x => true).OrderBy(r => r.Name).ToListAsync();
+        Redistributables = (await RedistributableService.Get(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

@@ -3,8 +3,6 @@
 @layout SettingsLayout
 @inject MediaService MediaService
 @inject UserService UserService
-@inject UserManager<User> UserManager
-@inject SignInManager<User> SignInManager
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -120,7 +118,7 @@
         {
             if (Form.IsModified || FieldsModified)
             {
-                await UserManager.UpdateAsync(User);
+                await UserService.Update(User);
 
                 MessageService.Success("User updated!");
             }

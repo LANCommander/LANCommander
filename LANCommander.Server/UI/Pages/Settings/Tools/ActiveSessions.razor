@@ -49,7 +49,7 @@
     {
         Loading = true;
 
-        PlaySessions = await PlaySessionService.Get(ps => !ps.End.HasValue).ToListAsync();
+        PlaySessions = await PlaySessionService.Get(ps => !ps.End.HasValue);
 
         Loading = false;
     }

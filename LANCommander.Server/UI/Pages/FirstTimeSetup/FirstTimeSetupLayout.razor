@@ -1,7 +1,7 @@
 ﻿@using LANCommander.Server.Data
 @inherits LayoutComponentBase
 @layout BasicLayout
-@inject UserManager<User> UserManager
+@inject UserService UserService
 @inject RoleManager<Role> RoleManager
 @inject IUserStore<User> UserStore
 @inject NavigationManager NavigationManager
@@ -42,9 +42,9 @@
                         Name = "Administrator"
                     });
 
-            var administrators = await UserManager.GetUsersInRoleAsync("Administrator");
+            var administrators = await UserService.GetInRole("Administrator");
 
-            if (administrators.Count > 0)
+            if (administrators.Any())
                 NavigationManager.NavigateTo("/");
         }
     }

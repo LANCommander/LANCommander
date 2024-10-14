@@ -1,8 +1,7 @@
 ﻿@page "/Settings/Users"
 @using LANCommander.Server.UI.Pages.Settings.Users.Components
 @layout SettingsLayout
-@inject UserManager<User> UserManager
-@inject RoleManager<Role> RoleManager
+@inject UserService UserService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -82,7 +81,7 @@
     {
         UserList = new List<UserViewModel>();
 
-        foreach (var user in UserManager.Users)
+        foreach (var user in await UserService.Get())
         {
             var savePath = user.GetGameSaveUploadPath();
 
@@ -95,7 +94,7 @@
             {
                 Id = user.Id,
                 UserName = user.UserName,
-                Roles = await UserManager.GetRolesAsync(user),
+                Roles = (await UserService.GetRoles(user)).Select(r => r.Name),
                 SavesSize = saveSize,
                 Approved = user.Approved
             });
@@ -107,14 +106,14 @@
 
     private async Task ApproveUser(UserViewModel user)
     {
-        var dbUser = await UserManager.FindByIdAsync(user.Id.ToString());
+        var dbUser = await UserService.Get(user.Id);
 
         if (dbUser != null)
         {
             dbUser.Approved = true;
             dbUser.ApprovedOn = DateTime.Now;
 
-            await UserManager.UpdateAsync(dbUser);
+            await UserService.Update(dbUser);
 
             user.Approved = true;
 
@@ -124,7 +123,10 @@
 
     private async Task PromoteUser(UserViewModel user)
     {
-        await UserManager.AddToRoleAsync(UserManager.Users.First(u => u.UserName == user.UserName), "Administrator");
+        var dbUser = await UserService.Get(user.Id);
+
+        await UserService.AddToRole(dbUser, "Administrator");
+
         await RefreshUserList();
 
         await MessageService.Success($"Promoted {user.UserName}!");
@@ -132,26 +134,32 @@
 
     private async Task DemoteUser(UserViewModel user)
     {
+        var dbUser = await UserService.Get(user.Id);
+
         if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
         {
             MessageService.Error("Cannot demote the only administrator!");
         }
         else
         {
-            await UserManager.RemoveFromRoleAsync(UserManager.Users.First(u => u.UserName == user.UserName), "Administrator");
+            await UserService.RemoveFromRole(dbUser, "Administrator");
+
             await RefreshUserList();
         }
     }
 
     private async Task DeleteUser(UserViewModel user)
     {
+        var dbUser = await UserService.Get(user.Id);
+
         if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1 && user.Roles.Contains("Administrator"))
         {
             MessageService.Error("Cannot delete the only administrator!");
         }
         else
         {
-            await UserManager.DeleteAsync(UserManager.Users.First(u => u.UserName == user.UserName));
+            await UserService.Delete(dbUser);
+
             await RefreshUserList();
 
             MessageService.Success($"Deleted {user.UserName}!");

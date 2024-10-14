@@ -10,29 +10,29 @@ namespace LANCommander.Server.Services
     {
         public GameSaveService(
             ILogger<GameSaveService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<GameSave> repository) : base(logger, repository) { }
 
-        public override Task Delete(GameSave entity)
+        public override async Task Delete(GameSave entity)
         {
-            FileHelpers.DeleteIfExists(GetSavePath(entity.Id));
+            FileHelpers.DeleteIfExists(await GetSavePath(entity.Id));
 
-            return base.Delete(entity);
+            await base.Delete(entity);
         }
 
-        public string GetSavePath(Guid gameId, Guid userId)
+        public async Task<string> GetSavePath(Guid gameId, Guid userId)
         {
-            var save = Get(gs => gs.GameId == gameId && gs.UserId == userId).FirstOrDefault();
+            var save = await FirstOrDefault(gs => gs.GameId == gameId && gs.UserId == userId);
 
             if (save == null)
                 return null;
 
-            return GetSavePath(save.Id);
+            return GetSavePath(save);
         }
 
-        public string GetSavePath(Guid id)
+        public async Task<string> GetSavePath(Guid id)
         {
             // Use get with predicate to avoid async
-            var save = Get(gs => gs.Id == id).FirstOrDefault();
+            var save = await FirstOrDefault(gs => gs.Id == id);
 
             if (save == null)
                 return null;
@@ -42,7 +42,7 @@ namespace LANCommander.Server.Services
 
         public string GetSavePath(GameSave save)
         {
-            return Path.Combine(Settings.UserSaves.StoragePath, save.UserId.ToString(), save.GameId.ToString(), $"{save.Id}");
+            return Path.Combine(save.StorageLocation.Path, save.UserId.ToString(), save.GameId.ToString(), $"{save.Id}");
         }
     }
 }

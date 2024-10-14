@@ -20,19 +20,19 @@ namespace LANCommander.Server.Controllers.Api
         private readonly IMapper Mapper;
         private readonly GameService GameService;
         private readonly GameSaveService GameSaveService;
-        private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
         public SavesController(
             ILogger<SavesController> logger,
             IMapper mapper,
             GameService gameService,
             GameSaveService gameSaveService,
-            UserManager<User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             Mapper = mapper;
             GameService = gameService;
             GameSaveService = gameSaveService;
-            UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpGet]
@@ -55,12 +55,12 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Game/{gameId}")]
         public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetGameSaves(Guid gameId)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var userSaves = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).ToListAsync();
+            var userSaves = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.GameSave>>(userSaves));
         }
@@ -68,12 +68,12 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Latest/{gameId}")]
         public async Task<ActionResult<SDK.Models.GameSave>> Latest(Guid gameId)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var latestSave = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId).OrderByDescending(gs => gs.CreatedOn).FirstOrDefaultAsync();
+            var latestSave = await GameSaveService.FirstOrDefault(gs => gs.UserId == user.Id && gs.GameId == gameId, gs => gs.CreatedOn);
 
             // Should probably return 404 if no latest save exists
             // Not sure if this will affect launcher stability
@@ -84,15 +84,13 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("DownloadLatest/{gameId}")]
         public async Task<IActionResult> DownloadLatest(Guid gameId)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
 
             if (user == null)
                 return NotFound();
 
             var save = await GameSaveService
-                .Get(gs => gs.GameId == gameId && gs.UserId == user.Id)
-                .OrderByDescending(gs => gs.CreatedOn)
-                .FirstOrDefaultAsync();
+                .FirstOrDefault(gs => gs.GameId == gameId && gs.UserId == user.Id, gs => gs.CreatedOn);
 
             if (save == null)
                 return NotFound();
@@ -126,7 +124,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             var file = Request.Form.Files.First();
 
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.Get(User?.Identity?.Name);
             var game = await GameService.Get(id);
 
             if (game == null)
@@ -152,7 +150,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (Settings.UserSaves.MaxSaves > 0)
             {
-                var saves = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == game.Id).OrderByDescending(gs => gs.CreatedOn).Skip(Settings.UserSaves.MaxSaves).ToListAsync();
+                var saves = (await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == game.Id)).OrderByDescending(gs => gs.CreatedOn).Skip(Settings.UserSaves.MaxSaves).ToList();
 
                 foreach (var extraSave in saves)
                     await GameSaveService.Delete(extraSave);

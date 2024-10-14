@@ -72,9 +72,9 @@
     [CascadingParameter]
     FirstTimeSetupLayout Layout { get; set; }
 
-    ICollection<StorageLocation> ArchiveStorageLocations;
-    StorageLocation MediaStorageLocation;
-    StorageLocation SavesStorageLocation;
+    ICollection<StorageLocation> ArchiveStorageLocations = new List<StorageLocation>();
+    StorageLocation MediaStorageLocation = new StorageLocation();
+    StorageLocation SavesStorageLocation = new StorageLocation();
 
     bool Loading = false;
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -83,9 +83,16 @@
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Paths);
 
-        ArchiveStorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).ToListAsync();
-        SavesStorageLocation = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default).FirstOrDefaultAsync();
-        MediaStorageLocation = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default).FirstOrDefaultAsync();
+        try
+        {
+            ArchiveStorageLocations = StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).GetAwaiter().GetResult();
+            SavesStorageLocation = StorageLocationService.FirstOrDefault(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default).GetAwaiter().GetResult();
+            MediaStorageLocation = StorageLocationService.FirstOrDefault(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            
+        }
     }
 
     async Task ValidatePaths()

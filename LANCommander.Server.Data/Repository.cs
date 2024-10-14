@@ -7,7 +7,7 @@ namespace LANCommander.Server.Data
 {
     public class Repository<T> : IDisposable where T : BaseModel
     {
-        private DbContext Context;
+        private readonly DbContext Context;
 
         public Repository(DatabaseContext context)
         {
@@ -51,8 +51,12 @@ namespace LANCommander.Server.Data
             return entity;
         }
 
-        public T Update(T entity)
+        public async Task<T> Update(T entity)
         {
+            var existing = await Find(entity.Id);
+
+            Context.Entry(existing).CurrentValues.SetValues(entity);
+
             entity.UpdatedBy = GetCurrentUser();
             entity.UpdatedOn = DateTime.Now;
 
@@ -93,7 +97,6 @@ namespace LANCommander.Server.Data
 
         public void Dispose()
         {
-            
         }
     }
 }

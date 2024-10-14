@@ -132,10 +132,10 @@ else
         else if (Id != Guid.Empty)
             Redistributable = await RedistributableService.Get(Id);
 
-        Games = await GameService
-            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null)
+        Games = (await GameService
+            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null))
             .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
-            .ToListAsync();
+            .ToList();
     }
 
     private async Task Save()

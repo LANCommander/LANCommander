@@ -8,6 +8,6 @@ namespace LANCommander.Server.Services
     {
         public GenreService(
             ILogger<GenreService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<Genre> repository) : base(logger, repository) { }
     }
 }

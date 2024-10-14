@@ -9,7 +9,7 @@ namespace LANCommander.Server.Services
     {
         public KeyService(
             ILogger<KeyService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<Key> repository) : base(logger, repository) { }
 
         public async Task<Key> Allocate(Key key, User user)
         {

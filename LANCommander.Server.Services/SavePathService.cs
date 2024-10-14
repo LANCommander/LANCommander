@@ -8,6 +8,6 @@ namespace LANCommander.Server.Services
     {
         public SavePathService(
             ILogger<SavePathService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<SavePath> repository) : base(logger, repository) { }
     }
 }

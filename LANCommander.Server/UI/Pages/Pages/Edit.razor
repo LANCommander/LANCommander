@@ -135,7 +135,7 @@
     {
         if (Id != Guid.Empty)
         {
-            SelectedPage = await PageService.Get(p => p.Id == Id).AsNoTracking().FirstOrDefaultAsync();
+            SelectedPage = await PageService.FirstOrDefault(p => p.Id == Id);
 
             if (SelectedPage == null)
                 NavigationManager.NavigateTo("/Pages/Edit");
@@ -149,7 +149,7 @@
 
     async Task LoadData()
     {
-        Pages = await PageService.Get(p => p.ParentId == null).OrderBy(p => p.SortOrder).AsNoTracking().ToListAsync();
+        Pages = (await PageService.Get(p => p.ParentId == null)).OrderBy(p => p.SortOrder).ToList();
 
         await InvokeAsync(StateHasChanged);
     }
@@ -166,7 +166,7 @@
             var sibling = e.TargetNode;
 
             if (parentId == Guid.Empty)
-                childOrder = await PageService.Get(p => p.Parent == null).Select(p => p.Id).ToListAsync();
+                childOrder = (await PageService.Get(p => p.Parent == null)).Select(p => p.Id).ToList();
             else
                 childOrder = parentNode.DataItem.Children.Select(c => c.Id).ToList();
 

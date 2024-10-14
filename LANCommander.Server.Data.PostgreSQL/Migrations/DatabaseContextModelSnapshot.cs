@@ -17,7 +17,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.10")
                 .HasAnnotation("Proxies:ChangeTracking", false)
                 .HasAnnotation("Proxies:CheckEquality", false)
                 .HasAnnotation("Proxies:LazyLoading", true)
@@ -1967,7 +1967,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
                         .WithMany("Issues")
                         .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.SetNull)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("LANCommander.Server.Data.Models.User", "ResolvedBy")
@@ -2141,7 +2141,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
                         .WithMany("PlaySessions")
                         .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()

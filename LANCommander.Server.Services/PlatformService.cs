@@ -8,6 +8,6 @@ namespace LANCommander.Server.Services
     {
         public PlatformService(
             ILogger<PlatformService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<Platform> repository) : base(logger, repository) { }
     }
 }

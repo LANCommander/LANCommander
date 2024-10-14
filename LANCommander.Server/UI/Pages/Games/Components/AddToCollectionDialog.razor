@@ -82,7 +82,7 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        var collections = await CollectionService.Get(c => SelectedCollections.Contains(c.Id)).ToListAsync();
+        var collections = await CollectionService.Get(c => SelectedCollections.Contains(c.Id));
 
         try
         {

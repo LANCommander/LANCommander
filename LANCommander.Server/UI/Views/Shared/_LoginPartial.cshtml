@@ -1,10 +1,8 @@
 ﻿@using LANCommander.Server.Data.Models
 @using Microsoft.AspNetCore.Identity
-@inject SignInManager<User> SignInManager
-@inject UserManager<User> UserManager
 
 <div class="navbar-nav flex-row order-md-last">
-    @if (SignInManager.IsSignedIn(User))
+    @if (User.Identity.IsAuthenticated)
     {
         <div class="nav-item dropdown">
 		    <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">

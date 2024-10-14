@@ -43,7 +43,7 @@
     }
 </style>
 
- @code {
+@code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
     [Parameter] public Guid ServerId { get; set; }
@@ -60,11 +60,11 @@
     private async Task LoadData()
     {
         if (GameId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.GameId == GameId).ToListAsync();
+            Scripts = await ScriptService.Get(s => s.GameId == GameId);
         else if (RedistributableId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.RedistributableId == RedistributableId).ToListAsync();
+            Scripts = await ScriptService.Get(s => s.RedistributableId == RedistributableId);
         else if (ServerId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.ServerId == ServerId).ToListAsync();
+            Scripts = await ScriptService.Get(s => s.ServerId == ServerId);
 
         await InvokeAsync(StateHasChanged);
     }

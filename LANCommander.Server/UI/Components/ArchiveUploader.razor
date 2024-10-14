@@ -103,7 +103,7 @@
 
     public async Task Open(Guid? archiveId = null)
     {
-        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).ToListAsync();
+        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
 
         if (archiveId.HasValue && archiveId != Guid.Empty)
         {
@@ -130,7 +130,7 @@
 
         if (Guid.TryParse(data, out var objectKey))
         {
-            var uploadedArchive = await ArchiveService.Get(a => a.ObjectKey == objectKey.ToString()).FirstOrDefaultAsync();
+            var uploadedArchive = await ArchiveService.FirstOrDefault(a => a.ObjectKey == objectKey.ToString());
 
             uploadedArchive.GameId = Archive.GameId;
             uploadedArchive.RedistributableId = Archive.RedistributableId;
@@ -152,9 +152,9 @@
             if (settings.Archives.EnablePatching)
             {
                 if (Archive.GameId != Guid.Empty)
-                    lastArchive = await ArchiveService.Get(a => a.Id != Archive.Id && a.GameId == Archive.GameId).OrderByDescending(a => a.CreatedOn).FirstOrDefaultAsync();
+                    lastArchive = await ArchiveService.FirstOrDefault(a => a.Id != Archive.Id && a.GameId == Archive.GameId, a => a.CreatedOn);
                 else if (Archive.RedistributableId != Guid.Empty)
-                    lastArchive = await ArchiveService.Get(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId).OrderByDescending(a => a.CreatedOn).FirstOrDefaultAsync();
+                    lastArchive = await ArchiveService.FirstOrDefault(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId, a => a.CreatedOn);
 
                 if (lastArchive != null && settings.Archives.EnablePatching)
                     BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));

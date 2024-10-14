@@ -8,6 +8,6 @@ namespace LANCommander.Server.Services
     {
         public StorageLocationService(
             ILogger<StorageLocationService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<StorageLocation> repository) : base(logger, repository) { }
     }
 }

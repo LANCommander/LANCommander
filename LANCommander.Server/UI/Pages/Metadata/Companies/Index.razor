@@ -90,7 +90,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Companies = await CompanyService.Get(r => r.Name.ToLower().Contains(fuzzySearch)).OrderBy(r => r.Name).ToListAsync();
+        Companies = (await CompanyService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private async Task UpdateOrAdd()
@@ -150,7 +150,7 @@
 
         await CompanyService.Delete(Company);
 
-        Companies = await CompanyService.Get(x => true).OrderBy(r => r.Name).ToListAsync();
+        Companies = (await CompanyService.Get(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

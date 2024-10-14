@@ -13,6 +13,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ParentPages = await PageService.Get(p => p.ParentId == null || p.ParentId == Guid.Empty).OrderBy(p => p.SortOrder).ToListAsync();
+        ParentPages = (await PageService.Get(p => p.ParentId == null || p.ParentId == Guid.Empty)).OrderBy(p => p.SortOrder).ToList();
     }
 }

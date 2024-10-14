@@ -93,8 +93,8 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var storageLocation = await StorageLocationService.Get(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default).FirstOrDefaultAsync();
-                var archive = await ArchiveService.Get(a => a.RedistributableId == request.Id && a.Version == request.Version).FirstOrDefaultAsync();
+                var storageLocation = await StorageLocationService.FirstOrDefault(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
+                var archive = await ArchiveService.FirstOrDefault(a => a.RedistributableId == request.Id && a.Version == request.Version);
                 var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (archive != null)

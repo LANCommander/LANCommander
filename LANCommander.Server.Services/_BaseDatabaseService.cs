@@ -10,32 +10,36 @@ namespace LANCommander.Server.Services
 {
     public abstract class BaseDatabaseService<T> : BaseService where T : BaseModel
     {
-        public DatabaseContext Context { get; set; }
+        public Repository<T> Repository { get; set; }
 
-        public BaseDatabaseService(ILogger logger, DatabaseContext dbContext) : base(logger)
+        public BaseDatabaseService(ILogger logger, Repository<T> repository) : base(logger)
         {
-            Context = dbContext;
+            Repository = repository;
         }
 
         public virtual async Task<ICollection<T>> Get()
         {
-            return await Get(x => true).ToListAsync();
+            return await Get(x => true);
         }
 
         public virtual async Task<T> Get(Guid id)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                return await repo.Find(id);
-            }
+            return await Repository.Find(id);
         }
 
-        public virtual IQueryable<T> Get(Expression<Func<T, bool>> predicate)
+        public virtual async Task<ICollection<T>> Get(Expression<Func<T, bool>> predicate)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                return repo.Get(predicate);
-            }
+            return await Repository.Get(predicate).ToListAsync();
+        }
+
+        public virtual async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
+        {
+            return await Repository.Get(predicate).FirstOrDefaultAsync();
+        }
+
+        public virtual async Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        {
+            return await Repository.Get(predicate).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
         }
 
         public virtual bool Exists(Guid id)
@@ -45,13 +49,10 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> Add(T entity)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                entity = await repo.Add(entity);
-                await repo.SaveChanges();
+            entity = await Repository.Add(entity);
+            await Repository.SaveChanges();
 
-                return entity;
-            }
+            return entity;
         }
 
         /// <summary>
@@ -62,55 +63,43 @@ namespace LANCommander.Server.Services
         /// <returns>Newly created or existing entity</returns>
         public virtual async Task<ExistingEntityResult<T>> AddMissing(Expression<Func<T, bool>> predicate, T entity)
         {
-            using (var repo = new Repository<T>(Context))
+            var existing = Repository.Get(predicate).FirstOrDefault();
+
+            if (existing == null)
             {
-                var existing = repo.Get(predicate).FirstOrDefault();
+                entity = await Repository.Add(entity);
 
-                if (existing == null)
+                await Repository.SaveChanges();
+
+                return new ExistingEntityResult<T>
                 {
-                    entity = await repo.Add(entity);
-
-                    await repo.SaveChanges();
-
-                    return new ExistingEntityResult<T>
-                    {
-                        Value = entity,
-                        Existing = false
-                    };
-                }
-                else
+                    Value = entity,
+                    Existing = false
+                };
+            }
+            else
+            {
+                return new ExistingEntityResult<T>
                 {
-                    return new ExistingEntityResult<T>
-                    {
-                        Value = existing,
-                        Existing = true
-                    };
-                }
+                    Value = existing,
+                    Existing = true
+                };
             }
         }
 
         public virtual async Task<T> Update(T entity)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                var existing = await repo.Find(entity.Id);
+            entity = await Repository.Update(entity);
 
-                Context.Entry(existing).CurrentValues.SetValues(entity);
+            await Repository.SaveChanges();
 
-                entity = repo.Update(existing);
-                await repo.SaveChanges();
-
-                return entity;
-            }
+            return entity;
         }
 
         public virtual async Task Delete(T entity)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                repo.Delete(entity);
-                await repo.SaveChanges();
-            }
+            Repository.Delete(entity);
+            await Repository.SaveChanges();
         }
     }
 }

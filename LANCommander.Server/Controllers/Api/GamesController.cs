@@ -21,8 +21,8 @@ namespace LANCommander.Server.Controllers.Api
         private readonly GameService GameService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
-        private readonly UserManager<User> UserManager;
-        private readonly RoleManager<Role> RoleManager;
+        private readonly UserService UserService;
+        private readonly RoleService RoleService;
         private readonly IFusionCache Cache;
 
         public GamesController(
@@ -32,15 +32,15 @@ namespace LANCommander.Server.Controllers.Api
             GameService gameService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
-            UserManager<User> userManager,
-            RoleManager<Role> roleManager) : base(logger)
+            UserService userService,
+            RoleService roleService) : base(logger)
         {
             Mapper = mapper;
             GameService = gameService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
-            UserManager = userManager;
-            RoleManager = roleManager;
+            UserService = userService;
+            RoleService = roleService;
             Cache = cache;
         }
 
@@ -57,14 +57,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole("Administrator"))
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
-                var roleNames = await UserManager.GetRolesAsync(user);
-                var roles = new List<Role>();
-
-                foreach (var name in roleNames)
-                {
-                    roles.Add(await RoleManager.FindByNameAsync(name));
-                }
+                var roles = await UserService.GetRoles(User?.Identity.Name);
 
                 var accessibleCollections = roles.SelectMany(r => r.Collections).DistinctBy(c => c.Id);
                 var accessibleCollectionGames = accessibleCollections.SelectMany(c => c.Games).DistinctBy(g => g.Id).Select(g => g.Id);
@@ -158,8 +151,8 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var storageLocation = await StorageLocationService.Get(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default).FirstOrDefaultAsync();
-                var archive = await ArchiveService.Get(a => a.GameId == request.Id && a.Version == request.Version).FirstOrDefaultAsync();
+                var storageLocation = await StorageLocationService.FirstOrDefault(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
+                var archive = await ArchiveService.FirstOrDefault(a => a.GameId == request.Id && a.Version == request.Version);
                 var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (archive != null)

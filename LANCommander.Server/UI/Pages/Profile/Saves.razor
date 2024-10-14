@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Components.Authorization;
 @using Microsoft.EntityFrameworkCore;
 @layout ProfileLayout
-@inject UserManager<User> UserManager
+@inject UserService UserService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject GameSaveService GameSaveService
@@ -65,7 +65,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
-            User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
+            User = await UserService.Get(authState.User.Identity.Name);
 
         if (User != null)
             GameSaves = User.GameSaves.OrderBy(s => s.CreatedOn).ToList();
@@ -89,7 +89,7 @@
 
         await GameSaveService.Delete(gameSave);
 
-        GameSaves = await GameSaveService.Get(gs => gs.UserId == User.Id).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToListAsync();
+        GameSaves = (await GameSaveService.Get(gs => gs.UserId == User.Id)).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToList();
 
         Loading = false;
     }

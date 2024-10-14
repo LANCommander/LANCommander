@@ -14,17 +14,17 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly GameService GameService;
         private readonly IssueService IssueService;
-        private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
         public IssueController(
             ILogger<IssueController> logger,
             GameService gameService,
             IssueService issueService,
-            UserManager<User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             GameService = gameService;
             IssueService = issueService;
-            UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpPost("Open")]
@@ -33,7 +33,7 @@ namespace LANCommander.Server.Controllers.Api
             try
             {
                 var game = await GameService.Get(issueRequest.GameId);
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
 
                 if (game != null)
                 {

@@ -10,7 +10,7 @@ namespace LANCommander.Server.Services
     {
         public ScriptService(
             ILogger<ScriptService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<Script> repository) : base(logger, repository) { }
 
         public static IEnumerable<Snippet> GetSnippets()
         {

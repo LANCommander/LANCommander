@@ -12,7 +12,7 @@ namespace LANCommander.Server.Services
     {
         public ServerConsoleService(
             ILogger<ServerConsoleService> logger,
-            DatabaseContext dbContext) : base(logger, dbContext) { }
+            Repository<ServerConsole> repository) : base(logger, repository) { }
 
         public async Task<string[]> ReadLog(Guid logId)
         {

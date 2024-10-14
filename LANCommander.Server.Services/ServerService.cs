@@ -16,9 +16,9 @@ namespace LANCommander.Server.Services
 
         public ServerService(
             ILogger<ServerService> logger,
-            DatabaseContext dbContext,
+            Repository<Data.Models.Server> repository,
             GameService gameService,
-            ArchiveService archiveService) : base(logger, dbContext)
+            ArchiveService archiveService) : base(logger, repository)
         {
             GameService = gameService;
             ArchiveService = archiveService;

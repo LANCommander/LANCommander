@@ -16,8 +16,8 @@ namespace LANCommander.Server.Services
 
         public PageService(
             ILogger<PageService> logger,
-            DatabaseContext dbContext,
-            IFusionCache cache) : base(logger, dbContext)
+            Repository<Page> repository,
+            IFusionCache cache) : base(logger, repository)
         {
             Cache = cache;
         }
@@ -112,7 +112,7 @@ namespace LANCommander.Server.Services
 
         public async Task FixRoutes()
         {
-            var parentPages = await Get(p => p.Parent == null).ToListAsync();
+            var parentPages = await Get(p => p.Parent == null);
 
             foreach (var page in parentPages)
             {

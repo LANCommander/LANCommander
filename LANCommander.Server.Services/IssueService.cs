@@ -12,14 +12,10 @@ namespace LANCommander.Server.Services
 {
     public class IssueService : BaseDatabaseService<Issue>
     {
-        private readonly UserManager<User> UserManager;
-
         public IssueService(
             ILogger<IssueService> logger,
-            DatabaseContext dbContext,
-            UserManager<User> userManager) : base(logger, dbContext)
+            Repository<Issue> repository) : base(logger, repository)
         {
-            UserManager = userManager;
         }
 
         public async Task ResolveAsync(Guid issueId)

@@ -15,8 +15,8 @@ namespace LANCommander.Server.Services
 
         public MediaService(
             ILogger<MediaService> logger,
-            DatabaseContext dbContext,
-            StorageLocationService storageLocationService) : base(logger, dbContext)
+            Repository<Media> repository,
+            StorageLocationService storageLocationService) : base(logger, repository)
         {
             StorageLocationService = storageLocationService;
         }
@@ -63,7 +63,7 @@ namespace LANCommander.Server.Services
         public async Task<Media> UploadMediaAsync(Stream stream, Media media)
         {
             var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.Get(l => l.Default).FirstOrDefaultAsync();
+            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Default);
 
             media.FileId = fileId;
             media.StorageLocation = storageLocation;
@@ -95,7 +95,7 @@ namespace LANCommander.Server.Services
         private async Task<Media> GeneratePdfThumbnailAsync(Stream inputStream)
         {
             var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.Get(l => l.Default).FirstOrDefaultAsync();
+            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Default);
 
             var media = new Media
             {
@@ -145,7 +145,7 @@ namespace LANCommander.Server.Services
         public async Task<Media> DownloadMediaAsync(string sourceUrl, Media media)
         {
             var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.Get(l => l.Default).FirstOrDefaultAsync();
+            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Default);
 
             media.FileId = fileId;
             media.StorageLocation = storageLocation;

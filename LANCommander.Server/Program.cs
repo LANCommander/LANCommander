@@ -18,6 +18,7 @@ using Serilog;
 using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
+using System.Diagnostics;
 
 namespace LANCommander.Server
 {
@@ -25,17 +26,47 @@ namespace LANCommander.Server
     {
         static async Task Main(string[] args)
         {
+            DatabaseContext.ContextTracker = new Dictionary<Guid, Stopwatch>();
+
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
+                .WriteTo.File(Path.Combine("startup-.txt"))
                 .CreateBootstrapLogger();
+
+            Log.Information("Starting application...");
 
             var builder = WebApplication.CreateBuilder(args);
 
             ConfigurationManager configuration = builder.Configuration;
 
+            #region Debug
+            if (args.Contains("--debugger"))
+            {
+                var currentProcess = Process.GetCurrentProcess();
+
+                Console.WriteLine($"Waiting for debugger to attach... Process ID: {currentProcess.Id}");
+
+                while (!Debugger.IsAttached)
+                {
+                    Thread.Sleep(100);
+                }
+
+                Console.WriteLine("Debugger attached.");
+            }
+            #endregion
+
             // Add services to the container.
             Log.Debug("Loading settings");
             var settings = SettingService.GetSettings(true);
+
+            var databaseProviderParameter = args.FirstOrDefault(arg => arg.StartsWith("--database-provider="))?.Split('=', 2).Last();
+            var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
+
+            if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
+                DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
+            else
+                DatabaseContext.Provider = settings.DatabaseProvider;
+
             Log.Debug("Loaded!");
 
 
@@ -50,6 +81,10 @@ namespace LANCommander.Server
             builder.Services.AddSerilog((serviceProvider, config) => config
                 .WriteTo.Console()
                 .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery)
+#if DEBUG
+                .WriteTo.Seq("http://localhost:5341")
+                .MinimumLevel.Debug()
+#endif
                 .WriteTo.SignalR<LoggingHub>(
                     serviceProvider,
                     (context, message, logEvent) => LoggingHub.Log(context, message, logEvent)
@@ -129,23 +164,25 @@ namespace LANCommander.Server
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
             builder.Services.AddDbContext<DatabaseContext>(b =>
             {
-                b.UseLazyLoadingProxies();
+                //b.UseLazyLoadingProxies();
+
+                settings = SettingService.GetSettings();
 
                 switch (DatabaseContext.Provider)
                 {
                     case DatabaseProvider.SQLite:
-                        b.UseSqlite(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
+                        b.UseSqlite(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
                         break;
 
                     case DatabaseProvider.MySQL:
-                        b.UseMySql(settings.DatabaseConnectionString, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                        b.UseMySql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
                         break;
 
                     case DatabaseProvider.PostgreSQL:
-                        b.UseNpgsql(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                        b.UseNpgsql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
                         break;
                 }
-            });
+            }, ServiceLifetime.Transient);
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -216,6 +253,7 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
+            builder.Services.AddScoped(typeof(Repository<>));
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();
             builder.Services.AddScoped<StorageLocationService>();
@@ -241,6 +279,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<PageService>();
             builder.Services.AddScoped<UserService>();
+            builder.Services.AddScoped<RoleService>();
             builder.Services.AddScoped<SetupService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
@@ -347,7 +386,7 @@ namespace LANCommander.Server
             // Migrate
             Log.Debug("Migrating database if required");
 
-            if (DatabaseContext.Provider != DatabaseProvider.Unknown)
+            /*if (DatabaseContext.Provider != DatabaseProvider.Unknown)
             {
                 await using var scope = app.Services.CreateAsyncScope();
                 using var db = scope.ServiceProvider.GetService<DatabaseContext>();
@@ -377,7 +416,7 @@ namespace LANCommander.Server
                 var serverService = scope.ServiceProvider.GetService<ServerService>();
                 var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
 
-                foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart).ToListAsync())
+                foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
                 {
                     try
                     {
@@ -393,10 +432,13 @@ namespace LANCommander.Server
                         Log.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
                     }
                 }
+
+                await db.DisposeAsync();
+                await scope.DisposeAsync();
             }
             else
                 Log.Debug("No database provider has been setup, application is fresh and needs first time setup");
-
+            */
             app.Run();
         }
     }

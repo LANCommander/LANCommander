@@ -17,15 +17,12 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class ProfileController : BaseApiController
     {
-        private readonly UserManager<User> UserManager;
         private readonly UserService UserService;
 
         public ProfileController(
             ILogger<ProfileController> logger,
-            UserManager<User> userManager,
             UserService userService) : base(logger)
         {
-            UserManager = userManager;
             UserService = userService;
         }
 
@@ -34,7 +31,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
 
                 if (user != null)
                     return Ok(user);
@@ -50,11 +47,11 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
 
                 user.Alias = request.Alias;
 
-                await UserManager.UpdateAsync(user);
+                await UserService.Update(user);
 
                 return Ok(request.Alias);
             }
@@ -67,7 +64,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
 
                 var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
 
@@ -88,7 +85,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserManager.FindByNameAsync(userName);
+                var user = await UserService.Get(userName);
 
                 if (user == null)
                     return NotFound();
@@ -113,7 +110,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
 
                 var field = await UserService.GetCustomField(user.Id, name);
 
@@ -132,7 +129,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.Get(User?.Identity?.Name);
 
                 await UserService.UpdateCustomField(user.Id, name, value);
 

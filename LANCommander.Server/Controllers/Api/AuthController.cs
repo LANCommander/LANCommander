@@ -35,28 +35,22 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class AuthController : BaseApiController
     {
-        private readonly SignInManager<User> SignInManager;
-        private readonly UserManager<User> UserManager;
-        private readonly IUserStore<User> UserStore;
-        private readonly RoleManager<Role> RoleManager;
+        private readonly UserService UserService;
+        private readonly RoleService RoleService;
 
         public AuthController(
             ILogger<AuthController> logger,
-            SignInManager<User> signInManager,
-            UserManager<User> userManager,
-            IUserStore<User> userStore,
-            RoleManager<Role> roleManager) : base(logger)
+            UserService userService,
+            RoleService roleService) : base(logger)
         {
-            SignInManager = signInManager;
-            UserManager = userManager;
-            UserStore = userStore;
-            RoleManager = roleManager;
+            UserService = userService;
+            RoleService = roleService;
         }
 
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var user = await UserManager.FindByNameAsync(model.UserName);
+            var user = await UserService.Get(model.UserName);
 
             try
             {
@@ -78,7 +72,7 @@ namespace LANCommander.Server.Controllers.Api
         public async Task<IActionResult> Logout()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
-                await SignInManager.SignOutAsync();
+                await UserService.SignOut();
 
             Logger?.LogInformation("Logged out user {UserName}", User.Identity.Name);
 
@@ -112,7 +106,7 @@ namespace LANCommander.Server.Controllers.Api
                 return BadRequest("Invalid access token or refresh token");
             }
 
-            var user = await UserManager.FindByNameAsync(principal.Identity.Name);
+            var user = await UserService.Get(principal.Identity.Name);
 
             if (user == null || user.RefreshToken != token.RefreshToken || user.RefreshTokenExpiration <= DateTime.Now)
             {
@@ -125,7 +119,7 @@ namespace LANCommander.Server.Controllers.Api
 
             user.RefreshToken = newRefreshToken;
 
-            await UserManager.UpdateAsync(user);
+            await UserService.Update(user);
 
             Logger?.LogDebug("Successfully refreshed token for user {UserName}", user.UserName);
 
@@ -140,7 +134,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            var user = await UserManager.FindByNameAsync(model.UserName);
+            var user = await UserService.Get(model.UserName);
 
             if (user != null)
             {
@@ -154,20 +148,22 @@ namespace LANCommander.Server.Controllers.Api
 
             user = new User();
 
-            await UserStore.SetUserNameAsync(user, model.UserName, CancellationToken.None);
+            user.UserName = model.UserName;
 
-            var result = await UserManager.CreateAsync(user, model.Password);
+            user = await UserService.Add(user);
 
-            if (result.Succeeded)
+            if (user != null)
             {
+                await UserService.ChangePassword(user, model.Password);
+
                 try
                 {
                     if (Settings.Roles.DefaultRoleId != Guid.Empty)
                     {
-                        var defaultRole = await RoleManager.FindByIdAsync(Settings.Roles.DefaultRoleId.ToString());
+                        var defaultRole = await RoleService.Get(Settings.Roles.DefaultRoleId);
 
                         if (defaultRole != null)
-                            await UserManager.AddToRoleAsync(user, defaultRole.Name);
+                            await UserService.AddToRole(user, defaultRole.Name);
                     }
 
                     var token = await Login(user, model.Password);
@@ -188,20 +184,20 @@ namespace LANCommander.Server.Controllers.Api
 
             return Unauthorized(new
             {
-                Message = "Error:\n" + String.Join('\n', result.Errors.Select(e => e.Description))
+                //Message = "Error:\n" + String.Join('\n', result.Errors.Select(e => e.Description))
             });
         }
 
         private async Task<TokenModel> Login(User user, string password)
         {
-            if (user != null && await UserManager.CheckPasswordAsync(user, password))
+            if (user != null && await UserService.CheckPassword(user, password))
             {
                 Logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
-                if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserManager.IsInRoleAsync(user, "Administrator")))
+                if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserService.IsInRole(user, "Administrator")))
                     throw new Exception("Account must be approved by an administrator");
 
-                var userRoles = await UserManager.GetRolesAsync(user);
+                var userRoles = await UserService.GetRoles(user);
 
                 var authClaims = new List<Claim>
                 {
@@ -211,7 +207,7 @@ namespace LANCommander.Server.Controllers.Api
 
                 foreach (var userRole in userRoles)
                 {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                    // authClaims.Add(new Claim(ClaimTypes.Role, userRole));
                 }
 
                 Logger?.LogDebug("Generating authentication token for user {UserName}", user.UserName);
@@ -222,7 +218,7 @@ namespace LANCommander.Server.Controllers.Api
                 user.RefreshToken = refreshToken;
                 user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.Authentication.TokenLifetime);
 
-                await UserManager.UpdateAsync(user);
+                await UserService.Update(user);
 
                 return new TokenModel()
                 {

@@ -7,17 +7,17 @@ namespace LANCommander.Server.Services
 {
     public class UserService : BaseService
     {
-        private readonly DatabaseContext DatabaseContext;
+        private readonly Repository<UserCustomField> CustomFieldRepository;
         private readonly UserManager<User> UserManager;
         private readonly RoleManager<Role> RoleManager;
 
         public UserService(
             ILogger<UserService> logger,
-            DatabaseContext databaseContext,
+            Repository<UserCustomField> customFieldRepository,
             UserManager<User> userManager,
             RoleManager<Role> roleManager) : base(logger)
         {
-            DatabaseContext = databaseContext;
+            CustomFieldRepository = customFieldRepository;
             UserManager = userManager;
             RoleManager = roleManager;
         }
@@ -146,10 +146,7 @@ namespace LANCommander.Server.Services
 
         public async Task<UserCustomField> GetCustomField(Guid userId, string name)
         {
-            using (var repo = new Repository<UserCustomField>(DatabaseContext))
-            {
-                return repo.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
-            }
+            return await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
         }
 
         public async Task UpdateCustomField(Guid userId, string name, string value)
@@ -160,58 +157,49 @@ namespace LANCommander.Server.Services
             if (value.Length > 1024)
                 throw new ArgumentException("Field value must be 1024 characters or less");
 
-            using (var repo = new Repository<UserCustomField>(DatabaseContext))
+            var existing = await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
+
+            if (existing.Value == value)
+                return;
+
+            if (existing == null)
             {
-                var existing = repo.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
-
-                if (existing.Value == value)
-                    return;
-
-                if (existing == null)
+                await CustomFieldRepository.Add(new UserCustomField
                 {
-                    await repo.Add(new UserCustomField
-                    {
-                        Name = name,
-                        Value = value
-                    });
+                    Name = name,
+                    Value = value
+                });
 
-                    await repo.SaveChanges();
-                }
-                else if (!String.IsNullOrWhiteSpace(value))
-                {
-                    existing.Value = value;
+                await CustomFieldRepository.SaveChanges();
+            }
+            else if (!String.IsNullOrWhiteSpace(value))
+            {
+                existing.Value = value;
 
-                    repo.Update(existing);
+                CustomFieldRepository.Update(existing);
 
-                    await repo.SaveChanges();
-                }
-                else
-                {
-                    await DeleteCustomField(userId, name);
-                }
+                await CustomFieldRepository.SaveChanges();
+            }
+            else
+            {
+                await DeleteCustomField(userId, name);
             }
         }
 
         public async Task DeleteCustomField(Guid userId, string name)
         {
-            using (var repo = new Repository<UserCustomField>(DatabaseContext))
-            {
-                var existing = repo.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
+            var existing = await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
 
-                repo.Delete(existing);
-                await repo.SaveChanges();
-            }
+            CustomFieldRepository.Delete(existing);
+            await CustomFieldRepository.SaveChanges();
         }
 
         public async Task DeleteCustomField(Guid userId, Guid id)
         {
-            using (var repo = new Repository<UserCustomField>(DatabaseContext))
-            {
-                var existing = repo.FirstOrDefault(cf => cf.UserId == userId && cf.Id == id);
+            var existing = await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Id == id);
 
-                repo.Delete(existing);
-                await repo.SaveChanges();
-            }
+            CustomFieldRepository.Delete(existing);
+            await CustomFieldRepository.SaveChanges();
         }
     }
 }

@@ -7,14 +7,14 @@ using System.Diagnostics;
 
 namespace LANCommander.Server.Data
 {
-    public class DatabaseContext : DbContext
+    public class IdentityContext : IdentityDbContext<User, Role, Guid>
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static Dictionary<Guid, Stopwatch> ContextTracker;
 
         private readonly ILogger Logger;
 
-        public DatabaseContext(DbContextOptions<DatabaseContext> options, ILogger<DatabaseContext> logger)
+        public IdentityContext(DbContextOptions<IdentityContext> options, ILogger<IdentityContext> logger)
             : base(options)
         {
             Logger = logger;
@@ -52,6 +52,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Tag>();
             builder.ConfigureBaseRelationships<Issue>();
             builder.ConfigureBaseRelationships<Page>();
+            builder.ConfigureBaseRelationships<UserCustomField>();
 
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
@@ -313,32 +314,5 @@ namespace LANCommander.Server.Data
                 );
             #endregion
         }
-
-        public DbSet<Game>? Games { get; set; }
-
-        public DbSet<Genre>? Genres { get; set; }
-
-        public DbSet<Category>? Categories { get; set; }
-
-        public DbSet<Tag>? Tags { get; set; }
-
-        public DbSet<Company>? Companies { get; set; }
-
-        public DbSet<Key>? Keys { get; set; }
-
-        public DbSet<GameSave>? GameSaves { get; set; }
-
-        public DbSet<PlaySession>? PlaySessions { get; set; }
-
-        public DbSet<Data.Models.Server>? Servers { get; set; }
-
-        public DbSet<ServerConsole>? ServerConsoles { get; set; }
-
-        public DbSet<Redistributable>? Redistributables { get; set; }
-
-        public DbSet<Media>? Media { get; set; }
-        public DbSet<Issue>? Issues { get; set; }
-        public DbSet<Page>? Pages { get; set; }
-        public DbSet<StorageLocation> StorageLocations { get; set; }
     }
 }

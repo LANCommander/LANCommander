@@ -32,6 +32,7 @@ namespace LANCommander.Server.Services
         public async Task ChangeProvider(DatabaseProvider provider, string connectionString)
         {
             DatabaseContext.Provider = provider;
+            IdentityContext.Provider = provider;
 
             using (var scope = ServiceProvider.CreateScope())
             {

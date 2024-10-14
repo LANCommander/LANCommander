@@ -63,9 +63,15 @@ namespace LANCommander.Server
             var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
 
             if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
+            {
                 DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
+                IdentityContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
+            }
             else
+            {
                 DatabaseContext.Provider = settings.DatabaseProvider;
+                IdentityContext.Provider = settings.DatabaseProvider;
+            }
 
             Log.Debug("Loaded!");
 
@@ -184,6 +190,26 @@ namespace LANCommander.Server
                 }
             }, ServiceLifetime.Transient);
 
+            builder.Services.AddDbContext<IdentityContext>(b =>
+            {
+                settings = SettingService.GetSettings();
+
+                switch (IdentityContext.Provider)
+                {
+                    case DatabaseProvider.SQLite:
+                        b.UseSqlite(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
+                        break;
+
+                    case DatabaseProvider.MySQL:
+                        b.UseMySql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                        break;
+
+                    case DatabaseProvider.PostgreSQL:
+                        b.UseNpgsql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                        break;
+                }
+            });
+
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             Log.Debug("Initializing Identity");
@@ -199,7 +225,7 @@ namespace LANCommander.Server
                 options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
             })
                 .AddRoles<Role>()
-                .AddEntityFrameworkStores<LANCommander.Server.Data.DatabaseContext>()
+                .AddEntityFrameworkStores<IdentityContext>()
                 .AddDefaultTokenProviders();
 
             builder.Services.AddAuthentication(options =>

@@ -162,6 +162,10 @@ namespace LANCommander.SDK.Services
 
                             if (File.Exists(entryPath))
                             {
+                                var destinationDirectory = Path.GetDirectoryName(entryPath);
+
+                                Directory.CreateDirectory(destinationDirectory);
+
                                 // Handle individual files that were saved as an entry in the path
                                 if (File.Exists(destinationPath))
                                     File.Delete(destinationPath);
@@ -175,6 +179,10 @@ namespace LANCommander.SDK.Services
 
                                 foreach (var entryFile in entryFiles)
                                 {
+                                    var destinationDirectory = Path.GetDirectoryName(entryFile);
+
+                                    Directory.CreateDirectory(destinationDirectory);
+
                                     var fileDestination = entryFile.Replace(entryPath, destinationPath);
 
                                     if (File.Exists(fileDestination))

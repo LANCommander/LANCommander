@@ -72,6 +72,7 @@ namespace LANCommander.Server.Services
 
                     if (manifestConsole != null)
                     {
+                        serverConsole.ServerId = server.Id;
                         serverConsole.Name = manifestConsole.Name;
                         serverConsole.Type = (ServerConsoleType)(int)manifestConsole.Type;
                         serverConsole.Path = manifestConsole.Path;
@@ -90,6 +91,7 @@ namespace LANCommander.Server.Services
                         server.ServerConsoles.Add(new ServerConsole()
                         {
                             Id = manifestConsole.Id,
+                            ServerId = server.Id,
                             Name = manifestConsole.Name,
                             Type = (ServerConsoleType)(int)manifestConsole.Type,
                             Path = manifestConsole.Path,

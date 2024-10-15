@@ -131,7 +131,7 @@
     {
         if (!_MainLayout.Importing)
         {
-            await _MainLayout.JS.InvokeVoidAsync("sendMessage", "import");
+            await _MainLayout.JS.InvokeVoidAsync("window.external.sendMessage", "import");
 
             _MainLayout.Importing = true;
             _MainLayout.StateHasChanged();

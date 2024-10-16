@@ -1,7 +1,9 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using System.Data;
 
 namespace LANCommander.Server.Services
 {
@@ -9,34 +11,43 @@ namespace LANCommander.Server.Services
     {
         public const string AdministratorRoleName = "Administrator";
 
-        private readonly RoleManager<Role> RoleManager;
-        private readonly UserManager<User> UserManager;
+        private readonly IdentityContextFactory IdentityContextFactory;
 
         public RoleService(
             ILogger<RoleService> logger,
             Repository<Role> repository,
-            RoleManager<Role> roleManager,
-            UserManager<User> userManager) : base(logger, repository)
+            IdentityContextFactory identityContextFactory) : base(logger, repository)
         {
-            RoleManager = roleManager;
-            UserManager = userManager;
+            IdentityContextFactory = identityContextFactory;
         }
 
         public override async Task<Role> Add(Role role)
         {
-            var result = await RoleManager.CreateAsync(role);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                var result = await identityContext.RoleManager.CreateAsync(role);
 
-            return await RoleManager.FindByNameAsync(role.Name);
+                if (result.Succeeded)
+                    return await identityContext.RoleManager.FindByNameAsync(role.Name);
+                else
+                    return null;
+            }
         }
 
         public async Task<Role> Get(string roleName)
         {
-            return await Repository.FirstOrDefault(r => r.Name == roleName);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                return await identityContext.RoleManager.FindByNameAsync(roleName);
+            }
         }
 
         public async Task<IEnumerable<User>> GetUsers(string roleName)
         {
-            return await UserManager.GetUsersInRoleAsync(roleName);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                return await identityContext.UserManager.GetUsersInRoleAsync(roleName);
+            }
         }
     }
 }

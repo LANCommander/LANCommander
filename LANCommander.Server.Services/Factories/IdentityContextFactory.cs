@@ -30,7 +30,7 @@ namespace LANCommander.Server.Services.Factories
 
     public class IdentityContext : IDisposable
     {
-        public readonly DatabaseContext DatabaseContext;
+        private readonly DatabaseContext DatabaseContext;
 
         public readonly UserManager<User> UserManager;
         public readonly RoleManager<Role> RoleManager;

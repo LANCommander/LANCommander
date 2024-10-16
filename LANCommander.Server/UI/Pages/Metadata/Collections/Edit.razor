@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Collections/{id:guid}"
 @page "/Metadata/Collections/Add"
 @using LANCommander.Server.Extensions
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject CollectionService CollectionService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager

@@ -4,7 +4,7 @@
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Models
 @using Microsoft.EntityFrameworkCore
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject RedistributableService RedistributableService
 @inject GameService GameService
 @inject IMessageService MessageService

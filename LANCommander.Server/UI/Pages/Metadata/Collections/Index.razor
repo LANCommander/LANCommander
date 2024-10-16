@@ -1,6 +1,6 @@
 ﻿@page "/Metadata/Collections"
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject CollectionService CollectionService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService

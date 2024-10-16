@@ -8,7 +8,7 @@
 @inject IGDBService IGDBService
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="General" />
 

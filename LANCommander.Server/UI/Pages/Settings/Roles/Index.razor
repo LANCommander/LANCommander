@@ -6,7 +6,7 @@
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Roles">
     <PageHeaderExtra>
@@ -50,7 +50,7 @@
                     <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
                 </SpaceItem>
                 <SpaceItem>
-                    @if (context.Name != "Administrator")
+                    @if (context.Name != RoleService.AdministratorRoleName)
                     {
                         <Popconfirm OnConfirm="() => DeleteRole(context)" Title="Are you sure you want to delete this role?">
                             <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
@@ -120,7 +120,7 @@
     {
         var role = await RoleService.Get(roleViewModel.Name);
 
-        if (role.Name == "Administrator")
+        if (role.Name == RoleService.AdministratorRoleName)
         {
             MessageService.Error("Cannot delete the administrator role!");
         }

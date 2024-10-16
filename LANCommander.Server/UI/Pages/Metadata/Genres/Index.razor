@@ -1,6 +1,6 @@
 ﻿@page "/Metadata/Genres"
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GenreService GenreService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService

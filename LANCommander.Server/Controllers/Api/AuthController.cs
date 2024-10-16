@@ -194,7 +194,7 @@ namespace LANCommander.Server.Controllers.Api
             {
                 Logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
-                if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserService.IsInRole(user, "Administrator")))
+                if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserService.IsInRole(user, RoleService.AdministratorRoleName)))
                     throw new Exception("Account must be approved by an administrator");
 
                 var userRoles = await UserService.GetRoles(user);

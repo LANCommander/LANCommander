@@ -5,7 +5,7 @@
 @inject ArchiveService ArchiveService;
 @inject MediaService MediaService;
 @inject StorageLocationService StorageLocationService;
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader>
     <PageHeaderTitle>Orphaned Files</PageHeaderTitle>

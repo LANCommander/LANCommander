@@ -4,7 +4,7 @@
 @inject SettingService SettingService
 @inject IMessageService MessageService
 @inject ILogger<Servers> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Servers" />
 

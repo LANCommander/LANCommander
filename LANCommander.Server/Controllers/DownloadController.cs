@@ -49,7 +49,7 @@ namespace LANCommander.Server.Controllers
             return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = RoleService.AdministratorRoleName)]
         public async Task<IActionResult> Archive(Guid id)
         {
             var archive = await ArchiveService.Get(id);
@@ -77,7 +77,7 @@ namespace LANCommander.Server.Controllers
         {
             var save = await GameSaveService.Get(id);
 
-            if (User == null || User.Identity?.Name != save.User?.UserName && !User.IsInRole("Administrator"))
+            if (User == null || User.Identity?.Name != save.User?.UserName && !User.IsInRole(RoleService.AdministratorRoleName))
                 return Unauthorized();
 
             if (save == null)

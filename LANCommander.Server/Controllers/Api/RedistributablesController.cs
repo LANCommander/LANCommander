@@ -70,7 +70,7 @@ namespace LANCommander.Server.Controllers.Api
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{redistributable.Name.SanitizeFilename()}.zip");
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("Import/{objectKey}")]
         public async Task<IActionResult> Import(Guid objectKey)
         {
@@ -87,7 +87,7 @@ namespace LANCommander.Server.Controllers.Api
             }
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("UploadArchive")]
         public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
         {

@@ -1,7 +1,7 @@
 ﻿@page "/Redistributables"
 @using Microsoft.EntityFrameworkCore;
 @using LANCommander.Server.UI.Pages.Redistributables.Components
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject RedistributableService RedistributableService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService

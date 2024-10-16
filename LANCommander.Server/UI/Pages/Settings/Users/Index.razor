@@ -5,7 +5,7 @@
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Users" />
 
@@ -42,7 +42,7 @@
                 </SpaceItem>
 
                 <SpaceItem>
-                    @if (!context.Roles.Any(r => r == "Administrator"))
+                    @if (!context.Roles.Any(r => r == RoleService.AdministratorRoleName))
                     {
                         <Popconfirm OnConfirm="() => DeleteUser(context)" Title="Are you sure you want to delete this user?">
                             <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
@@ -127,7 +127,7 @@
     {
         var dbUser = await UserService.Get(user.Id);
 
-        await UserService.AddToRole(dbUser, "Administrator");
+        await UserService.AddToRole(dbUser, RoleService.AdministratorRoleName);
 
         await RefreshUserList();
 
@@ -138,13 +138,13 @@
     {
         var dbUser = await UserService.Get(user.Id);
 
-        if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1)
+        if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1)
         {
             MessageService.Error("Cannot demote the only administrator!");
         }
         else
         {
-            await UserService.RemoveFromRole(dbUser, "Administrator");
+            await UserService.RemoveFromRole(dbUser, RoleService.AdministratorRoleName);
 
             await RefreshUserList();
         }
@@ -154,7 +154,7 @@
     {
         var dbUser = await UserService.Get(user.Id);
 
-        if (UserList.SelectMany(u => u.Roles).Count(r => r == "Administrator") == 1 && user.Roles.Contains("Administrator"))
+        if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1 && user.Roles.Contains(RoleService.AdministratorRoleName))
         {
             MessageService.Error("Cannot delete the only administrator!");
         }

@@ -53,7 +53,7 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        var currentAdmins = await RoleService.GetUsers("Administrator");
+        var currentAdmins = await RoleService.GetUsers(RoleService.AdministratorRoleName);
 
         try
         {
@@ -65,7 +65,7 @@
             {
                 if (!SelectedRoles.Any(r => r.Name == role.Name))
                 {
-                    if (role.Name == "Administrator" && currentAdmins.Any())
+                    if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Any())
                         MessageService.Warning("Cannot demote the only administrator!");
                     else
                         await UserService.RemoveFromRole(User, role);

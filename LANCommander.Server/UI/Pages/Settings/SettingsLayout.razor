@@ -1,6 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @layout MainLayout
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">

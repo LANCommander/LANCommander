@@ -9,7 +9,7 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Controllers
 {
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Roles = RoleService.AdministratorRoleName)]
     public class UploadController : BaseController
     {
         private readonly StorageLocationService StorageLocationService;

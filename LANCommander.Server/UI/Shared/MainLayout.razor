@@ -10,7 +10,7 @@
                 <MenuItem RouterLink="/">Overview</MenuItem>
                 <MenuItem RouterLink="/Dashboard/SessionPlaytime">Average Session Playtime</MenuItem>
             </SubMenu>
-            @if (User != null && User.IsInRole("Administrator"))
+            @if (User != null && User.IsInRole(RoleService.AdministratorRoleName))
             {
                 <MenuItem RouterLink="/Games">Games</MenuItem>
                 <SubMenu Title="Metadata">

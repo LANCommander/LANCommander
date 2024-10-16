@@ -1,6 +1,6 @@
 ﻿@page "/Metadata/Tags"
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject TagService TagService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService

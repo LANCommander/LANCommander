@@ -6,7 +6,7 @@ using System.IO.Compression;
 
 namespace LANCommander.Server.Controllers
 {
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Roles = RoleService.AdministratorRoleName)]
     public class GamesController : BaseController
     {
         private readonly GameService GameService;

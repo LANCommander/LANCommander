@@ -51,15 +51,15 @@
 
         try
         {
-            var role = await RoleService.Get("Administrator");
+            var role = await RoleService.Get(RoleService.AdministratorRoleName);
 
             if (role == null)
                 await RoleService.Add(new Role
                 {
-                    Name = "Administrator"
+                    Name = RoleService.AdministratorRoleName
                 });
 
-            var administrators = await RoleService.GetUsers("Administrator");
+            var administrators = await RoleService.GetUsers(RoleService.AdministratorRoleName);
 
             if (administrators != null && administrators.Any())
                 NavigationManager.NavigateTo("/");
@@ -76,7 +76,7 @@
                 if (user != null)
                 {
                     await UserService.ChangePassword(user, Model.Password);
-                    await UserService.AddToRole(user, "Administrator");
+                    await UserService.AddToRole(user, RoleService.AdministratorRoleName);
 
                     Logger?.LogInformation("Administrator created a new account with password.");
 

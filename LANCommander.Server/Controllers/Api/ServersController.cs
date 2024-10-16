@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Controllers.Api
 {
-    [Authorize(AuthenticationSchemes = "Bearer", Roles = "Administrator")]
+    [Authorize(AuthenticationSchemes = "Bearer", Roles = RoleService.AdministratorRoleName)]
     [Route("api/[controller]")]
     [ApiController]
     public class ServersController : BaseApiController

@@ -5,7 +5,7 @@
 @using LANCommander.Server.UI.Pages.Games.Components
 @using System.IO.Compression
 @using Microsoft.EntityFrameworkCore
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
 @inject CompanyService CompanyService
 @inject GenreService GenreService

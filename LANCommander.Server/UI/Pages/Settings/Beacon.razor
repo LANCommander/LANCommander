@@ -5,7 +5,7 @@
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Beacon" />
 

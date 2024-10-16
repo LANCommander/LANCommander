@@ -1,7 +1,7 @@
 ﻿@page "/Servers"
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager

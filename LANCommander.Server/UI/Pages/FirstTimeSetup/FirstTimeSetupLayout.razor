@@ -33,15 +33,15 @@
     {
         if (DatabaseContext.Provider != Data.Enums.DatabaseProvider.Unknown)
         {
-            var role = await RoleService.Get("Administrator");
+            var role = await RoleService.Get(RoleService.AdministratorRoleName);
 
             if (role == null)
                 await RoleService.Add(new Role
-                    {
-                        Name = "Administrator"
-                    });
+                {
+                    Name = RoleService.AdministratorRoleName
+                });
 
-            var administrators = await RoleService.GetUsers("Administrator");
+            var administrators = await RoleService.GetUsers(RoleService.AdministratorRoleName);
 
             if (administrators != null && administrators.Any())
                 NavigationManager.NavigateTo("/");

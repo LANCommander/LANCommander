@@ -5,7 +5,7 @@
 @inject IMessageService MessageService
 @inject ArchiveService ArchiveService
 @inject ILogger<MissingArchives> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Missing Archives" />
 

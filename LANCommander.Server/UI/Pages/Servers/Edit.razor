@@ -2,7 +2,7 @@
 @page "/Servers/{id:guid}/{panel}"
 @page "/Servers/{id:guid}/{panel}/{logId}"
 @page "/Servers/Add"
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using LANCommander.Server.Extensions

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LANCommander.Server.Data.Models
 {
-    public abstract class BaseModel : IKeyedModel
+    public abstract class BaseModel : IBaseModel
     {
         [Key]
         public Guid Id { get; set; }

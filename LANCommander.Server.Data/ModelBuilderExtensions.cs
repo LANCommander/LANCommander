@@ -5,7 +5,7 @@ namespace LANCommander.Server.Data
 {
     public static class ModelBuilderExtensions
     {
-        public static void ConfigureBaseRelationships<T>(this ModelBuilder modelBuilder) where T : BaseModel
+        public static void ConfigureBaseRelationships<T>(this ModelBuilder modelBuilder) where T : class, IBaseModel
         {
             modelBuilder.Entity<T>()
                 .HasOne(x => x.CreatedBy)

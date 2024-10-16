@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace LANCommander.Server.Data.Models
 {
     [Table("Users")]
-    public class User : IdentityUser<Guid>
+    public class User : IdentityUser<Guid>, IBaseModel
     {
         // Ignore the following properties from leaking into REST requests
         [JsonIgnore]
@@ -60,5 +60,19 @@ namespace LANCommander.Server.Data.Models
         public DateTime? ApprovedOn { get; set; }
 
         public string? Alias { get; set; }
+
+        public virtual ICollection<Role> Roles { get; set; } = new List<Role>();
+
+        [Display(Name = "Created On")]
+        public DateTime CreatedOn { get; set; }
+
+        [Display(Name = "Created By")]
+        public virtual User? CreatedBy { get; set; }
+
+        [Display(Name = "Updated On")]
+        public DateTime UpdatedOn { get; set; }
+
+        [Display(Name = "Updated By")]
+        public virtual User? UpdatedBy { get; set; }
     }
 }

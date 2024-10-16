@@ -53,6 +53,9 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Tag>();
             builder.ConfigureBaseRelationships<Issue>();
             builder.ConfigureBaseRelationships<Page>();
+            builder.ConfigureBaseRelationships<Role>();
+            builder.ConfigureBaseRelationships<User>();
+            builder.ConfigureBaseRelationships<UserCustomField>();
 
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
@@ -202,7 +205,7 @@ namespace LANCommander.Server.Data
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<IdentityUser<Guid>>(b =>
+            builder.Entity<User>(b =>
             {
                 // Primary key
                 b.HasKey(u => u.Id);
@@ -218,19 +221,19 @@ namespace LANCommander.Server.Data
                 // Note that these relationships are configured with no navigation properties
 
                 // Each User can have many UserClaims
-                b.HasMany<IdentityUserClaim<Guid>>().WithOne().HasForeignKey(uc => uc.UserId).IsRequired();
+                b.HasMany<UserClaim>().WithOne().HasForeignKey(uc => uc.UserId).IsRequired();
 
                 // Each User can have many UserLogins
-                b.HasMany<IdentityUserLogin<Guid>>().WithOne().HasForeignKey(ul => ul.UserId).IsRequired();
+                b.HasMany<UserLogin>().WithOne().HasForeignKey(ul => ul.UserId).IsRequired();
 
                 // Each User can have many UserTokens
-                b.HasMany<IdentityUserToken<Guid>>().WithOne().HasForeignKey(ut => ut.UserId).IsRequired();
+                b.HasMany<UserToken>().WithOne().HasForeignKey(ut => ut.UserId).IsRequired();
 
                 // Each User can have many entries in the UserRole join table
-                b.HasMany<IdentityUserRole<Guid>>().WithOne().HasForeignKey(ur => ur.UserId).IsRequired();
+                b.HasMany<UserRole>().WithOne().HasForeignKey(ur => ur.UserId).IsRequired();
             });
 
-            builder.Entity<IdentityUserClaim<Guid>>(b =>
+            builder.Entity<UserClaim>(b =>
             {
                 // Primary key
                 b.HasKey(uc => uc.Id);
@@ -239,7 +242,7 @@ namespace LANCommander.Server.Data
                 b.ToTable("UserClaims");
             });
 
-            builder.Entity<IdentityUserLogin<Guid>>(b =>
+            builder.Entity<UserLogin>(b =>
             {
                 // Composite primary key consisting of the LoginProvider and the key to use
                 // with that provider
@@ -249,7 +252,7 @@ namespace LANCommander.Server.Data
                 b.ToTable("UserLogins");
             });
 
-            builder.Entity<IdentityUserToken<Guid>>(b =>
+            builder.Entity<UserToken>(b =>
             {
                 // Composite primary key consisting of the UserId, LoginProvider and Name
                 b.HasKey(t => new { t.UserId, t.LoginProvider, t.Name });
@@ -259,7 +262,7 @@ namespace LANCommander.Server.Data
                 b.ToTable("UserTokens");
             });
 
-            builder.Entity<IdentityRole<Guid>>(b =>
+            builder.Entity<Role>(b =>
             {
                 // Primary key
                 b.HasKey(r => r.Id);
@@ -277,13 +280,13 @@ namespace LANCommander.Server.Data
                 // Note that these relationships are configured with no navigation properties
 
                 // Each Role can have many entries in the UserRole join table
-                b.HasMany<IdentityUserRole<Guid>>().WithOne().HasForeignKey(ur => ur.RoleId).IsRequired();
+                b.HasMany<UserRole>().WithOne().HasForeignKey(ur => ur.RoleId).IsRequired();
 
                 // Each Role can have many associated RoleClaims
-                b.HasMany<IdentityRoleClaim<Guid>>().WithOne().HasForeignKey(rc => rc.RoleId).IsRequired();
+                b.HasMany<RoleClaim>().WithOne().HasForeignKey(rc => rc.RoleId).IsRequired();
             });
 
-            builder.Entity<IdentityRoleClaim<Guid>>(b =>
+            builder.Entity<RoleClaim>(b =>
             {
                 // Primary key
                 b.HasKey(rc => rc.Id);
@@ -292,7 +295,7 @@ namespace LANCommander.Server.Data
                 b.ToTable("RoleClaims");
             });
 
-            builder.Entity<IdentityUserRole<Guid>>(b =>
+            builder.Entity<UserRole>(b =>
             {
                 // Primary key
                 b.HasKey(r => new { r.UserId, r.RoleId });

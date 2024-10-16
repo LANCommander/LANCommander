@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Server.Data
 {
-    public class Repository<T> where T : BaseModel
+    public class Repository<T> : IDisposable where T : class, IBaseModel
     {
         private readonly DbContext Context;
         private readonly IHttpContextAccessor HttpContextAccessor;

@@ -51,6 +51,7 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         public virtual ICollection<Media>? Media { get; set; }
 
+        [NotMapped]
         public virtual ICollection<Role>? Roles { get; set; }
         public virtual ICollection<UserCustomField>? CustomFields { get; set; }
 

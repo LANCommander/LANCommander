@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace LANCommander.Server.Data
 {
-    public class DatabaseContext : DbContext
+    public class DatabaseContext : IdentityDbContext<User, Role, Guid>
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static Dictionary<Guid, Stopwatch> ContextTracker;
@@ -207,96 +207,36 @@ namespace LANCommander.Server.Data
 
             builder.Entity<User>(b =>
             {
-                // Primary key
-                b.HasKey(u => u.Id);
-
-                // Indexes for "normalized" username and email, to allow efficient lookups
-                b.HasIndex(u => u.NormalizedUserName).HasName("UserNameIndex").IsUnique();
-                b.HasIndex(u => u.NormalizedEmail).HasName("EmailIndex");
-
-                // Maps to the AspNetUsers table
                 b.ToTable("Users");
-
-                // The relationships between User and other entity types
-                // Note that these relationships are configured with no navigation properties
-
-                // Each User can have many UserClaims
-                b.HasMany<UserClaim>().WithOne().HasForeignKey(uc => uc.UserId).IsRequired();
-
-                // Each User can have many UserLogins
-                b.HasMany<UserLogin>().WithOne().HasForeignKey(ul => ul.UserId).IsRequired();
-
-                // Each User can have many UserTokens
-                b.HasMany<UserToken>().WithOne().HasForeignKey(ut => ut.UserId).IsRequired();
             });
 
-
-
-            builder.Entity<User>()
-                .HasMany(u => u.Roles)
-                .WithMany(r => r.Users)
-                .UsingEntity<Dictionary<string, object>>(
-                    "UserRoles",
-                    ur => ur.HasOne<Role>().WithMany().HasForeignKey("RoleId").OnDelete(DeleteBehavior.Cascade),
-                    ur => ur.HasOne<User>().WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade)
-                );
-
-            builder.Entity<UserClaim>(b =>
+            builder.Entity<IdentityUserRole<Guid>>(b =>
             {
-                // Primary key
-                b.HasKey(uc => uc.Id);
+                b.ToTable("UserRoles");
+            });
 
-                // Maps to the AspNetUserClaims table
+            builder.Entity<IdentityUserClaim<Guid>>(b =>
+            {
                 b.ToTable("UserClaims");
             });
 
             builder.Entity<UserLogin>(b =>
             {
-                // Composite primary key consisting of the LoginProvider and the key to use
-                // with that provider
-                b.HasKey(l => new { l.LoginProvider, l.ProviderKey });
-
-                // Maps to the AspNetUserLogins table
                 b.ToTable("UserLogins");
             });
 
             builder.Entity<UserToken>(b =>
             {
-                // Composite primary key consisting of the UserId, LoginProvider and Name
-                b.HasKey(t => new { t.UserId, t.LoginProvider, t.Name });
-
-
-                // Maps to the AspNetUserTokens table
                 b.ToTable("UserTokens");
             });
 
             builder.Entity<Role>(b =>
             {
-                // Primary key
-                b.HasKey(r => r.Id);
-
-                // Index for "normalized" role name to allow efficient lookups
-                b.HasIndex(r => r.NormalizedName).HasName("RoleNameIndex").IsUnique();
-
-                // Maps to the AspNetRoles table
                 b.ToTable("Roles");
-
-                // A concurrency token for use with the optimistic concurrency checking
-                b.Property(r => r.ConcurrencyStamp).IsConcurrencyToken();
-
-                // The relationships between Role and other entity types
-                // Note that these relationships are configured with no navigation properties
-
-                // Each Role can have many associated RoleClaims
-                b.HasMany<RoleClaim>().WithOne().HasForeignKey(rc => rc.RoleId).IsRequired();
             });
 
             builder.Entity<RoleClaim>(b =>
             {
-                // Primary key
-                b.HasKey(rc => rc.Id);
-
-                // Maps to the AspNetRoleClaims table
                 b.ToTable("RoleClaims");
             });
             #endregion

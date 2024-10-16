@@ -1,19 +1,26 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LANCommander.Server.Services
 {
     public class UserService : BaseDatabaseService<User>
     {
         private readonly RoleService RoleService;
+        private readonly UserManager<User> UserManager;
+        private readonly RoleManager<Role> RoleManager;
 
         public UserService(
             ILogger<UserService> logger,
             Repository<User> repository,
-            RoleService roleService) : base(logger, repository)
+            RoleService roleService,
+            UserManager<User> userManager,
+            RoleManager<Role> roleManager) : base(logger, repository)
         {
             RoleService = roleService;
+            UserManager = userManager;
         }
 
         public async Task<User> Get(string username)
@@ -30,27 +37,29 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<Role>> GetRoles(User user)
         {
-            return user.Roles;
+            var roleNames = await UserManager.GetRolesAsync(user);
+
+            return await RoleService.Get(r => roleNames.Contains(r.Name));
         }
 
         public async Task<bool> IsInRole(User user, string roleName)
         {
-            if (user.Roles == null)
-                return false;
+            return await UserManager.IsInRoleAsync(user, roleName);
+        }
 
-            return user.Roles.Any(r => r.Name == roleName);
+        public override async Task<User> Add(User user)
+        {
+            var result = await UserManager.CreateAsync(user);
+
+            if (result.Succeeded)
+                return await UserManager.FindByNameAsync(user.UserName);
+            else
+                return null;
         }
 
         public async Task AddToRole(User user, string roleName)
         {
-            var role = await RoleService.Get(roleName);
-
-            if (user.Roles == null)
-                user.Roles = new List<Role>();
-
-            user.Roles.Add(role);
-
-            await Update(user);
+            await UserManager.AddToRoleAsync(user, roleName);
         }
 
         public async Task AddToRoles(User user, IEnumerable<string> roleNames)
@@ -77,26 +86,23 @@ namespace LANCommander.Server.Services
 
         public async Task<bool> CheckPassword(User user, string password)
         {
-            // return await UserManager.CheckPasswordAsync(user, password);
-            return false;
+            return await UserManager.CheckPasswordAsync(user, password);
         }
 
         public async Task<bool> ChangePassword(User user, string currentPassword, string newPassword)
         {
-            /*var result = await UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
+            var result = await UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
 
-            return result.Succeeded;*/
-            return false;
+            return result.Succeeded;
         }
 
         public async Task<bool> ChangePassword(User user, string newPassword)
         {
-            /*var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
 
             var result = await UserManager.ResetPasswordAsync(user, token, newPassword);
 
-            return result.Succeeded;*/
-            return false;
+            return result.Succeeded;
         }
 
         public async Task SignOut()

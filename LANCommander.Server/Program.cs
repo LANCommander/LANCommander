@@ -225,7 +225,7 @@ namespace LANCommander.Server
                 options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
             })
                 .AddRoles<Role>()
-                .AddEntityFrameworkStores<IdentityContext>()
+                .AddEntityFrameworkStores<DatabaseContext>()
                 .AddDefaultTokenProviders();
 
             builder.Services.AddAuthentication(options =>

@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Server.Data
 {
-    public class ConnectionInterceptor : DbConnectionInterceptor
+    public class DatabaseContextConnectionInterceptor : DbConnectionInterceptor
     {
         private readonly ILogger Logger;
 
-        public ConnectionInterceptor(ILogger logger)
+        public DatabaseContextConnectionInterceptor(ILogger logger)
         {
             Logger = logger;
         }
@@ -30,6 +30,9 @@ namespace LANCommander.Server.Data
 
         public override async Task ConnectionOpenedAsync(DbConnection connection, ConnectionEndEventData eventData, CancellationToken cancellationToken = default)
         {
+            if (DatabaseContext.ContextTracker == null)
+                DatabaseContext.ContextTracker = new Dictionary<Guid, Stopwatch>();
+
             DatabaseContext.ContextTracker[eventData.ConnectionId] = Stopwatch.StartNew();
 
             Logger.LogInformation("DbContext connection opened: {ConnectionId}", eventData.ConnectionId);

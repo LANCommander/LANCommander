@@ -1,5 +1,6 @@
 ﻿using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ namespace LANCommander.Server.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.AddInterceptors(new ConnectionInterceptor(Logger));
+            optionsBuilder.AddInterceptors(new DatabaseContextConnectionInterceptor(Logger));
             base.OnConfiguring(optionsBuilder);
         }
 
@@ -200,6 +201,105 @@ namespace LANCommander.Server.Data
                 .WithOne(cf => cf.User)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<IdentityUser<Guid>>(b =>
+            {
+                // Primary key
+                b.HasKey(u => u.Id);
+
+                // Indexes for "normalized" username and email, to allow efficient lookups
+                b.HasIndex(u => u.NormalizedUserName).HasName("UserNameIndex").IsUnique();
+                b.HasIndex(u => u.NormalizedEmail).HasName("EmailIndex");
+
+                // Maps to the AspNetUsers table
+                b.ToTable("Users");
+
+                // The relationships between User and other entity types
+                // Note that these relationships are configured with no navigation properties
+
+                // Each User can have many UserClaims
+                b.HasMany<IdentityUserClaim<Guid>>().WithOne().HasForeignKey(uc => uc.UserId).IsRequired();
+
+                // Each User can have many UserLogins
+                b.HasMany<IdentityUserLogin<Guid>>().WithOne().HasForeignKey(ul => ul.UserId).IsRequired();
+
+                // Each User can have many UserTokens
+                b.HasMany<IdentityUserToken<Guid>>().WithOne().HasForeignKey(ut => ut.UserId).IsRequired();
+
+                // Each User can have many entries in the UserRole join table
+                b.HasMany<IdentityUserRole<Guid>>().WithOne().HasForeignKey(ur => ur.UserId).IsRequired();
+            });
+
+            builder.Entity<IdentityUserClaim<Guid>>(b =>
+            {
+                // Primary key
+                b.HasKey(uc => uc.Id);
+
+                // Maps to the AspNetUserClaims table
+                b.ToTable("UserClaims");
+            });
+
+            builder.Entity<IdentityUserLogin<Guid>>(b =>
+            {
+                // Composite primary key consisting of the LoginProvider and the key to use
+                // with that provider
+                b.HasKey(l => new { l.LoginProvider, l.ProviderKey });
+
+                // Maps to the AspNetUserLogins table
+                b.ToTable("UserLogins");
+            });
+
+            builder.Entity<IdentityUserToken<Guid>>(b =>
+            {
+                // Composite primary key consisting of the UserId, LoginProvider and Name
+                b.HasKey(t => new { t.UserId, t.LoginProvider, t.Name });
+
+
+                // Maps to the AspNetUserTokens table
+                b.ToTable("UserTokens");
+            });
+
+            builder.Entity<IdentityRole<Guid>>(b =>
+            {
+                // Primary key
+                b.HasKey(r => r.Id);
+
+                // Index for "normalized" role name to allow efficient lookups
+                b.HasIndex(r => r.NormalizedName).HasName("RoleNameIndex").IsUnique();
+
+                // Maps to the AspNetRoles table
+                b.ToTable("Roles");
+
+                // A concurrency token for use with the optimistic concurrency checking
+                b.Property(r => r.ConcurrencyStamp).IsConcurrencyToken();
+
+                // The relationships between Role and other entity types
+                // Note that these relationships are configured with no navigation properties
+
+                // Each Role can have many entries in the UserRole join table
+                b.HasMany<IdentityUserRole<Guid>>().WithOne().HasForeignKey(ur => ur.RoleId).IsRequired();
+
+                // Each Role can have many associated RoleClaims
+                b.HasMany<IdentityRoleClaim<Guid>>().WithOne().HasForeignKey(rc => rc.RoleId).IsRequired();
+            });
+
+            builder.Entity<IdentityRoleClaim<Guid>>(b =>
+            {
+                // Primary key
+                b.HasKey(rc => rc.Id);
+
+                // Maps to the AspNetRoleClaims table
+                b.ToTable("RoleClaims");
+            });
+
+            builder.Entity<IdentityUserRole<Guid>>(b =>
+            {
+                // Primary key
+                b.HasKey(r => new { r.UserId, r.RoleId });
+
+                // Maps to the AspNetUserRoles table
+                b.ToTable("UserRoles");
+            });
             #endregion
 
             #region Server Relationships
@@ -339,6 +439,6 @@ namespace LANCommander.Server.Data
         public DbSet<Media>? Media { get; set; }
         public DbSet<Issue>? Issues { get; set; }
         public DbSet<Page>? Pages { get; set; }
-        public DbSet<StorageLocation> StorageLocations { get; set; }
+        public DbSet<StorageLocation>? StorageLocations { get; set; }
     }
 }

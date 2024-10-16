@@ -279,6 +279,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<PageService>();
             builder.Services.AddScoped<UserService>();
+            builder.Services.AddScoped<UserCustomFieldService>();
             builder.Services.AddScoped<RoleService>();
             builder.Services.AddScoped<SetupService>();
 

@@ -24,17 +24,20 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
     public class LoginModel : PageModel
     {
         private readonly SignInManager<User> _signInManager;
-        private readonly UserManager<User> _userManager;
+        private readonly UserService UserService;
+        private readonly RoleService RoleService;
         private readonly ILogger<LoginModel> _logger;
 
         public LoginModel(
             SignInManager<User> signInManager,
-            UserManager<User> userManager,
+            UserService userService,
+            RoleService roleService,
             ILogger<LoginModel> logger
             )
         {
             _signInManager = signInManager;
-            _userManager = userManager;
+            UserService = userService;
+            RoleService = roleService;
             _logger = logger;
         }
 
@@ -114,9 +117,9 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
             if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown)
                 return Redirect("/FirstTimeSetup");
 
-            var administrators = await _userManager.GetUsersInRoleAsync("Administrator");
+            var administrators = await RoleService.GetUsers(RoleService.AdministratorRoleName);
 
-            if (administrators.Count == 0)
+            if (administrators != null && administrators.Any())
                 return Redirect("/FirstTimeSetup");
 
             return Page();
@@ -139,9 +142,9 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
 
                 if (settings.Authentication.RequireApproval)
                 {
-                    var user = await _userManager.FindByNameAsync(Input.UserName);
+                    var user = await UserService.Get(Input.UserName);
 
-                    if (user != null && !user.Approved && !(await _userManager.IsInRoleAsync(user, "Administrator")))
+                    if (user != null && !user.Approved && !(await UserService.IsInRole(user, RoleService.AdministratorRoleName)))
                     {
                         ModelState.AddModelError(string.Empty, "Your account must be approved by an administrator.");
                         return Page();

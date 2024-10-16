@@ -228,10 +228,18 @@ namespace LANCommander.Server.Data
 
                 // Each User can have many UserTokens
                 b.HasMany<UserToken>().WithOne().HasForeignKey(ut => ut.UserId).IsRequired();
-
-                // Each User can have many entries in the UserRole join table
-                b.HasMany<UserRole>().WithOne().HasForeignKey(ur => ur.UserId).IsRequired();
             });
+
+
+
+            builder.Entity<User>()
+                .HasMany(u => u.Roles)
+                .WithMany(r => r.Users)
+                .UsingEntity<Dictionary<string, object>>(
+                    "UserRoles",
+                    ur => ur.HasOne<Role>().WithMany().HasForeignKey("RoleId").OnDelete(DeleteBehavior.Cascade),
+                    ur => ur.HasOne<User>().WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade)
+                );
 
             builder.Entity<UserClaim>(b =>
             {
@@ -279,9 +287,6 @@ namespace LANCommander.Server.Data
                 // The relationships between Role and other entity types
                 // Note that these relationships are configured with no navigation properties
 
-                // Each Role can have many entries in the UserRole join table
-                b.HasMany<UserRole>().WithOne().HasForeignKey(ur => ur.RoleId).IsRequired();
-
                 // Each Role can have many associated RoleClaims
                 b.HasMany<RoleClaim>().WithOne().HasForeignKey(rc => rc.RoleId).IsRequired();
             });
@@ -293,15 +298,6 @@ namespace LANCommander.Server.Data
 
                 // Maps to the AspNetRoleClaims table
                 b.ToTable("RoleClaims");
-            });
-
-            builder.Entity<UserRole>(b =>
-            {
-                // Primary key
-                b.HasKey(r => new { r.UserId, r.RoleId });
-
-                // Maps to the AspNetUserRoles table
-                b.ToTable("UserRoles");
             });
             #endregion
 
@@ -443,5 +439,7 @@ namespace LANCommander.Server.Data
         public DbSet<Issue>? Issues { get; set; }
         public DbSet<Page>? Pages { get; set; }
         public DbSet<StorageLocation>? StorageLocations { get; set; }
+        public DbSet<Role>? Roles { get; set; }
+        public DbSet<User>? Users { get; set; }
     }
 }

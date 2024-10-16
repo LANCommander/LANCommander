@@ -1,58 +1,27 @@
-﻿using LANCommander.Server.Data.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using LANCommander.Server.Data;
+using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Server.Services
 {
-    public class RoleService : BaseService
+    public class RoleService : BaseDatabaseService<Role>
     {
-        private readonly RoleManager<Role> RoleManager;
+        public const string AdministratorRoleName = "Administrator";
 
         public RoleService(
             ILogger<RoleService> logger,
-            RoleManager<Role> roleManager) : base(logger)
-        {
-            RoleManager = roleManager;
-        }
-
-        public async Task<IEnumerable<Role>> Get()
-        {
-            return await RoleManager.Roles.ToListAsync();
-        }
-
-        public async Task<Role> Get(Guid id)
-        {
-            return await RoleManager.FindByIdAsync(id.ToString());
-        }
+            Repository<Role> repository) : base(logger, repository) { }
 
         public async Task<Role> Get(string roleName)
         {
-            return await RoleManager.FindByNameAsync(roleName);
+            return await Repository.FirstOrDefault(r => r.Name == roleName);
         }
 
-        public async Task<Role> Add(Role role)
+        public async Task<IEnumerable<User>> GetUsers(string roleName)
         {
-            await RoleManager.CreateAsync(role);
+            var role = await Get(roleName);
 
-            return await Get(role.Name);
-        }
-
-        public async Task<Role> Update(Role role)
-        {
-            await RoleManager.UpdateAsync(role);
-
-            return await RoleManager.FindByIdAsync(role.Id.ToString());
-        }
-
-        public async Task Delete(Role role)
-        {
-            await RoleManager.DeleteAsync(role);
+            return role.Users;
         }
     }
 }

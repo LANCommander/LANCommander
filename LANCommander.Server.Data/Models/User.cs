@@ -51,6 +51,7 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         public virtual ICollection<Media>? Media { get; set; }
 
+        public virtual ICollection<Role>? Roles { get; set; }
         public virtual ICollection<UserCustomField>? CustomFields { get; set; }
 
         [JsonIgnore]
@@ -60,8 +61,6 @@ namespace LANCommander.Server.Data.Models
         public DateTime? ApprovedOn { get; set; }
 
         public string? Alias { get; set; }
-
-        public virtual ICollection<Role> Roles { get; set; } = new List<Role>();
 
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }

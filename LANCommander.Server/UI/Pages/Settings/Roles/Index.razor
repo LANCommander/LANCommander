@@ -102,14 +102,12 @@
 
         foreach (var role in await RoleService.Get())
         {
-            var users = await UserService.GetUsersInRole(role.Name);
-
             Roles.Add(new RoleViewModel()
             {
                 Id = role.Id,
                 Name = role.Name,
                 Collections = role.Collections != null ? role.Collections.Count : 0,
-                Users = users != null ? users.Count() : 0
+                Users = role.Users.Count()
             });
         }
 

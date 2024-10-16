@@ -18,12 +18,15 @@ namespace LANCommander.Server.Controllers.Api
     public class ProfileController : BaseApiController
     {
         private readonly UserService UserService;
+        private readonly UserCustomFieldService UserCustomFieldService;
 
         public ProfileController(
             ILogger<ProfileController> logger,
-            UserService userService) : base(logger)
+            UserService userService,
+            UserCustomFieldService userCustomFieldService) : base(logger)
         {
             UserService = userService;
+            UserCustomFieldService = userCustomFieldService;
         }
 
         [HttpGet]
@@ -112,7 +115,7 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var user = await UserService.Get(User?.Identity?.Name);
 
-                var field = await UserService.GetCustomField(user.Id, name);
+                var field = await UserCustomFieldService.Get(user.Id, name);
 
                 return Ok(field.Value);
             }
@@ -131,7 +134,7 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var user = await UserService.Get(User?.Identity?.Name);
 
-                await UserService.UpdateCustomField(user.Id, name, value);
+                await UserCustomFieldService.Update(user.Id, name, value);
 
                 return Ok(value);
             }

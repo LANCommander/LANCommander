@@ -1,67 +1,24 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.Services
 {
-    public class UserService : BaseService
+    public class UserService : BaseDatabaseService<User>
     {
-        private readonly Repository<UserCustomField> CustomFieldRepository;
-        private readonly UserManager<User> UserManager;
-        private readonly RoleManager<Role> RoleManager;
+        private readonly RoleService RoleService;
 
         public UserService(
             ILogger<UserService> logger,
-            Repository<UserCustomField> customFieldRepository,
-            UserManager<User> userManager,
-            RoleManager<Role> roleManager) : base(logger)
+            Repository<User> repository,
+            RoleService roleService) : base(logger, repository)
         {
-            CustomFieldRepository = customFieldRepository;
-            UserManager = userManager;
-            RoleManager = roleManager;
-        }
-
-        public async Task<IEnumerable<User>> Get()
-        {
-            return UserManager.Users;
-        }
-
-        public async Task<User> Get(Guid id)
-        {
-            return await UserManager.FindByIdAsync(id.ToString());
+            RoleService = roleService;
         }
 
         public async Task<User> Get(string username)
         {
-            return await UserManager.FindByNameAsync(username);
-        }
-
-        public async Task<IEnumerable<User>> GetInRole(string roleName)
-        {
-            return await UserManager.GetUsersInRoleAsync(roleName);
-        }
-
-        public async Task<User> Add(User user)
-        {
-            var result = await UserManager.CreateAsync(user);
-
-            if (result.Succeeded)
-                return await Get(user.UserName);
-            else
-                return null;
-        }
-
-        public async Task<User> Update(User user)
-        {
-            await UserManager.UpdateAsync(user);
-
-            return await Get(user.Id);
-        }
-
-        public async Task Delete(User user)
-        {
-            await UserManager.DeleteAsync(user);
+            return await Repository.FirstOrDefault(u => u.UserName == username);
         }
 
         public async Task<IEnumerable<Role>> GetRoles(string username)
@@ -73,39 +30,32 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<Role>> GetRoles(User user)
         {
-            var roleNames = await UserManager.GetRolesAsync(user);
-
-            var roles = new List<Role>();
-
-            foreach (var roleName in roleNames)
-            {
-                var role = await RoleManager.FindByNameAsync(roleName);
-
-                if (role != null)
-                    roles.Add(role);
-            }
-
-            return roles;
-        }
-
-        public async Task<IEnumerable<User>> GetUsersInRole(string roleName)
-        {
-            return await UserManager.GetUsersInRoleAsync(roleName);
+            return user.Roles;
         }
 
         public async Task<bool> IsInRole(User user, string roleName)
         {
-            return await UserManager.IsInRoleAsync(user, roleName);
+            if (user.Roles == null)
+                return false;
+
+            return user.Roles.Any(r => r.Name == roleName);
         }
 
-        public async Task AddToRole(User user, string role)
+        public async Task AddToRole(User user, string roleName)
         {
-            await UserManager.AddToRoleAsync(user, role);
+            var role = await RoleService.Get(roleName);
+
+            if (user.Roles == null)
+                user.Roles = new List<Role>();
+
+            user.Roles.Add(role);
+
+            await Update(user);
         }
 
-        public async Task AddToRoles(User user, IEnumerable<string> roles)
+        public async Task AddToRoles(User user, IEnumerable<string> roleNames)
         {
-            await UserManager.AddToRolesAsync(user, roles);
+            var roles = await RoleService.Get(r => roleNames.Contains(r.Name));
         }
 
         public async Task RemoveFromRole(User user, Role role)
@@ -113,93 +63,45 @@ namespace LANCommander.Server.Services
             await RemoveFromRole(user, role.Name);
         }
 
-        public async Task RemoveFromRole(User user, string role)
+        public async Task RemoveFromRole(User user, string roleName)
         {
-            await UserManager.RemoveFromRoleAsync(user, role);
+            var role = user.Roles.FirstOrDefault(u => u.Name == roleName);
+
+            if (role != null)
+            {
+                user.Roles.Remove(role);
+
+                await Update(user);
+            }
         }
 
         public async Task<bool> CheckPassword(User user, string password)
         {
-            return await UserManager.CheckPasswordAsync(user, password);
+            // return await UserManager.CheckPasswordAsync(user, password);
+            return false;
         }
 
         public async Task<bool> ChangePassword(User user, string currentPassword, string newPassword)
         {
-            var result = await UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
+            /*var result = await UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
 
-            return result.Succeeded;
+            return result.Succeeded;*/
+            return false;
         }
 
         public async Task<bool> ChangePassword(User user, string newPassword)
         {
-            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+            /*var token = await UserManager.GeneratePasswordResetTokenAsync(user);
 
             var result = await UserManager.ResetPasswordAsync(user, token, newPassword);
 
-            return result.Succeeded;
+            return result.Succeeded;*/
+            return false;
         }
 
         public async Task SignOut()
         {
 
-        }
-
-        public async Task<UserCustomField> GetCustomField(Guid userId, string name)
-        {
-            return await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
-        }
-
-        public async Task UpdateCustomField(Guid userId, string name, string value)
-        {
-            if (name.Length > 64)
-                throw new ArgumentException("Field name must be 64 characters or shorter");
-
-            if (value.Length > 1024)
-                throw new ArgumentException("Field value must be 1024 characters or less");
-
-            var existing = await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
-
-            if (existing.Value == value)
-                return;
-
-            if (existing == null)
-            {
-                await CustomFieldRepository.Add(new UserCustomField
-                {
-                    Name = name,
-                    Value = value
-                });
-
-                await CustomFieldRepository.SaveChanges();
-            }
-            else if (!String.IsNullOrWhiteSpace(value))
-            {
-                existing.Value = value;
-
-                CustomFieldRepository.Update(existing);
-
-                await CustomFieldRepository.SaveChanges();
-            }
-            else
-            {
-                await DeleteCustomField(userId, name);
-            }
-        }
-
-        public async Task DeleteCustomField(Guid userId, string name)
-        {
-            var existing = await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
-
-            CustomFieldRepository.Delete(existing);
-            await CustomFieldRepository.SaveChanges();
-        }
-
-        public async Task DeleteCustomField(Guid userId, Guid id)
-        {
-            var existing = await CustomFieldRepository.FirstOrDefault(cf => cf.UserId == userId && cf.Id == id);
-
-            CustomFieldRepository.Delete(existing);
-            await CustomFieldRepository.SaveChanges();
         }
     }
 }

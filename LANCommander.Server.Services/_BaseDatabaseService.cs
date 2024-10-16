@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Server.Services
 {
-    public abstract class BaseDatabaseService<T> : BaseService where T : BaseModel
+    public abstract class BaseDatabaseService<T> : BaseService where T : class, IBaseModel
     {
         public Repository<T> Repository { get; set; }
 

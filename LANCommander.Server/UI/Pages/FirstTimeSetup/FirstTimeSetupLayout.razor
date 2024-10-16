@@ -2,8 +2,7 @@
 @inherits LayoutComponentBase
 @layout BasicLayout
 @inject UserService UserService
-@inject RoleManager<Role> RoleManager
-@inject IUserStore<User> UserStore
+@inject RoleService RoleService
 @inject NavigationManager NavigationManager
 
 <GridRow Align="center" Class="ant-row-middle ant-row-space-around" Style="min-height: 100vh; margin-top: -96px;">
@@ -34,17 +33,17 @@
     {
         if (DatabaseContext.Provider != Data.Enums.DatabaseProvider.Unknown)
         {
-            var role = await RoleManager.FindByNameAsync("Administrator");
+            var role = await RoleService.Get("Administrator");
 
             if (role == null)
-                await RoleManager.CreateAsync(new Role
+                await RoleService.Add(new Role
                     {
                         Name = "Administrator"
                     });
 
-            var administrators = await UserService.GetInRole("Administrator");
+            var administrators = await RoleService.GetUsers("Administrator");
 
-            if (administrators.Any())
+            if (administrators != null && administrators.Any())
                 NavigationManager.NavigateTo("/");
         }
     }

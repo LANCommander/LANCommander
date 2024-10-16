@@ -59,9 +59,9 @@
                     Name = "Administrator"
                 });
 
-            var administrators = await UserService.GetUsersInRole("Administrator");
+            var administrators = await RoleService.GetUsers("Administrator");
 
-            if (administrators.Any())
+            if (administrators != null && administrators.Any())
                 NavigationManager.NavigateTo("/");
             else
             {

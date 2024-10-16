@@ -1,70 +1,92 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Data;
 
 namespace LANCommander.Server.Services
 {
     public class UserService : BaseDatabaseService<User>
     {
-        private readonly RoleService RoleService;
-        private readonly UserManager<User> UserManager;
-        private readonly RoleManager<Role> RoleManager;
+        private readonly IdentityContextFactory IdentityContextFactory;
 
         public UserService(
             ILogger<UserService> logger,
             Repository<User> repository,
             RoleService roleService,
-            UserManager<User> userManager,
-            RoleManager<Role> roleManager) : base(logger, repository)
+            IdentityContextFactory identityContextFactory) : base(logger, repository)
         {
-            RoleService = roleService;
-            UserManager = userManager;
+            IdentityContextFactory = identityContextFactory;
         }
 
-        public async Task<User> Get(string username)
+        public async Task<User> Get(string userName)
         {
-            return await Repository.FirstOrDefault(u => u.UserName == username);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                return await identityContext.UserManager.FindByNameAsync(userName);
+            }
         }
 
-        public async Task<IEnumerable<Role>> GetRoles(string username)
+        public async Task<IEnumerable<Role>> GetRoles(string userName)
         {
-            var user = await Get(username);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                var user = await identityContext.UserManager.FindByNameAsync(userName);
 
-            return await GetRoles(user);
+                var roleNames = await identityContext.UserManager.GetRolesAsync(user);
+
+                return identityContext.RoleManager.Roles.Where(r => roleNames.Contains(r.Name));
+            }
         }
 
         public async Task<IEnumerable<Role>> GetRoles(User user)
         {
-            var roleNames = await UserManager.GetRolesAsync(user);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                var roleNames = await identityContext.UserManager.GetRolesAsync(user);
 
-            return await RoleService.Get(r => roleNames.Contains(r.Name));
+                return identityContext.RoleManager.Roles.Where(r => roleNames.Contains(r.Name));
+            }
         }
 
         public async Task<bool> IsInRole(User user, string roleName)
         {
-            return await UserManager.IsInRoleAsync(user, roleName);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                return await identityContext.UserManager.IsInRoleAsync(user, roleName);
+            }
         }
 
         public override async Task<User> Add(User user)
         {
-            var result = await UserManager.CreateAsync(user);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                var result = await identityContext.UserManager.CreateAsync(user);
 
-            if (result.Succeeded)
-                return await UserManager.FindByNameAsync(user.UserName);
-            else
-                return null;
+                if (result.Succeeded)
+                    return await identityContext.UserManager.FindByNameAsync(user.UserName);
+                else
+                    return null;
+            }
         }
 
         public async Task AddToRole(User user, string roleName)
         {
-            await UserManager.AddToRoleAsync(user, roleName);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                await identityContext.UserManager.AddToRoleAsync(user, roleName);
+            }
         }
 
         public async Task AddToRoles(User user, IEnumerable<string> roleNames)
         {
-            var roles = await RoleService.Get(r => roleNames.Contains(r.Name));
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                await identityContext.UserManager.AddToRolesAsync(user, roleNames);
+            }
         }
 
         public async Task RemoveFromRole(User user, Role role)
@@ -74,35 +96,38 @@ namespace LANCommander.Server.Services
 
         public async Task RemoveFromRole(User user, string roleName)
         {
-            var role = user.Roles.FirstOrDefault(u => u.Name == roleName);
-
-            if (role != null)
+            using (var identityContext = IdentityContextFactory.Create())
             {
-                user.Roles.Remove(role);
-
-                await Update(user);
+                await identityContext.UserManager.RemoveFromRoleAsync(user, roleName);
             }
         }
 
         public async Task<bool> CheckPassword(User user, string password)
         {
-            return await UserManager.CheckPasswordAsync(user, password);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                return await identityContext.UserManager.CheckPasswordAsync(user, password);
+            }
         }
 
-        public async Task<bool> ChangePassword(User user, string currentPassword, string newPassword)
+        public async Task<IdentityResult> ChangePassword(User user, string currentPassword, string newPassword)
         {
-            var result = await UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                var result = await identityContext.UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
 
-            return result.Succeeded;
+                return result;
+            }
         }
 
-        public async Task<bool> ChangePassword(User user, string newPassword)
+        public async Task<IdentityResult> ChangePassword(User user, string newPassword)
         {
-            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+            using (var identityContext = IdentityContextFactory.Create())
+            {
+                var token = await identityContext.UserManager.GeneratePasswordResetTokenAsync(user);
 
-            var result = await UserManager.ResetPasswordAsync(user, token, newPassword);
-
-            return result.Succeeded;
+                return await identityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+            }
         }
 
         public async Task SignOut()

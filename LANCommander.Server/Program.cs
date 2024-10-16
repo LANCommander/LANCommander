@@ -19,6 +19,7 @@ using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
+using LANCommander.Server.Services.Factories;
 
 namespace LANCommander.Server
 {
@@ -184,6 +185,26 @@ namespace LANCommander.Server
                 }
             }, ServiceLifetime.Transient);
 
+            builder.Services.AddDbContextFactory<DatabaseContext>(b =>
+            {
+                settings = SettingService.GetSettings();
+
+                switch (DatabaseContext.Provider)
+                {
+                    case DatabaseProvider.SQLite:
+                        b.UseSqlite(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
+                        break;
+
+                    case DatabaseProvider.MySQL:
+                        b.UseMySql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                        break;
+
+                    case DatabaseProvider.PostgreSQL:
+                        b.UseNpgsql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                        break;
+                }
+            });
+
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             Log.Debug("Initializing Identity");
@@ -254,6 +275,7 @@ namespace LANCommander.Server
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
             builder.Services.AddScoped(typeof(Repository<>));
+            builder.Services.AddScoped<IdentityContextFactory>();
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();
             builder.Services.AddScoped<StorageLocationService>();

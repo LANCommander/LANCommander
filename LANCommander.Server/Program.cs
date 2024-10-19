@@ -405,7 +405,7 @@ namespace LANCommander.Server
             app.UseAntiforgery();
             app.UseStaticFiles();
 
-            app.MapRazorComponents<App>()
+            app.MapRazorComponents<UI.App>()
                 .AddInteractiveServerRenderMode();
 
             app.UseEndpoints(endpoints =>

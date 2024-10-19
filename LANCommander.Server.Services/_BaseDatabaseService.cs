@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Server.Services
 {
-    public abstract class BaseDatabaseService<T> : BaseService where T : class, IBaseModel
+    public abstract class BaseDatabaseService<T> : BaseService, IBaseDatabaseService<T> where T : class, IBaseModel
     {
         public Repository<T> Repository { get; set; }
 
@@ -42,7 +42,7 @@ namespace LANCommander.Server.Services
             return await Repository.Get(predicate).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
         }
 
-        public virtual bool Exists(Guid id)
+        public virtual async Task<bool> Exists(Guid id)
         {
             return Get(id) != null;
         }

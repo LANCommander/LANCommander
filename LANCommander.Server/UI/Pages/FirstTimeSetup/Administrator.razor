@@ -75,8 +75,8 @@
 
                 if (user != null)
                 {
-                    await UserService.ChangePassword(user, Model.Password);
-                    await UserService.AddToRole(user, RoleService.AdministratorRoleName);
+                    await UserService.ChangePassword(user.UserName, Model.Password);
+                    await UserService.AddToRole(user.UserName, RoleService.AdministratorRoleName);
 
                     Logger?.LogInformation("Administrator created a new account with password.");
 

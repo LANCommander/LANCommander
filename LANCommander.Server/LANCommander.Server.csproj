@@ -246,6 +246,51 @@
     </TypeScriptCompile>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Data\" />
+    <Folder Include="UI\Account\Pages\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="UI\Pages\Authentication\AccessDenied.razor" />
+    <None Include="UI\Pages\Authentication\ConfirmEmail.razor" />
+    <None Include="UI\Pages\Authentication\ConfirmEmailChange.razor" />
+    <None Include="UI\Pages\Authentication\ExternalLogin.razor" />
+    <None Include="UI\Pages\Authentication\ForgotPassword.razor" />
+    <None Include="UI\Pages\Authentication\ForgotPasswordConfirmation.razor" />
+    <None Include="UI\Pages\Authentication\InvalidPasswordReset.razor" />
+    <None Include="UI\Pages\Authentication\InvalidUser.razor" />
+    <None Include="UI\Pages\Authentication\Lockout.razor" />
+    <None Include="UI\Pages\Authentication\Login.razor" />
+    <None Include="UI\Pages\Authentication\LoginWith2fa.razor" />
+    <None Include="UI\Pages\Authentication\LoginWithRecoveryCode.razor" />
+    <None Include="UI\Pages\Authentication\Manage\ChangePassword.razor" />
+    <None Include="UI\Pages\Authentication\Manage\DeletePersonalData.razor" />
+    <None Include="UI\Pages\Authentication\Manage\Disable2fa.razor" />
+    <None Include="UI\Pages\Authentication\Manage\Email.razor" />
+    <None Include="UI\Pages\Authentication\Manage\EnableAuthenticator.razor" />
+    <None Include="UI\Pages\Authentication\Manage\ExternalLogins.razor" />
+    <None Include="UI\Pages\Authentication\Manage\GenerateRecoveryCodes.razor" />
+    <None Include="UI\Pages\Authentication\Manage\Index.razor" />
+    <None Include="UI\Pages\Authentication\Manage\ManageLayout.razor" />
+    <None Include="UI\Pages\Authentication\Manage\PersonalData.razor" />
+    <None Include="UI\Pages\Authentication\Manage\ResetAuthenticator.razor" />
+    <None Include="UI\Pages\Authentication\Manage\SetPassword.razor" />
+    <None Include="UI\Pages\Authentication\Manage\TwoFactorAuthentication.razor" />
+    <None Include="UI\Pages\Authentication\Manage\_Imports.razor" />
+    <None Include="UI\Pages\Authentication\Register.razor" />
+    <None Include="UI\Pages\Authentication\RegisterConfirmation.razor" />
+    <None Include="UI\Pages\Authentication\ResendEmailConfirmation.razor" />
+    <None Include="UI\Pages\Authentication\ResetPassword.razor" />
+    <None Include="UI\Pages\Authentication\ResetPasswordConfirmation.razor" />
+    <None Include="UI\Account\Shared\AccountLayout.razor" />
+    <None Include="UI\Account\Shared\ExternalLoginPicker.razor" />
+    <None Include="UI\Account\Shared\ManageNavMenu.razor" />
+    <None Include="UI\Account\Shared\RedirectToLogin.razor" />
+    <None Include="UI\Account\Shared\ShowRecoveryCodes.razor" />
+    <None Include="UI\Pages\Authentication\Components\StatusMessage.razor" />
+  </ItemGroup>
+
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>

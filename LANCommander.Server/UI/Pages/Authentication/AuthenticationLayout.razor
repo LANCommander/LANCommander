@@ -1,0 +1,29 @@
+﻿@inherits LayoutComponentBase
+@layout BasicLayout
+@inject NavigationManager NavigationManager
+
+<GridRow Align="center" Class="ant-row-middle ant-row-space-around" Style="min-height: 100vh; margin-top: -96px;">
+    <GridCol Xs="24" Md="10">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <img src="/static/logo-dark.svg" />
+        </div>
+
+        @Body
+    </GridCol>
+</GridRow>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (HttpContext is null)
+        {
+            // If this code runs, we're currently rendering in interactive mode, so there is no HttpContext.
+            // The identity pages need to set cookies, so they require an HttpContext. To achieve this we
+            // must transition back from interactive mode to a server-rendered page.
+            NavigationManager.Refresh(forceReload: true);
+        }
+    }
+}

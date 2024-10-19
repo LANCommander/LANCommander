@@ -1,27 +1,92 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@using LANCommander.Server.Services
+@using LANCommander.Server.Services.Models
+@using Microsoft.AspNetCore.Components.Web
+@inject SettingService SettingService
 
-<AntContainer />
+@{
+    var settings = SettingService.GetSettings();
+}
 
-<Router AppAssembly="@typeof(Program).Assembly">
-    <Found Context="routeData">
-        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-            <NotAuthorized>
-                @if (context.User.Identity.IsAuthenticated == false)
-                {
-                    <RedirectToLogin />
-                }
-                else
-                {
-                    <audio autoplay>
-                        <source src="~/static/access-denied.mp3" type="audio/mp3" />
-                    </audio>
-                }
-            </NotAuthorized>
-        </AuthorizeRouteView>
-    </Found>
-    <NotFound>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p>Sorry, there's nothing at this address.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <base href="/" />
+
+        @switch (SettingService.GetSettings().Theme)
+        {
+            case LANCommanderTheme.Light:
+                <link href="/_content/AntDesign/css/ant-design-blazor.css" rel="stylesheet" />
+                break;
+
+            case LANCommanderTheme.Dark:
+                <link href="/_content/AntDesign/css/ant-design-blazor.dark.css" rel="stylesheet" />
+                break;
+        }
+
+        <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css"  />
+        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css" />
+        <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css" />
+        <link rel="stylesheet" href="_content/LANCommander.UI/ui.css" />
+        <link rel="stylesheet" href="css/site.css" />
+    </head>
+    <body data-theme="@settings.Theme">
+        
+
+        <div class="page-wrapper">
+            <AntContainer />
+
+            <Router AppAssembly="@typeof(Program).Assembly">
+                <Found Context="routeData">
+                    <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                        <NotAuthorized>
+                            @if (context.User.Identity.IsAuthenticated == false)
+                            {
+                                <RedirectToLogin />
+                            }
+                            else
+                            {
+                                <audio autoplay>
+                                    <source src="~/static/access-denied.mp3" type="audio/mp3" />
+                                </audio>
+                            }
+                        </NotAuthorized>
+                    </AuthorizeRouteView>
+                </Found>
+                <NotFound>
+                    <LayoutView Layout="@typeof(MainLayout)">
+                        <p>Sorry, there's nothing at this address.</p>
+                    </LayoutView>
+                </NotFound>
+            </Router>
+        </div>
+
+        <script src="lib/antv/g2plot/dist/g2plot.js"></script>
+        <script src="_content/AntDesign/js/ant-design-blazor.js"></script>
+        <script src="_content/AntDesign.Charts/ant-design-charts-blazor.js"></script>
+        <script src="_framework/blazor.web.js"></script>
+
+        <script src="_content/LANCommander.UI/bundle.js"></script>
+        <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js"></script>
+        <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js"></script>
+
+        <script src="_content/XtermBlazor/XtermBlazor.min.js"></script>
+
+        <script>
+            XtermBlazor.registerAddons({
+                "readline": new XtermAddons.Readline(),
+                "addon-fit": new XtermAddons.Fit()
+            });
+        </script>
+
+        <script src="_content/BlazorMonaco/jsInterop.js"></script>
+        <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
+        <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.js"></script>
+
+        <script>
+            Uploader.MaxChunkSize = @(settings.Archives.MaxChunkSize * 1024 * 1024)
+        </script>
+    </body>
+</html>

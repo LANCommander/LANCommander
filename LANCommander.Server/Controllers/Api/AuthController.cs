@@ -154,7 +154,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (user != null)
             {
-                await UserService.ChangePassword(user, model.Password);
+                await UserService.ChangePassword(user.UserName, model.Password);
 
                 try
                 {
@@ -163,7 +163,7 @@ namespace LANCommander.Server.Controllers.Api
                         var defaultRole = await RoleService.Get(Settings.Roles.DefaultRoleId);
 
                         if (defaultRole != null)
-                            await UserService.AddToRole(user, defaultRole.Name);
+                            await UserService.AddToRole(user.UserName, defaultRole.Name);
                     }
 
                     var token = await Login(user, model.Password);
@@ -190,14 +190,14 @@ namespace LANCommander.Server.Controllers.Api
 
         private async Task<TokenModel> Login(User user, string password)
         {
-            if (user != null && await UserService.CheckPassword(user, password))
+            if (user != null && await UserService.CheckPassword(user.UserName, password))
             {
                 Logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
-                if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserService.IsInRole(user, RoleService.AdministratorRoleName)))
+                if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserService.IsInRole(user.UserName, RoleService.AdministratorRoleName)))
                     throw new Exception("Account must be approved by an administrator");
 
-                var userRoles = await UserService.GetRoles(user);
+                var userRoles = await UserService.GetRoles(user.UserName);
 
                 var authClaims = new List<Claim>
                 {

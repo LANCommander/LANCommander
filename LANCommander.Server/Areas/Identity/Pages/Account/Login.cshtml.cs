@@ -119,7 +119,7 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
 
             var administrators = await RoleService.GetUsers(RoleService.AdministratorRoleName);
 
-            if (administrators != null && administrators.Any())
+            if (administrators == null || !administrators.Any())
                 return Redirect("/FirstTimeSetup");
 
             return Page();
@@ -144,7 +144,7 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
                 {
                     var user = await UserService.Get(Input.UserName);
 
-                    if (user != null && !user.Approved && !(await UserService.IsInRole(user, RoleService.AdministratorRoleName)))
+                    if (user != null && !user.Approved && !(await UserService.IsInRole(user.UserName, RoleService.AdministratorRoleName)))
                     {
                         ModelState.AddModelError(string.Empty, "Your account must be approved by an administrator.");
                         return Page();

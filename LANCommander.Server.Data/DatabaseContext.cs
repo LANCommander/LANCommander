@@ -220,12 +220,12 @@ namespace LANCommander.Server.Data
                 b.ToTable("UserClaims");
             });
 
-            builder.Entity<UserLogin>(b =>
+            builder.Entity<IdentityUserLogin<Guid>>(b =>
             {
                 b.ToTable("UserLogins");
             });
 
-            builder.Entity<UserToken>(b =>
+            builder.Entity<IdentityUserToken<Guid>>(b =>
             {
                 b.ToTable("UserTokens");
             });
@@ -235,7 +235,7 @@ namespace LANCommander.Server.Data
                 b.ToTable("Roles");
             });
 
-            builder.Entity<RoleClaim>(b =>
+            builder.Entity<IdentityRoleClaim<Guid>>(b =>
             {
                 b.ToTable("RoleClaims");
             });

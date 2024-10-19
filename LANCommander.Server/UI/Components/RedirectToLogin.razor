@@ -5,6 +5,6 @@
     {
         var currentUri = new Uri(NavigationManager.Uri);
 
-        NavigationManager.NavigateTo($"/Identity/Account/Login?ReturnUrl={currentUri.AbsolutePath}", true);
+        NavigationManager.NavigateTo($"/Login?ReturnUrl={currentUri.AbsolutePath}", true);
     }
 }

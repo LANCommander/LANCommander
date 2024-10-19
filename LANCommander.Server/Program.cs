@@ -20,6 +20,8 @@ using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
 using LANCommander.Server.Services.Factories;
+using LANCommander.Server.UI.Account;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace LANCommander.Server
 {
@@ -136,14 +138,10 @@ namespace LANCommander.Server
                 options.RootDirectory = "/UI/Pages";
             });
 
-            builder.Services.AddServerSideBlazor().AddCircuitOptions(option =>
-            {
-                option.DetailedErrors = true;
-            }).AddHubOptions(option =>
-            {
-                option.MaximumReceiveMessageSize = 1024 * 1024 * 11;
-                option.DisableImplicitFromServicesParameters = true;
-            });
+            builder.Services.AddRazorComponents()
+                .AddInteractiveServerComponents();
+
+            builder.Services.AddCascadingAuthenticationState();
 
             builder.Services.AddAutoMapper(typeof(AutoMapper));
 
@@ -163,7 +161,7 @@ namespace LANCommander.Server
             }));
 
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
-            builder.Services.AddDbContext<DatabaseContext>(b =>
+            /*builder.Services.AddDbContext<DatabaseContext>(b =>
             {
                 b.UseLazyLoadingProxies();
 
@@ -183,10 +181,12 @@ namespace LANCommander.Server
                         b.UseNpgsql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
                         break;
                 }
-            }, ServiceLifetime.Transient);
+            }, ServiceLifetime.Transient);*/
 
             builder.Services.AddDbContextFactory<DatabaseContext>(b =>
             {
+                b.UseLazyLoadingProxies();
+
                 settings = SettingService.GetSettings();
 
                 switch (DatabaseContext.Provider)
@@ -203,12 +203,12 @@ namespace LANCommander.Server
                         b.UseNpgsql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
                         break;
                 }
-            });
+            }, ServiceLifetime.Scoped);
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             Log.Debug("Initializing Identity");
-            builder.Services.AddDefaultIdentity<User>((IdentityOptions options) =>
+            builder.Services.AddIdentityCore<User>((IdentityOptions options) =>
             {
                 options.SignIn.RequireConfirmedAccount = false;
                 options.SignIn.RequireConfirmedEmail = false;
@@ -221,27 +221,42 @@ namespace LANCommander.Server
             })
                 .AddRoles<Role>()
                 .AddEntityFrameworkStores<DatabaseContext>()
+                .AddSignInManager()
                 .AddDefaultTokenProviders();
 
-            builder.Services.AddAuthentication(options =>
+            var authBuilder = builder.Services.AddAuthentication(options =>
             {
+                options.DefaultScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
                 /*options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;*/
-            })
-                .AddJwtBearer(options =>
+            });
+
+            authBuilder.AddIdentityCookies();
+
+            authBuilder.AddJwtBearer(options =>
+            {
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters()
                 {
-                    options.SaveToken = true;
-                    options.RequireHttpsMetadata = false;
-                    options.TokenValidationParameters = new TokenValidationParameters()
-                    {
-                        ValidateIssuer = false,
-                        ValidateAudience = false,
-                        // ValidAudience = configuration["JWT:ValidAudience"],
-                        // ValidIssuer = configuration["JWT:ValidIssuer"],
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Authentication.TokenSecret))
-                    };
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    // ValidAudience = configuration["JWT:ValidAudience"],
+                    // ValidIssuer = configuration["JWT:ValidIssuer"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Authentication.TokenSecret))
+                };
+            });
+
+            /*if (settings.Authentication.Discord.Enabled)
+            {
+                authBuilder.AddDiscord(options =>
+                {
+                    options.ClientId = settings.Authentication.Discord.ClientId;
+                    options.ClientSecret = settings.Authentication.Discord.ClientSecret;
                 });
+            }*/
 
             Log.Debug("Initializing Controllers");
             builder.Services.AddControllers().AddJsonOptions(x =>
@@ -304,6 +319,9 @@ namespace LANCommander.Server
             builder.Services.AddScoped<UserCustomFieldService>();
             builder.Services.AddScoped<RoleService>();
             builder.Services.AddScoped<SetupService>();
+            builder.Services.AddScoped<IdentityUserAccessor>();
+            builder.Services.AddScoped<IdentityRedirectManager>();
+            builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
@@ -372,7 +390,6 @@ namespace LANCommander.Server
             app.UseHangfireDashboard();
 
             // app.UseHttpsRedirection();
-            app.UseStaticFiles();
 
             app.UseRouting();
 
@@ -385,12 +402,19 @@ namespace LANCommander.Server
 
             app.MapHub<LoggingHub>("/logging");
 
+            app.UseAntiforgery();
+            app.UseStaticFiles();
+
+            app.MapRazorComponents<App>()
+                .AddInteractiveServerRenderMode();
+
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
                 endpoints.MapControllers();
             });
+
+            app.MapAdditionalIdentityEndpoints();
 
             Log.Debug("Ensuring required directories exist");
 

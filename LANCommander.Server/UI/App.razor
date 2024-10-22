@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Server.Services
 @using LANCommander.Server.Services.Models
 @using Microsoft.AspNetCore.Components.Web
+@using System.Security.Claims
 @inject SettingService SettingService
 
 @{
@@ -67,3 +68,15 @@
         </script>
     </body>
 </html>
+
+@code {
+    ClaimsPrincipal User;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        //if (authState.User.Identity.IsAuthenticated)
+        //    User = authState.User;
+    }
+}

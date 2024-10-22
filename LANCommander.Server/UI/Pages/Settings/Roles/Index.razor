@@ -1,7 +1,9 @@
 ﻿@page "/Settings/Roles"
 @using LANCommander.Server.Models;
+@using Microsoft.EntityFrameworkCore
 @layout SettingsLayout
-@inject RoleService RoleService
+@inject RoleManager<Role> RoleManager
+@inject UserManager<User> UserManager
 @inject UserService UserService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -100,14 +102,16 @@
     {
         Roles = new List<RoleViewModel>();
 
-        foreach (var role in await RoleService.Get())
+        foreach (var role in await RoleManager.Roles.ToListAsync())
         {
-            Roles.Add(new RoleViewModel()
+            var users = await UserManager.GetUsersInRoleAsync(role.Name);
+
+            Roles.Add(new RoleViewModel
             {
                 Id = role.Id,
                 Name = role.Name,
                 Collections = role.Collections != null ? role.Collections.Count : 0,
-                Users = role.Users.Count()
+                Users = users.Count
             });
         }
 
@@ -118,7 +122,7 @@
 
     private async Task DeleteRole(RoleViewModel roleViewModel)
     {
-        var role = await RoleService.Get(roleViewModel.Name);
+        var role = await RoleManager.FindByNameAsync(roleViewModel.Name);
 
         if (role.Name == RoleService.AdministratorRoleName)
         {
@@ -126,7 +130,7 @@
         }
         else
         {
-            await RoleService.Delete(role);
+            await RoleManager.DeleteAsync(role);
             await LoadData();
 
             MessageService.Success($"Deleted {role.Name}!");
@@ -142,7 +146,7 @@
 
     private async Task AddRole()
     {
-        if ((await RoleService.Get(NewRole.Name)) != null)
+        if ((await RoleManager.FindByNameAsync(NewRole.Name)) != null)
         {
             MessageService.Error("A role with that name already exists!");
             AddRoleDialogVisible = false;
@@ -151,7 +155,7 @@
 
         try
         {
-            await RoleService.Add(new Role
+            await RoleManager.CreateAsync(new Role
             {
                 Name = NewRole.Name
             });

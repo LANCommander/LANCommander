@@ -12,6 +12,8 @@
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
+<PageTitle>Database Config - First Time Setup</PageTitle>
+
 <Form Model="@Settings" Loading="Loading" OnFinish="ValidateDatabaseConnection" Layout="@FormLayout.Vertical">
     <FormItem>
         LANCommander requires a database to run. If you require something other than SQLite, configure that here.

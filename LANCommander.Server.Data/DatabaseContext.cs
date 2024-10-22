@@ -11,6 +11,7 @@ namespace LANCommander.Server.Data
     public class DatabaseContext : IdentityDbContext<User, Role, Guid>
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
+        public static string ConnectionString = "";
         public static Dictionary<Guid, Stopwatch> ContextTracker;
 
         private readonly ILogger Logger;
@@ -23,6 +24,21 @@ namespace LANCommander.Server.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            switch (Provider)
+            {
+                case DatabaseProvider.SQLite:
+                    optionsBuilder.UseSqlite(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
+                    break;
+
+                case DatabaseProvider.MySQL:
+                    optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                    break;
+
+                case DatabaseProvider.PostgreSQL:
+                    optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                    break;
+            }
+
             optionsBuilder.AddInterceptors(new DatabaseContextConnectionInterceptor(Logger));
             base.OnConfiguring(optionsBuilder);
         }

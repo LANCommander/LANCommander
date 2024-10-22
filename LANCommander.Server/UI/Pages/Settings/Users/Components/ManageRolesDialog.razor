@@ -41,7 +41,7 @@
         User = await UserService.Get(Options);
         Roles = (await RoleService.Get()).ToList();
 
-        var currentRoles = await UserService.GetRoles(User);
+        var currentRoles = await UserService.GetRoles(User.UserName);
 
         SelectedRoles = Roles.Where(r => currentRoles.Any(cr => r.Name == cr.Name)).ToList();
     }
@@ -57,9 +57,9 @@
 
         try
         {
-            var currentRoles = await UserService.GetRoles(User);
+            var currentRoles = await UserService.GetRoles(User.UserName);
 
-            await UserService.AddToRoles(User, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
+            await UserService.AddToRoles(User.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
 
             foreach (var role in currentRoles)
             {
@@ -68,7 +68,7 @@
                     if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Any())
                         MessageService.Warning("Cannot demote the only administrator!");
                     else
-                        await UserService.RemoveFromRole(User, role);
+                        await UserService.RemoveFromRole(User.UserName, role.Name);
                 }
             }
 

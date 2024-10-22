@@ -8,9 +8,6 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Hangfire;
 using LANCommander.Server.Services.MediaGrabbers;
-using Microsoft.Data.Sqlite;
-using Pomelo.EntityFrameworkCore.MySql;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 using LANCommander.Server.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using LANCommander.SDK.Enums;
@@ -20,7 +17,6 @@ using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
 using LANCommander.Server.Services.Factories;
-using LANCommander.Server.UI.Account;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace LANCommander.Server
@@ -69,6 +65,11 @@ namespace LANCommander.Server
                 DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
             else
                 DatabaseContext.Provider = settings.DatabaseProvider;
+
+            if (!String.IsNullOrWhiteSpace(connectionStringParameter))
+                DatabaseContext.ConnectionString = connectionStringParameter;
+            else
+                DatabaseContext.ConnectionString = settings.DatabaseConnectionString;
 
             Log.Debug("Loaded!");
 
@@ -183,27 +184,7 @@ namespace LANCommander.Server
                 }
             }, ServiceLifetime.Transient);*/
 
-            builder.Services.AddDbContextFactory<DatabaseContext>(b =>
-            {
-                b.UseLazyLoadingProxies();
-
-                settings = SettingService.GetSettings();
-
-                switch (DatabaseContext.Provider)
-                {
-                    case DatabaseProvider.SQLite:
-                        b.UseSqlite(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
-                        break;
-
-                    case DatabaseProvider.MySQL:
-                        b.UseMySql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
-                        break;
-
-                    case DatabaseProvider.PostgreSQL:
-                        b.UseNpgsql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
-                        break;
-                }
-            }, ServiceLifetime.Scoped);
+            builder.Services.AddDbContextFactory<DatabaseContext>();
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -289,39 +270,36 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
-            builder.Services.AddScoped(typeof(Repository<>));
-            builder.Services.AddScoped<IdentityContextFactory>();
+            builder.Services.AddTransient(typeof(Repository<>));
+            builder.Services.AddTransient<IdentityContextFactory>();
             builder.Services.AddScoped<SettingService>();
-            builder.Services.AddScoped<ArchiveService>();
-            builder.Services.AddScoped<StorageLocationService>();
-            builder.Services.AddScoped<CategoryService>();
-            builder.Services.AddScoped<CollectionService>();
-            builder.Services.AddScoped<GameService>();
-            builder.Services.AddScoped<ScriptService>();
-            builder.Services.AddScoped<GenreService>();
-            builder.Services.AddScoped<PlatformService>();
-            builder.Services.AddScoped<KeyService>();
-            builder.Services.AddScoped<TagService>();
-            builder.Services.AddScoped<EngineService>();
-            builder.Services.AddScoped<CompanyService>();
-            builder.Services.AddScoped<IGDBService>();
-            builder.Services.AddScoped<ServerService>();
-            builder.Services.AddScoped<ServerConsoleService>();
-            builder.Services.AddScoped<GameSaveService>();
-            builder.Services.AddScoped<PlaySessionService>();
-            builder.Services.AddScoped<MediaService>();
-            builder.Services.AddScoped<RedistributableService>();
-            builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
-            builder.Services.AddScoped<UpdateService>();
-            builder.Services.AddScoped<IssueService>();
-            builder.Services.AddScoped<PageService>();
-            builder.Services.AddScoped<UserService>();
-            builder.Services.AddScoped<UserCustomFieldService>();
-            builder.Services.AddScoped<RoleService>();
-            builder.Services.AddScoped<SetupService>();
-            builder.Services.AddScoped<IdentityUserAccessor>();
-            builder.Services.AddScoped<IdentityRedirectManager>();
-            builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+            builder.Services.AddTransient<ArchiveService>();
+            builder.Services.AddTransient<StorageLocationService>();
+            builder.Services.AddTransient<CategoryService>();
+            builder.Services.AddTransient<CollectionService>();
+            builder.Services.AddTransient<GameService>();
+            builder.Services.AddTransient<ScriptService>();
+            builder.Services.AddTransient<GenreService>();
+            builder.Services.AddTransient<PlatformService>();
+            builder.Services.AddTransient<KeyService>();
+            builder.Services.AddTransient<TagService>();
+            builder.Services.AddTransient<EngineService>();
+            builder.Services.AddTransient<CompanyService>();
+            builder.Services.AddTransient<IGDBService>();
+            builder.Services.AddTransient<ServerService>();
+            builder.Services.AddTransient<ServerConsoleService>();
+            builder.Services.AddTransient<GameSaveService>();
+            builder.Services.AddTransient<PlaySessionService>();
+            builder.Services.AddTransient<MediaService>();
+            builder.Services.AddTransient<RedistributableService>();
+            builder.Services.AddTransient<IMediaGrabberService, SteamGridDBMediaGrabber>();
+            builder.Services.AddTransient<UpdateService>();
+            builder.Services.AddTransient<IssueService>();
+            builder.Services.AddTransient<PageService>();
+            builder.Services.AddTransient<UserService>();
+            builder.Services.AddTransient<UserCustomFieldService>();
+            builder.Services.AddTransient<RoleService>();
+            builder.Services.AddTransient<SetupService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
@@ -413,8 +391,6 @@ namespace LANCommander.Server
                 endpoints.MapFallbackToPage("/_Host");
                 endpoints.MapControllers();
             });
-
-            app.MapAdditionalIdentityEndpoints();
 
             Log.Debug("Ensuring required directories exist");
 

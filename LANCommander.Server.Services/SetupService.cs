@@ -18,24 +18,23 @@ namespace LANCommander.Server.Services
     public class SetupService : BaseService
     {
         private readonly IServiceProvider ServiceProvider;
-        private readonly DatabaseContext DatabaseContext;
 
         public SetupService(
             ILogger<SetupService> logger,
-            IServiceProvider serviceProvider,
-            DatabaseContext databaseContext) : base(logger)
+            IServiceProvider serviceProvider) : base(logger)
         {
             ServiceProvider = serviceProvider;
-            DatabaseContext = databaseContext;
         }
 
         public async Task ChangeProvider(DatabaseProvider provider, string connectionString)
         {
             DatabaseContext.Provider = provider;
+            DatabaseContext.ConnectionString = connectionString;
 
             using (var scope = ServiceProvider.CreateScope())
             {
-                var db = scope.ServiceProvider.GetService<DatabaseContext>();
+                var dbFactory = scope.ServiceProvider.GetService<IDbContextFactory<DatabaseContext>>();
+                var db = await dbFactory.CreateDbContextAsync();
 
                 if ((await db.Database.GetPendingMigrationsAsync()).Any())
                 {
@@ -54,6 +53,8 @@ namespace LANCommander.Server.Services
 
                     await db.Database.MigrateAsync();
                 }
+
+                await db.DisposeAsync();
             }
         }
 

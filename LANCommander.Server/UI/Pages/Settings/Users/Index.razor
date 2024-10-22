@@ -90,13 +90,13 @@
             if (Directory.Exists(savePath))
                 saveSize = new DirectoryInfo(savePath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
 
-            var roles = await UserService.GetRoles(user);
+            var roles = await UserService.GetRoles(user.UserName);
 
             UserList.Add(new UserViewModel()
             {
                 Id = user.Id,
                 UserName = user.UserName,
-                Roles = roles.Select(r => r.Name),
+                Roles = roles.Select(r => r.Name).ToList(),
                 SavesSize = saveSize,
                 Approved = user.Approved
             });
@@ -127,7 +127,7 @@
     {
         var dbUser = await UserService.Get(user.Id);
 
-        await UserService.AddToRole(dbUser, RoleService.AdministratorRoleName);
+        await UserService.AddToRole(dbUser.UserName, RoleService.AdministratorRoleName);
 
         await RefreshUserList();
 
@@ -144,7 +144,7 @@
         }
         else
         {
-            await UserService.RemoveFromRole(dbUser, RoleService.AdministratorRoleName);
+            await UserService.RemoveFromRole(dbUser.UserName, RoleService.AdministratorRoleName);
 
             await RefreshUserList();
         }

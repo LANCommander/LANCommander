@@ -29,7 +29,20 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<ICollection<T>> Get(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.Get(predicate).ToListAsync();
+            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
+            var results = await Repository.Get(predicate).ToListAsync();
+            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
+            return results;
+        }
+
+        public virtual async Task<T> First(Expression<Func<T, bool>> predicate)
+        {
+            return await Repository.Get(predicate).FirstAsync();
+        }
+
+        public virtual async Task<T> First<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        {
+            return await Repository.Get(predicate).OrderByDescending(orderKeySelector).FirstAsync();
         }
 
         public virtual async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)

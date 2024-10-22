@@ -15,6 +15,8 @@
 
     bool Loading = true;
 
+    ICollection<PlaySession> PlaySessions;
+
     string JsConfig = @"{
         meta: {
             value: {
@@ -38,37 +40,34 @@
         ColorField = "type",
     };
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        PlaySessions = await PlaySessionService.Get();
+
+        Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
+
+        Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
+
+        foreach (var gameSessions in PlaySessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
         {
-            Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
+            var total = new TimeSpan();
 
-            Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
-
-            var sessions = await PlaySessionService.Get();
-
-            foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
+            foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
             {
-                var total = new TimeSpan();
-
-                foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
-                {
-                    total = total.Add(session.End.Value.Subtract(session.Start.Value));
-                }
-
-                playtimes[gameSessions.First().Game.Title] = total;
+                total = total.Add(session.End.Value.Subtract(session.Start.Value));
             }
 
-            Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
-            {
-                type = pt.Key,
-                value = (int)pt.Value.TotalSeconds
-            }).ToArray();
-
-            Loading = false;
-
-            StateHasChanged();
+            playtimes[gameSessions.First().Game.Title] = total;
         }
+
+        Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
+        {
+            type = pt.Key,
+            value = (int)pt.Value.TotalSeconds
+        }).ToArray();
+
+        Loading = false;
+
+        StateHasChanged();
     }
 }

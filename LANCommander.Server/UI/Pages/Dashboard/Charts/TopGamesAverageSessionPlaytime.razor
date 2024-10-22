@@ -41,37 +41,34 @@
         ColorField = "game",
     };
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
+
+        Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
+
+        var sessions = await PlaySessionService.Get();
+
+        foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
         {
-            Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
+            var total = new TimeSpan();
 
-            Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
-
-            var sessions = await PlaySessionService.Get();
-
-            foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
+            foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
             {
-                var total = new TimeSpan();
-
-                foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
-                {
-                    total = total.Add(session.End.Value.Subtract(session.Start.Value));
-                }
-
-                playtimes[gameSessions.First().Game.Title] = TimeSpan.FromSeconds(total.TotalSeconds / gameSessions.Count());
+                total = total.Add(session.End.Value.Subtract(session.Start.Value));
             }
 
-            Data = playtimes.OrderByDescending(pt => pt.Value).Take(20).Select(pt => new
-            {
-                Game = pt.Key,
-                Playtime = (int)pt.Value.TotalSeconds
-            }).ToArray();
-
-            Loading = false;
-
-            StateHasChanged();
+            playtimes[gameSessions.First().Game.Title] = TimeSpan.FromSeconds(total.TotalSeconds / gameSessions.Count());
         }
+
+        Data = playtimes.OrderByDescending(pt => pt.Value).Take(20).Select(pt => new
+        {
+            Game = pt.Key,
+            Playtime = (int)pt.Value.TotalSeconds
+        }).ToArray();
+
+        Loading = false;
+
+        StateHasChanged();
     }
 }

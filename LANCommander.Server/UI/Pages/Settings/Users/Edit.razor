@@ -3,6 +3,7 @@
 @layout SettingsLayout
 @inject MediaService MediaService
 @inject UserService UserService
+@inject UserCustomFieldService UserCustomFieldService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -87,7 +88,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        /*var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
         {
@@ -95,7 +96,7 @@
 
             if (User.CustomFields == null)
                 User.CustomFields = new List<UserCustomField>();
-        }
+        }*/
     }
 
     private void AddField()

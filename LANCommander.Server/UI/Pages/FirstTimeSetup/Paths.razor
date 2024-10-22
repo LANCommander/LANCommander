@@ -6,6 +6,8 @@
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
+<PageTitle>Configure Paths - First Time Setup</PageTitle>
+
 <Form Model="@this" Loading="Loading" OnFinish="ValidatePaths" Layout="@FormLayout.Vertical">
     <FormItem>
         Configure where archives, saves, and media get stored.
@@ -45,17 +47,23 @@
         </Space>
     </FormItem>
 
-    <Divider Text="Saves" />
+    @if (SavesStorageLocation != null)
+    {
+        <Divider Text="Saves" />
 
-    <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@SavesStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(SavesStorageLocation, path)" />
-    </FormItem>
+        <FormItem>
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@SavesStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(SavesStorageLocation, path)" />
+        </FormItem>
+    }
 
-    <Divider Text="Media" />
+    @if (MediaStorageLocation != null)
+    {
+        <Divider Text="Media" />
 
-    <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@MediaStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(MediaStorageLocation, path)" />
-    </FormItem>
+        <FormItem>
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@MediaStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(MediaStorageLocation, path)" />
+        </FormItem>
+    }
 
     <FormItem>
         <GridRow Justify="end" Style="margin-top: 16px;">
@@ -85,13 +93,51 @@
 
         try
         {
-            ArchiveStorageLocations = StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive).GetAwaiter().GetResult();
-            SavesStorageLocation = StorageLocationService.FirstOrDefault(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default).GetAwaiter().GetResult();
-            MediaStorageLocation = StorageLocationService.FirstOrDefault(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default).GetAwaiter().GetResult();
+            ArchiveStorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
         }
         catch (Exception ex)
         {
+            Logger?.LogError(ex, "Couldn't retrieve existing archive storage locations");
+        }
+        finally
+        {
+            if (!ArchiveStorageLocations.Any())
+                ArchiveStorageLocations.Add(new StorageLocation
+                {
+                    Path = "Uploads",
+                    Type = SDK.Enums.StorageLocationType.Archive
+                });
+        }
+
+        try
+        {
             
+            SavesStorageLocation = await StorageLocationService.First(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default);
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Couldn't retrieve existing store locations");
+
+            SavesStorageLocation = new StorageLocation
+            {
+                Path = "Saves",
+                Type = SDK.Enums.StorageLocationType.Save
+            };
+        }
+
+        try
+        {
+            MediaStorageLocation = await StorageLocationService.First(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Couldn't retrieve existing store locations");
+
+            MediaStorageLocation = new StorageLocation
+            {
+                Path = "Media",
+                Type = SDK.Enums.StorageLocationType.Media
+            };
         }
     }
 

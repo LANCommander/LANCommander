@@ -1,19 +1,26 @@
-﻿using LANCommander.Server.Data.Models;
+﻿using LANCommander.SDK.Extensions;
+using LANCommander.SDK;
+using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
 namespace LANCommander.Server.Data
 {
     public class Repository<T> : IDisposable where T : class, IBaseModel
     {
-        private readonly DbContext Context;
+        public readonly DatabaseContext Context;
         private readonly IHttpContextAccessor HttpContextAccessor;
+        private readonly ILogger Logger;
 
-        public Repository(DatabaseContext context, IHttpContextAccessor httpContextAccessor)
+        public Repository(IDbContextFactory<DatabaseContext> contextFactory, IHttpContextAccessor httpContextAccessor, ILogger<Repository<T>> logger)
         {
-            Context = context;
+            Context = contextFactory.CreateDbContext();
             HttpContextAccessor = httpContextAccessor;
+            Logger = logger;
+
+            Logger?.LogDebug("Opened up context {ContextId}", Context.ContextId);
         }
 
         private DbSet<T> DbSet
@@ -28,53 +35,94 @@ namespace LANCommander.Server.Data
 
         public IQueryable<T> Get(Expression<Func<T, bool>> predicate)
         {
-            return DbSet.AsQueryable().Where(predicate);
+            using (var op = Logger.BeginOperation("Querying database"))
+            {
+                var queryable = DbSet.AsQueryable().Where(predicate);
+
+                op.Complete();
+
+                return queryable;
+            }
         }
 
         public async Task<T> Find(Guid id)
         {
-            return await DbSet.FindAsync(id);
+            using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
+            {
+                var entity = await DbSet.FindAsync(id);
+
+                op.Complete();
+
+                return entity;
+            }
         }
 
         public async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
         {
-            return await Get(predicate).FirstOrDefaultAsync();
+            using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
+            {
+                var entity = await Get(predicate).FirstOrDefaultAsync();
+
+                op.Complete();
+
+                return entity;
+            }
         }
 
         public async Task<T> Add(T entity)
         {
-            entity.CreatedBy = GetCurrentUser();
-            entity.UpdatedBy = GetCurrentUser();
-            entity.CreatedOn = DateTime.Now;
-            entity.UpdatedOn = DateTime.Now;
+            using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
+            {
+                entity.CreatedBy = GetCurrentUser();
+                entity.UpdatedBy = GetCurrentUser();
+                entity.CreatedOn = DateTime.Now;
+                entity.UpdatedOn = DateTime.Now;
 
-            await Context.AddAsync(entity);
+                await Context.AddAsync(entity);
 
-            return entity;
+                op.Complete();
+
+                return entity;
+            }
         }
 
         public async Task<T> Update(T entity)
         {
-            var existing = await Find(entity.Id);
+            using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
+            {
+                var existing = await Find(entity.Id);
 
-            Context.Entry(existing).CurrentValues.SetValues(entity);
+                Context.Entry(existing).CurrentValues.SetValues(entity);
 
-            entity.UpdatedBy = GetCurrentUser();
-            entity.UpdatedOn = DateTime.Now;
+                entity.UpdatedBy = GetCurrentUser();
+                entity.UpdatedOn = DateTime.Now;
 
-            Context.Update(entity);
+                Context.Update(entity);
 
-            return entity;
+                op.Complete();
+
+                return entity;
+            }
         }
 
         public void Delete(T entity)
         {
-            Context.Remove(entity);
+            using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
+            {
+                Context.Remove(entity);
+
+                op.Complete();
+            }
         }
 
         public async Task SaveChanges()
         {
-            await Context.SaveChangesAsync();
+            using (var op = Logger.BeginOperation("Saving changes!"))
+            {
+                await Context.SaveChangesAsync();
+
+                op.Complete();
+            }
         }
 
         private User GetUser(string username)
@@ -95,6 +143,18 @@ namespace LANCommander.Server.Data
             }
             else
                 return null;
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                Context.Dispose();
+                Logger?.LogDebug("Disposed context {ContextId}", Context.ContextId);
+            }
+            catch {
+                Logger?.LogDebug("Could not dispose context {ContextId}", Context.ContextId);
+            }
         }
     }
 }

@@ -39,10 +39,6 @@ label.ant-btn-icon-only {
     line-height: 30px;
 }
 
-.ant-card .ant-form > .ant-form-item {
-    margin-bottom: 12px;
-}
-
 .ant-card .ant-form > .ant-form-item:last-child {
     margin-bottom: 0;
 }

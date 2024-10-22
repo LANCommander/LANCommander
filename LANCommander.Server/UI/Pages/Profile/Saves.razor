@@ -62,11 +62,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        /*var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
-            User = await UserService.Get(authState.User.Identity.Name);
-
+            User = await UserService.Get(authState.User.Identity.Name);*/
+            
         if (User != null)
             GameSaves = User.GameSaves.OrderBy(s => s.CreatedOn).ToList();
 

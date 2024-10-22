@@ -4,6 +4,8 @@
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
+<PageTitle>Metadata Connections - First Time Setup</PageTitle>
+
 <Form Model="@Settings" Loading="Loading" OnFinish="ValidateMetadataConnections" Layout="@FormLayout.Vertical">
     <FormItem>
         LANCommander has the ability to pull metadata and media from external sources. Required credentials can be added here, or can be set later in Settings.

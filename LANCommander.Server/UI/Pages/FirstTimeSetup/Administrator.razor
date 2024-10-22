@@ -1,10 +1,12 @@
 ﻿@page "/FirstTimeSetup/Administrator"
 @layout FirstTimeSetupLayout
 @inject RoleService RoleService
-@inject UserService UserService
+@inject UserManager<User> UserManager
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject ILogger<Administrator> Logger
+
+<PageTitle>Create Administrator User - First Time Setup</PageTitle>
 
 <Form Model="@Model" Loading="Loading" OnFinish="CreateAdministratorUser" Layout="@FormLayout.Vertical">
     <FormItem>
@@ -71,20 +73,29 @@
                 user.ApprovedOn = DateTime.Now;
                 user.UserName = Model.Username;
 
-                user = await UserService.Add(user);
+                var result = await UserManager.CreateAsync(user, Model.Password);
 
-                if (user != null)
+                if (!result.Succeeded)
                 {
-                    await UserService.ChangePassword(user.UserName, Model.Password);
-                    await UserService.AddToRole(user.UserName, RoleService.AdministratorRoleName);
+                    foreach (var error in result.Errors)
+                    {
+                        MessageService.Error(error.Description);
+                    }
+
+                    Loading = false;
+                    StateHasChanged();
+
+                    return;
+                }
+                else
+                {
+                    await UserManager.AddToRolesAsync(user, new string[] { RoleService.AdministratorRoleName });
 
                     Logger?.LogInformation("Administrator created a new account with password.");
 
                     await MessageService.Success("Setup completed! Redirecting...", 5);
 
                     Loading = false;
-
-                    NavigationManager.NavigateTo("/");
                 }
             }
         }

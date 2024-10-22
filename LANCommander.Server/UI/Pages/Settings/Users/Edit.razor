@@ -88,7 +88,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        /*var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
         {
@@ -96,7 +96,7 @@
 
             if (User.CustomFields == null)
                 User.CustomFields = new List<UserCustomField>();
-        }*/
+        }
     }
 
     private void AddField()

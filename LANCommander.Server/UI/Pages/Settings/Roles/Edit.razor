@@ -31,7 +31,7 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Role Role;
+    Role Role = new Role();
     IEnumerable<Collection> Collections = new List<Collection>();
 
     protected override async Task OnInitializedAsync()

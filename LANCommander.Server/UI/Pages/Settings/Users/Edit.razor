@@ -36,7 +36,7 @@
 
         <Divider>Custom Fields</Divider>
 
-        @if (!context.CustomFields.Any())
+        @if (context.CustomFields == null || context.CustomFields?.Count == 0)
         {
             <Empty>
                 <DescriptionTemplate>

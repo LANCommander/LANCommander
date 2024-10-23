@@ -38,7 +38,7 @@
         "image/jpeg"
     };
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         User = await UserService.Get(UserId);
 
@@ -47,7 +47,7 @@
 
     void LoadAvatar()
     {
-        var avatar = User.Media.FirstOrDefault(a => a.Type == SDK.Enums.MediaType.Avatar);
+        var avatar = User?.Media?.FirstOrDefault(a => a.Type == SDK.Enums.MediaType.Avatar);
 
         if (avatar != null)
             AvatarUrl = $"/api/Media/{avatar.Id}/Download?fileId={avatar.FileId}";

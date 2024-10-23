@@ -77,7 +77,7 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Collection Collection;
+    Collection Collection = new Collection();
 
     protected override async Task OnInitializedAsync()
     {

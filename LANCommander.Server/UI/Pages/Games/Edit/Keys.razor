@@ -1,0 +1,18 @@
+﻿@page "/Games/{id:guid}/Keys"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView Id="Id" Title="Keys">
+    <TitleExtraTemplate>
+        <Button Type="@ButtonType.Primary" OnClick="() => KeysEditor.Edit()">Edit</Button>
+    </TitleExtraTemplate>
+
+    <ChildContent>
+        <KeysEditor @ref="KeysEditor" @bind-Keys="context.Keys" GameId="context.Id" />
+    </ChildContent>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private KeysEditor? KeysEditor;
+}

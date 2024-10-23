@@ -1,0 +1,18 @@
+﻿@page "/Games/{id:guid}/SavePaths"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView Id="Id" Title="Save Paths">
+    <SavePathEditor @bind-Value="context.SavePaths" GameId="context.Id" ArchiveId="@GetLatestArchiveId(context)" />
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private Guid GetLatestArchiveId(Game game)
+    {
+        if (game != null && game.Archives != null && game.Archives.Count > 0)
+            return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Id ?? Guid.Empty;
+        else
+            return Guid.Empty;
+    }
+}

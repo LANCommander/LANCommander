@@ -39,7 +39,6 @@ namespace LANCommander.Server.Data
                     break;
             }
 
-            optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
             optionsBuilder.AddInterceptors(new DatabaseContextConnectionInterceptor(Logger));
             base.OnConfiguring(optionsBuilder);
         }

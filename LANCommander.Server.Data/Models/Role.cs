@@ -14,11 +14,17 @@ namespace LANCommander.Server.Data.Models
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }
 
+        public Guid? CreatedById { get; set; }
+        [ForeignKey(nameof(CreatedById))]
+
         [Display(Name = "Created By")]
         public virtual User? CreatedBy { get; set; }
 
         [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
+
+        public Guid? UpdatedById { get; set; }
+        [ForeignKey(nameof(UpdatedById))]
 
         [Display(Name = "Updated By")]
         public virtual User? UpdatedBy { get; set; }

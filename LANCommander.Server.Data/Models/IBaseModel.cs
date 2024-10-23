@@ -12,8 +12,10 @@ namespace LANCommander.Server.Data.Models
     {
         Guid Id { get; set; }
         DateTime CreatedOn { get; set; }
+        Guid? CreatedById { get; set; }
         User? CreatedBy { get; set; }
         DateTime UpdatedOn { get; set; }
+        Guid? UpdatedById { get; set; }
         User? UpdatedBy { get; set; }
     }
 }

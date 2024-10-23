@@ -14,6 +14,8 @@ namespace LANCommander.Server.Data
         private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly ILogger Logger;
 
+        private User User;
+
         public Repository(IDbContextFactory<DatabaseContext> contextFactory, IHttpContextAccessor httpContextAccessor, ILogger<Repository<T>> logger)
         {
             Context = contextFactory.CreateDbContext();
@@ -73,8 +75,8 @@ namespace LANCommander.Server.Data
         {
             using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
             {
-                entity.CreatedBy = GetCurrentUser();
-                entity.UpdatedBy = GetCurrentUser();
+                entity.CreatedById = await GetCurrentUserId();
+                entity.UpdatedById = await GetCurrentUserId();
                 entity.CreatedOn = DateTime.Now;
                 entity.UpdatedOn = DateTime.Now;
 
@@ -94,7 +96,7 @@ namespace LANCommander.Server.Data
 
                 Context.Entry(existing).CurrentValues.SetValues(entity);
 
-                entity.UpdatedBy = GetCurrentUser();
+                entity.UpdatedById = await GetCurrentUserId();
                 entity.UpdatedOn = DateTime.Now;
 
                 Context.Update(entity);
@@ -125,21 +127,22 @@ namespace LANCommander.Server.Data
             }
         }
 
-        private User GetUser(string username)
+        private async Task<User> GetUser(string username)
         {
-            return UserDbSet.FirstOrDefault(u => u.UserName == username);
+            return await UserDbSet.FirstOrDefaultAsync(u => u.UserName == username);
         }
 
-        private User GetCurrentUser()
+        private async Task<Guid?> GetCurrentUserId()
         {
             if (HttpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated == true)
             {
-                var user = GetUser(HttpContextAccessor.HttpContext.User.Identity.Name);
+                if (User == null)
+                    User = await GetUser(HttpContextAccessor.HttpContext.User.Identity.Name);
 
-                if (user == null)
+                if (User == null)
                     return null;
                 else
-                    return user;
+                    return User.Id;
             }
             else
                 return null;

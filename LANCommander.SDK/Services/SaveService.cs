@@ -68,6 +68,11 @@ namespace LANCommander.SDK.Services
             return Client.GetRequest<IEnumerable<GameSave>>($"/api/Saves/Game/{gameId}");
         }
 
+        public async Task<IEnumerable<GameSave>> GetAsync(Guid gameId)
+        {
+            return await Client.GetRequestAsync<IEnumerable<GameSave>>($"/api/Saves/Game/{gameId}");
+        }
+
         public GameSave GetLatest(Guid gameId)
         {
             return Client.GetRequest<GameSave>($"/api/Saves/Latest/{gameId}");
@@ -313,9 +318,9 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        public void Delete(Guid id)
+        public async Task DeleteAsync(Guid id)
         {
-            Client.PostRequest<bool>($"/api/Saves/Delete/{id}");
+            await Client.DeleteRequestAsync<bool>($"/api/Saves/Delete/{id}");
         }
 
         public IEnumerable<SavePathEntry> GetFileSavePathEntries(SavePath savePath, string installDirectory)

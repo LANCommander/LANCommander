@@ -1,0 +1,71 @@
+﻿@using BootstrapBlazor.Components
+@using LANCommander.SDK.Models
+@inherits FeedbackComponent<Data.Models.Game>
+@inject SaveService SaveService
+@inject IMessageService MessageService
+
+<Table DataSource="Saves">
+    <PropertyColumn Property="s => s.CreatedOn" />
+    <PropertyColumn Property="s => s.Size">
+        @ByteSizeLib.ByteSize.FromBytes(context.Size)
+    </PropertyColumn>
+    <ActionColumn>
+        <Flex Justify="end">
+            <Popconfirm Title="Are you sure? This will replace any local save files!" OnConfirm="() => Download(context)">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" />
+            </Popconfirm>
+
+            <Popconfirm Title="Are you sure you want to delete this save?" OnConfirm="() => Delete(context)">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger />
+            </Popconfirm>
+        </Flex>
+    </ActionColumn>
+</Table>
+
+@code {
+    IEnumerable<GameSave> Saves = new List<GameSave>();
+
+    async Task Download(GameSave save)
+    {
+        await SaveService.DownloadAsync(Options.InstallDirectory, Options.Id, save.Id);
+
+        MessageService.Success("Save downloaded!");
+    }
+
+    async Task Delete(GameSave save)
+    {
+        await SaveService.DeleteAsync(save.Id);
+
+        MessageService.Success("Save deleted!");
+    }
+
+    async Task LoadData()
+    {
+        Saves = await SaveService.Get(Options.Id);
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        try
+        {
+            if (true)
+            {
+                MessageService.Success("Issue reported!");
+
+                await base.FeedbackRef.CloseAsync();
+            }
+            else
+            {
+                MessageService.Error("Unknown error: issue not reported");
+
+                args.Reject();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Unknown error: issue not reported");
+
+            args.Reject();
+        }
+    }
+}

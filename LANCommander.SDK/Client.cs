@@ -226,6 +226,23 @@ namespace LANCommander.SDK
             return response;
         }
 
+        internal async Task<T> DeleteRequestAsync<T>(string route, bool ignoreVersion = false)
+        {
+            if (Token == null)
+                return default;
+
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            if (!ignoreVersion)
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+            var response = await ApiClient.DeleteAsync<T>(request);
+
+            return response;
+        }
+
         internal async Task<string> DownloadRequestAsync(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
             route = route.TrimStart('/');

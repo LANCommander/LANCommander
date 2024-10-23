@@ -35,6 +35,10 @@
         <MenuDivider />
     }
 
+    <MenuItem OnClick="() => OpenSaveManager()">
+        Manage Saves
+    </MenuItem>
+
     <MenuItem OnClick="() => BrowseFiles()">
         Browse Files
     </MenuItem>
@@ -233,6 +237,21 @@ else
         };
 
         var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+    }
+
+    async Task OpenSaveManager()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Manage Saves",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Resizable = true
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<SavesDialog, Game>(modalOptions, Game);
     }
 
     async Task ReportIssue()

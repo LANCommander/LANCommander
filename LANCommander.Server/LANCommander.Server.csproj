@@ -45,17 +45,24 @@
     <!-- <BeautyGitCDN>https://gitee.com/liesauer/HostFXRPatcher</BeautyGitCDN> -->
     <!-- <BeautyGitTree>master</BeautyGitTree> -->
   </PropertyGroup>
-  
-  <ItemGroup>
-    <Compile Remove="wwwroot\scripts\**" />
-    <Content Remove="wwwroot\scripts\**" />
-    <EmbeddedResource Remove="wwwroot\scripts\**" />
-    <None Remove="wwwroot\scripts\**" />
-    <TypeScriptCompile Remove="wwwroot\scripts\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Remove="wwwroot\js\Upload.ts" />
-  </ItemGroup>
+
+	<Target Name="CompileGlobalSass" BeforeTargets="Compile">
+		<Message Text="Compiling global SCSS files" Importance="high" />
+		<Exec Command="npm run sass" />
+	</Target>
+
+	<ItemGroup>
+		<ComponentScssFiles Include="**/*/*.scss" Exclude="node_modules/**;wwwroot/**;Styles/**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ComponentScssFiles Remove="node_modules\**" />
+	  <TypeScriptCompile Remove="node_modules\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+	</ItemGroup>
 
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">
 	    <DefineConstants>WINDOWS</DefineConstants>

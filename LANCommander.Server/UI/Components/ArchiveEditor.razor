@@ -62,15 +62,18 @@
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
 
-    ICollection<Archive> Archives { get; set; }
+    ICollection<Archive> Archives { get; set; } = new List<Archive>();
 
     ArchiveUploader Uploader;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
-
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
     }
 
     private async Task LoadData()

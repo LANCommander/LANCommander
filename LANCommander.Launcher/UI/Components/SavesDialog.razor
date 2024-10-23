@@ -25,6 +25,11 @@
 @code {
     IEnumerable<GameSave> Saves = new List<GameSave>();
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
     async Task Download(GameSave save)
     {
         await SaveService.DownloadAsync(Options.InstallDirectory, Options.Id, save.Id);

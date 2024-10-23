@@ -37,7 +37,7 @@ namespace LANCommander.Server.Data
         {
             using (var op = Logger.BeginOperation("Querying database"))
             {
-                var queryable = DbSet.AsQueryable().AsNoTracking().Where(predicate);
+                var queryable = DbSet.AsQueryable().Where(predicate);
 
                 op.Complete();
 
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Data
         {
             using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
             {
-                var entity = await DbSet.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id);
+                var entity = await DbSet.FindAsync(id);
 
                 op.Complete();
 
@@ -61,7 +61,7 @@ namespace LANCommander.Server.Data
         {
             using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
             {
-                var entity = await Get(predicate).AsNoTracking().FirstOrDefaultAsync();
+                var entity = await Get(predicate).FirstOrDefaultAsync();
 
                 op.Complete();
 
@@ -127,7 +127,7 @@ namespace LANCommander.Server.Data
 
         private User GetUser(string username)
         {
-            return UserDbSet.AsNoTracking().FirstOrDefault(u => u.UserName == username);
+            return UserDbSet.FirstOrDefault(u => u.UserName == username);
         }
 
         private User GetCurrentUser()

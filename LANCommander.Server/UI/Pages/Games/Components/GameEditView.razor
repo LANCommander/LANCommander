@@ -15,12 +15,12 @@
                 <MenuItem RouterLink="@($"/Games/{Id}/Keys")">Keys</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Id}/Scripts")">Scripts</MenuItem>
 
-                if (Game.DependentGames.Any(g => g.Type == GameType.Expansion))
+                if (Game.DependentGames != null && Game.DependentGames.Any(g => g.Type == GameType.Expansion))
                 {
                     <MenuItem RouterLink="@($"/Games/{Id}/Expansions")">Expansions</MenuItem>
                 }
 
-                if (Game.DependentGames.Any(g => g.Type == GameType.Mod))
+                if (Game.DependentGames != null && Game.DependentGames.Any(g => g.Type == GameType.Mod))
                 {
                     <MenuItem RouterLink="@($"/Games/{Id}/Mods")">Mods</MenuItem>
                 }
@@ -52,13 +52,13 @@
                 </PageHeaderTitle>
 
                 <PageHeaderExtra>
-                    @TitleExtraTemplate(Game)
+                    @TitleExtraTemplate?.Invoke(Game)
                 </PageHeaderExtra>
             </PageHeader>
         </CascadingValue>
 
         <div class="panel-layout-content">
-            @ChildContent(Game)
+            @ChildContent?.Invoke(Game)
         </div>
     </Content>
 </Layout>

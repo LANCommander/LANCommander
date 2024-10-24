@@ -112,7 +112,7 @@
         if (dbUser != null)
         {
             dbUser.Approved = true;
-            dbUser.ApprovedOn = DateTime.Now;
+            dbUser.ApprovedOn = DateTime.UtcNow;
 
             await UserService.Update(dbUser);
 

@@ -70,7 +70,7 @@
                 var user = Activator.CreateInstance<User>();
 
                 user.Approved = true;
-                user.ApprovedOn = DateTime.Now;
+                user.ApprovedOn = DateTime.UtcNow;
                 user.UserName = Model.Username;
 
                 var result = await UserManager.CreateAsync(user, Model.Password);

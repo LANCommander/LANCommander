@@ -120,7 +120,7 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
                 if (!settings.Authentication.RequireApproval)
                 {
                     user.Approved = false;
-                    user.ApprovedOn = DateTime.Now;
+                    user.ApprovedOn = DateTime.UtcNow;
                 }
 
                 await _userStore.SetUserNameAsync(user, Input.UserName, CancellationToken.None);

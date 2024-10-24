@@ -77,8 +77,8 @@ namespace LANCommander.Server.Data
             {
                 entity.CreatedById = await GetCurrentUserId();
                 entity.UpdatedById = await GetCurrentUserId();
-                entity.CreatedOn = DateTime.Now;
-                entity.UpdatedOn = DateTime.Now;
+                entity.CreatedOn = DateTime.UtcNow;
+                entity.UpdatedOn = DateTime.UtcNow;
 
                 await Context.AddAsync(entity);
 
@@ -97,7 +97,7 @@ namespace LANCommander.Server.Data
                 Context.Entry(existing).CurrentValues.SetValues(entity);
 
                 entity.UpdatedById = await GetCurrentUserId();
-                entity.UpdatedOn = DateTime.Now;
+                entity.UpdatedOn = DateTime.UtcNow;
 
                 Context.Update(entity);
 

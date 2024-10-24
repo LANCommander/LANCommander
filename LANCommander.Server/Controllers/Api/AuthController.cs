@@ -108,7 +108,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var user = await UserService.Get(principal.Identity.Name);
 
-            if (user == null || user.RefreshToken != token.RefreshToken || user.RefreshTokenExpiration <= DateTime.Now)
+            if (user == null || user.RefreshToken != token.RefreshToken || user.RefreshTokenExpiration <= DateTime.UtcNow)
             {
                 Logger?.LogDebug("Invalid access token or refresh token for user {UserName}", principal.Identity.Name);
                 return BadRequest("Invalid access token or refresh token");
@@ -216,7 +216,7 @@ namespace LANCommander.Server.Controllers.Api
                 var refreshToken = GenerateRefreshToken();
 
                 user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.Authentication.TokenLifetime);
+                user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(Settings.Authentication.TokenLifetime);
 
                 await UserService.Update(user);
 
@@ -236,7 +236,7 @@ namespace LANCommander.Server.Controllers.Api
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.Authentication.TokenSecret));
 
             var token = new JwtSecurityToken(
-                expires: DateTime.Now.AddDays(Settings.Authentication.TokenLifetime),
+                expires: DateTime.UtcNow.AddDays(Settings.Authentication.TokenLifetime),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );

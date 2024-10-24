@@ -1,10 +1,11 @@
-﻿@using LANCommander.Server.Services
+﻿@using LANCommander.Server.Data
+@using LANCommander.Server.Services
 @using LANCommander.Server.Services.Models
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Web
 @using System.Security.Claims
 @inject SettingService SettingService
-@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 @{
     var settings = SettingService.GetSettings();
@@ -73,13 +74,11 @@
 </html>
 
 @code {
-    ClaimsPrincipal User;
-
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        if (authState.User.Identity.IsAuthenticated)
-            User = authState.User;
+        if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown && !NavigationManager.Uri.Contains("/FirstTimeSetup"))
+        {
+            NavigationManager.NavigateTo("/FirstTimeSetup", true);
+        }
     }
 }

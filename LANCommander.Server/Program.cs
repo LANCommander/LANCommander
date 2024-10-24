@@ -18,6 +18,7 @@ using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
 using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Authentication;
 
 namespace LANCommander.Server
 {

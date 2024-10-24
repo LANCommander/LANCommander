@@ -1,10 +1,18 @@
-﻿@inject NavigationManager NavigationManager
+﻿@using LANCommander.Server.Data
+@inject NavigationManager NavigationManager
 
 @code {
     protected override void OnInitialized()
     {
-        var currentUri = new Uri(NavigationManager.Uri);
+        if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown)
+        {
+            NavigationManager.NavigateTo("/FirstTimeSetup");
+        }
+        else
+        {
+            var currentUri = new Uri(NavigationManager.Uri);
 
-        NavigationManager.NavigateTo($"/Login?ReturnUrl={currentUri.AbsolutePath}", true);
+            NavigationManager.NavigateTo($"/Identity/Account/Login?ReturnUrl={currentUri.AbsolutePath}", true);
+        }
     }
 }

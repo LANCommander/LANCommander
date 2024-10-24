@@ -28,7 +28,7 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
         {
             await SignInManager.SignOutAsync();
 
-            return LocalRedirect("/");
+            return RedirectToPage("./Login");
         }
     }
 }

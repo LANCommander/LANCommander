@@ -18,9 +18,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.10")
-                .HasAnnotation("Proxies:ChangeTracking", false)
-                .HasAnnotation("Proxies:CheckEquality", false)
-                .HasAnnotation("Proxies:LazyLoading", true)
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -479,6 +476,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("char(36)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
 
                     b.Property<Guid>("StorageLocationId")
                         .HasColumnType("char(36)");

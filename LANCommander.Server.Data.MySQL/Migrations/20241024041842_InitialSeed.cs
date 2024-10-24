@@ -941,6 +941,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     StorageLocationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
                     GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
                     UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),

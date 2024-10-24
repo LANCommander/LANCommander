@@ -18,9 +18,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.10")
-                .HasAnnotation("Proxies:ChangeTracking", false)
-                .HasAnnotation("Proxies:CheckEquality", false)
-                .HasAnnotation("Proxies:LazyLoading", true)
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -479,6 +476,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
 
                     b.Property<Guid>("StorageLocationId")
                         .HasColumnType("uuid");
@@ -939,6 +939,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Name")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -947,13 +953,23 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
                         .HasDatabaseName("RoleNameIndex");
 
-                    b.ToTable("AspNetRoles", (string)null);
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.SavePath", b =>
@@ -1333,6 +1349,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -1375,11 +1397,19 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -1388,7 +1418,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.UserCustomField", b =>
@@ -1455,7 +1487,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetRoleClaims", (string)null);
+                    b.ToTable("RoleClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
@@ -1479,18 +1511,16 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserClaims", (string)null);
+                    b.ToTable("UserClaims", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
                     b.Property<string>("LoginProvider")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ProviderKey")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("text");
 
                     b.Property<string>("ProviderDisplayName")
                         .HasColumnType("text");
@@ -1502,7 +1532,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AspNetUserLogins", (string)null);
+                    b.ToTable("UserLogins", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
@@ -1517,7 +1547,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("UserRoles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
@@ -1526,19 +1556,17 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("LoginProvider")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Value")
                         .HasColumnType("text");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 
-                    b.ToTable("AspNetUserTokens", (string)null);
+                    b.ToTable("UserTokens", (string)null);
                 });
 
             modelBuilder.Entity("PageGame", b =>
@@ -2180,6 +2208,23 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Role", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.SavePath", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -2356,15 +2401,34 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.User", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.UserCustomField", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
-                        .HasForeignKey("UpdatedById");
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Server.Data.Models.User", "User")
                         .WithMany("CustomFields")

@@ -1,5 +1,4 @@
 ﻿using System;
-using LANCommander.SDK.Enums;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -14,21 +13,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "AspNetRoles",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetRoles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUsers",
+                name: "Users",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -50,117 +35,27 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     Approved = table.Column<bool>(type: "boolean", nullable: false),
                     ApprovedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Alias = table.Column<string>(type: "text", nullable: true),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetRoleClaims",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetRoleClaims", x => x.Id);
+                    table.PrimaryKey("PK_Users", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
+                        name: "FK_Users_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserClaims",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
+                        name: "FK_Users_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserLogins",
-                columns: table => new
-                {
-                    LoginProvider = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    ProviderKey = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserRoles",
-                columns: table => new
-                {
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserRoles", x => new { x.UserId, x.RoleId });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserTokens",
-                columns: table => new
-                {
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    LoginProvider = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Name = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Value = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserTokens_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -179,22 +74,22 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Categories", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Categories_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Categories_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Categories_Categories_ParentId",
                         column: x => x.ParentId,
                         principalTable: "Categories",
                         principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Categories_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Categories_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -212,15 +107,15 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Collections", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Collections_AspNetUsers_CreatedById",
+                        name: "FK_Collections_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Collections_AspNetUsers_UpdatedById",
+                        name: "FK_Collections_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
@@ -240,15 +135,15 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Companies", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Companies_AspNetUsers_CreatedById",
+                        name: "FK_Companies_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Companies_AspNetUsers_UpdatedById",
+                        name: "FK_Companies_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
@@ -268,14 +163,14 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Engines", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Engines_AspNetUsers_CreatedById",
+                        name: "FK_Engines_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Engines_AspNetUsers_UpdatedById",
+                        name: "FK_Engines_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id");
                 });
 
@@ -294,15 +189,15 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Genres", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Genres_AspNetUsers_CreatedById",
+                        name: "FK_Genres_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Genres_AspNetUsers_UpdatedById",
+                        name: "FK_Genres_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
@@ -327,23 +222,23 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Pages", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Pages_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Pages_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Pages_Pages_ParentId",
                         column: x => x.ParentId,
                         principalTable: "Pages",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Pages_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Pages_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -361,15 +256,15 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Platforms", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Platforms_AspNetUsers_CreatedById",
+                        name: "FK_Platforms_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Platforms_AspNetUsers_UpdatedById",
+                        name: "FK_Platforms_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
@@ -391,15 +286,45 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Redistributables", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Redistributables_AspNetUsers_CreatedById",
+                        name: "FK_Redistributables_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Redistributables_AspNetUsers_UpdatedById",
+                        name: "FK_Redistributables_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Roles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "uuid", nullable: true),
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Roles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Roles_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Roles_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
@@ -421,14 +346,14 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_StorageLocations", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_StorageLocations_AspNetUsers_CreatedById",
+                        name: "FK_StorageLocations_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_StorageLocations_AspNetUsers_UpdatedById",
+                        name: "FK_StorageLocations_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id");
                 });
 
@@ -447,17 +372,38 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Tags", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Tags_AspNetUsers_CreatedById",
+                        name: "FK_Tags_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_Tags_AspNetUsers_UpdatedById",
+                        name: "FK_Tags_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserClaims_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -477,43 +423,61 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_UserCustomField", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_UserCustomField_AspNetUsers_CreatedById",
+                        name: "FK_UserCustomField_Users_CreatedById",
                         column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_UserCustomField_AspNetUsers_UpdatedById",
+                        name: "FK_UserCustomField_Users_UpdatedById",
                         column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_UserCustomField_AspNetUsers_UserId",
+                        name: "FK_UserCustomField_Users_UserId",
                         column: x => x.UserId,
-                        principalTable: "AspNetUsers",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "RoleCollection",
+                name: "UserLogins",
                 columns: table => new
                 {
-                    CollectionId = table.Column<Guid>(type: "uuid", nullable: false),
-                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    ProviderKey = table.Column<string>(type: "text", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RoleCollection", x => new { x.CollectionId, x.RoleId });
+                    table.PrimaryKey("PK_UserLogins", x => new { x.LoginProvider, x.ProviderKey });
                     table.ForeignKey(
-                        name: "FK_RoleCollection_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
+                        name: "FK_UserLogins_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserTokens",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
                     table.ForeignKey(
-                        name: "FK_RoleCollection_Collections_CollectionId",
-                        column: x => x.CollectionId,
-                        principalTable: "Collections",
+                        name: "FK_UserTokens_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -545,18 +509,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Games", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Games_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Games_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Games_Engines_EngineId",
                         column: x => x.EngineId,
                         principalTable: "Engines",
@@ -566,6 +518,18 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         name: "FK_Games_Games_BaseGameId",
                         column: x => x.BaseGameId,
                         principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Games_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Games_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
@@ -590,6 +554,75 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         name: "FK_PageRedistributable_Redistributables_RedistributableId",
                         column: x => x.RedistributableId,
                         principalTable: "Redistributables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoleClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoleClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RoleClaims_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "Roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RoleCollection",
+                columns: table => new
+                {
+                    CollectionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RoleCollection", x => new { x.CollectionId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_RoleCollection_Collections_CollectionId",
+                        column: x => x.CollectionId,
+                        principalTable: "Collections",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RoleCollection_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "Roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserRoles",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserRoles", x => new { x.UserId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_UserRoles_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "Roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserRoles_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -622,18 +655,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "Archive",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_Archive_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Archive_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Archive_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
@@ -651,6 +672,18 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "StorageLocations",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Archive_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Archive_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -827,6 +860,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     StorageLocationId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Size = table.Column<long>(type: "bigint", nullable: false),
                     GameId = table.Column<Guid>(type: "uuid", nullable: true),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -838,24 +872,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_GameSaves", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_GameSaves_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_GameSaves_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_GameSaves_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_GameSaves_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
@@ -865,6 +881,24 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         name: "FK_GameSaves_StorageLocations_StorageLocationId",
                         column: x => x.StorageLocationId,
                         principalTable: "StorageLocations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameSaves_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_GameSaves_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_GameSaves_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -911,28 +945,28 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Issues", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Issues_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Issues_AspNetUsers_ResolvedById",
-                        column: x => x.ResolvedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Issues_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Issues_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Issues_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Issues_Users_ResolvedById",
+                        column: x => x.ResolvedById,
+                        principalTable: "Users",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Issues_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -957,28 +991,28 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Keys", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Keys_AspNetUsers_ClaimedByUserId",
-                        column: x => x.ClaimedByUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Keys_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Keys_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Keys_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Keys_Users_ClaimedByUserId",
+                        column: x => x.ClaimedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Keys_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Keys_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1005,24 +1039,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Media", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Media_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Media_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Media_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_Media_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
@@ -1038,6 +1054,24 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         name: "FK_Media_StorageLocations_StorageLocationId",
                         column: x => x.StorageLocationId,
                         principalTable: "StorageLocations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Media_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Media_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Media_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1063,23 +1097,23 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_MultiplayerModes", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_MultiplayerModes_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_MultiplayerModes_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_MultiplayerModes_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MultiplayerModes_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_MultiplayerModes_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1124,27 +1158,27 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_PlaySessions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_PlaySessions_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_PlaySessions_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_PlaySessions_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_PlaySessions_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PlaySessions_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_PlaySessions_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_PlaySessions_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1168,23 +1202,23 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_SavePaths", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_SavePaths_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_SavePaths_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_SavePaths_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_SavePaths_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_SavePaths_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1215,21 +1249,21 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Servers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Servers_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Servers_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Servers_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Servers_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Servers_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
@@ -1256,18 +1290,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Actions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Actions_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Actions_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Actions_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
@@ -1279,6 +1301,18 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Actions_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Actions_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1327,18 +1361,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_Scripts", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Scripts_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_Scripts_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_Scripts_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
@@ -1356,6 +1378,18 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Scripts_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Scripts_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1380,18 +1414,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_ServerConsoles", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ServerConsoles_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_ServerConsoles_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_ServerConsoles_Servers_ServerId",
                         column: x => x.ServerId,
                         principalTable: "Servers",
@@ -1402,6 +1424,18 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         column: x => x.ServerId1,
                         principalTable: "Servers",
                         principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ServerConsoles_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ServerConsoles_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -1422,18 +1456,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 {
                     table.PrimaryKey("PK_ServerHttpPath", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ServerHttpPath_AspNetUsers_CreatedById",
-                        column: x => x.CreatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_ServerHttpPath_AspNetUsers_UpdatedById",
-                        column: x => x.UpdatedById,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
                         name: "FK_ServerHttpPath_Servers_ServerId",
                         column: x => x.ServerId,
                         principalTable: "Servers",
@@ -1444,6 +1466,18 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         column: x => x.ServerId1,
                         principalTable: "Servers",
                         principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ServerHttpPath_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ServerHttpPath_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateIndex(
@@ -1495,43 +1529,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "IX_Archive_UpdatedById",
                 table: "Archive",
                 column: "UpdatedById");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetRoleClaims_RoleId",
-                table: "AspNetRoleClaims",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "RoleNameIndex",
-                table: "AspNetRoles",
-                column: "NormalizedName",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserClaims_UserId",
-                table: "AspNetUserClaims",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserLogins_UserId",
-                table: "AspNetUserLogins",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserRoles_RoleId",
-                table: "AspNetUserRoles",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "EmailIndex",
-                table: "AspNetUsers",
-                column: "NormalizedEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "UserNameIndex",
-                table: "AspNetUsers",
-                column: "NormalizedUserName",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Categories_CreatedById",
@@ -1830,9 +1827,30 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RoleClaims_RoleId",
+                table: "RoleClaims",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoleCollection_RoleId",
                 table: "RoleCollection",
                 column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Roles_CreatedById",
+                table: "Roles",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Roles_UpdatedById",
+                table: "Roles",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "RoleNameIndex",
+                table: "Roles",
+                column: "NormalizedName",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_SavePaths_CreatedById",
@@ -1950,6 +1968,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
+                name: "IX_UserClaims_UserId",
+                table: "UserClaims",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_UserCustomField_CreatedById",
                 table: "UserCustomField",
                 column: "CreatedById");
@@ -1964,33 +1987,36 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 table: "UserCustomField",
                 column: "UserId");
 
-            migrationBuilder.Sql($"INSERT INTO StorageLocations (Id, Path, Type, \"Default\", CreatedOn, UpdatedOn) VALUES (upper(gen_random_uuid()), 'Uploads', {(int)StorageLocationType.Archive}, 1, now(), now())");
-            migrationBuilder.Sql($"INSERT INTO StorageLocations (Id, Path, Type, \"Default\", CreatedOn, UpdatedOn) VALUES (upper(gen_random_uuid()), 'Saves', {(int)StorageLocationType.Save}, 1, now(), now())");
-            migrationBuilder.Sql($"INSERT INTO StorageLocations (Id, Path, Type, \"Default\", CreatedOn, UpdatedOn) VALUES (upper(gen_random_uuid()), 'Media', {(int)StorageLocationType.Media}, 1, now(), now())");
+            migrationBuilder.CreateIndex(
+                name: "IX_UserLogins_UserId",
+                table: "UserLogins",
+                column: "UserId");
 
-            migrationBuilder.Sql($@"UPDATE Archive
-                SET StorageLocationId = (
-                    SELECT Id
-                    FROM StorageLocations
-                    WHERE Type = {(int)StorageLocationType.Archive}
-                    LIMIT 1
-                );");
+            migrationBuilder.CreateIndex(
+                name: "IX_UserRoles_RoleId",
+                table: "UserRoles",
+                column: "RoleId");
 
-            migrationBuilder.Sql($@"UPDATE GameSaves
-                SET StorageLocationId = (
-                    SELECT Id
-                    FROM StorageLocations
-                    WHERE Type = {(int)StorageLocationType.Save}
-                    LIMIT 1
-                );");
+            migrationBuilder.CreateIndex(
+                name: "EmailIndex",
+                table: "Users",
+                column: "NormalizedEmail");
 
-            migrationBuilder.Sql($@"UPDATE Media
-                SET StorageLocationId = (
-                    SELECT Id
-                    FROM StorageLocations
-                    WHERE Type = {(int)StorageLocationType.Media}
-                    LIMIT 1
-                );");
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_CreatedById",
+                table: "Users",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_UpdatedById",
+                table: "Users",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "UserNameIndex",
+                table: "Users",
+                column: "NormalizedUserName",
+                unique: true);
         }
 
         /// <inheritdoc />
@@ -2001,21 +2027,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "Archive");
-
-            migrationBuilder.DropTable(
-                name: "AspNetRoleClaims");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUserClaims");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUserLogins");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUserRoles");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
                 name: "CategoryGame");
@@ -2069,6 +2080,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "PlaySessions");
 
             migrationBuilder.DropTable(
+                name: "RoleClaims");
+
+            migrationBuilder.DropTable(
                 name: "RoleCollection");
 
             migrationBuilder.DropTable(
@@ -2084,7 +2098,19 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "ServerHttpPath");
 
             migrationBuilder.DropTable(
+                name: "UserClaims");
+
+            migrationBuilder.DropTable(
                 name: "UserCustomField");
+
+            migrationBuilder.DropTable(
+                name: "UserLogins");
+
+            migrationBuilder.DropTable(
+                name: "UserRoles");
+
+            migrationBuilder.DropTable(
+                name: "UserTokens");
 
             migrationBuilder.DropTable(
                 name: "Categories");
@@ -2108,9 +2134,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "Pages");
 
             migrationBuilder.DropTable(
-                name: "AspNetRoles");
-
-            migrationBuilder.DropTable(
                 name: "Collections");
 
             migrationBuilder.DropTable(
@@ -2120,13 +2143,16 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "Servers");
 
             migrationBuilder.DropTable(
+                name: "Roles");
+
+            migrationBuilder.DropTable(
                 name: "Games");
 
             migrationBuilder.DropTable(
                 name: "Engines");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "Users");
         }
     }
 }

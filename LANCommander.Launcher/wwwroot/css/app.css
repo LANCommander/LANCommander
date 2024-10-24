@@ -211,6 +211,18 @@ footer {
   color: rgba(255, 255, 255, 0.75);
 }
 
+.ant-modal-wrap-no-padding .ant-modal-body {
+  padding: 0;
+}
+.ant-modal-wrap-no-padding .ant-table-tbody > tr > td:first-child,
+.ant-modal-wrap-no-padding .ant-table-thead > tr > th:first-child {
+  padding-left: 24px;
+}
+.ant-modal-wrap-no-padding .ant-table-tbody > tr > td:last-child,
+.ant-modal-wrap-no-padding .ant-table-thead > tr > th:last-child {
+  padding-right: 24px;
+}
+
 .ant-collapse .ant-list {
   margin: -16px;
 }

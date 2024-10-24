@@ -4,8 +4,8 @@
 @inject SaveService SaveService
 @inject IMessageService MessageService
 
-<Table DataSource="Saves">
-    <PropertyColumn Property="s => s.CreatedOn" />
+<Table DataSource="Saves" Size="TableSize.Small" PageIndex="@CurrentPage" PageSize="@PageSize" PaginationPosition="none">
+    <PropertyColumn Property="s => s.CreatedOn" Title="Created On" />
     <PropertyColumn Property="s => s.Size">
         @ByteSizeLib.ByteSize.FromBytes(context.Size)
     </PropertyColumn>
@@ -22,12 +22,40 @@
     </ActionColumn>
 </Table>
 
+<GridRow Wrap="false" Style="padding: 10px 16px;">
+    <GridCol Flex="@("auto")" Style=";display: flex; align-items: center;">
+        @if (Saves.Count() > PageSize)
+        {
+            <Pagination Simple PageSize="@PageSize" OnChange="OnPageChange" Total="Saves.Count()" />
+        }
+    </GridCol>
+
+    <GridCol>
+        <Space Direction="DirectionVHType.Horizontal">
+            <SpaceItem>
+                <Button OnClick="() => Upload()">Upload</Button>
+            </SpaceItem>
+            <SpaceItem>
+                <Button Type="@ButtonType.Primary" OnClick="() => Close()">Close</Button>
+            </SpaceItem>
+        </Space>
+    </GridCol>
+</GridRow>
+
 @code {
     IEnumerable<GameSave> Saves = new List<GameSave>();
+
+    int PageSize = 10;
+    int CurrentPage = 1;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+    }
+
+    async Task OnPageChange(PaginationEventArgs args)
+    {
+        CurrentPage = args.Page;
     }
 
     async Task Download(GameSave save)
@@ -42,35 +70,26 @@
         await SaveService.DeleteAsync(save.Id);
 
         MessageService.Success("Save deleted!");
+
+        await LoadData();
+    }
+
+    async Task Upload()
+    {
+        await SaveService.UploadAsync(Options.InstallDirectory, Options.Id);
+
+        MessageService.Success("Save uploaded!");
+
+        await LoadData();
+    }
+
+    async Task Close()
+    {
+        await CloseFeedbackAsync();
     }
 
     async Task LoadData()
     {
-        Saves = await SaveService.Get(Options.Id);
-    }
-
-    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
-    {
-        try
-        {
-            if (true)
-            {
-                MessageService.Success("Issue reported!");
-
-                await base.FeedbackRef.CloseAsync();
-            }
-            else
-            {
-                MessageService.Error("Unknown error: issue not reported");
-
-                args.Reject();
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Unknown error: issue not reported");
-
-            args.Reject();
-        }
+        Saves = (await SaveService.Get(Options.Id)).OrderByDescending(s => s.CreatedOn);
     }
 }

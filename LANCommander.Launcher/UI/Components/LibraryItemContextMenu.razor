@@ -248,7 +248,9 @@ else
             DefaultMaximized = false,
             Closable = true,
             Draggable = true,
-            Resizable = true
+            Resizable = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
         };
 
         var modalRef = await ModalService.CreateModalAsync<SavesDialog, Game>(modalOptions, Game);

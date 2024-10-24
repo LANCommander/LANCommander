@@ -22,7 +22,7 @@ namespace LANCommander.Server.Services
         {
             var issue = await Get(issueId);
 
-            issue.ResolvedOn = DateTime.Now;
+            issue.ResolvedOn = DateTime.UtcNow;
             // issue.ResolvedBy = await GetCurrentUserAsync();
 
             await Update(issue);

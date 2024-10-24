@@ -14,7 +14,7 @@ namespace LANCommander.Server.Services
         public async Task<Key> Allocate(Key key, User user)
         {
             key.ClaimedByUser = user;
-            key.ClaimedOn = DateTime.Now;
+            key.ClaimedOn = DateTime.UtcNow;
             key.AllocationMethod = KeyAllocationMethod.UserAccount;
 
             key = await Update(key);
@@ -25,7 +25,7 @@ namespace LANCommander.Server.Services
         public async Task<Key> Allocate(Key key, string macAddress)
         {
             key.ClaimedByMacAddress = macAddress;
-            key.ClaimedOn = DateTime.Now;
+            key.ClaimedOn = DateTime.UtcNow;
             key.AllocationMethod = KeyAllocationMethod.MacAddress;
 
             key = await Update(key);

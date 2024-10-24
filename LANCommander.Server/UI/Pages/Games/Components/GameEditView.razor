@@ -1,4 +1,5 @@
 ﻿@inject GameService GameService
+@inject NavigationManager NavigationManager
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">
@@ -78,5 +79,8 @@
             Game = await GameService.Get(Id);
         else
             Game = new Game();
+
+        if (Game == null)
+            NavigationManager.NavigateTo("/Games");
     }
 }

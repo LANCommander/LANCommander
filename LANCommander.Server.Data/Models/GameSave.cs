@@ -12,6 +12,8 @@ namespace LANCommander.Server.Data.Models
         [InverseProperty(nameof(StorageLocation.GameSaves))]
         public virtual StorageLocation StorageLocation { get; set; }
 
+        public long Size { get; set; }
+
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]

@@ -133,7 +133,8 @@ namespace LANCommander.Server.Controllers.Api
             var save = new GameSave()
             {
                 GameId = id,
-                UserId = user.Id
+                UserId = user.Id,
+                Size = file.Length,
             };
 
             save = await GameSaveService.Add(save);

@@ -9,7 +9,7 @@ namespace LANCommander.SDK.Enums
 {
     public enum GameInstallStatus
     {
-        Idle,
+        Queued,
         Downloading,
         [Display(Name = "Installing Redistributables")]
         InstallingRedistributables,

@@ -102,7 +102,8 @@ namespace LANCommander.Launcher.Services
                 }
             }
 
-            if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Idle))
+            // If not already queued
+            if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Queued))
             {
                 var queueItem = new DownloadQueueGame(gameInfo);
 
@@ -113,8 +114,6 @@ namespace LANCommander.Launcher.Services
                 else
                 {
                     Logger?.LogTrace("Download queue is empty, starting the game download immediately");
-
-                    queueItem.Status = GameInstallStatus.Downloading;
 
                     Queue.Add(queueItem);
 
@@ -154,10 +153,14 @@ namespace LANCommander.Launcher.Services
 
         public async Task Install()
         {
-            var currentItem = Queue.FirstOrDefault(i => i.State);
+            var currentItem = Queue.FirstOrDefault(i => i.Status == GameInstallStatus.Queued);
 
             if (currentItem == null)
                 return;
+
+            currentItem.Status = GameInstallStatus.Downloading;
+
+            OnQueueChanged?.Invoke();
 
             Game game = null;
             SDK.Models.Game gameInfo = null;

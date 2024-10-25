@@ -276,8 +276,10 @@ footer {
   margin-bottom: 0;
 }
 .authentication-form .login-form-pane {
-  padding: 24px;
   background: #000;
+}
+.authentication-form .login-form-pane .ant-form {
+  padding: 24px;
 }
 .authentication-form .login-form-pane .ant-form-item:last-child {
   margin-bottom: 0;

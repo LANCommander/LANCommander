@@ -430,6 +430,13 @@ namespace LANCommander.SDK
                 Password = password
             }));
 
+            if (response.ErrorException != null)
+            {
+                Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
+
+                throw response.ErrorException;
+            }
+
             switch (response.StatusCode)
             {
                 case HttpStatusCode.OK:

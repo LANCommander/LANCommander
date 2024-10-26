@@ -1,13 +1,13 @@
 ﻿@using LANCommander.Launcher.Models
 @using System.Diagnostics
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject SDK.Client Client
 @inject GameService GameService
 
 <footer>
     <LibraryItemFilter />
 
-    @if (DownloadService.Queue.Any(qi => qi.State))
+    @if (InstallService.Queue.Any(qi => qi.State))
     {
         <div class="downloader" @onclick="() => ShowDownloadQueue()">
             <CurrentDownloadItem ShowIcon="true" />
@@ -28,7 +28,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        DownloadService.OnQueueChanged += async () =>
+        InstallService.OnQueueChanged += async () =>
         {
             await InvokeAsync(StateHasChanged);
         };

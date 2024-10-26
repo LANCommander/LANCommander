@@ -1,6 +1,6 @@
 ﻿@using LANCommander.Launcher.Models
 @using System.Diagnostics
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject SDK.Client Client
 @inject GameService GameService
 
@@ -50,48 +50,23 @@
 @code {
     [Parameter] public bool ShowIcon { get; set; }
 
-    IDownloadQueueItem CurrentQueueItem = null;
+    IInstallQueueItem CurrentQueueItem = null;
 
     Stopwatch Stopwatch = new Stopwatch();
 
     protected override async Task OnInitializedAsync()
     {
-        Client.Games.OnArchiveExtractionProgress += (long position, long length, SDK.Models.Game game) =>
-        {
-            if (!Stopwatch.IsRunning)
-                Stopwatch.Start();
-
-            if (Stopwatch.ElapsedMilliseconds > 500)
-            {
-                CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
-
-                var bytesThisInterval = position - CurrentQueueItem.BytesDownloaded;
-
-                CurrentQueueItem.BytesDownloaded = position;
-                CurrentQueueItem.TotalBytes = length;
-                CurrentQueueItem.TransferSpeed = (double)(bytesThisInterval / (Stopwatch.ElapsedMilliseconds / 1000d));
-
-                InvokeAsync(StateHasChanged);
-
-                Stopwatch.Reset();
-            }
-        };
-
-        Client.Games.OnArchiveEntryExtractionProgress += (object sender, SDK.ArchiveEntryExtractionProgressArgs e) =>
-        {
-            // InvokeAsync(StateHasChanged);
-        };
-
-        DownloadService.OnInstallComplete += async (game) =>
+        InstallService.OnInstallComplete += async (game) =>
         {
             Stopwatch.Stop();
         };
 
-        DownloadService.OnQueueChanged += async () =>
+        InstallService.OnQueueChanged += async () =>
         {
-            CurrentQueueItem = DownloadService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
+            CurrentQueueItem = InstallService.Queue.OrderByDescending(qi => qi.QueuedOn).FirstOrDefault(qi => qi.State);
 
             await InvokeAsync(StateHasChanged);
+            await Task.Yield();
         };
     }
 }

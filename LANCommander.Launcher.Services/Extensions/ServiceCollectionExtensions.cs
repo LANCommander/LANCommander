@@ -60,7 +60,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<CollectionService>();
             services.AddScoped<CommandLineService>();
             services.AddScoped<CompanyService>();
-            services.AddScoped<DownloadService>();
+            services.AddScoped<InstallService>();
             services.AddScoped<EngineService>();
             services.AddScoped<GameService>();
             services.AddScoped<GenreService>();

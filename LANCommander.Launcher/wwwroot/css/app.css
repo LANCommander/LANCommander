@@ -600,7 +600,7 @@ footer {
 .checkbox-button-group .ant-btn span:not(.anticon) {
   flex-grow: 1;
   text-align: left;
-  margin-left: none;
+  margin-left: 0;
 }
 
 /*# sourceMappingURL=app.css.map */

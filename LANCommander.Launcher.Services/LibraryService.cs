@@ -22,7 +22,7 @@ namespace LANCommander.Launcher.Services
 {
     public class LibraryService : BaseService
     {
-        private readonly DownloadService DownloadService;
+        private readonly InstallService InstallService;
         private readonly GameService GameService;
         private readonly SaveService SaveService;
         private readonly PlaySessionService PlaySessionService;
@@ -48,7 +48,7 @@ namespace LANCommander.Launcher.Services
         public LibraryService(
             SDK.Client client,
             ILogger<LibraryService> logger,
-            DownloadService downloadService,
+            InstallService installService,
             GameService gameService,
             SaveService saveService,
             PlaySessionService playSessionService,
@@ -56,7 +56,7 @@ namespace LANCommander.Launcher.Services
             ImportService importService,
             MessageBusService messageBusService) : base(client, logger)
         {
-            DownloadService = downloadService;
+            InstallService = installService;
             GameService = gameService;
             SaveService = saveService;
             PlaySessionService = playSessionService;
@@ -64,7 +64,7 @@ namespace LANCommander.Launcher.Services
             ImportService = importService;
             MessageBusService = messageBusService;
 
-            DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
+            InstallService.OnInstallComplete += InstallService_OnInstallComplete;
             ImportService.OnImportComplete += ImportService_OnImportComplete;
         }
 
@@ -75,7 +75,7 @@ namespace LANCommander.Launcher.Services
             LibraryChanged();
         }
 
-        private async Task DownloadService_OnInstallComplete(Game game)
+        private async Task InstallService_OnInstallComplete(Game game)
         {
             if (OnLibraryChanged != null)
                 await OnLibraryChanged.Invoke(LibraryItems);
@@ -197,13 +197,6 @@ namespace LANCommander.Launcher.Services
             var game = await GameService.Get(key);
 
             return new LibraryItem(game, GroupSelector);
-        }
-
-        public async Task Install(LibraryItem libraryItem, string installDirectory = "", Guid[] addonIds = null)
-        {
-            var game = libraryItem.DataItem as Game;
-
-            await DownloadService.Add(game, installDirectory, addonIds);
         }
 
         public async Task LibraryChanged()

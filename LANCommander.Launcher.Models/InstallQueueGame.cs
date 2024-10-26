@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    public class DownloadQueueGame : IDownloadQueueItem
+    public class InstallQueueGame : IInstallQueueItem
     {
         public Guid Id { get; set; }
         public Guid[] AddonIds { get; set; }
@@ -24,10 +24,13 @@ namespace LANCommander.Launcher.Models
             {
                 switch (Status)
                 {
+                    case GameInstallStatus.Starting:
+                    case GameInstallStatus.Moving:
                     case GameInstallStatus.Downloading:
                     case GameInstallStatus.InstallingRedistributables:
                     case GameInstallStatus.InstallingMods:
                     case GameInstallStatus.InstallingExpansions:
+                    case GameInstallStatus.InstallingAddons:
                     case GameInstallStatus.RunningScripts:
                     case GameInstallStatus.DownloadingSaves:
                         return true;
@@ -50,7 +53,7 @@ namespace LANCommander.Launcher.Models
         public long BytesDownloaded { get; set; }
         public long TotalBytes { get; set; }
 
-        public DownloadQueueGame(SDK.Models.Game game)
+        public InstallQueueGame(SDK.Models.Game game)
         {
             Game = game;
             Id = game.Id;

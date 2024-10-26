@@ -4,7 +4,7 @@
 @using LANCommander.SDK.Helpers
 @inject GameService GameService
 @inject LibraryService LibraryService
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject ModalService ModalService
 @inject MessageBusService MessageBusService
 @inject SDK.Client Client
@@ -38,6 +38,13 @@
     <MenuItem OnClick="() => OpenSaveManager()">
         Manage Saves
     </MenuItem>
+
+    if (Settings.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+    {
+        <MenuItem OnClick="() => Modify()">
+            Modify
+        </MenuItem>
+    }
 
     <MenuItem OnClick="() => BrowseFiles()">
         Browse Files
@@ -129,7 +136,7 @@ else
 
     async Task Install()
     {
-        if (Settings.Games.InstallDirectories.Length > 1)
+        if (Settings.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
         {
             var modalOptions = new ModalOptions()
             {
@@ -137,17 +144,37 @@ else
                 Maximizable = false,
                 DefaultMaximized = false,
                 Closable = true,
-                OkText = "Install",
                 Draggable = true,
-                Centered = true
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
             };
 
             var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, Model);
         }
         else
         {
-            await LibraryService.Install(Model);
+            var game = Model.DataItem as Game;
+
+            await InstallService.Add(game);
         }
+    }
+
+    async Task Modify()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Modify {Model.Name}",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, Model);
     }
 
     async Task Uninstall()
@@ -175,7 +202,7 @@ else
         if (confirmed)
             await GameService.UninstallAsync(Game);
 
-        DownloadService.Remove(Game.Id);
+        InstallService.Remove(Game.Id);
 
         await LibraryService.LibraryChanged();
     }

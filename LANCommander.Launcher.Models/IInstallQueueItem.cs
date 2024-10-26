@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    public interface IDownloadQueueItem
+    public interface IInstallQueueItem
     {
         Guid Id { get; set; }
         Guid[] AddonIds { get; set; }

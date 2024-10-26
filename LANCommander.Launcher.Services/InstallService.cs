@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class DownloadService : BaseService
+    public class InstallService : BaseService
     {
         private readonly GameService GameService;
         private readonly SaveService SaveService;
@@ -27,7 +27,7 @@ namespace LANCommander.Launcher.Services
 
         private Stopwatch Stopwatch { get; set; }
 
-        public ObservableCollection<IDownloadQueueItem> Queue { get; set; }
+        public ObservableCollection<IInstallQueueItem> Queue { get; set; }
 
         public delegate Task OnQueueChangedHandler();
         public event OnQueueChangedHandler OnQueueChanged;
@@ -38,9 +38,9 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnInstallFailHandler(Game game);
         public event OnInstallFailHandler OnInstallFail;
 
-        public DownloadService(
+        public InstallService(
             SDK.Client client,
-            ILogger<DownloadService> logger,
+            ILogger<InstallService> logger,
             GameService gameService,
             SaveService saveService) : base(client, logger)
         {
@@ -49,7 +49,7 @@ namespace LANCommander.Launcher.Services
             Stopwatch = new Stopwatch();
             Settings = SettingService.GetSettings();
 
-            Queue = new ObservableCollection<IDownloadQueueItem>();
+            Queue = new ObservableCollection<IInstallQueueItem>();
 
             Queue.CollectionChanged += (sender, e) =>
             {
@@ -102,9 +102,25 @@ namespace LANCommander.Launcher.Services
                 }
             }
 
+            try
+            {
+                var gameCompletedQueueItems = Queue.Where(i => i.Status == GameInstallStatus.Complete && i.Id == game.Id).ToList();
+
+                foreach (var queueItem in gameCompletedQueueItems)
+                {
+                    Queue.Remove(queueItem);
+                }
+
+                OnQueueChanged?.Invoke();
+            }
+            catch (Exception ex)
+            {
+
+            }
+
             if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Idle))
             {
-                var queueItem = new DownloadQueueGame(gameInfo);
+                var queueItem = new InstallQueueGame(gameInfo);
 
                 queueItem.InstallDirectory = installDirectory;
 
@@ -117,11 +133,11 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogTrace("Download queue is empty, starting the game download immediately");
 
-                    queueItem.Status = GameInstallStatus.Downloading;
+                    queueItem.Status = GameInstallStatus.Starting;
 
                     Queue.Add(queueItem);
 
-                    await Install();
+                    await Next();
                 }
 
                 OnQueueChanged?.Invoke();
@@ -140,7 +156,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public void Remove(IDownloadQueueItem queueItem)
+        public void Remove(IInstallQueueItem queueItem)
         {
             if (queueItem != null)
             {
@@ -155,52 +171,76 @@ namespace LANCommander.Launcher.Services
 
         }
 
-        public async Task Install()
+        public async Task Next()
         {
             var currentItem = Queue.FirstOrDefault(i => i.State);
 
             if (currentItem == null)
                 return;
 
-            Game game = null;
-            SDK.Models.Game gameInfo = null;
+            Game localGame = null;
+            SDK.Models.Game remoteGame = null;
 
             try
             {
-                Logger?.LogTrace("Starting install for {GameTitle}", currentItem.Title);
+                localGame = await GameService.Get(currentItem.Id);
+                remoteGame = await Client.Games.GetAsync(currentItem.Id);
 
-                game = await GameService.Get(currentItem.Id);
-                gameInfo = await Client.Games.GetAsync(currentItem.Id);
-
-                if (game == null)
+                if (localGame == null)
                 {
                     Logger?.LogError("Game does not exist in local database, skipping");
+                    Remove(currentItem);
+                    OnQueueChanged?.Invoke();
                     return;
                 }
 
-                if (gameInfo == null)
+                if (remoteGame == null)
                 {
                     Logger?.LogError("Game info could not be retrieved from the server");
+
+                    currentItem.Status = GameInstallStatus.Failed;
+                    OnQueueChanged?.Invoke();
                     return;
+                }
+
+                if (localGame.Installed)
+                {
+                    // Probably doing a modification of some sort
+                    if (localGame.InstallDirectory.StartsWith(currentItem.InstallDirectory))
+                        await Client.Games.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, currentItem.AddonIds);
+                    else
+                    {
+                        await Move(currentItem, localGame, remoteGame);
+                    }
+                }
+                else
+                {
+                    await Install(currentItem, localGame, remoteGame);
                 }
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "An unknow error occured while trying to retrieve game info from the server");
+                Logger?.LogError(ex, "An unknown error occured while trying to retrieve game info from the server");
             }
+        }
 
-            using (var operation = Logger.BeginOperation("Installing game {GameTitle} ({GameId})", game.Title, game.Id))
+        public async Task Install(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame)
+        {
+            using (var operation = Logger.BeginOperation("Installing game {GameTitle} ({GameId})", localGame.Title, localGame.Id))
             {
                 string installDirectory;
 
+                currentItem.Status = GameInstallStatus.Downloading;
+                OnQueueChanged?.Invoke();
+
                 try
                 {
-                    installDirectory = await Client.Games.InstallAsync(gameInfo.Id, currentItem.InstallDirectory, currentItem.AddonIds);
+                    installDirectory = await Client.Games.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds);
 
-                    game.InstallDirectory = installDirectory;
-                    game.Installed = true;
-                    game.InstalledVersion = currentItem.Version;
-                    game.InstalledOn = DateTime.Now;
+                    localGame.InstallDirectory = installDirectory;
+                    localGame.Installed = true;
+                    localGame.InstalledVersion = currentItem.Version;
+                    localGame.InstalledOn = DateTime.Now;
                 }
                 catch (InstallCanceledException ex)
                 {
@@ -224,7 +264,7 @@ namespace LANCommander.Launcher.Services
                 #region Download Manuals
                 try
                 {
-                    foreach (var manual in gameInfo.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
+                    foreach (var manual in remoteGame.Media.Where(m => m.Type == SDK.Enums.MediaType.Manual))
                     {
                         var localPath = Path.Combine(MediaService.GetStoragePath(), $"{manual.FileId}-{manual.Crc32}");
 
@@ -245,11 +285,11 @@ namespace LANCommander.Launcher.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "An unknown error occurred while trying to download game manuals for game {GameTitle} ({GameId})", game.Title, game.Id);
+                    Logger?.LogError(ex, "An unknown error occurred while trying to download game manuals for game {GameTitle} ({GameId})", localGame.Title, localGame.Id);
                 }
                 #endregion
 
-                if (currentItem is DownloadQueueGame)
+                if (currentItem is InstallQueueGame)
                 {
                     currentItem.CompletedOn = DateTime.Now;
                     currentItem.Status = GameInstallStatus.Complete;
@@ -258,26 +298,48 @@ namespace LANCommander.Launcher.Services
 
                     try
                     {
-                        await GameService.Update(game);
+                        await GameService.Update(localGame);
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogError(ex, "An unknown error occurred while trying to write changes to the database after install of game {GameTitle} ({GameId})", game.Title, game.Id);
+                        Logger?.LogError(ex, "An unknown error occurred while trying to write changes to the database after install of game {GameTitle} ({GameId})", localGame.Title, localGame.Id);
                     }
 
                     OnQueueChanged?.Invoke();
 
-                    Logger?.LogTrace("Install of game {GameTitle} ({GameId}) complete!", game.Title, game.Id);
+                    Logger?.LogTrace("Install of game {GameTitle} ({GameId}) complete!", localGame.Title, localGame.Id);
 
                     // ShowCompletedNotification(currentItem);
 
-                    OnInstallComplete?.Invoke(game);
+                    OnInstallComplete?.Invoke(localGame);
 
                     operation.Complete();
                 }
             }
 
-            await Install();
+            await Next();
+        }
+
+        public async Task Move(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame)
+        {
+            using (var operation = Logger.BeginOperation("Moving game {GameTitle} ({GameId}) to {Destination}", localGame.Title, localGame.Id, currentItem.InstallDirectory))
+            {
+                var newInstallDirectory = Client.Games.GetInstallDirectory(remoteGame, currentItem.InstallDirectory);
+
+                newInstallDirectory = await Client.Games.MoveAsync(remoteGame, localGame.InstallDirectory, newInstallDirectory);
+
+                localGame.InstallDirectory = newInstallDirectory;
+
+                await GameService.Update(localGame);
+
+                currentItem.Status = GameInstallStatus.Complete;
+
+                OnQueueChanged?.Invoke();
+                OnInstallComplete?.Invoke(localGame);
+
+                operation.Complete();
+            }
+
         }
 
         /*private void ShowCompletedNotification(IDownloadQueueItem queueItem)

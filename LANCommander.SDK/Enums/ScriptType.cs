@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace LANCommander.SDK.Enums
 {
@@ -20,5 +21,11 @@ namespace LANCommander.SDK.Enums
         BeforeStart,
         [Display(Name = "After Stop")]
         AfterStop,
+        [Display(Name = "User Registration")]
+        UserRegistration,
+        [Display(Name = "User Login")]
+        UserLogin,
+        [Display(Name = "Application Start")]
+        ApplicationStart,
     }
 }

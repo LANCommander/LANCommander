@@ -2,30 +2,32 @@
 @using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @using LANCommander.Launcher.Services.Extensions
+@using System.ComponentModel.DataAnnotations
 @inherits FeedbackComponent<LibraryItem, string>
-@inject LibraryService LibraryService
+@inject InstallService InstallService
 @inject SDK.Client Client
 
-<Row Gutter="16">
-    <Col Span="12">
-        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;" />
-    </Col>
-    <Col Span="12">
-        <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;" />
-    </Col>
-</Row>
+<div style="padding: 16px;">
+    <Row Gutter="16">
+        <Col Span="12">
+            <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;" />
+        </Col>
+        <Col Span="12">
+            <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;" />
+        </Col>
+    </Row>
 
 
-@if (Addons.Any())
-{
-    <Divider Text="Addons" />
+    @if (Addons.Any())
+    {
+        <Divider Text="Addons" />
 
-    <CheckboxButtonGroup DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="DirectionVHType.Vertical" />
-}
+        <CheckboxButtonGroup DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="DirectionVHType.Vertical" />
+    }
 
-@if (Settings.Games.InstallDirectories.Length > 1)
-{
-    <Divider Text="Install Location" />
+    @if (Settings.Games.InstallDirectories.Length > 1)
+    {
+        <Divider Text="Install Location" />
         <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
             @foreach (var directory in Settings.Games.InstallDirectories)
             {
@@ -41,31 +43,80 @@
                 </Radio>
             }
         </RadioGroup>
-}
+    }
+</div>
+
+
+<Flex Gap="middle" Style="padding: 16px; padding-top: 0px" Justify="flex-end">
+    @if (GetOperation() != InstallOperation.None)
+    {
+        <Button Type="@ButtonType.Primary" OnClick="Install">@GetOperation()</Button>
+    }
+
+    <Button OnClick="() => Close()">Close</Button>
+</Flex>
 
 @code {
     Settings Settings = SettingService.GetSettings();
 
     string SelectedDirectory = "";
+
     List<SDK.Models.Game> Addons = new();
+
     SDK.Models.Game RemoteGame;
+    Data.Models.Game Game;
 
     Guid[] SelectedAddonIds = new Guid[] { };
 
+    enum InstallOperation
+    {
+        None,
+        Install,
+        Move,
+        Modify,
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        SelectedDirectory = Settings.Games.InstallDirectories.First();
+        Game = Options.DataItem as Game;
 
-        var game = Options.DataItem as Game;
+        if (Game.Installed)
+            SelectedDirectory = Settings.Games.InstallDirectories.FirstOrDefault(d => Game.InstallDirectory.StartsWith(d));
+
+        if (String.IsNullOrWhiteSpace(SelectedDirectory))
+            SelectedDirectory = Settings.Games.InstallDirectories.First();
 
         RemoteGame = await Client.Games.GetAsync(Options.Key);
 
         Addons = RemoteGame.DependentGames.Where(g => g.Type.IsIn(SDK.Enums.GameType.Expansion, SDK.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
     }
 
-    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    async Task Close()
     {
-        LibraryService.Install(Options, SelectedDirectory, SelectedAddonIds);
+        await CloseFeedbackAsync();
+    }
+
+    async Task Install()
+    {
+        var game = Options.DataItem as Game;
+
+        InstallService.Add(game, SelectedDirectory, SelectedAddonIds);
+        
+        await CloseFeedbackAsync();
+    }
+
+    InstallOperation GetOperation()
+    {
+        if (!Game.Installed)
+            return InstallOperation.Install;
+
+        if (Game.DependentGames.Any(g => !g.Installed && SelectedAddonIds.Contains(g.Id)))
+            return InstallOperation.Modify;
+
+        if (!Game.InstallDirectory.StartsWith(SelectedDirectory))
+            return InstallOperation.Move;
+
+        return InstallOperation.None;
     }
 
     void OnAddonsSelectedChange(string[] selectedIds)

@@ -9,7 +9,7 @@
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
 @inject LibraryService LibraryService
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject GameService GameService
 @inject ModalService ModalService
 @inject ConfirmService ConfirmService
@@ -158,9 +158,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        DownloadService.OnQueueChanged += OnQueueChanged;
-        DownloadService.OnInstallFail += OnInstallFail;
-        DownloadService.OnInstallComplete += OnInstallComplete;
+        InstallService.OnQueueChanged += OnQueueChanged;
+        InstallService.OnInstallFail += OnInstallFail;
+        InstallService.OnInstallComplete += OnInstallComplete;
         GameService.OnUninstallComplete += OnUninstallComplete;
 
         LibraryService.GroupSelector = (libraryItem) =>
@@ -224,20 +224,22 @@
                 Closable = true,
                 OkText = "Install",
                 Draggable = true,
-                Centered = true
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
             };
 
             var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, item);
         }
         else
         {
-            await LibraryService.Install(item);
+            await InstallService.Add(game);
         }
     }
 
     async Task OnQueueChanged()
     {
-        var queueItem = DownloadService.Queue.FirstOrDefault(i => SelectedItem != null && i.Id == SelectedItem.Key);
+        var queueItem = InstallService.Queue.FirstOrDefault(i => SelectedItem != null && i.Id == SelectedItem.Key);
 
         if (queueItem != null)
         {

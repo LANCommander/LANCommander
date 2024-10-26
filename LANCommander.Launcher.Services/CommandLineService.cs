@@ -13,7 +13,7 @@ namespace LANCommander.Launcher.Services
     public class CommandLineService : BaseService
     {
         private readonly GameService GameService;
-        private readonly DownloadService DownloadService;
+        private readonly InstallService InstallService;
         private readonly ImportService ImportService;
         private readonly ProfileService ProfileService;
 
@@ -23,12 +23,12 @@ namespace LANCommander.Launcher.Services
             SDK.Client client,
             ILogger<CommandLineService> logger,
             GameService gameService,
-            DownloadService downloadService,
+            InstallService installService,
             ImportService importService,
             ProfileService profileService) : base(client, logger)
         {
             GameService = gameService;
-            DownloadService = downloadService;
+            InstallService = installService;
             ImportService = importService;
             ProfileService = profileService;
         }
@@ -103,8 +103,8 @@ namespace LANCommander.Launcher.Services
             {
                 var game = await GameService.Get(options.GameId);
 
-                await DownloadService.Add(game, options.InstallDirectory);
-                await DownloadService.Install();
+                await InstallService.Add(game, options.InstallDirectory);
+                await InstallService.Next();
 
                 game = await GameService.Get(options.GameId);
 

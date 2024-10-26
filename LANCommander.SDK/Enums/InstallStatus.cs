@@ -10,6 +10,8 @@ namespace LANCommander.SDK.Enums
     public enum GameInstallStatus
     {
         Idle,
+        Starting,
+        Moving,
         Downloading,
         [Display(Name = "Installing Redistributables")]
         InstallingRedistributables,
@@ -17,6 +19,8 @@ namespace LANCommander.SDK.Enums
         InstallingMods,
         [Display(Name = "Installing Expansions")]
         InstallingExpansions,
+        [Display(Name = "Installing Addons")]
+        InstallingAddons,
         [Display(Name = "Running Scripts")]
         RunningScripts,
         [Display(Name = "Downloading Saves")]

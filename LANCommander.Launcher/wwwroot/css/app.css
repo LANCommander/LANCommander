@@ -579,8 +579,28 @@ footer {
   display: none;
 }
 
+.install-dialog-addons-selector .ant-collapse-header {
+  padding: 6px 8px;
+}
+.install-dialog-addons-selector .ant-collapse-content {
+  border: 0;
+}
 .install-dialog-addons-selector + .install-dialog-directory-selector {
   margin-top: 16px;
+}
+
+.checkbox-button-group {
+  width: 100%;
+}
+.checkbox-button-group .ant-btn {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+}
+.checkbox-button-group .ant-btn span:not(.anticon) {
+  flex-grow: 1;
+  text-align: left;
+  margin-left: none;
 }
 
 /*# sourceMappingURL=app.css.map */

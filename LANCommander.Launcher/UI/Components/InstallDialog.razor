@@ -8,50 +8,40 @@
 
 <Row Gutter="16">
     <Col Span="12">
-        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
+        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;" />
     </Col>
     <Col Span="12">
-        <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" />
+        <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;" />
     </Col>
 </Row>
 
+
 @if (Addons.Any())
 {
-    <Collapse Class="install-dialog-addons-selector">
-        <Panel Header="Addons">
-            <ExtraTemplate>
-                @SelectedAddonIds.Length / @Addons.Count Selected
-            </ExtraTemplate>
-            <ChildContent>
-                <CheckboxGroup Style="width: 100%" TValue="string" ValueChanged="@OnAddonsSelectedChange">
-                    @foreach (var addon in Addons)
-                    {
-                        <Checkbox Label="@addon.Id.ToString()">
-                            <Text>@addon.Title</Text>
-                            <Text Type="@TextElementType.Secondary">@addon.Description</Text>
-                        </Checkbox>
-                    }
-                </CheckboxGroup>
-            </ChildContent>
-        </Panel>
-    </Collapse>
+    <Divider Text="Addons" />
+
+    <CheckboxButtonGroup DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="DirectionVHType.Vertical" />
 }
 
-<RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
-    @foreach (var directory in Settings.Games.InstallDirectories)
-    {
-        <Radio RadioButton Value="@directory">
-            <GridRow>
-                <GridCol Flex="@("auto")">
-                    @directory
-                </GridCol>
-                <GridCol>
-                    @ByteSizeLib.ByteSize.FromBytes(GetFreeSpace(directory))
-                </GridCol>
-            </GridRow>
-        </Radio>
-    }
-</RadioGroup>
+@if (Settings.Games.InstallDirectories.Length > 1)
+{
+    <Divider Text="Install Location" />
+        <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
+            @foreach (var directory in Settings.Games.InstallDirectories)
+            {
+                <Radio RadioButton Value="@directory">
+                    <GridRow>
+                        <GridCol Flex="@("auto")">
+                            @directory
+                        </GridCol>
+                        <GridCol>
+                            @ByteSizeLib.ByteSize.FromBytes(GetFreeSpace(directory))
+                        </GridCol>
+                    </GridRow>
+                </Radio>
+            }
+        </RadioGroup>
+}
 
 @code {
     Settings Settings = SettingService.GetSettings();

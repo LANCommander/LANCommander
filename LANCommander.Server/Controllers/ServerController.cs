@@ -77,7 +77,7 @@ namespace LANCommander.Server.Controllers
 
                 foreach (var file in files)
                 {
-                    var entryName = file.Substring(server.WorkingDirectory.Length, file.Length - server.WorkingDirectory.Length).Replace(Path.DirectorySeparatorChar, '/');
+                    var entryName = file.Substring(server.WorkingDirectory.Length, file.Length - server.WorkingDirectory.Length).Replace(Path.DirectorySeparatorChar, '/').TrimStart('/');
 
                     if (System.IO.File.Exists(file))
                     {

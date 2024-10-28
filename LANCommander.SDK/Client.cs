@@ -106,8 +106,7 @@ namespace LANCommander.SDK
                 BaseUrl = new Uri(baseUrl);
                 ApiClient = new RestClient(new RestClientOptions
                 {
-                    BaseUrl = BaseUrl,
-                    ThrowOnAnyError = true
+                    BaseUrl = BaseUrl
                 });
             }
         }
@@ -446,6 +445,20 @@ namespace LANCommander.SDK
                 UserName = username,
                 Password = password
             }));
+
+            if (response.ErrorException != null)
+            {
+                Logger?.LogError(response.ErrorException, "Registration failed for user {UserName}", username);
+
+                if (!String.IsNullOrWhiteSpace(response?.Data?.Message))
+                {
+                    Logger?.LogError(response.Data.Message);
+
+                    throw new Exception(response.Data.Message);
+                }
+                else
+                    throw response.ErrorException;
+            }
 
             switch (response.StatusCode)
             {

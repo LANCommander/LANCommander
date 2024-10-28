@@ -60,7 +60,7 @@ namespace LANCommander.Launcher.Models
             Title = game.Title;
             Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
             QueuedOn = DateTime.Now;
-            Status = GameInstallStatus.Idle;
+            Status = GameInstallStatus.Queued;
 
             var cover = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
 

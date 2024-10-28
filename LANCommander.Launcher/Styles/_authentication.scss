@@ -40,8 +40,11 @@
     }
 
     .login-form-pane {
-        padding: 24px;
         background: #000;
+
+        .ant-form {
+            padding: 24px;
+        }
 
         .ant-form-item:last-child {
             margin-bottom: 0;

@@ -24,7 +24,7 @@
     }
 
     <h2>Up Next</h2>
-    @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State && qi.Status == SDK.Enums.GameInstallStatus.Idle))
+    @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State && qi.Status == SDK.Enums.GameInstallStatus.Queued))
     {
         <div class="queue-item">
             <MediaImage Id="@queueItem.CoverId" Class="queue-item-cover" />
@@ -39,12 +39,12 @@
         </div>
     }
 
-    @if (!InstallService.Queue.Any(qi => qi.Status == SDK.Enums.GameInstallStatus.Idle))
+    @if (!InstallService.Queue.Any(qi => qi.Status == SDK.Enums.GameInstallStatus.Queued))
     {
         <Empty Simple Description="@("The queue is empty")" />
     }
 
-    @if (InstallService.Queue.Any(qi => !qi.State && qi.Status != SDK.Enums.GameInstallStatus.Idle && qi.Status != SDK.Enums.GameInstallStatus.Failed && qi.Status != SDK.Enums.GameInstallStatus.Canceled))
+    @if (InstallService.Queue.Any(qi => !qi.State && qi.Status != SDK.Enums.GameInstallStatus.Queued && qi.Status != SDK.Enums.GameInstallStatus.Failed && qi.Status != SDK.Enums.GameInstallStatus.Canceled))
     {
         <h2>Completed</h2>
         @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State))

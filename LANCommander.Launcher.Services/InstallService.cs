@@ -118,7 +118,7 @@ namespace LANCommander.Launcher.Services
 
             }
 
-            if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Idle))
+            if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Queued))
             {
                 var queueItem = new InstallQueueGame(gameInfo);
 

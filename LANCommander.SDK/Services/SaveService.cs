@@ -8,6 +8,7 @@ using SharpCompress.Archives;
 using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
 using SharpCompress.Readers;
+using SharpCompress.Writers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -240,14 +241,14 @@ namespace LANCommander.SDK.Services
         {
             var manifest = ManifestHelper.Read(installDirectory, gameId);
 
-            var temp = Path.GetTempFileName();
-
             if (manifest.SavePaths != null && manifest.SavePaths.Count() > 0)
             {
-                using (var archive = ZipArchive.Create())
+                using (var ms = new MemoryStream())
+                using (var writer = WriterFactory.Open(ms, ArchiveType.Zip, new WriterOptions(CompressionType.Deflate)
                 {
-                    archive.DeflateCompressionLevel = SharpCompress.Compressors.Deflate.CompressionLevel.BestCompression;
-
+                    ArchiveEncoding = new ArchiveEncoding() { Default = Encoding.UTF8 }
+                }))
+                {
                     #region Add files from defined paths
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
@@ -258,11 +259,9 @@ namespace LANCommander.SDK.Services
                             var localPath = GetLocalPath(entry.ActualPath, installDirectory);
 
                             if (Directory.Exists(localPath))
-                                AddDirectoryToZip(archive, entry.ArchivePath, localPath, savePath.Id);
+                                AddDirectoryToZip(writer, entry.ArchivePath, localPath, savePath.Id);
                             else if (File.Exists(localPath))
-                            {
-                                archive.AddEntry($"Files/{savePath.Id}/{entry.ArchivePath}", localPath);
-                            }
+                                writer.Write($"Files/{savePath.Id}/{entry.ArchivePath}", localPath);
                         }
                     }
                     #endregion
@@ -301,27 +300,15 @@ namespace LANCommander.SDK.Services
                             File.Delete(tempRegFile);
                         }
 
-                        archive.AddEntry("_registry.reg", new MemoryStream(Encoding.UTF8.GetBytes(exportFile.ToString())), true);
+                        writer.Write("_registry.reg", new MemoryStream(Encoding.UTF8.GetBytes(exportFile.ToString())));
                     }
                     #endregion
 
-                    var tempManifest = Path.GetTempFileName();
+                    writer.Write(ManifestHelper.ManifestFilename, new MemoryStream(Encoding.UTF8.GetBytes(ManifestHelper.Serialize(manifest))));
 
-                    File.WriteAllText(tempManifest, ManifestHelper.Serialize(manifest));
+                    ms.Seek(0, SeekOrigin.Begin);
 
-                    archive.AddEntry(ManifestHelper.ManifestFilename, tempManifest);
-
-                    using (var op = Logger.BeginOperation("Pack and upload save"))
-                    {
-                        using (var ms = new MemoryStream())
-                        {
-                            archive.SaveTo(ms);
-
-                            ms.Seek(0, SeekOrigin.Begin);
-
-                            var save = Upload(manifest.Id, ms.ToArray());
-                        }
-                    }
+                    var save = Upload(manifest.Id, ms.ToArray());
                 }
             }
         }
@@ -419,13 +406,13 @@ namespace LANCommander.SDK.Services
             return archivePath;
         }
 
-        private void AddDirectoryToZip(ZipArchive zipArchive, string archivePath, string localPath, Guid pathId)
+        private void AddDirectoryToZip(IWriter writer, string archivePath, string localPath, Guid pathId)
         {
             foreach (var file in Directory.GetFiles(localPath, "*", SearchOption.AllDirectories))
             {
                 var fileArchivePath = file.Substring(localPath.Length).Replace(Path.DirectorySeparatorChar, '/').Trim('/');
 
-                zipArchive.AddEntry($"Files/{pathId}/{archivePath}/{fileArchivePath}", file);
+                writer.Write($"Files/{pathId}/{archivePath}/{fileArchivePath}", file);
             }
         }
 

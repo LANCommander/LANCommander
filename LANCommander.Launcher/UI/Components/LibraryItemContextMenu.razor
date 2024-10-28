@@ -82,8 +82,8 @@ else
     [Parameter] public LibraryItem Model { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
 
-    Data.Models.Game Game { get; set; }
-    IEnumerable<SDK.Models.Action> GameActions { get; set; }
+    Data.Models.Game Game { get; set; } = new Game();
+    IEnumerable<SDK.Models.Action> GameActions { get; set; } = new List<SDK.Models.Action>();
 
     Settings Settings;
 
@@ -103,7 +103,7 @@ else
             {
                 var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
 
-                if (manifest != null)
+                if (manifest != null && manifest.Actions != null)
                     GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
             }
         }

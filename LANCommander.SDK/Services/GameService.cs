@@ -919,6 +919,8 @@ namespace LANCommander.SDK.Services
                     Running[gameId] = cancellationTokenSource;
 
                     await task;
+
+                    Running.Remove(gameId);
                 }
                 catch (Exception ex)
                 {

@@ -18,8 +18,6 @@ namespace LANCommander.SDK
         private readonly Client Client;
         private readonly ILogger Logger;
 
-        public ICollection<Process> Processes { get; private set; } = new List<Process>();
-
         private Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
 
         public GameExecutionContext(Client client)

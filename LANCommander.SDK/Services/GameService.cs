@@ -62,7 +62,8 @@ namespace LANCommander.SDK.Services
 
         private GameInstallProgress GameInstallProgress = new GameInstallProgress();
 
-        private Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
+        private Dictionary<Guid, CancellationTokenSource> Running = new Dictionary<Guid, CancellationTokenSource>();
+        private Dictionary<Guid, IEnumerable<Process>> RunningProcesses = new Dictionary<Guid, IEnumerable<Process>>();
 
         public GameService(Client client, string defaultInstallDirectory)
         {
@@ -912,9 +913,10 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    var task = context.ExecuteAsync(installDirectory, gameId, action);
+                    var cancellationTokenSource = new CancellationTokenSource();
+                    var task = context.ExecuteAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
 
-                    RunningProcesses[gameId] = context.Process;
+                    Running[gameId] = cancellationTokenSource;
 
                     await task;
                 }
@@ -943,40 +945,20 @@ namespace LANCommander.SDK.Services
 
         public async Task Stop(Guid gameId)
         {
-            await Task.Run(() =>
+            if (Running.ContainsKey(gameId))
             {
-                if (RunningProcesses.ContainsKey(gameId))
-                {
-                    var process = RunningProcesses[gameId];
+                await Running[gameId].CancelAsync();
 
-                    process.CloseMainWindow();
-
-                    RunningProcesses.Remove(gameId);
-                }
-            });
+                Running.Remove(gameId);
+            }
         }
 
         public bool IsRunning(Guid gameId)
         {
-            if (!RunningProcesses.ContainsKey(gameId))
+            if (!Running.ContainsKey(gameId))
                 return false;
 
-            var process = RunningProcesses[gameId];
-
-            try
-            {
-                if (process.HasExited)
-                {
-                    RunningProcesses.Remove(gameId);
-                    return false;
-                }
-                else
-                    return true;
-            }
-            catch
-            {
-                return false;
-            }
+            return !Running[gameId].IsCancellationRequested;
         }
 
         public async Task ImportAsync(string archivePath)

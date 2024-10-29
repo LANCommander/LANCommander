@@ -42,14 +42,18 @@ namespace LANCommander.SDK.Extensions
 
                         if (!process.HasExited)
                         {
+                            
                             try
                             {
                                 await process.WaitForExitAsync(cancellationToken);
                             }
                             catch (OperationCanceledException)
                             {
-                                if (!process.HasExited)
-                                    process.Kill(true);
+                                await Task.Run(() =>
+                                {
+                                    if (!process.HasExited)
+                                        process.Kill();
+                                });
                             }
                         }
                     }
@@ -65,16 +69,20 @@ namespace LANCommander.SDK.Extensions
                     {
                         var childProcess = Process.GetProcessById(childProcessId);
 
-                        if (!childProcess.HasExited)
-                            childProcess.Kill(true);
+                        await Task.Run(() =>
+                        {
+                            if (!childProcess.HasExited)
+                                childProcess.Kill();
+                        });
                     }
                     catch { }
                 }
 
-                if (!parentProcess.HasExited)
+                await Task.Run(() =>
                 {
-                    parentProcess.Kill(true);
-                }
+                    if (!parentProcess.HasExited)
+                        parentProcess.Kill();
+                });
             }
         }
     }

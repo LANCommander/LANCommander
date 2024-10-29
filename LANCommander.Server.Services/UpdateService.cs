@@ -172,7 +172,7 @@ namespace LANCommander.Server.Services
             {
                 foreach (ZipArchiveEntry entry in archive.Entries.Where(e => e.FullName == processExecutable))
                 {
-                    entry.ExtractToFile(Path.Combine(processExecutable, entry.FullName));
+                    entry.ExtractToFile(processExecutable);
                 }
             }
 

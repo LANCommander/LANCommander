@@ -8,6 +8,7 @@ using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Steamworks.Ugc;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -43,7 +44,7 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
         public event OnLibraryItemsFilteredHandler OnLibraryItemsFiltered;
 
-        public Func<LibraryItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
+        public Filter Filter { get; set; } = new Filter();
 
         public LibraryService(
             SDK.Client client,
@@ -66,6 +67,13 @@ namespace LANCommander.Launcher.Services
 
             InstallService.OnInstallComplete += InstallService_OnInstallComplete;
             ImportService.OnImportComplete += ImportService_OnImportComplete;
+            Filter.OnChanged += Filter_OnChanged;
+        }
+
+        private async Task Filter_OnChanged()
+        {
+            if (OnLibraryItemsFiltered != null)
+                await OnLibraryItemsFiltered.Invoke(Filter.ApplyFilter(LibraryItems));
         }
 
         private async Task ImportService_OnImportComplete()
@@ -85,6 +93,9 @@ namespace LANCommander.Launcher.Services
         {
             LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
 
+            if (OnLibraryItemsFiltered != null)
+                await OnLibraryItemsFiltered.Invoke(Filter.ApplyFilter(LibraryItems));
+
             return LibraryItems;
         }
 
@@ -95,31 +106,15 @@ namespace LANCommander.Launcher.Services
 
         public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
         {
-            var settings = SettingService.GetSettings();
-
             LibraryItems.Clear();
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
                 var games = await GameService.Get(x => true).AsNoTracking().ToListAsync();
 
-                switch (settings.Filter.GroupBy)
-                {
-                    case Models.Enums.GroupBy.None:
-                        GroupSelector = (g) => new string[] { };
-                        break;
-                    case Models.Enums.GroupBy.Collection:
-                        GroupSelector = (g) => (g.DataItem as Game).Collections.Select(c => c.Name).ToArray();
-                        break;
-                    case Models.Enums.GroupBy.Genre:
-                        GroupSelector = (g) => (g.DataItem as Game).Genres.Select(ge => ge.Name).ToArray();
-                        break;
-                    case Models.Enums.GroupBy.Platform:
-                        GroupSelector = (g) => (g.DataItem as Game).Platforms.Select(p => p.Name).ToArray();
-                        break;
-                }
+                Filter.Populate(games);
 
-                foreach (var item in games.Select(g => new LibraryItem(g, GroupSelector)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
+                foreach (var item in games.Select(g => new LibraryItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
                 {
                     LibraryItems.Add(item);
                 }
@@ -127,54 +122,12 @@ namespace LANCommander.Launcher.Services
                 op.Complete();
             }
 
-            return await FilterLibraryItems(LibraryItems);
+            return LibraryItems;
         }
 
-        async Task<IEnumerable<LibraryItem>> FilterLibraryItems(IEnumerable<LibraryItem> items)
+        public IEnumerable<LibraryItem> GetFilteredItems()
         {
-            var settings = SettingService.GetSettings();
-
-            using (var op = Logger.BeginOperation(LogLevel.Trace, "Filtering library items"))
-            {
-                if (OnPreLibraryItemsFiltered != null)
-                    await OnPreLibraryItemsFiltered.Invoke(items);
-
-                if (!String.IsNullOrWhiteSpace(settings.Filter.Title))
-                    items = items.Where(i => i.Name?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
-
-                if (settings.Filter.Engines != null && settings.Filter.Engines.Any())
-                    items = items.Where(i => settings.Filter.Engines.Any(e => e == (i.DataItem as Game)?.Engine?.Name));
-
-                if (settings.Filter.Genres != null && settings.Filter.Genres.Any())
-                    items = items.Where(i => settings.Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg == g.Name)));
-
-                if (settings.Filter.Tags != null && settings.Filter.Tags.Any())
-                    items = items.Where(i => settings.Filter.Tags.Any(ft => (i.DataItem as Game).Tags.Any(t => ft == t.Name)));
-
-                if (settings.Filter.Developers != null && settings.Filter.Developers.Any())
-                    items = items.Where(i => settings.Filter.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc == c.Name)));
-
-                if (settings.Filter.Publishers != null && settings.Filter.Publishers.Any())
-                    items = items.Where(i => settings.Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc == c.Name)));
-
-                if (settings.Filter.MinPlayers != null)
-                    items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= settings.Filter.MinPlayers && mm.MaxPlayers >= settings.Filter.MinPlayers));
-
-                if (settings.Filter.MaxPlayers != null)
-                    items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= settings.Filter.MaxPlayers));
-
-                if (settings.Filter.Installed)
-                    items = items.Where(i => (i.DataItem as Game).Installed);
-
-                items = items.Where(i => (i.DataItem as Game).Type.IsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
-
-                if (OnLibraryItemsFiltered != null)
-                    await OnLibraryItemsFiltered.Invoke(items);
-
-                op.Complete();
-            }
-
-            return items;
+            return Filter.ApplyFilter(LibraryItems);
         }
 
         public LibraryItem GetLibraryItem(Guid key)
@@ -196,7 +149,7 @@ namespace LANCommander.Launcher.Services
         {
             var game = await GameService.Get(key);
 
-            return new LibraryItem(game, GroupSelector);
+            return new LibraryItem(game);
         }
 
         public async Task LibraryChanged()

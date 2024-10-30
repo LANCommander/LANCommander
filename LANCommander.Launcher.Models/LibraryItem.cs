@@ -43,7 +43,7 @@ namespace LANCommander.Launcher.Models
             DataItem = collection;
         }
 
-        public LibraryItem(Game game, Func<LibraryItem, string[]> groupSelector)
+        public LibraryItem(Game game)
         {
             Key = game.Id;
             Type = LibraryItemType.Game;
@@ -64,8 +64,6 @@ namespace LANCommander.Launcher.Models
 
             if (icon != null)
                 IconId = icon.Id;
-
-            Groups = groupSelector.Invoke(this);
         }
 
         public LibraryItem(Redistributable redistributable)

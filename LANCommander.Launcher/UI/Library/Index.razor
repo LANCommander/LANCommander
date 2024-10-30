@@ -163,14 +163,6 @@
         InstallService.OnInstallComplete += OnInstallComplete;
         GameService.OnUninstallComplete += OnUninstallComplete;
 
-        LibraryService.GroupSelector = (libraryItem) =>
-        {
-            if (libraryItem.DataItem is Game game)
-                return game.Collections.Select(c => c.Name).ToArray();
-            else
-                return new string[] { };
-        };
-
         await LoadData();
     }
 

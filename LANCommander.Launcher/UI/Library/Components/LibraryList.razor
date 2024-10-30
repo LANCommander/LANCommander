@@ -4,7 +4,7 @@
 @inject ImportService ImportService
 @inject MessageBusService MessageBusService
 
-<div class="library-list">
+<Flex Vertical Class="library-list">
     <Collapse>
         @if (Groups.Count > 1)
         {
@@ -20,27 +20,37 @@
         else
         {
             <Panel Class="no-header">
-                <AntList DataSource="LibraryService.LibraryItems" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                <AntList DataSource="LibraryItems" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
                     <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                 </AntList>
             </Panel>
         }
     </Collapse>
-</div>
+    
+    <LibraryItemFilter />
+</Flex>
 
 @code {
     [Parameter] public Guid? SelectedItem { get; set; }
     [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
 
+    string Search { get; set; } = "";
     List<string> Groups = new List<string>();
     IEnumerable<LibraryItem> LibraryItems;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LibraryService.OnLibraryChanged += UpdateGroups;
-        LibraryService.OnLibraryItemsFiltered += UpdateGroups;
+        LibraryService.OnLibraryItemsFiltered += LoadFilteredItems;
 
-        UpdateGroups(LibraryService.LibraryItems);
+        await LibraryService.RefreshLibraryItemsAsync();
+    }
+
+    async Task LoadFilteredItems(IEnumerable<LibraryItem> libraryItems)
+    {
+        LibraryItems = libraryItems;
+
+        await UpdateGroups();
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task SelectItem(LibraryItem item)
@@ -49,10 +59,8 @@
             await OnItemSelected.InvokeAsync(item.Key);
     }
 
-    async Task UpdateGroups(IEnumerable<LibraryItem> items)
+    async Task UpdateGroups()
     {
-        LibraryItems = items;
-
         Groups = LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
 
         if (LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
@@ -63,7 +71,6 @@
 
     public void Dispose()
     {
-        LibraryService.OnLibraryChanged -= UpdateGroups;
-        LibraryService.OnLibraryItemsFiltered -= UpdateGroups;
+        LibraryService.OnLibraryItemsFiltered -= LoadFilteredItems;
     }
 }

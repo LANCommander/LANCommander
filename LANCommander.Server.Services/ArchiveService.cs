@@ -17,16 +17,14 @@ namespace LANCommander.Server.Services
     public class ArchiveService : BaseDatabaseService<Archive>
     {
         private readonly StorageLocationService StorageLocationService;
-        private readonly IFusionCache Cache;
 
         public ArchiveService(
             ILogger<ArchiveService> logger,
+            IFusionCache cache,
             Repository<Archive> repository,
-            StorageLocationService storageLocationService,
-            IFusionCache cache) : base(logger, repository)
+            StorageLocationService storageLocationService) : base(logger, cache, repository)
         {
             StorageLocationService = storageLocationService;
-            Cache = cache;
         }
 
         public string GetArchiveFileLocation(Archive archive)

@@ -4,6 +4,7 @@ using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Data;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -15,8 +16,9 @@ namespace LANCommander.Server.Services
 
         public RoleService(
             ILogger<RoleService> logger,
+            IFusionCache cache,
             Repository<Role> repository,
-            IdentityContextFactory identityContextFactory) : base(logger, repository)
+            IdentityContextFactory identityContextFactory) : base(logger, cache, repository)
         {
             IdentityContextFactory = identityContextFactory;
         }

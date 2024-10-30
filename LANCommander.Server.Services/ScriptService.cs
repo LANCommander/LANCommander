@@ -3,6 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
 using System.Security.Cryptography.X509Certificates;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -10,7 +11,8 @@ namespace LANCommander.Server.Services
     {
         public ScriptService(
             ILogger<ScriptService> logger,
-            Repository<Script> repository) : base(logger, repository) { }
+            IFusionCache cache,
+            Repository<Script> repository) : base(logger, cache, repository) { }
 
         public static IEnumerable<Snippet> GetSnippets()
         {

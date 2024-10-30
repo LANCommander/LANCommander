@@ -5,6 +5,7 @@ using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -12,7 +13,8 @@ namespace LANCommander.Server.Services
     {
         public ServerConsoleService(
             ILogger<ServerConsoleService> logger,
-            Repository<ServerConsole> repository) : base(logger, repository) { }
+            IFusionCache cache,
+            Repository<ServerConsole> repository) : base(logger, cache, repository) { }
 
         public async Task<string[]> ReadLog(Guid logId)
         {

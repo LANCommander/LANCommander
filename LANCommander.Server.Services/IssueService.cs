@@ -7,6 +7,7 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -14,7 +15,8 @@ namespace LANCommander.Server.Services
     {
         public IssueService(
             ILogger<IssueService> logger,
-            Repository<Issue> repository) : base(logger, repository)
+            IFusionCache cache,
+            Repository<Issue> repository) : base(logger, cache, repository)
         {
         }
 

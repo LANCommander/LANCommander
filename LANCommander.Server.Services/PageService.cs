@@ -12,15 +12,10 @@ namespace LANCommander.Server.Services
 {
     public class PageService : BaseDatabaseService<Page>
     {
-        private readonly IFusionCache Cache;
-
         public PageService(
             ILogger<PageService> logger,
-            Repository<Page> repository,
-            IFusionCache cache) : base(logger, repository)
-        {
-            Cache = cache;
-        }
+            IFusionCache cache,
+            Repository<Page> repository) : base(logger, cache,repository) { }
 
         public override async Task<Page> Add(Page entity)
         {

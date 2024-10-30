@@ -9,6 +9,7 @@ using YamlDotNet.Serialization.NamingConventions;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -18,8 +19,9 @@ namespace LANCommander.Server.Services
 
         public RedistributableService(
             ILogger<RedistributableService> logger,
+            IFusionCache cache,
             Repository<Redistributable> repository,
-            ArchiveService archiveService) : base(logger, repository)
+            ArchiveService archiveService) : base(logger, cache, repository)
         {
             ArchiveService = archiveService;
         }

@@ -5,21 +5,27 @@ using LANCommander.Server.Services.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
     public abstract class BaseDatabaseService<T> : BaseService, IBaseDatabaseService<T> where T : class, IBaseModel
     {
+        protected readonly IFusionCache Cache;
         public Repository<T> Repository { get; set; }
 
-        public BaseDatabaseService(ILogger logger, Repository<T> repository) : base(logger)
+        public BaseDatabaseService(ILogger logger, IFusionCache cache, Repository<T> repository) : base(logger)
         {
+            Cache = cache;
             Repository = repository;
         }
 
         public virtual async Task<ICollection<T>> Get()
         {
-            return await Get(x => true);
+            return await Cache.GetOrSetAsync($"{typeof(T).FullName}:Get", async _ =>
+            {
+                return await Get(x => true);
+            }, TimeSpan.FromSeconds(30));
         }
 
         public virtual async Task<T> Get(Guid id)
@@ -80,6 +86,8 @@ namespace LANCommander.Server.Services
 
             if (existing == null)
             {
+                await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
+
                 entity = await Repository.Add(entity);
 
                 await Repository.SaveChanges();
@@ -102,6 +110,8 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> Update(T entity)
         {
+            await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
+
             entity = await Repository.Update(entity);
 
             await Repository.SaveChanges();
@@ -111,6 +121,8 @@ namespace LANCommander.Server.Services
 
         public virtual async Task Delete(T entity)
         {
+            await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
+
             Repository.Delete(entity);
             await Repository.SaveChanges();
         }

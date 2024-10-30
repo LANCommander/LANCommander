@@ -1,6 +1,7 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -9,7 +10,8 @@ namespace LANCommander.Server.Services
 
         public UserCustomFieldService(
             ILogger<UserCustomFieldService> logger,
-            Repository<UserCustomField> repository) : base(logger, repository) { }
+            IFusionCache cache,
+            Repository<UserCustomField> repository) : base(logger, cache, repository) { }
 
         public async Task<UserCustomField> Get(Guid userId, string name)
         {

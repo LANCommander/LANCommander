@@ -6,6 +6,7 @@ using Syncfusion.PdfToImageConverter;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -15,8 +16,9 @@ namespace LANCommander.Server.Services
 
         public MediaService(
             ILogger<MediaService> logger,
+            IFusionCache cache,
             Repository<Media> repository,
-            StorageLocationService storageLocationService) : base(logger, repository)
+            StorageLocationService storageLocationService) : base(logger, cache, repository)
         {
             StorageLocationService = storageLocationService;
         }

@@ -1,6 +1,7 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -8,6 +9,7 @@ namespace LANCommander.Server.Services
     {
         public EngineService(
             ILogger<EngineService> logger,
-            Repository<Engine> repository) : base(logger, repository) { }
+            IFusionCache cache,
+            Repository<Engine> repository) : base(logger, cache, repository) { }
     }
 }

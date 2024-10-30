@@ -26,10 +26,10 @@ namespace LANCommander.Server.Services
         private readonly TagService TagService;
         private readonly CompanyService CompanyService;
         private readonly GenreService GenreService;
-        private readonly IFusionCache Cache;
 
         public GameService(
             ILogger<GameService> logger,
+            IFusionCache cache,
             Repository<Game> repository,
             IMapper mapper,
             ArchiveService archiveService,
@@ -37,8 +37,7 @@ namespace LANCommander.Server.Services
             EngineService engineService,
             TagService tagService,
             CompanyService companyService,
-            GenreService genreService,
-            IFusionCache cache) : base(logger, repository)
+            GenreService genreService) : base(logger, cache,repository)
         {
             Mapper = mapper;
             ArchiveService = archiveService;
@@ -47,7 +46,6 @@ namespace LANCommander.Server.Services
             TagService = tagService;
             CompanyService = companyService;
             GenreService = genreService;
-            Cache = cache;
         }
 
         public override async Task<Game> Add(Game entity)

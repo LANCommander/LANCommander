@@ -6,6 +6,7 @@ using System.IO.Compression;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
@@ -16,9 +17,10 @@ namespace LANCommander.Server.Services
 
         public ServerService(
             ILogger<ServerService> logger,
+            IFusionCache cache,
             Repository<Data.Models.Server> repository,
             GameService gameService,
-            ArchiveService archiveService) : base(logger, repository)
+            ArchiveService archiveService) : base(logger, cache, repository)
         {
             GameService = gameService;
             ArchiveService = archiveService;

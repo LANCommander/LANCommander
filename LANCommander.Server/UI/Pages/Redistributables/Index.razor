@@ -99,7 +99,7 @@
 
         await RedistributableService.Delete(redistributable);
 
-        Redistributables = (await RedistributableService.Get(x => true)).OrderBy(r => r.Name);
+        Redistributables = (await RedistributableService.Get()).OrderBy(r => r.Name);
 
         Loading = false;
     }

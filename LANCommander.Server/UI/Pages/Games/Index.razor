@@ -180,8 +180,9 @@
 
     private async Task LoadData()
     {
-        Games = (await GameService
-            .Get(g =>
+        Games = ((await GameService
+            .Get())
+            .Where(g =>
                 (
                     g.Type == GameType.MainGame
                     ||
@@ -280,7 +281,7 @@
             Logger.LogError(ex, "Could not delete the game!");
         }
 
-        Games = (await GameService.Get(x => true)).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+        Games = (await GameService.Get()).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
         Loading = false;
     }

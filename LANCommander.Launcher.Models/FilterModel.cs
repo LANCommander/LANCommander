@@ -11,7 +11,9 @@ namespace LANCommander.Launcher.Models
     public class FilterModel
     {
         public string Title { get; set; }
-        public GroupBy GroupBy { get; set; }
+        public GroupBy GroupBy { get; set; } = GroupBy.Collection;
+        public SortBy SortBy { get; set; } = SortBy.Title;
+        public SortDirection SortDirection { get; set; } = SortDirection.Ascending;
         public ICollection<Engine> Engines { get; set; }
         public ICollection<Genre> Genres { get; set; }
         public ICollection<Tag> Tags { get; set; }

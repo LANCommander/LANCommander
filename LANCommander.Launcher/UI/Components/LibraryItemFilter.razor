@@ -27,6 +27,23 @@
                         <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
                     </Select>
                 </FormItem>
+                <FormItem Label="Sort By">
+                    <Flex>
+                        <Select @bind-Value="@context.SelectedOptions.SortBy" TItem="SortBy" TItemValue="SortBy" DataSource="Enum.GetValues<SortBy>()">
+                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                        </Select>
+
+                        @if (context.SelectedOptions.SortDirection == Models.Enums.SortDirection.Ascending)
+                        {
+                            <Button Icon="@IconType.Outline.SortAscending" OnClick="() => context.SelectedOptions.SortDirection = Models.Enums.SortDirection.Descending" />
+                        }
+                        else
+                        {
+                            <Button Icon="@IconType.Outline.SortDescending" OnClick="() => context.SelectedOptions.SortDirection = Models.Enums.SortDirection.Ascending" />
+                        }
+                    </Flex>
+                </FormItem>
                 <FormItem Label="Engine">
                     <TagsInput Entities="context.DataSource.Engines" @bind-Values="@context.SelectedOptions.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
                 </FormItem>

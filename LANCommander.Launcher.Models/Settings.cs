@@ -56,6 +56,8 @@ namespace LANCommander.Launcher.Models
     {
         public string? Title { get; set; }
         public GroupBy GroupBy { get; set; } = GroupBy.Collection;
+        public SortBy SortBy { get; set; } = SortBy.Title;
+        public SortDirection SortDirection { get; set; } = SortDirection.Ascending;
         public IEnumerable<string> Engines { get; set; }
         public IEnumerable<string> Genres { get; set; }
         public IEnumerable<string> Tags { get; set; }

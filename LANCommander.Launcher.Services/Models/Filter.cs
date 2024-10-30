@@ -1,5 +1,6 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK.Extensions;
 using Microsoft.Extensions.Logging;
 using System;
@@ -114,6 +115,34 @@ namespace LANCommander.Launcher.Models
 
             items = items.Where(i => (i.DataItem as Game).Type.IsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
 
+            switch (SelectedOptions.SortBy)
+            {
+                case Enums.SortBy.Title:
+                    items = items.OrderByTitle(i => i.Name ?? i.SortName, SelectedOptions.SortDirection);
+                    break;
+
+                case Enums.SortBy.DateAdded:
+                    items = items.OrderBy(i =>
+                        (i.DataItem as Game)?.CreatedOn ?? DateTime.MinValue,
+                        SelectedOptions.SortDirection);
+                    break;
+
+                case Enums.SortBy.DateReleased:
+                    items = items.OrderBy(i =>
+                        (i.DataItem as Game)?.ReleasedOn ?? DateTime.MinValue,
+                        SelectedOptions.SortDirection);
+                    break;
+
+                case Enums.SortBy.RecentActivity:
+                    items = items.OrderBy(i =>
+                        (i.DataItem as Game)?.PlaySessions?
+                            .Where(ps => ps?.End != null)
+                            .OrderByDescending(ps => ps.End ?? DateTime.MinValue)
+                            .FirstOrDefault()?.End ?? DateTime.MinValue,
+                        SelectedOptions.SortDirection);
+                    break;
+            }
+
             switch (SelectedOptions.GroupBy)
             {
                 case Enums.GroupBy.None:
@@ -177,6 +206,8 @@ namespace LANCommander.Launcher.Models
 
             SelectedOptions.Title = settings.Filter.Title;
             SelectedOptions.GroupBy = settings.Filter.GroupBy;
+            SelectedOptions.SortBy = settings.Filter.SortBy;
+            SelectedOptions.SortDirection = settings.Filter.SortDirection;
             SelectedOptions.Engines = settings.Filter.Engines != null ? DataSource.Engines?.Where(e => settings.Filter.Engines.Contains(e.Name)).ToList() : null;
             SelectedOptions.Genres = settings.Filter.Genres != null ? DataSource.Genres?.Where(e => settings.Filter.Genres.Contains(e.Name)).ToList() : null;
             SelectedOptions.Tags = settings.Filter.Tags != null ? DataSource.Tags?.Where(e => settings.Filter.Tags.Contains(e.Name)).ToList() : null;
@@ -196,6 +227,8 @@ namespace LANCommander.Launcher.Models
             {
                 Title = SelectedOptions.Title,
                 GroupBy = SelectedOptions.GroupBy,
+                SortBy = SelectedOptions.SortBy,
+                SortDirection = SelectedOptions.SortDirection,
                 Engines = SelectedOptions.Engines?.Select(e => e.Name),
                 Genres = SelectedOptions.Genres?.Select(g => g.Name),
                 Tags = SelectedOptions.Tags?.Select(t => t.Name),

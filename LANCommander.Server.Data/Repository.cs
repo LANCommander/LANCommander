@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
+using System.Threading;
 
 namespace LANCommander.Server.Data
 {
@@ -13,6 +14,7 @@ namespace LANCommander.Server.Data
         public readonly DatabaseContext Context;
         private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly ILogger Logger;
+        private readonly SemaphoreSlim Semaphore = new(1);
 
         private User User;
 
@@ -35,7 +37,7 @@ namespace LANCommander.Server.Data
             get { return Context.Set<User>(); }
         }
 
-        public IQueryable<T> Get(Expression<Func<T, bool>> predicate)
+        private IQueryable<T> Query(Expression<Func<T, bool>> predicate)
         {
             using (var op = Logger.BeginOperation("Querying database"))
             {
@@ -47,89 +49,207 @@ namespace LANCommander.Server.Data
             }
         }
 
+        public async Task <ICollection<T>> Get(Expression<Func<T, bool>> predicate)
+        {
+            try
+            {
+                await Semaphore.WaitAsync();
+
+                return await Query(predicate).ToListAsync();
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
+        }
+
+        public async Task<T> First(Expression<Func<T, bool>> predicate)
+        {
+            try
+            {
+                await Semaphore.WaitAsync();
+
+                return await Query(predicate).FirstAsync();
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
+        }
+
+        public async Task<T> First<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        {
+            try
+            {
+                await Semaphore.WaitAsync();
+
+                return await Query(predicate).OrderByDescending(orderKeySelector).FirstAsync();
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
+        }
+
         public async Task<T> Find(Guid id)
         {
-            using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
+            try {
+                await Semaphore.WaitAsync();
+
+                using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
+                {
+                    var entity = await DbSet.FindAsync(id);
+
+                    op.Complete();
+
+                    return entity;
+                }
+            }
+            finally
             {
-                var entity = await DbSet.FindAsync(id);
-
-                op.Complete();
-
-                return entity;
+                Semaphore.Release();
             }
         }
 
         public async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
         {
-            using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
+            try
             {
-                var entity = await Get(predicate).FirstOrDefaultAsync();
+                await Semaphore.WaitAsync();
 
-                op.Complete();
+                using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
+                {
+                    var entity = await Query(predicate).FirstOrDefaultAsync();
 
-                return entity;
+                    op.Complete();
+
+                    return entity;
+                }
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
+        }
+
+        public async Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        {
+            try
+            {
+                await Semaphore.WaitAsync();
+
+                return await Query(predicate).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
+            }
+            finally
+            {
+                Semaphore.Release();
             }
         }
 
         public async Task<T> Add(T entity)
         {
-            using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
+            try
             {
-                entity.CreatedById = await GetCurrentUserId();
-                entity.UpdatedById = await GetCurrentUserId();
-                entity.CreatedOn = DateTime.UtcNow;
-                entity.UpdatedOn = DateTime.UtcNow;
+                await Semaphore.WaitAsync();
 
-                await Context.AddAsync(entity);
+                using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
+                {
+                    entity.CreatedById = await GetCurrentUserId();
+                    entity.UpdatedById = await GetCurrentUserId();
+                    entity.CreatedOn = DateTime.UtcNow;
+                    entity.UpdatedOn = DateTime.UtcNow;
 
-                op.Complete();
+                    await Context.AddAsync(entity);
 
-                return entity;
+                    op.Complete();
+
+                    return entity;
+                }
+            }
+            finally
+            {
+                Semaphore.Release();
             }
         }
 
         public async Task<T> Update(T entity)
         {
-            using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
+            try
             {
-                var existing = await Find(entity.Id);
+                await Semaphore.WaitAsync();
 
-                Context.Entry(existing).CurrentValues.SetValues(entity);
+                using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
+                {
+                    var existing = await Find(entity.Id);
 
-                entity.UpdatedById = await GetCurrentUserId();
-                entity.UpdatedOn = DateTime.UtcNow;
+                    Context.Entry(existing).CurrentValues.SetValues(entity);
 
-                Context.Update(entity);
+                    entity.UpdatedById = await GetCurrentUserId();
+                    entity.UpdatedOn = DateTime.UtcNow;
 
-                op.Complete();
+                    Context.Update(entity);
 
-                return entity;
+                    op.Complete();
+
+                    return entity;
+                }
+            }
+            finally
+            {
+                Semaphore.Release();
             }
         }
 
         public void Delete(T entity)
         {
-            using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
+            try
             {
-                Context.Remove(entity);
+                Semaphore.Wait();
 
-                op.Complete();
+                using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
+                {
+                    Context.Remove(entity);
+
+                    op.Complete();
+                }
+            }
+            finally
+            {
+                Semaphore.Release();
             }
         }
 
         public async Task SaveChanges()
         {
-            using (var op = Logger.BeginOperation("Saving changes!"))
+            try
             {
-                await Context.SaveChangesAsync();
+                await Semaphore.WaitAsync();
 
-                op.Complete();
+                using (var op = Logger.BeginOperation("Saving changes!"))
+                {
+                    await Context.SaveChangesAsync();
+
+                    op.Complete();
+                }
+            }
+            finally
+            {
+                Semaphore.Release();
             }
         }
 
         private async Task<User> GetUser(string username)
         {
-            return await UserDbSet.FirstOrDefaultAsync(u => u.UserName == username);
+            try
+            {
+                await Semaphore.WaitAsync();
+
+                return await UserDbSet.FirstOrDefaultAsync(u => u.UserName == username);
+            }
+            finally
+            {
+                Semaphore.Release();
+            }
         }
 
         private async Task<Guid?> GetCurrentUserId()
@@ -152,6 +272,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
+                Semaphore.Release();
                 Context.Dispose();
                 Logger?.LogDebug("Disposed context {ContextId}", Context.ContextId);
             }

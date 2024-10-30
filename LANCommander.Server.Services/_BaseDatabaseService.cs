@@ -36,29 +36,29 @@ namespace LANCommander.Server.Services
         public virtual async Task<ICollection<T>> Get(Expression<Func<T, bool>> predicate)
         {
             Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
-            var results = await Repository.Get(predicate).ToListAsync();
+            var results = await Repository.Get(predicate);
             Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
             return results;
         }
 
         public virtual async Task<T> First(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.Get(predicate).FirstAsync();
+            return await Repository.First(predicate);
         }
 
         public virtual async Task<T> First<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await Repository.Get(predicate).OrderByDescending(orderKeySelector).FirstAsync();
+            return await Repository.First(predicate, orderKeySelector);
         }
 
         public virtual async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.Get(predicate).FirstOrDefaultAsync();
+            return await Repository.FirstOrDefault(predicate);
         }
 
         public virtual async Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await Repository.Get(predicate).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
+            return await Repository.FirstOrDefault(predicate, orderKeySelector);
         }
 
         public virtual async Task<bool> Exists(Guid id)
@@ -82,7 +82,7 @@ namespace LANCommander.Server.Services
         /// <returns>Newly created or existing entity</returns>
         public virtual async Task<ExistingEntityResult<T>> AddMissing(Expression<Func<T, bool>> predicate, T entity)
         {
-            var existing = Repository.Get(predicate).FirstOrDefault();
+            var existing = await Repository.FirstOrDefault(predicate);
 
             if (existing == null)
             {

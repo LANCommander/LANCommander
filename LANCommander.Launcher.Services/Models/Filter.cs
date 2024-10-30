@@ -117,16 +117,31 @@ namespace LANCommander.Launcher.Models
             switch (SelectedOptions.GroupBy)
             {
                 case Enums.GroupBy.None:
-                    GroupSelector = (g) => new string[] { };
+                    GroupSelector = (g) => Array.Empty<string>();
                     break;
+
                 case Enums.GroupBy.Collection:
-                    GroupSelector = (g) => (g.DataItem as Game).Collections.Select(c => c.Name).ToArray();
+                    GroupSelector = (g) =>
+                        (g.DataItem as Game)?.Collections?
+                            .Where(c => c?.Name != null)
+                            .Select(c => c.Name)
+                            .ToArray() ?? Array.Empty<string>();
                     break;
+
                 case Enums.GroupBy.Genre:
-                    GroupSelector = (g) => (g.DataItem as Game).Genres.Select(ge => ge.Name).ToArray();
+                    GroupSelector = (g) =>
+                        (g.DataItem as Game)?.Genres?
+                            .Where(ge => ge?.Name != null)
+                            .Select(ge => ge.Name)
+                            .ToArray() ?? Array.Empty<string>();
                     break;
+
                 case Enums.GroupBy.Platform:
-                    GroupSelector = (g) => (g.DataItem as Game).Platforms.Select(p => p.Name).ToArray();
+                    GroupSelector = (g) =>
+                        (g.DataItem as Game)?.Platforms?
+                            .Where(p => p?.Name != null)
+                            .Select(p => p.Name)
+                            .ToArray() ?? Array.Empty<string>();
                     break;
             }
 

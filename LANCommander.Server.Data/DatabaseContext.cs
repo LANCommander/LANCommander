@@ -56,6 +56,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<GameSave>();
             builder.ConfigureBaseRelationships<Genre>();
             builder.ConfigureBaseRelationships<Key>();
+            builder.ConfigureBaseRelationships<Library>();
             builder.ConfigureBaseRelationships<Media>();
             builder.ConfigureBaseRelationships<MultiplayerMode>();
             builder.ConfigureBaseRelationships<Platform>();
@@ -93,6 +94,20 @@ namespace LANCommander.Server.Data
             builder.Entity<Platform>()
                 .HasMany(p => p.Games)
                 .WithMany(g => g.Platforms);
+
+            builder.Entity<Library>()
+                .HasOne(l => l.User)
+                .WithOne(u => u.Library)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Library>()
+                .HasMany(l => l.Games)
+                .WithMany(l => l.Libraries)
+                .UsingEntity<Dictionary<string, object>>(
+                    "LibraryGame",
+                    lg => lg.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
+                    lg => lg.HasOne<Library>().WithMany().HasForeignKey("LibraryId").OnDelete(DeleteBehavior.Cascade)
+                );
 
             #region Game Relationships
             builder.Entity<Game>()

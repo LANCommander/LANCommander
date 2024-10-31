@@ -63,22 +63,30 @@ namespace LANCommander.Server.Data.Models
 
         public string? Alias { get; set; }
 
+        [JsonIgnore]
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }
 
+        [JsonIgnore]
         public Guid? CreatedById { get; set; }
         [ForeignKey(nameof(CreatedById))]
 
+        [JsonIgnore]
         [Display(Name = "Created By")]
         public virtual User? CreatedBy { get; set; }
 
+        [JsonIgnore]
         [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
 
+        [JsonIgnore]
         public Guid? UpdatedById { get; set; }
         [ForeignKey(nameof(UpdatedById))]
 
+        [JsonIgnore]
         [Display(Name = "Updated By")]
         public virtual User? UpdatedBy { get; set; }
+
+        public virtual Library Library { get; set; }
     }
 }

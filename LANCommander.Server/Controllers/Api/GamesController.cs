@@ -19,6 +19,7 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly GameService GameService;
+        private readonly LibraryService LibraryService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
         private readonly UserService UserService;
@@ -30,6 +31,7 @@ namespace LANCommander.Server.Controllers.Api
             IMapper mapper,
             IFusionCache cache,
             GameService gameService,
+            LibraryService libraryService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
             UserService userService,
@@ -37,6 +39,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             Mapper = mapper;
             GameService = gameService;
+            LibraryService = libraryService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
             UserService = userService;

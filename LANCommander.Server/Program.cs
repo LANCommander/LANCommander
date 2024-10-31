@@ -279,6 +279,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<CategoryService>();
             builder.Services.AddScoped<CollectionService>();
             builder.Services.AddScoped<GameService>();
+            builder.Services.AddScoped<LibraryService>();
             builder.Services.AddScoped<ScriptService>();
             builder.Services.AddScoped<GenreService>();
             builder.Services.AddScoped<PlatformService>();

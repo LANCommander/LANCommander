@@ -33,6 +33,7 @@ namespace LANCommander.SDK
         public string DefaultInstallDirectory;
 
         public readonly GameService Games;
+        public readonly LibraryService Library;
         public readonly SaveService Saves;
         public readonly RedistributableService Redistributables;
         public readonly ScriptService Scripts;
@@ -60,6 +61,7 @@ namespace LANCommander.SDK
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory);
+            Library = new LibraryService(this);
             Saves = new SaveService(this);
             Redistributables = new RedistributableService(this);
             Scripts = new ScriptService(this);
@@ -82,6 +84,7 @@ namespace LANCommander.SDK
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory, logger);
+            Library = new LibraryService(this, logger);
             Saves = new SaveService(this, logger);
             Redistributables = new RedistributableService(this, logger);
             Scripts = new ScriptService(this, logger);

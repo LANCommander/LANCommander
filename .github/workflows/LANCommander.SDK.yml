@@ -1,0 +1,51 @@
+name: Publish SDK NuGet Package
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Matches tags like v1.0.3
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Specify the version to publish'
+        required: false
+        default: ''
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.x'
+
+      - name: Determine version
+        id: determine_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF##*/}"
+          fi
+          echo "Version to use: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Restore dependencies
+        run: dotnet restore LANCommander.SDK/LANCommander.SDK.csproj
+
+      - name: Build project
+        run: dotnet build --no-restore --configuration Release LANCommander.SDK/LANCommander.SDK.csproj
+
+      - name: Pack NuGet package with symbols
+        run: dotnet pack LANCommander.SDK/LANCommander.SDK.csproj --no-build --configuration Release -p:PackageVersion=${{ env.VERSION }} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -o ./artifacts
+
+      - name: Publish NuGet package
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push ./artifacts/*.nupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json
+          dotnet nuget push ./artifacts/*.snupkg --api-key $NUGET_API_KEY --source https://api.nuget.org/v3/index.json

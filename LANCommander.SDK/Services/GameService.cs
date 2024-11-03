@@ -150,22 +150,30 @@ namespace LANCommander.SDK.Services
             if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
             {
                 var primaryAction = actions.First();
-                var lobbies = Client.Lobbies.GetSteamLobbies(installDirectory, id);
 
-                foreach (var lobby in lobbies)
+                try
                 {
-                    var lobbyAction = new Models.Action
-                    {
-                        Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
-                        IsPrimaryAction = true,
-                        Name = $"Join {lobby.ExternalUsername}'s lobby",
-                        SortOrder = actions.Count,
-                        Variables = primaryAction.Variables,
-                        Path = primaryAction.Path,
-                        WorkingDirectory = primaryAction.WorkingDirectory
-                    };
+                    var lobbies = Client.Lobbies.GetSteamLobbies(installDirectory, id);
 
-                    actions.Add(lobbyAction);
+                    foreach (var lobby in lobbies)
+                    {
+                        var lobbyAction = new Models.Action
+                        {
+                            Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
+                            IsPrimaryAction = true,
+                            Name = $"Join {lobby.ExternalUsername}'s lobby",
+                            SortOrder = actions.Count,
+                            Variables = primaryAction.Variables,
+                            Path = primaryAction.Path,
+                            WorkingDirectory = primaryAction.WorkingDirectory
+                        };
+
+                        actions.Add(lobbyAction);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Could not get lobbies");
                 }
             }
 

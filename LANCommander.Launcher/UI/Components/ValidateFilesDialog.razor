@@ -1,0 +1,37 @@
+﻿@using BootstrapBlazor.Components
+@using LANCommander.SDK.Models
+@inherits FeedbackComponent<Data.Models.Game>
+@inject SaveService SaveService
+@inject SDK.Client Client
+@inject IMessageService MessageService
+
+<Table DataSource="Conflicts" Size="TableSize.Small" RowKey="c => c.FullName" @bind-SelectedRows="Selected">
+    <PropertyColumn Property="c => c.FullName" Title="Name" />
+</Table>
+
+@code {
+    IEnumerable<ArchiveEntry> Conflicts = new List<ArchiveEntry>();
+    IEnumerable<ArchiveEntry> Selected = new List<ArchiveEntry>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task Close()
+    {
+        await CloseFeedbackAsync();
+    }
+
+    async Task LoadData()
+    {
+        Conflicts = await Client.Games.ValidateFilesAsync(Options.InstallDirectory, Options.Id);
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await Client.Games.DownloadFilesAsync(Options.InstallDirectory, Options.Id, Selected.Select(e => e.FullName));
+
+        await base.CloseFeedbackAsync();
+    }
+}

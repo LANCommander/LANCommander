@@ -35,6 +35,11 @@ namespace LANCommander.Server
                 .ForMember(dest =>
                     dest.IPXRelayPort,
                     opt => opt.MapFrom(src => src.IPXRelay.Port));
+
+            CreateMap<Data.Models.Action, SDK.Models.Action>()
+                .ForMember(dest =>
+                    dest.IsPrimaryActoin,
+                    opt => opt.MapFrom(src => src.PrimaryAction));
         }
     }
 }

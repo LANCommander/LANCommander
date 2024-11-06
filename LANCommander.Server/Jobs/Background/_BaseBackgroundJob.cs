@@ -2,21 +2,15 @@
 
 namespace LANCommander.Server.Jobs.Background
 {
-    public class PatchArchiveBackgroundJob
+    public abstract class BaseBackgroundJob
     {
-        private readonly ArchiveService ArchiveService;
+        private readonly ILogger Logger;
 
-        public PatchArchiveBackgroundJob(ArchiveService archiveService)
+        public BaseBackgroundJob(ILogger logger)
         {
-            ArchiveService = archiveService;
+            Logger = logger;
         }
 
-        public async Task Execute(Guid originalArchiveId, Guid alteredArchiveId)
-        {
-            var originalArchive = await ArchiveService.Get(originalArchiveId);
-            var alteredArchive = await ArchiveService.Get(alteredArchiveId);
-
-            await ArchiveService.PatchArchive(originalArchive, alteredArchive);
-        }
+        public abstract Task ExecuteAsync();
     }
 }

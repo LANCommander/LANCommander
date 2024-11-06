@@ -38,7 +38,7 @@ namespace LANCommander.Server
 
             CreateMap<Data.Models.Action, SDK.Models.Action>()
                 .ForMember(dest =>
-                    dest.IsPrimaryActoin,
+                    dest.IsPrimaryAction,
                     opt => opt.MapFrom(src => src.PrimaryAction));
         }
     }

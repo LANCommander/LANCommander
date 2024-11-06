@@ -1,18 +1,31 @@
-﻿using Force.Crc32;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
 using System.Net.Mime;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using LANCommander.SDK.Enums;
+using LANCommander.SDK.Extensions;
 
 namespace LANCommander.Server.Services
 {
     public class MediaService : BaseDatabaseService<Media>
     {
         private readonly StorageLocationService StorageLocationService;
+
+        private Dictionary<MediaType, Size> ThumbnailSizes = new Dictionary<MediaType, Size>
+        {
+            { MediaType.Cover, new Size(600, 900) },
+            { MediaType.Manual, new Size(600, 900) },
+            { MediaType.Logo, new Size(640, 360) },
+            { MediaType.Background, new Size(1920, 1080) },
+            { MediaType.Icon, new Size(64, 64) },
+            { MediaType.Avatar, new Size(128, 128) }
+        };
 
         public MediaService(
             ILogger<MediaService> logger,
@@ -25,7 +38,7 @@ namespace LANCommander.Server.Services
 
         public override Task Delete(Media entity)
         {
-            FileHelpers.DeleteIfExists(GetImagePath(entity));
+            DeleteLocalMediaFile(entity);
 
             return base.Delete(entity);
         }
@@ -72,113 +85,97 @@ namespace LANCommander.Server.Services
 
             var path = GetImagePath(media);
 
-            using (var fs = new FileStream(path, FileMode.Create))
-            {
-                await stream.CopyToAsync(fs);
-
-                if (media.MimeType == MediaTypeNames.Application.Pdf)
-                {
-                    using (var ms = new MemoryStream())
-                    {
-                        await stream.CopyToAsync(ms);
-
-                        var thumbnail = await GeneratePdfThumbnailAsync(ms);
-
-                        media.Thumbnail = thumbnail;
-                    }
-                }
-            }
-
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
+
+            await GenerateThumbnailAsync(media);
 
             return media;
         }
 
-        private async Task<Media> GeneratePdfThumbnailAsync(Stream inputStream)
+        public async Task<string> GenerateThumbnailAsync(Media media, int quality = 75)
         {
-            var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Default);
+            var destination = GetThumbnailPath(media);
 
-            var media = new Media
+            Stream stream = null;
+
+            try
             {
-                FileId = fileId,
-                MimeType = MediaTypeNames.Application.Pdf,
-                Type = SDK.Enums.MediaType.Thumbnail,
-                StorageLocation = storageLocation
-            };
-
-            var path = GetImagePath(media);
-
-            PdfToImageConverter converter = new PdfToImageConverter();
-
-            converter.Load(inputStream);
-
-            var outputStream = converter.Convert(0, false, true);
-
-            using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write))
-            {
-                try
+                if (media.MimeType == MediaTypeNames.Application.Pdf)
                 {
-                    outputStream.Position = 0;
-                    await outputStream.CopyToAsync(fs);
+                    using (var pdfStream = new FileStream(GetImagePath(media), FileMode.Open, FileAccess.Read))
+                    {
+                        var converter = new PdfToImageConverter();
+
+                        converter.Load(stream);
+
+                        stream = converter.Convert(0, false, true);
+
+                        stream.Seek(0, SeekOrigin.Begin);
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Logger?.LogError(ex, "Could not write thumbnail for PDF");
+                    stream = new FileStream(GetImagePath(media), FileMode.Open, FileAccess.Read);
+                }
 
-                    if (File.Exists(path))
-                        File.Delete(path);
+                if (ThumbnailSizes.ContainsKey(media.Type))
+                {
+                    using (var image = await Image.LoadAsync(stream))
+                    {
+                        var resizeOptions = new ResizeOptions
+                        {
+                            Mode = ResizeMode.Max,
+                            Size = ThumbnailSizes[media.Type],
+                            Sampler = KnownResamplers.Bicubic,
+                        };
+
+                        image.Mutate(context => context.Resize(resizeOptions));
+
+                        if (media.Type.IsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && media.MimeType == MediaTypeNames.Image.Png)
+                        {
+                            await image.SaveAsPngAsync(destination);
+                        }
+                        else
+                        {
+                            await image.SaveAsJpegAsync(destination, new JpegEncoder
+                            {
+                                Quality = quality
+                            });
+                        }
+                    }
                 }
             }
+            finally
+            {
+                if (stream is not null)
+                    await stream.DisposeAsync();
+            }
 
-            media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
+            return destination;
+        }
 
-            return media;
+        private string GetThumbnailPath(Media media)
+        {
+            if (ThumbnailSizes.ContainsKey(media.Type))
+                return $"{GetImagePath(media)}.Thumb";
+            else
+                return GetImagePath(media);
         }
 
         public void DeleteLocalMediaFile(Media media)
         {
-            var path = GetImagePath(media);
-
-            if (File.Exists(path))
-                File.Delete(path);
+            FileHelpers.DeleteIfExists(GetImagePath(media));
+            FileHelpers.DeleteIfExists(GetThumbnailPath(media));
         }
 
         public async Task<Media> DownloadMediaAsync(string sourceUrl, Media media)
         {
-            var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Default);
-
-            media.FileId = fileId;
-            media.StorageLocation = storageLocation;
-
-            var path = GetImagePath(media);
-
             using (var http = new HttpClient())
-            using (var fs = new FileStream(path, FileMode.Create))
             {
-                using (var ms = new MemoryStream())
-                {
-                    var response = await http.GetStreamAsync(sourceUrl);
+                var response = await http.GetStreamAsync(sourceUrl);
 
-                    await response.CopyToAsync(ms);
-
-                    if (media.MimeType == MediaTypeNames.Application.Pdf)
-                    {
-                        var thumbnail = await GeneratePdfThumbnailAsync(ms);
-
-                        media.Thumbnail = thumbnail;
-                    }
-
-                    ms.Position = 0;
-
-                    await ms.CopyToAsync(fs);
-                }
+                return await UploadMediaAsync(response, media);
             }
-
-            media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
-
-            return media;
         }
     }
 }

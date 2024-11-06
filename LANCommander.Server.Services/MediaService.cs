@@ -45,14 +45,14 @@ namespace LANCommander.Server.Services
 
         public bool FileExists(Media entity)
         {
-            var path = GetImagePath(entity);
+            var path = GetMediaPath(entity);
 
             return File.Exists(path);
         }
 
         public async Task<bool> FileExists(Guid id)
         {
-            var path = await GetImagePath(id);
+            var path = await GetMediaPath(id);
 
             return File.Exists(path);
         }
@@ -61,10 +61,10 @@ namespace LANCommander.Server.Services
         {
             var entity = await Get(id);
 
-            return GetImagePath(entity);
+            return GetMediaPath(entity);
         }
 
-        public static string GetImagePath(Media entity)
+        public static string GetMediaPath(Media entity)
         {
             return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
         }
@@ -83,7 +83,7 @@ namespace LANCommander.Server.Services
             media.FileId = fileId;
             media.StorageLocation = storageLocation;
 
-            var path = GetImagePath(media);
+            var path = GetMediaPath(media);
 
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
 
@@ -102,7 +102,7 @@ namespace LANCommander.Server.Services
             {
                 if (media.MimeType == MediaTypeNames.Application.Pdf)
                 {
-                    using (var pdfStream = new FileStream(GetImagePath(media), FileMode.Open, FileAccess.Read))
+                    using (var pdfStream = new FileStream(GetMediaPath(media), FileMode.Open, FileAccess.Read))
                     {
                         var converter = new PdfToImageConverter();
 
@@ -115,7 +115,7 @@ namespace LANCommander.Server.Services
                 }
                 else
                 {
-                    stream = new FileStream(GetImagePath(media), FileMode.Open, FileAccess.Read);
+                    stream = new FileStream(GetMediaPath(media), FileMode.Open, FileAccess.Read);
                 }
 
                 if (ThumbnailSizes.ContainsKey(media.Type))
@@ -157,14 +157,14 @@ namespace LANCommander.Server.Services
         private string GetThumbnailPath(Media media)
         {
             if (ThumbnailSizes.ContainsKey(media.Type))
-                return $"{GetImagePath(media)}.Thumb";
+                return $"{GetMediaPath(media)}.Thumb";
             else
-                return GetImagePath(media);
+                return GetMediaPath(media);
         }
 
         public void DeleteLocalMediaFile(Media media)
         {
-            FileHelpers.DeleteIfExists(GetImagePath(media));
+            FileHelpers.DeleteIfExists(GetMediaPath(media));
             FileHelpers.DeleteIfExists(GetThumbnailPath(media));
         }
 

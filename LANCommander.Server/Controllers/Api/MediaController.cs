@@ -52,7 +52,7 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var media = await MediaService.Get(id);
 
-                var fs = System.IO.File.OpenRead(Services.MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(Services.MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }

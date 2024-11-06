@@ -77,7 +77,7 @@
         }
 
         var media = await MediaService.Get();
-        var mediaFiles = media.Select(m => MediaService.GetImagePath(m));
+        var mediaFiles = media.Select(m => MediaService.GetMediaPath(m));
 
         foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
         {

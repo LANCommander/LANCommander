@@ -74,7 +74,7 @@ namespace LANCommander.Server.Controllers.Api
                 if (media == null)
                     return NotFound();
 
-                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }
@@ -98,7 +98,7 @@ namespace LANCommander.Server.Controllers.Api
                 if (media == null)
                     return NotFound();
 
-                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }

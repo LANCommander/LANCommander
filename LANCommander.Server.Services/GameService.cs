@@ -530,9 +530,9 @@ namespace LANCommander.Server.Services
                         media.MimeType = manifestMedia.MimeType;
                         media.CreatedOn = manifestMedia.CreatedOn;
 
-                        importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetImagePath(media), true);
+                        importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetMediaPath(media), true);
 
-                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetImagePath(media));
+                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
                     }
                 }
 
@@ -549,9 +549,9 @@ namespace LANCommander.Server.Services
                             CreatedOn = manifestMedia.CreatedOn,
                         };
 
-                        importZip.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetImagePath(media), true);
+                        importZip.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetMediaPath(media), true);
 
-                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetImagePath(media));
+                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
 
                         game.Media.Add(media);
                     }

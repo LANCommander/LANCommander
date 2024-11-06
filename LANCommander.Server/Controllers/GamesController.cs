@@ -61,7 +61,7 @@ namespace LANCommander.Server.Controllers
                 if (game.Media != null)
                 foreach (var media in game.Media)
                 {
-                    var mediaFilePath = await MediaService.GetImagePath(media.Id);
+                    var mediaFilePath = await MediaService.GetMediaPath(media.Id);
                     var entry = export.CreateEntry($"Media/{media.FileId}", CompressionLevel.NoCompression);
 
                     using (var entryStream = entry.Open())
@@ -146,7 +146,7 @@ namespace LANCommander.Server.Controllers
                 if (game.Media != null)
                     foreach (var media in game.Media)
                     {
-                        var mediaFilePath = await MediaService.GetImagePath(media.Id);
+                        var mediaFilePath = await MediaService.GetMediaPath(media.Id);
                         var entry = export.CreateEntry($"Media/{media.FileId}", CompressionLevel.NoCompression);
 
                         using (var entryStream = entry.Open())

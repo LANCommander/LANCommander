@@ -462,11 +462,11 @@ namespace LANCommander.Server
 
                 await db.DisposeAsync();
                 await scope.DisposeAsync();
+
+                BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
             }
             else
                 Log.Debug("No database provider has been setup, application is fresh and needs first time setup");
-
-            BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
 
             app.Run();
         }

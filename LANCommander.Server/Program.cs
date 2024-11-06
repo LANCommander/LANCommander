@@ -19,6 +19,7 @@ using System.Diagnostics;
 using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
+using LANCommander.Server.Jobs.Background;
 
 namespace LANCommander.Server
 {
@@ -464,6 +465,9 @@ namespace LANCommander.Server
             else
                 Log.Debug("No database provider has been setup, application is fresh and needs first time setup");
             */
+
+            BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
+
             app.Run();
         }
     }

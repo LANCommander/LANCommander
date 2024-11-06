@@ -57,7 +57,14 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<string> GetImagePath(Guid id)
+        public bool ThumbnailExists(Media entity)
+        {
+            var path = GetThumbnailPath(entity);
+
+            return File.Exists(path);
+        }
+
+        public async Task<string> GetMediaPath(Guid id)
         {
             var entity = await Get(id);
 

@@ -66,6 +66,8 @@ jobs:
     # UI
     - run: cd ./LANCommander.UI; npm install; npm run package
 
+    - run: cd ./LANCommander.Server; npm install
+
     - name: Publish Server
       run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_tag }}"
 

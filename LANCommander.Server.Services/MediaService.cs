@@ -78,7 +78,7 @@ namespace LANCommander.Server.Services
         public async Task<Media> UploadMediaAsync(Stream stream, Media media)
         {
             var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Default);
+            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Type == StorageLocationType.Media && l.Default);
 
             media.FileId = fileId;
             media.StorageLocation = storageLocation;

@@ -3,9 +3,11 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.UI.Pages.Servers.Components;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IO.Compression;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -60,6 +62,43 @@ namespace LANCommander.Server.Controllers.Api
             }
 
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{archive.Game.Title.SanitizeFilename()}.zip");
+        }
+
+        [HttpGet("Contents/{id}")]
+        public async Task<IActionResult> Contents(Guid id)
+        {
+            var archive = await ArchiveService.Get(id);
+
+            if (archive == null)
+            {
+                Logger?.LogError("No archive found with ID {ArchiveId}", id);
+                return NotFound();
+            }
+
+            var filename = ArchiveService.GetArchiveFileLocation(archive);
+
+            if (!System.IO.File.Exists(filename))
+            {
+                Logger?.LogError("Archive ({ArchiveId}) file not found at {FileName}", filename);
+                return NotFound();
+            }
+
+            var entries = new List<ArchiveEntry>();
+
+            using (var zip = ZipFile.OpenRead(filename))
+            {
+                foreach (var entry in zip.Entries)
+                {
+                    entries.Add(new ArchiveEntry
+                    {
+                        FullName = entry.FullName,
+                        Name = entry.Name,
+                        Crc32 = entry.Crc32
+                    });
+                }
+            }
+
+            return Ok(entries);
         }
     }
 }

@@ -49,6 +49,9 @@
     <MenuItem OnClick="() => BrowseFiles()">
         Browse Files
     </MenuItem>
+    <MenuItem OnClick="() => ValidateFiles()">
+        Validate Files
+    </MenuItem>
     <MenuItem OnClick="() => Uninstall()">
         Uninstall
     </MenuItem>
@@ -175,6 +178,23 @@ else
         };
 
         var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, Model);
+    }
+
+    async Task ValidateFiles()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"File Conflicts",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            OkText = "Replace",
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<ValidateFilesDialog, Game>(modalOptions, Model.DataItem as Game);
     }
 
     async Task Uninstall()

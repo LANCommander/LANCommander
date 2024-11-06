@@ -150,22 +150,30 @@ namespace LANCommander.SDK.Services
             if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
             {
                 var primaryAction = actions.First();
-                var lobbies = Client.Lobbies.GetSteamLobbies(installDirectory, id);
 
-                foreach (var lobby in lobbies)
+                try
                 {
-                    var lobbyAction = new Models.Action
-                    {
-                        Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
-                        IsPrimaryAction = true,
-                        Name = $"Join {lobby.ExternalUsername}'s lobby",
-                        SortOrder = actions.Count,
-                        Variables = primaryAction.Variables,
-                        Path = primaryAction.Path,
-                        WorkingDirectory = primaryAction.WorkingDirectory
-                    };
+                    var lobbies = Client.Lobbies.GetSteamLobbies(installDirectory, id);
 
-                    actions.Add(lobbyAction);
+                    foreach (var lobby in lobbies)
+                    {
+                        var lobbyAction = new Models.Action
+                        {
+                            Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
+                            IsPrimaryAction = true,
+                            Name = $"Join {lobby.ExternalUsername}'s lobby",
+                            SortOrder = actions.Count,
+                            Variables = primaryAction.Variables,
+                            Path = primaryAction.Path,
+                            WorkingDirectory = primaryAction.WorkingDirectory
+                        };
+
+                        actions.Add(lobbyAction);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Could not get lobbies");
                 }
             }
 
@@ -994,6 +1002,117 @@ namespace LANCommander.SDK.Services
                         Changelog = changelog,
                     });
             }
+        }
+
+        /// <summary>
+        /// Get the archive associated with the installed version of the game and return any non-matching files in the current install.
+        /// </summary>
+        /// <param name="installDirectory">The game's install directory</param>
+        /// <param name="gameId">The game's ID</param>
+        /// <returns>List of file conflicts</returns>
+        public async Task<IEnumerable<ArchiveEntry>> ValidateFilesAsync(string installDirectory, Guid gameId)
+        {
+            var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/ByVersion/{manifest.Version}");
+            var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/{archive.Id}");
+
+            var conflictedEntries = new List<ArchiveEntry>();
+
+            foreach (var entry in entries)
+            {
+                var localFile = Path.Combine(installDirectory, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
+
+                if (!Path.Exists(localFile))
+                    conflictedEntries.Add(entry);
+                else
+                {
+                    uint crc = 0;
+
+                    if (File.Exists(localFile))
+                    {
+                        using (FileStream fs = File.Open(localFile, FileMode.Open))
+                        {
+                            var buffer = new byte[65536];
+
+                            while (true)
+                            {
+                                var count = fs.Read(buffer, 0, buffer.Length);
+
+                                if (count == 0)
+                                    break;
+
+                                crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                            }
+                        }
+                    }
+
+                    if (crc == 0 || crc != entry.Crc32)
+                        conflictedEntries.Add(entry);
+                }
+            }
+
+            return conflictedEntries;
+        }
+
+        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
+        {
+            var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/ByVersion/{manifest.Version}");
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    TransferStream = Stream(gameId);
+                    Reader = ReaderFactory.Open(TransferStream);
+
+                    while (Reader.MoveToNextEntry())
+                    {
+                        if (Reader.Cancelled)
+                            break;
+
+                        try
+                        {
+                            if (entries.Contains(Reader.Entry.Key))
+                            {
+                                var destination = Path.Combine(installDirectory, Reader.Entry.Key.Replace('/', Path.DirectorySeparatorChar));
+
+                                Reader.WriteEntryToFile(destination, new ExtractionOptions
+                                {
+                                    Overwrite = true,
+                                    PreserveFileTime = true,
+                                    PreserveAttributes = true,
+                                });
+                            }
+                            else // Skip to next entry
+                                try
+                                {
+                                    Reader.OpenEntryStream().Dispose();
+                                }
+                                catch { }
+                        }
+                        catch (IOException ex)
+                        {
+                            var errorCode = ex.HResult & 0xFFFF;
+
+                            if (errorCode == 87)
+                                throw ex;
+                            else
+                                Logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+
+                            // Skip to next entry
+                            Reader.OpenEntryStream().Dispose();
+                        }
+                    }
+
+                    Reader.Dispose();
+                    TransferStream.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
+                }
+            });
         }
 
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)

@@ -20,6 +20,7 @@ using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using LANCommander.Server.Jobs.Background;
+using Microsoft.Data.Sqlite;
 
 namespace LANCommander.Server
 {
@@ -412,7 +413,7 @@ namespace LANCommander.Server
             // Migrate
             Log.Debug("Migrating database if required");
 
-            /*if (DatabaseContext.Provider != DatabaseProvider.Unknown)
+            if (DatabaseContext.Provider != DatabaseProvider.Unknown)
             {
                 await using var scope = app.Services.CreateAsyncScope();
                 using var db = scope.ServiceProvider.GetService<DatabaseContext>();
@@ -464,7 +465,6 @@ namespace LANCommander.Server
             }
             else
                 Log.Debug("No database provider has been setup, application is fresh and needs first time setup");
-            */
 
             BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
 

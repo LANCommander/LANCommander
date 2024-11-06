@@ -32,7 +32,6 @@ namespace LANCommander.Server
 
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
-                .WriteTo.File(Path.Combine("startup-.txt"))
                 .CreateBootstrapLogger();
 
             Log.Information("Starting application...");

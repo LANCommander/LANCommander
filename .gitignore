@@ -365,5 +365,4 @@ LANCommander.Server/Saves
 LANCommander.Server/Launcher
 LANCommander.Server/Settings.yml
 LANCommander.Server/LANCommander.db*
-LANCommander.Launcher/package-lock.json
 package-lock.json

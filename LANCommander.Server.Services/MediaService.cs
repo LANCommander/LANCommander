@@ -113,7 +113,7 @@ namespace LANCommander.Server.Services
                     {
                         var converter = new PdfToImageConverter();
 
-                        converter.Load(stream);
+                        converter.Load(pdfStream);
 
                         stream = converter.Convert(0, false, true);
 

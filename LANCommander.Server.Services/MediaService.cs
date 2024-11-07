@@ -101,7 +101,11 @@ namespace LANCommander.Server.Services
 
         public async Task<string> GenerateThumbnailAsync(Media media, int quality = 75)
         {
+            var source = GetMediaPath(media);
             var destination = GetThumbnailPath(media);
+
+            if (!File.Exists(source))
+                return String.Empty;
 
             Stream stream = null;
 
@@ -109,7 +113,7 @@ namespace LANCommander.Server.Services
             {
                 if (media.MimeType == MediaTypeNames.Application.Pdf)
                 {
-                    using (var pdfStream = new FileStream(GetMediaPath(media), FileMode.Open, FileAccess.Read))
+                    using (var pdfStream = new FileStream(source, FileMode.Open, FileAccess.Read))
                     {
                         var converter = new PdfToImageConverter();
 
@@ -122,7 +126,7 @@ namespace LANCommander.Server.Services
                 }
                 else
                 {
-                    stream = new FileStream(GetMediaPath(media), FileMode.Open, FileAccess.Read);
+                    stream = new FileStream(source, FileMode.Open, FileAccess.Read);
                 }
 
                 if (ThumbnailSizes.ContainsKey(media.Type))

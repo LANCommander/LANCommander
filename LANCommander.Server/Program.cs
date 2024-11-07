@@ -186,7 +186,7 @@ namespace LANCommander.Server
                 }
             }, ServiceLifetime.Transient);*/
 
-            builder.Services.AddDbContextFactory<DatabaseContext>();
+            builder.Services.AddDbContext<DatabaseContext>();
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

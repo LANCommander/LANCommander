@@ -14,6 +14,8 @@ namespace LANCommander.Server.Data
         public static string ConnectionString = "";
         public static Dictionary<Guid, Stopwatch> ContextTracker;
 
+        public readonly SemaphoreSlim Semaphore = new(1);
+
         private readonly ILogger Logger;
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options, ILogger<DatabaseContext> logger)
@@ -39,7 +41,8 @@ namespace LANCommander.Server.Data
                     break;
             }
 
-            optionsBuilder.AddInterceptors(new DatabaseContextConnectionInterceptor(Logger));
+            optionsBuilder.UseLazyLoadingProxies();
+
             base.OnConfiguring(optionsBuilder);
         }
 
@@ -209,6 +212,12 @@ namespace LANCommander.Server.Data
                 .WithOne(m => m.Parent)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Media>()
+                .HasOne(m => m.StorageLocation)
+                .WithMany(l => l.Media)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.SetNull);
             #endregion
 
             #region User Relationships

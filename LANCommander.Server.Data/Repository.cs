@@ -14,13 +14,13 @@ namespace LANCommander.Server.Data
         public readonly DatabaseContext Context;
         private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly ILogger Logger;
-        private readonly SemaphoreSlim Semaphore = new(1);
 
+        private List<Expression<Func<T, object>>> IncludeExpressions { get; } = new();
         private User User;
 
-        public Repository(IDbContextFactory<DatabaseContext> contextFactory, IHttpContextAccessor httpContextAccessor, ILogger<Repository<T>> logger)
+        public Repository(DatabaseContext context, IHttpContextAccessor httpContextAccessor, ILogger<Repository<T>> logger)
         {
-            Context = contextFactory.CreateDbContext();
+            Context = context;
             HttpContextAccessor = httpContextAccessor;
             Logger = logger;
 
@@ -43,23 +43,36 @@ namespace LANCommander.Server.Data
             {
                 var queryable = DbSet.AsQueryable().Where(predicate);
 
+                foreach (var includeExpression in IncludeExpressions)
+                {
+                    queryable = queryable.Include(includeExpression);
+                }
+
                 op.Complete();
 
                 return queryable;
             }
         }
 
+        public Repository<T> Include(Expression<Func<T, object>> includeExpression)
+        {
+            IncludeExpressions.Add(includeExpression);
+
+            return this;
+        }
+
         public async Task <ICollection<T>> Get(Expression<Func<T, bool>> predicate)
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 return await Query(predicate).ToListAsync();
             }
             finally
             {
-                Semaphore.Release();
+                IncludeExpressions.Clear();
+                Context.Semaphore.Release();
             }
         }
 
@@ -67,13 +80,14 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 return await Query(predicate).FirstAsync();
             }
             finally
             {
-                Semaphore.Release();
+                IncludeExpressions.Clear();
+                Context.Semaphore.Release();
             }
         }
 
@@ -81,24 +95,25 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 return await Query(predicate).OrderByDescending(orderKeySelector).FirstAsync();
             }
             finally
             {
-                Semaphore.Release();
+                IncludeExpressions.Clear();
+                Context.Semaphore.Release();
             }
         }
 
         public async Task<T> Find(Guid id)
         {
             try {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 {
-                    var entity = await DbSet.FindAsync(id);
+                    var entity = await Query(x => x.Id == id).FirstAsync();
 
                     op.Complete();
 
@@ -107,7 +122,8 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Semaphore.Release();
+                IncludeExpressions.Clear();
+                Context.Semaphore.Release();
             }
         }
 
@@ -115,7 +131,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
                 {
@@ -128,7 +144,8 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Semaphore.Release();
+                IncludeExpressions.Clear();
+                Context.Semaphore.Release();
             }
         }
 
@@ -136,13 +153,14 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 return await Query(predicate).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
             }
             finally
             {
-                Semaphore.Release();
+                IncludeExpressions.Clear();
+                Context.Semaphore.Release();
             }
         }
 
@@ -150,7 +168,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
                 {
@@ -168,7 +186,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Semaphore.Release();
+                Context.Semaphore.Release();
             }
         }
 
@@ -176,7 +194,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
                 {
@@ -196,7 +214,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Semaphore.Release();
+                Context.Semaphore.Release();
             }
         }
 
@@ -204,7 +222,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                Semaphore.Wait();
+                Context.Semaphore.Wait();
 
                 using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
                 {
@@ -215,7 +233,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Semaphore.Release();
+                Context.Semaphore.Release();
             }
         }
 
@@ -223,7 +241,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Saving changes!"))
                 {
@@ -234,7 +252,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Semaphore.Release();
+                Context.Semaphore.Release();
             }
         }
 
@@ -242,13 +260,13 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Semaphore.WaitAsync();
+                await Context.Semaphore.WaitAsync();
 
                 return await UserDbSet.FirstOrDefaultAsync(u => u.UserName == username);
             }
             finally
             {
-                Semaphore.Release();
+                Context.Semaphore.Release();
             }
         }
 
@@ -272,8 +290,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                Semaphore.Release();
-                Context.Dispose();
+                Context.Semaphore.Release();
                 Logger?.LogDebug("Disposed context {ContextId}", Context.ContextId);
             }
             catch {

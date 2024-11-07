@@ -35,9 +35,9 @@ namespace LANCommander.Server.Services.Factories
         public readonly UserManager<User> UserManager;
         public readonly RoleManager<Role> RoleManager;
 
-        public IdentityContext(IDbContextFactory<DatabaseContext> dbContextFactory, IServiceProvider serviceProvider)
+        public IdentityContext(DatabaseContext databaseContext, IServiceProvider serviceProvider)
         {
-            DatabaseContext = dbContextFactory.CreateDbContext();
+            DatabaseContext = databaseContext;
 
             var userStore = new CustomUserStore(DatabaseContext);
             UserManager = new UserManager<User>(
@@ -67,18 +67,18 @@ namespace LANCommander.Server.Services.Factories
     }
     public class IdentityContextFactory
     {
-        private readonly IDbContextFactory<DatabaseContext> DbContextFactory;
+        private readonly DatabaseContext DatabaseContext;
         private readonly IServiceProvider ServiceProvider;
 
-        public IdentityContextFactory(IDbContextFactory<DatabaseContext> dbContextFactory, IServiceProvider serviceProvider)
+        public IdentityContextFactory(DatabaseContext databaseContext, IServiceProvider serviceProvider)
         {
-            DbContextFactory = dbContextFactory;
+            DatabaseContext = databaseContext;
             ServiceProvider = serviceProvider;
         }
 
         public IdentityContext Create()
         {
-            return new IdentityContext(DbContextFactory, ServiceProvider);
+            return new IdentityContext(DatabaseContext, ServiceProvider);
         }
     }
 }

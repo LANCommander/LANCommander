@@ -156,6 +156,10 @@ namespace LANCommander.Server.Services
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not generate thumbnail for media with ID {MediaId}", media.Id);
+            }
             finally
             {
                 if (stream is not null)

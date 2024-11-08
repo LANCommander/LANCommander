@@ -10,6 +10,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace LANCommander.Server.Services
 {
@@ -146,7 +147,7 @@ namespace LANCommander.Server.Services
 
                 if (ThumbnailSizes.ContainsKey(media.Type))
                 {
-                    using (var image = await Image.LoadAsync(stream))
+                    using (var image = await Image.LoadAsync<Rgba32>(stream))
                     {
                         var resizeOptions = new ResizeOptions
                         {
@@ -157,7 +158,7 @@ namespace LANCommander.Server.Services
 
                         image.Mutate(context => context.Resize(resizeOptions));
 
-                        if (media.Type.IsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && media.MimeType == MediaTypeNames.Image.Png)
+                        if (media.Type.IsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && media.MimeType == MediaTypeNames.Image.Png && !HasTransparentPixels(image))
                         {
                             await image.SaveAsPngAsync(destination);
                         }
@@ -184,7 +185,30 @@ namespace LANCommander.Server.Services
             return destination;
         }
 
+        private bool HasTransparentPixels(Image<Rgba32> image)
         {
+            var hasTransparentPixels = false;
+
+            image.ProcessPixelRows(accessor =>
+            {
+                for (int y = 0; y < accessor.Height; y++)
+                {
+                    Span<Rgba32> pixelRow = accessor.GetRowSpan(y);
+
+                    for (int x = 0; x < pixelRow.Length; x++)
+                    {
+                        ref Rgba32 pixel = ref pixelRow[x];
+
+                        if (pixel.A < 255)
+                        {
+                            hasTransparentPixels = true;
+                            return;
+                        }
+                    }
+                }
+            });
+
+            return hasTransparentPixels;
         }
 
         public void DeleteLocalMediaFile(Media media)

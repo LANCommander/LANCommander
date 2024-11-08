@@ -35,13 +35,13 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.FindByNameAsync(userName);
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -59,7 +59,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -67,7 +67,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -75,7 +75,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -83,7 +83,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var result = await IdentityContext.UserManager.CreateAsync(user);
 
@@ -94,7 +94,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -102,7 +102,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -110,7 +110,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -118,7 +118,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -126,7 +126,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -134,7 +134,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -142,7 +142,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -150,7 +150,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -158,7 +158,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -166,7 +166,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -176,7 +176,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -184,7 +184,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
@@ -194,7 +194,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -207,13 +207,13 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.Users.ToListAsync();
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -221,13 +221,13 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.FindByIdAsync(id.ToString());
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -235,13 +235,13 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.Users.Where(predicate).ToListAsync();
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -249,13 +249,13 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.Users.FirstOrDefaultAsync(predicate);
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -263,13 +263,13 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.Users.Where(predicate).OrderBy(orderKeySelector).FirstOrDefaultAsync();
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -277,7 +277,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByIdAsync(id.ToString());
 
@@ -285,7 +285,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -293,7 +293,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var result = new ExistingEntityResult<User>();
 
@@ -316,7 +316,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -324,7 +324,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByIdAsync(entity.Id.ToString());
 
@@ -342,7 +342,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
 
@@ -350,7 +350,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await IdentityContext.DatabaseContext.Semaphore.WaitAsync();
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 var user = await IdentityContext.UserManager.FindByIdAsync(entity.Id.ToString());
 
@@ -358,7 +358,7 @@ namespace LANCommander.Server.Services
             }
             finally
             {
-                IdentityContext.DatabaseContext.Semaphore.Release();
+                IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
     }

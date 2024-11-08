@@ -14,7 +14,7 @@ namespace LANCommander.Server.Data
         public static string ConnectionString = "";
         public static Dictionary<Guid, Stopwatch> ContextTracker;
 
-        public readonly SemaphoreSlim Semaphore = new(1);
+        public readonly SemaphoreSlim ContextMutex = new(1);
 
         private readonly ILogger Logger;
 

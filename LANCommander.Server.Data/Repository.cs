@@ -65,14 +65,14 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 return await Query(predicate).ToListAsync();
             }
             finally
             {
                 IncludeExpressions.Clear();
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -80,14 +80,14 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 return await Query(predicate).FirstAsync();
             }
             finally
             {
                 IncludeExpressions.Clear();
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -95,21 +95,21 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 return await Query(predicate).OrderByDescending(orderKeySelector).FirstAsync();
             }
             finally
             {
                 IncludeExpressions.Clear();
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
         public async Task<T> Find(Guid id)
         {
             try {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 {
@@ -123,7 +123,7 @@ namespace LANCommander.Server.Data
             finally
             {
                 IncludeExpressions.Clear();
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -131,7 +131,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
                 {
@@ -145,7 +145,7 @@ namespace LANCommander.Server.Data
             finally
             {
                 IncludeExpressions.Clear();
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -153,14 +153,14 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 return await Query(predicate).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
             }
             finally
             {
                 IncludeExpressions.Clear();
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -168,7 +168,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
                 {
@@ -186,7 +186,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -194,7 +194,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
                 {
@@ -214,7 +214,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -222,7 +222,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                Context.Semaphore.Wait();
+                Context.ContextMutex.Wait();
 
                 using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
                 {
@@ -233,7 +233,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -241,7 +241,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Saving changes!"))
                 {
@@ -252,7 +252,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -260,13 +260,13 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.Semaphore.WaitAsync();
+                await Context.ContextMutex.WaitAsync();
 
                 return await UserDbSet.FirstOrDefaultAsync(u => u.UserName == username);
             }
             finally
             {
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
             }
         }
 
@@ -290,7 +290,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                Context.Semaphore.Release();
+                Context.ContextMutex.Release();
                 Logger?.LogDebug("Disposed context {ContextId}", Context.ContextId);
             }
             catch {

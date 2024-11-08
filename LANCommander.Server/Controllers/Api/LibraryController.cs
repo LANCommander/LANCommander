@@ -31,6 +31,7 @@ namespace LANCommander.Server.Controllers.Api
             UserService = userService;
         }
 
+        [HttpGet]
         public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
             try

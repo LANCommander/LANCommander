@@ -16,12 +16,12 @@ namespace LANCommander.Server.Controllers.Api
     public class MediaController : BaseApiController
     {
         private readonly IMapper Mapper;
-        private readonly Services.MediaService MediaService;
+        private readonly MediaService MediaService;
 
         public MediaController(
             ILogger<MediaController> logger,
             IMapper mapper,
-            Services.MediaService mediaService) : base(logger)
+            MediaService mediaService) : base(logger)
         {
             Mapper = mapper;
             MediaService = mediaService;
@@ -42,6 +42,24 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             else
                 return Mapper.Map<SDK.Models.Media>(media);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{id}/Thumbnail")]
+        public async Task<IActionResult> Thumbnail(Guid id)
+        {
+            try
+            {
+                var media = await MediaService.Get(id);
+
+                var fs = System.IO.File.OpenRead(MediaService.GetThumbnailPath(media));
+
+                return File(fs, media.MimeType);
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
         }
 
         [AllowAnonymous]

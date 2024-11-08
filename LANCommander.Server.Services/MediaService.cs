@@ -76,6 +76,21 @@ namespace LANCommander.Server.Services
             return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
         }
 
+        public async Task<string> GetThumbnailPath(Guid id)
+        {
+            var entity = await Get(id);
+
+            return GetThumbnailPath(entity);
+        }
+
+        public string GetThumbnailPath(Media media)
+        {
+            if (ThumbnailSizes.ContainsKey(media.Type))
+                return $"{GetMediaPath(media)}.Thumb";
+            else
+                return GetMediaPath(media);
+        }
+
         /*public async Task<Media> UploadMediaAsync(Stream stream, Media media)
         {
             return await UploadMediaAsync(stream, media);
@@ -169,12 +184,7 @@ namespace LANCommander.Server.Services
             return destination;
         }
 
-        private string GetThumbnailPath(Media media)
         {
-            if (ThumbnailSizes.ContainsKey(media.Type))
-                return $"{GetMediaPath(media)}.Thumb";
-            else
-                return GetMediaPath(media);
         }
 
         public void DeleteLocalMediaFile(Media media)

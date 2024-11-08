@@ -60,6 +60,11 @@ namespace LANCommander.SDK.Services
             return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
         }
 
+        public string GetThumbnailPath(Media media)
+        {
+            return $"/api/Media/{media.Id}/Thumbnail";
+        }
+
         public static string CalculateChecksum(string path)
         {
             uint crc = 0;

@@ -17,7 +17,7 @@ namespace LANCommander.Launcher.Services
         private readonly LibraryService LibraryService;
         private readonly GameService GameService;
 
-        public FilterModel Filter { get; set; }
+        public LibraryFilterModel Filter { get; set; }
 
         public ICollection<Engine> Engines { get; private set; }
         public ICollection<Genre> Genres { get; private set; }
@@ -98,7 +98,7 @@ namespace LANCommander.Launcher.Services
             LoadSettings();
         }
 
-        public IEnumerable<LibraryItem> FilterLibraryItems(IEnumerable<LibraryItem> items)
+        public IEnumerable<ListItem> FilterLibraryItems(IEnumerable<ListItem> items)
         {
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Filtering library items"))
             {
@@ -146,7 +146,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task ResetFilter()
         {
-            Filter = new FilterModel();
+            Filter = new LibraryFilterModel();
 
             await LibraryService.FilterChanged();
 

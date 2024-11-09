@@ -93,7 +93,7 @@ else
 @MenuExtra
 
 @code {
-    [Parameter] public LibraryItem Model { get; set; }
+    [Parameter] public Models.ListItem Model { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
 
     Data.Models.Game Game { get; set; }
@@ -153,7 +153,7 @@ else
                 Footer = null,
             };
 
-            var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, Model);
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
         }
         else
         {
@@ -177,7 +177,7 @@ else
             Footer = null,
         };
 
-        var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, Model);
+        var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
     }
 
     async Task ValidateFiles()

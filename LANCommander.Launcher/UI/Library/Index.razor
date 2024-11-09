@@ -42,29 +42,29 @@
                         <div class="game-action-bar">
                             <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
                                 <SpaceItem>
-                                    @if (SelectedItem.State == LibraryItemState.Installed)
+                                    @if (SelectedItem.State == ListItemState.Installed)
                                     {
                                         <PlayButton LibraryItem="SelectedItem" />
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.NotInstalled)
+                                    else if (SelectedItem.State == ListItemState.NotInstalled)
                                     {
                                         <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.Queued)
+                                    else if (SelectedItem.State == ListItemState.Queued)
                                     {
                                         <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.UpdateAvailable)
+                                    else if (SelectedItem.State == ListItemState.UpdateAvailable)
                                     {
                                         <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.Installing)
+                                    else if (SelectedItem.State == ListItemState.Installing)
                                     {
                                         <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
                                     }
                                 </SpaceItem>
 
-                                @if (SelectedItem.State == LibraryItemState.NotInstalled && Client.IsConnected())
+                                @if (SelectedItem.State == ListItemState.NotInstalled && Client.IsConnected())
                                 {
                                     <SpaceItem>
                                         <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
@@ -149,7 +149,7 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    LibraryItem SelectedItem { get; set; }
+        Models.ListItem SelectedItem { get; set; }
 
     Data.Models.Game SelectedGame { get; set; }
     SDK.Models.Game RemoteGame { get; set; }
@@ -170,7 +170,7 @@
     {
         if (Id != Guid.Empty)
         {
-            await OnLibraryItemSelected(LibraryService.GetLibraryItem(Id));
+            await OnLibraryItemSelected(LibraryService.GetItem(Id));
 
             if (SelectedGame != null && Client.IsConnected())
                 RemoteGame = await Client.Games.GetAsync(SelectedGame.Id);
@@ -181,7 +181,7 @@
 
     async Task LoadData()
     {
-        await LibraryService.RefreshLibraryItemsAsync();
+        await LibraryService.RefreshItemsAsync();
 
         await InvokeAsync(StateHasChanged);
     }
@@ -191,7 +191,7 @@
         NavigationManager.NavigateTo($"/{id}");
     }
 
-    async Task OnLibraryItemSelected(LibraryItem item)
+    async Task OnLibraryItemSelected(Models.ListItem item)
     {
         if (item != null && item.DataItem is Data.Models.Game)
         {
@@ -202,7 +202,7 @@
         }
     }
 
-    async Task Install(LibraryItem item)
+    async Task Install(Models.ListItem item)
     {
         var game = item.DataItem as Game;
 
@@ -221,7 +221,7 @@
                 Footer = null,
             };
 
-            var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, item);
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, item);
         }
         else
         {
@@ -235,7 +235,7 @@
 
         if (queueItem != null)
         {
-            SelectedItem = await LibraryService.GetLibraryItemAsync(SelectedItem);
+            SelectedItem = await LibraryService.GetItemAsync(SelectedItem);
 
             switch (queueItem.Status)
             {
@@ -245,20 +245,20 @@
                 case SDK.Enums.GameInstallStatus.InstallingExpansions:
                 case SDK.Enums.GameInstallStatus.RunningScripts:
                 case SDK.Enums.GameInstallStatus.DownloadingSaves:
-                    SelectedItem.State = LibraryItemState.Installing;
+                    SelectedItem.State = ListItemState.Installing;
                     break;
 
                 case SDK.Enums.GameInstallStatus.Queued:
-                    SelectedItem.State = LibraryItemState.Queued;
+                    SelectedItem.State = ListItemState.Queued;
                     break;
 
                 case SDK.Enums.GameInstallStatus.Failed:
                 case SDK.Enums.GameInstallStatus.Canceled:
-                    SelectedItem.State = LibraryItemState.NotInstalled;
+                    SelectedItem.State = ListItemState.NotInstalled;
                     break;
 
                 case SDK.Enums.GameInstallStatus.Complete:
-                    SelectedItem.State = LibraryItemState.Installed;
+                    SelectedItem.State = ListItemState.Installed;
                     break;
             }
 
@@ -275,7 +275,7 @@
         if (SelectedItem.DataItem is Game selectedGame)
         {
             if (selectedGame.Id == game.Id)
-                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
+                await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
         }
     }
 
@@ -292,7 +292,7 @@
 
         if (result == ConfirmResult.Retry)
         {
-            var libraryItem = LibraryService.GetLibraryItem(game.Id);
+            var libraryItem = LibraryService.GetItem(game.Id);
 
             Install(libraryItem);
         }
@@ -305,7 +305,7 @@
         if (SelectedItem.DataItem is Game selectedGame)
         {
             if (selectedGame.Id == game.Id)
-                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
+                await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
         }
     }
 

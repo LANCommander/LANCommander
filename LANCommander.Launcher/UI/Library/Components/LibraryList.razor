@@ -11,7 +11,7 @@
             foreach (var group in Groups.OrderByTitle(g => g))
             {
                 <Panel Header="@group" Key="@group">
-                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="small">
                         <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                     </AntList>
                 </Panel>
@@ -20,7 +20,7 @@
         else
         {
             <Panel Class="no-header">
-                <AntList DataSource="LibraryItems" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="small">
                     <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                 </AntList>
             </Panel>
@@ -36,16 +36,16 @@
 
     string Search { get; set; } = "";
     List<string> Groups = new List<string>();
-    IEnumerable<LibraryItem> LibraryItems;
+    IEnumerable<Models.ListItem> LibraryItems;
 
     protected override async Task OnInitializedAsync()
     {
-        LibraryService.OnLibraryItemsFiltered += LoadFilteredItems;
+        LibraryService.OnItemsFiltered += LoadFilteredItems;
 
-        await LibraryService.RefreshLibraryItemsAsync();
+        await LibraryService.RefreshItemsAsync();
     }
 
-    async Task LoadFilteredItems(IEnumerable<LibraryItem> libraryItems)
+    async Task LoadFilteredItems(IEnumerable<Models.ListItem> libraryItems)
     {
         LibraryItems = libraryItems;
 
@@ -53,7 +53,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    async Task SelectItem(LibraryItem item)
+    async Task SelectItem(Models.ListItem item)
     {
         if (OnItemSelected.HasDelegate)
             await OnItemSelected.InvokeAsync(item.Key);
@@ -71,6 +71,6 @@
 
     public void Dispose()
     {
-        LibraryService.OnLibraryItemsFiltered -= LoadFilteredItems;
+        LibraryService.OnItemsFiltered -= LoadFilteredItems;
     }
 }

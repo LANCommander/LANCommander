@@ -12,17 +12,17 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    public class Filter
+    public class LibraryFilter
     {
         private bool Initialized = false;
 
-        public FilterModel DataSource { get; set; } = new FilterModel();
-        public FilterModel SelectedOptions { get; set; } = new FilterModel();
+        public LibraryFilterModel DataSource { get; set; } = new LibraryFilterModel();
+        public LibraryFilterModel SelectedOptions { get; set; } = new LibraryFilterModel();
 
         public delegate Task OnChangedHandler();
         public event OnChangedHandler OnChanged;
 
-        public Func<LibraryItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
+        public Func<ListItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
 
         public void Populate(IEnumerable<Game> games)
         {
@@ -84,7 +84,7 @@ namespace LANCommander.Launcher.Models
             Initialized = true;
         }
 
-        public IEnumerable<LibraryItem> ApplyFilter(IEnumerable<LibraryItem> items)
+        public IEnumerable<ListItem> ApplyFilter(IEnumerable<ListItem> items)
         {
             if (!String.IsNullOrWhiteSpace(SelectedOptions.Title))
                 items = items.Where(i => i.Name?.IndexOf(SelectedOptions.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(SelectedOptions.Title, StringComparison.OrdinalIgnoreCase) >= 0);
@@ -192,7 +192,7 @@ namespace LANCommander.Launcher.Models
 
         public async Task ResetFilter()
         {
-            SelectedOptions = new FilterModel();
+            SelectedOptions = new LibraryFilterModel();
 
             if (OnChanged != null)
                 await OnChanged();

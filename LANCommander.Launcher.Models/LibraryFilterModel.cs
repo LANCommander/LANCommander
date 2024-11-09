@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    public class FilterModel
+    public class LibraryFilterModel
     {
         public string Title { get; set; }
         public GroupBy GroupBy { get; set; } = GroupBy.Collection;

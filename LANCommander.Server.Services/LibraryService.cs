@@ -48,7 +48,7 @@ namespace LANCommander.Server.Services
         {
             var game = await GameService.Get(gameId);
 
-            var library = await FirstOrDefault(l => l.User.Id == userId);
+            var library = await GetByUserId(userId);
 
             library.Games.Add(game);
 
@@ -57,7 +57,7 @@ namespace LANCommander.Server.Services
 
         public async Task RemoveFromLibrary(Guid userId, Guid gameId)
         {
-            var library = await FirstOrDefault(l => l.User.Id == userId);
+            var library = await GetByUserId(userId);
 
             var game = library.Games.FirstOrDefault(g => g.Id == gameId);
 

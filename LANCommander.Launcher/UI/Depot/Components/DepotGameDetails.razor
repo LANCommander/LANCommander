@@ -1,0 +1,131 @@
+﻿@inject DepotService DepotService
+@inject SDK.Client Client
+@inject ILogger<DepotGameDetails> Logger
+
+<Drawer Placement="bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
+    @if (SelectedGame != null)
+    {
+        <div class="game-details no-scrollbar">
+            <Button Class="game-details-close-btn" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" OnClick="Hide" />
+
+            @if (SelectedGame != null)
+            {
+                <div class="game-hero">
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
+                    {
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo).Id)" Class="game-details-logo" />
+                    }
+                    else
+                    {
+                        <h1>@SelectedGame.Title</h1>
+                    }
+
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
+                    {
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background).Id)" Class="game-details-background" />
+                    }
+                </div>
+
+                <GridRow Gutter="32" Class="game-info" Wrap="false">
+                    <GridCol Flex="@("auto")">
+                        <div class="game-metadata">
+                            @if (!String.IsNullOrWhiteSpace(SelectedGame.Description))
+                            {
+                                <div class="game-metadata-description">@SelectedGame.Description</div>
+                            }
+
+                            @if (SelectedGame.ReleasedOn != null)
+                            {
+                                <div class="game-metadata-released-on">
+                                    <h3>Released On</h3>
+                                    <span>@SelectedGame.ReleasedOn.ToString("MMMM d, yyyy")</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Developers != null && SelectedGame.Developers.Any())
+                            {
+                                <div class="game-metadata-developers">
+                                    <h3>Developers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Publishers != null && SelectedGame.Publishers.Any())
+                            {
+                                <div class="game-metadata-publishers">
+                                    <h3>Publishers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Genres != null && SelectedGame.Genres.Any())
+                            {
+                                <div class="game-metadata-genres">
+                                    <h3>Genres</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Tags != null && SelectedGame.Tags.Any())
+                            {
+                                <div class="game-metadata-tags">
+                                    <h3>Tags</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
+                                </div>
+                            }
+                        </div>
+                    </GridCol>
+
+                    <GridCol Flex="@("256px")" Class="game-cover">
+                        @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
+                        {
+                            <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover).Id)" />
+                        }
+                    </GridCol>
+                </GridRow>
+            }
+        </div>
+    }
+</Drawer>
+
+@code {
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    SDK.Models.Game SelectedGame { get; set; }
+    bool Visible { get; set; } = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            if (GameId != Guid.Empty)
+                SelectedGame = await Client.Games.GetAsync(GameId);
+        }
+        catch (Exception ex)
+        {
+            SelectedGame = null;
+
+            Logger?.LogError(ex, "Could not load game with ID {GameId}", GameId);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Show()
+    {
+        Visible = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Hide()
+    {
+        Visible = false;
+
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

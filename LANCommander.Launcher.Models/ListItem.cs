@@ -82,5 +82,14 @@ namespace LANCommander.Launcher.Models
             SortName = game.SortTitle;
             DataItem = game;
         }
+
+        public ListItem(SDK.Models.DepotGame game)
+        {
+            Key = game.Id;
+            Type = ListItemType.Game;
+            Name = game.Title;
+            SortName = game.SortTitle;
+            DataItem = game;
+        }
     }
 }

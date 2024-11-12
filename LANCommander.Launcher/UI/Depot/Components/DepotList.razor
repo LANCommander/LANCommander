@@ -1,0 +1,19 @@
+﻿@using LANCommander.SDK.Models
+@inject SDK.Client Client
+
+<Flex Wrap="wrap" Justify="center" Gap="large" Class="depot-games no-scrollbar">
+    @foreach (var game in Games)
+    {
+        <DepotGameItem Value="game" OnClick="OnGameSelected" />
+    }
+</Flex>
+
+@code {
+    [Parameter] public IEnumerable<DepotGame> Games { get; set; }
+    [Parameter] public EventCallback<DepotGame> OnGameSelected { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        
+    }
+}

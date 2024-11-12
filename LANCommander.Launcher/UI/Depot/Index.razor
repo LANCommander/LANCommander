@@ -1,0 +1,68 @@
+﻿@page "/Browse"
+@page "/Browse/{id:guid}"
+@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models.Enums
+@using LANCommander.Launcher.Models
+@using System.Diagnostics
+@using LANCommander.Launcher.UI.Depot.Components
+@using LANCommander.SDK.Helpers
+@inject SDK.Client Client
+@inject NavigationManager NavigationManager
+@inject DepotService DepotService
+@inject InstallService InstallService
+@inject GameService GameService
+@inject ModalService ModalService
+@inject ConfirmService ConfirmService
+@inject ImportService ImportService
+
+<Layout>
+    <Content Class="depot">
+        <DepotFilter Games="@Games" />
+
+        <DepotList Games="@Games" OnGameSelected="@((game) => NavigationManager.NavigateTo($"/Browse/{game.Id}"))" />
+    </Content>
+</Layout>
+
+<div class="logo">
+    <img src="assets/logo-cut.svg" />
+</div>
+
+<DepotGameDetails @ref="DepotGameDetails" GameId="@(SelectedItem?.Key ?? Guid.Empty)" OnClose="@(() => NavigationManager.NavigateTo("/Browse"))" />
+
+<LANCommander.Launcher.UI.Components.Footer />
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    DepotGameDetails DepotGameDetails;
+
+    IEnumerable<SDK.Models.DepotGame> Games { get; set; } = new List<SDK.Models.DepotGame>();
+
+    Models.ListItem SelectedItem { get; set; }
+
+    Settings Settings = SettingService.GetSettings();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        SelectedItem = DepotService.Items.FirstOrDefault(i => i.Key == Id);
+
+        if (SelectedItem != null && Id != Guid.Empty)
+        {
+            await DepotGameDetails.Show();
+        }
+    }
+
+    async Task LoadData()
+    {
+        await DepotService.RefreshItemsAsync();
+
+        Games = DepotService.Items.Select(i => i.DataItem as SDK.Models.DepotGame);
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

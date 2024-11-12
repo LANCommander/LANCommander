@@ -1,0 +1,54 @@
+﻿@using LANCommander.SDK.Models
+@inject SDK.Client Client
+@inject DepotService DepotService
+@inject LibraryService LibraryService
+@inject IMessageService MessageService
+@inject ILogger<DepotGame> Logger
+
+<div class="depot-game">
+    <div class="depot-game-cover" @onclick="() => OnClick.InvokeAsync(Value)">
+        @if (Value.Cover != null)
+        {
+            <img src="@Client.Media.GetAbsoluteThumbnailUrl(Value.Cover)" />
+        }
+        else
+        {
+            <div class="depot-game-default-cover"></div>
+        }
+
+        @if (!Value.InLibrary)
+        {
+            <Button class="depot-game-add-btn" Type="@ButtonType.Primary" Icon="@IconType.Outline.Plus" Loading="Importing" OnClickStopPropagation="true" OnClick="AddToLibrary" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public DepotGame Value { get; set; }
+    [Parameter] public EventCallback<DepotGame> OnClick { get; set; }
+
+    bool Importing = false;
+
+    async Task AddToLibrary()
+    {
+        try
+        {
+            Importing = true;
+            StateHasChanged();
+            await Task.Yield();
+
+            await LibraryService.AddToLibraryAsync(Value.Id);
+
+            Importing = false;
+            StateHasChanged();
+            await Task.Yield();
+
+            MessageService.Success($"{Value.Title} was added to your library!");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, $"{Value} ({Value.Id}) could not be added to your library!");
+            MessageService.Error($"{Value.Title} could not be added to your library!");
+        }
+    }
+}

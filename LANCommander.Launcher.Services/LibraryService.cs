@@ -152,6 +152,26 @@ namespace LANCommander.Launcher.Services
             return new ListItem(game);
         }
 
+        public async Task AddToLibraryAsync(Guid id)
+        {
+            await Client.Library.AddToLibrary(id);
+
+            await ImportService.ImportGameAsync(id);
+
+            await LibraryChanged();
+        }
+
+        public async Task RemoveFromLibraryAsync(Guid id)
+        {
+            await Client.Library.RemoveFromLibrary(id);
+
+            var localGame = await GameService.Get(id);
+
+            await GameService.Delete(localGame);
+
+            await LibraryChanged();
+        }
+
         public async Task LibraryChanged()
         {
             if (OnLibraryChanged != null)

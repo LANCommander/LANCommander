@@ -16,7 +16,7 @@ namespace LANCommander.SDK.Models
         public bool InLibrary { get; set; }
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
-        public Game BaseGame { get; set; }
+        public Guid BaseGameId { get; set; }
         public Engine Engine { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Tag> Tags { get; set; }
@@ -32,7 +32,7 @@ namespace LANCommander.SDK.Models
         public virtual IEnumerable<Redistributable> Redistributables { get; set; }
         public virtual IEnumerable<Server> Servers { get; set; }
         public virtual IEnumerable<PlaySession> PlaySessions { get; set; }
-        public virtual IEnumerable<Game> DependentGames { get; set; }
+        public virtual IEnumerable<Guid> DependentGames { get; set; }
 
         public bool IsAddon
         {

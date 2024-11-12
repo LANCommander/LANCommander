@@ -245,7 +245,7 @@ namespace LANCommander.Launcher.Services
                             localGame.Notes = remoteGame.Notes;
                             localGame.ReleasedOn = remoteGame.ReleasedOn;
                             localGame.Type = (Data.Enums.GameType)(int)remoteGame.Type;
-                            localGame.BaseGameId = remoteGame.BaseGame?.Id;
+                            localGame.BaseGameId = remoteGame.BaseGameId;
                             localGame.Singleplayer = remoteGame.Singleplayer;
 
                             #region Update Game Engine
@@ -379,7 +379,7 @@ namespace LANCommander.Launcher.Services
                             #region Check Installation Status
                             foreach (var installDirectory in Settings.Games.InstallDirectories)
                             {
-                                var gameDirectory = Client.Games.GetInstallDirectory(remoteGame, installDirectory);
+                                var gameDirectory = await Client.Games.GetInstallDirectory(remoteGame, installDirectory);
 
                                 if (Directory.Exists(gameDirectory))
                                 {

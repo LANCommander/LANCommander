@@ -11,7 +11,6 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Company, SDK.Models.Company>();
             CreateMap<Data.Models.Collection, SDK.Models.Collection>();
             CreateMap<Data.Models.Engine, SDK.Models.Engine>();
-            CreateMap<Data.Models.Game, SDK.Models.Game>();
             CreateMap<Data.Models.GameSave, SDK.Models.GameSave>();
             CreateMap<Data.Models.Genre, SDK.Models.Genre>();
             CreateMap<Data.Models.Key, SDK.Models.Key>();
@@ -40,6 +39,11 @@ namespace LANCommander.Server
                 .ForMember(dest =>
                     dest.IsPrimaryAction,
                     opt => opt.MapFrom(src => src.PrimaryAction));
+
+            CreateMap<Data.Models.Game, SDK.Models.Game>()
+                .ForMember(dest =>
+                    dest.DependentGames,
+                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)));
 
             CreateMap<Data.Models.Game, SDK.Models.DepotGame>()
                 .ForMember(dest =>

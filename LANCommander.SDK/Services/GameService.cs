@@ -287,7 +287,7 @@ namespace LANCommander.SDK.Services
                 installDirectory = Client.DefaultInstallDirectory;
 
             var game = Get(gameId);
-            var destination = GetInstallDirectory(game, installDirectory);
+            var destination = await GetInstallDirectory(game, installDirectory);
 
             GameInstallProgress.Game = game;
             GameInstallProgress.Status = GameInstallStatus.Downloading;
@@ -299,12 +299,14 @@ namespace LANCommander.SDK.Services
             OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
 
             // Handle Standalone Mods
-            if (game.Type == GameType.StandaloneMod && game.BaseGame != null)
+            if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
             {
-                destination = GetInstallDirectory(game.BaseGame, installDirectory);
+                var baseGame = await Client.Games.GetAsync(game.BaseGameId);
+
+                destination = await GetInstallDirectory(baseGame, installDirectory);
 
                 if (!Directory.Exists(destination))
-                    destination = await InstallAsync(game.BaseGame.Id, installDirectory, null, maxAttempts);
+                    destination = await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts);
             }
 
             try
@@ -412,7 +414,10 @@ namespace LANCommander.SDK.Services
 
         public async Task InstallAddonAsync(string installDirectory, Game game, Guid addonId)
         {
-            var addon = game.DependentGames.Where(g => g.IsAddon && g.Id == addonId).FirstOrDefault();
+            var addon = await Client.Games.GetAsync(addonId);
+
+            if (!addon.IsAddon)
+                return;
 
             if (addon.Type == GameType.Expansion)
                 GameInstallProgress.Status = GameInstallStatus.InstallingExpansions;
@@ -524,7 +529,6 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> MoveAsync(Game game, string oldInstallDirectory, string newInstallDirectory)
         {
-            var addons = game.DependentGames.Where(g => g.IsAddon);
             var gameAndAddons = new List<Game>();
 
             GameInstallProgress.Game = game;
@@ -532,11 +536,18 @@ namespace LANCommander.SDK.Services
             OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
 
             gameAndAddons.Add(game);
-            gameAndAddons.AddRange(addons);
+
+            foreach (var dependentGameId in game.DependentGames)
+            {
+                var dependentGame = await Client.Games.GetAsync(dependentGameId);
+
+                if (dependentGame.IsAddon)
+                    gameAndAddons.Add(dependentGame);
+            }
 
             foreach (var entry in gameAndAddons)
             {
-                if (IsInstalled(oldInstallDirectory, game, entry.Id))
+                if (await IsInstalled(oldInstallDirectory, game, entry.Id))
                     await Client.Saves.UploadAsync(oldInstallDirectory, entry.Id);
             }
 
@@ -595,7 +606,7 @@ namespace LANCommander.SDK.Services
 
             foreach (var entry in gameAndAddons)
             {
-                if (IsInstalled(newInstallDirectory, game, entry.Id))
+                if (await IsInstalled(newInstallDirectory, game, entry.Id))
                 {
                     await RunPostInstallScripts(entry);
                     await Client.Saves.DownloadAsync(newInstallDirectory, entry.Id);
@@ -608,9 +619,9 @@ namespace LANCommander.SDK.Services
             return newInstallDirectory;
         }
 
-        public bool IsInstalled(string installDirectory, Game game, Guid? addonId = null)
+        public async Task<bool> IsInstalled(string installDirectory, Game game, Guid? addonId = null)
         {
-            installDirectory = GetInstallDirectory(game, installDirectory);
+            installDirectory = await GetInstallDirectory(game, installDirectory);
 
             var metadataPath = ManifestHelper.GetPath(installDirectory, addonId ?? game.Id);
 
@@ -805,13 +816,17 @@ namespace LANCommander.SDK.Services
             return extractionResult;
         }
 
-        public string GetInstallDirectory(Game game, string installDirectory)
+        public async Task<string> GetInstallDirectory(Game game, string installDirectory)
         {
             if (string.IsNullOrWhiteSpace(installDirectory))
                 installDirectory = Client.DefaultInstallDirectory;
 
-            if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGame != null)
-                return GetInstallDirectory(game.BaseGame, installDirectory);
+            if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGameId != Guid.Empty)
+            {
+                var baseGame = await Client.Games.GetAsync(game.BaseGameId);
+
+                return await GetInstallDirectory(baseGame, installDirectory);
+            }
             else
                 return Path.Combine(installDirectory, game.Title.SanitizeFilename());
         }

@@ -50,34 +50,44 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
-            var accessibleGames = new List<SDK.Models.Game>();
-            var games = await GameService.Get();
+            var user = await UserService.Get(User?.Identity?.Name);
+            var userLibrary = await LibraryService.GetByUserId(user.Id);
 
             var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");
-                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
-            }, TimeSpan.FromHours(1));
+
+                var games = await GameService.Get<SDK.Models.Game>();
+
+                return games;
+            }, TimeSpan.MaxValue);
+
+            foreach (var mappedGame in mappedGames)
+            {
+                mappedGame.PlaySessions = mappedGame.PlaySessions.Where(ps => ps.UserId == user.Id);
+
+                if (userLibrary.Games != null)
+                    mappedGame.InLibrary = userLibrary.Games.Any(g => g.Id == mappedGame.Id);
+            }
 
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole(RoleService.AdministratorRoleName))
             {
                 var roles = await UserService.GetRoles(User?.Identity.Name);
 
-                var accessibleCollections = roles.SelectMany(r => r.Collections).DistinctBy(c => c.Id);
-                var accessibleCollectionGames = accessibleCollections.SelectMany(c => c.Games).DistinctBy(g => g.Id).Select(g => g.Id);
+                var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
 
-                accessibleGames.AddRange(mappedGames.Where(mg => accessibleCollectionGames.Contains(mg.Id)));
+                var accessibleGames = mappedGames.Where(g => g.Collections.Any(c => accessibleCollectionIds.Contains(c.Id)));
 
                 foreach (var game in accessibleGames)
                 {
-                    game.Collections = game.Collections.Where(c => accessibleCollections.Any(ac => ac.Id == c.Id));
+                    game.Collections = game.Collections.Where(c => accessibleCollectionIds.Contains(c.Id));
                 }
+
+                return accessibleGames;
             }
             else
             {
-                accessibleGames = mappedGames.ToList();
+                return mappedGames;
             }
-
-            return accessibleGames;
         }
 
         [HttpGet("{id}")]

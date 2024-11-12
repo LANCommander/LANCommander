@@ -43,12 +43,24 @@ namespace LANCommander.Server.Controllers.Api
             try
             {
                 var user = await UserService.Get(User.Identity.Name);
+                var roles = await UserService.GetRoles(User?.Identity.Name);
                 var library = await LibraryService.GetByUserId(user.Id);
                 var libraryGameIds = library.Games.Select(g => g.Id).ToList();
 
+                var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
+
                 return await Cache.GetOrSetAsync($"LibraryGames:{user.Id}", async _ =>
                 {
-                    return await GameService.Get<SDK.Models.Game>(g => libraryGameIds.Contains(g.Id));
+                    var games = await GameService.Get<SDK.Models.Game>(g => libraryGameIds.Contains(g.Id));
+
+                    foreach (var game in games)
+                    {
+                        game.PlaySessions = game.PlaySessions.Where(ps => ps.UserId == user.Id);
+                        game.Collections = game.Collections.Where(c => accessibleCollectionIds.Contains(c.Id));
+                        game.InLibrary = true;
+                    }
+
+                    return games;
                 }, TimeSpan.MaxValue);
             }
             catch (Exception ex)

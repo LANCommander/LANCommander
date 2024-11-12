@@ -13,6 +13,7 @@ namespace LANCommander.SDK.Models
         public string Description { get; set; }
         public bool Singleplayer { get; set; }
         public DateTime ReleasedOn { get; set; }
+        public bool InLibrary { get; set; }
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
         public Game BaseGame { get; set; }

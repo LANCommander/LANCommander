@@ -361,5 +361,10 @@ namespace LANCommander.Server.Services
                 IdentityContext.DatabaseContext.ContextMutex.Release();
             }
         }
+
+        public IBaseDatabaseService<User> Include(Expression<Func<User, object>> includeExpression)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

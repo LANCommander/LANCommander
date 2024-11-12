@@ -14,6 +14,7 @@ using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using System.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using SharpCompress.Common;
 
 namespace LANCommander.Server.Services
 {
@@ -50,21 +51,21 @@ namespace LANCommander.Server.Services
 
         public override async Task<Game> Add(Game entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await ExpireCache(entity.Id);
 
             return await base.Add(entity);
         }
 
         public override async Task<ExistingEntityResult<Game>> AddMissing(Expression<Func<Game, bool>> predicate, Game entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await ExpireCache(entity.Id);
 
             return await base.AddMissing(predicate, entity);
         }
 
         public override async Task<Game> Update(Game entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await ExpireCache(entity.Id);
 
             foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
                 entity.Media.Remove(media);
@@ -83,10 +84,9 @@ namespace LANCommander.Server.Services
             {
                 await MediaService.Delete(media);
             }
-
             await base.Delete(game);
 
-            await Cache.ExpireAsync("MappedGames");
+            await ExpireCache(game.Id);
         }
 
         public async Task<GameManifest> GetManifest(Guid id)
@@ -613,6 +613,13 @@ namespace LANCommander.Server.Services
             await ArchiveService.Delete(importArchive);
 
             return game;
+        }
+
+        private async Task ExpireCache(Guid gameId)
+        {
+            await Cache.ExpireAsync("MappedGames");
+            await Cache.ExpireAsync("DepotGames");
+            await Cache.ExpireAsync($"DepotGames:{gameId}");
         }
     }
 }

@@ -27,11 +27,21 @@ namespace LANCommander.Server.Services
             GameService = gameService;
         }
 
-        public async Task<IEnumerable<Game>> Get(Guid userId)
+        public async Task<Library> GetByUserId(Guid userId)
         {
             var library = await FirstOrDefault(l => l.User.Id == userId);
 
-            return library.Games;
+            if (library == null)
+            {
+                var user = await UserService.Get(userId);
+
+                if (user == null)
+                    throw new Exception("User not found with ID " + userId.ToString());
+
+                library = await Add(new Library { UserId = userId });
+            }
+
+            return library;
         }
 
         public async Task AddToLibrary(Guid userId, Guid gameId)

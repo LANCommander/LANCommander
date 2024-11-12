@@ -12,6 +12,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Collection, SDK.Models.Collection>();
             CreateMap<Data.Models.Engine, SDK.Models.Engine>();
             CreateMap<Data.Models.Game, SDK.Models.Game>();
+            CreateMap<Data.Models.Game, SDK.Models.DepotGame>();
             CreateMap<Data.Models.GameSave, SDK.Models.GameSave>();
             CreateMap<Data.Models.Genre, SDK.Models.Genre>();
             CreateMap<Data.Models.Key, SDK.Models.Key>();

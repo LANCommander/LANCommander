@@ -1,9 +1,12 @@
 ﻿
 using AutoMapper;
-using LANCommander.SDK.Models;
+using AutoMapper.QueryableExtensions;
+using LANCommander.Server.Data;
+using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Controllers.Api
@@ -15,6 +18,7 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly IFusionCache Cache;
+        private readonly GameService GameService;
         private readonly LibraryService LibraryService;
         private readonly UserService UserService;
 
@@ -22,11 +26,13 @@ namespace LANCommander.Server.Controllers.Api
             ILogger<LibraryController> logger,
             IMapper mapper,
             IFusionCache cache,
+            GameService gameService,
             LibraryService libraryService,
             UserService userService) : base(logger)
         {
             Mapper = mapper;
             Cache = cache;
+            GameService = gameService;
             LibraryService = libraryService;
             UserService = userService;
         }
@@ -37,11 +43,13 @@ namespace LANCommander.Server.Controllers.Api
             try
             {
                 var user = await UserService.Get(User.Identity.Name);
+                var library = await LibraryService.GetByUserId(user.Id);
+                var libraryGameIds = library.Games.Select(g => g.Id).ToList();
 
                 return await Cache.GetOrSetAsync($"LibraryGames:{user.Id}", async _ =>
                 {
-                    return Mapper.Map<IEnumerable<SDK.Models.Game>>(await LibraryService.Get(user.Id));
-                }, TimeSpan.FromDays(1));
+                    return await GameService.Get<SDK.Models.Game>(g => libraryGameIds.Contains(g.Id));
+                }, TimeSpan.MaxValue);
             }
             catch (Exception ex)
             {

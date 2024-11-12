@@ -21,6 +21,20 @@ namespace LANCommander.Server.Services
             Repository = repository;
         }
 
+        public IBaseDatabaseService<T> Include(Expression<Func<T, object>> includeExpression)
+        {
+            Repository.Include(includeExpression);
+
+            return this;
+        }
+
+        public IBaseDatabaseService<T> DisableTracking()
+        {
+            Repository.AsNoTracking();
+
+            return this;
+        }
+
         public virtual async Task<ICollection<T>> Get()
         {
             return await Cache.GetOrSetAsync($"{typeof(T).FullName}:Get", async _ =>
@@ -29,9 +43,19 @@ namespace LANCommander.Server.Services
             }, TimeSpan.FromSeconds(30));
         }
 
+        public virtual async Task<ICollection<U>> Get<U>()
+        {
+            return await Get<U>(x => true);
+        }
+
         public virtual async Task<T> Get(Guid id)
         {
             return await Repository.Find(id);
+        }
+
+        public virtual async Task<U> Get<U>(Guid id)
+        {
+            return await Repository.Find<U>(id);
         }
 
         public virtual async Task<ICollection<T>> Get(Expression<Func<T, bool>> predicate)
@@ -42,14 +66,32 @@ namespace LANCommander.Server.Services
             return results;
         }
 
+        public virtual async Task<ICollection<U>> Get<U>(Expression<Func<T, bool>> predicate)
+        {
+            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
+            var results = await Repository.Get<U>(predicate);
+            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
+            return results;
+        }
+
         public virtual async Task<T> First(Expression<Func<T, bool>> predicate)
         {
             return await Repository.First(predicate);
         }
 
+        public virtual async Task<U> First<U>(Expression<Func<T, bool>> predicate)
+        {
+            return await Repository.First<U>(predicate);
+        }
+
         public virtual async Task<T> First<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await Repository.First(predicate, orderKeySelector);
+            return await Repository.First<TKey>(predicate, orderKeySelector);
+        }
+
+        public virtual async Task<U> First<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        {
+            return await Repository.First<U, TKey>(predicate, orderKeySelector);
         }
 
         public virtual async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
@@ -57,9 +99,19 @@ namespace LANCommander.Server.Services
             return await Repository.FirstOrDefault(predicate);
         }
 
+        public virtual async Task<U> FirstOrDefault<U>(Expression<Func<T, bool>> predicate)
+        {
+            return await Repository.FirstOrDefault<U>(predicate);
+        }
+
         public virtual async Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await Repository.FirstOrDefault(predicate, orderKeySelector);
+            return await Repository.FirstOrDefault<T, TKey>(predicate, orderKeySelector);
+        }
+
+        public virtual async Task<U> FirstOrDefault<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        {
+            return await Repository.FirstOrDefault<U, TKey>(predicate, orderKeySelector);
         }
 
         public virtual async Task<bool> Exists(Guid id)

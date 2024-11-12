@@ -6,21 +6,30 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using System.Threading;
+using AutoMapper.QueryableExtensions;
+using AutoMapper;
 
 namespace LANCommander.Server.Data
 {
     public class Repository<T> : IDisposable where T : class, IBaseModel
     {
         public readonly DatabaseContext Context;
+        private readonly IMapper Mapper;
         private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly ILogger Logger;
 
         private List<Expression<Func<T, object>>> IncludeExpressions { get; } = new();
         private User User;
+        private bool Tracking = true;
 
-        public Repository(DatabaseContext context, IHttpContextAccessor httpContextAccessor, ILogger<Repository<T>> logger)
+        public Repository(
+            DatabaseContext context,
+            IMapper mapper,
+            IHttpContextAccessor httpContextAccessor,
+            ILogger<Repository<T>> logger)
         {
             Context = context;
+            Mapper = mapper;
             HttpContextAccessor = httpContextAccessor;
             Logger = logger;
 
@@ -50,8 +59,18 @@ namespace LANCommander.Server.Data
 
                 op.Complete();
 
+                if (!Tracking)
+                    queryable = queryable.AsNoTracking();
+
                 return queryable;
             }
+        }
+
+        public Repository<T> AsNoTracking()
+        {
+            Tracking = false;
+
+            return this;
         }
 
         public Repository<T> Include(Expression<Func<T, object>> includeExpression)
@@ -71,6 +90,23 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
+                IncludeExpressions.Clear();
+                Context.ContextMutex.Release();
+            }
+        }
+
+        public async Task<ICollection<U>> Get<U>(Expression<Func<T, bool>> predicate)
+        {
+            try
+            {
+                await Context.ContextMutex.WaitAsync();
+
+                return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).ToListAsync();
+            }
+            finally
+            {
+                Tracking = true;
                 IncludeExpressions.Clear();
                 Context.ContextMutex.Release();
             }
@@ -86,6 +122,23 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
+                IncludeExpressions.Clear();
+                Context.ContextMutex.Release();
+            }
+        }
+
+        public async Task<U> First<U>(Expression<Func<T, bool>> predicate)
+        {
+            try
+            {
+                await Context.ContextMutex.WaitAsync();
+
+                return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
+            }
+            finally
+            {
+                Tracking = true;
                 IncludeExpressions.Clear();
                 Context.ContextMutex.Release();
             }
@@ -101,6 +154,23 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
+                IncludeExpressions.Clear();
+                Context.ContextMutex.Release();
+            }
+        }
+
+        public async Task<U> First<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        {
+            try
+            {
+                await Context.ContextMutex.WaitAsync();
+
+                return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).OrderByDescending(orderKeySelector).FirstAsync();
+            }
+            finally
+            {
+                Tracking = true;
                 IncludeExpressions.Clear();
                 Context.ContextMutex.Release();
             }
@@ -122,6 +192,30 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
+                IncludeExpressions.Clear();
+                Context.ContextMutex.Release();
+            }
+        }
+
+        public async Task<U> Find<U>(Guid id)
+        {
+            try
+            {
+                await Context.ContextMutex.WaitAsync();
+
+                using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
+                {
+                    var entity = await Query(x => x.Id == id).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
+
+                    op.Complete();
+
+                    return entity;
+                }
+            }
+            finally
+            {
+                Tracking = true;
                 IncludeExpressions.Clear();
                 Context.ContextMutex.Release();
             }
@@ -144,6 +238,30 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
+                IncludeExpressions.Clear();
+                Context.ContextMutex.Release();
+            }
+        }
+
+        public async Task<U> FirstOrDefault<U>(Expression<Func<T, bool>> predicate)
+        {
+            try
+            {
+                await Context.ContextMutex.WaitAsync();
+
+                using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
+                {
+                    var entity = await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
+
+                    op.Complete();
+
+                    return entity;
+                }
+            }
+            finally
+            {
+                Tracking = true;
                 IncludeExpressions.Clear();
                 Context.ContextMutex.Release();
             }
@@ -159,6 +277,23 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
+                IncludeExpressions.Clear();
+                Context.ContextMutex.Release();
+            }
+        }
+
+        public async Task<U> FirstOrDefault<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        {
+            try
+            {
+                await Context.ContextMutex.WaitAsync();
+
+                return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
+            }
+            finally
+            {
+                Tracking = true;
                 IncludeExpressions.Clear();
                 Context.ContextMutex.Release();
             }
@@ -168,12 +303,14 @@ namespace LANCommander.Server.Data
         {
             try
             {
+                var currentUser = await GetCurrentUserId();
+
                 await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
                 {
-                    entity.CreatedById = await GetCurrentUserId();
-                    entity.UpdatedById = await GetCurrentUserId();
+                    entity.CreatedById = currentUser;
+                    entity.UpdatedById = currentUser;
                     entity.CreatedOn = DateTime.UtcNow;
                     entity.UpdatedOn = DateTime.UtcNow;
 
@@ -186,6 +323,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
                 Context.ContextMutex.Release();
             }
         }
@@ -194,15 +332,16 @@ namespace LANCommander.Server.Data
         {
             try
             {
+                var currentUserId = await GetCurrentUserId();
+                var existing = await Find(entity.Id);
+
                 await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
                 {
-                    var existing = await Find(entity.Id);
-
                     Context.Entry(existing).CurrentValues.SetValues(entity);
 
-                    entity.UpdatedById = await GetCurrentUserId();
+                    entity.UpdatedById = currentUserId;
                     entity.UpdatedOn = DateTime.UtcNow;
 
                     Context.Update(entity);
@@ -214,6 +353,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
                 Context.ContextMutex.Release();
             }
         }
@@ -233,6 +373,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
                 Context.ContextMutex.Release();
             }
         }
@@ -252,6 +393,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
                 Context.ContextMutex.Release();
             }
         }
@@ -266,6 +408,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
+                Tracking = true;
                 Context.ContextMutex.Release();
             }
         }

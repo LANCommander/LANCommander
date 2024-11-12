@@ -12,6 +12,8 @@ namespace LANCommander.Server.Services
     {
         Repository<T> Repository { get; set; }
 
+        IBaseDatabaseService<T> Include(Expression<Func<T, object>> includeExpression);
+
         Task<ICollection<T>> Get();
 
         Task<T> Get(Guid id);

@@ -10,7 +10,5 @@
 
         public long CompressedSize { get; set; }
         public long UncompressedSize { get; set; }
-
-        public virtual Archive LastVersion { get; set; }
     }
 }

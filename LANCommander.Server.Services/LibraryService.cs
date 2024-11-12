@@ -53,6 +53,8 @@ namespace LANCommander.Server.Services
             library.Games.Add(game);
 
             await Update(library);
+
+            await Cache.ExpireAsync($"LibraryGames:{userId}");
         }
 
         public async Task RemoveFromLibrary(Guid userId, Guid gameId)
@@ -64,6 +66,8 @@ namespace LANCommander.Server.Services
             library.Games.Remove(game);
 
             await Update(library);
+
+            await Cache.ExpireAsync($"LibraryGames:{userId}");
         }
     }
 }

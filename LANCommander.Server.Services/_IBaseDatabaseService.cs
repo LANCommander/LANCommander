@@ -15,14 +15,19 @@ namespace LANCommander.Server.Services
         IBaseDatabaseService<T> Include(Expression<Func<T, object>> includeExpression);
 
         Task<ICollection<T>> Get();
+        Task<ICollection<U>> Get<U>();
 
         Task<T> Get(Guid id);
+        Task<U> Get<U>(Guid id);
 
         Task<ICollection<T>> Get(Expression<Func<T, bool>> predicate);
+        Task<ICollection<U>> Get<U>(Expression<Func<T, bool>> predicate);
 
         Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate);
+        Task<U> FirstOrDefault<U>(Expression<Func<T, bool>> predicate);
 
         Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector);
+        Task<U> FirstOrDefault<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector);
 
         Task<bool> Exists(Guid id);
 

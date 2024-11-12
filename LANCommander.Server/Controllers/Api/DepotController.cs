@@ -46,7 +46,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var games = await Cache.GetOrSetAsync("DepotGames", async _ =>
             {
-                return await GameService.Get<SDK.Models.DepotGame>();
+                return await GameService.Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover)).Get<SDK.Models.DepotGame>();
             }, TimeSpan.MaxValue);
 
             foreach (var game in games)

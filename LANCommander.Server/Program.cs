@@ -21,6 +21,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using LANCommander.Server.Jobs.Background;
 using Microsoft.Data.Sqlite;
+using Microsoft.OpenApi.Models;
+using Microsoft.CodeAnalysis.Options;
 
 namespace LANCommander.Server
 {
@@ -263,6 +265,30 @@ namespace LANCommander.Server
             builder.Services.AddSwaggerGen(options =>
             {
                 options.CustomSchemaIds(type => type.ToString());
+                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    In = ParameterLocation.Header,
+                    Description = "Enter a valid access token",
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    BearerFormat = "JWT",
+                    Scheme = "Bearer"
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[]{}
+                    }
+                });
             });
 
             Log.Debug("Registering AntDesign Blazor");

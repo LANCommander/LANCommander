@@ -60,6 +60,11 @@ namespace LANCommander.SDK.Services
             return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
         }
 
+        public string GetAbsoluteThumbnailUrl(Media media)
+        {
+            return new Uri(Client.BaseUrl, GetThumbnailPath(media)).ToString();
+        }
+
         public string GetThumbnailPath(Media media)
         {
             return $"/api/Media/{media.Id}/Thumbnail";

@@ -1,4 +1,6 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Models;
@@ -19,16 +21,19 @@ namespace LANCommander.Server.Services
     public class UserService : BaseService, IBaseDatabaseService<User>
     {
         private readonly IdentityContext IdentityContext;
+        private readonly IMapper Mapper;
 
         public Repository<User> Repository { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public UserService(
             ILogger<UserService> logger,
+            IMapper mapper,
             Repository<User> repository,
             RoleService roleService,
             IdentityContextFactory identityContextFactory) : base(logger)
         {
             IdentityContext = identityContextFactory.Create();
+            Mapper = mapper;
         }
 
         public async Task<User> Get(string userName)
@@ -38,6 +43,22 @@ namespace LANCommander.Server.Services
                 await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.FindByNameAsync(userName);
+            }
+            finally
+            {
+                IdentityContext.DatabaseContext.ContextMutex.Release();
+            }
+        }
+
+        public async Task<T> Get<T>(string userName)
+        {
+            try
+            {
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
+
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
+
+                return Mapper.Map<T>(user);
             }
             finally
             {
@@ -217,6 +238,20 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public async Task<ICollection<T>> Get<T>()
+        {
+            try
+            {
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
+
+                return await IdentityContext.UserManager.Users.ProjectTo<T>(Mapper.ConfigurationProvider).ToListAsync();
+            }
+            finally
+            {
+                IdentityContext.DatabaseContext.ContextMutex.Release();
+            }
+        }
+
         public async Task<User> Get(Guid id)
         {
             try
@@ -224,6 +259,22 @@ namespace LANCommander.Server.Services
                 await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.FindByIdAsync(id.ToString());
+            }
+            finally
+            {
+                IdentityContext.DatabaseContext.ContextMutex.Release();
+            }
+        }
+
+        public async Task<T> Get<T>(Guid id)
+        {
+            try
+            {
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
+
+                var user = await IdentityContext.UserManager.FindByIdAsync(id.ToString());
+
+                return Mapper.Map<T>(user);
             }
             finally
             {
@@ -245,6 +296,20 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public async Task<ICollection<T>> Get<T>(Expression<Func<User, bool>> predicate)
+        {
+            try
+            {
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
+
+                return await IdentityContext.UserManager.Users.Where(predicate).ProjectTo<T>(Mapper.ConfigurationProvider).ToListAsync();
+            }
+            finally
+            {
+                IdentityContext.DatabaseContext.ContextMutex.Release();
+            }
+        }
+
         public async Task<User> FirstOrDefault(Expression<Func<User, bool>> predicate)
         {
             try
@@ -259,6 +324,20 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public async Task<T> FirstOrDefault<T>(Expression<Func<User, bool>> predicate)
+        {
+            try
+            {
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
+
+                return await IdentityContext.UserManager.Users.Where(predicate).ProjectTo<T>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
+            }
+            finally
+            {
+                IdentityContext.DatabaseContext.ContextMutex.Release();
+            }
+        }
+
         public async Task<User> FirstOrDefault<TKey>(Expression<Func<User, bool>> predicate, Expression<Func<User, TKey>> orderKeySelector)
         {
             try
@@ -266,6 +345,20 @@ namespace LANCommander.Server.Services
                 await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
 
                 return await IdentityContext.UserManager.Users.Where(predicate).OrderBy(orderKeySelector).FirstOrDefaultAsync();
+            }
+            finally
+            {
+                IdentityContext.DatabaseContext.ContextMutex.Release();
+            }
+        }
+
+        public async Task<T> FirstOrDefault<T, TKey>(Expression<Func<User, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        {
+            try
+            {
+                await IdentityContext.DatabaseContext.ContextMutex.WaitAsync();
+
+                return await IdentityContext.UserManager.Users.Where(predicate).ProjectTo<T>(Mapper.ConfigurationProvider).OrderBy(orderKeySelector).FirstOrDefaultAsync();
             }
             finally
             {

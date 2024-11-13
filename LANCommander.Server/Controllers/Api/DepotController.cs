@@ -40,13 +40,15 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Games")]
         public async Task<IEnumerable<SDK.Models.DepotGame>> GetGames()
         {
-            var user = await UserService.Get(User?.Identity?.Name);
-            var library = await LibraryService.GetByUserId(user.Id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var library = await LibraryService.GetByUserIdAsync(user.Id);
             var libraryGameIds = library.Games.Select(g => g.Id).ToList();
 
             var games = await Cache.GetOrSetAsync("DepotGames", async _ =>
             {
-                return await GameService.Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover)).Get<SDK.Models.DepotGame>();
+                return await GameService
+                    .Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover))
+                    .GetAsync<SDK.Models.DepotGame>();
             }, TimeSpan.MaxValue);
 
             foreach (var game in games)
@@ -61,9 +63,9 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Games/{id}")]
         public async Task<SDK.Models.DepotGame> GetGame(Guid id)
         {
-            var game = await GameService.Get(id);
-            var user = await UserService.Get(User?.Identity?.Name);
-            var library = await LibraryService.GetByUserId(user.Id);
+            var game = await GameService.GetAsync(id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var library = await LibraryService.GetByUserIdAsync(user.Id);
 
             var result = Mapper.Map<SDK.Models.DepotGame>(game);
 

@@ -89,7 +89,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Tags = (await TagService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        Tags = (await TagService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private async Task UpdateOrAdd()
@@ -98,13 +98,13 @@
         {
             if (TagContext.Id == Guid.Empty)
             {
-                await TagService.AddMissing(x => x.Name == TagContext.Name, TagContext);
+                await TagService.AddMissingAsync(x => x.Name == TagContext.Name, TagContext);
 
                 MessageService.Success($"{TagContext.Name} was added!");
             }
             else
             {
-                await TagService.Update(TagContext);
+                await TagService.UpdateAsync(TagContext);
 
                 MessageService.Success($"{TagContext.Name} was updated!");
             }
@@ -147,9 +147,9 @@
 
         Loading = true;
 
-        await TagService.Delete(Tag);
+        await TagService.DeleteAsync(Tag);
 
-        Tags = (await TagService.Get(x => true)).OrderBy(r => r.Name);
+        Tags = (await TagService.GetAsync(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

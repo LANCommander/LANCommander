@@ -89,7 +89,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Platforms = (await PlatformService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        Platforms = (await PlatformService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private async Task UpdateOrAdd()
@@ -98,13 +98,13 @@
         {
             if (PlatformContext.Id == Guid.Empty)
             {
-                await PlatformService.AddMissing(x => x.Name == PlatformContext.Name, PlatformContext);
+                await PlatformService.AddMissingAsync(x => x.Name == PlatformContext.Name, PlatformContext);
 
                 MessageService.Success($"{PlatformContext.Name} was added!");
             }
             else
             {
-                await PlatformService.Update(PlatformContext);
+                await PlatformService.UpdateAsync(PlatformContext);
 
                 MessageService.Success($"{PlatformContext.Name} was updated!");
             }
@@ -147,9 +147,9 @@
 
         Loading = true;
 
-        await PlatformService.Delete(Platform);
+        await PlatformService.DeleteAsync(Platform);
 
-        Platforms = (await PlatformService.Get(x => true)).OrderBy(r => r.Name);
+        Platforms = (await PlatformService.GetAsync(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

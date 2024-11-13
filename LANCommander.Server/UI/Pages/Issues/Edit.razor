@@ -98,9 +98,9 @@
         if (Id == Guid.Empty)
             Issue = new Issue();
         else
-            Issue = await IssueService.Get(Id);
+            Issue = await IssueService.GetAsync(Id);
 
-        Games = await GameService.Get();
+        Games = await GameService.GetAsync();
     }
 
     private async Task Save()
@@ -109,13 +109,13 @@
         {
             if (Issue.Id != Guid.Empty)
             {
-                Issue = await IssueService.Update(Issue);
+                Issue = await IssueService.UpdateAsync(Issue);
 
                 await MessageService.Success("Game updated!");
             }
             else
             {
-                Issue = await IssueService.Add(Issue);
+                Issue = await IssueService.AddAsync(Issue);
 
                 NavigationManager.LocationChanged += NotifyIssueAdded;
 

@@ -32,8 +32,8 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var game = await GameService.Get(issueRequest.GameId);
-                var user = await UserService.Get(User?.Identity?.Name);
+                var game = await GameService.GetAsync(issueRequest.GameId);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 if (game != null)
                 {
@@ -43,7 +43,7 @@ namespace LANCommander.Server.Controllers.Api
                         Description = issueRequest.Description
                     };
 
-                    issue = await IssueService.Add(issue);
+                    issue = await IssueService.AddAsync(issue);
 
                     return true;
                 }

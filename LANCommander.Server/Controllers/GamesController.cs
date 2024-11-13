@@ -27,7 +27,7 @@ namespace LANCommander.Server.Controllers
         [HttpGet("/Games/{id:guid}/Export/Full")]
         public async Task ExportFull(Guid id)
         {
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -40,7 +40,7 @@ namespace LANCommander.Server.Controllers
 
             using (ZipArchive export = new ZipArchive(Response.BodyWriter.AsStream(), ZipArchiveMode.Create))
             {
-                var manifest = await GameService.Export(game.Id);
+                var manifest = await GameService.ExportAsync(game.Id);
                 var serializedManifest = ManifestHelper.Serialize(manifest);
 
                 using (var manistream = new MemoryStream())
@@ -61,7 +61,7 @@ namespace LANCommander.Server.Controllers
                 if (game.Media != null)
                 foreach (var media in game.Media)
                 {
-                    var mediaFilePath = await MediaService.GetMediaPath(media.Id);
+                    var mediaFilePath = await MediaService.GetMediaPathAsync(media.Id);
                     var entry = export.CreateEntry($"Media/{media.FileId}", CompressionLevel.NoCompression);
 
                     using (var entryStream = entry.Open())
@@ -108,7 +108,7 @@ namespace LANCommander.Server.Controllers
         [HttpGet("/Games/{id:guid}/Export/Metadata")]
         public async Task ExportMetadata(Guid id)
         {
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -121,7 +121,7 @@ namespace LANCommander.Server.Controllers
 
             using (ZipArchive export = new ZipArchive(Response.BodyWriter.AsStream(), ZipArchiveMode.Create))
             {
-                var manifest = await GameService.Export(game.Id);
+                var manifest = await GameService.ExportAsync(game.Id);
 
                 manifest.Keys = null;
                 manifest.Archives = null;
@@ -146,7 +146,7 @@ namespace LANCommander.Server.Controllers
                 if (game.Media != null)
                     foreach (var media in game.Media)
                     {
-                        var mediaFilePath = await MediaService.GetMediaPath(media.Id);
+                        var mediaFilePath = await MediaService.GetMediaPathAsync(media.Id);
                         var entry = export.CreateEntry($"Media/{media.FileId}", CompressionLevel.NoCompression);
 
                         using (var entryStream = entry.Open())

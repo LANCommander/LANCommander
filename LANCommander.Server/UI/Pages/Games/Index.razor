@@ -193,7 +193,7 @@
     private async Task LoadData()
     {
         Games = ((await GameService
-            .Get())
+            .GetAsync())
             .Where(g =>
                 (
                     g.Type == GameType.MainGame
@@ -283,7 +283,7 @@
 
         try
         {
-            await GameService.Delete(game);
+            await GameService.DeleteAsync(game);
 
             MessageService.Success($"{game.Title} was successfully deleted!");
         }
@@ -293,7 +293,7 @@
             Logger.LogError(ex, "Could not delete the game!");
         }
 
-        Games = (await GameService.Get()).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+        Games = (await GameService.GetAsync()).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
         Loading = false;
     }

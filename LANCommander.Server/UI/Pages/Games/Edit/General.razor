@@ -172,14 +172,14 @@
 
     private async Task LoadData()
     {
-        Engines = await EngineService.Get();
-        Companies = await CompanyService.Get();
-        Genres = await GenreService.Get();
-        Platforms = await PlatformService.Get();
-        Tags = await TagService.Get();
-        Collections = await CollectionService.Get();
-        Games = await GameService.Get(g => g.Type == GameType.MainGame);
-        Redistributables = await RedistributableService.Get();
+        Engines = await EngineService.GetAsync();
+        Companies = await CompanyService.GetAsync();
+        Genres = await GenreService.GetAsync();
+        Platforms = await PlatformService.GetAsync();
+        Tags = await TagService.GetAsync();
+        Collections = await CollectionService.GetAsync();
+        Games = await GameService.GetAsync(g => g.Type == GameType.MainGame);
+        Redistributables = await RedistributableService.GetAsync();
         RedistributableTargetItems = Redistributables.Select(r => new TransferItem
         {
             Title = r.Name,
@@ -196,13 +196,13 @@
         {
             if (game.Id != Guid.Empty)
             {
-                game = await GameService.Update(game);
+                game = await GameService.UpdateAsync(game);
 
                 await MessageService.Success("Game updated!");
             }
             else
             {
-                game = await GameService.Add(game);
+                game = await GameService.AddAsync(game);
 
                 NavigationManager.LocationChanged += NotifyGameAdded;
 
@@ -245,7 +245,7 @@
 
         if (result.IGDBMetadata.ParentGame != null && result.IGDBMetadata.ParentGame.Id.HasValue)
         {
-            var baseGame = await GameService.FirstOrDefault(g => g.IGDBId == result.IGDBMetadata.ParentGame.Id);
+            var baseGame = await GameService.FirstOrDefaultAsync(g => g.IGDBId == result.IGDBMetadata.ParentGame.Id);
 
             if (baseGame != null)
                 game.BaseGameId = baseGame.Id;
@@ -255,10 +255,10 @@
         {
             var engineMetadata = result.IGDBMetadata.GameEngines.Values.FirstOrDefault();
 
-            var engine = await EngineService.AddMissing(e => e.Name == engineMetadata.Name, new Engine { Name = engineMetadata.Name });
+            var engine = await EngineService.AddMissingAsync(e => e.Name == engineMetadata.Name, new Engine { Name = engineMetadata.Name });
 
             if (!engine.Existing)
-                Engines = await EngineService.Get();
+                Engines = await EngineService.GetAsync();
 
             game.Engine = engine.Value;
             game.EngineId = engine.Value.Id;
@@ -278,20 +278,20 @@
 
             foreach (var developer in developers)
             {
-                var company = await CompanyService.AddMissing(c => c.Name == developer, new Company { Name = developer });
+                var company = await CompanyService.AddMissingAsync(c => c.Name == developer, new Company { Name = developer });
 
                 if (!company.Existing)
-                    Companies = await CompanyService.Get();
+                    Companies = await CompanyService.GetAsync();
 
                 game.Developers.Add(company.Value);
             }
 
             foreach (var publisher in publishers)
             {
-                var company = await CompanyService.AddMissing(c => c.Name == publisher, new Company { Name = publisher });
+                var company = await CompanyService.AddMissingAsync(c => c.Name == publisher, new Company { Name = publisher });
 
                 if (!company.Existing)
-                    Companies = await CompanyService.Get();
+                    Companies = await CompanyService.GetAsync();
 
                 game.Publishers.Add(company.Value);
             }
@@ -303,10 +303,10 @@
 
             foreach (var genre in genres)
             {
-                var genreEntity = await GenreService.AddMissing(g => g.Name == genre, new Genre { Name = genre });
+                var genreEntity = await GenreService.AddMissingAsync(g => g.Name == genre, new Genre { Name = genre });
 
                 if (!genreEntity.Existing)
-                    Genres = await GenreService.Get();
+                    Genres = await GenreService.GetAsync();
 
                 game.Genres.Add(genreEntity.Value);
             }
@@ -318,10 +318,10 @@
 
             foreach (var tag in tags)
             {
-                var tagEntity = await TagService.AddMissing(t => t.Name == tag, new Data.Models.Tag { Name = tag });
+                var tagEntity = await TagService.AddMissingAsync(t => t.Name == tag, new Data.Models.Tag { Name = tag });
 
                 if (!tagEntity.Existing)
-                    Tags = await TagService.Get();
+                    Tags = await TagService.GetAsync();
 
                 game.Tags.Add(tagEntity.Value);
             }
@@ -344,7 +344,7 @@
 
         try
         {
-            await GameService.Delete(game);
+            await GameService.DeleteAsync(game);
         }
         catch (Exception ex)
         {

@@ -55,8 +55,8 @@
 
         Orphans = new List<OrphanedFile>();
 
-        var storageLocations = await StorageLocationService.Get();
-        var archives = await ArchiveService.Get();
+        var storageLocations = await StorageLocationService.GetAsync();
+        var archives = await ArchiveService.GetAsync();
         var archiveFiles = archives.Select(a => ArchiveService.GetArchiveFileLocation(a));
 
         foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
@@ -76,7 +76,7 @@
             }
         }
 
-        var media = await MediaService.Get();
+        var media = await MediaService.GetAsync();
         var mediaFiles = media.Select(m => MediaService.GetMediaPath(m));
 
         foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))

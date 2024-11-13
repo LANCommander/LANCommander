@@ -35,94 +35,94 @@ namespace LANCommander.Server.Services
             return this;
         }
 
-        public virtual async Task<ICollection<T>> Get()
+        public virtual async Task<ICollection<T>> GetAsync()
         {
             return await Cache.GetOrSetAsync($"{typeof(T).FullName}:Get", async _ =>
             {
-                return await Get(x => true);
+                return await GetAsync(x => true);
             }, TimeSpan.FromSeconds(30));
         }
 
-        public virtual async Task<ICollection<U>> Get<U>()
+        public virtual async Task<ICollection<U>> GetAsync<U>()
         {
-            return await Get<U>(x => true);
+            return await GetAsync<U>(x => true);
         }
 
-        public virtual async Task<T> Get(Guid id)
+        public virtual async Task<T> GetAsync(Guid id)
         {
-            return await Repository.Find(id);
+            return await Repository.FindAsync(id);
         }
 
-        public virtual async Task<U> Get<U>(Guid id)
+        public virtual async Task<U> GetAsync<U>(Guid id)
         {
-            return await Repository.Find<U>(id);
+            return await Repository.FindAsync<U>(id);
         }
 
-        public virtual async Task<ICollection<T>> Get(Expression<Func<T, bool>> predicate)
+        public virtual async Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
         {
             Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
-            var results = await Repository.Get(predicate);
+            var results = await Repository.GetAsync(predicate);
             Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
             return results;
         }
 
-        public virtual async Task<ICollection<U>> Get<U>(Expression<Func<T, bool>> predicate)
+        public virtual async Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate)
         {
             Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
-            var results = await Repository.Get<U>(predicate);
+            var results = await Repository.GetAsync<U>(predicate);
             Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
             return results;
         }
 
-        public virtual async Task<T> First(Expression<Func<T, bool>> predicate)
+        public virtual async Task<T> FirstAsync(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.First(predicate);
+            return await Repository.FirstAsync(predicate);
         }
 
-        public virtual async Task<U> First<U>(Expression<Func<T, bool>> predicate)
+        public virtual async Task<U> FirstAsync<U>(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.First<U>(predicate);
+            return await Repository.FirstAsync<U>(predicate);
         }
 
-        public virtual async Task<T> First<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        public virtual async Task<T> FirstAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await Repository.First<TKey>(predicate, orderKeySelector);
+            return await Repository.FirstAsync<TKey>(predicate, orderKeySelector);
         }
 
-        public virtual async Task<U> First<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        public virtual async Task<U> FirstAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
         {
-            return await Repository.First<U, TKey>(predicate, orderKeySelector);
+            return await Repository.FirstAsync<U, TKey>(predicate, orderKeySelector);
         }
 
-        public virtual async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
+        public virtual async Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.FirstOrDefault(predicate);
+            return await Repository.FirstOrDefaultAsync(predicate);
         }
 
-        public virtual async Task<U> FirstOrDefault<U>(Expression<Func<T, bool>> predicate)
+        public virtual async Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.FirstOrDefault<U>(predicate);
+            return await Repository.FirstOrDefaultAsync<U>(predicate);
         }
 
-        public virtual async Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        public virtual async Task<T> FirstOrDefaultAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await Repository.FirstOrDefault<T, TKey>(predicate, orderKeySelector);
+            return await Repository.FirstOrDefaultAsync<T, TKey>(predicate, orderKeySelector);
         }
 
-        public virtual async Task<U> FirstOrDefault<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        public virtual async Task<U> FirstOrDefaultAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
         {
-            return await Repository.FirstOrDefault<U, TKey>(predicate, orderKeySelector);
+            return await Repository.FirstOrDefaultAsync<U, TKey>(predicate, orderKeySelector);
         }
 
-        public virtual async Task<bool> Exists(Guid id)
+        public virtual async Task<bool> ExistsAsync(Guid id)
         {
-            return Get(id) != null;
+            return GetAsync(id) != null;
         }
 
-        public virtual async Task<T> Add(T entity)
+        public virtual async Task<T> AddAsync(T entity)
         {
-            entity = await Repository.Add(entity);
-            await Repository.SaveChanges();
+            entity = await Repository.AddAsync(entity);
+            await Repository.SaveChangesAsync();
 
             return entity;
         }
@@ -133,17 +133,17 @@ namespace LANCommander.Server.Services
         /// <param name="predicate">Qualifier expressoin</param>
         /// <param name="entity">Entity to add</param>
         /// <returns>Newly created or existing entity</returns>
-        public virtual async Task<ExistingEntityResult<T>> AddMissing(Expression<Func<T, bool>> predicate, T entity)
+        public virtual async Task<ExistingEntityResult<T>> AddMissingAsync(Expression<Func<T, bool>> predicate, T entity)
         {
-            var existing = await Repository.FirstOrDefault(predicate);
+            var existing = await Repository.FirstOrDefaultAsync(predicate);
 
             if (existing == null)
             {
                 await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
 
-                entity = await Repository.Add(entity);
+                entity = await Repository.AddAsync(entity);
 
-                await Repository.SaveChanges();
+                await Repository.SaveChangesAsync();
 
                 return new ExistingEntityResult<T>
                 {
@@ -161,23 +161,23 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public virtual async Task<T> Update(T entity)
+        public virtual async Task<T> UpdateAsync(T entity)
         {
             await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
 
-            entity = await Repository.Update(entity);
+            entity = await Repository.UpdateAsync(entity);
 
-            await Repository.SaveChanges();
+            await Repository.SaveChangesAsync();
 
             return entity;
         }
 
-        public virtual async Task Delete(T entity)
+        public virtual async Task DeleteAsync(T entity)
         {
             await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
 
             Repository.Delete(entity);
-            await Repository.SaveChanges();
+            await Repository.SaveChangesAsync();
         }
     }
 }

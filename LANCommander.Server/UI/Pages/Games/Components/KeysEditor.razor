@@ -100,7 +100,7 @@
 
     private async Task Release(Key key)
     {
-        key = await KeyService.Release(key);
+        key = await KeyService.ReleaseAsync(key);
 
         await MessageService.Success("Key was unallocated!");
     }
@@ -114,10 +114,10 @@
         var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k)).ToList();
 
         foreach (var key in keysDeleted)
-            KeyService.Delete(key);
+            KeyService.DeleteAsync(key);
 
         foreach (var key in keysAdded)
-            await KeyService.Add(new Key()
+            await KeyService.AddAsync(new Key()
                 {
                     GameId = GameId,
                     Value = key

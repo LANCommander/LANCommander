@@ -85,7 +85,7 @@
     protected override async Task OnInitializedAsync()
     {
         if (Options.ScriptId != Guid.Empty)
-            Script = await ScriptService.Get(Options.ScriptId);
+            Script = await ScriptService.GetAsync(Options.ScriptId);
         else if (Options.GameId != Guid.Empty)
             Script = new Script()
                 {
@@ -209,9 +209,9 @@
                 Script.Contents = value;
 
                 if (Script.Id == Guid.Empty)
-                    Script = await ScriptService.Add(Script);
+                    Script = await ScriptService.AddAsync(Script);
                 else
-                    Script = await ScriptService.Update(Script);
+                    Script = await ScriptService.UpdateAsync(Script);
 
                 MessageService.Success("Script saved!");
 

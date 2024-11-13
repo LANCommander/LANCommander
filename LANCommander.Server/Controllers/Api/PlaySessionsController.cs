@@ -34,18 +34,18 @@ namespace LANCommander.Server.Controllers.Api
         [HttpPost("Start/{id}")]
         public async Task<IActionResult> Start(Guid id)
         {
-            var user = await UserService.Get(User?.Identity?.Name);
-            var game = await GameService.Get(id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var game = await GameService.GetAsync(id);
 
             if (game == null || user == null)
                 return BadRequest();
 
-            var activeSessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.End == null);
+            var activeSessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id && ps.End == null);
 
             foreach (var activeSession in activeSessions)
-                await PlaySessionService.EndSession(activeSession.Game.Id, activeSession.UserId);
+                await PlaySessionService.EndSessionAsync(activeSession.Game.Id, activeSession.UserId);
 
-            await PlaySessionService.StartSession(game.Id, user.Id);
+            await PlaySessionService.StartSessionAsync(game.Id, user.Id);
 
             return Ok();
         }
@@ -53,13 +53,13 @@ namespace LANCommander.Server.Controllers.Api
         [HttpPost("End/{id}")]
         public async Task<IActionResult> End(Guid id)
         {
-            var user = await UserService.Get(User?.Identity?.Name);
-            var game = await GameService.Get(id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var game = await GameService.GetAsync(id);
 
             if (game == null || user == null)
                 return BadRequest();
 
-            await PlaySessionService.EndSession(game.Id, user.Id);
+            await PlaySessionService.EndSessionAsync(game.Id, user.Id);
 
             return Ok();
         }
@@ -67,12 +67,12 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id);
+            var sessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }
@@ -80,12 +80,12 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(Guid id)
         {
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.GameId == id);
+            var sessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id && ps.GameId == id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }

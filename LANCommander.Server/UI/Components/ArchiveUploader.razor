@@ -103,11 +103,11 @@
 
     public async Task Open(Guid? archiveId = null)
     {
-        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+        StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
 
         if (archiveId.HasValue && archiveId != Guid.Empty)
         {
-            Archive = await ArchiveService.Get(archiveId.Value);
+            Archive = await ArchiveService.GetAsync(archiveId.Value);
         }
         else
         {
@@ -130,7 +130,7 @@
 
         if (Guid.TryParse(data, out var objectKey))
         {
-            var uploadedArchive = await ArchiveService.FirstOrDefault(a => a.ObjectKey == objectKey.ToString());
+            var uploadedArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
 
             uploadedArchive.GameId = Archive.GameId;
             uploadedArchive.RedistributableId = Archive.RedistributableId;
@@ -139,7 +139,7 @@
             uploadedArchive.CompressedSize = ArchiveService.GetCompressedSize(uploadedArchive);
             uploadedArchive.UncompressedSize = ArchiveService.GetUncompressedSize(uploadedArchive);
 
-            await ArchiveService.Update(uploadedArchive);
+            await ArchiveService.UpdateAsync(uploadedArchive);
 
             Visible = false;
 
@@ -152,9 +152,9 @@
             if (settings.Archives.EnablePatching)
             {
                 if (Archive.GameId != Guid.Empty)
-                    lastArchive = await ArchiveService.FirstOrDefault(a => a.Id != Archive.Id && a.GameId == Archive.GameId, a => a.CreatedOn);
+                    lastArchive = await ArchiveService.FirstOrDefaultAsync(a => a.Id != Archive.Id && a.GameId == Archive.GameId, a => a.CreatedOn);
                 else if (Archive.RedistributableId != Guid.Empty)
-                    lastArchive = await ArchiveService.FirstOrDefault(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId, a => a.CreatedOn);
+                    lastArchive = await ArchiveService.FirstOrDefaultAsync(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId, a => a.CreatedOn);
 
                 if (lastArchive != null && settings.Archives.EnablePatching)
                     BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
@@ -193,7 +193,7 @@
     {
         try
         {
-            var objectKey = await ArchiveService.CopyFromLocalFile(path);
+            var objectKey = await ArchiveService.CopyFromLocalFileAsync(path);
 
             await OnUploadCompleted(objectKey.ToString());
         }

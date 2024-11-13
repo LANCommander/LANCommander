@@ -22,12 +22,12 @@ namespace LANCommander.Server.Services
 
         public async Task ResolveAsync(Guid issueId)
         {
-            var issue = await Get(issueId);
+            var issue = await GetAsync(issueId);
 
             issue.ResolvedOn = DateTime.UtcNow;
             // issue.ResolvedBy = await GetCurrentUserAsync();
 
-            await Update(issue);
+            await UpdateAsync(issue);
         }
     }
 }

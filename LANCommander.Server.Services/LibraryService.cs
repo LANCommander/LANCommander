@@ -27,43 +27,43 @@ namespace LANCommander.Server.Services
             GameService = gameService;
         }
 
-        public async Task<Library> GetByUserId(Guid userId)
+        public async Task<Library> GetByUserIdAsync(Guid userId)
         {
-            var library = await FirstOrDefault(l => l.User.Id == userId);
+            var library = await FirstOrDefaultAsync(l => l.User.Id == userId);
 
             if (library == null)
             {
-                var user = await UserService.Get(userId);
+                var user = await UserService.GetAsync(userId);
 
                 if (user == null)
                     throw new Exception("User not found with ID " + userId.ToString());
 
-                library = await Add(new Library { UserId = userId });
+                library = await AddAsync(new Library { UserId = userId });
             }
 
             return library;
         }
 
-        public async Task AddToLibrary(Guid userId, Guid gameId)
+        public async Task AddToLibraryAsync(Guid userId, Guid gameId)
         {
-            var game = await GameService.Get(gameId);
+            var game = await GameService.GetAsync(gameId);
 
-            var library = await GetByUserId(userId);
+            var library = await GetByUserIdAsync(userId);
 
             library.Games.Add(game);
 
-            await Update(library);
+            await UpdateAsync(library);
         }
 
-        public async Task RemoveFromLibrary(Guid userId, Guid gameId)
+        public async Task RemoveFromLibraryAsync(Guid userId, Guid gameId)
         {
-            var library = await GetByUserId(userId);
+            var library = await GetByUserIdAsync(userId);
 
             var game = library.Games.FirstOrDefault(g => g.Id == gameId);
 
             library.Games.Remove(game);
 
-            await Update(library);
+            await UpdateAsync(library);
         }
     }
 }

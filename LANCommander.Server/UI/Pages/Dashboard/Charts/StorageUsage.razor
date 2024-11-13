@@ -40,7 +40,7 @@
             var drives = DriveInfo.GetDrives();
             var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-            var storageLocations = await StorageLocationService.Get();
+            var storageLocations = await StorageLocationService.GetAsync();
 
             long totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
             long totalSaveDirectorySize = 0;

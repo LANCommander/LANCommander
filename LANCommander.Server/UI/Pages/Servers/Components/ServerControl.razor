@@ -58,7 +58,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Server = await ServerService.Get(ServerId);
+        Server = await ServerService.GetAsync(ServerId);
 
         ServerProcessService.OnStatusUpdate += OnStatusUpdate;
     }
@@ -100,7 +100,7 @@
 
     private void Stop()
     {
-        ServerProcessService.StopServer(Server.Id);
+        ServerProcessService.StopServerAsync(Server.Id);
     }
 
     public async ValueTask DisposeAsync()

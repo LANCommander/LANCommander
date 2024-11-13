@@ -80,7 +80,7 @@
     {
         UserList = new List<UserViewModel>();
 
-        foreach (var user in await UserService.Get())
+        foreach (var user in await UserService.GetAsync())
         {
             var savePath = user.GetGameSaveUploadPath();
 
@@ -89,7 +89,7 @@
             if (Directory.Exists(savePath))
                 saveSize = new DirectoryInfo(savePath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
 
-            var roles = await UserService.GetRoles(user.UserName);
+            var roles = await UserService.GetRolesAsync(user.UserName);
 
             UserList.Add(new UserViewModel()
             {
@@ -107,14 +107,14 @@
 
     private async Task ApproveUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
+        var dbUser = await UserService.GetAsync(user.Id);
 
         if (dbUser != null)
         {
             dbUser.Approved = true;
             dbUser.ApprovedOn = DateTime.UtcNow;
 
-            await UserService.Update(dbUser);
+            await UserService.UpdateAsync(dbUser);
 
             user.Approved = true;
 
@@ -124,9 +124,9 @@
 
     private async Task PromoteUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
+        var dbUser = await UserService.GetAsync(user.Id);
 
-        await UserService.AddToRole(dbUser.UserName, RoleService.AdministratorRoleName);
+        await UserService.AddToRoleAsync(dbUser.UserName, RoleService.AdministratorRoleName);
 
         await RefreshUserList();
 
@@ -135,7 +135,7 @@
 
     private async Task DemoteUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
+        var dbUser = await UserService.GetAsync(user.Id);
 
         if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1)
         {
@@ -151,7 +151,7 @@
 
     private async Task DeleteUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
+        var dbUser = await UserService.GetAsync(user.Id);
 
         if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1 && user.Roles.Contains(RoleService.AdministratorRoleName))
         {
@@ -159,7 +159,7 @@
         }
         else
         {
-            await UserService.Delete(dbUser);
+            await UserService.DeleteAsync(dbUser);
 
             await RefreshUserList();
 

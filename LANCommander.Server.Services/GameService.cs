@@ -49,49 +49,49 @@ namespace LANCommander.Server.Services
             GenreService = genreService;
         }
 
-        public override async Task<Game> Add(Game entity)
+        public override async Task<Game> AddAsync(Game entity)
         {
-            await ExpireCache(entity.Id);
+            await ExpireCacheAsync(entity.Id);
 
-            return await base.Add(entity);
+            return await base.AddAsync(entity);
         }
 
-        public override async Task<ExistingEntityResult<Game>> AddMissing(Expression<Func<Game, bool>> predicate, Game entity)
+        public override async Task<ExistingEntityResult<Game>> AddMissingAsync(Expression<Func<Game, bool>> predicate, Game entity)
         {
-            await ExpireCache(entity.Id);
+            await ExpireCacheAsync(entity.Id);
 
-            return await base.AddMissing(predicate, entity);
+            return await base.AddMissingAsync(predicate, entity);
         }
 
-        public override async Task<Game> Update(Game entity)
+        public override async Task<Game> UpdateAsync(Game entity)
         {
-            await ExpireCache(entity.Id);
+            await ExpireCacheAsync(entity.Id);
 
             foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
                 entity.Media.Remove(media);
 
-            return await base.Update(entity);
+            return await base.UpdateAsync(entity);
         }
 
-        public override async Task Delete(Game game)
+        public override async Task DeleteAsync(Game game)
         {
             foreach (var archive in game.Archives.ToList())
             {
-                await ArchiveService.Delete(archive);
+                await ArchiveService.DeleteAsync(archive);
             }
 
             foreach (var media in game.Media.ToList())
             {
-                await MediaService.Delete(media);
+                await MediaService.DeleteAsync(media);
             }
-            await base.Delete(game);
+            await base.DeleteAsync(game);
 
-            await ExpireCache(game.Id);
+            await ExpireCacheAsync(game.Id);
         }
 
-        public async Task<GameManifest> GetManifest(Guid id)
+        public async Task<GameManifest> GetManifestAsync(Guid id)
         {
-            var game = await Get(id);
+            var game = await GetAsync(id);
 
             return GetManifest(game);
         }
@@ -204,10 +204,10 @@ namespace LANCommander.Server.Services
             return manifest;
         }
 
-        public async Task<GameManifest> Export(Guid id)
+        public async Task<GameManifest> ExportAsync(Guid id)
         {
-            var game = await Get(id);
-            var manifest = await GetManifest(id);
+            var game = await GetAsync(id);
+            var manifest = await GetManifestAsync(id);
 
             if (game.Media != null && game.Media.Count > 0)
             {
@@ -254,7 +254,7 @@ namespace LANCommander.Server.Services
             return manifest;
         }
 
-        public async Task<Game> ImportLocalFile(string path)
+        public async Task<Game> ImportLocalFileAsync(string path)
         {
             Guid objectKey = Guid.NewGuid();
 
@@ -262,12 +262,12 @@ namespace LANCommander.Server.Services
 
             File.Copy(path, importArchivePath, true);
 
-            return await Import(objectKey);
+            return await ImportAsync(objectKey);
         }
 
-        public async Task<Game> Import(Guid objectKey)
+        public async Task<Game> ImportAsync(Guid objectKey)
         {
-            var importArchive = await ArchiveService.FirstOrDefault(a => a.ObjectKey == objectKey.ToString());
+            var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
             var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
 
             Game game;
@@ -277,7 +277,7 @@ namespace LANCommander.Server.Services
                 // Read manifest
                 GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                game = await Get(manifest.Id);
+                game = await GetAsync(manifest.Id);
 
                 var exists = game != null;
 
@@ -313,7 +313,7 @@ namespace LANCommander.Server.Services
                 #region Engine
                 if (game.Engine != null)
                 {
-                    var engine = await EngineService.AddMissing(e => e.Name == manifest.Engine, new Engine { Name = manifest.Engine });
+                    var engine = await EngineService.AddMissingAsync(e => e.Name == manifest.Engine, new Engine { Name = manifest.Engine });
 
                     game.Engine = engine.Value;
                 }
@@ -326,7 +326,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Tags != null)
                     foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
                     {
-                        game.Tags.Add((await TagService.AddMissing(t => t.Name == tag, new Tag()
+                        game.Tags.Add((await TagService.AddMissingAsync(t => t.Name == tag, new Tag()
                         {
                             Name = tag
                         })).Value);
@@ -343,7 +343,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Genre != null)
                     foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
                     {
-                        game.Genres.Add((await GenreService.AddMissing(g => g.Name == genre, new Genre()
+                        game.Genres.Add((await GenreService.AddMissingAsync(g => g.Name == genre, new Genre()
                         {
                             Name = genre
                         })).Value);
@@ -360,7 +360,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Developers != null)
                     foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
                     {
-                        game.Developers.Add((await CompanyService.AddMissing(c => c.Name == developer, new Company()
+                        game.Developers.Add((await CompanyService.AddMissingAsync(c => c.Name == developer, new Company()
                         {
                             Name = developer
                         })).Value);
@@ -377,7 +377,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Publishers != null)
                     foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
                     {
-                        game.Publishers.Add((await CompanyService.AddMissing(c => c.Name == publisher, new Company()
+                        game.Publishers.Add((await CompanyService.AddMissingAsync(c => c.Name == publisher, new Company()
                         {
                             Name = publisher
                         })).Value);
@@ -605,17 +605,17 @@ namespace LANCommander.Server.Services
                 #endregion
 
                 if (exists)
-                    game = await Update(game);
+                    game = await UpdateAsync(game);
                 else
-                    game = await Add(game);
+                    game = await AddAsync(game);
             }
 
-            await ArchiveService.Delete(importArchive);
+            await ArchiveService.DeleteAsync(importArchive);
 
             return game;
         }
 
-        private async Task ExpireCache(Guid gameId)
+        private async Task ExpireCacheAsync(Guid gameId)
         {
             await Cache.ExpireAsync("MappedGames");
             await Cache.ExpireAsync("DepotGames");

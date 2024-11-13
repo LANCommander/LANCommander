@@ -33,7 +33,7 @@
     {
         try
         {
-            game = await GameService.Update(game);
+            game = await GameService.UpdateAsync(game);
 
             await MessageService.Success("Save paths updated!");
         }

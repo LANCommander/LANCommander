@@ -42,7 +42,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        PlaySessions = await PlaySessionService.Get();
+        PlaySessions = await PlaySessionService.GetAsync();
 
         Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
 

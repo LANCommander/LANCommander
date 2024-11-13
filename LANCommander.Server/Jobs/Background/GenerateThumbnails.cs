@@ -15,7 +15,7 @@ namespace LANCommander.Server.Jobs.Background
 
         public override async Task ExecuteAsync()
         {
-            var allMedia = await MediaService.Get();
+            var allMedia = await MediaService.GetAsync();
 
             foreach (var media in allMedia)
             {

@@ -14,29 +14,29 @@ namespace LANCommander.Server.Services
 
         IBaseDatabaseService<T> Include(Expression<Func<T, object>> includeExpression);
 
-        Task<ICollection<T>> Get();
-        Task<ICollection<U>> Get<U>();
+        Task<ICollection<T>> GetAsync();
+        Task<ICollection<U>> GetAsync<U>();
 
-        Task<T> Get(Guid id);
-        Task<U> Get<U>(Guid id);
+        Task<T> GetAsync(Guid id);
+        Task<U> GetAsync<U>(Guid id);
 
-        Task<ICollection<T>> Get(Expression<Func<T, bool>> predicate);
-        Task<ICollection<U>> Get<U>(Expression<Func<T, bool>> predicate);
+        Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate);
+        Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate);
 
-        Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate);
-        Task<U> FirstOrDefault<U>(Expression<Func<T, bool>> predicate);
+        Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate);
+        Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate);
 
-        Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector);
-        Task<U> FirstOrDefault<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector);
+        Task<T> FirstOrDefaultAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector);
+        Task<U> FirstOrDefaultAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector);
 
-        Task<bool> Exists(Guid id);
+        Task<bool> ExistsAsync(Guid id);
 
-        Task<T> Add(T entity);
+        Task<T> AddAsync(T entity);
 
-        Task<ExistingEntityResult<T>> AddMissing(Expression<Func<T, bool>> predicate, T entity);
+        Task<ExistingEntityResult<T>> AddMissingAsync(Expression<Func<T, bool>> predicate, T entity);
 
-        Task<T> Update(T entity);
+        Task<T> UpdateAsync(T entity);
 
-        Task Delete(T entity);
+        Task DeleteAsync(T entity);
     }
 }

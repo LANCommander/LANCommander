@@ -39,7 +39,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<Game> Get(long id, params string[] additionalFields)
+        public async Task<Game> GetAsync(long id, params string[] additionalFields)
         {
             var fields = DefaultFields.Split(',').ToList();
 
@@ -53,7 +53,7 @@ namespace LANCommander.Server.Services
             return games.FirstOrDefault();
         }
 
-        public async Task<IEnumerable<Game>> Search(string input, int limit = 10, int offset = 0, params string[] additionalFields)
+        public async Task<IEnumerable<Game>> SearchAsync(string input, int limit = 10, int offset = 0, params string[] additionalFields)
         {
             var fields = DefaultFields.Split(',').ToList();
 

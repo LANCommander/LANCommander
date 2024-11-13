@@ -89,7 +89,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Engines = (await EngineService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        Engines = (await EngineService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private async Task UpdateOrAdd()
@@ -98,13 +98,13 @@
         {
             if (EngineContext.Id == Guid.Empty)
             {
-                await EngineService.AddMissing(x => x.Name == EngineContext.Name, EngineContext);
+                await EngineService.AddMissingAsync(x => x.Name == EngineContext.Name, EngineContext);
 
                 MessageService.Success($"{EngineContext.Name} was added!");
             }
             else
             {
-                await EngineService.Update(EngineContext);
+                await EngineService.UpdateAsync(EngineContext);
 
                 MessageService.Success($"{EngineContext.Name} was updated!");
             }
@@ -147,9 +147,9 @@
 
         Loading = true;
 
-        await EngineService.Delete(Engine);
+        await EngineService.DeleteAsync(Engine);
 
-        Engines = (await EngineService.Get(x => true)).OrderBy(r => r.Name);
+        Engines = (await EngineService.GetAsync(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

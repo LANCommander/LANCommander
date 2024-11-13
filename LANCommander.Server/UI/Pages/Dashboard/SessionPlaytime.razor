@@ -34,7 +34,7 @@
     {
         Loading = true;
 
-        Games = await GameService.Get();
+        Games = await GameService.GetAsync();
 
         SessionData = Games.Select(g =>
         {

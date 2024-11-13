@@ -119,7 +119,7 @@
         {
             if (media.Id != Guid.Empty)
             {
-                await MediaService.Update(media);
+                await MediaService.UpdateAsync(media);
 
                 MessageService.Success($"{media.Type} updated!");
             }
@@ -176,7 +176,7 @@
             {
                 media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
 
-                await MediaService.Add(media);
+                await MediaService.AddAsync(media);
             }
             else
             {
@@ -184,10 +184,10 @@
 
                 media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
 
-                await MediaService.Update(media);
+                await MediaService.UpdateAsync(media);
             }
 
-            Values = await MediaService.Get(m => m.GameId == media.GameId);
+            Values = await MediaService.GetAsync(m => m.GameId == media.GameId);
 
             if (ValuesChanged.HasDelegate)
                 await ValuesChanged.InvokeAsync(Values);
@@ -216,16 +216,16 @@
         {
             media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
 
-            await MediaService.Add(media);
+            await MediaService.AddAsync(media);
         }
         else
         {
             MediaService.DeleteLocalMediaFile(media);
             media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
-            await MediaService.Update(media);
+            await MediaService.UpdateAsync(media);
         }
 
-        Values = await MediaService.Get(m => m.GameId == media.GameId);
+        Values = await MediaService.GetAsync(m => m.GameId == media.GameId);
 
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(Values);
@@ -236,7 +236,7 @@
         Values.Remove(media);
 
         if (media.Id != Guid.Empty)
-            await MediaService.Delete(media);
+            await MediaService.DeleteAsync(media);
     }
 
     private async Task OpenManual(Media media)

@@ -70,7 +70,7 @@
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
-        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+        StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
     }
 
     private async Task Save()
@@ -85,9 +85,9 @@
                     storageLocation.Default = true;
 
                 if (storageLocation.Id != Guid.Empty)
-                    await StorageLocationService.Update(storageLocation);
+                    await StorageLocationService.UpdateAsync(storageLocation);
                 else
-                    await StorageLocationService.Add(storageLocation);
+                    await StorageLocationService.AddAsync(storageLocation);
             }
 
             MessageService.Success("Settings saved!");

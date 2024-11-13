@@ -76,7 +76,7 @@
     protected override async Task OnParametersSetAsync()
     {
         if (Id != Guid.Empty)
-            Game = await GameService.Get(Id);
+            Game = await GameService.GetAsync(Id);
         else
             Game = new Game();
 

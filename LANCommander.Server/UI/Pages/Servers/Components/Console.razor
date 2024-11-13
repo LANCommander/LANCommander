@@ -44,7 +44,7 @@
     {
         if (ServerConsoleId != Guid.Empty)
         {
-            ServerConsole = await ServerConsoleService.Get(ServerConsoleId);
+            ServerConsole = await ServerConsoleService.GetAsync(ServerConsoleId);
 
             await Connect(ServerConsole);
         }
@@ -65,7 +65,7 @@
 
             if (ServerConsoleId != Guid.Empty)
             {
-                var log = await ServerConsoleService.ReadLog(ServerConsoleId);
+                var log = await ServerConsoleService.ReadLogAsync(ServerConsoleId);
 
                 foreach (var line in log)
                 {

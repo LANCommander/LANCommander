@@ -105,7 +105,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Servers = (await ServerService.Get(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))))).OrderBy(s => s.Name);
+        Servers = (await ServerService.GetAsync(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))))).OrderBy(s => s.Name);
     }
 
     private void Add()
@@ -124,9 +124,9 @@
 
         Loading = true;
 
-        await ServerService.Delete(server);
+        await ServerService.DeleteAsync(server);
 
-        Servers = (await ServerService.Get(x => true)).OrderBy(s => s.Name);
+        Servers = (await ServerService.GetAsync(x => true)).OrderBy(s => s.Name);
 
         Loading = false;
     }
@@ -163,7 +163,7 @@
         foreach (var server in SelectedServers)
         {
             if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                ServerProcessService.StopServer(server.Id);
+                ServerProcessService.StopServerAsync(server.Id);
         }
     }
 

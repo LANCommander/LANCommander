@@ -60,11 +60,11 @@
     private async Task LoadData()
     {
         if (GameId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.GameId == GameId);
+            Scripts = await ScriptService.GetAsync(s => s.GameId == GameId);
         else if (RedistributableId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.RedistributableId == RedistributableId);
+            Scripts = await ScriptService.GetAsync(s => s.RedistributableId == RedistributableId);
         else if (ServerId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.ServerId == ServerId);
+            Scripts = await ScriptService.GetAsync(s => s.ServerId == ServerId);
 
         await InvokeAsync(StateHasChanged);
     }
@@ -101,7 +101,7 @@
     private async void Delete(Script script = null)
     {
         if (script != null)
-            await ScriptService.Delete(script);
+            await ScriptService.DeleteAsync(script);
 
         await MessageService.Success("Script deleted!");
     }

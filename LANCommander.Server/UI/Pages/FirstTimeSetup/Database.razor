@@ -117,7 +117,7 @@
             {
                 await InvokeAsync(async () =>
                 {
-                    await SetupService.ChangeProvider(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+                    await SetupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
 
                     SettingService.SaveSettings(Settings);
 

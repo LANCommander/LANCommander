@@ -30,13 +30,13 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SDK.Models.Server>>> Get()
         {
-            return Ok(Mapper.Map<IEnumerable<SDK.Models.Server>>(await ServerService.Get()));
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Server>>(await ServerService.GetAsync()));
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<SDK.Models.Server>> Get(Guid id)
         {
-            var server = await ServerService.Get(id);
+            var server = await ServerService.GetAsync(id);
 
             if (server == null)
                 return NotFound();
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var game = await ServerService.Import(objectKey);
+                var game = await ServerService.ImportAsync(objectKey);
 
                 return Ok();
             }

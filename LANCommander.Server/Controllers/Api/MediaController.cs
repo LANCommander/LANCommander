@@ -30,13 +30,13 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SDK.Models.Media>>> Get()
         {
-            return Ok(Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.Get()));
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.GetAsync()));
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<SDK.Models.Media>> Get(Guid id)
         {
-            var media = await MediaService.Get(id);
+            var media = await MediaService.GetAsync(id);
 
             if (media == null)
                 return NotFound();
@@ -50,7 +50,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var media = await MediaService.Get(id);
+                var media = await MediaService.GetAsync(id);
 
                 var fs = System.IO.File.OpenRead(MediaService.GetThumbnailPath(media));
 
@@ -68,7 +68,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var media = await MediaService.Get(id);
+                var media = await MediaService.GetAsync(id);
 
                 var fs = System.IO.File.OpenRead(Services.MediaService.GetMediaPath(media));
 

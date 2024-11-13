@@ -37,7 +37,7 @@ namespace LANCommander.Server.Controllers
 
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
             {
-                var release = await UpdateService.GetRelease(version);
+                var release = await UpdateService.GetReleaseAsync(version);
                 var asset = release.Assets.FirstOrDefault(a => a.Name == fileName);
 
                 if (asset != null)
@@ -52,7 +52,7 @@ namespace LANCommander.Server.Controllers
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         public async Task<IActionResult> Archive(Guid id)
         {
-            var archive = await ArchiveService.Get(id);
+            var archive = await ArchiveService.GetAsync(id);
 
             if (archive == null)
                 return NotFound();
@@ -75,7 +75,7 @@ namespace LANCommander.Server.Controllers
         [HttpGet]
         public async Task<IActionResult> Save(Guid id)
         {
-            var save = await GameSaveService.Get(id);
+            var save = await GameSaveService.GetAsync(id);
 
             if (User == null || User.Identity?.Name != save.User?.UserName && !User.IsInRole(RoleService.AdministratorRoleName))
                 return Unauthorized();

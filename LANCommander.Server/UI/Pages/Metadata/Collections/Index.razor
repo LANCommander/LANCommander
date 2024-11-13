@@ -88,7 +88,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Collections = (await CollectionService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        Collections = (await CollectionService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private async Task OpenAdd()
@@ -111,7 +111,7 @@
     {
         try
         {
-            await CollectionService.AddMissing(x => x.Name == CollectionContext.Name, CollectionContext);
+            await CollectionService.AddMissingAsync(x => x.Name == CollectionContext.Name, CollectionContext);
 
             MessageService.Success($"{CollectionContext.Name} was added!");
 
@@ -132,9 +132,9 @@
 
         Loading = true;
 
-        await CollectionService.Delete(Collection);
+        await CollectionService.DeleteAsync(Collection);
 
-        Collections = (await CollectionService.Get(x => true)).OrderBy(r => r.Name);
+        Collections = (await CollectionService.GetAsync(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

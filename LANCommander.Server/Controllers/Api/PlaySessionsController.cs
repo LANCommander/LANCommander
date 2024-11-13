@@ -32,7 +32,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Start/{id}")]
-        public async Task<IActionResult> Start(Guid id)
+        public async Task<IActionResult> StartAsync(Guid id)
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var game = await GameService.GetAsync(id);
@@ -51,7 +51,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("End/{id}")]
-        public async Task<IActionResult> End(Guid id)
+        public async Task<IActionResult> EndAsync(Guid id)
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var game = await GameService.GetAsync(id);
@@ -65,7 +65,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> GetAsync()
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
@@ -78,7 +78,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(Guid id)
+        public async Task<IActionResult> GetAsync(Guid id)
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 

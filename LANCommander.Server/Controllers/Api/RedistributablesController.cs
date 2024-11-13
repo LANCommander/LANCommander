@@ -33,13 +33,13 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> GetAsync()
         {
             return Ok(Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.GetAsync()));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SDK.Models.Redistributable>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Redistributable>> GetAsync(Guid id)
         {
             var redistributable = await RedistributableService.GetAsync(id);
 
@@ -50,7 +50,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
             var redistributable = await RedistributableService.GetAsync(id);
 
@@ -72,7 +72,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("Import/{objectKey}")]
-        public async Task<IActionResult> Import(Guid objectKey)
+        public async Task<IActionResult> ImportAsync(Guid objectKey)
         {
             try
             {
@@ -89,7 +89,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("UploadArchive")]
-        public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
+        public async Task<IActionResult> UploadArchiveAsync(SDK.Models.UploadArchiveRequest request)
         {
             try
             {

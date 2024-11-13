@@ -30,7 +30,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<User>> Get()
+        public async Task<ActionResult<User>> GetAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
@@ -46,7 +46,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("ChangeAlias")]
-        public async Task<IActionResult> ChangeAlias(ChangeAliasRequest request)
+        public async Task<IActionResult> ChangeAliasAsync(ChangeAliasRequest request)
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
@@ -63,7 +63,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Avatar")]
-        public async Task<IActionResult> Avatar()
+        public async Task<IActionResult> AvatarAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
@@ -84,7 +84,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [AllowAnonymous]
         [HttpGet("{userName}/Avatar")]
-        public async Task<IActionResult> Avatar(string userName)
+        public async Task<IActionResult> AvatarAsync(string userName)
         {
             try
             {
@@ -109,7 +109,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("CustomField/{name}")]
-        public async Task<IActionResult> CustomField(string name)
+        public async Task<IActionResult> GetCustomFieldAsync(string name)
         {
             try
             {
@@ -128,7 +128,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("CustomField/{name}")]
-        public async Task<IActionResult> CustomField(string name, string value)
+        public async Task<IActionResult> UpdateCustomFieldAsync(string name, string value)
         {
             try
             {

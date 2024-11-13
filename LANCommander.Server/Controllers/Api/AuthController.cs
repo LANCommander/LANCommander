@@ -48,13 +48,13 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost]
-        public async Task<IActionResult> Login([FromBody] LoginModel model)
+        public async Task<IActionResult> LoginAsync([FromBody] LoginModel model)
         {
             var user = await UserService.GetAsync(model.UserName);
 
             try
             {
-                var token = await Login(user, model.Password);
+                var token = await LoginAsync(user, model.Password);
 
                 Logger?.LogDebug("Successfully logged in user {UserName}", user.UserName);
 
@@ -69,7 +69,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Logout")]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> LogoutAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
                 await UserService.SignOut();
@@ -81,7 +81,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [HttpPost("Validate")]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public IActionResult Validate()
+        public IActionResult ValidateAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
                 return Ok();
@@ -90,7 +90,7 @@ namespace LANCommander.Server.Controllers.Api
         } 
 
         [HttpPost("Refresh")]
-        public async Task<IActionResult> Refresh(TokenModel token)
+        public async Task<IActionResult> RefreshAsync(TokenModel token)
         {
             if (token == null)
             {
@@ -132,7 +132,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] RegisterModel model)
+        public async Task<IActionResult> RegisterAsync([FromBody] RegisterModel model)
         {
             var user = await UserService.GetAsync(model.UserName);
 
@@ -166,7 +166,7 @@ namespace LANCommander.Server.Controllers.Api
                             await UserService.AddToRoleAsync(user.UserName, defaultRole.Name);
                     }
 
-                    var token = await Login(user, model.Password);
+                    var token = await LoginAsync(user, model.Password);
 
                     Logger?.LogDebug("Successfully registered user {UserName}", user.UserName);
 
@@ -188,7 +188,7 @@ namespace LANCommander.Server.Controllers.Api
             });
         }
 
-        private async Task<TokenModel> Login(User user, string password)
+        private async Task<TokenModel> LoginAsync(User user, string password)
         {
             if (user != null && await UserService.CheckPassword(user.UserName, password))
             {

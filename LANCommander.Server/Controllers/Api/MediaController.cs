@@ -28,13 +28,13 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.Media>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Media>>> GetAsync()
         {
             return Ok(Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.GetAsync()));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SDK.Models.Media>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Media>> GetAsync(Guid id)
         {
             var media = await MediaService.GetAsync(id);
 
@@ -46,7 +46,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [AllowAnonymous]
         [HttpGet("{id}/Thumbnail")]
-        public async Task<IActionResult> Thumbnail(Guid id)
+        public async Task<IActionResult> ThumbnailAsync(Guid id)
         {
             try
             {
@@ -64,7 +64,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [AllowAnonymous]
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
             try
             {

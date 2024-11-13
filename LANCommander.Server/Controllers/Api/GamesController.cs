@@ -48,7 +48,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Game>> Get()
+        public async Task<IEnumerable<SDK.Models.Game>> GetAsync()
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var userLibrary = await LibraryService.GetByUserIdAsync(user.Id);
@@ -91,7 +91,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}")]
-        public async Task<SDK.Models.Game> Get(Guid id)
+        public async Task<SDK.Models.Game> GetAsync(Guid id)
         {
             return Mapper.Map<SDK.Models.Game>(await GameService.GetAsync(id));
         }
@@ -106,7 +106,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [AllowAnonymous]
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
             if (!Settings.Archives.AllowInsecureDownloads && (User == null || User.Identity == null || !User.Identity.IsAuthenticated))
             {
@@ -143,7 +143,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("Import/{objectKey}")]
-        public async Task<IActionResult> Import(Guid objectKey)
+        public async Task<IActionResult> ImportAsync(Guid objectKey)
         {
             try
             {
@@ -160,7 +160,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("UploadArchive")]
-        public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
+        public async Task<IActionResult> UploadArchiveAsync(SDK.Models.UploadArchiveRequest request)
         {
             try
             {

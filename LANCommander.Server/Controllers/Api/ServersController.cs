@@ -28,7 +28,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.Server>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Server>>> GetAsync()
         {
             return Ok(Mapper.Map<IEnumerable<SDK.Models.Server>>(await ServerService.GetAsync()));
         }
@@ -45,7 +45,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Import/{objectKey}")]
-        public async Task<IActionResult> Import(Guid objectKey)
+        public async Task<IActionResult> ImportAsync(Guid objectKey)
         {
             try
             {

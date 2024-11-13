@@ -26,13 +26,13 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Archive>>> Get()
+        public async Task<ActionResult<IEnumerable<Archive>>> GetAsync()
         {
             return Ok(await ArchiveService.GetAsync());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Archive>> Get(Guid id)
+        public async Task<ActionResult<Archive>> GetAsync(Guid id)
         {
             var archive = await ArchiveService.GetAsync(id);
 
@@ -43,7 +43,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Download/{id}")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
             var archive = await ArchiveService.GetAsync(id);
 
@@ -65,7 +65,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Contents/{id}")]
-        public async Task<IActionResult> Contents(Guid id)
+        public async Task<IActionResult> ContentsAsync(Guid id)
         {
             var archive = await ArchiveService.GetAsync(id);
 

@@ -37,9 +37,9 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost]
-        public async Task<ActionResult<SDK.Models.Key>> Get(KeyRequest keyRequest)
+        public async Task<ActionResult<SDK.Models.Key>> GetAsync(KeyRequest keyRequest)
         {
-            return await GetAllocated(keyRequest.GameId, keyRequest);
+            return await GetAllocatedAsync(keyRequest.GameId, keyRequest);
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace LANCommander.Server.Controllers.Api
         /// <param name="keyRequest"></param>
         /// <returns>Allocated key</returns>
         [HttpPost("GetAllocated/{id}")]
-        public async Task<ActionResult<SDK.Models.Key>> GetAllocated(Guid id, KeyRequest keyRequest)
+        public async Task<ActionResult<SDK.Models.Key>> GetAllocatedAsync(Guid id, KeyRequest keyRequest)
         {
             try
             {
@@ -99,7 +99,7 @@ namespace LANCommander.Server.Controllers.Api
         /// <param name="keyRequest"></param>
         /// <returns>Newly allocated key</returns>
         [HttpPost("Allocate/{id}")]
-        public async Task<ActionResult<SDK.Models.Key>> Allocate(Guid id, KeyRequest keyRequest)
+        public async Task<ActionResult<SDK.Models.Key>> AllocateAsync(Guid id, KeyRequest keyRequest)
         {
             try
             {

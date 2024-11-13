@@ -28,7 +28,7 @@ namespace LANCommander.Server.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<IActionResult> Launcher()
+        public async Task<IActionResult> LauncherAsync()
         {
             var version = UpdateService.GetCurrentVersion();
             var settings = SettingService.GetSettings();
@@ -50,7 +50,7 @@ namespace LANCommander.Server.Controllers
         }
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
-        public async Task<IActionResult> Archive(Guid id)
+        public async Task<IActionResult> ArchiveAsync(Guid id)
         {
             var archive = await ArchiveService.GetAsync(id);
 
@@ -73,7 +73,7 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Save(Guid id)
+        public async Task<IActionResult> SaveAsync(Guid id)
         {
             var save = await GameSaveService.GetAsync(id);
 

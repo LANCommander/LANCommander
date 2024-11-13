@@ -36,13 +36,13 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetAsync()
         {
             return Ok(Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.GetAsync()));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SDK.Models.GameSave>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.GameSave>> GetAsync(Guid id)
         {
             var gameSave = await GameSaveService.GetAsync(id);
 
@@ -53,7 +53,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Game/{gameId}")]
-        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetGameSaves(Guid gameId)
+        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetGameSavesAsync(Guid gameId)
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
@@ -66,7 +66,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Latest/{gameId}")]
-        public async Task<ActionResult<SDK.Models.GameSave>> Latest(Guid gameId)
+        public async Task<ActionResult<SDK.Models.GameSave>> LatestAsync(Guid gameId)
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
@@ -82,7 +82,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("DownloadLatest/{gameId}")]
-        public async Task<IActionResult> DownloadLatest(Guid gameId)
+        public async Task<IActionResult> DownloadLatestAsync(Guid gameId)
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
@@ -104,7 +104,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Download/{id}")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
             var save = await GameSaveService.GetAsync(id);
 
@@ -120,7 +120,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Upload/{id}")]
-        public async Task<IActionResult> Upload(Guid id)
+        public async Task<IActionResult> UploadAsync(Guid id)
         {
             var file = Request.Form.Files.First();
 
@@ -161,7 +161,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Delete/{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> DeleteAsync(Guid id)
         {
             try
             {

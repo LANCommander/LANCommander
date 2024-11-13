@@ -38,7 +38,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Game>> Get()
+        public async Task<IEnumerable<SDK.Models.Game>> GetAsync()
         {
             try
             {
@@ -70,7 +70,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("AddToLibrary")]
-        public async Task<bool> AddToLibrary(Guid gameId)
+        public async Task<bool> AddToLibraryAsync(Guid gameId)
         {
             try
             {
@@ -89,7 +89,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("RemoveFromLibrary")]
-        public async Task<bool> RemoveFromLibrary(Guid gameId)
+        public async Task<bool> RemoveFromLibraryAsync(Guid gameId)
         {
             try
             {

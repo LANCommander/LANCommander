@@ -25,7 +25,7 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpGet("/Games/{id:guid}/Export/Full")]
-        public async Task ExportFull(Guid id)
+        public async Task ExportFullAsync(Guid id)
         {
             var game = await GameService.GetAsync(id);
 
@@ -106,7 +106,7 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpGet("/Games/{id:guid}/Export/Metadata")]
-        public async Task ExportMetadata(Guid id)
+        public async Task ExportMetadataAsync(Guid id)
         {
             var game = await GameService.GetAsync(id);
 

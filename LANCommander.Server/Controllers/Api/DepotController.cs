@@ -38,7 +38,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Games")]
-        public async Task<IEnumerable<SDK.Models.DepotGame>> GetGames()
+        public async Task<IEnumerable<SDK.Models.DepotGame>> GetGamesAsync()
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var library = await LibraryService.GetByUserIdAsync(user.Id);
@@ -61,7 +61,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Games/{id}")]
-        public async Task<SDK.Models.DepotGame> GetGame(Guid id)
+        public async Task<SDK.Models.DepotGame> GetGameAsync(Guid id)
         {
             var game = await GameService.GetAsync(id);
             var user = await UserService.GetAsync(User?.Identity?.Name);

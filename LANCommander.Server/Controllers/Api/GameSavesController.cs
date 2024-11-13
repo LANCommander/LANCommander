@@ -30,7 +30,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<GameSave>> Get(Guid id)
+        public async Task<ActionResult<GameSave>> GetAsync(Guid id)
         {
             var gameSave = await GameSaveService.GetAsync(id);
 
@@ -50,7 +50,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
             var game = await GameService.GetAsync(id);
 
@@ -80,7 +80,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("{id}/Upload")]
-        public async Task<IActionResult> Upload(Guid id, [FromForm] SaveUpload save)
+        public async Task<IActionResult> UploadAsync(Guid id, [FromForm] SaveUpload save)
         {
             var maxSize = (ByteSizeLib.ByteSize.BytesInMebiByte * Settings.UserSaves.MaxSize);
 

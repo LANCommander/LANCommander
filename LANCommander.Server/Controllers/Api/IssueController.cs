@@ -28,7 +28,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Open")]
-        public async Task<bool> Open(SDK.Models.Issue issueRequest)
+        public async Task<bool> OpenAsync(SDK.Models.Issue issueRequest)
         {
             try
             {

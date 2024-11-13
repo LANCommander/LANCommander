@@ -246,7 +246,7 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginOperation("Retrieving games from the server"))
             {
-                remoteGames = await Client.Games.GetAsync();
+                remoteGames = await Client.Library.GetAsync();
 
                 op.Complete();
             }

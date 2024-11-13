@@ -8,12 +8,12 @@
 <Flex Justify="space-between" Class="footer">
     @if (Client.IsConnected())
     {
-        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" OnClick="@(() => NavigationManager.NavigateTo("/Browse"))">Browse Games</Button>
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
     }
     else
     {
         <Tooltip Title="You are currently offline">
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" Disabled>Browse Games</Button>
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
         </Tooltip>
     }
 

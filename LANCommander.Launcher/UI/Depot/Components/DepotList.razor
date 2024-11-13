@@ -2,18 +2,13 @@
 @inject SDK.Client Client
 
 <Flex Wrap="wrap" Justify="center" Gap="large" Class="depot-games no-scrollbar">
-    @foreach (var game in Games)
+    @foreach (var item in Items)
     {
-        <DepotGameItem Value="game" OnClick="OnGameSelected" />
+        <DepotGameItem Item="item" OnClick="OnItemSelected" />
     }
 </Flex>
 
 @code {
-    [Parameter] public IEnumerable<DepotGame> Games { get; set; }
-    [Parameter] public EventCallback<DepotGame> OnGameSelected { get; set; }
-
-    protected override async Task OnInitializedAsync()
-    {
-        
-    }
+    [Parameter] public IEnumerable<Models.ListItem> Items { get; set; }
+    [Parameter] public EventCallback<Models.ListItem> OnItemSelected { get; set; }
 }

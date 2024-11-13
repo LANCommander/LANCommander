@@ -137,7 +137,7 @@
 </Drawer>
 
 @code {
-    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public Guid ItemId { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
     SDK.Models.Game SelectedGame { get; set; }
@@ -150,11 +150,11 @@
     {
         try
         {
-            if (GameId != Guid.Empty)
+            if (ItemId != Guid.Empty)
             {
-                SelectedGame = await Client.Games.GetAsync(GameId);
+                SelectedGame = await Client.Games.GetAsync(ItemId);
 
-                var game = await GameService.Get(GameId);
+                var game = await GameService.Get(ItemId);
 
                 if (game == null || !game.Installed)
                     IsInstalled = false;
@@ -166,7 +166,7 @@
         {
             SelectedGame = null;
 
-            Logger?.LogError(ex, "Could not load game with ID {GameId}", GameId);
+            Logger?.LogError(ex, "Could not load game with ID {GameId}", ItemId);
         }
 
         await InvokeAsync(StateHasChanged);

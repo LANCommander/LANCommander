@@ -1,5 +1,5 @@
-﻿@page "/Browse"
-@page "/Browse/{id:guid}"
+﻿@page "/Depot"
+@page "/Depot/{id:guid}"
 @using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models.Enums
 @using LANCommander.Launcher.Models
@@ -17,9 +17,9 @@
 
 <Layout>
     <Content Class="depot">
-        <DepotFilter Games="@Games" />
+        <DepotFilter Items="@ListItems" />
 
-        <DepotList Games="@Games" OnGameSelected="@((game) => NavigationManager.NavigateTo($"/Browse/{game.Id}"))" />
+        <DepotList Items="@ListItems" OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
     </Content>
 </Layout>
 
@@ -27,7 +27,7 @@
     <img src="assets/logo-cut.svg" />
 </div>
 
-<DepotGameDetails @ref="DepotGameDetails" GameId="@(SelectedItem?.Key ?? Guid.Empty)" OnClose="@(() => NavigationManager.NavigateTo("/Browse"))" />
+<DepotGameDetails @ref="DepotGameDetails" ItemId="@(SelectedItem?.Key ?? Guid.Empty)" OnClose="@(() => NavigationManager.NavigateTo("/Depot"))" />
 
 <LANCommander.Launcher.UI.Components.Footer />
 
@@ -36,7 +36,8 @@
 
     DepotGameDetails DepotGameDetails;
 
-    IEnumerable<SDK.Models.DepotGame> Games { get; set; } = new List<SDK.Models.DepotGame>();
+    List<string> Groups = new();
+    IEnumerable<Models.ListItem> ListItems = new List<Models.ListItem>();
 
     Models.ListItem SelectedItem { get; set; }
 
@@ -44,7 +45,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        DepotService.OnItemsFiltered += LoadFilteredItems;
+
+        await DepotService.RefreshItemsAsync();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -57,11 +60,20 @@
         }
     }
 
-    async Task LoadData()
+    async Task LoadFilteredItems(IEnumerable<Models.ListItem> listItems)
     {
-        await DepotService.RefreshItemsAsync();
+        ListItems = listItems;
 
-        Games = DepotService.Items.Select(i => i.DataItem as SDK.Models.DepotGame);
+        await UpdateGroups();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task UpdateGroups()
+    {
+        Groups = ListItems.SelectMany(i => i.Groups).Distinct().ToList();
+
+        if (ListItems.Any(i => i.Groups == null || i.Groups.Length == 0))
+            Groups.Add("Uncategorized");
 
         await InvokeAsync(StateHasChanged);
     }

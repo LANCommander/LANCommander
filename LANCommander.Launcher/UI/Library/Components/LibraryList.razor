@@ -34,8 +34,7 @@
     [Parameter] public Guid? SelectedItem { get; set; }
     [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
 
-    string Search { get; set; } = "";
-    List<string> Groups = new List<string>();
+    List<string> Groups = new();
     IEnumerable<Models.ListItem> LibraryItems;
 
     protected override async Task OnInitializedAsync()

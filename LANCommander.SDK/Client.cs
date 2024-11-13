@@ -197,6 +197,23 @@ namespace LANCommander.SDK
             return response;
         }
 
+        internal async Task<T> PutRequestAsync<T>(string route, object body, bool ignoreVersion = false)
+        {
+            if (Token == null)
+                return default;
+
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            if (!ignoreVersion)
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+            var response = await ApiClient.PutAsync<T>(request);
+
+            return response;
+        }
+
         internal T GetRequest<T>(string route, bool ignoreVersion = false)
         {
             if (Token == null)

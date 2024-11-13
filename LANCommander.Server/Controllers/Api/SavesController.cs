@@ -160,7 +160,7 @@ namespace LANCommander.Server.Controllers.Api
             return Ok(Mapper.Map<SDK.Models.GameSave>(save));
         }
 
-        [HttpPost("Delete/{id}")]
+        [HttpDelete("Delete/{id}")]
         public async Task<IActionResult> DeleteAsync(Guid id)
         {
             try

@@ -45,7 +45,7 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
         }
 
-        [HttpPost("ChangeAlias")]
+        [HttpPut("ChangeAlias")]
         public async Task<IActionResult> ChangeAliasAsync(ChangeAliasRequest request)
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
@@ -127,7 +127,7 @@ namespace LANCommander.Server.Controllers.Api
             }
         }
 
-        [HttpPost("CustomField/{name}")]
+        [HttpPut("CustomField/{name}")]
         public async Task<IActionResult> UpdateCustomFieldAsync(string name, string value)
         {
             try

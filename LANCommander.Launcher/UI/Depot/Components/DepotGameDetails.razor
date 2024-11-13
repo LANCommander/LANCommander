@@ -1,6 +1,13 @@
-﻿@inject DepotService DepotService
+﻿@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models
+@inject DepotService DepotService
+@inject LibraryService LibraryService
+@inject GameService GameService
+@inject InstallService InstallService
 @inject SDK.Client Client
 @inject ILogger<DepotGameDetails> Logger
+@inject NavigationManager NavigationManager
+@inject ModalService ModalService
 
 <Drawer Placement="bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
     @if (SelectedGame != null)
@@ -28,6 +35,47 @@
 
                 <GridRow Gutter="32" Class="game-info" Wrap="false">
                     <GridCol Flex="@("auto")">
+                        <div class="game-action-bar">
+                            <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                                <SpaceItem>
+                                    @if (IsInstalled)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" OnClick="@(() => NavigationManager.NavigateTo($"/{SelectedGame.Id}"))">View in Library</Button>
+                                    }
+                                    else
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install">Install</Button>
+                                    }
+
+                                    @if (SelectedGame.InLibrary)
+                                    {
+                                        <Button Size="@ButtonSize.Large" OnClick="RemoveFromLibrary">Remove from Library</Button>
+                                    }
+                                    else
+                                    {
+                                        <Button Size="@ButtonSize.Large" OnClick="AddToLibrary">Add to Library</Button>
+                                    }
+                                </SpaceItem>
+
+                                @if (!IsInstalled && Client.IsConnected())
+                                {
+                                    <SpaceItem>
+                                        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
+                                    </SpaceItem>
+                                }
+
+                                @if (SelectedGame.PlaySessions.Any())
+                                {
+                                    <SpaceItem>
+                                        <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
+                                    </SpaceItem>
+                                    <SpaceItem>
+                                        <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
+                                    </SpaceItem>
+                                }
+                            </Space>
+                        </div>
+
                         <div class="game-metadata">
                             @if (!String.IsNullOrWhiteSpace(SelectedGame.Description))
                             {
@@ -94,13 +142,25 @@
 
     SDK.Models.Game SelectedGame { get; set; }
     bool Visible { get; set; } = false;
+    bool IsInstalled { get; set; } = false;
+
+    Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnParametersSetAsync()
     {
         try
         {
             if (GameId != Guid.Empty)
+            {
                 SelectedGame = await Client.Games.GetAsync(GameId);
+
+                var game = await GameService.Get(GameId);
+
+                if (game == null || !game.Installed)
+                    IsInstalled = false;
+                else
+                    IsInstalled = true;
+            }
         }
         catch (Exception ex)
         {
@@ -127,5 +187,82 @@
             await OnClose.InvokeAsync();
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Install()
+    {
+        if (!SelectedGame.InLibrary)
+            await AddToLibrary();
+
+        var libraryItem = LibraryService.GetItem(SelectedGame.Id);
+        var game = libraryItem.DataItem as Game;
+
+        if (Settings.Games.InstallDirectories.Length > 1 || game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = $"Install {SelectedGame.Title}",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = "Install",
+                Draggable = true,
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, libraryItem);
+        }
+        else
+        {
+            await InstallService.Add(game);
+        }
+    }
+
+    async Task AddToLibrary()
+    {
+        await LibraryService.AddToLibraryAsync(SelectedGame.Id);
+        await LibraryService.RefreshItemsAsync();
+    }
+
+    async Task RemoveFromLibrary()
+    {
+        await LibraryService.RemoveFromLibraryAsync(SelectedGame.Id);
+        await LibraryService.RefreshItemsAsync();
+    }
+
+    long GetDownloadSize()
+    {
+        long size = 0;
+
+        if (SelectedGame != null && SelectedGame.Archives.Any())
+            size = SelectedGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+
+        return size;
+    }
+
+    string GetPlayTime(SDK.Models.Game game)
+    {
+        var totalTime = new TimeSpan(game.PlaySessions
+            .Where(ps => ps.End != null && ps.Start != null)
+            .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
+            .Sum(ts => ts.Ticks));
+        if (totalTime.TotalMinutes < 1)
+            return "None";
+        else if (totalTime.TotalHours < 1)
+            return totalTime.TotalMinutes.ToString("0") + " minutes";
+        else
+            return totalTime.TotalHours.ToString("0.##") + " hours";
+    }
+
+    string GetLastPlayed(SDK.Models.Game game)
+    {
+        var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
+
+        if (lastSession == null)
+            return "Never";
+        else
+            return lastSession.End.Value.ToRelativeDate();
     }
 }

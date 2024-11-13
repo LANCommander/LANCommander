@@ -34,7 +34,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 if (user != null)
                     return Ok(user);
@@ -50,11 +50,11 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 user.Alias = request.Alias;
 
-                await UserService.Update(user);
+                await UserService.UpdateAsync(user);
 
                 return Ok(request.Alias);
             }
@@ -67,7 +67,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
 
@@ -88,7 +88,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserService.Get(userName);
+                var user = await UserService.GetAsync(userName);
 
                 if (user == null)
                     return NotFound();
@@ -113,9 +113,9 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                var field = await UserCustomFieldService.Get(user.Id, name);
+                var field = await UserCustomFieldService.GetAsync(user.Id, name);
 
                 return Ok(field.Value);
             }
@@ -132,9 +132,9 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                await UserCustomFieldService.Update(user.Id, name, value);
+                await UserCustomFieldService.UpdateAsync(user.Id, name, value);
 
                 return Ok(value);
             }

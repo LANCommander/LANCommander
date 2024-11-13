@@ -249,7 +249,7 @@
         if (Id != Guid.Empty && Panel == null)
             NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
         else if (Id != Guid.Empty)
-            Server = await ServerService.Get(Id);
+            Server = await ServerService.GetAsync(Id);
 
         if (Server.GameId.HasValue)
             GameId = Server.GameId.Value;
@@ -257,7 +257,7 @@
         if (Server.HttpPaths == null)
             Server.HttpPaths = new List<ServerHttpPath>();
 
-        Games = await GameService.Get();
+        Games = await GameService.GetAsync();
 
         await OnPortNumberChanged(Server.Port);
     }
@@ -270,13 +270,13 @@
 
             if (Server.Id != Guid.Empty)
             {
-                Server = await ServerService.Update(Server);
+                Server = await ServerService.UpdateAsync(Server);
 
                 await MessageService.Success("Server updated!");
             }
             else
             {
-                Server = await ServerService.Add(Server);
+                Server = await ServerService.AddAsync(Server);
 
                 NavigationManager.LocationChanged += NotifyServerAdded;
 
@@ -323,6 +323,6 @@
     private async Task OnPortNumberChanged(int value)
     {
         if (value > 0)
-            PortInUse = (await ServerService.Get(s => s.Port == value && s.Id != Id)).Any();
+            PortInUse = (await ServerService.GetAsync(s => s.Port == value && s.Id != Id)).Any();
     }
 }

@@ -32,7 +32,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<ActionResult<GameSave>> Get(Guid id)
         {
-            var gameSave = await GameSaveService.Get(id);
+            var gameSave = await GameSaveService.GetAsync(id);
 
             if (gameSave == null || gameSave.User == null)
             {
@@ -46,13 +46,13 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
             }
 
-            return Ok(await GameSaveService.Get(id));
+            return Ok(await GameSaveService.GetAsync(id));
         }
 
         [HttpGet("{id}/Download")]
         public async Task<IActionResult> Download(Guid id)
         {
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -60,7 +60,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
             {
@@ -68,7 +68,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
                 
-            var path = await GameSaveService.GetSavePath(game.Id, user.Id);
+            var path = await GameSaveService.GetSavePathAsync(game.Id, user.Id);
 
             if (!System.IO.File.Exists(path))
             {
@@ -90,7 +90,7 @@ namespace LANCommander.Server.Controllers.Api
                 return BadRequest("Save file archive is too large");
             }
 
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -98,7 +98,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
             {
@@ -106,7 +106,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var path = await GameSaveService.GetSavePath(game.Id, user.Id);
+            var path = await GameSaveService.GetSavePathAsync(game.Id, user.Id);
 
             var fileInfo = new FileInfo(path);
 

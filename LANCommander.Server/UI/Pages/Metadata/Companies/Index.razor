@@ -90,7 +90,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Companies = (await CompanyService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        Companies = (await CompanyService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private async Task UpdateOrAdd()
@@ -99,13 +99,13 @@
         {
             if (CompanyContext.Id == Guid.Empty)
             {
-                await CompanyService.AddMissing(x => x.Name == CompanyContext.Name, CompanyContext);
+                await CompanyService.AddMissingAsync(x => x.Name == CompanyContext.Name, CompanyContext);
 
                 MessageService.Success($"{CompanyContext.Name} was added!");
             }
             else
             {
-                await CompanyService.Update(CompanyContext);
+                await CompanyService.UpdateAsync(CompanyContext);
 
                 MessageService.Success($"{CompanyContext.Name} was updated!");
             }
@@ -148,9 +148,9 @@
 
         Loading = true;
 
-        await CompanyService.Delete(Company);
+        await CompanyService.DeleteAsync(Company);
 
-        Companies = (await CompanyService.Get(x => true)).OrderBy(r => r.Name);
+        Companies = (await CompanyService.GetAsync(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

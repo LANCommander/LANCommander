@@ -135,7 +135,7 @@
     {
         if (Id != Guid.Empty)
         {
-            SelectedPage = await PageService.FirstOrDefault(p => p.Id == Id);
+            SelectedPage = await PageService.FirstOrDefaultAsync(p => p.Id == Id);
 
             if (SelectedPage == null)
                 NavigationManager.NavigateTo("/Pages/Edit");
@@ -149,7 +149,7 @@
 
     async Task LoadData()
     {
-        Pages = (await PageService.Get(p => p.ParentId == null)).OrderBy(p => p.SortOrder).ToList();
+        Pages = (await PageService.GetAsync(p => p.ParentId == null)).OrderBy(p => p.SortOrder).ToList();
 
         await InvokeAsync(StateHasChanged);
     }
@@ -166,7 +166,7 @@
             var sibling = e.TargetNode;
 
             if (parentId == Guid.Empty)
-                childOrder = (await PageService.Get(p => p.Parent == null)).Select(p => p.Id).ToList();
+                childOrder = (await PageService.GetAsync(p => p.Parent == null)).Select(p => p.Id).ToList();
             else
                 childOrder = parentNode.DataItem.Children.Select(c => c.Id).ToList();
 
@@ -176,7 +176,7 @@
 
             childOrder.Insert(targetPosition + 1, e.Node.DataItem.Id);
 
-            await PageService.UpdateOrder(parentId, childOrder);
+            await PageService.UpdateOrderAsync(parentId, childOrder);
         }
         else
         {
@@ -185,7 +185,7 @@
             childOrder.Remove(e.Node.DataItem.Id);
             childOrder.Insert(0, e.Node.DataItem.Id);
 
-            await PageService.UpdateOrder(e.TargetNode.DataItem.Id, childOrder);
+            await PageService.UpdateOrderAsync(e.TargetNode.DataItem.Id, childOrder);
         }
 
         await LoadData();
@@ -201,14 +201,14 @@
             newPage.Slug = "new-page";
             newPage.Contents = "";
 
-            newPage = await PageService.Add(newPage);
+            newPage = await PageService.AddAsync(newPage);
 
             if (SelectedPage != null && SelectedPage.Parent != null)
                 newPage.Parent = SelectedPage.Parent;
             else
                 newPage.Parent = SelectedPage;
 
-            await PageService.Update(newPage);
+            await PageService.UpdateAsync(newPage);
 
             await LoadData();
 
@@ -229,9 +229,9 @@
             {
                 var parentId = SelectedPage.Parent?.Id ?? Guid.Empty;
 
-                var page = await PageService.Get(SelectedPage.Id);
+                var page = await PageService.GetAsync(SelectedPage.Id);
 
-                await PageService.Delete(page);
+                await PageService.DeleteAsync(page);
 
                 if (parentId != Guid.Empty)
                     NavigationManager.NavigateTo($"/Pages/Edit/{parentId}");
@@ -256,12 +256,12 @@
         {
             if (SelectedPage.Id != Guid.Empty)
             {
-                await PageService.Update(SelectedPage);
+                await PageService.UpdateAsync(SelectedPage);
                 MessageService.Success("Page updated!");
             }
             else
             {
-                await PageService.Add(SelectedPage);
+                await PageService.AddAsync(SelectedPage);
                 MessageService.Success("Page added!");
             }
 
@@ -344,9 +344,9 @@
             Crc32 = ""
         };
 
-        media = await MediaService.Add(media);
+        media = await MediaService.AddAsync(media);
         media = await MediaService.UploadMediaAsync(stream, media);
-        media = await MediaService.Update(media);
+        media = await MediaService.UpdateAsync(media);
 
         entry.UploadUrl = $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
 

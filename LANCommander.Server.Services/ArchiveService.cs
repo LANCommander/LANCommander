@@ -34,42 +34,42 @@ namespace LANCommander.Server.Services
 
         public async Task<string> GetArchiveFileLocationAsync(string objectKey)
         {
-            var archive = await FirstOrDefault(a => a.ObjectKey == objectKey);
+            var archive = await FirstOrDefaultAsync(a => a.ObjectKey == objectKey);
 
             return GetArchiveFileLocation(archive);
         }
 
-        public override async Task<Archive> Add(Archive entity)
+        public override async Task<Archive> AddAsync(Archive entity)
         {
             await Cache.ExpireAsync("MappedGames");
 
-            return await base.Add(entity);
+            return await base.AddAsync(entity);
         }
 
-        public override async Task<ExistingEntityResult<Archive>> AddMissing(Expression<Func<Archive, bool>> predicate, Archive entity)
+        public override async Task<ExistingEntityResult<Archive>> AddMissingAsync(Expression<Func<Archive, bool>> predicate, Archive entity)
         {
             await Cache.ExpireAsync("MappedGames");
 
-            return await base.AddMissing(predicate, entity);
+            return await base.AddMissingAsync(predicate, entity);
         }
 
-        public override async Task<Archive> Update(Archive entity)
+        public override async Task<Archive> UpdateAsync(Archive entity)
         {
             await Cache.ExpireAsync("MappedGames");
 
-            return await base.Update(entity);
+            return await base.UpdateAsync(entity);
         }
 
-        public override async Task Delete(Archive archive)
+        public override async Task DeleteAsync(Archive archive)
         {
             FileHelpers.DeleteIfExists(GetArchiveFileLocation(archive));
 
             await Cache.ExpireAsync("MappedGames");
 
-            await base.Delete(archive);
+            await base.DeleteAsync(archive);
         }
 
-        public async Task<GameManifest> ReadManifest(string objectKey)
+        public async Task<GameManifest> ReadManifestAsync(string objectKey)
         {
             var upload = await GetArchiveFileLocationAsync(objectKey);
 
@@ -101,7 +101,7 @@ namespace LANCommander.Server.Services
             return manifest;
         }
 
-        public async Task<byte[]> ReadFile(string objectKey, string path)
+        public async Task<byte[]> ReadFileAsync(string objectKey, string path)
         {
             var upload = await GetArchiveFileLocationAsync(objectKey);
 
@@ -124,16 +124,16 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<bool> Exists(Guid archiveId)
+        public async Task<bool> ExistsAsync(Guid archiveId)
         {
-            var archive = await Get(archiveId);
+            var archive = await GetAsync(archiveId);
 
             var path = GetArchiveFileLocation(archive);
 
             return File.Exists(path);
         }
 
-        public async Task<Guid> CopyFromLocalFile(string path)
+        public async Task<Guid> CopyFromLocalFileAsync(string path)
         {
             Guid objectKey = Guid.NewGuid();
 
@@ -144,9 +144,9 @@ namespace LANCommander.Server.Services
             return objectKey;
         }
 
-        public async Task<IEnumerable<ZipArchiveEntry>> GetContents(Guid archiveId)
+        public async Task<IEnumerable<ZipArchiveEntry>> GetContentsAsync(Guid archiveId)
         {
-            var archive = await Get(archiveId);
+            var archive = await GetAsync(archiveId);
 
             var upload = GetArchiveFileLocation(archive);
 
@@ -184,7 +184,7 @@ namespace LANCommander.Server.Services
             return size;
         }
 
-        public async Task PatchArchive(Archive originalArchive, Archive alteredArchive, CompressionLevel compressionLevel = CompressionLevel.Optimal)
+        public async Task PatchArchiveAsync(Archive originalArchive, Archive alteredArchive, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
             var alteredZipPath = GetArchiveFileLocation(alteredArchive);
             var patchZipPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
@@ -243,8 +243,8 @@ namespace LANCommander.Server.Services
             alteredArchive.CompressedSize = new FileInfo(GetArchiveFileLocation(alteredArchive)).Length;
             originalArchive.CompressedSize = new FileInfo(GetArchiveFileLocation(originalArchive)).Length;
 
-            await Update(alteredArchive);
-            await Update(originalArchive);
+            await UpdateAsync(alteredArchive);
+            await UpdateAsync(originalArchive);
 
             Logger?.LogInformation("Finished merging original archive {ArchiveId} and rebuilt patch archive {PatchArchivePath}", originalArchive.Id.ToString(), alteredZipPath);
         }

@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
             Mapper = mapper;
         }
 
-        public async Task<User> Get(string userName)
+        public async Task<User> GetAsync(string userName)
         {
             try
             {
@@ -50,7 +50,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<T> Get<T>(string userName)
+        public async Task<T> GetAsync<T>(string userName)
         {
             try
             {
@@ -66,7 +66,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<IEnumerable<Role>> GetRoles(string userName)
+        public async Task<IEnumerable<Role>> GetRolesAsync(string userName)
         {
             try
             {
@@ -84,7 +84,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<bool> IsInRole(string userName, string roleName)
+        public async Task<bool> IsInRoleAsync(string userName, string roleName)
         {
             try
             {
@@ -100,7 +100,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<User> Add(User user)
+        public async Task<User> AddAsync(User user)
         {
             try
             {
@@ -119,7 +119,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task AddToRole(string userName, string roleName)
+        public async Task AddToRoleAsync(string userName, string roleName)
         {
             try
             {
@@ -135,7 +135,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task AddToRoles(string userName, IEnumerable<string> roleNames)
+        public async Task AddToRolesAsync(string userName, IEnumerable<string> roleNames)
         {
             try
             {
@@ -224,7 +224,7 @@ namespace LANCommander.Server.Services
 
         }
 
-        public async Task<ICollection<User>> Get()
+        public async Task<ICollection<User>> GetAsync()
         {
             try
             {
@@ -238,7 +238,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<ICollection<T>> Get<T>()
+        public async Task<ICollection<T>> GetAsync<T>()
         {
             try
             {
@@ -252,7 +252,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<User> Get(Guid id)
+        public async Task<User> GetAsync(Guid id)
         {
             try
             {
@@ -266,7 +266,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<T> Get<T>(Guid id)
+        public async Task<T> GetAsync<T>(Guid id)
         {
             try
             {
@@ -282,7 +282,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<ICollection<User>> Get(Expression<Func<User, bool>> predicate)
+        public async Task<ICollection<User>> GetAsync(Expression<Func<User, bool>> predicate)
         {
             try
             {
@@ -296,7 +296,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<ICollection<T>> Get<T>(Expression<Func<User, bool>> predicate)
+        public async Task<ICollection<T>> GetAsync<T>(Expression<Func<User, bool>> predicate)
         {
             try
             {
@@ -310,7 +310,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<User> FirstOrDefault(Expression<Func<User, bool>> predicate)
+        public async Task<User> FirstOrDefaultAsync(Expression<Func<User, bool>> predicate)
         {
             try
             {
@@ -324,7 +324,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<T> FirstOrDefault<T>(Expression<Func<User, bool>> predicate)
+        public async Task<T> FirstOrDefaultAsync<T>(Expression<Func<User, bool>> predicate)
         {
             try
             {
@@ -338,7 +338,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<User> FirstOrDefault<TKey>(Expression<Func<User, bool>> predicate, Expression<Func<User, TKey>> orderKeySelector)
+        public async Task<User> FirstOrDefaultAsync<TKey>(Expression<Func<User, bool>> predicate, Expression<Func<User, TKey>> orderKeySelector)
         {
             try
             {
@@ -352,7 +352,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<T> FirstOrDefault<T, TKey>(Expression<Func<User, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        public async Task<T> FirstOrDefaultAsync<T, TKey>(Expression<Func<User, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
             try
             {
@@ -366,7 +366,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<bool> Exists(Guid id)
+        public async Task<bool> ExistsAsync(Guid id)
         {
             try
             {
@@ -382,7 +382,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<ExistingEntityResult<User>> AddMissing(Expression<Func<User, bool>> predicate, User entity)
+        public async Task<ExistingEntityResult<User>> AddMissingAsync(Expression<Func<User, bool>> predicate, User entity)
         {
             try
             {
@@ -413,7 +413,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<User> Update(User entity)
+        public async Task<User> UpdateAsync(User entity)
         {
             try
             {
@@ -439,7 +439,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task Delete(User entity)
+        public async Task DeleteAsync(User entity)
         {
             try
             {

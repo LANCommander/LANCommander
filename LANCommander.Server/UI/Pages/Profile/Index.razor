@@ -46,7 +46,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
-            User = await UserService.Get(authState.User.Identity.Name);
+            User = await UserService.GetAsync(authState.User.Identity.Name);
     }
 
     private async Task Save()
@@ -55,7 +55,7 @@
         {
             if (Form.IsModified)
             {
-                await UserService.Update(User);
+                await UserService.UpdateAsync(User);
 
                 MessageService.Success("Profile updated!");
 

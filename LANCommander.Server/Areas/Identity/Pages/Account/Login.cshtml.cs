@@ -117,7 +117,7 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
             if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown)
                 return Redirect("/FirstTimeSetup");
 
-            var administrators = await RoleService.GetUsers(RoleService.AdministratorRoleName);
+            var administrators = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
 
             if (administrators == null || !administrators.Any())
                 return Redirect("/FirstTimeSetup");
@@ -142,9 +142,9 @@ namespace LANCommander.Server.Areas.Identity.Pages.Account
 
                 if (settings.Authentication.RequireApproval)
                 {
-                    var user = await UserService.Get(Input.UserName);
+                    var user = await UserService.GetAsync(Input.UserName);
 
-                    if (user != null && !user.Approved && !(await UserService.IsInRole(user.UserName, RoleService.AdministratorRoleName)))
+                    if (user != null && !user.Approved && !(await UserService.IsInRoleAsync(user.UserName, RoleService.AdministratorRoleName)))
                     {
                         ModelState.AddModelError(string.Empty, "Your account must be approved by an administrator.");
                         return Page();

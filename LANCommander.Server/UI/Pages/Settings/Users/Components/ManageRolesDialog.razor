@@ -38,10 +38,10 @@
 
     private async Task LoadData()
     {
-        User = await UserService.Get(Options);
-        Roles = (await RoleService.Get()).ToList();
+        User = await UserService.GetAsync(Options);
+        Roles = (await RoleService.GetAsync()).ToList();
 
-        var currentRoles = await UserService.GetRoles(User.UserName);
+        var currentRoles = await UserService.GetRolesAsync(User.UserName);
 
         SelectedRoles = Roles.Where(r => currentRoles.Any(cr => r.Name == cr.Name)).ToList();
     }
@@ -53,13 +53,13 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        var currentAdmins = await RoleService.GetUsers(RoleService.AdministratorRoleName);
+        var currentAdmins = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
 
         try
         {
-            var currentRoles = await UserService.GetRoles(User.UserName);
+            var currentRoles = await UserService.GetRolesAsync(User.UserName);
 
-            await UserService.AddToRoles(User.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
+            await UserService.AddToRolesAsync(User.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
 
             foreach (var role in currentRoles)
             {

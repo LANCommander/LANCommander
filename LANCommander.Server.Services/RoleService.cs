@@ -23,7 +23,7 @@ namespace LANCommander.Server.Services
             IdentityContextFactory = identityContextFactory;
         }
 
-        public override async Task<Role> Add(Role role)
+        public override async Task<Role> AddAsync(Role role)
         {
             using (var identityContext = IdentityContextFactory.Create())
             {
@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<Role> Get(string roleName)
+        public async Task<Role> GetAsync(string roleName)
         {
             using (var identityContext = IdentityContextFactory.Create())
             {
@@ -44,7 +44,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<IEnumerable<User>> GetUsers(string roleName)
+        public async Task<IEnumerable<User>> GetUsersAsync(string roleName)
         {
             using (var identityContext = IdentityContextFactory.Create())
             {

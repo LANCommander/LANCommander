@@ -29,7 +29,7 @@ namespace LANCommander.Server.Controllers
 
         public async Task<JsonResult> Init([FromBody]SDK.Models.UploadInitRequest request)
         {
-            var storageLocation = await StorageLocationService.Get(request.StorageLocationId);
+            var storageLocation = await StorageLocationService.GetAsync(request.StorageLocationId);
 
             if (!Directory.Exists(storageLocation.Path))
                 Directory.CreateDirectory(storageLocation.Path);
@@ -41,7 +41,7 @@ namespace LANCommander.Server.Controllers
                 Version = "",
             };
 
-            archive = await ArchiveService.Add(archive);
+            archive = await ArchiveService.AddAsync(archive);
 
             var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 

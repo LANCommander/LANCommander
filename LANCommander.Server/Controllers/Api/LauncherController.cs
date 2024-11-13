@@ -31,7 +31,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
             {
-                var release = await UpdateService.GetRelease(version);
+                var release = await UpdateService.GetReleaseAsync(version);
 
                 if (release == null)
                     return NotFound();

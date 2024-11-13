@@ -82,7 +82,7 @@
         {
             try
             {
-                var game = await GameService.Import(objectKey);
+                var game = await GameService.ImportAsync(objectKey);
 
                 Visible = false;
 
@@ -125,7 +125,7 @@
     {
         try
         {
-            var game = await GameService.ImportLocalFile(path);
+            var game = await GameService.ImportLocalFileAsync(path);
 
             Visible = false;
 

@@ -32,7 +32,7 @@
 
     private async Task LoadData()
     {
-        Collections = (await CollectionService.Get()).OrderBy(c => c.Name).ToList();
+        Collections = (await CollectionService.GetAsync()).OrderBy(c => c.Name).ToList();
     }
 
     private RenderFragment DropdownRender(RenderFragment originNode)
@@ -63,7 +63,7 @@
         {
             if (!String.IsNullOrWhiteSpace(NewCollectionName))
             {
-                await CollectionService.Add(new Collection()
+                await CollectionService.AddAsync(new Collection()
                     {
                         Name = NewCollectionName
                     });
@@ -82,7 +82,7 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        var collections = await CollectionService.Get(c => SelectedCollections.Contains(c.Id));
+        var collections = await CollectionService.GetAsync(c => SelectedCollections.Contains(c.Id));
 
         try
         {
@@ -93,12 +93,12 @@
 
                 foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
                 {
-                    var game = await GameService.Get(gameId);
+                    var game = await GameService.GetAsync(gameId);
 
                     collection.Games.Add(game);
                 }
 
-                await CollectionService.Update(collection);
+                await CollectionService.UpdateAsync(collection);
             }
 
             if (collections.Count > 1)

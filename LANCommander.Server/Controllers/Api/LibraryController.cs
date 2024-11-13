@@ -42,16 +42,16 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserService.Get(User.Identity.Name);
-                var roles = await UserService.GetRoles(User?.Identity.Name);
-                var library = await LibraryService.GetByUserId(user.Id);
+                var user = await UserService.GetAsync(User.Identity.Name);
+                var roles = await UserService.GetRolesAsync(User?.Identity.Name);
+                var library = await LibraryService.GetByUserIdAsync(user.Id);
                 var libraryGameIds = library.Games.Select(g => g.Id).ToList();
 
                 var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
 
                 return await Cache.GetOrSetAsync($"LibraryGames:{user.Id}", async _ =>
                 {
-                    var games = await GameService.Get<SDK.Models.Game>(g => libraryGameIds.Contains(g.Id));
+                    var games = await GameService.GetAsync<SDK.Models.Game>(g => libraryGameIds.Contains(g.Id));
 
                     foreach (var game in games)
                     {
@@ -74,9 +74,9 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserService.Get(User.Identity.Name);
+                var user = await UserService.GetAsync(User.Identity.Name);
 
-                await LibraryService.AddToLibrary(user.Id, gameId);
+                await LibraryService.AddToLibraryAsync(user.Id, gameId);
 
                 await Cache.ExpireAsync($"LibraryGames:{user.Id}");
 
@@ -93,9 +93,9 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var user = await UserService.Get(User.Identity.Name);
+                var user = await UserService.GetAsync(User.Identity.Name);
 
-                await LibraryService.RemoveFromLibrary(user.Id, gameId);
+                await LibraryService.RemoveFromLibraryAsync(user.Id, gameId);
 
                 await Cache.ExpireAsync($"LibraryGames:{user.Id}");
 

@@ -48,7 +48,7 @@
     {
         Loading = true;
 
-        PlaySessions = await PlaySessionService.Get(ps => !ps.End.HasValue);
+        PlaySessions = await PlaySessionService.GetAsync(ps => !ps.End.HasValue);
 
         Loading = false;
     }
@@ -57,7 +57,7 @@
     {
         try
         {
-            await PlaySessionService.Delete(playSession);
+            await PlaySessionService.DeleteAsync(playSession);
 
             await LoadData();
 

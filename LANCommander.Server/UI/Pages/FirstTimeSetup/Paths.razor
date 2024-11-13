@@ -93,7 +93,7 @@
 
         try
         {
-            ArchiveStorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+            ArchiveStorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
         }
         catch (Exception ex)
         {
@@ -113,7 +113,7 @@
         try
         {
             
-            SavesStorageLocation = await StorageLocationService.First(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default);
+            SavesStorageLocation = await StorageLocationService.FirstAsync(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default);
         }
         catch (Exception ex)
         {
@@ -128,7 +128,7 @@
 
         try
         {
-            MediaStorageLocation = await StorageLocationService.First(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
+            MediaStorageLocation = await StorageLocationService.FirstAsync(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
         }
         catch (Exception ex)
         {

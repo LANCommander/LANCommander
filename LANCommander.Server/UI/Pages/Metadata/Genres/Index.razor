@@ -89,7 +89,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Genres = (await GenreService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        Genres = (await GenreService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
     private async Task UpdateOrAdd()
@@ -98,13 +98,13 @@
         {
             if (GenreContext.Id == Guid.Empty)
             {
-                await GenreService.AddMissing(x => x.Name == GenreContext.Name, GenreContext);
+                await GenreService.AddMissingAsync(x => x.Name == GenreContext.Name, GenreContext);
 
                 MessageService.Success($"{GenreContext.Name} was added!");
             }
             else
             {
-                await GenreService.Update(GenreContext);
+                await GenreService.UpdateAsync(GenreContext);
 
                 MessageService.Success($"{GenreContext.Name} was updated!");
             }
@@ -147,9 +147,9 @@
 
         Loading = true;
 
-        await GenreService.Delete(Genre);
+        await GenreService.DeleteAsync(Genre);
 
-        Genres = (await GenreService.Get(x => true)).OrderBy(r => r.Name);
+        Genres = (await GenreService.GetAsync(x => true)).OrderBy(r => r.Name);
 
         Loading = false;
     }

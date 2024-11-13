@@ -40,7 +40,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        User = await UserService.Get(UserId);
+        User = await UserService.GetAsync(UserId);
 
         LoadAvatar();
     }
@@ -85,13 +85,13 @@
         {
             media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
 
-            await MediaService.Add(media);
+            await MediaService.AddAsync(media);
         }
         else
         {
             MediaService.DeleteLocalMediaFile(media);
             media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
-            await MediaService.Update(media);
+            await MediaService.UpdateAsync(media);
         }
 
         LoadAvatar();

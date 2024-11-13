@@ -34,7 +34,7 @@ else if (!String.IsNullOrWhiteSpace(Root))
     protected override async Task OnInitializedAsync()
     {
         if (ArchiveId != Guid.Empty)
-            ArchiveExists = await ArchiveService.Exists(ArchiveId);
+            ArchiveExists = await ArchiveService.ExistsAsync(ArchiveId);
     }
 
     private async void BrowseForFile()

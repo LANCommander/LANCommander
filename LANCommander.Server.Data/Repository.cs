@@ -80,7 +80,7 @@ namespace LANCommander.Server.Data
             return this;
         }
 
-        public async Task <ICollection<T>> Get(Expression<Func<T, bool>> predicate)
+        public async Task <ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
         {
             try
             {
@@ -96,7 +96,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<ICollection<U>> Get<U>(Expression<Func<T, bool>> predicate)
+        public async Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate)
         {
             try
             {
@@ -112,7 +112,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<T> First(Expression<Func<T, bool>> predicate)
+        public async Task<T> FirstAsync(Expression<Func<T, bool>> predicate)
         {
             try
             {
@@ -128,7 +128,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<U> First<U>(Expression<Func<T, bool>> predicate)
+        public async Task<U> FirstAsync<U>(Expression<Func<T, bool>> predicate)
         {
             try
             {
@@ -144,7 +144,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<T> First<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        public async Task<T> FirstAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
             try
             {
@@ -160,7 +160,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<U> First<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        public async Task<U> FirstAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
         {
             try
             {
@@ -176,7 +176,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<T> Find(Guid id)
+        public async Task<T> FindAsync(Guid id)
         {
             try {
                 await Context.ContextMutex.WaitAsync();
@@ -198,7 +198,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<U> Find<U>(Guid id)
+        public async Task<U> FindAsync<U>(Guid id)
         {
             try
             {
@@ -221,7 +221,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
+        public async Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
         {
             try
             {
@@ -244,7 +244,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<U> FirstOrDefault<U>(Expression<Func<T, bool>> predicate)
+        public async Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate)
         {
             try
             {
@@ -267,7 +267,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<T> FirstOrDefault<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        public async Task<T> FirstOrDefaultAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
             try
             {
@@ -283,7 +283,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<U> FirstOrDefault<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
+        public async Task<U> FirstOrDefaultAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
         {
             try
             {
@@ -299,7 +299,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<T> Add(T entity)
+        public async Task<T> AddAsync(T entity)
         {
             try
             {
@@ -328,12 +328,12 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task<T> Update(T entity)
+        public async Task<T> UpdateAsync(T entity)
         {
             try
             {
                 var currentUserId = await GetCurrentUserId();
-                var existing = await Find(entity.Id);
+                var existing = await FindAsync(entity.Id);
 
                 await Context.ContextMutex.WaitAsync();
 
@@ -378,7 +378,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task SaveChanges()
+        public async Task SaveChangesAsync()
         {
             try
             {

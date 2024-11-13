@@ -50,13 +50,13 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<IEnumerable<SDK.Models.Game>> Get()
         {
-            var user = await UserService.Get(User?.Identity?.Name);
-            var userLibrary = await LibraryService.GetByUserId(user.Id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var userLibrary = await LibraryService.GetByUserIdAsync(user.Id);
 
             var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");
 
-                var games = await GameService.Get<SDK.Models.Game>();
+                var games = await GameService.GetAsync<SDK.Models.Game>();
 
                 return games;
             }, TimeSpan.MaxValue);
@@ -71,7 +71,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole(RoleService.AdministratorRoleName))
             {
-                var roles = await UserService.GetRoles(User?.Identity.Name);
+                var roles = await UserService.GetRolesAsync(User?.Identity.Name);
 
                 var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
 
@@ -93,13 +93,13 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<SDK.Models.Game> Get(Guid id)
         {
-            return Mapper.Map<SDK.Models.Game>(await GameService.Get(id));
+            return Mapper.Map<SDK.Models.Game>(await GameService.GetAsync(id));
         }
 
         [HttpGet("{id}/Manifest")]
         public async Task<SDK.GameManifest> GetManifest(Guid id)
         {
-            var manifest = await GameService.GetManifest(id);
+            var manifest = await GameService.GetManifestAsync(id);
 
             return manifest;
         }
@@ -114,7 +114,7 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
             }
 
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -147,7 +147,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var game = await GameService.Import(objectKey);
+                var game = await GameService.ImportAsync(objectKey);
 
                 return Ok();
             }
@@ -164,8 +164,8 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var storageLocation = await StorageLocationService.FirstOrDefault(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
-                var archive = await ArchiveService.FirstOrDefault(a => a.GameId == request.Id && a.Version == request.Version);
+                var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
+                var archive = await ArchiveService.FirstOrDefaultAsync(a => a.GameId == request.Id && a.Version == request.Version);
                 var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (archive != null)
@@ -179,7 +179,7 @@ namespace LANCommander.Server.Controllers.Api
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
                     archive.StorageLocation = storageLocation;
 
-                    archive = await ArchiveService.Update(archive);
+                    archive = await ArchiveService.UpdateAsync(archive);
                 }
                 else
                 {
@@ -192,7 +192,7 @@ namespace LANCommander.Server.Controllers.Api
                         StorageLocation = storageLocation
                     };
 
-                    await ArchiveService.Add(archive);
+                    await ArchiveService.AddAsync(archive);
                 }
 
                 return Ok();

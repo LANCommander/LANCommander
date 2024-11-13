@@ -37,11 +37,11 @@ namespace LANCommander.Server.Services
             StorageLocationService = storageLocationService;
         }
 
-        public override Task Delete(Media entity)
+        public override Task DeleteAsync(Media entity)
         {
             DeleteLocalMediaFile(entity);
 
-            return base.Delete(entity);
+            return base.DeleteAsync(entity);
         }
 
         public bool FileExists(Media entity)
@@ -51,9 +51,9 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<bool> FileExists(Guid id)
+        public async Task<bool> FileExistsAsync(Guid id)
         {
-            var path = await GetMediaPath(id);
+            var path = await GetMediaPathAsync(id);
 
             return File.Exists(path);
         }
@@ -65,9 +65,9 @@ namespace LANCommander.Server.Services
             return File.Exists(path);
         }
 
-        public async Task<string> GetMediaPath(Guid id)
+        public async Task<string> GetMediaPathAsync(Guid id)
         {
-            var entity = await Get(id);
+            var entity = await GetAsync(id);
 
             return GetMediaPath(entity);
         }
@@ -77,9 +77,9 @@ namespace LANCommander.Server.Services
             return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
         }
 
-        public async Task<string> GetThumbnailPath(Guid id)
+        public async Task<string> GetThumbnailPathAsync(Guid id)
         {
-            var entity = await Get(id);
+            var entity = await GetAsync(id);
 
             return GetThumbnailPath(entity);
         }
@@ -101,7 +101,7 @@ namespace LANCommander.Server.Services
         public async Task<Media> UploadMediaAsync(Stream stream, Media media)
         {
             var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.FirstOrDefault(l => l.Type == StorageLocationType.Media && l.Default);
+            var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
 
             media.FileId = fileId;
             media.StorageLocation = storageLocation;

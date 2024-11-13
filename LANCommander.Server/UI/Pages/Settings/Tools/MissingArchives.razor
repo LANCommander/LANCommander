@@ -55,10 +55,10 @@
 
         Archives = new List<Archive>();
 
-        foreach (var archive in await ArchiveService.Get())
+        foreach (var archive in await ArchiveService.GetAsync())
         {
             var archivePath = ArchiveService.GetArchiveFileLocation(archive);
-            var exists = await ArchiveService.Exists(archive.Id);
+            var exists = await ArchiveService.ExistsAsync(archive.Id);
 
             if (!exists)
                 Archives.Add(archive);
@@ -73,7 +73,7 @@
     {
         var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive);
 
-        if (await ArchiveService.Exists(archive.Id))
+        if (await ArchiveService.ExistsAsync(archive.Id))
             File.Delete(archiveFilePath);
 
         System.IO.File.Create(archiveFilePath).Close();
@@ -85,7 +85,7 @@
     {
         try
         {
-            await ArchiveService.Delete(archive);
+            await ArchiveService.DeleteAsync(archive);
 
             await LoadData();
 

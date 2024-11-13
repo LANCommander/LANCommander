@@ -73,7 +73,7 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Issues = (await IssueService.Get(r => r.Game.Title.ToLower().Contains(fuzzySearch))).OrderByDescending(r => r.CreatedOn);
+        Issues = (await IssueService.GetAsync(r => r.Game.Title.ToLower().Contains(fuzzySearch))).OrderByDescending(r => r.CreatedOn);
     }
 
     private void Add()
@@ -87,9 +87,9 @@
 
         Loading = true;
 
-        await IssueService.Delete(redistributable);
+        await IssueService.DeleteAsync(redistributable);
 
-        Issues = (await IssueService.Get(x => true)).OrderByDescending(r => r.CreatedOn);
+        Issues = (await IssueService.GetAsync(x => true)).OrderByDescending(r => r.CreatedOn);
 
         Loading = false;
     }

@@ -65,7 +65,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
-        User = await UserService.Get(authState.User.Identity.Name);
+        User = await UserService.GetAsync(authState.User.Identity.Name);
             
         if (User != null)
             GameSaves = User.GameSaves.OrderBy(s => s.CreatedOn).ToList();
@@ -87,9 +87,9 @@
 
         Loading = true;
 
-        await GameSaveService.Delete(gameSave);
+        await GameSaveService.DeleteAsync(gameSave);
 
-        GameSaves = (await GameSaveService.Get(gs => gs.UserId == User.Id)).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToList();
+        GameSaves = (await GameSaveService.GetAsync(gs => gs.UserId == User.Id)).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToList();
 
         Loading = false;
     }

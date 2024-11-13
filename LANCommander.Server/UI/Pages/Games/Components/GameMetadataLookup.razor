@@ -121,7 +121,7 @@ else
             "involved_companies.company.name"
             };
 
-            var results = await IGDBService.Search(title, limit, Offset, fields);
+            var results = await IGDBService.SearchAsync(title, limit, Offset, fields);
 
             MoreResults = results.Count() == limit;
 
@@ -190,7 +190,7 @@ else
             "game_engines.*"
         };
 
-        result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), fields);
+        result.IGDBMetadata = await IGDBService.GetAsync(SelectedResults.First().IGDBId.GetValueOrDefault(), fields);
         result.MultiplayerModes = await GetMultiplayerModes(result.IGDBMetadata.Name);
 
         await OnResultSelected.InvokeAsync(result);

@@ -43,7 +43,7 @@
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
-        StorageLocation = await StorageLocationService.FirstOrDefault(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
+        StorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
     }
 
     private void Save()

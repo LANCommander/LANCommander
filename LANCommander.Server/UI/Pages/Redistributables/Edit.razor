@@ -130,10 +130,10 @@ else
         if (Id != Guid.Empty && Panel == null)
             NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
         else if (Id != Guid.Empty)
-            Redistributable = await RedistributableService.Get(Id);
+            Redistributable = await RedistributableService.GetAsync(Id);
 
         Games = (await GameService
-            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null))
+            .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null))
             .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
             .ToList();
     }
@@ -144,13 +144,13 @@ else
         {
             if (Redistributable.Id != Guid.Empty)
             {
-                Redistributable = await RedistributableService.Update(Redistributable);
+                Redistributable = await RedistributableService.UpdateAsync(Redistributable);
 
                 await MessageService.Success("Redistributable updated!");
             }
             else
             {
-                Redistributable = await RedistributableService.Add(Redistributable);
+                Redistributable = await RedistributableService.AddAsync(Redistributable);
 
                 NavigationManager.LocationChanged += NotifyRedistributableAdded;
 

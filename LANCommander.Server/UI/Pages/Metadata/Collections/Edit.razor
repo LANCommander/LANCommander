@@ -84,7 +84,7 @@
         if (Id == Guid.Empty)
             Collection = new Collection();
         else
-            Collection = await CollectionService.Get(Id);
+            Collection = await CollectionService.GetAsync(Id);
     }
 
     private async Task Save()
@@ -93,13 +93,13 @@
         {
             if (Collection.Id != Guid.Empty)
             {
-                Collection = await CollectionService.Update(Collection);
+                Collection = await CollectionService.UpdateAsync(Collection);
 
                 await MessageService.Success("Collection updated!");
             }
             else
             {
-                Collection = await CollectionService.Add(Collection);
+                Collection = await CollectionService.AddAsync(Collection);
 
                 NavigationManager.LocationChanged += NotifyCollectionAdded;
 
@@ -126,7 +126,7 @@
         {
             Collection.Games.Remove(game);
 
-            await CollectionService.Update(Collection);
+            await CollectionService.UpdateAsync(Collection);
         }
         catch (Exception ex)
         {

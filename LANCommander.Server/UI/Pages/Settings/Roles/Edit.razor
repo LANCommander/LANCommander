@@ -36,15 +36,15 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Role = await RoleService.Get(Id);
-        Collections = await CollectionService.Get();
+        Role = await RoleService.GetAsync(Id);
+        Collections = await CollectionService.GetAsync();
     }
 
     private async Task Save()
     {
         try
         {
-            await RoleService.Update(Role);
+            await RoleService.UpdateAsync(Role);
 
             MessageService.Success("Role updated!");
         }

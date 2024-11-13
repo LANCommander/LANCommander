@@ -16,9 +16,9 @@ namespace LANCommander.Server.Services
             IFusionCache cache,
             Repository<ServerConsole> repository) : base(logger, cache, repository) { }
 
-        public async Task<string[]> ReadLog(Guid logId)
+        public async Task<string[]> ReadLogAsync(Guid logId)
         {
-            var log = await Get(logId);
+            var log = await GetAsync(logId);
 
             if (log.Type != ServerConsoleType.LogFile)
                 throw new Exception("Invalid console type");

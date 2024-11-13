@@ -68,7 +68,7 @@
 
         await InvokeAsync(StateHasChanged);
 
-        var archives = await ArchiveService.Get();
+        var archives = await ArchiveService.GetAsync();
 
         foreach (var archive in archives)
         {
@@ -79,7 +79,7 @@
                 archive.CompressedSize = ArchiveService.GetCompressedSize(archive);
                 archive.UncompressedSize = ArchiveService.GetUncompressedSize(archive);
 
-                await ArchiveService.Update(archive);
+                await ArchiveService.UpdateAsync(archive);
             }
         }
 
@@ -102,11 +102,11 @@
         await InvokeAsync(StateHasChanged);
 
         var currentVersion = UpdateService.GetCurrentVersion();
-        var currentRelease = await UpdateService.GetRelease(currentVersion);
+        var currentRelease = await UpdateService.GetReleaseAsync(currentVersion);
 
         if (currentRelease != null)
         {
-            await UpdateService.DownloadLauncherRelease(currentRelease);
+            await UpdateService.DownloadLauncherReleaseAsync(currentRelease);
 
             MessageService.Success("Clients downloaded!");
         }
@@ -126,7 +126,7 @@
 
         try
         {
-            await PageService.FixRoutes();
+            await PageService.FixRoutesAsync();
 
             MessageService.Success("Routes fixed!");
         }

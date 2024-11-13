@@ -468,7 +468,7 @@ namespace LANCommander.Server
                 var serverService = scope.ServiceProvider.GetService<ServerService>();
                 var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
 
-                foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
+                foreach (var server in await serverService.GetAsync(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
                 {
                     try
                     {

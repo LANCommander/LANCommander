@@ -55,8 +55,8 @@ namespace LANCommander.Server.Controllers.Api
             {
                 Data.Models.Key key = null;
 
-                var user = await UserService.Get(User?.Identity?.Name);
-                var game = await GameService.Get(id);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
+                var game = await GameService.GetAsync(id);
 
                 if (game == null)
                 {
@@ -83,7 +83,7 @@ namespace LANCommander.Server.Controllers.Api
                 if (key != null)
                     return Ok(Mapper.Map<SDK.Models.Key>(key));
                 else
-                    return Ok(Mapper.Map<SDK.Models.Key>(await AllocateNewKey(id, keyRequest, game.KeyAllocationMethod)));
+                    return Ok(Mapper.Map<SDK.Models.Key>(await AllocateNewKeyAsync(id, keyRequest, game.KeyAllocationMethod)));
             }
             catch (Exception ex) {
                 Logger?.LogError(ex, "An unknown error occurred while trying to get an allocated key for game with ID {GameId}", id);
@@ -105,8 +105,8 @@ namespace LANCommander.Server.Controllers.Api
             {
                 Data.Models.Key key = null;
 
-                var user = await UserService.Get(User?.Identity?.Name);
-                var game = await GameService.Get(id);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
+                var game = await GameService.GetAsync(id);
 
                 if (game == null)
                 {
@@ -142,16 +142,16 @@ namespace LANCommander.Server.Controllers.Api
                 else
                 {
                     if (key != null)
-                        await KeyService.Release(key.Id);
+                        await KeyService.ReleaseAsync(key.Id);
 
                     switch (game.KeyAllocationMethod)
                     {
                         case KeyAllocationMethod.MacAddress:
-                            key = await KeyService.Allocate(availableKey, keyRequest.MacAddress);
+                            key = await KeyService.AllocateAsync(availableKey, keyRequest.MacAddress);
                             break;
 
                         case KeyAllocationMethod.UserAccount:
-                            key = await KeyService.Allocate(availableKey, user);
+                            key = await KeyService.AllocateAsync(availableKey, user);
                             break;
                     }
 
@@ -172,11 +172,11 @@ namespace LANCommander.Server.Controllers.Api
         /// <param name="keyRequest"></param>
         /// <param name="keyAllocationMethod"></param>
         /// <returns>Allocated key</returns>
-        private async Task<SDK.Models.Key> AllocateNewKey(Guid id, KeyRequest keyRequest, KeyAllocationMethod keyAllocationMethod)
+        private async Task<SDK.Models.Key> AllocateNewKeyAsync(Guid id, KeyRequest keyRequest, KeyAllocationMethod keyAllocationMethod)
         {
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
-            var keys = await KeyService.Get(k => k.Game.Id == id);
+            var keys = await KeyService.GetAsync(k => k.Game.Id == id);
             var availableKey = keys.Where(k =>
                 (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
                 ||
@@ -187,9 +187,9 @@ namespace LANCommander.Server.Controllers.Api
                 return null;
 
             if (keyAllocationMethod == KeyAllocationMethod.MacAddress)
-                return Mapper.Map<SDK.Models.Key>(await KeyService.Allocate(availableKey, keyRequest.MacAddress));
+                return Mapper.Map<SDK.Models.Key>(await KeyService.AllocateAsync(availableKey, keyRequest.MacAddress));
             else if (keyAllocationMethod == KeyAllocationMethod.UserAccount)
-                return Mapper.Map<SDK.Models.Key>(await KeyService.Allocate(availableKey, user));
+                return Mapper.Map<SDK.Models.Key>(await KeyService.AllocateAsync(availableKey, user));
             else
                 return null;
         }

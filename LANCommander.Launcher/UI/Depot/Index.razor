@@ -36,7 +36,6 @@
 
     DepotGameDetails DepotGameDetails;
 
-    List<string> Groups = new();
     IEnumerable<Models.ListItem> ListItems = new List<Models.ListItem>();
 
     Models.ListItem SelectedItem { get; set; }
@@ -63,17 +62,6 @@
     async Task LoadFilteredItems(IEnumerable<Models.ListItem> listItems)
     {
         ListItems = listItems;
-
-        await UpdateGroups();
-        await InvokeAsync(StateHasChanged);
-    }
-
-    async Task UpdateGroups()
-    {
-        Groups = ListItems.SelectMany(i => i.Groups).Distinct().ToList();
-
-        if (ListItems.Any(i => i.Groups == null || i.Groups.Length == 0))
-            Groups.Add("Uncategorized");
 
         await InvokeAsync(StateHasChanged);
     }

@@ -32,17 +32,21 @@ $hero-max-height: 40vh;
     flex-shrink: 0;
 }
 
-.depot-games {
+.depot-list {
     width: 100%;
     overflow-y: scroll;
     overflow-x: hidden;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax($cover-max-width, 1fr));
-    gap: $cover-gap;
     padding-top: $window-drag-area-height + $cover-vertical-padding;
     padding-left: $cover-horizontal-padding + $cover-gap;
     padding-right: $cover-horizontal-padding + $cover-gap;
     padding-bottom: $cover-vertical-padding + $cover-gap;
+}
+
+.depot-list-items,
+.depot-list-group-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax($cover-max-width, 1fr));
+    gap: $cover-gap;
 }
 
 .depot-game {

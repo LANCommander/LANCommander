@@ -1,14 +1,54 @@
 ﻿@using LANCommander.SDK.Models
 @inject SDK.Client Client
 
-<Flex Wrap="wrap" Justify="center" Gap="large" Class="depot-games no-scrollbar">
-    @foreach (var item in Items)
+<div class="depot-list no-scrollbar">
+    @if (Groups.Count > 1)
     {
-        <DepotGameItem Item="item" OnClick="OnItemSelected" />
+        @foreach (var group in Groups)
+        {
+            <div class="depot-list-group">
+                <Divider Text="@group" />
+
+                <div class="depot-list-group-items">
+                    @foreach (var item in Items.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && i.Groups.Length == 0)))
+                    {
+                        <DepotGameItem Item="item" OnClick="OnItemSelected" />
+                    }
+                </div>
+            </div>
+        }
     }
-</Flex>
+    else
+    {
+        <div class="depot-list-items">
+            @foreach (var item in Items)
+            {
+                <DepotGameItem Item="item" OnClick="OnItemSelected" />
+            }
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public IEnumerable<Models.ListItem> Items { get; set; }
     [Parameter] public EventCallback<Models.ListItem> OnItemSelected { get; set; }
+
+    List<string> Groups = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await UpdateGroups();
+    }
+
+    async Task UpdateGroups()
+    {
+        Groups = Items.SelectMany(i => i.Groups).Distinct().ToList();
+
+        var uncategorized = Items.Where(i => i.Groups == null || i.Groups.Length == 0).ToList();
+
+        if (Items.Any(i => i.Groups == null || i.Groups.Length == 0))
+            Groups.Add("Uncategorized");
+
+        await InvokeAsync(StateHasChanged);
+    }
 }

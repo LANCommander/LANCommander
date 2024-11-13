@@ -6,7 +6,7 @@ namespace LANCommander.Launcher.Models
     public class DepotFilterModel
     {
         public string Title { get; set; }
-        public GroupBy GroupBy { get; set; } = GroupBy.Collection;
+        public GroupBy GroupBy { get; set; } = GroupBy.None;
         public SortBy SortBy { get; set; } = SortBy.Title;
         public SortDirection SortDirection { get; set; } = SortDirection.Ascending;
         public ICollection<Engine> Engines { get; set; }

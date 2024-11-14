@@ -52,6 +52,9 @@
     <MenuItem OnClick="() => ValidateFiles()">
         Validate Files
     </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()">
+        Remove
+    </MenuItem>
     <MenuItem OnClick="() => Uninstall()">
         Uninstall
     </MenuItem>
@@ -60,6 +63,9 @@ else
 {
     <MenuItem OnClick="() => Install()">
         Install
+    </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()">
+        Remove
     </MenuItem>
 }
 
@@ -225,6 +231,11 @@ else
         InstallService.Remove(Game.Id);
 
         await LibraryService.LibraryChanged();
+    }
+
+    async Task RemoveFromLibrary()
+    {
+        await LibraryService.RemoveFromLibraryAsync(Game.Id);
     }
 
     async Task RunInstallScripts()

@@ -6,15 +6,22 @@
 @inject NavigationManager NavigationManager
 
 <Flex Justify="space-between" Class="footer">
-    @if (Client.IsConnected())
+    @if (NavigationManager.Uri.Contains("/Depot"))
     {
-        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">Library</Button>
     }
     else
     {
-        <Tooltip Title="You are currently offline">
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
-        </Tooltip>
+        if (Client.IsConnected())
+        {
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
+        }
+        else
+        {
+            <Tooltip Title="You are currently offline">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
+            </Tooltip>
+        }
     }
 
     @if (InstallService.Queue.Any(qi => qi.State))

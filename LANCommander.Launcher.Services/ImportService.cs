@@ -119,7 +119,11 @@ namespace LANCommander.Launcher.Services
 
             foreach (var id in ids)
             {
-                localGames.Add(await GameService.Get(id));
+                var localGame = await GameService.Get(id);
+                
+                if (localGame != null)
+                    localGames.Add(localGame);
+
                 remoteGames.Add(await Client.Games.GetAsync(id));
             }
 
@@ -627,7 +631,14 @@ namespace LANCommander.Launcher.Services
             {
                 foreach (var model in models.Where(m => !importModels.Any(im => im.Id == m.Id)))
                 {
-                    await service.Delete(model);
+                    try
+                    {
+                        await service.Delete(model);
+                    }
+                    catch
+                    {
+
+                    }
                 }
             }
 

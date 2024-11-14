@@ -49,11 +49,15 @@
 
                                     @if (SelectedGame.InLibrary)
                                     {
-                                        <Button Size="@ButtonSize.Large" OnClick="RemoveFromLibrary">Remove from Library</Button>
+                                        <Tooltip Title="Remove from Library">
+                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" />
+                                        </Tooltip>
                                     }
                                     else
                                     {
-                                        <Button Size="@ButtonSize.Large" OnClick="AddToLibrary">Add to Library</Button>
+                                        <Tooltip Title="Add to Library">
+                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Plus" OnClick="AddToLibrary" />
+                                        </Tooltip>
                                     }
                                 </SpaceItem>
 

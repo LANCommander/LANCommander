@@ -88,154 +88,12 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task ImportGameAsync(Guid gameId)
-        {
-            Game localGame;
-            SDK.Models.Game remoteGame;
-
-            Logger?.LogInformation("Importing game with ID {GameId}", gameId);
-
-            using (var op = Logger?.BeginOperation("Retrieving game from the local database"))
-            {
-                localGame = await GameService.Get(gameId);
-
-                op.Complete();
-            }
-
-            using (var op = Logger?.BeginOperation("Retrieving game from the server"))
-            {
-                remoteGame = await Client.Games.GetAsync(gameId);
-
-                op.Complete();
-            }
-
-            IEnumerable<Collection> collections;
-            IEnumerable<Company> companies;
-            IEnumerable<Engine> engines;
-            IEnumerable<Genre> genres;
-            IEnumerable<Platform> platforms;
-            IEnumerable<Tag> tags;
-            IEnumerable<MultiplayerMode> multiplayerModes;
-
-            #region Import Collections
-            using (var op = Logger.BeginOperation("Importing collections"))
-            {
-                collections = await ImportBulk<Collection, SDK.Models.Collection, CollectionService>(remoteGame.Collections.DistinctBy(c => c.Id), CollectionService, (collection, importCollection) =>
-                {
-                    collection.Name = importCollection.Name;
-
-                    return collection;
-                });
-
-                op.Complete();
-            }
-            #endregion
-
-            #region Import Companies
-            using (var op = Logger.BeginOperation("Importing companies"))
-            {
-                var importCompanies = new List<SDK.Models.Company>();
-
-                importCompanies.AddRange(remoteGame.Developers);
-                importCompanies.AddRange(remoteGame.Publishers);
-
-                companies = await ImportBulk<Company, SDK.Models.Company, CompanyService>(importCompanies.DistinctBy(c => c.Id), CompanyService, (company, importCompany) =>
-                {
-                    company.Name = importCompany.Name;
-
-                    return company;
-                });
-
-                op.Complete();
-            }
-            #endregion
-
-            #region Import Engines
-            if (remoteGame.Engine != null)
-            {
-                using (var op = Logger.BeginOperation("Importing engines"))
-                {
-                    engines = await ImportBulk<Engine, SDK.Models.Engine, EngineService>(new List<SDK.Models.Engine>() { remoteGame.Engine }, EngineService, (engine, importEngine) =>
-                    {
-                        engine.Name = importEngine.Name;
-
-                        return engine;
-                    });
-
-                    op.Complete();
-                }
-            }
-            #endregion
-
-            #region Import Genres
-            using (var op = Logger.BeginOperation("Importing genres"))
-            {
-                genres = await ImportBulk<Genre, SDK.Models.Genre, GenreService>(remoteGame.Genres.DistinctBy(g => g.Id), GenreService, (genre, importGenre) =>
-                {
-                    genre.Name = importGenre.Name;
-
-                    return genre;
-                });
-
-                op.Complete();
-            }
-            #endregion
-
-            #region Import Platforms
-            using (var op = Logger.BeginOperation("Importing platforms"))
-            {
-                platforms = await ImportBulk<Platform, SDK.Models.Platform, PlatformService>(remoteGame.Platforms.DistinctBy(g => g.Id), PlatformService, (platform, importPlatform) =>
-                {
-                    platform.Name = importPlatform.Name;
-
-                    return platform;
-                });
-
-                op.Complete();
-            }
-            #endregion
-
-            #region Import Tags
-            using (var op = Logger.BeginOperation("Importing tags"))
-            {
-                tags = await ImportBulk<Tag, SDK.Models.Tag, TagService>(remoteGame.Tags.DistinctBy(t => t.Id), TagService, (tag, importTag) =>
-                {
-                    tag.Name = importTag.Name;
-
-                    return tag;
-                });
-
-                op.Complete();
-            }
-            #endregion
-
-            #region Import MultiplayerModes
-            using (var op = Logger.BeginOperation("Importing multiplayer modes"))
-            {
-                multiplayerModes = await ImportBulk<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGame.MultiplayerModes.DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
-                {
-                    multiplayerMode.Type = importMultiplayerMode.Type;
-                    multiplayerMode.NetworkProtocol = importMultiplayerMode.NetworkProtocol;
-                    multiplayerMode.Description = importMultiplayerMode.Description;
-                    multiplayerMode.MinPlayers = importMultiplayerMode.MinPlayers;
-                    multiplayerMode.MaxPlayers = importMultiplayerMode.MaxPlayers;
-                    multiplayerMode.Spectators = importMultiplayerMode.Spectators;
-
-                    return multiplayerMode;
-                });
-
-                op.Complete();
-
-            }
-            #endregion
-        }
-
         public async Task ImportGamesAsync()
         {
             ICollection<Game> localGames;
             IEnumerable<SDK.Models.Game> remoteGames;
 
-            Logger?.LogInformation("Importing games");
+            Logger?.LogInformation("Importing library games");
 
             using (var op = Logger.BeginOperation("Retrieving games from the database"))
             {
@@ -251,6 +109,25 @@ namespace LANCommander.Launcher.Services
                 op.Complete();
             }
 
+            await ImportGamesAsync(localGames, remoteGames);
+        }
+
+        public async Task ImportGamesAsync(params Guid[] ids)
+        {
+            var localGames = new List<Game>();
+            var remoteGames = new List<SDK.Models.Game>();
+
+            foreach (var id in ids)
+            {
+                localGames.Add(await GameService.Get(id));
+                remoteGames.Add(await Client.Games.GetAsync(id));
+            }
+
+            await ImportGamesAsync(localGames, remoteGames);
+        }
+
+        private async Task ImportGamesAsync(IEnumerable<Game> localGames, IEnumerable<SDK.Models.Game> remoteGames)
+        {
             IEnumerable<Collection> collections;
             IEnumerable<Company> companies;
             IEnumerable<Engine> engines;

@@ -156,7 +156,7 @@ namespace LANCommander.Launcher.Services
         {
             await Client.Library.AddToLibrary(id);
 
-            await ImportService.ImportGameAsync(id);
+            await ImportService.ImportGamesAsync(id);
 
             await LibraryChanged();
         }

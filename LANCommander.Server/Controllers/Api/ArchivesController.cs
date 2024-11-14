@@ -17,7 +17,7 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class ArchivesController : BaseApiController
     {
-        private readonly FusionCache Cache;
+        private readonly IFusionCache Cache;
         private readonly ArchiveService ArchiveService;
 
         public ArchivesController(

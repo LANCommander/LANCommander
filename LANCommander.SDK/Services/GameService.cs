@@ -1028,7 +1028,7 @@ namespace LANCommander.SDK.Services
         public async Task<IEnumerable<ArchiveEntry>> ValidateFilesAsync(string installDirectory, Guid gameId)
         {
             var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
-            var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/ByVersion/{manifest.Version}");
+            var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/Contents/{gameId}/{manifest.Version}");
             var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/{archive.Id}");
 
             var conflictedEntries = new List<ArchiveEntry>();

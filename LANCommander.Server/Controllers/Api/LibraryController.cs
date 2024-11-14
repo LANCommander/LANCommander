@@ -69,14 +69,14 @@ namespace LANCommander.Server.Controllers.Api
             }
         }
 
-        [HttpPost("AddToLibrary")]
-        public async Task<bool> AddToLibraryAsync(Guid gameId)
+        [HttpPost("AddToLibrary/{id}")]
+        public async Task<bool> AddToLibraryAsync(Guid id)
         {
             try
             {
                 var user = await UserService.GetAsync(User.Identity.Name);
 
-                await LibraryService.AddToLibraryAsync(user.Id, gameId);
+                await LibraryService.AddToLibraryAsync(user.Id, id);
 
                 await Cache.ExpireAsync($"LibraryGames:{user.Id}");
 
@@ -88,14 +88,14 @@ namespace LANCommander.Server.Controllers.Api
             }
         }
 
-        [HttpPost("RemoveFromLibrary")]
-        public async Task<bool> RemoveFromLibraryAsync(Guid gameId)
+        [HttpPost("RemoveFromLibrary/{id}")]
+        public async Task<bool> RemoveFromLibraryAsync(Guid id)
         {
             try
             {
                 var user = await UserService.GetAsync(User.Identity.Name);
 
-                await LibraryService.RemoveFromLibraryAsync(user.Id, gameId);
+                await LibraryService.RemoveFromLibraryAsync(user.Id, id);
 
                 await Cache.ExpireAsync($"LibraryGames:{user.Id}");
 

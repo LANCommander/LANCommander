@@ -45,6 +45,10 @@ app {
     }
 }
 
+.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+    line-height: 2;
+}
+
 @keyframes a {
     to {
         background-position: -200% 0

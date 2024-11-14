@@ -51,6 +51,9 @@ namespace LANCommander.Launcher.Data
                 .WithMany(g => g.Platforms);
 
             #region Game Relationships
+            builder.Entity<Game>()
+                .Property(g => g.BaseGameId)
+                .HasConversion(new GuidToNullConverter());
 
             builder.Entity<Game>()
                 .HasMany(g => g.MultiplayerModes)

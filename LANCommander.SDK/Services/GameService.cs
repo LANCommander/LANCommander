@@ -1025,20 +1025,33 @@ namespace LANCommander.SDK.Services
         /// <param name="installDirectory">The game's install directory</param>
         /// <param name="gameId">The game's ID</param>
         /// <returns>List of file conflicts</returns>
-        public async Task<IEnumerable<ArchiveEntry>> ValidateFilesAsync(string installDirectory, Guid gameId)
+        public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
         {
             var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
-            var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/Contents/{gameId}/{manifest.Version}");
-            var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/{archive.Id}");
+            var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/Contents/{gameId}/{manifest.Version}");
 
-            var conflictedEntries = new List<ArchiveEntry>();
+            var conflictedEntries = new List<ArchiveValidationConflict>();
+
+            var savePathEntries = manifest.SavePaths?.SelectMany(p => Client.Saves.GetFileSavePathEntries(p, installDirectory)) ?? new List<SavePathEntry>();
 
             foreach (var entry in entries)
             {
+                if (savePathEntries.Any(e => e.ArchivePath.Equals(entry.FullName, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                if (entry.FullName.EndsWith('/'))
+                    continue;
+
                 var localFile = Path.Combine(installDirectory, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
 
                 if (!Path.Exists(localFile))
-                    conflictedEntries.Add(entry);
+                    conflictedEntries.Add(new ArchiveValidationConflict
+                    {
+                        Name = entry.Name,
+                        FullName = entry.FullName,
+                        Crc32 = entry.Crc32,
+                        Length = entry.Length,
+                    });
                 else
                 {
                     uint crc = 0;
@@ -1062,7 +1075,13 @@ namespace LANCommander.SDK.Services
                     }
 
                     if (crc == 0 || crc != entry.Crc32)
-                        conflictedEntries.Add(entry);
+                        conflictedEntries.Add(new ArchiveValidationConflict
+                        {
+                            Name = entry.Name,
+                            FullName = entry.FullName,
+                            Crc32 = entry.Crc32,
+                            LocalFileInfo = new FileInfo(localFile)
+                        });
                 }
             }
 
@@ -1096,7 +1115,6 @@ namespace LANCommander.SDK.Services
                                 {
                                     Overwrite = true,
                                     PreserveFileTime = true,
-                                    PreserveAttributes = true,
                                 });
                             }
                             else // Skip to next entry

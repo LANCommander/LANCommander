@@ -110,7 +110,8 @@ namespace LANCommander.Server.Controllers.Api
                         {
                             FullName = entry.FullName,
                             Name = entry.Name,
-                            Crc32 = entry.Crc32
+                            Crc32 = entry.Crc32,
+                            Length = entry.Length,
                         });
                     }
                 }

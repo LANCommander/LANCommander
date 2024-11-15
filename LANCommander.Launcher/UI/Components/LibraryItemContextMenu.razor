@@ -192,12 +192,11 @@ else
         {
             Title = $"File Conflicts",
             Maximizable = false,
-            DefaultMaximized = false,
+            DefaultMaximized = true,
             Closable = true,
             Draggable = true,
             Centered = true,
-            OkText = "Replace",
-            Footer = null,
+            OkText = "Replace Selected",
         };
 
         var modalRef = ModalService.CreateModal<ValidateFilesDialog, Game>(modalOptions, Model.DataItem as Game);

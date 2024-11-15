@@ -3,7 +3,7 @@
 @inject DepotService DepotService
 
 <div class="depot-filter">
-    <Form @ref="Form" Model="DepotService.Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical" Size="small">
+    <Form @ref="Form" Model="DepotService.Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical">
         <FormItem Label="Title">
             <Input @bind-Value="@context.SelectedOptions.Title" />
         </FormItem>

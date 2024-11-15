@@ -42,12 +42,12 @@ namespace LANCommander.SDK.Services
 
         public async Task<bool> AddToLibrary(Guid gameId)
         {
-            return await Client.PostRequestAsync<bool>("/api/Library/AddToLibrary", gameId);
+            return await Client.PostRequestAsync<bool>($"/api/Library/AddToLibrary/{gameId}");
         }
 
         public async Task<bool> RemoveFromLibrary(Guid gameId)
         {
-            return await Client.PostRequestAsync<bool>("/api/Library/RemoveFromLibrary", gameId);
+            return await Client.PostRequestAsync<bool>($"/api/Library/RemoveFromLibrary/{gameId}");
         }
     }
 }

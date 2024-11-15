@@ -1,6 +1,6 @@
 ﻿$window-drag-area-height: 37px;
 $cover-hover-scale: 1.2;
-$cover-aspect-ratio: 3 / 2;
+$cover-aspect-ratio: 2 / 3;
 $cover-max-width: 150px;
 $cover-max-height: $cover-aspect-ratio * $cover-max-width;
 $cover-hover-width: $cover-max-width * $cover-hover-scale;
@@ -66,6 +66,7 @@ $hero-max-height: 40vh;
         box-shadow: 0px 0px 0px 0px #000;
         position: relative;
         cursor: pointer;
+        flex-grow: 1;
 
         &:hover {
             transform: scale($cover-hover-scale);
@@ -87,6 +88,17 @@ $hero-max-height: 40vh;
     &-cover:hover &-add-btn {
         display: block;
         opacity: 1;
+    }
+
+    &-default-cover {
+        aspect-ratio: $cover-aspect-ratio;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #555 0%, #333 100%);
+        font-size: 20px;
+        padding: 16px;
+        text-align: center;
     }
 
     img {

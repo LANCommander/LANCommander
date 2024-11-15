@@ -13,7 +13,9 @@
         }
         else
         {
-            <div class="depot-game-default-cover"></div>
+            <div class="depot-game-default-cover">
+                <span>@Item.Name</span>
+            </div>
         }
 
         @if (!(Item.DataItem as DepotGame).InLibrary)

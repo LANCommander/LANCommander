@@ -119,12 +119,25 @@ namespace LANCommander.Launcher.Services
 
             foreach (var id in ids)
             {
-                var localGame = await GameService.Get(id);
-                
-                if (localGame != null)
-                    localGames.Add(localGame);
+                Guid gameId = id;
+                Game localGame;
+                SDK.Models.Game remoteGame;
 
-                remoteGames.Add(await Client.Games.GetAsync(id));
+                do
+                {
+                    localGame = await GameService.Get(gameId);
+                    remoteGame = await Client.Games.GetAsync(gameId);
+
+                    if (localGame != null)
+                        localGames.Add(localGame);
+
+                    if (remoteGame != null)
+                        remoteGames.Add(remoteGame);
+
+                    if (remoteGame != null && remoteGame.BaseGameId != Guid.Empty)
+                        gameId = remoteGame.BaseGameId;
+                }
+                while (remoteGame != null && remoteGame.BaseGameId != Guid.Empty);                
             }
 
             await ImportGamesAsync(localGames, remoteGames);
@@ -253,6 +266,7 @@ namespace LANCommander.Launcher.Services
             {
                 foreach (var remoteGame in remoteGames.OrderBy(g => (int)g.Type))
                 {
+
                     using (var op = Logger.BeginOperation("Importing game {GameTitle}", remoteGame.Title))
                     {
                         try
@@ -270,6 +284,11 @@ namespace LANCommander.Launcher.Services
                             localGame.Type = (Data.Enums.GameType)(int)remoteGame.Type;
                             localGame.BaseGameId = remoteGame.BaseGameId;
                             localGame.Singleplayer = remoteGame.Singleplayer;
+
+                            if (remoteGame.BaseGameId != Guid.Empty && localGame.BaseGameId != remoteGame.BaseGameId)
+                            {
+                                localGame.BaseGameId = remoteGame.BaseGameId;
+                            }
 
                             #region Update Game Engine
                             if (remoteGame.Engine == null && localGame.Engine != null)

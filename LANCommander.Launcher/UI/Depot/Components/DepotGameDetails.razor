@@ -20,7 +20,7 @@
                 <div class="game-hero">
                     @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
                     {
-                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo).Id)" Class="game-details-logo" />
+                        <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo)))" class="game-details-logo" />
                     }
                     else
                     {
@@ -29,7 +29,7 @@
 
                     @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
                     {
-                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background).Id)" Class="game-details-background" />
+                        <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background)))" class="game-details-background" />
                     }
                 </div>
 
@@ -131,7 +131,7 @@
                     <GridCol Flex="@("256px")" Class="game-cover">
                         @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
                         {
-                            <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover).Id)" />
+                            <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)))" />
                         }
                     </GridCol>
                 </GridRow>

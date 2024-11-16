@@ -91,7 +91,6 @@
                                 DefaultActiveFirstOption="false"
                                 EnableSearch>
                                 <ItemTemplate Context="game">
-                                    <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
                                     @game.Title
                                 </ItemTemplate>
                         </Select>
@@ -257,7 +256,7 @@
         if (Server.HttpPaths == null)
             Server.HttpPaths = new List<ServerHttpPath>();
 
-        Games = await GameService.GetAsync();
+        Games = await GameService.Include(g => g.Media).GetAsync();
 
         await OnPortNumberChanged(Server.Port);
     }

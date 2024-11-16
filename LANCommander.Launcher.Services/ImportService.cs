@@ -36,6 +36,14 @@ namespace LANCommander.Launcher.Services
         public delegate void OnImportFailedHandler(Exception ex);
         public event OnImportFailedHandler OnImportFailed;
 
+        private IEnumerable<Collection> Collections;
+        private IEnumerable<Company> Companies;
+        private IEnumerable<Engine> Engines;
+        private IEnumerable<Genre> Genres;
+        private IEnumerable<Platform> Platforms;
+        private IEnumerable<Tag> Tags;
+        private IEnumerable<MultiplayerMode> MultiplayerModes;
+
         public ImportService(
             SDK.Client client,
             ILogger<ImportService> logger,
@@ -85,6 +93,206 @@ namespace LANCommander.Launcher.Services
             catch (Exception ex)
             {
                 OnImportFailed?.Invoke(ex);
+            }
+        }
+
+        private async Task ImportGameAsync(SDK.Models.Game remoteGame, IEnumerable<Game> localGames)
+        {
+            using (var op = Logger.BeginOperation("Importing game {GameTitle}", remoteGame.Title))
+            {
+                try
+                {
+                    var localGame = localGames.FirstOrDefault(g => g.Id == remoteGame.Id);
+
+                    if (localGame == null)
+                        localGame = new Data.Models.Game();
+
+                    localGame.Title = remoteGame.Title;
+                    localGame.SortTitle = remoteGame.SortTitle;
+                    localGame.Description = remoteGame.Description;
+                    localGame.Notes = remoteGame.Notes;
+                    localGame.ReleasedOn = remoteGame.ReleasedOn;
+                    localGame.Type = (Data.Enums.GameType)(int)remoteGame.Type;
+                    localGame.Singleplayer = remoteGame.Singleplayer;
+
+                    if (remoteGame.BaseGameId != Guid.Empty && localGame.BaseGameId != remoteGame.BaseGameId)
+                    {
+                        var baseGame = await GameService.Get(remoteGame.BaseGameId);
+
+                        if (baseGame == null)
+                        {
+                            await ImportGamesAsync(remoteGame.BaseGameId);
+
+                            baseGame = await GameService.Get(remoteGame.BaseGameId);
+                        }
+
+                        localGame.BaseGameId = remoteGame.BaseGameId;
+                    }
+
+                    #region Update Game Engine
+                    if (remoteGame.Engine == null && localGame.Engine != null)
+                    {
+                        localGame.Engine = null;
+                        localGame.EngineId = null;
+                    }
+                    else if (remoteGame.Engine != null)
+                    {
+                        var engine = Engines.FirstOrDefault(e => e.Id == remoteGame.Engine.Id);
+
+                        localGame.Engine = engine;
+                        localGame.EngineId = engine.Id;
+                    }
+                    #endregion
+
+                    #region Update Game Collections
+                    if (localGame.Collections == null)
+                        localGame.Collections = Collections.Where(c => remoteGame.Collections.Any(rc => rc.Id == c.Id)).ToList();
+                    else
+                    {
+                        var collectionsToRemove = localGame.Collections.Where(c => !remoteGame.Collections.Any(rc => rc.Id == c.Id)).ToList();
+                        var collectionsToAdd = Collections.Where(c => remoteGame.Collections.Any(rc => rc.Id == c.Id) && !localGame.Collections.Any(lc => lc.Id == c.Id)).ToList();
+
+                        foreach (var collection in collectionsToRemove)
+                            localGame.Collections.Remove(collection);
+
+                        foreach (var collection in collectionsToAdd)
+                            localGame.Collections.Add(collection);
+                    }
+                    #endregion
+
+                    #region Update Game Developers
+                    if (localGame.Developers == null)
+                        localGame.Developers = Companies.Where(c => remoteGame.Developers.Any(rc => rc.Id == c.Id)).ToList();
+                    else
+                    {
+                        var developersToRemove = localGame.Developers.Where(c => !remoteGame.Developers.Any(rc => rc.Id == c.Id)).ToList();
+                        var developersToAdd = Companies.Where(c => remoteGame.Developers.Any(rc => rc.Id == c.Id) && !localGame.Developers.Any(lc => lc.Id == c.Id)).ToList();
+
+                        foreach (var developer in developersToRemove)
+                            localGame.Developers.Remove(developer);
+
+                        foreach (var developer in developersToAdd)
+                            localGame.Developers.Add(developer);
+                    }
+                    #endregion
+
+                    #region Update Game Publishers
+                    if (localGame.Publishers == null)
+                        localGame.Publishers = Companies.Where(c => remoteGame.Publishers.Any(rc => rc.Id == c.Id)).ToList();
+                    else
+                    {
+                        var publishersToRemove = localGame.Publishers.Where(c => !remoteGame.Publishers.Any(rc => rc.Id == c.Id)).ToList();
+                        var publishersToAdd = Companies.Where(c => remoteGame.Publishers.Any(rc => rc.Id == c.Id) && !localGame.Publishers.Any(lc => lc.Id == c.Id)).ToList();
+
+                        foreach (var publisher in publishersToRemove)
+                            localGame.Publishers.Remove(publisher);
+
+                        foreach (var publisher in publishersToAdd)
+                            localGame.Publishers.Add(publisher);
+                    }
+                    #endregion
+
+                    #region Update Game Genres
+                    if (localGame.Genres == null)
+                        localGame.Genres = Genres.Where(c => remoteGame.Genres.Any(rc => rc.Id == c.Id)).ToList();
+                    else
+                    {
+                        var genresToRemove = localGame.Genres.Where(c => !remoteGame.Genres.Any(rc => rc.Id == c.Id)).ToList();
+                        var genresToAdd = Genres.Where(c => remoteGame.Genres.Any(rc => rc.Id == c.Id) && !localGame.Genres.Any(lc => lc.Id == c.Id)).ToList();
+
+                        foreach (var genre in genresToRemove)
+                            localGame.Genres.Remove(genre);
+
+                        foreach (var genre in genresToAdd)
+                            localGame.Genres.Add(genre);
+                    }
+                    #endregion
+
+                    #region Update Game Tags
+                    if (localGame.Tags == null)
+                        localGame.Tags = Tags.Where(c => remoteGame.Tags.Any(rc => rc.Id == c.Id)).ToList();
+                    else
+                    {
+                        var tagsToRemove = localGame.Tags.Where(c => !remoteGame.Tags.Any(rc => rc.Id == c.Id)).ToList();
+                        var tagsToAdd = Tags.Where(c => remoteGame.Tags.Any(rc => rc.Id == c.Id) && !localGame.Tags.Any(lc => lc.Id == c.Id)).ToList();
+
+                        foreach (var tag in tagsToRemove)
+                            localGame.Tags.Remove(tag);
+
+                        foreach (var tag in tagsToAdd)
+                            localGame.Tags.Add(tag);
+                    }
+                    #endregion
+
+                    #region Update Game Multiplayer Modes
+                    if (localGame.MultiplayerModes == null)
+                        localGame.MultiplayerModes = MultiplayerModes.Where(m => remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id)).ToList();
+                    else
+                    {
+                        var modesToRemove = localGame.MultiplayerModes.Where(m => !remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id)).ToList();
+                        var modesToAdd = MultiplayerModes.Where(m => remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id) && !localGame.MultiplayerModes.Any(lm => lm.Id == m.Id)).ToList();
+
+                        foreach (var mode in modesToRemove)
+                            localGame.MultiplayerModes.Remove(mode);
+
+                        foreach (var mode in modesToAdd)
+                            localGame.MultiplayerModes.Add(mode);
+                    }
+                    #endregion
+
+                    #region Update Play Sessions
+                    // This needs to be fixed, the profile ID should _not_ pull out of settings
+                    // It'd be better to pull directly from the authenticated client
+                    foreach (var session in remoteGame.PlaySessions.Where(rps => rps.UserId == Settings.Profile.Id && !localGame.PlaySessions.Any(lps => lps.Start == rps.Start && lps.End == lps.End)))
+                    {
+                        localGame.PlaySessions.Add(new PlaySession
+                        {
+                            Start = session.Start,
+                            End = session.End,
+                            CreatedOn = session.CreatedOn,
+                            UpdatedOn = session.UpdatedOn,
+                            GameId = session.GameId,
+                            UserId = Settings.Profile.Id
+                        });
+                    }
+                    #endregion
+
+                    #region Check Installation Status
+                    foreach (var installDirectory in Settings.Games.InstallDirectories)
+                    {
+                        var gameDirectory = await Client.Games.GetInstallDirectory(remoteGame, installDirectory);
+
+                        if (Directory.Exists(gameDirectory))
+                        {
+                            var manifestLocation = ManifestHelper.GetPath(gameDirectory, remoteGame.Id);
+
+                            if (File.Exists(manifestLocation))
+                            {
+                                var manifest = ManifestHelper.Read(gameDirectory, remoteGame.Id);
+
+                                localGame.Installed = true;
+                                localGame.InstalledOn = DateTime.Now;
+                                localGame.InstallDirectory = gameDirectory;
+                                localGame.InstalledVersion = manifest.Version;
+                            }
+                        }
+                    }
+                    #endregion
+
+                    if (localGame.Id == Guid.Empty)
+                    {
+                        localGame.Id = remoteGame.Id;
+                        localGame = await GameService.Add(localGame);
+                    }
+                    else
+                        localGame = await GameService.Update(localGame);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Could not import game {GameTitle}", remoteGame.Title);
+                }
+
+                op.Complete();
             }
         }
 
@@ -156,7 +364,7 @@ namespace LANCommander.Launcher.Services
             #region Import Collections
             using (var op = Logger.BeginOperation("Importing collections"))
             {
-                collections = await ImportBulk<Collection, SDK.Models.Collection, CollectionService>(remoteGames.SelectMany(g => g.Collections).DistinctBy(c => c.Id), CollectionService, (collection, importCollection) =>
+                Collections = await ImportBulk<Collection, SDK.Models.Collection, CollectionService>(remoteGames.SelectMany(g => g.Collections).DistinctBy(c => c.Id), CollectionService, (collection, importCollection) =>
                 {
                     collection.Name = importCollection.Name;
 
@@ -175,7 +383,7 @@ namespace LANCommander.Launcher.Services
                 importCompanies.AddRange(remoteGames.SelectMany(g => g.Developers));
                 importCompanies.AddRange(remoteGames.SelectMany(g => g.Publishers));
 
-                companies = await ImportBulk<Company, SDK.Models.Company, CompanyService>(importCompanies.DistinctBy(c => c.Id), CompanyService, (company, importCompany) =>
+                Companies = await ImportBulk<Company, SDK.Models.Company, CompanyService>(importCompanies.DistinctBy(c => c.Id), CompanyService, (company, importCompany) =>
                 {
                     company.Name = importCompany.Name;
 
@@ -189,7 +397,7 @@ namespace LANCommander.Launcher.Services
             #region Import Engines
             using (var op = Logger.BeginOperation("Importing engines"))
             {
-                engines = await ImportBulk<Engine, SDK.Models.Engine, EngineService>(remoteGames.Where(g => g.Engine != null).Select(g => g.Engine).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
+                Engines = await ImportBulk<Engine, SDK.Models.Engine, EngineService>(remoteGames.Where(g => g.Engine != null).Select(g => g.Engine).DistinctBy(e => e.Id), EngineService, (engine, importEngine) =>
                 {
                     engine.Name = importEngine.Name;
 
@@ -203,7 +411,7 @@ namespace LANCommander.Launcher.Services
             #region Import Genres
             using (var op = Logger.BeginOperation("Importing genres"))
             {
-                genres = await ImportBulk<Genre, SDK.Models.Genre, GenreService>(remoteGames.Where(g => g.Genres != null).SelectMany(g => g.Genres).DistinctBy(g => g.Id), GenreService, (genre, importGenre) =>
+                Genres = await ImportBulk<Genre, SDK.Models.Genre, GenreService>(remoteGames.Where(g => g.Genres != null).SelectMany(g => g.Genres).DistinctBy(g => g.Id), GenreService, (genre, importGenre) =>
                 {
                     genre.Name = importGenre.Name;
 
@@ -217,7 +425,7 @@ namespace LANCommander.Launcher.Services
             #region Import Platforms
             using (var op = Logger.BeginOperation("Importing platforms"))
             {
-                platforms = await ImportBulk<Platform, SDK.Models.Platform, PlatformService>(remoteGames.Where(g => g.Platforms != null).SelectMany(g => g.Platforms).DistinctBy(g => g.Id), PlatformService, (platform, importPlatform) =>
+                Platforms = await ImportBulk<Platform, SDK.Models.Platform, PlatformService>(remoteGames.Where(g => g.Platforms != null).SelectMany(g => g.Platforms).DistinctBy(g => g.Id), PlatformService, (platform, importPlatform) =>
                 {
                     platform.Name = importPlatform.Name;
 
@@ -231,7 +439,7 @@ namespace LANCommander.Launcher.Services
             #region Import Tags
             using (var op = Logger.BeginOperation("Importing tags"))
             {
-                tags = await ImportBulk<Tag, SDK.Models.Tag, TagService>(remoteGames.Where(g => g.Tags != null).SelectMany(g => g.Tags).DistinctBy(t => t.Id), TagService, (tag, importTag) =>
+                Tags = await ImportBulk<Tag, SDK.Models.Tag, TagService>(remoteGames.Where(g => g.Tags != null).SelectMany(g => g.Tags).DistinctBy(t => t.Id), TagService, (tag, importTag) =>
                 {
                     tag.Name = importTag.Name;
 
@@ -245,7 +453,7 @@ namespace LANCommander.Launcher.Services
             #region Import MultiplayerModes
             using (var op = Logger.BeginOperation("Importing multiplayer modes"))
             {
-                multiplayerModes = await ImportBulk<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes).DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
+                MultiplayerModes = await ImportBulk<MultiplayerMode, SDK.Models.MultiplayerMode, MultiplayerModeService>(remoteGames.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes).DistinctBy(t => t.Id), MultiplayerModeService, (multiplayerMode, importMultiplayerMode) =>
                 {
                     multiplayerMode.Type = importMultiplayerMode.Type;
                     multiplayerMode.NetworkProtocol = importMultiplayerMode.NetworkProtocol;
@@ -262,199 +470,30 @@ namespace LANCommander.Launcher.Services
             }
             #endregion
 
+            var importedGames = new List<SDK.Models.Game>();
+
             using (var gameTransaction = DatabaseContext.Database.BeginTransaction())
             {
                 foreach (var remoteGame in remoteGames.OrderBy(g => (int)g.Type))
                 {
+                    if (importedGames.Any(g => g.Id == remoteGame.Id))
+                        continue;
 
-                    using (var op = Logger.BeginOperation("Importing game {GameTitle}", remoteGame.Title))
+                    if (remoteGame.BaseGameId != Guid.Empty && !importedGames.Any(g => g.Id == remoteGame.BaseGameId))
                     {
-                        try
-                        {
-                            var localGame = localGames.FirstOrDefault(g => g.Id == remoteGame.Id);
+                        var baseGame = remoteGames.FirstOrDefault(g => g.Id == remoteGame.BaseGameId);
 
-                            if (localGame == null)
-                                localGame = new Data.Models.Game();
+                        if (baseGame == null)
+                            baseGame = await Client.Games.GetAsync(remoteGame.BaseGameId);
 
-                            localGame.Title = remoteGame.Title;
-                            localGame.SortTitle = remoteGame.SortTitle;
-                            localGame.Description = remoteGame.Description;
-                            localGame.Notes = remoteGame.Notes;
-                            localGame.ReleasedOn = remoteGame.ReleasedOn;
-                            localGame.Type = (Data.Enums.GameType)(int)remoteGame.Type;
-                            localGame.BaseGameId = remoteGame.BaseGameId;
-                            localGame.Singleplayer = remoteGame.Singleplayer;
+                        await ImportGameAsync(baseGame, localGames);
 
-                            if (remoteGame.BaseGameId != Guid.Empty && localGame.BaseGameId != remoteGame.BaseGameId)
-                            {
-                                localGame.BaseGameId = remoteGame.BaseGameId;
-                            }
-
-                            #region Update Game Engine
-                            if (remoteGame.Engine == null && localGame.Engine != null)
-                            {
-                                localGame.Engine = null;
-                                localGame.EngineId = null;
-                            }
-                            else if (remoteGame.Engine != null)
-                            {
-                                var engine = engines.FirstOrDefault(e => e.Id == remoteGame.Engine.Id);
-
-                                localGame.Engine = engine;
-                                localGame.EngineId = engine.Id;
-                            }
-                            #endregion
-
-                            #region Update Game Collections
-                            if (localGame.Collections == null)
-                                localGame.Collections = collections.Where(c => remoteGame.Collections.Any(rc => rc.Id == c.Id)).ToList();
-                            else
-                            {
-                                var collectionsToRemove = localGame.Collections.Where(c => !remoteGame.Collections.Any(rc => rc.Id == c.Id)).ToList();
-                                var collectionsToAdd = collections.Where(c => remoteGame.Collections.Any(rc => rc.Id == c.Id) && !localGame.Collections.Any(lc => lc.Id == c.Id)).ToList();
-
-                                foreach (var collection in collectionsToRemove)
-                                    localGame.Collections.Remove(collection);
-
-                                foreach (var collection in collectionsToAdd)
-                                    localGame.Collections.Add(collection);
-                            }
-                            #endregion
-
-                            #region Update Game Developers
-                            if (localGame.Developers == null)
-                                localGame.Developers = companies.Where(c => remoteGame.Developers.Any(rc => rc.Id == c.Id)).ToList();
-                            else
-                            {
-                                var developersToRemove = localGame.Developers.Where(c => !remoteGame.Developers.Any(rc => rc.Id == c.Id)).ToList();
-                                var developersToAdd = companies.Where(c => remoteGame.Developers.Any(rc => rc.Id == c.Id) && !localGame.Developers.Any(lc => lc.Id == c.Id)).ToList();
-
-                                foreach (var developer in developersToRemove)
-                                    localGame.Developers.Remove(developer);
-
-                                foreach (var developer in developersToAdd)
-                                    localGame.Developers.Add(developer);
-                            }
-                            #endregion
-
-                            #region Update Game Publishers
-                            if (localGame.Publishers == null)
-                                localGame.Publishers = companies.Where(c => remoteGame.Publishers.Any(rc => rc.Id == c.Id)).ToList();
-                            else
-                            {
-                                var publishersToRemove = localGame.Publishers.Where(c => !remoteGame.Publishers.Any(rc => rc.Id == c.Id)).ToList();
-                                var publishersToAdd = companies.Where(c => remoteGame.Publishers.Any(rc => rc.Id == c.Id) && !localGame.Publishers.Any(lc => lc.Id == c.Id)).ToList();
-
-                                foreach (var publisher in publishersToRemove)
-                                    localGame.Publishers.Remove(publisher);
-
-                                foreach (var publisher in publishersToAdd)
-                                    localGame.Publishers.Add(publisher);
-                            }
-                            #endregion
-
-                            #region Update Game Genres
-                            if (localGame.Genres == null)
-                                localGame.Genres = genres.Where(c => remoteGame.Genres.Any(rc => rc.Id == c.Id)).ToList();
-                            else
-                            {
-                                var genresToRemove = localGame.Genres.Where(c => !remoteGame.Genres.Any(rc => rc.Id == c.Id)).ToList();
-                                var genresToAdd = genres.Where(c => remoteGame.Genres.Any(rc => rc.Id == c.Id) && !localGame.Genres.Any(lc => lc.Id == c.Id)).ToList();
-
-                                foreach (var genre in genresToRemove)
-                                    localGame.Genres.Remove(genre);
-
-                                foreach (var genre in genresToAdd)
-                                    localGame.Genres.Add(genre);
-                            }
-                            #endregion
-
-                            #region Update Game Tags
-                            if (localGame.Tags == null)
-                                localGame.Tags = tags.Where(c => remoteGame.Tags.Any(rc => rc.Id == c.Id)).ToList();
-                            else
-                            {
-                                var tagsToRemove = localGame.Tags.Where(c => !remoteGame.Tags.Any(rc => rc.Id == c.Id)).ToList();
-                                var tagsToAdd = tags.Where(c => remoteGame.Tags.Any(rc => rc.Id == c.Id) && !localGame.Tags.Any(lc => lc.Id == c.Id)).ToList();
-
-                                foreach (var tag in tagsToRemove)
-                                    localGame.Tags.Remove(tag);
-
-                                foreach (var tag in tagsToAdd)
-                                    localGame.Tags.Add(tag);
-                            }
-                            #endregion
-
-                            #region Update Game Multiplayer Modes
-                            if (localGame.MultiplayerModes == null)
-                                localGame.MultiplayerModes = multiplayerModes.Where(m => remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id)).ToList();
-                            else
-                            {
-                                var modesToRemove = localGame.MultiplayerModes.Where(m => !remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id)).ToList();
-                                var modesToAdd = multiplayerModes.Where(m => remoteGame.MultiplayerModes.Any(rm => rm.Id == m.Id) && !localGame.MultiplayerModes.Any(lm => lm.Id == m.Id)).ToList();
-
-                                foreach (var mode in modesToRemove)
-                                    localGame.MultiplayerModes.Remove(mode);
-
-                                foreach (var mode in modesToAdd)
-                                    localGame.MultiplayerModes.Add(mode);
-                            }
-                            #endregion
-
-                            #region Update Play Sessions
-                            // This needs to be fixed, the profile ID should _not_ pull out of settings
-                            // It'd be better to pull directly from the authenticated client
-                            foreach (var session in remoteGame.PlaySessions.Where(rps => rps.UserId == Settings.Profile.Id && !localGame.PlaySessions.Any(lps => lps.Start == rps.Start && lps.End == lps.End)))
-                            {
-                                localGame.PlaySessions.Add(new PlaySession
-                                {
-                                    Start = session.Start,
-                                    End = session.End,
-                                    CreatedOn = session.CreatedOn,
-                                    UpdatedOn = session.UpdatedOn,
-                                    GameId = session.GameId,
-                                    UserId = Settings.Profile.Id
-                                });
-                            }
-                            #endregion
-
-                            #region Check Installation Status
-                            foreach (var installDirectory in Settings.Games.InstallDirectories)
-                            {
-                                var gameDirectory = await Client.Games.GetInstallDirectory(remoteGame, installDirectory);
-
-                                if (Directory.Exists(gameDirectory))
-                                {
-                                    var manifestLocation = ManifestHelper.GetPath(gameDirectory, remoteGame.Id);
-
-                                    if (File.Exists(manifestLocation))
-                                    {
-                                        var manifest = ManifestHelper.Read(gameDirectory, remoteGame.Id);
-
-                                        localGame.Installed = true;
-                                        localGame.InstalledOn = DateTime.Now;
-                                        localGame.InstallDirectory = gameDirectory;
-                                        localGame.InstalledVersion = manifest.Version;
-                                    }
-                                }
-                            }
-                            #endregion
-
-                            if (localGame.Id == Guid.Empty)
-                            {
-                                localGame.Id = remoteGame.Id;
-                                localGame = await GameService.Add(localGame);
-                            }
-                            else
-                                localGame = await GameService.Update(localGame);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError(ex, "Could not import game {GameTitle}", remoteGame.Title);
-                        }
-
-                        op.Complete();
+                        importedGames.Add(baseGame);
                     }
+
+                    await ImportGameAsync(remoteGame, localGames);
+
+                    importedGames.Add(remoteGame);
                 }
 
                 // Potentially delete any games that no longer exist on the server or have been revoked
@@ -486,17 +525,17 @@ namespace LANCommander.Launcher.Services
             IEnumerable<Media> medias;
             var mediaMap = new Dictionary<Guid, Guid>();
 
-            foreach (var remoteGame in remoteGames)
+            foreach (var importedGame in importedGames)
             {
-                foreach (var remoteMedia in remoteGame.Media)
+                foreach (var remoteMedia in importedGame.Media)
                 {
-                    mediaMap[remoteMedia.Id] = remoteGame.Id;
+                    mediaMap[remoteMedia.Id] = importedGame.Id;
                 }
             }
 
             using (var op = Logger.BeginOperation("Importing media metadata"))
             {
-                medias = await ImportBulk<Media, SDK.Models.Media, MediaService>(remoteGames.SelectMany(g => g.Media), MediaService, (media, importMedia) =>
+                medias = await ImportBulk<Media, SDK.Models.Media, MediaService>(importedGames.SelectMany(g => g.Media), MediaService, (media, importMedia) =>
                 {
                     media.FileId = importMedia.FileId;
                     media.Type = importMedia.Type;

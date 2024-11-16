@@ -8,6 +8,7 @@
 @inject ILogger<DepotGameDetails> Logger
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
+@inject IMessageService MessageService
 
 <Drawer Placement="bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
     @if (SelectedGame != null)
@@ -44,19 +45,19 @@
                                     }
                                     else
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install">Install</Button>
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install" Loading="Installing">Install</Button>
                                     }
 
                                     @if (SelectedGame.InLibrary)
                                     {
                                         <Tooltip Title="Remove from Library">
-                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" />
+                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" Loading="RemovingFromLibrary" />
                                         </Tooltip>
                                     }
                                     else
                                     {
                                         <Tooltip Title="Add to Library">
-                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Plus" OnClick="AddToLibrary" />
+                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Plus" OnClick="AddToLibrary" Loading="AddingToLibrary" />
                                         </Tooltip>
                                     }
                                 </SpaceItem>
@@ -148,10 +149,18 @@
     bool Visible { get; set; } = false;
     bool IsInstalled { get; set; } = false;
 
+    bool Installing { get; set; } = false;
+    bool AddingToLibrary { get; set; } = false;
+    bool RemovingFromLibrary { get; set; } = false;
+
     Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnParametersSetAsync()
     {
+        Installing = false;
+        AddingToLibrary = false;
+        RemovingFromLibrary = false;
+
         try
         {
             if (ItemId != Guid.Empty)
@@ -195,11 +204,17 @@
 
     async Task Install()
     {
+        Installing = true;
+        StateHasChanged();
+        await Task.Yield();
+
         if (!SelectedGame.InLibrary)
             await AddToLibrary();
 
         var libraryItem = LibraryService.GetItem(SelectedGame.Id);
         var game = libraryItem.DataItem as Game;
+
+        await Hide();
 
         if (Settings.Games.InstallDirectories.Length > 1 || game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
         {
@@ -226,14 +241,60 @@
 
     async Task AddToLibrary()
     {
-        await LibraryService.AddToLibraryAsync(SelectedGame.Id);
-        await LibraryService.RefreshItemsAsync();
+        if (!Installing)
+        {
+            AddingToLibrary = true;
+            StateHasChanged();
+            await Task.Yield();
+        }
+
+        try {
+            await LibraryService.AddToLibraryAsync(SelectedGame.Id);
+            await LibraryService.RefreshItemsAsync();
+
+            MessageService.Success($"{SelectedGame.Title} was added to your library!");
+
+            SelectedGame.InLibrary = true;
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, $"{SelectedGame.Title} ({SelectedGame.Id}) could not be added to your library!");
+            MessageService.Error($"{SelectedGame.Title} could not be added to your library!");
+        }
+
+
+        AddingToLibrary = false;
+        StateHasChanged();
+        await Task.Yield();
     }
 
     async Task RemoveFromLibrary()
     {
-        await LibraryService.RemoveFromLibraryAsync(SelectedGame.Id);
-        await LibraryService.RefreshItemsAsync();
+        if (!Installing)
+        {
+            RemovingFromLibrary = true;
+            StateHasChanged();
+            await Task.Yield();
+        }
+
+        try
+        {
+            await LibraryService.RemoveFromLibraryAsync(SelectedGame.Id);
+            await LibraryService.RefreshItemsAsync();
+
+            MessageService.Success($"{SelectedGame.Title} was removed from your library!");
+
+            SelectedGame.InLibrary = false;
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, $"{SelectedGame.Title} ({SelectedGame.Id}) could not be removed from your library!");
+            MessageService.Error($"{SelectedGame.Title} could not be removed from your library!");
+        }
+
+        RemovingFromLibrary = false;
+        StateHasChanged();
+        await Task.Yield();
     }
 
     long GetDownloadSize()

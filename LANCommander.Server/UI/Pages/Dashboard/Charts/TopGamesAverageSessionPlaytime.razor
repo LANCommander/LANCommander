@@ -47,7 +47,11 @@
 
         Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
 
-        var sessions = await PlaySessionService.GetAsync();
+        var sessions = await PlaySessionService
+            .Include(ps => ps.Game)
+            .Include(ps => ps.CreatedBy)
+            .Include(ps => ps.User)
+            .GetAsync();
 
         foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
         {

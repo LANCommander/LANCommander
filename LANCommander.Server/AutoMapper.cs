@@ -41,6 +41,7 @@ namespace LANCommander.Server
                     opt => opt.MapFrom(src => src.PrimaryAction));
 
             CreateMap<Data.Models.Game, SDK.Models.Game>()
+                .MaxDepth(5)
                 .ForMember(dest =>
                     dest.DependentGames,
                     opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)));

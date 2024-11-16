@@ -246,7 +246,7 @@ namespace LANCommander.Server
             Log.Debug("Initializing Controllers");
             builder.Services.AddControllers().AddJsonOptions(x =>
             {
-                x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve;
+                x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
             });
 
             Log.Debug("Initializing Hangfire");

@@ -53,7 +53,7 @@
             StateHasChanged();
             await Task.Yield();
 
-            Logger?.LogError(ex, $"{Item} ({Item.Key}) could not be added to your library!");
+            Logger?.LogError(ex, $"{Item.Name} ({Item.Key}) could not be added to your library!");
             MessageService.Error($"{Item.Name} could not be added to your library!");
         }
     }

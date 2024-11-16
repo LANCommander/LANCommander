@@ -406,9 +406,12 @@ namespace LANCommander.SDK.Services
 
         public async Task InstallAddonsAsync(string installDirectory, Game game, IEnumerable<Guid> addonIds)
         {
-            foreach (var addonId in addonIds)
+            if (addonIds != null)
             {
-                await InstallAddonAsync(installDirectory, game, addonId);
+                foreach (var addonId in addonIds)
+                {
+                    await InstallAddonAsync(installDirectory, game, addonId);
+                }
             }
         }
 

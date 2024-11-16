@@ -73,12 +73,12 @@ namespace LANCommander.Server.Controllers.Api
             if (user == null)
                 return Unauthorized();
 
-            var latestSave = await GameSaveService.FirstOrDefaultAsync<SDK.Models.GameSave>(gs => gs.UserId == user.Id && gs.GameId == gameId, gs => gs.CreatedOn);
+            var latestSave = await GameSaveService.FirstOrDefaultAsync(gs => gs.UserId == user.Id && gs.GameId == gameId, gs => gs.CreatedOn);
 
             // Should probably return 404 if no latest save exists
             // Not sure if this will affect launcher stability
 
-            return Ok(latestSave);
+            return Ok(Mapper.Map<SDK.Models.GameSave>(latestSave));
         }
 
         [HttpGet("DownloadLatest/{gameId}")]

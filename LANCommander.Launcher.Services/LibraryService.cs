@@ -110,7 +110,9 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
-                var games = await GameService.Get(x => true).AsNoTracking().ToListAsync();
+                var games = await GameService
+                    .Get(x => true)
+                    .ToListAsync();
 
                 Filter.Populate(games);
 

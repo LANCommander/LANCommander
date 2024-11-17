@@ -34,7 +34,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserService.GetAsync(User?.Identity?.Name);
+                var user = await UserService.GetAsync<SDK.Models.User>(User?.Identity?.Name);
 
                 if (user != null)
                     return Ok(user);

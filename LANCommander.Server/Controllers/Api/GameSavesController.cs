@@ -30,9 +30,9 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<GameSave>> GetAsync(Guid id)
+        public async Task<ActionResult<SDK.Models.GameSave>> GetAsync(Guid id)
         {
-            var gameSave = await GameSaveService.GetAsync(id);
+            var gameSave = await GameSaveService.GetAsync<SDK.Models.GameSave>(id);
 
             if (gameSave == null || gameSave.User == null)
             {
@@ -46,7 +46,7 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
             }
 
-            return Ok(await GameSaveService.GetAsync(id));
+            return Ok(await GameSaveService.GetAsync<SDK.Models.GameSave>(id));
         }
 
         [HttpGet("{id}/Download")]

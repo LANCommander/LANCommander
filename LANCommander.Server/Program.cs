@@ -30,8 +30,6 @@ namespace LANCommander.Server
     {
         static async Task Main(string[] args)
         {
-            DatabaseContext.ContextTracker = new Dictionary<Guid, Stopwatch>();
-
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
                 .CreateBootstrapLogger();

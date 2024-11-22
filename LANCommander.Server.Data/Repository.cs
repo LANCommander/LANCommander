@@ -84,15 +84,12 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).ToListAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -100,15 +97,12 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).ToListAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -116,15 +110,12 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).FirstAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -132,15 +123,12 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -148,15 +136,12 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).OrderByDescending(orderKeySelector).FirstAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -164,23 +149,18 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).OrderByDescending(orderKeySelector).FirstAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
         public async Task<T> FindAsync(Guid id)
         {
             try {
-                await Context.ContextMutex.WaitAsync();
-
                 using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 {
                     var entity = await Query(x => x.Id == id).FirstAsync();
@@ -194,7 +174,6 @@ namespace LANCommander.Server.Data
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -202,8 +181,6 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 {
                     var entity = await Query(x => x.Id == id).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
@@ -217,7 +194,6 @@ namespace LANCommander.Server.Data
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -225,8 +201,6 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
                 {
                     var entity = await Query(predicate).FirstOrDefaultAsync();
@@ -240,7 +214,6 @@ namespace LANCommander.Server.Data
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -248,8 +221,6 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
                 {
                     var entity = await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
@@ -263,7 +234,6 @@ namespace LANCommander.Server.Data
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -271,15 +241,12 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -287,15 +254,12 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).OrderByDescending(orderKeySelector).FirstOrDefaultAsync();
             }
             finally
             {
                 Tracking = true;
                 IncludeExpressions.Clear();
-                Context.ContextMutex.Release();
             }
         }
 
@@ -304,8 +268,6 @@ namespace LANCommander.Server.Data
             try
             {
                 var currentUser = await GetCurrentUserId();
-
-                await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
                 {
@@ -324,7 +286,6 @@ namespace LANCommander.Server.Data
             finally
             {
                 Tracking = true;
-                Context.ContextMutex.Release();
             }
         }
 
@@ -334,8 +295,6 @@ namespace LANCommander.Server.Data
             {
                 var currentUserId = await GetCurrentUserId();
                 var existing = await FindAsync(entity.Id);
-
-                await Context.ContextMutex.WaitAsync();
 
                 using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
                 {
@@ -354,7 +313,6 @@ namespace LANCommander.Server.Data
             finally
             {
                 Tracking = true;
-                Context.ContextMutex.Release();
             }
         }
 
@@ -362,8 +320,6 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                Context.ContextMutex.Wait();
-
                 using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
                 {
                     Context.Remove(entity);
@@ -374,7 +330,6 @@ namespace LANCommander.Server.Data
             finally
             {
                 Tracking = true;
-                Context.ContextMutex.Release();
             }
         }
 
@@ -382,8 +337,6 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 using (var op = Logger.BeginOperation("Saving changes!"))
                 {
                     await Context.SaveChangesAsync();
@@ -394,7 +347,6 @@ namespace LANCommander.Server.Data
             finally
             {
                 Tracking = true;
-                Context.ContextMutex.Release();
             }
         }
 
@@ -402,14 +354,11 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                await Context.ContextMutex.WaitAsync();
-
                 return await UserDbSet.FirstOrDefaultAsync(u => u.UserName == username);
             }
             finally
             {
                 Tracking = true;
-                Context.ContextMutex.Release();
             }
         }
 
@@ -433,7 +382,6 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                Context.ContextMutex.Release();
                 Logger?.LogDebug("Disposed context {ContextId}", Context.ContextId);
             }
             catch {

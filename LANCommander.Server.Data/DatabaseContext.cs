@@ -12,9 +12,6 @@ namespace LANCommander.Server.Data
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static string ConnectionString = "";
-        public static Dictionary<Guid, Stopwatch> ContextTracker;
-
-        public readonly SemaphoreSlim ContextMutex = new(1);
 
         private readonly ILogger Logger;
 

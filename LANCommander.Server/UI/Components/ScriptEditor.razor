@@ -64,7 +64,7 @@
         await LoadData();
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         if (GameId != Guid.Empty)
             Scripts = await ScriptService.GetAsync(s => s.GameId == GameId);
@@ -76,7 +76,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async void Edit(Guid? scriptId = null)
+    async void Edit(Guid? scriptId = null)
     {
         var modalOptions = new ModalOptions()
         {
@@ -105,7 +105,7 @@
         };
     }
 
-    private async void Delete(Script script = null)
+    async void Delete(Script script = null)
     {
         if (script != null)
             await ScriptService.DeleteAsync(script);

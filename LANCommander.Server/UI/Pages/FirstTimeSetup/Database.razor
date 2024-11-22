@@ -59,7 +59,7 @@
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
     }
 
-    async Task OnDatabaseProviderChanged()
+    void OnDatabaseProviderChanged()
     {
         switch (Settings.DatabaseProvider)
         {

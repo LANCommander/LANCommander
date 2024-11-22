@@ -48,7 +48,7 @@
         StorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
     }
 
-    private void Save()
+    void Save()
     {
         try
         {
@@ -62,7 +62,7 @@
         }
     }
 
-    private void OnPathSelected(string path)
+    void OnPathSelected(string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 

@@ -99,7 +99,7 @@
             await LoadData();
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         Roles = new List<RoleViewModel>();
 
@@ -121,7 +121,7 @@
         StateHasChanged();
     }
 
-    private async Task DeleteRole(RoleViewModel roleViewModel)
+    async Task DeleteRole(RoleViewModel roleViewModel)
     {
         var role = await RoleService.FirstOrDefaultAsync(r => r.Name == roleViewModel.Name);
 
@@ -139,14 +139,14 @@
         }
     }
 
-    private void ShowNewRoleDialog()
+    void ShowNewRoleDialog()
     {
         NewRole = new RoleViewModel();
 
         AddRoleDialogVisible = true;
     }
 
-    private async Task AddRole()
+    async Task AddRole()
     {
         if ((await RoleService.ExistsAsync(r => r.Name == NewRole.Name)))
         {
@@ -175,7 +175,7 @@
         }
     }
 
-    private void Save()
+    void Save()
     {
         try
         {

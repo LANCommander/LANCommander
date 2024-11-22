@@ -32,9 +32,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-        {
-            LoadData();
-        }
+            await LoadData();
     }
 
     private async Task LoadData()

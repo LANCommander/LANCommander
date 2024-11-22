@@ -104,21 +104,21 @@
         }
     }
 
-    private void AddField()
+    void AddField()
     {
         User.CustomFields.Add(new UserCustomField());
 
         FieldsModified = true;
     }
 
-    private async Task RemoveField(UserCustomField customField)
+    async Task RemoveField(UserCustomField customField)
     {
         User.CustomFields.Remove(customField);
 
         FieldsModified = true;
     } 
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {

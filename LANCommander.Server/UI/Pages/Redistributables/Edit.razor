@@ -116,7 +116,7 @@ else
 
     Settings Settings = SettingService.GetSettings();
 
-    private Guid LatestArchiveId
+    Guid LatestArchiveId
     {
         get
         {
@@ -143,7 +143,7 @@ else
             .ToList();
     }
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
@@ -169,7 +169,7 @@ else
         }
     }
 
-    private void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
+    void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
     {
         NavigationManager.LocationChanged -= NotifyRedistributableAdded;
 

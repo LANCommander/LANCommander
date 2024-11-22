@@ -56,12 +56,12 @@
         await ChunkUploader.Start();
     }
 
-    private async Task Clear()
+    async Task Clear()
     {
         await ChunkUploader.Clear();
     }
 
-    private async Task Cancel()
+    async Task Cancel()
     {
         await ChunkUploader.Clear();
         Visible = false;

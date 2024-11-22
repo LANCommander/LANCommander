@@ -145,7 +145,7 @@
         }
     }
 
-    async Task ValidatePaths()
+    void ValidatePaths()
     {
         var valid = false;
 
@@ -175,7 +175,7 @@
             NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
     }
 
-    async Task SetDefault(StorageLocation storageLocation)
+    void SetDefault(StorageLocation storageLocation)
     {
         foreach (var archiveStorageLocation in ArchiveStorageLocations)
         {
@@ -193,14 +193,14 @@
         storageLocation.Path = path;
     }
 
-    async Task AddArchiveStorageLocation()
+    void AddArchiveStorageLocation()
     {
         ArchiveStorageLocations.Add(new StorageLocation());
 
         StateHasChanged();
     }
 
-    async Task RemoveArchiveStorageLocation(StorageLocation storageLocation)
+    void RemoveArchiveStorageLocation(StorageLocation storageLocation)
     {
         ArchiveStorageLocations.Remove(storageLocation);
     }

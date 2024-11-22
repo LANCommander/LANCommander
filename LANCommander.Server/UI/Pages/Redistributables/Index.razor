@@ -86,19 +86,19 @@
         }
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
         Redistributables = (await RedistributableService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
-    private void Add()
+    void Add()
     {
         NavigationManager.NavigateTo("/Redistributables/Add");
     }
 
-    private async Task Delete(Redistributable redistributable)
+    async Task Delete(Redistributable redistributable)
     {
         Redistributables = new List<Redistributable>();
 
@@ -111,12 +111,12 @@
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

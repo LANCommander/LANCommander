@@ -91,14 +91,14 @@
         }
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
         Collections = (await CollectionService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
-    private async Task OpenAdd()
+    async Task OpenAdd()
     {
         CollectionContext = new Collection();
 
@@ -107,14 +107,14 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseAdd()
+    async Task CloseAdd()
     {
         AddCollectionVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Add()
+    async Task Add()
     {
         try
         {
@@ -133,7 +133,7 @@
         }
     }
 
-    private async Task Delete(Collection Collection)
+    async Task Delete(Collection Collection)
     {
         Collections = new List<Collection>();
 
@@ -146,12 +146,12 @@
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

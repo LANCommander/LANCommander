@@ -100,7 +100,7 @@
         Companies = (await CompanyService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
-    private async Task UpdateOrAdd()
+    async Task UpdateOrAdd()
     {
         try
         {
@@ -132,7 +132,7 @@
         await CloseEdit();
     }
 
-    private async Task OpenEdit(Company company)
+    async Task OpenEdit(Company company)
     {
         if (company != null)
             CompanyContext = company;
@@ -142,14 +142,14 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseEdit()
+    async Task CloseEdit()
     {
         EditCompanyVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Delete(Company Company)
+    async Task Delete(Company Company)
     {
         Companies = new List<Company>();
 
@@ -162,12 +162,12 @@
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

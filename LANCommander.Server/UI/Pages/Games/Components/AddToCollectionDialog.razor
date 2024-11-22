@@ -30,12 +30,12 @@
         await LoadData();
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         Collections = (await CollectionService.GetAsync()).OrderBy(c => c.Name).ToList();
     }
 
-    private RenderFragment DropdownRender(RenderFragment originNode)
+    RenderFragment DropdownRender(RenderFragment originNode)
     {
         RenderFragment customDropdownRender =
             @<Template>
@@ -57,7 +57,7 @@
         return customDropdownRender;
     }
 
-    private async Task AddCollection(MouseEventArgs args)
+    async Task AddCollection(MouseEventArgs args)
     {
         try
         {

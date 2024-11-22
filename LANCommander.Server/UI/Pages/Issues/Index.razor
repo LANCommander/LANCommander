@@ -76,19 +76,19 @@
         }
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
         Issues = (await IssueService.GetAsync(r => r.Game.Title.ToLower().Contains(fuzzySearch))).OrderByDescending(r => r.CreatedOn);
     }
 
-    private void Add()
+    void Add()
     {
         NavigationManager.NavigateTo("/Issues/Add");
     }
 
-    private async Task Delete(Issue redistributable)
+    async Task Delete(Issue redistributable)
     {
         Issues = new List<Issue>();
 
@@ -101,12 +101,12 @@
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

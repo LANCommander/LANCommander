@@ -76,7 +76,7 @@
         StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
     }
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
@@ -102,7 +102,7 @@
         }
     }
 
-    private void OnPathSelected(StorageLocation storageLocation, string path)
+    void OnPathSelected(StorageLocation storageLocation, string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 

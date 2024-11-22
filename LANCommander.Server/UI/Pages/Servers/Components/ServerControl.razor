@@ -81,7 +81,7 @@
         }
     }
 
-    private void OnStatusUpdate(object sender, ServerStatusUpdateEventArgs args)
+    void OnStatusUpdate(object sender, ServerStatusUpdateEventArgs args)
     {
         if (args?.Server?.Id == ServerId)
         {
@@ -98,12 +98,12 @@
         }
     }
 
-    private async Task Start()
+    async Task Start()
     {
         await ServerProcessService.StartServerAsync(Server.Id);
     }
 
-    private void Stop()
+    void Stop()
     {
         ServerProcessService.StopServerAsync(Server.Id);
     }

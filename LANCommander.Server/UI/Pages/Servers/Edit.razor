@@ -267,7 +267,7 @@
         await OnPortNumberChanged(Server.Port);
     }
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
@@ -295,7 +295,7 @@
         }
     }
 
-    private async Task AddPath()
+    async Task AddPath()
     {
         Server.HttpPaths.Add(new ServerHttpPath()
         {
@@ -303,19 +303,19 @@
         });
     }
 
-    private void OnPathSelected(string path)
+    void OnPathSelected(string path)
     {
         Server.WorkingDirectory = Path.GetDirectoryName(path);
     }
 
-    private void NotifyServerAdded(object? sender, LocationChangedEventArgs e)
+    void NotifyServerAdded(object? sender, LocationChangedEventArgs e)
     {
         NavigationManager.LocationChanged -= NotifyServerAdded;
 
         MessageService.Success("Server added!");
     }
 
-    private string GetIcon(Game game)
+    string GetIcon(Game game)
     {
         var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
@@ -325,7 +325,7 @@
             return "/favicon.ico";
     }
 
-    private async Task OnPortNumberChanged(int value)
+    async Task OnPortNumberChanged(int value)
     {
         if (value > 0)
             PortInUse = (await ServerService.GetAsync(s => s.Port == value && s.Id != Id)).Any();

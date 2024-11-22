@@ -92,14 +92,14 @@
         }
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
         Platforms = (await PlatformService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
     }
 
-    private async Task UpdateOrAdd()
+    async Task UpdateOrAdd()
     {
         try
         {
@@ -131,7 +131,7 @@
         await CloseEdit();
     }
 
-    private async Task OpenEdit(Platform platform)
+    async Task OpenEdit(Platform platform)
     {
         if (platform != null)
             PlatformContext = platform;
@@ -141,14 +141,14 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseEdit()
+    async Task CloseEdit()
     {
         EditPlatformVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Delete(Platform Platform)
+    async Task Delete(Platform Platform)
     {
         Platforms = new List<Platform>();
 
@@ -161,12 +161,12 @@
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

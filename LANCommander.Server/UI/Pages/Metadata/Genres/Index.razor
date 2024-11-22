@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Genres"
+@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject GenreService GenreService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,6 +61,8 @@
 </Modal>
 
  @code {
+    GenreService GenreService;
+
     IEnumerable<Genre> Genres { get; set; } = new List<Genre>();
 
     bool Loading = true;
@@ -72,6 +74,11 @@
 
     bool EditGenreVisible = false;
     Genre GenreContext = new Genre();
+
+    protected override void OnInitialized()
+    {
+        GenreService = ScopedServices.GetService<GenreService>()!;
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {

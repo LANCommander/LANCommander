@@ -1,9 +1,9 @@
 ﻿@page "/Pages/{*route}"
+@inherits OwningComponentBase
 @using LANCommander.Server.UI.Pages.Pages.Components
 @using Markdig
 @using Microsoft.EntityFrameworkCore
 @using ZiggyCreatures.Caching.Fusion
-@inject PageService PageService
 @inject IFusionCache Cache
 @inject NavigationManager NavigationManager
 
@@ -31,7 +31,14 @@
 @code {
     [Parameter] public string Route { get; set; }
 
+    PageService PageService;
+
     Page Page;
+
+    protected override void OnInitialized()
+    {
+        PageService = ScopedServices.GetService<PageService>()!;
+    }
 
     protected override async Task OnParametersSetAsync()
     {

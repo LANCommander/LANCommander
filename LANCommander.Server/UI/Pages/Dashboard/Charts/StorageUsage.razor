@@ -1,13 +1,15 @@
-﻿@using AntDesign.Charts
+﻿@inherits OwningComponentBase
+@using AntDesign.Charts
 @using ByteSizeLib
 @using LANCommander.SDK.Enums
-@inject StorageLocationService StorageLocationService
 
 <Spin Spinning="Loading">
     <Pie Data="Data" Config="Config" JsConfig="@JsConfig" />
 </Spin>
 
 @code {
+    StorageLocationService StorageLocationService;
+
     object[] Data;
 
     bool Loading = true;
@@ -31,6 +33,11 @@
         AngleField = "value",
         ColorField = "type",
     };
+
+    protected override void OnInitialized()
+    {
+        StorageLocationService = ScopedServices.GetService<StorageLocationService>()!;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

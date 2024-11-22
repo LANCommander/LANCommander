@@ -1,10 +1,8 @@
-﻿@using AntDesign.TableModels;
+﻿@inherits OwningComponentBase
+@using AntDesign.TableModels;
 @using LANCommander.PCGamingWiki
 @using LANCommander.SDK.Enums
 @inject IGDBService IGDBService
-@inject CompanyService CompanyService
-@inject GenreService GenreService
-@inject TagService TagService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<GameMetadataLookup> Logger
@@ -73,6 +71,10 @@ else
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
+    CompanyService CompanyService;
+    GenreService GenreService;
+    TagService TagService;
+
     ITable? ResultsTable;
 
     List<Game> Results { get; set; } = new List<Game>();
@@ -83,8 +85,12 @@ else
     bool MoreResults = false;
     int Offset = 0;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
+        CompanyService = ScopedServices.GetService<CompanyService>()!;
+        GenreService = ScopedServices.GetService<GenreService>()!;
+        TagService = ScopedServices.GetService<TagService>()!;
+
         PCGamingWikiClient = new PCGamingWikiClient();
     }
 

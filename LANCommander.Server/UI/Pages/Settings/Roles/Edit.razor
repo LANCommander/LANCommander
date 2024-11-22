@@ -1,7 +1,6 @@
 ﻿@page "/Settings/Roles/{id:guid}"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
-@inject CollectionService CollectionService
-@inject RoleService RoleService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -31,11 +30,17 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
+    RoleService RoleService;
+    CollectionService CollectionService;
+
     Role Role = new Role();
     IEnumerable<Collection> Collections = new List<Collection>();
 
     protected override async Task OnInitializedAsync()
     {
+        RoleService = ScopedServices.GetService<RoleService>()!;
+        CollectionService = ScopedServices.GetService<CollectionService>()!;
+
         Role = await RoleService.GetAsync(Id);
         Collections = await CollectionService.GetAsync();
     }

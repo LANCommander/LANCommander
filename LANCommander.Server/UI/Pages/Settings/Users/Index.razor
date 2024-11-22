@@ -1,6 +1,6 @@
 ﻿@page "/Settings/Users"
+@inherits OwningComponentBase
 @using LANCommander.Server.UI.Pages.Settings.Users.Components
-@inject UserService UserService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -60,14 +60,16 @@
 </div>
 
 @code {
-    ICollection<UserViewModel> UserList { get; set; }
+    UserService UserService;
+
+    ICollection<UserViewModel> UserList { get; set; } = new List<UserViewModel>();
 
     Settings Settings = SettingService.GetSettings();
     bool Loading = true;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        UserList = new List<UserViewModel>();
+        UserService = ScopedServices.GetService<UserService>()!;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/Actions"
+@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject GameService GameService
 @inject IMessageService MessageService
 @inject ILogger<Actions> Logger
 
@@ -21,7 +21,14 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    private Guid GetLatestArchiveId(Game game)
+    GameService GameService;
+
+    protected override void OnInitialized()
+    {
+        GameService = ScopedServices.GetService<GameService>()!;
+    }
+
+    Guid GetLatestArchiveId(Game game)
     {
         if (game != null && game.Archives != null && game.Archives.Count > 0)
             return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Id ?? Guid.Empty;

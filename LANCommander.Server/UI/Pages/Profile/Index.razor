@@ -1,9 +1,8 @@
 ﻿@page "/Profile"
 @page "/Profile/General"
+@inherits OwningComponentBase
 @using Microsoft.AspNetCore.Components.Authorization;
 @layout ProfileLayout
-@inject UserService UserService
-@inject MediaService MediaService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -38,11 +37,17 @@
 </div>
 
 @code {
+    UserService UserService;
+    MediaService MediaService;
+
     User User = new User();
     Form<User> Form;
 
     protected override async Task OnInitializedAsync()
     {
+        UserService = ScopedServices.GetService<UserService>()!;
+        MediaService = ScopedServices.GetService<MediaService>()!;
+        
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)

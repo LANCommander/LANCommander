@@ -1,12 +1,11 @@
 ﻿@page "/Redistributables/{id:guid}"
 @page "/Redistributables/{id:guid}/{panel}"
 @page "/Redistributables/Add"
+@inherits OwningComponentBase
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Models
 @using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject RedistributableService RedistributableService
-@inject GameService GameService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -108,6 +107,9 @@ else
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Panel { get; set; }
 
+    RedistributableService RedistributableService;
+    GameService GameService;
+
     Redistributable Redistributable = new Redistributable();
 
     ICollection<Game> Games;
@@ -127,6 +129,9 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        GameService = ScopedServices.GetService<GameService>()!;
+        RedistributableService = ScopedServices.GetService<RedistributableService>()!;
+
         if (Id != Guid.Empty && Panel == null)
             NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
         else if (Id != Guid.Empty)

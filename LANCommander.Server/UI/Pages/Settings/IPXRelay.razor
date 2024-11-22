@@ -1,6 +1,5 @@
 ﻿@page "/Settings/IPXRelay"
-@using LANCommander.Server.Models;
-@inject SettingService SettingService
+@using LANCommander.Server.Models
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<IPXRelay> Logger
@@ -34,12 +33,7 @@
 </div>
 
 @code {
-    Settings Settings;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
+    Settings Settings = SettingService.GetSettings();
 
     private void Save()
     {

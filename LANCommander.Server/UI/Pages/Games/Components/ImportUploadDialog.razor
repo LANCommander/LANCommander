@@ -1,10 +1,10 @@
-﻿@using System.Net;
+﻿@inherits OwningComponentBase
+@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
-@inject NavigationManager Navigator
-@inject GameService GameService
+@inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
@@ -41,6 +41,8 @@
     [Parameter] public EventCallback<Guid> OnGameImported { get; set; }
     [Parameter] public RenderFragment Hint { get; set; }
 
+    GameService GameService;
+
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     IBrowserFile File;
@@ -52,6 +54,11 @@
     string Filename;
 
     string Status;
+
+    protected override void OnInitialized()
+    {
+        GameService = ScopedServices.GetService<GameService>()!;
+    }
 
     private async Task Start()
     {

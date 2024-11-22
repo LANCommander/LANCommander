@@ -2,15 +2,13 @@
 @page "/Servers/{id:guid}/{panel}"
 @page "/Servers/{id:guid}/{panel}/{logId}"
 @page "/Servers/Add"
+@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using LANCommander.Server.Extensions
 @using Microsoft.EntityFrameworkCore
 @using System.Runtime.InteropServices
-@inject GameService GameService
-@inject ServerService ServerService
-@inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -213,6 +211,10 @@
     [Parameter] public string Panel { get; set; }
     [Parameter] public string LogId { get; set; }
 
+    GameService GameService;
+    ServerService ServerService;
+    ServerProcessService ServerProcessService;
+
     IEnumerable<Game> Games = new List<Game>();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -245,6 +247,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        GameService = ScopedServices.GetService<GameService>()!;
+        ServerService = ScopedServices.GetService<ServerService>()!;
+        ServerProcessService = ScopedServices.GetService<ServerProcessService>()!;
+
         if (Id != Guid.Empty && Panel == null)
             NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
         else if (Id != Guid.Empty)

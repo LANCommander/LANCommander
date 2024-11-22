@@ -119,6 +119,11 @@ namespace LANCommander.Server.Services
             return GetAsync(id) != null;
         }
 
+        public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
+        {
+            return GetAsync(predicate) != null;
+        }
+
         public virtual async Task<T> AddAsync(T entity)
         {
             entity = await Repository.AddAsync(entity);

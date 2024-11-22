@@ -1,6 +1,6 @@
-﻿@using AntDesign.Charts
+﻿@inherits OwningComponentBase
+@using AntDesign.Charts
 @using ByteSizeLib
-@inject PlaySessionService PlaySessionService
 
 <Spin Spinning="Loading">
     <div class="dashboard-chart">
@@ -9,6 +9,7 @@
 </Spin>
 
 @code {
+    PlaySessionService PlaySessionService;
     Settings Settings = SettingService.GetSettings();
 
     object[] Data;
@@ -39,6 +40,11 @@
         AngleField = "value",
         ColorField = "type",
     };
+
+    protected override void OnInitialized()
+    {
+        PlaySessionService = ScopedServices.GetService<PlaySessionService>()!;
+    }
 
     protected override async Task OnInitializedAsync()
     {

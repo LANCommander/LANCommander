@@ -1,4 +1,4 @@
-﻿@inject PageService PageService
+﻿@inherits OwningComponentBase
 
 <Space>
     @if (!Editing)
@@ -29,7 +29,14 @@
     [Parameter] public Page Page { get; set; }
     [Parameter] public EventCallback<Page> PageChanged { get; set; }
 
+    PageService PageService;
+
     bool Editing { get; set; } = false;
+
+    protected override void OnInitialized()
+    {
+        PageService = ScopedServices.GetService<PageService>()!;
+    }
 
     void Edit()
     {

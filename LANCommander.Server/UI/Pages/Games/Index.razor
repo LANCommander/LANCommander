@@ -1,4 +1,5 @@
 ﻿@page "/Games"
+@inherits OwningComponentBase
 @using AntDesign.TableModels;
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Extensions;
@@ -9,7 +10,6 @@
 @using Microsoft.EntityFrameworkCore;
 @using System.Web
 @attribute [Authorize]
-@inject GameService GameService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject IMessageService MessageService
@@ -161,6 +161,8 @@
 </ImportUploadDialog>
 
 @code {
+    GameService GameService;
+
     IEnumerable<Game> Games { get; set; } = new List<Game>();
 
     bool Loading = true;
@@ -182,6 +184,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        GameService = ScopedServices.GetService<GameService>()!;
+
         Url = NavigationManager.Uri;
         NavigationManager.LocationChanged += LocationChanged;
         LoadTableParameter();

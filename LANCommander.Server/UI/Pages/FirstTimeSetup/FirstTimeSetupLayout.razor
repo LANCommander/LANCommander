@@ -1,8 +1,6 @@
 ﻿@using LANCommander.Server.Data
 @inherits LayoutComponentBase
 @layout BasicLayout
-@inject UserService UserService
-@inject RoleService RoleService
 @inject NavigationManager NavigationManager
 
 <GridRow Align="center" Class="ant-row-middle ant-row-space-around" Style="min-height: 100vh; margin-top: -96px;">
@@ -28,25 +26,6 @@
 
 @code {
     private int CurrentStep = (int)FirstTimeSetupStep.Database;
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (DatabaseContext.Provider != Data.Enums.DatabaseProvider.Unknown)
-        {
-            var role = await RoleService.GetAsync(RoleService.AdministratorRoleName);
-
-            if (role == null)
-                await RoleService.AddAsync(new Role
-                {
-                    Name = RoleService.AdministratorRoleName
-                });
-
-            var administrators = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
-
-            if (administrators != null && administrators.Any())
-                NavigationManager.NavigateTo("/");
-        }
-    }
 
     internal async Task ChangeCurrentStep(FirstTimeSetupStep step)
     {

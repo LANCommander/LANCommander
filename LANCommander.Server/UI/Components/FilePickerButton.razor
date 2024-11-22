@@ -1,7 +1,7 @@
-﻿@using LANCommander.Server.Models
+﻿@inherits OwningComponentBase
+@using LANCommander.Server.Models
 @using System.IO.Compression
 @inject ModalService ModalService
-@inject ArchiveService ArchiveService
 
 @if (ArchiveId != Guid.Empty)
 {
@@ -29,10 +29,14 @@ else if (!String.IsNullOrWhiteSpace(Root))
     [Parameter] public string Type { get; set; }
     [Parameter] public bool Disabled { get; set; }
 
+    ArchiveService ArchiveService;
+
     bool ArchiveExists { get; set; } = false;
 
     protected override async Task OnInitializedAsync()
     {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
+
         if (ArchiveId != Guid.Empty)
             ArchiveExists = await ArchiveService.ExistsAsync(ArchiveId);
     }

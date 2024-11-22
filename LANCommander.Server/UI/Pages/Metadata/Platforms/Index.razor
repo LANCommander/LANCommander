@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Platforms"
+@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject PlatformService PlatformService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,6 +61,8 @@
 </Modal>
 
  @code {
+    PlatformService PlatformService;
+
     IEnumerable<Platform> Platforms { get; set; } = new List<Platform>();
 
     bool Loading = true;
@@ -72,6 +74,11 @@
 
     bool EditPlatformVisible = false;
     Platform PlatformContext = new Platform();
+
+    protected override void OnInitialized()
+    {
+        PlatformService = ScopedServices.GetService<PlatformService>()!;
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {

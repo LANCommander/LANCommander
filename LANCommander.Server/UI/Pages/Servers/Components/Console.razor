@@ -1,9 +1,7 @@
-﻿@using LANCommander.SDK.Enums
+﻿@inherits OwningComponentBase
+@using LANCommander.SDK.Enums
 @using Microsoft.AspNetCore.SignalR.Client
 @using XtermBlazor
-@inject ServerService ServerService
-@inject ServerConsoleService ServerConsoleService
-@inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Console> Logger
@@ -19,6 +17,10 @@
 @code {
     [Parameter] public Guid ServerId { get; set; }
     [Parameter] public Guid ServerConsoleId { get; set; }
+
+    ServerService ServerService;
+    ServerConsoleService ServerConsoleService;
+    ServerProcessService ServerProcessService;
 
     Xterm? Terminal;
     HubConnection? HubConnection;
@@ -42,6 +44,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ServerService = ScopedServices.GetService<ServerService>()!;
+        ServerConsoleService = ScopedServices.GetService<ServerConsoleService>()!;
+        ServerProcessService = ScopedServices.GetService<ServerProcessService>()!;
+
         if (ServerConsoleId != Guid.Empty)
         {
             ServerConsole = await ServerConsoleService.GetAsync(ServerConsoleId);

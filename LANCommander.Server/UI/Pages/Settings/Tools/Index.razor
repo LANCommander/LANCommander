@@ -1,10 +1,8 @@
 ﻿@page "/Settings/Tools"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using ZiggyCreatures.Caching.Fusion
 @inject IMessageService MessageService
-@inject ArchiveService ArchiveService
-@inject UpdateService UpdateService
-@inject PageService PageService
 @inject IFusionCache FusionCache
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -58,9 +56,20 @@
 
 
 @code {
+    ArchiveService ArchiveService;
+    UpdateService UpdateService;
+    PageService PageService;
+
     bool RecalculatingFileSizes = false;
     bool DownloadingClients = false;
     bool FixingPageRoutes = false;
+
+    protected override void OnInitialized()
+    {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
+        UpdateService = ScopedServices.GetService<UpdateService>()!;
+        PageService = ScopedServices.GetService<PageService>()!;
+    }
 
     async Task RecalculateFileSizes()
     {

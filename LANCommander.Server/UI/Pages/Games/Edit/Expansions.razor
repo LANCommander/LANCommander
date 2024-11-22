@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/Expansions"
+@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject GameService GameService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Expansions> Logger
@@ -32,7 +32,14 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    private async Task Delete(Game game)
+    GameService GameService;
+
+    protected override void OnInitialized()
+    {
+        GameService = ScopedServices.GetService<GameService>()!;
+    }
+
+    async Task Delete(Game game)
     {
         try
         {

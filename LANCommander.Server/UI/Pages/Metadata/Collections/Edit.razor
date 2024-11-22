@@ -1,8 +1,8 @@
 ﻿@page "/Metadata/Collections/{id:guid}"
 @page "/Metadata/Collections/Add"
+@inherits OwningComponentBase
 @using LANCommander.Server.Extensions
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject CollectionService CollectionService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -77,10 +77,14 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
+    CollectionService CollectionService;
+
     Collection Collection = new Collection();
 
     protected override async Task OnInitializedAsync()
     {
+        CollectionService = ScopedServices.GetService<CollectionService>()!;
+
         if (Id == Guid.Empty)
             Collection = new Collection();
         else

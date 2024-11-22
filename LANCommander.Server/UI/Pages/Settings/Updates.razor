@@ -2,7 +2,6 @@
 @using Markdig
 @using Octokit
 @using Semver
-@inject SettingService SettingService
 @inject IMessageService MessageService
 @inject UpdateService UpdateService
 @inject ILogger<Updates> Logger
@@ -69,7 +68,7 @@
 </div>
 
 @code {
-    Settings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
@@ -82,8 +81,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
-
         CurrentVersion = UpdateService.GetCurrentVersion();
         UpdateAvailable = await UpdateService.UpdateAvailableAsync();
         LatestVersion = await UpdateService.GetLatestVersionAsync();

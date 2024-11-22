@@ -1,11 +1,11 @@
-﻿@using System.Net;
+﻿@inherits OwningComponentBase
+@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
-@inject ArchiveService ArchiveService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -62,12 +62,15 @@
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
 
+    ArchiveService ArchiveService;
+
     ICollection<Archive> Archives { get; set; } = new List<Archive>();
 
     ArchiveUploader Uploader;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
     }
 

@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Tags"
+@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject TagService TagService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,6 +61,8 @@
 </Modal>
 
  @code {
+    TagService TagService;
+
     IEnumerable<Data.Models.Tag> Tags { get; set; } = new List<Data.Models.Tag>();
 
     bool Loading = true;
@@ -72,6 +74,11 @@
 
     bool EditTagVisible = false;
     Data.Models.Tag TagContext = new Data.Models.Tag();
+
+    protected override void OnInitialized()
+    {
+        TagService = ScopedServices.GetService<TagService>()!;
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {

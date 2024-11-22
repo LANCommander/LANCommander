@@ -1,8 +1,7 @@
 ﻿@page "/Settings/Archives"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using Microsoft.EntityFrameworkCore
-@inject SettingService SettingService
-@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<Archives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -62,13 +61,17 @@
 </div>
 
 @code {
-    Settings Settings;
+    StorageLocationService StorageLocationService;
+
+    Settings Settings = SettingService.GetSettings();
     ICollection<StorageLocation> StorageLocations;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     protected override async Task OnInitializedAsync()
     {
+        StorageLocationService = ScopedServices.GetService<StorageLocationService>()!;
+
         Settings = SettingService.GetSettings();
         StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
     }

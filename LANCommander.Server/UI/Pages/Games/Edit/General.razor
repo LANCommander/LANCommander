@@ -1,15 +1,8 @@
 ﻿@page "/Games/{id:guid}/General"
 @page "/Games/{id:guid}"
 @page "/Games/Add"
+@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject GameService GameService
-@inject CompanyService CompanyService
-@inject GenreService GenreService
-@inject PlatformService PlatformService
-@inject TagService TagService
-@inject EngineService EngineService
-@inject CollectionService CollectionService
-@inject RedistributableService RedistributableService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
@@ -145,6 +138,15 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
+    GameService GameService;
+    CompanyService CompanyService;
+    GenreService GenreService;
+    PlatformService PlatformService;
+    TagService TagService;
+    EngineService EngineService;
+    CollectionService CollectionService;
+    RedistributableService RedistributableService;
+
     bool Loaded = false;
     bool Success;
     string[] Errors = { };
@@ -163,6 +165,18 @@
     private GameMetadataLookup? GameMetadataLookup;
 
     private Settings Settings = SettingService.GetSettings();
+
+    protected override void OnInitialized()
+    {
+        GameService = ScopedServices.GetService<GameService>()!;
+        CompanyService = ScopedServices.GetService<CompanyService>()!;
+        GenreService = ScopedServices.GetService<GenreService>()!;
+        PlatformService = ScopedServices.GetService<PlatformService>()!;
+        TagService = ScopedServices.GetService<TagService>()!;
+        EngineService = ScopedServices.GetService<EngineService>()!;
+        CollectionService = ScopedServices.GetService<CollectionService>()!;
+        RedistributableService = ScopedServices.GetService<RedistributableService>()!;
+    }
 
     protected override async Task OnParametersSetAsync()
     {

@@ -1,8 +1,7 @@
 ﻿@page "/Issues/{id:guid}"
 @page "/Issues/Add"
+@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject IssueService IssueService
-@inject GameService GameService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -89,12 +88,18 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
+    GameService GameService;
+    IssueService IssueService;
+
     Issue Issue = new Issue();
 
     IEnumerable<Game> Games = new List<Game>();
 
     protected override async Task OnInitializedAsync()
     {
+        GameService = ScopedServices.GetService<GameService>()!;
+        IssueService = ScopedServices.GetService<IssueService>()!;
+
         if (Id == Guid.Empty)
             Issue = new Issue();
         else

@@ -1,5 +1,4 @@
-﻿@inject UserService UserService
-@inject MediaService MediaService
+﻿@inherits OwningComponentBase
 @inject IMessageService MessageService
 
 <InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png" />
@@ -26,6 +25,9 @@
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public string Width { get; set; } = "104px";
 
+    UserService UserService;
+    MediaService MediaService;
+
     Settings Settings = SettingService.GetSettings();
 
     string AvatarUrl;
@@ -37,6 +39,12 @@
         "image/png",
         "image/jpeg"
     };
+
+    protected override void OnInitialized()
+    {
+        UserService = ScopedServices.GetService<UserService>()!;
+        MediaService = ScopedServices.GetService<MediaService>()!;
+    }
 
     protected override async Task OnParametersSetAsync()
     {

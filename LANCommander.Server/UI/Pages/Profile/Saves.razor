@@ -1,9 +1,9 @@
 ﻿@page "/Profile/Saves"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using Microsoft.AspNetCore.Components.Authorization;
 @using Microsoft.EntityFrameworkCore;
 @layout ProfileLayout
-@inject UserService UserService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject GameSaveService GameSaveService
@@ -53,6 +53,8 @@
 </div>
 
  @code {
+    UserService UserService;
+
     User User = new User();
     ICollection<GameSave> GameSaves = new List<GameSave>();
     IEnumerable<Game> Games = new List<Game>();
@@ -62,6 +64,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        UserService = ScopedServices.GetService<UserService>()!;
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)

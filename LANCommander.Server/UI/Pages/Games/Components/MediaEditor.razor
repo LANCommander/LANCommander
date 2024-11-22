@@ -1,6 +1,6 @@
-﻿@using LANCommander.SDK.Enums
+﻿@inherits OwningComponentBase
+@using LANCommander.SDK.Enums
 @using System.Net.Mime
-@inject MediaService MediaService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -84,6 +84,8 @@
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public string GameTitle { get; set; }
 
+    MediaService MediaService;
+
     Settings Settings = SettingService.GetSettings();
 
     MediaType[] AllowedMediaTypes = new MediaType[]
@@ -112,6 +114,11 @@
         MediaTypeNames.Application.Pdf,
         MediaTypeNames.Image.Icon
     };
+
+    protected override void OnInitialized()
+    {
+        MediaService = ScopedServices.GetService<MediaService>()!;
+    }
 
     private async Task Update(Media media)
     {

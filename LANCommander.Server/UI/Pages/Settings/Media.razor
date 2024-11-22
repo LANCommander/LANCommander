@@ -1,8 +1,7 @@
 ﻿@page "/Settings/Media"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using Microsoft.EntityFrameworkCore
-@inject SettingService SettingService
-@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<Media> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -34,7 +33,9 @@
 </div>
 
 @code {
-    Settings Settings;
+    StorageLocationService StorageLocationService;
+
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
@@ -42,7 +43,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
+        StorageLocationService = ScopedServices.GetService<StorageLocationService>()!;
+
         StorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
     }
 

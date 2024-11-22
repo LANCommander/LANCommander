@@ -1,4 +1,4 @@
-﻿@inject GameService GameService
+﻿@inherits OwningComponentBase
 @inject NavigationManager NavigationManager
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
@@ -71,7 +71,14 @@
     [Parameter] public RenderFragment<Game>? TitleExtraTemplate { get; set; }
     [Parameter] public RenderFragment<Game>? ChildContent { get; set; }
 
+    GameService GameService;
+
     Game Game { get; set; } = new Game();
+
+    protected override void OnInitialized()
+    {
+        GameService = ScopedServices.GetService<GameService>()!;
+    }
 
     protected override async Task OnParametersSetAsync()
     {

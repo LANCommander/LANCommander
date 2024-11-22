@@ -1,12 +1,11 @@
-﻿@using System.Net;
+﻿@inherits OwningComponentBase
+@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
-@inject ArchiveService ArchiveService
-@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ArchiveUploader> Logger
@@ -67,6 +66,9 @@
     [Parameter] public Guid RedistributableId { get; set; }
     [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
 
+    ArchiveService ArchiveService;
+    StorageLocationService StorageLocationService;
+
     Archive Archive;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -83,6 +85,12 @@
     string Filename;
 
     string Status;
+
+    protected override void OnInitialized()
+    {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
+        StorageLocationService = ScopedServices.GetService<StorageLocationService>()!;
+    }
 
     private async Task Start()
     {

@@ -1,9 +1,7 @@
 ﻿@page "/Settings/Roles"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using Microsoft.EntityFrameworkCore
-@inject RoleManager<Role> RoleManager
-@inject UserManager<User> UserManager
-@inject UserService UserService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
@@ -78,7 +76,10 @@
 </Modal>
 
 @code {
-    ICollection<RoleViewModel> Roles { get; set; }
+    RoleService RoleService;
+    UserService UserService;
+
+    ICollection<RoleViewModel> Roles { get; set; } = new List<RoleViewModel>();
 
     Settings Settings = SettingService.GetSettings();
     bool Loading = true;
@@ -86,9 +87,10 @@
 
     RoleViewModel NewRole = new RoleViewModel();
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        Roles = new List<RoleViewModel>();
+        RoleService = ScopedServices.GetService<RoleService>()!;
+        UserService = ScopedServices.GetService<UserService>()!;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -101,16 +103,16 @@
     {
         Roles = new List<RoleViewModel>();
 
-        foreach (var role in await RoleManager.Roles.ToListAsync())
+        foreach (var role in await RoleService.GetAsync())
         {
-            var users = await UserManager.GetUsersInRoleAsync(role.Name);
+            var users = await RoleService.GetUsersAsync(role.Name);
 
             Roles.Add(new RoleViewModel
             {
                 Id = role.Id,
                 Name = role.Name,
                 Collections = role.Collections != null ? role.Collections.Count : 0,
-                Users = users.Count
+                Users = users.Count()
             });
         }
 
@@ -121,7 +123,7 @@
 
     private async Task DeleteRole(RoleViewModel roleViewModel)
     {
-        var role = await RoleManager.FindByNameAsync(roleViewModel.Name);
+        var role = await RoleService.FirstOrDefaultAsync(r => r.Name == roleViewModel.Name);
 
         if (role.Name == RoleService.AdministratorRoleName)
         {
@@ -129,7 +131,8 @@
         }
         else
         {
-            await RoleManager.DeleteAsync(role);
+            await RoleService.DeleteAsync(role);
+            
             await LoadData();
 
             MessageService.Success($"Deleted {role.Name}!");
@@ -145,21 +148,24 @@
 
     private async Task AddRole()
     {
-        if ((await RoleManager.FindByNameAsync(NewRole.Name)) != null)
+        if ((await RoleService.ExistsAsync(r => r.Name == NewRole.Name)))
         {
             MessageService.Error("A role with that name already exists!");
+
             AddRoleDialogVisible = false;
+
             return;
         }
 
         try
         {
-            await RoleManager.CreateAsync(new Role
+            await RoleService.AddAsync(new Role
             {
                 Name = NewRole.Name
             });
 
             await LoadData();
+
             MessageService.Success("Role added!");
         }
         catch (Exception ex)

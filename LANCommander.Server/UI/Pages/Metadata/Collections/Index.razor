@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Collections"
+@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject CollectionService CollectionService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -60,6 +60,8 @@
 </Modal>
 
  @code {
+    CollectionService CollectionService;
+
     IEnumerable<Collection> Collections { get; set; } = new List<Collection>();
 
     bool Loading = true;
@@ -71,6 +73,11 @@
 
     bool AddCollectionVisible = false;
     Collection CollectionContext = new Collection();
+
+    protected override void OnInitialized()
+    {
+        CollectionService = ScopedServices.GetService<CollectionService>()!;
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {

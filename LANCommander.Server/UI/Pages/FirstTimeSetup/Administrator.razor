@@ -1,7 +1,6 @@
 ﻿@page "/FirstTimeSetup/Administrator"
+@inherits OwningComponentBase
 @layout FirstTimeSetupLayout
-@inject RoleService RoleService
-@inject UserManager<User> UserManager
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Administrator> Logger
@@ -33,8 +32,10 @@
 </Form>
 
 @code {
-    [CascadingParameter]
-    FirstTimeSetupLayout Layout { get; set; }
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
+
+    RoleService RoleService;
+    UserService UserService;
 
     FirstTimeSetupModel Model = new FirstTimeSetupModel();
 
@@ -42,6 +43,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        UserService = ScopedServices.GetService<UserService>()!;
+        RoleService = ScopedServices.GetService<RoleService>()!;
+
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Administrator);
     }
 
@@ -73,14 +77,14 @@
                 user.ApprovedOn = DateTime.UtcNow;
                 user.UserName = Model.Username;
 
-                var result = await UserManager.CreateAsync(user, Model.Password);
+                var result = await UserService.AddAsync(user);
 
-                if (!result.Succeeded)
+                if (result == null)
                 {
-                    foreach (var error in result.Errors)
+                    /*foreach (var error in result.Errors)
                     {
                         MessageService.Error(error.Description);
-                    }
+                    }*/
 
                     Loading = false;
                     StateHasChanged();
@@ -89,7 +93,7 @@
                 }
                 else
                 {
-                    await UserManager.AddToRolesAsync(user, new string[] { RoleService.AdministratorRoleName });
+                    await UserService.AddToRolesAsync(user.UserName, new string[] { RoleService.AdministratorRoleName });
 
                     Logger?.LogInformation("Administrator created a new account with password.");
 

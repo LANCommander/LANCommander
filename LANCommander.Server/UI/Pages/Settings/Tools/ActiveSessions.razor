@@ -1,9 +1,9 @@
 ﻿@page "/Settings/Tools/ActiveSessions"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Games.Components;
 @using Microsoft.EntityFrameworkCore
 @inject IMessageService MessageService
-@inject PlaySessionService PlaySessionService
 @inject ILogger<ActiveSessions> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -36,11 +36,15 @@
 
 
  @code {
+    PlaySessionService PlaySessionService;
+
     ICollection<PlaySession> PlaySessions;
     bool Loading = true;
 
     protected override async Task OnInitializedAsync()
     {
+        PlaySessionService = ScopedServices.GetService<PlaySessionService>()!;
+
         await LoadData();
     }
 

@@ -1,8 +1,6 @@
 ﻿@page "/Settings/Users/{username}"
+@inherits OwningComponentBase
 @using Microsoft.AspNetCore.Components.Authorization;
-@inject MediaService MediaService
-@inject UserService UserService
-@inject UserCustomFieldService UserCustomFieldService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -80,6 +78,10 @@
 @code {
     [Parameter] public string Username { get; set; }
 
+    MediaService MediaService;
+    UserService UserService;
+    UserCustomFieldService UserCustomFieldService;
+
     User User = new User();
     Form<User> Form;
 
@@ -87,6 +89,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        MediaService = ScopedServices.GetService<MediaService>()!;
+        UserService = ScopedServices.GetService<UserService>()!;
+        UserCustomFieldService = ScopedServices.GetService<UserCustomFieldService>()!;
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)

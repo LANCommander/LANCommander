@@ -1,5 +1,4 @@
-﻿@inject ServerService ServerService
-@inject ServerProcessService ServerProcessService
+﻿@inherits OwningComponentBase
 @inject IMessageService MessageService
 @inject INotificationService NotificationService
 @implements IAsyncDisposable
@@ -51,6 +50,9 @@
 @code {
     [Parameter] public Guid ServerId { get; set; }
 
+    ServerService ServerService;
+    ServerProcessService ServerProcessService;
+
     Server Server;
     Timer Timer;
 
@@ -58,6 +60,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ServerService = ScopedServices.GetService<ServerService>()!;
+        ServerProcessService = ScopedServices.GetService<ServerProcessService>()!;
+
         Server = await ServerService.GetAsync(ServerId);
 
         ServerProcessService.OnStatusUpdate += OnStatusUpdate;

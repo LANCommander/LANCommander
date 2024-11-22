@@ -3,7 +3,6 @@
 @using LANCommander.Server.Data.Enums
 @using LANCommander.Server.Models;
 @using LANCommander.Server.Extensions;
-@inject SettingService SettingService
 @inject IGDBService IGDBService
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
@@ -50,14 +49,9 @@
 
 
 @code {
-    private Settings Settings;
+    Settings Settings = SettingService.GetSettings();
 
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
-
-    private void Save()
+    void Save()
     {
         try
         {

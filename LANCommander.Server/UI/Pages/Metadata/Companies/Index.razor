@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Companies"
+@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject CompanyService CompanyService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -62,6 +62,8 @@
 </Modal>
 
  @code {
+    CompanyService CompanyService;
+
     IEnumerable<Company> Companies { get; set; } = new List<Company>();
 
     bool Loading = true;
@@ -74,11 +76,16 @@
     bool EditCompanyVisible = false;
     Company CompanyContext = new Company();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override void OnInitialized()
+    {
+        CompanyService = ScopedServices.GetService<CompanyService>()!;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            LoadData();
+            await LoadData();
 
             Loading = false;
 

@@ -1,5 +1,5 @@
 ﻿@page "/Dashboard/SessionPlaytime"
-@inject GameService GameService
+@inherits OwningComponentBase
 
 <PageHeader Title="Session Playtime" />
 
@@ -15,12 +15,19 @@
 </Table>
 
 @code {
+    GameService GameService;
+
     Dictionary<string, TimeSpan> Playtimes = new Dictionary<string, TimeSpan>();
 
     ICollection<Game> Games { get; set; } = new List<Game>();
     IEnumerable<GameAverageSessionData> SessionData = new List<GameAverageSessionData>();
 
     bool Loading = true;
+
+    protected override void OnInitialized()
+    {
+        GameService = ScopedServices.GetService<GameService>()!;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

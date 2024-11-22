@@ -1,6 +1,5 @@
 ﻿@page "/Settings/Authentication"
 @using LANCommander.Server.Models;
-@inject SettingService SettingService
 @inject IMessageService MessageService
 @inject ILogger<Authentication> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -45,12 +44,7 @@
 </div>
 
 @code {
-    Settings Settings;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
+    Settings Settings = SettingService.GetSettings();
 
     private string FormatTokenLifetime(int value)
     {

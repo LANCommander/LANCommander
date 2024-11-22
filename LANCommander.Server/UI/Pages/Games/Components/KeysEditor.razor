@@ -1,5 +1,5 @@
-﻿@using LANCommander.SDK.Enums
-@inject KeyService KeyService
+﻿@inherits OwningComponentBase
+@using LANCommander.SDK.Enums
 @inject IMessageService MessageService
 
 @if (Keys != null)
@@ -68,6 +68,8 @@
     [Parameter] public ICollection<Key> Keys { get; set; }
     [Parameter] public EventCallback<ICollection<Key>> KeysChanged { get; set; }
 
+    KeyService KeyService;
+
     int AllocatedKeys;
 
     bool EditModalVisible = false;
@@ -83,6 +85,11 @@
             Value = String.Join('\n', Keys.Select(k => k.Value)),
             Theme = "vs-dark",
         };
+    }
+
+    protected override void OnInitialized()
+    {
+        KeyService = ScopedServices.GetService<KeyService>()!;
     }
 
     protected override async Task OnInitializedAsync()

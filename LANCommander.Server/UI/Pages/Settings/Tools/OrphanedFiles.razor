@@ -1,9 +1,7 @@
 ﻿@page "/Settings/Tools/OrphanedFiles"
+@inherits OwningComponentBase
 @using LANCommander.Helpers;
 @using LANCommander.Server.Models;
-@inject ArchiveService ArchiveService;
-@inject MediaService MediaService;
-@inject StorageLocationService StorageLocationService;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader>
@@ -39,13 +37,21 @@
 </div>
 
  @code {
+    ArchiveService ArchiveService;
+    MediaService MediaService;
+    StorageLocationService StorageLocationService;
+
     ICollection<OrphanedFile> Orphans = new List<OrphanedFile>();
     bool Loading = true;
 
-    private readonly Settings Settings = SettingService.GetSettings();
+    readonly Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
+        MediaService = ScopedServices.GetService<MediaService>()!;
+        StorageLocationService = ScopedServices.GetService<StorageLocationService>()!;
+
         await LoadData();
     }
 

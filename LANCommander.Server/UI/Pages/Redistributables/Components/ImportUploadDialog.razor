@@ -1,10 +1,10 @@
-﻿@using System.Net;
+﻿@inherits OwningComponentBase
+@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
 @inject NavigationManager Navigator
-@inject RedistributableService RedistributableService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
@@ -34,6 +34,8 @@
     [Parameter] public EventCallback<Guid> OnRedistributableImported { get; set; }
     [Parameter] public RenderFragment Hint { get; set; }
 
+    RedistributableService RedistributableService;
+
     IBrowserFile File;
     ChunkUploader ChunkUploader;
 
@@ -44,7 +46,12 @@
 
     string Status;
 
-    private async Task Start()
+    protected override void OnInitialized()
+    {
+        RedistributableService = ScopedServices.GetService<RedistributableService>()!;
+    }
+
+    async Task Start()
     {
         await ChunkUploader.Start();
     }

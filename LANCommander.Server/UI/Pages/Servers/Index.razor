@@ -1,9 +1,8 @@
 ﻿@page "/Servers"
+@inherits OwningComponentBase
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject ServerService ServerService
-@inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 
@@ -78,6 +77,9 @@
 </ImportUploadDialog>
 
 @code {
+    ServerService ServerService;
+    ServerProcessService ServerProcessService;
+
     IEnumerable<Server> Servers { get; set; } = new List<Server>();
 
     bool Loading = true;
@@ -89,11 +91,17 @@
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override void OnInitialized()
+    {
+        ServerService = ScopedServices.GetService<ServerService>()!;
+        ServerProcessService = ScopedServices.GetService<ServerProcessService>()!;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            LoadData();
+            await LoadData();
 
             Loading = false;
 

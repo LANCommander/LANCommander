@@ -1,5 +1,5 @@
 ﻿@using Microsoft.EntityFrameworkCore
-@inject PageService PageService
+@inherits OwningComponentBase
 
 <Menu Mode="@MenuMode.Inline">
     @foreach (var parent in ParentPages)
@@ -9,7 +9,14 @@
 </Menu>
 
 @code {
+    PageService PageService;
+
     ICollection<Page> ParentPages = new List<Page>();
+
+    protected override void OnInitialized()
+    {
+        PageService = ScopedServices.GetService<PageService>()!;
+    }
 
     protected override async Task OnInitializedAsync()
     {

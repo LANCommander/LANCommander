@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Engines"
+@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject EngineService EngineService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,6 +61,8 @@
 </Modal>
 
  @code {
+    EngineService EngineService;
+
     IEnumerable<Engine> Engines { get; set; } = new List<Engine>();
 
     bool Loading = true;
@@ -73,11 +75,16 @@
     bool EditEngineVisible = false;
     Engine EngineContext = new Engine();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override void OnInitialized()
+    {
+        EngineService = ScopedServices.GetService<EngineService>()!;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            LoadData();
+            await LoadData();
 
             Loading = false;
 

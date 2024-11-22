@@ -1,7 +1,7 @@
 ﻿@page "/Issues"
+@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject IssueService IssueService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 
@@ -48,6 +48,8 @@
 </Table>
 
  @code {
+    IssueService IssueService;
+
     IEnumerable<Issue> Issues { get; set; } = new List<Issue>();
 
     bool Loading = true;
@@ -56,6 +58,11 @@
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
+
+    protected override void OnInitialized()
+    {
+        IssueService = ScopedServices.GetService<IssueService>()!;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

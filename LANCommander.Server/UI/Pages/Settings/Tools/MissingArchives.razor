@@ -1,8 +1,8 @@
 ﻿@page "/Settings/Tools/MissingArchives"
+@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Games.Components;
 @inject IMessageService MessageService
-@inject ArchiveService ArchiveService
 @inject ILogger<MissingArchives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -39,6 +39,8 @@
 
 
  @code {
+    ArchiveService ArchiveService;
+
     ICollection<Archive> Archives;
     bool Loading = true;
 
@@ -46,6 +48,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
+
         await LoadData();
     }
 

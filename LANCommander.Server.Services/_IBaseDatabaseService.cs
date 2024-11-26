@@ -1,4 +1,5 @@
 ﻿using LANCommander.Server.Data;
+using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
@@ -8,11 +9,13 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Server.Services
 {
-    public interface IBaseDatabaseService<T> where T : class, IBaseModel
+    public interface IBaseDatabaseService<T> : IDisposable where T : class, IBaseModel
     {
-        Repository<T> Repository { get; set; }
-
-        IBaseDatabaseService<T> Include(Expression<Func<T, object>> includeExpression);
+        IBaseDatabaseService<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier);
+        IBaseDatabaseService<T> Include(params Expression<Func<T, object>>[] expressions);
+        IBaseDatabaseService<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending);
+        IBaseDatabaseService<T> DisableTracking();
+        Task<PaginatedResults<T>> PaginateAsync(Expression<Func<T, bool>> expression, int pageNumber, int pageSize);
 
         Task<ICollection<T>> GetAsync();
         Task<ICollection<U>> GetAsync<U>();

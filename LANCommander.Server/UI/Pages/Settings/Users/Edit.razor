@@ -1,6 +1,6 @@
 ﻿@page "/Settings/Users/{username}"
-@inherits OwningComponentBase
 @using Microsoft.AspNetCore.Components.Authorization;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -78,10 +78,6 @@
 @code {
     [Parameter] public string Username { get; set; }
 
-    MediaService MediaService;
-    UserService UserService;
-    UserCustomFieldService UserCustomFieldService;
-
     User User = new User();
     Form<User> Form;
 
@@ -89,15 +85,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        MediaService = ScopedServices.GetService<MediaService>()!;
-        UserService = ScopedServices.GetService<UserService>()!;
-        UserCustomFieldService = ScopedServices.GetService<UserCustomFieldService>()!;
-
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity.IsAuthenticated)
         {
-            User = await UserService.GetAsync(Username);
+            using (var userService = DatabaseServiceFactory.Create<UserService>())
+            {
+                User = await userService.GetAsync(Username);
+            }
 
             if (User.CustomFields == null)
                 User.CustomFields = new List<UserCustomField>();
@@ -124,7 +119,10 @@
         {
             if (Form.IsModified || FieldsModified)
             {
-                await UserService.UpdateAsync(User);
+                using (var userService = DatabaseServiceFactory.Create<UserService>())
+                {
+                    await userService.UpdateAsync(User);
+                }
 
                 MessageService.Success("User updated!");
             }

@@ -14,7 +14,7 @@ namespace LANCommander.Server.Services
         public ServerConsoleService(
             ILogger<ServerConsoleService> logger,
             IFusionCache cache,
-            Repository<ServerConsole> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
         public async Task<string[]> ReadLogAsync(Guid logId)
         {

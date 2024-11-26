@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Companies"
-@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -62,8 +62,6 @@
 </Modal>
 
  @code {
-    CompanyService CompanyService;
-
     IEnumerable<Company> Companies { get; set; } = new List<Company>();
 
     bool Loading = true;
@@ -75,11 +73,6 @@
 
     bool EditCompanyVisible = false;
     Company CompanyContext = new Company();
-
-    protected override void OnInitialized()
-    {
-        CompanyService = ScopedServices.GetService<CompanyService>()!;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -97,24 +90,30 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Companies = (await CompanyService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
+        {
+            Companies = await companyService.SortBy(c => c.Name).GetAsync(c => c.Name.ToLower().Contains(fuzzySearch));
+        }
     }
 
     async Task UpdateOrAdd()
     {
         try
         {
-            if (CompanyContext.Id == Guid.Empty)
+            using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
             {
-                await CompanyService.AddMissingAsync(x => x.Name == CompanyContext.Name, CompanyContext);
+                if (CompanyContext.Id == Guid.Empty)
+                {
+                    await companyService.AddMissingAsync(x => x.Name == CompanyContext.Name, CompanyContext);
 
-                MessageService.Success($"{CompanyContext.Name} was added!");
-            }
-            else
-            {
-                await CompanyService.UpdateAsync(CompanyContext);
+                    MessageService.Success($"{CompanyContext.Name} was added!");
+                }
+                else
+                {
+                    await companyService.UpdateAsync(CompanyContext);
 
-                MessageService.Success($"{CompanyContext.Name} was updated!");
+                    MessageService.Success($"{CompanyContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -155,9 +154,12 @@
 
         Loading = true;
 
-        await CompanyService.DeleteAsync(Company);
+        using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
+        {
+            await companyService.DeleteAsync(Company);
+        }
 
-        Companies = (await CompanyService.GetAsync(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }

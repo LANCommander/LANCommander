@@ -1,8 +1,8 @@
 ﻿@page "/Settings/Tools/ActiveSessions"
-@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Games.Components;
 @using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<ActiveSessions> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -36,15 +36,11 @@
 
 
  @code {
-    PlaySessionService PlaySessionService;
-
     ICollection<PlaySession> PlaySessions;
     bool Loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        PlaySessionService = ScopedServices.GetService<PlaySessionService>()!;
-
         await LoadData();
     }
 
@@ -52,7 +48,10 @@
     {
         Loading = true;
 
-        PlaySessions = await PlaySessionService.GetAsync(ps => !ps.End.HasValue);
+        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+        {
+            PlaySessions = await playSessionService.GetAsync(ps => !ps.End.HasValue);
+        }
 
         Loading = false;
     }
@@ -61,7 +60,10 @@
     {
         try
         {
-            await PlaySessionService.DeleteAsync(playSession);
+            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+            {
+                await playSessionService.DeleteAsync(playSession);
+            }
 
             await LoadData();
 

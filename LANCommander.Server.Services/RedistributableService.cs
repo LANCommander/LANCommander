@@ -20,8 +20,8 @@ namespace LANCommander.Server.Services
         public RedistributableService(
             ILogger<RedistributableService> logger,
             IFusionCache cache,
-            Repository<Redistributable> repository,
-            ArchiveService archiveService) : base(logger, cache, repository)
+            RepositoryFactory repositoryFactory,
+            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
         {
             ArchiveService = archiveService;
         }

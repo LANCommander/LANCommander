@@ -1,5 +1,5 @@
 ﻿@using Microsoft.EntityFrameworkCore
-@inherits OwningComponentBase
+@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <Menu Mode="@MenuMode.Inline">
     @foreach (var parent in ParentPages)
@@ -9,17 +9,13 @@
 </Menu>
 
 @code {
-    PageService PageService;
-
     ICollection<Page> ParentPages = new List<Page>();
-
-    protected override void OnInitialized()
-    {
-        PageService = ScopedServices.GetService<PageService>()!;
-    }
 
     protected override async Task OnInitializedAsync()
     {
-        ParentPages = (await PageService.GetAsync(p => p.ParentId == null || p.ParentId == Guid.Empty)).OrderBy(p => p.SortOrder).ToList();
+        using (var pageService = DatabaseServiceFactory.Create<PageService>())
+        {
+            ParentPages = await pageService.SortBy(p => p.SortOrder).GetAsync(p => p.ParentId == null || p.ParentId == Guid.Empty);
+        }
     }
 }

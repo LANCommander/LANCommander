@@ -1,4 +1,5 @@
 ﻿using LANCommander.Server.Data;
+using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
@@ -13,17 +14,31 @@ namespace LANCommander.Server.Services
     public abstract class BaseDatabaseService<T> : BaseService, IBaseDatabaseService<T> where T : class, IBaseModel
     {
         protected readonly IFusionCache Cache;
-        public Repository<T> Repository { get; set; }
+        protected Repository<T> Repository { get; set; }
 
-        public BaseDatabaseService(ILogger logger, IFusionCache cache, Repository<T> repository) : base(logger)
+        public BaseDatabaseService(ILogger logger, IFusionCache cache, RepositoryFactory repositoryFactory) : base(logger)
         {
             Cache = cache;
-            Repository = repository;
+            Repository = repositoryFactory.Create<T>();
         }
 
-        public IBaseDatabaseService<T> Include(Expression<Func<T, object>> includeExpression)
+        public IBaseDatabaseService<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier)
         {
-            Repository.Include(includeExpression);
+            Repository.Query(modifier);
+
+            return this;
+        }
+
+        public IBaseDatabaseService<T> Include(params Expression<Func<T, object>>[] expressions)
+        {
+            Repository.Include(expressions);
+
+            return this;
+        }
+
+        public IBaseDatabaseService<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending)
+        {
+            Repository.SortBy(expression, direction);
 
             return this;
         }
@@ -35,12 +50,17 @@ namespace LANCommander.Server.Services
             return this;
         }
 
+        public async Task<PaginatedResults<T>> PaginateAsync(Expression<Func<T, bool>> expression, int pageNumber, int pageSize)
+        {
+            return await Repository.PaginateAsync(expression, pageNumber, pageSize);
+        }
+
         public virtual async Task<ICollection<T>> GetAsync()
         {
             return await Cache.GetOrSetAsync($"{typeof(T).FullName}:Get", async _ =>
             {
                 return await GetAsync(x => true);
-            }, TimeSpan.FromSeconds(30));
+            }, TimeSpan.MaxValue);
         }
 
         public virtual async Task<ICollection<U>> GetAsync<U>()
@@ -183,6 +203,15 @@ namespace LANCommander.Server.Services
 
             Repository.Delete(entity);
             await Repository.SaveChangesAsync();
+        }
+
+        public void Dispose()
+        {
+            /*if (Repository != null)
+            {
+                Repository.Dispose();
+                Repository = null;
+            }*/
         }
     }
 }

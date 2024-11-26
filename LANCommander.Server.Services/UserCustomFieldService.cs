@@ -11,7 +11,7 @@ namespace LANCommander.Server.Services
         public UserCustomFieldService(
             ILogger<UserCustomFieldService> logger,
             IFusionCache cache,
-            Repository<UserCustomField> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
         public async Task<UserCustomField> GetAsync(Guid userId, string name)
         {

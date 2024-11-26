@@ -31,8 +31,8 @@ namespace LANCommander.Server.Services
         public MediaService(
             ILogger<MediaService> logger,
             IFusionCache cache,
-            Repository<Media> repository,
-            StorageLocationService storageLocationService) : base(logger, cache, repository)
+            RepositoryFactory repositoryFactory,
+            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
         {
             StorageLocationService = storageLocationService;
         }
@@ -44,7 +44,7 @@ namespace LANCommander.Server.Services
             return base.DeleteAsync(entity);
         }
 
-        public bool FileExists(Media entity)
+        public static bool FileExists(Media entity)
         {
             var path = GetMediaPath(entity);
 

@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Tags"
-@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,8 +61,6 @@
 </Modal>
 
  @code {
-    TagService TagService;
-
     IEnumerable<Data.Models.Tag> Tags { get; set; } = new List<Data.Models.Tag>();
 
     bool Loading = true;
@@ -74,11 +72,6 @@
 
     bool EditTagVisible = false;
     Data.Models.Tag TagContext = new Data.Models.Tag();
-
-    protected override void OnInitialized()
-    {
-        TagService = ScopedServices.GetService<TagService>()!;
-    }
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -96,24 +89,30 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Tags = (await TagService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var tagService = DatabaseServiceFactory.Create<TagService>())
+        {
+            Tags = await tagService.SortBy(t => t.Name).GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
+        }
     }
 
     async Task UpdateOrAdd()
     {
         try
         {
-            if (TagContext.Id == Guid.Empty)
+            using (var tagService = DatabaseServiceFactory.Create<TagService>())
             {
-                await TagService.AddMissingAsync(x => x.Name == TagContext.Name, TagContext);
+                if (TagContext.Id == Guid.Empty)
+                {
+                    await tagService.AddMissingAsync(x => x.Name == TagContext.Name, TagContext);
 
-                MessageService.Success($"{TagContext.Name} was added!");
-            }
-            else
-            {
-                await TagService.UpdateAsync(TagContext);
+                    MessageService.Success($"{TagContext.Name} was added!");
+                }
+                else
+                {
+                    await tagService.UpdateAsync(TagContext);
 
-                MessageService.Success($"{TagContext.Name} was updated!");
+                    MessageService.Success($"{TagContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -154,9 +153,12 @@
 
         Loading = true;
 
-        await TagService.DeleteAsync(Tag);
+        using (var tagService = DatabaseServiceFactory.Create<TagService>())
+        {
+            await tagService.DeleteAsync(Tag);
+        }
 
-        Tags = (await TagService.GetAsync(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }

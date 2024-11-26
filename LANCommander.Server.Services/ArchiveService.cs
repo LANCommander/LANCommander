@@ -21,8 +21,8 @@ namespace LANCommander.Server.Services
         public ArchiveService(
             ILogger<ArchiveService> logger,
             IFusionCache cache,
-            Repository<Archive> repository,
-            StorageLocationService storageLocationService) : base(logger, cache, repository)
+            RepositoryFactory repositoryFactory,
+            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
         {
             StorageLocationService = storageLocationService;
         }

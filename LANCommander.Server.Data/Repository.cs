@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using AutoMapper.QueryableExtensions;
 using AutoMapper;
+using LANCommander.Server.Data.Enums;
 
 namespace LANCommander.Server.Data
 {
@@ -18,22 +19,32 @@ namespace LANCommander.Server.Data
         private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly ILogger Logger;
 
-        private List<Expression<Func<T, object>>> IncludeExpressions { get; } = new();
+        private List<Func<IQueryable<T>, IQueryable<T>>> Modifiers = new List<Func<IQueryable<T>, IQueryable<T>>>();
+
         private User User;
-        private bool Tracking = true;
 
         public Repository(
-            DatabaseContext context,
+            IDbContextFactory<DatabaseContext> contextFactory,
             IMapper mapper,
             IHttpContextAccessor httpContextAccessor,
-            ILogger<Repository<T>> logger)
+            ILogger logger)
         {
-            Context = context;
+            Context = contextFactory.CreateDbContext();
             Mapper = mapper;
             HttpContextAccessor = httpContextAccessor;
             Logger = logger;
 
             Logger?.LogDebug("Opened up context {ContextId}", Context.ContextId);
+        }
+
+        public Repository(
+            IDbContextFactory<DatabaseContext> contextFactory,
+            IMapper mapper,
+            IHttpContextAccessor httpContextAccessor)
+        {
+            Context = contextFactory.CreateDbContext();
+            Mapper = mapper;
+            HttpContextAccessor = httpContextAccessor;
         }
 
         private DbSet<T> DbSet
@@ -46,38 +57,103 @@ namespace LANCommander.Server.Data
             get { return Context.Set<User>(); }
         }
 
+        public Repository<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier)
+        {
+            Modifiers.Add(modifier);
+
+            return this;
+        }
+
         private IQueryable<T> Query(Expression<Func<T, bool>> predicate)
         {
-            using (var op = Logger.BeginOperation("Querying database"))
+            var queryable = DbSet.AsQueryable().Where(predicate);
+
+            foreach (var modifier in Modifiers)
             {
-                var queryable = DbSet.AsQueryable().Where(predicate);
-
-                foreach (var includeExpression in IncludeExpressions)
-                {
-                    queryable = queryable.Include(includeExpression);
-                }
-
-                op.Complete();
-
-                if (!Tracking)
-                    queryable = queryable.AsNoTracking();
-
-                return queryable;
+                queryable = modifier.Invoke(queryable);
             }
+
+            return queryable;
+        }
+
+        public IQueryable<T> Query()
+        {
+            return DbSet.AsQueryable();
         }
 
         public Repository<T> AsNoTracking()
         {
-            Tracking = false;
-
-            return this;
+            return Query((queryable) =>
+            {
+                return queryable.AsNoTracking();
+            });
         }
 
-        public Repository<T> Include(Expression<Func<T, object>> includeExpression)
+        public Repository<T> Include(params Expression<Func<T, object>>[] expressions)
         {
-            IncludeExpressions.Add(includeExpression);
+            return Query((queryable) =>
+            {
+                foreach (var expression in expressions)
+                {
+                    queryable = queryable.Include(expression);
+                }
 
-            return this;
+                return queryable;
+            });
+        }
+
+        public Repository<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending)
+        {
+            switch (direction)
+            {
+                case SortDirection.Descending:
+                    return Query((queryable) =>
+                    {
+                        return queryable.OrderByDescending(expression);
+                    });
+                case SortDirection.Ascending:
+                default:
+                    return Query((queryable) =>
+                    {
+                        return queryable.OrderBy(expression);
+                    });
+            }
+        }
+
+        /// <summary>
+        /// With the current query, get a paginated list of results. Optimizes the query by only getting the amount of records specified by page size.
+        /// </summary>
+        /// <param name="expression">The query to filter results by</param>
+        /// <param name="pageNumber">The current page number (indexed by 1)</param>
+        /// <param name="pageSize">The number of results to get per page</param>
+        /// <returns></returns>
+        public async Task<PaginatedResults<T>> PaginateAsync(Expression<Func<T, bool>> expression, int pageNumber, int pageSize)
+        {
+            try
+            {
+                var results = new PaginatedResults<T>();
+
+                results.Count = await Query(expression).CountAsync();
+                results.Results = await Query(expression).Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+                return results;
+            }
+            finally
+            {
+                Modifiers.Clear();
+            }
+        }
+
+        public async Task<ICollection<T>> GetAsync()
+        {
+            try
+            {
+                return await Query().ToListAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task <ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
@@ -88,8 +164,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -101,8 +176,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -114,8 +188,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -127,8 +200,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -140,8 +212,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -153,27 +224,25 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
         public async Task<T> FindAsync(Guid id)
         {
             try {
-                using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
-                {
+                //using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
+                //{
                     var entity = await Query(x => x.Id == id).FirstAsync();
 
-                    op.Complete();
+                ///    op.Complete();
 
                     return entity;
-                }
+                //}
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -181,19 +250,18 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
-                {
+                //using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
+                //{
                     var entity = await Query(x => x.Id == id).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
 
-                    op.Complete();
+                //    op.Complete();
 
                     return entity;
-                }
+                //}
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -201,19 +269,18 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
-                {
+                //using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
+                //{
                     var entity = await Query(predicate).FirstOrDefaultAsync();
 
-                    op.Complete();
+                //    op.Complete();
 
                     return entity;
-                }
+                //}
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -221,19 +288,18 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
-                {
+                //using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
+                //{
                     var entity = await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
 
-                    op.Complete();
+                //    op.Complete();
 
                     return entity;
-                }
+                //}
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -245,8 +311,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -258,8 +323,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
-                IncludeExpressions.Clear();
+                Reset();
             }
         }
 
@@ -269,8 +333,8 @@ namespace LANCommander.Server.Data
             {
                 var currentUser = await GetCurrentUserId();
 
-                using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
-                {
+                //using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
+                //{
                     entity.CreatedById = currentUser;
                     entity.UpdatedById = currentUser;
                     entity.CreatedOn = DateTime.UtcNow;
@@ -278,14 +342,14 @@ namespace LANCommander.Server.Data
 
                     await Context.AddAsync(entity);
 
-                    op.Complete();
+                    //op.Complete();
 
                     return entity;
-                }
+                //}
             }
             finally
             {
-                Tracking = true;
+                Reset();
             }
         }
 
@@ -296,8 +360,8 @@ namespace LANCommander.Server.Data
                 var currentUserId = await GetCurrentUserId();
                 var existing = await FindAsync(entity.Id);
 
-                using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
-                {
+                //using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
+                //{
                     Context.Entry(existing).CurrentValues.SetValues(entity);
 
                     entity.UpdatedById = currentUserId;
@@ -305,14 +369,14 @@ namespace LANCommander.Server.Data
 
                     Context.Update(entity);
 
-                    op.Complete();
+                //    op.Complete();
 
                     return entity;
-                }
+                //}
             }
             finally
             {
-                Tracking = true;
+                Reset();
             }
         }
 
@@ -320,16 +384,16 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
-                {
+                //using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
+                //{
                     Context.Remove(entity);
 
-                    op.Complete();
-                }
+                //    op.Complete();
+                //}
             }
             finally
             {
-                Tracking = true;
+                Reset();
             }
         }
 
@@ -337,16 +401,16 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                using (var op = Logger.BeginOperation("Saving changes!"))
-                {
+                //using (var op = Logger.BeginOperation("Saving changes!"))
+                //{
                     await Context.SaveChangesAsync();
 
-                    op.Complete();
-                }
+                //    op.Complete();
+                //}
             }
             finally
             {
-                Tracking = true;
+                Reset();
             }
         }
 
@@ -358,7 +422,7 @@ namespace LANCommander.Server.Data
             }
             finally
             {
-                Tracking = true;
+                Reset();
             }
         }
 
@@ -378,15 +442,18 @@ namespace LANCommander.Server.Data
                 return null;
         }
 
+        private void Reset()
+        {
+            Modifiers.Clear();
+        }
+
         public void Dispose()
         {
             try
             {
-                Logger?.LogDebug("Disposed context {ContextId}", Context.ContextId);
+                Context.Dispose();
             }
-            catch {
-                Logger?.LogDebug("Could not dispose context {ContextId}", Context.ContextId);
-            }
+            catch { }
         }
     }
 }

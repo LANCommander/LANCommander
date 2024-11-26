@@ -1,9 +1,9 @@
 ﻿@page "/Pages/{*route}"
-@inherits OwningComponentBase
 @using LANCommander.Server.UI.Pages.Pages.Components
 @using Markdig
 @using Microsoft.EntityFrameworkCore
 @using ZiggyCreatures.Caching.Fusion
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IFusionCache Cache
 @inject NavigationManager NavigationManager
 
@@ -31,33 +31,30 @@
 @code {
     [Parameter] public string Route { get; set; }
 
-    PageService PageService;
-
     Page Page;
-
-    protected override void OnInitialized()
-    {
-        PageService = ScopedServices.GetService<PageService>()!;
-    }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Route == null) {
-            var firstParent = await PageService.FirstOrDefaultAsync(p => p.Parent == null, p => p.SortOrder);
-
-            if (firstParent == null)
-                NavigationManager.NavigateTo("/");
-            else
-                NavigationManager.NavigateTo($"/{firstParent.Route}");
-        }
-        else
+        using (var pageService = DatabaseServiceFactory.Create<PageService>())
         {
-            var route = Route.TrimEnd('/').ToLower();
-
-            Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+            if (Route == null)
             {
-                return await PageService.FirstOrDefaultAsync(p => p.Route == $"Pages/{route}");
-            });
+                var firstParent = await pageService.FirstOrDefaultAsync(p => p.Parent == null, p => p.SortOrder);
+
+                if (firstParent == null)
+                    NavigationManager.NavigateTo("/");
+                else
+                    NavigationManager.NavigateTo($"/{firstParent.Route}");
+            }
+            else
+            {
+                var route = Route.TrimEnd('/').ToLower();
+
+                Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+                {
+                    return await pageService.FirstOrDefaultAsync(p => p.Route == $"Pages/{route}");
+                });
+            }
         }
     }
 }

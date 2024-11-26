@@ -10,6 +10,6 @@ namespace LANCommander.Server.Services
         public CollectionService(
             ILogger<CollectionService> logger,
             IFusionCache cache,
-            Repository<Collection> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
     }
 }

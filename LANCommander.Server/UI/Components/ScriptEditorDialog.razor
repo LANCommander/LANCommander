@@ -3,7 +3,7 @@
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Components;
 @inherits FeedbackComponent<ScriptEditorOptions, Script>
-@inject ScriptService ScriptService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditorDialog> Logger
@@ -21,23 +21,26 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Options.ScriptId != Guid.Empty)
-            Script = await ScriptService.GetAsync(Options.ScriptId);
-        else if (Options.GameId != Guid.Empty)
-            Script = new Script()
-            {
-                GameId = Options.GameId
-            };
-        else if (Options.RedistributableId != Guid.Empty)
-            Script = new Script()
-            {
-                RedistributableId = Options.RedistributableId
-            };
-        else if (Options.ServerId != Guid.Empty)
-            Script = new Script()
-            {
-                ServerId = Options.ServerId
-            };
+        using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
+        {
+            if (Options.ScriptId != Guid.Empty)
+                Script = await scriptService.GetAsync(Options.ScriptId);
+            else if (Options.GameId != Guid.Empty)
+                Script = new Script()
+                {
+                    GameId = Options.GameId
+                };
+            else if (Options.RedistributableId != Guid.Empty)
+                Script = new Script()
+                {
+                    RedistributableId = Options.RedistributableId
+                };
+            else if (Options.ServerId != Guid.Empty)
+                Script = new Script()
+                {
+                    ServerId = Options.ServerId
+                };
+        }
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
@@ -54,10 +57,13 @@
     {
         try
         {
-            if (Script.Id == Guid.Empty)
-                Script = await ScriptService.AddAsync(Script);
-            else
-                Script = await ScriptService.UpdateAsync(Script);
+            using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
+            {
+                if (Script.Id == Guid.Empty)
+                    Script = await scriptService.AddAsync(Script);
+                else
+                    Script = await scriptService.UpdateAsync(Script);
+            }
 
             MessageService.Success("Script saved!");
 

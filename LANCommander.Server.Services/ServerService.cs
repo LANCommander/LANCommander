@@ -18,9 +18,9 @@ namespace LANCommander.Server.Services
         public ServerService(
             ILogger<ServerService> logger,
             IFusionCache cache,
-            Repository<Data.Models.Server> repository,
+            RepositoryFactory repositoryFactory,
             GameService gameService,
-            ArchiveService archiveService) : base(logger, cache, repository)
+            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
         {
             GameService = gameService;
             ArchiveService = archiveService;

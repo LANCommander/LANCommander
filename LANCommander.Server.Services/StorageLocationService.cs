@@ -10,6 +10,6 @@ namespace LANCommander.Server.Services
         public StorageLocationService(
             ILogger<StorageLocationService> logger,
             IFusionCache cache,
-            Repository<StorageLocation> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
     }
 }

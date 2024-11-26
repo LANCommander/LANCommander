@@ -1,4 +1,5 @@
 ﻿@inherits OwningComponentBase
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 
 <InputFile id="@("AvatarUpload")" OnChange="(e) => UploadAvatar(e)" hidden accept=".jpg,jpeg,.png" />
@@ -25,9 +26,6 @@
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public string Width { get; set; } = "104px";
 
-    UserService UserService;
-    MediaService MediaService;
-
     Settings Settings = SettingService.GetSettings();
 
     string AvatarUrl;
@@ -40,15 +38,12 @@
         "image/jpeg"
     };
 
-    protected override void OnInitialized()
-    {
-        UserService = ScopedServices.GetService<UserService>()!;
-        MediaService = ScopedServices.GetService<MediaService>()!;
-    }
-
     protected override async Task OnParametersSetAsync()
     {
-        User = await UserService.GetAsync(UserId);
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            User = await userService.Include(u => u.Media).GetAsync(UserId);
+        }
 
         LoadAvatar();
     }
@@ -89,17 +84,20 @@
         media.SourceUrl = "";
         media.MimeType = e.File.ContentType;
 
-        if (media.Id == Guid.Empty)
+        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
         {
-            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
+            if (media.Id == Guid.Empty)
+            {
+                media = await mediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
 
-            await MediaService.AddAsync(media);
-        }
-        else
-        {
-            MediaService.DeleteLocalMediaFile(media);
-            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
-            await MediaService.UpdateAsync(media);
+                await mediaService.AddAsync(media);
+            }
+            else
+            {
+                mediaService.DeleteLocalMediaFile(media);
+                media = await mediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
+                await mediaService.UpdateAsync(media);
+            }
         }
 
         LoadAvatar();

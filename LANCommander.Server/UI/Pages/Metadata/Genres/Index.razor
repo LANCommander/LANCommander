@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Genres"
-@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,8 +61,6 @@
 </Modal>
 
  @code {
-    GenreService GenreService;
-
     IEnumerable<Genre> Genres { get; set; } = new List<Genre>();
 
     bool Loading = true;
@@ -74,11 +72,6 @@
 
     bool EditGenreVisible = false;
     Genre GenreContext = new Genre();
-
-    protected override void OnInitialized()
-    {
-        GenreService = ScopedServices.GetService<GenreService>()!;
-    }
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -96,24 +89,30 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Genres = (await GenreService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
+        {
+            Genres = await genreService.GetAsync(g => g.Name.ToLower().Contains(fuzzySearch));
+        }
     }
 
     private async Task UpdateOrAdd()
     {
         try
         {
-            if (GenreContext.Id == Guid.Empty)
+            using (var genreService = DatabaseServiceFactory.Create<GenreService>())
             {
-                await GenreService.AddMissingAsync(x => x.Name == GenreContext.Name, GenreContext);
+                if (GenreContext.Id == Guid.Empty)
+                {
+                    await genreService.AddMissingAsync(x => x.Name == GenreContext.Name, GenreContext);
 
-                MessageService.Success($"{GenreContext.Name} was added!");
-            }
-            else
-            {
-                await GenreService.UpdateAsync(GenreContext);
+                    MessageService.Success($"{GenreContext.Name} was added!");
+                }
+                else
+                {
+                    await genreService.UpdateAsync(GenreContext);
 
-                MessageService.Success($"{GenreContext.Name} was updated!");
+                    MessageService.Success($"{GenreContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -154,9 +153,12 @@
 
         Loading = true;
 
-        await GenreService.DeleteAsync(Genre);
+        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
+        {
+            await genreService.DeleteAsync(Genre);
+        }
 
-        Genres = (await GenreService.GetAsync(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }

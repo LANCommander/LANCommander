@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/PlaySessions"
-@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<PlaySessions> Logger
 
@@ -30,18 +30,14 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    PlaySessionService PlaySessionService;
-
-    protected override void OnInitialized()
-    {
-        PlaySessionService = ScopedServices.GetService<PlaySessionService>()!;
-    }
-
     private async Task Delete(PlaySession session)
     {
         try
         {
-            await PlaySessionService.DeleteAsync(session);
+            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+            {
+                await playSessionService.DeleteAsync(session);
+            }
         }
         catch (Exception ex)
         {

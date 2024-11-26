@@ -164,28 +164,8 @@ namespace LANCommander.Server
             }));
 
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
-            /*builder.Services.AddDbContext<DatabaseContext>(b =>
-            {
-                b.UseLazyLoadingProxies();
 
-                settings = SettingService.GetSettings();
-
-                switch (DatabaseContext.Provider)
-                {
-                    case DatabaseProvider.SQLite:
-                        b.UseSqlite(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
-                        break;
-
-                    case DatabaseProvider.MySQL:
-                        b.UseMySql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
-                        break;
-
-                    case DatabaseProvider.PostgreSQL:
-                        b.UseNpgsql(String.IsNullOrWhiteSpace(connectionStringParameter) ? settings.DatabaseConnectionString : connectionStringParameter, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
-                        break;
-                }
-            }, ServiceLifetime.Transient);*/
-
+            builder.Services.AddDbContextFactory<DatabaseContext>();
             builder.Services.AddDbContext<DatabaseContext>();
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -231,15 +211,6 @@ namespace LANCommander.Server
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Authentication.TokenSecret))
                 };
             });
-
-            /*if (settings.Authentication.Discord.Enabled)
-            {
-                authBuilder.AddDiscord(options =>
-                {
-                    options.ClientId = settings.Authentication.Discord.ClientId;
-                    options.ClientSecret = settings.Authentication.Discord.ClientSecret;
-                });
-            }*/
 
             Log.Debug("Initializing Controllers");
             builder.Services.AddControllers().AddJsonOptions(x =>
@@ -296,7 +267,9 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
+            builder.Services.AddSingleton<RepositoryFactory>();
             builder.Services.AddScoped(typeof(Repository<>));
+            builder.Services.AddScoped<DatabaseServiceFactory>();
             builder.Services.AddScoped<IdentityContextFactory>();
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();

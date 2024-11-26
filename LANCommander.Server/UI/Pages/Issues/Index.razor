@@ -1,7 +1,7 @@
 ﻿@page "/Issues"
-@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 
@@ -59,11 +59,6 @@
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
 
-    protected override void OnInitialized()
-    {
-        IssueService = ScopedServices.GetService<IssueService>()!;
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -80,7 +75,15 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Issues = (await IssueService.GetAsync(r => r.Game.Title.ToLower().Contains(fuzzySearch))).OrderByDescending(r => r.CreatedOn);
+        using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+        {
+            Issues = await issueService
+                .Include(i => i.CreatedBy)
+                .Include(i => i.UpdatedBy)
+                .Include(i => i.Game)
+                .SortBy(i => i.CreatedOn, Data.Enums.SortDirection.Descending)
+                .GetAsync(i => i.Game.Title.ToLower().Contains(fuzzySearch));
+        }
     }
 
     void Add()
@@ -88,15 +91,18 @@
         NavigationManager.NavigateTo("/Issues/Add");
     }
 
-    async Task Delete(Issue redistributable)
+    async Task Delete(Issue issue)
     {
         Issues = new List<Issue>();
 
         Loading = true;
 
-        await IssueService.DeleteAsync(redistributable);
+        using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+        {
+            await IssueService.DeleteAsync(issue);
+        }
 
-        Issues = (await IssueService.GetAsync(x => true)).OrderByDescending(r => r.CreatedOn);
+        await LoadData();
 
         Loading = false;
     }

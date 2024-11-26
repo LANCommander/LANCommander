@@ -17,9 +17,9 @@ namespace LANCommander.Server.Services
         public PlaySessionService(
             ILogger<PlaySessionService> logger,
             IFusionCache cache,
-            Repository<PlaySession> repository,
+            RepositoryFactory repositoryFactory,
             ServerService serverService,
-            ServerProcessService serverProcessService) : base(logger, cache, repository)
+            ServerProcessService serverProcessService) : base(logger, cache, repositoryFactory)
         {
             ServerService = serverService;
             ServerProcessService = serverProcessService;

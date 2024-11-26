@@ -1,7 +1,8 @@
-﻿@inherits OwningComponentBase
-@using LANCommander.SDK.Enums
+﻿@using LANCommander.SDK.Enums
 @using Microsoft.AspNetCore.SignalR.Client
 @using XtermBlazor
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Console> Logger
@@ -17,10 +18,6 @@
 @code {
     [Parameter] public Guid ServerId { get; set; }
     [Parameter] public Guid ServerConsoleId { get; set; }
-
-    ServerService ServerService;
-    ServerConsoleService ServerConsoleService;
-    ServerProcessService ServerProcessService;
 
     Xterm? Terminal;
     HubConnection? HubConnection;
@@ -44,13 +41,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ServerService = ScopedServices.GetService<ServerService>()!;
-        ServerConsoleService = ScopedServices.GetService<ServerConsoleService>()!;
-        ServerProcessService = ScopedServices.GetService<ServerProcessService>()!;
-
         if (ServerConsoleId != Guid.Empty)
         {
-            ServerConsole = await ServerConsoleService.GetAsync(ServerConsoleId);
+            using (var serverConsoleService = DatabaseServiceFactory.Create<ServerConsoleService>())
+            {
+                ServerConsole = await serverConsoleService.GetAsync(ServerConsoleId);
+            }
 
             await Connect(ServerConsole);
         }
@@ -71,11 +67,14 @@
 
             if (ServerConsoleId != Guid.Empty)
             {
-                var log = await ServerConsoleService.ReadLogAsync(ServerConsoleId);
-
-                foreach (var line in log)
+                using (var serverConsoleService = DatabaseServiceFactory.Create<ServerConsoleService>())
                 {
-                    await Terminal.WriteLine(line);
+                    var log = await serverConsoleService.ReadLogAsync(ServerConsoleId);
+
+                    foreach (var line in log)
+                    {
+                        await Terminal.WriteLine(line);
+                    }
                 }
             }
         }

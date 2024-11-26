@@ -38,7 +38,7 @@ namespace LANCommander.Server.Data
                     break;
             }
 
-            optionsBuilder.UseLazyLoadingProxies();
+            // optionsBuilder.UseLazyLoadingProxies();
 
             base.OnConfiguring(optionsBuilder);
         }
@@ -215,6 +215,16 @@ namespace LANCommander.Server.Data
                 .WithMany(l => l.Media)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Media>()
+                .Navigation(m => m.StorageLocation)
+                .AutoInclude();
+            #endregion
+
+            #region Archive Relationships
+            builder.Entity<Archive>()
+                .Navigation(a => a.StorageLocation)
+                .AutoInclude();
             #endregion
 
             #region User Relationships

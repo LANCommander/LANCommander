@@ -1,7 +1,7 @@
-﻿@inherits OwningComponentBase
-@using LANCommander.SDK.Enums
+﻿@using LANCommander.SDK.Enums
 @using System.IO.Compression
 @using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
 @inject IMessageService MessageService
 
@@ -50,14 +50,7 @@
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
 
-    ScriptService ScriptService;
-
     ICollection<Script> Scripts { get; set; } = new List<Script>();
-
-    protected override void OnInitialized()
-    {
-        ScriptService = ScopedServices.GetService<ScriptService>()!;
-    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -66,12 +59,15 @@
 
     async Task LoadData()
     {
-        if (GameId != Guid.Empty)
-            Scripts = await ScriptService.GetAsync(s => s.GameId == GameId);
-        else if (RedistributableId != Guid.Empty)
-            Scripts = await ScriptService.GetAsync(s => s.RedistributableId == RedistributableId);
-        else if (ServerId != Guid.Empty)
-            Scripts = await ScriptService.GetAsync(s => s.ServerId == ServerId);
+        using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
+        {
+            if (GameId != Guid.Empty)
+                Scripts = await scriptService.GetAsync(s => s.GameId == GameId);
+            else if (RedistributableId != Guid.Empty)
+                Scripts = await scriptService.GetAsync(s => s.RedistributableId == RedistributableId);
+            else if (ServerId != Guid.Empty)
+                Scripts = await scriptService.GetAsync(s => s.ServerId == ServerId);
+        }
 
         await InvokeAsync(StateHasChanged);
     }
@@ -107,8 +103,11 @@
 
     async void Delete(Script script = null)
     {
-        if (script != null)
-            await ScriptService.DeleteAsync(script);
+        using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
+        {
+            if (script != null)
+                await scriptService.DeleteAsync(script);
+        }
 
         await MessageService.Success("Script deleted!");
     }

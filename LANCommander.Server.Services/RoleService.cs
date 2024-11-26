@@ -17,8 +17,8 @@ namespace LANCommander.Server.Services
         public RoleService(
             ILogger<RoleService> logger,
             IFusionCache cache,
-            Repository<Role> repository,
-            IdentityContextFactory identityContextFactory) : base(logger, cache, repository)
+            RepositoryFactory repositoryFactory,
+            IdentityContextFactory identityContextFactory) : base(logger, cache, repositoryFactory)
         {
             IdentityContextFactory = identityContextFactory;
         }

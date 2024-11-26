@@ -1,5 +1,5 @@
 ﻿@page "/Dashboard/SessionPlaytime"
-@inherits OwningComponentBase
+@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <PageHeader Title="Session Playtime" />
 
@@ -15,19 +15,12 @@
 </Table>
 
 @code {
-    GameService GameService;
-
     Dictionary<string, TimeSpan> Playtimes = new Dictionary<string, TimeSpan>();
 
     ICollection<Game> Games { get; set; } = new List<Game>();
     IEnumerable<GameAverageSessionData> SessionData = new List<GameAverageSessionData>();
 
     bool Loading = true;
-
-    protected override void OnInitialized()
-    {
-        GameService = ScopedServices.GetService<GameService>()!;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -39,7 +32,13 @@
     {
         Loading = true;
 
-        Games = await GameService.GetAsync();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService
+                .Include(g => g.PlaySessions)
+                .Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon))
+                .GetAsync();
+        }
 
         SessionData = Games.Select(g =>
         {

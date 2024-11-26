@@ -1,7 +1,8 @@
 ﻿@page "/Settings/Tools"
-@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using ZiggyCreatures.Caching.Fusion
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject UpdateService UpdateService
 @inject IMessageService MessageService
 @inject IFusionCache FusionCache
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -56,20 +57,9 @@
 
 
 @code {
-    ArchiveService ArchiveService;
-    UpdateService UpdateService;
-    PageService PageService;
-
     bool RecalculatingFileSizes = false;
     bool DownloadingClients = false;
     bool FixingPageRoutes = false;
-
-    protected override void OnInitialized()
-    {
-        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
-        UpdateService = ScopedServices.GetService<UpdateService>()!;
-        PageService = ScopedServices.GetService<PageService>()!;
-    }
 
     async Task RecalculateFileSizes()
     {
@@ -77,18 +67,21 @@
 
         await InvokeAsync(StateHasChanged);
 
-        var archives = await ArchiveService.GetAsync();
-
-        foreach (var archive in archives)
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
-            var path = ArchiveService.GetArchiveFileLocation(archive);
+            var archives = await archiveService.GetAsync();
 
-            if (File.Exists(path))
+            foreach (var archive in archives)
             {
-                archive.CompressedSize = ArchiveService.GetCompressedSize(archive);
-                archive.UncompressedSize = ArchiveService.GetUncompressedSize(archive);
+                var path = archiveService.GetArchiveFileLocation(archive);
 
-                await ArchiveService.UpdateAsync(archive);
+                if (File.Exists(path))
+                {
+                    archive.CompressedSize = archiveService.GetCompressedSize(archive);
+                    archive.UncompressedSize = archiveService.GetUncompressedSize(archive);
+
+                    await archiveService.UpdateAsync(archive);
+                }
             }
         }
 
@@ -135,7 +128,10 @@
 
         try
         {
-            await PageService.FixRoutesAsync();
+            using (var pageService = DatabaseServiceFactory.Create<PageService>())
+            {
+                await pageService.FixRoutesAsync();
+            }
 
             MessageService.Success("Routes fixed!");
         }

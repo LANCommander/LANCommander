@@ -1,8 +1,8 @@
 ﻿@page "/Profile"
 @page "/Profile/General"
-@inherits OwningComponentBase
 @using Microsoft.AspNetCore.Components.Authorization;
 @layout ProfileLayout
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -37,21 +37,18 @@
 </div>
 
 @code {
-    UserService UserService;
-    MediaService MediaService;
-
     User User = new User();
     Form<User> Form;
 
     protected override async Task OnInitializedAsync()
     {
-        UserService = ScopedServices.GetService<UserService>()!;
-        MediaService = ScopedServices.GetService<MediaService>()!;
-        
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (authState.User.Identity.IsAuthenticated)
-            User = await UserService.GetAsync(authState.User.Identity.Name);
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            if (authState.User.Identity.IsAuthenticated)
+                User = await userService.GetAsync(authState.User.Identity.Name);
+        }
     }
 
     private async Task Save()
@@ -60,7 +57,10 @@
         {
             if (Form.IsModified)
             {
-                await UserService.UpdateAsync(User);
+                using (var userService = DatabaseServiceFactory.Create<UserService>())
+                {
+                    await userService.UpdateAsync(User);
+                }
 
                 MessageService.Success("Profile updated!");
 

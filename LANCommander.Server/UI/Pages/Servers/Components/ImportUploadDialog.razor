@@ -1,9 +1,9 @@
-﻿@inherits OwningComponentBase
-@using System.Net;
+﻿@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -34,8 +34,6 @@
     [Parameter] public EventCallback<Guid> OnServerImported { get; set; }
     [Parameter] public RenderFragment Hint { get; set; }
 
-    ServerService ServerService;
-
     IBrowserFile File;
     ChunkUploader ChunkUploader;
 
@@ -46,12 +44,7 @@
 
     string Status;
 
-    protected override void OnInitialized()
-    {
-        ServerService = ScopedServices.GetService<ServerService>()!;
-    }
-
-     async Task Start()
+    async Task Start()
     {
         await ChunkUploader.Start();
     }
@@ -80,16 +73,19 @@
         {
             try
             {
-                var server = await ServerService.ImportAsync(objectKey);
+                using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+                {
+                    var server = await serverService.ImportAsync(objectKey);
 
-                Visible = false;
+                    Visible = false;
 
-                await InvokeAsync(StateHasChanged);
+                    await InvokeAsync(StateHasChanged);
 
-                if (OnServerImported.HasDelegate)
-                    await OnServerImported.InvokeAsync(server.Id);
+                    if (OnServerImported.HasDelegate)
+                        await OnServerImported.InvokeAsync(server.Id);
 
-                MessageService.Success($"{server.Name} successfully imported!");
+                    MessageService.Success($"{server.Name} successfully imported!");
+                }
             }
             catch (Exception ex)
             {

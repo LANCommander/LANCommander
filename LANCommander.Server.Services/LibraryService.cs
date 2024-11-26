@@ -19,9 +19,9 @@ namespace LANCommander.Server.Services
         public LibraryService(
             ILogger<LibraryService> logger,
             IFusionCache cache,
-            Repository<Library> repository,
+            RepositoryFactory repositoryFactory,
             UserService userService,
-            GameService gameService) : base(logger, cache, repository)
+            GameService gameService) : base(logger, cache, repositoryFactory)
         {
             UserService = userService;
             GameService = gameService;

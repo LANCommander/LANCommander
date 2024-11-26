@@ -11,7 +11,7 @@ namespace LANCommander.Server.Services
         public KeyService(
             ILogger<KeyService> logger,
             IFusionCache cache,
-            Repository<Key> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
         public async Task<Key> AllocateAsync(Key key, User user)
         {

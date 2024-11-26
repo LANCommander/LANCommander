@@ -15,7 +15,7 @@ namespace LANCommander.Server.Services
         public PageService(
             ILogger<PageService> logger,
             IFusionCache cache,
-            Repository<Page> repository) : base(logger, cache,repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
         public override async Task<Page> AddAsync(Page entity)
         {

@@ -1,7 +1,7 @@
 ﻿@page "/Settings/Archives"
-@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Archives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -61,8 +61,6 @@
 </div>
 
 @code {
-    StorageLocationService StorageLocationService;
-
     Settings Settings = SettingService.GetSettings();
     ICollection<StorageLocation> StorageLocations;
 
@@ -70,10 +68,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        StorageLocationService = ScopedServices.GetService<StorageLocationService>()!;
-
         Settings = SettingService.GetSettings();
-        StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+        {
+            StorageLocations = await storageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+        }
     }
 
     async Task Save()
@@ -87,10 +87,13 @@
                 if (!StorageLocations.Any(l => l.Default))
                     storageLocation.Default = true;
 
-                if (storageLocation.Id != Guid.Empty)
-                    await StorageLocationService.UpdateAsync(storageLocation);
-                else
-                    await StorageLocationService.AddAsync(storageLocation);
+                using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+                {
+                    if (storageLocation.Id != Guid.Empty)
+                        await storageLocationService.UpdateAsync(storageLocation);
+                    else
+                        await storageLocationService.AddAsync(storageLocation);
+                }
             }
 
             MessageService.Success("Settings saved!");

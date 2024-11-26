@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Collections"
-@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -60,8 +60,6 @@
 </Modal>
 
  @code {
-    CollectionService CollectionService;
-
     IEnumerable<Collection> Collections { get; set; } = new List<Collection>();
 
     bool Loading = true;
@@ -73,11 +71,6 @@
 
     bool AddCollectionVisible = false;
     Collection CollectionContext = new Collection();
-
-    protected override void OnInitialized()
-    {
-        CollectionService = ScopedServices.GetService<CollectionService>()!;
-    }
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -95,7 +88,10 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Collections = (await CollectionService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+        {
+            Collections = await collectionService.SortBy(r => r.Name).GetAsync(r => r.Name.ToLower().Contains(fuzzySearch));
+        }
     }
 
     async Task OpenAdd()
@@ -118,7 +114,10 @@
     {
         try
         {
-            await CollectionService.AddMissingAsync(x => x.Name == CollectionContext.Name, CollectionContext);
+            using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+            {
+                await collectionService.AddMissingAsync(x => x.Name == CollectionContext.Name, CollectionContext);
+            }
 
             MessageService.Success($"{CollectionContext.Name} was added!");
 
@@ -139,9 +138,12 @@
 
         Loading = true;
 
-        await CollectionService.DeleteAsync(Collection);
+        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+        {
+            await collectionService.DeleteAsync(Collection);
+        }
 
-        Collections = (await CollectionService.GetAsync(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }

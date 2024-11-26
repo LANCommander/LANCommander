@@ -16,7 +16,7 @@ namespace LANCommander.Server.Services
         public IssueService(
             ILogger<IssueService> logger,
             IFusionCache cache,
-            Repository<Issue> repository) : base(logger, cache, repository)
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory)
         {
         }
 

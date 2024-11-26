@@ -1,7 +1,7 @@
 ﻿@page "/Settings/Roles"
-@inherits OwningComponentBase
 @using LANCommander.Server.Models;
 @using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
@@ -76,9 +76,6 @@
 </Modal>
 
 @code {
-    RoleService RoleService;
-    UserService UserService;
-
     ICollection<RoleViewModel> Roles { get; set; } = new List<RoleViewModel>();
 
     Settings Settings = SettingService.GetSettings();
@@ -86,12 +83,6 @@
     bool AddRoleDialogVisible = false;
 
     RoleViewModel NewRole = new RoleViewModel();
-
-    protected override void OnInitialized()
-    {
-        RoleService = ScopedServices.GetService<RoleService>()!;
-        UserService = ScopedServices.GetService<UserService>()!;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -103,17 +94,20 @@
     {
         Roles = new List<RoleViewModel>();
 
-        foreach (var role in await RoleService.GetAsync())
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
         {
-            var users = await RoleService.GetUsersAsync(role.Name);
-
-            Roles.Add(new RoleViewModel
+            foreach (var role in await roleService.GetAsync())
             {
-                Id = role.Id,
-                Name = role.Name,
-                Collections = role.Collections != null ? role.Collections.Count : 0,
-                Users = users.Count()
-            });
+                var users = await roleService.GetUsersAsync(role.Name);
+
+                Roles.Add(new RoleViewModel
+                {
+                    Id = role.Id,
+                    Name = role.Name,
+                    Collections = role.Collections != null ? role.Collections.Count : 0,
+                    Users = users.Count()
+                });
+            }
         }
 
         Loading = false;
@@ -123,19 +117,22 @@
 
     async Task DeleteRole(RoleViewModel roleViewModel)
     {
-        var role = await RoleService.FirstOrDefaultAsync(r => r.Name == roleViewModel.Name);
-
-        if (role.Name == RoleService.AdministratorRoleName)
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
         {
-            MessageService.Error("Cannot delete the administrator role!");
-        }
-        else
-        {
-            await RoleService.DeleteAsync(role);
-            
-            await LoadData();
+            var role = await roleService.FirstOrDefaultAsync(r => r.Name == roleViewModel.Name);
 
-            MessageService.Success($"Deleted {role.Name}!");
+            if (role.Name == RoleService.AdministratorRoleName)
+            {
+                MessageService.Error("Cannot delete the administrator role!");
+            }
+            else
+            {
+                await roleService.DeleteAsync(role);
+
+                await LoadData();
+
+                MessageService.Success($"Deleted {role.Name}!");
+            }
         }
     }
 
@@ -148,30 +145,33 @@
 
     async Task AddRole()
     {
-        if ((await RoleService.ExistsAsync(r => r.Name == NewRole.Name)))
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
         {
-            MessageService.Error("A role with that name already exists!");
-
-            AddRoleDialogVisible = false;
-
-            return;
-        }
-
-        try
-        {
-            await RoleService.AddAsync(new Role
+            if ((await roleService.ExistsAsync(r => r.Name == NewRole.Name)))
             {
-                Name = NewRole.Name
-            });
+                MessageService.Error("A role with that name already exists!");
 
-            await LoadData();
+                AddRoleDialogVisible = false;
 
-            MessageService.Success("Role added!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not add role!");
-            Logger.LogError(ex, "Could not add role!");
+                return;
+            }
+
+            try
+            {
+                await roleService.AddAsync(new Role
+                {
+                    Name = NewRole.Name
+                });
+
+                await LoadData();
+
+                MessageService.Success("Role added!");
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("Could not add role!");
+                Logger.LogError(ex, "Could not add role!");
+            }
         }
     }
 

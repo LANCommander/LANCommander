@@ -1,11 +1,11 @@
 ﻿@page "/Redistributables/{id:guid}"
 @page "/Redistributables/{id:guid}/{panel}"
 @page "/Redistributables/Add"
-@inherits OwningComponentBase
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Models
 @using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -104,62 +104,64 @@ else
 }
 
 @code {
-    [Parameter] public Guid Id { get; set; }
-    [Parameter] public string Panel { get; set; }
+        [Parameter] public Guid Id { get; set; }
+        [Parameter] public string Panel { get; set; }
 
-    RedistributableService RedistributableService;
-    GameService GameService;
+        Redistributable Redistributable = new Redistributable();
 
-    Redistributable Redistributable = new Redistributable();
+        ICollection<Game> Games;
 
-    ICollection<Game> Games;
+        Settings Settings = SettingService.GetSettings();
 
-    Settings Settings = SettingService.GetSettings();
-
-    Guid LatestArchiveId
-    {
-        get
+        Guid LatestArchiveId
         {
-            if (Redistributable != null && Redistributable.Archives != null && Redistributable.Archives.Count > 0)
-                return Redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
-            else
-                return Guid.Empty;
+            get
+            {
+                if (Redistributable != null && Redistributable.Archives != null && Redistributable.Archives.Count > 0)
+                    return Redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
+                else
+                    return Guid.Empty;
+            }
         }
-    }
 
     protected override async Task OnInitializedAsync()
     {
-        GameService = ScopedServices.GetService<GameService>()!;
-        RedistributableService = ScopedServices.GetService<RedistributableService>()!;
+        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+        {
+            if (Id != Guid.Empty && Panel == null)
+                NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
+            else if (Id != Guid.Empty)
+                Redistributable = await redistributableService.GetAsync(Id);
+        }
 
-        if (Id != Guid.Empty && Panel == null)
-            NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
-        else if (Id != Guid.Empty)
-            Redistributable = await RedistributableService.GetAsync(Id);
-
-        Games = (await GameService
-            .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null))
-            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
-            .ToList();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService
+                .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+                .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
+        }
     }
 
     async Task Save()
     {
         try
         {
-            if (Redistributable.Id != Guid.Empty)
+            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
             {
-                Redistributable = await RedistributableService.UpdateAsync(Redistributable);
+                if (Redistributable.Id != Guid.Empty)
+                {
+                    Redistributable = await redistributableService.UpdateAsync(Redistributable);
 
-                await MessageService.Success("Redistributable updated!");
-            }
-            else
-            {
-                Redistributable = await RedistributableService.AddAsync(Redistributable);
+                    await MessageService.Success("Redistributable updated!");
+                }
+                else
+                {
+                    Redistributable = await redistributableService.AddAsync(Redistributable);
 
-                NavigationManager.LocationChanged += NotifyRedistributableAdded;
+                    NavigationManager.LocationChanged += NotifyRedistributableAdded;
 
-                NavigationManager.NavigateTo($"/Redistributables/{Redistributable.Id}");
+                    NavigationManager.NavigateTo($"/Redistributables/{Redistributable.Id}");
+                }
             }
         }
         catch (Exception ex)

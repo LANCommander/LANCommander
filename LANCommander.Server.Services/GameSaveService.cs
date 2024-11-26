@@ -12,7 +12,7 @@ namespace LANCommander.Server.Services
         public GameSaveService(
             ILogger<GameSaveService> logger,
             IFusionCache cache,
-            Repository<GameSave> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
         public override async Task DeleteAsync(GameSave entity)
         {

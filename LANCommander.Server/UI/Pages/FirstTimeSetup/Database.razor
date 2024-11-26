@@ -1,6 +1,5 @@
 ﻿@page "/FirstTimeSetup"
 @page "/FirstTimeSetup/Database"
-@inherits OwningComponentBase
 @layout FirstTimeSetupLayout
 @using LANCommander.Server.Data
 @using LANCommander.Server.Data.Enums
@@ -8,6 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @using MySqlConnector
 @using Npgsql
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -46,16 +46,12 @@
 @code {
     [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
 
-    SetupService SetupService;
-
     Settings Settings = SettingService.GetSettings();
 
     bool Loading = false;
 
     protected override async Task OnInitializedAsync()
     {
-        SetupService = ScopedServices.GetService<SetupService>()!;
-
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
     }
 
@@ -87,7 +83,10 @@
 
         try
         {
-            SetupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+            /*using (var setupService = DatabaseServiceFactory.Create<SetupService>())
+            {
+                setupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+            }*/
 
             valid = true;
         }
@@ -118,7 +117,10 @@
             {
                 await InvokeAsync(async () =>
                 {
-                    await SetupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+                    /*using (var setupService = DatabaseServiceFactory.Create<SetupService>())
+                    {
+                        await setupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+                    }*/
 
                     SettingService.SaveSettings(Settings);
 

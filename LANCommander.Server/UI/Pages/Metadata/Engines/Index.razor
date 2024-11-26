@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Engines"
-@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,8 +61,6 @@
 </Modal>
 
  @code {
-    EngineService EngineService;
-
     IEnumerable<Engine> Engines { get; set; } = new List<Engine>();
 
     bool Loading = true;
@@ -74,11 +72,6 @@
 
     bool EditEngineVisible = false;
     Engine EngineContext = new Engine();
-
-    protected override void OnInitialized()
-    {
-        EngineService = ScopedServices.GetService<EngineService>()!;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -96,24 +89,30 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Engines = (await EngineService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var engineService = DatabaseServiceFactory.Create<EngineService>())
+        {
+            Engines = await engineService.SortBy(e => e.Name).GetAsync(e => e.Name.ToLower().Contains(fuzzySearch));
+        }
     }
 
     async Task UpdateOrAdd()
     {
         try
         {
-            if (EngineContext.Id == Guid.Empty)
+            using (var engineService = DatabaseServiceFactory.Create<EngineService>())
             {
-                await EngineService.AddMissingAsync(x => x.Name == EngineContext.Name, EngineContext);
+                if (EngineContext.Id == Guid.Empty)
+                {
+                    await engineService.AddMissingAsync(x => x.Name == EngineContext.Name, EngineContext);
 
-                MessageService.Success($"{EngineContext.Name} was added!");
-            }
-            else
-            {
-                await EngineService.UpdateAsync(EngineContext);
+                    MessageService.Success($"{EngineContext.Name} was added!");
+                }
+                else
+                {
+                    await engineService.UpdateAsync(EngineContext);
 
-                MessageService.Success($"{EngineContext.Name} was updated!");
+                    MessageService.Success($"{EngineContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -154,9 +153,12 @@
 
         Loading = true;
 
-        await EngineService.DeleteAsync(Engine);
+        using (var engineService = DatabaseServiceFactory.Create<EngineService>())
+        {
+            await engineService.DeleteAsync(Engine);
+        }
 
-        Engines = (await EngineService.GetAsync(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }

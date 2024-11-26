@@ -31,14 +31,14 @@ namespace LANCommander.Server.Services
         public GameService(
             ILogger<GameService> logger,
             IFusionCache cache,
-            Repository<Game> repository,
+            RepositoryFactory repositoryFactory,
             IMapper mapper,
             ArchiveService archiveService,
             MediaService mediaService,
             EngineService engineService,
             TagService tagService,
             CompanyService companyService,
-            GenreService genreService) : base(logger, cache,repository)
+            GenreService genreService) : base(logger, cache, repositoryFactory)
         {
             Mapper = mapper;
             ArchiveService = archiveService;
@@ -75,6 +75,11 @@ namespace LANCommander.Server.Services
 
         public override async Task DeleteAsync(Game game)
         {
+            game = await Include(
+                g => g.Archives,
+                g => g.Media)
+                .GetAsync(game.Id);
+
             foreach (var archive in game.Archives.ToList())
             {
                 await ArchiveService.DeleteAsync(archive);
@@ -84,6 +89,7 @@ namespace LANCommander.Server.Services
             {
                 await MediaService.DeleteAsync(media);
             }
+
             await base.DeleteAsync(game);
 
             await ExpireCacheAsync(game.Id);

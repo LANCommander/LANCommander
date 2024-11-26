@@ -1,6 +1,6 @@
 ﻿@page "/Settings/Roles/{id:guid}"
-@inherits OwningComponentBase
 @using LANCommander.Server.Models;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -30,26 +30,30 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    RoleService RoleService;
-    CollectionService CollectionService;
-
     Role Role = new Role();
     IEnumerable<Collection> Collections = new List<Collection>();
 
     protected override async Task OnInitializedAsync()
     {
-        RoleService = ScopedServices.GetService<RoleService>()!;
-        CollectionService = ScopedServices.GetService<CollectionService>()!;
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
+        {
+            Role = await roleService.GetAsync(Id);
+        }
 
-        Role = await RoleService.GetAsync(Id);
-        Collections = await CollectionService.GetAsync();
+        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+        {
+            Collections = await collectionService.GetAsync();
+        }
     }
 
     async Task Save()
     {
         try
         {
-            await RoleService.UpdateAsync(Role);
+            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
+            {
+                await roleService.UpdateAsync(Role);
+            }
 
             MessageService.Success("Role updated!");
         }

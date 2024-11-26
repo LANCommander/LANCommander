@@ -1,6 +1,7 @@
 ﻿@page "/Games/{id:guid}/Saves"
 @inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Saves> Logger
 
@@ -33,18 +34,14 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    GameSaveService GameSaveService;
-
-    protected override void OnInitialized()
-    {
-        GameSaveService = ScopedServices.GetService<GameSaveService>()!;
-    }
-
     async Task Delete(GameSave gameSave)
     {
         try
         {
-            await GameSaveService.DeleteAsync(gameSave);
+            using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
+            {
+                await gameSaveService.DeleteAsync(gameSave);
+            }
         }
         catch (Exception ex)
         {

@@ -1,7 +1,7 @@
 ﻿@page "/Metadata/Platforms"
-@inherits OwningComponentBase
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -61,8 +61,6 @@
 </Modal>
 
  @code {
-    PlatformService PlatformService;
-
     IEnumerable<Platform> Platforms { get; set; } = new List<Platform>();
 
     bool Loading = true;
@@ -74,11 +72,6 @@
 
     bool EditPlatformVisible = false;
     Platform PlatformContext = new Platform();
-
-    protected override void OnInitialized()
-    {
-        PlatformService = ScopedServices.GetService<PlatformService>()!;
-    }
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -96,24 +89,30 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Platforms = (await PlatformService.GetAsync(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
+        {
+            Platforms = await platformService.SortBy(p => p.Name).GetAsync(p => p.Name.ToLower().Contains(fuzzySearch));
+        }
     }
 
     async Task UpdateOrAdd()
     {
         try
         {
-            if (PlatformContext.Id == Guid.Empty)
+            using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
             {
-                await PlatformService.AddMissingAsync(x => x.Name == PlatformContext.Name, PlatformContext);
+                if (PlatformContext.Id == Guid.Empty)
+                {
+                    await platformService.AddMissingAsync(x => x.Name == PlatformContext.Name, PlatformContext);
 
-                MessageService.Success($"{PlatformContext.Name} was added!");
-            }
-            else
-            {
-                await PlatformService.UpdateAsync(PlatformContext);
+                    MessageService.Success($"{PlatformContext.Name} was added!");
+                }
+                else
+                {
+                    await platformService.UpdateAsync(PlatformContext);
 
-                MessageService.Success($"{PlatformContext.Name} was updated!");
+                    MessageService.Success($"{PlatformContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -154,9 +153,12 @@
 
         Loading = true;
 
-        await PlatformService.DeleteAsync(Platform);
+        using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
+        {
+            await platformService.DeleteAsync(Platform);
+        }
 
-        Platforms = (await PlatformService.GetAsync(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }

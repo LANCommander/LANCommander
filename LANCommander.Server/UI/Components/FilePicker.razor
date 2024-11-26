@@ -1,5 +1,4 @@
-﻿@inherits OwningComponentBase
-@using LANCommander.Server.Models
+﻿@using LANCommander.Server.Models
 @using System.IO.Compression
 @inject ModalService ModalService
 
@@ -35,13 +34,6 @@
     [Parameter] public string Root { get; set; }
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
-
-    ArchiveService ArchiveService;
-
-    protected override void OnInitialized()
-    {
-        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
-    }
 
     async Task OnInput(ChangeEventArgs args)
     {

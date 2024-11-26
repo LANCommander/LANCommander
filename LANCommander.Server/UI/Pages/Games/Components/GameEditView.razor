@@ -1,4 +1,4 @@
-﻿@inherits OwningComponentBase
+﻿@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
@@ -71,21 +71,40 @@
     [Parameter] public RenderFragment<Game>? TitleExtraTemplate { get; set; }
     [Parameter] public RenderFragment<Game>? ChildContent { get; set; }
 
-    GameService GameService;
-
     Game Game { get; set; } = new Game();
-
-    protected override void OnInitialized()
-    {
-        GameService = ScopedServices.GetService<GameService>()!;
-    }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Id != Guid.Empty)
-            Game = await GameService.GetAsync(Id);
-        else
-            Game = new Game();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            if (Id != Guid.Empty)
+                Game = await gameService
+                    .Include(g => g.Actions)
+                    .Include(g => g.Archives)
+                    .Include(g => g.BaseGame)
+                    .Include(g => g.Categories)
+                    .Include(g => g.Collections)
+                    .Include(g => g.CreatedBy)
+                    .Include(g => g.DependentGames)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Engine)
+                    .Include(g => g.GameSaves)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Keys)
+                    .Include(g => g.Media)
+                    .Include(g => g.MultiplayerModes)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.PlaySessions)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Redistributables)
+                    .Include(g => g.SavePaths)
+                    .Include(g => g.Scripts)
+                    .Include(g => g.Tags)
+                    .Include(g => g.UpdatedBy)
+                    .GetAsync(Id);
+            else
+                Game = new Game();
+        }
 
         if (Game == null)
             NavigationManager.NavigateTo("/Games");

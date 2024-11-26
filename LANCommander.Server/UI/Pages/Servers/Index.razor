@@ -1,8 +1,9 @@
 ﻿@page "/Servers"
-@inherits OwningComponentBase
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 
@@ -77,9 +78,6 @@
 </ImportUploadDialog>
 
 @code {
-    ServerService ServerService;
-    ServerProcessService ServerProcessService;
-
     IEnumerable<Server> Servers { get; set; } = new List<Server>();
 
     bool Loading = true;
@@ -90,12 +88,6 @@
     IEnumerable<Server> SelectedServers;
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
-
-    protected override void OnInitialized()
-    {
-        ServerService = ScopedServices.GetService<ServerService>()!;
-        ServerProcessService = ScopedServices.GetService<ServerProcessService>()!;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -113,7 +105,12 @@
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Servers = (await ServerService.GetAsync(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))))).OrderBy(s => s.Name);
+        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+        {
+            Servers = await serverService
+                .SortBy(s => s.Name)
+                .GetAsync(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))));
+        }
     }
 
     void Add()
@@ -132,9 +129,12 @@
 
         Loading = true;
 
-        await ServerService.DeleteAsync(server);
+        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+        {
+            await serverService.DeleteAsync(server);
+        }
 
-        Servers = (await ServerService.GetAsync(x => true)).OrderBy(s => s.Name);
+        await LoadData();
 
         Loading = false;
     }

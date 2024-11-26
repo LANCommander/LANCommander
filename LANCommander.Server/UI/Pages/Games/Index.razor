@@ -1,21 +1,24 @@
 ﻿@page "/Games"
-@inherits OwningComponentBase
+@inherits DatabaseQueryableComponentBase
 @using AntDesign.TableModels;
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Data
 @using LANCommander.Server.Extensions;
 @using System.ComponentModel.DataAnnotations;
 @using LANCommander.Server.Models
+@using LANCommander.Server.Services.Factories
 @using LANCommander.Server.UI.Pages.Games.Components
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 @using Microsoft.EntityFrameworkCore;
 @using System.Web
 @attribute [Authorize]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Games" Subtitle="@Games.Count().ToString()">
+<PageHeader Title="Games" Subtitle="@TotalCount.ToString()">
     <PageHeaderExtra>
         <Space Direction="DirectionVHType.Horizontal">
             @if (Selected != null && Selected.Count() > 0)
@@ -48,6 +51,7 @@
     Loading="@Loading"
     PageSize="@PageSize"
     PageIndex="@PageIndex"
+    Total="@TotalCount"
     OnPageIndexChange="PageIndexChanged"
     OnPageSizeChange="PageSizeChanged"
     Size="@TableSize.Small"
@@ -161,8 +165,6 @@
 </ImportUploadDialog>
 
 @code {
-    GameService GameService;
-
     IEnumerable<Game> Games { get; set; } = new List<Game>();
 
     bool Loading = true;
@@ -181,11 +183,10 @@
 
     int PageIndex = 1;
     int PageSize = 25;
+    int TotalCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        GameService = ScopedServices.GetService<GameService>()!;
-
         Url = NavigationManager.Uri;
         NavigationManager.LocationChanged += LocationChanged;
         LoadTableParameter();
@@ -196,26 +197,37 @@
 
     private async Task LoadData()
     {
-        Games = ((await GameService
-            .GetAsync())
-            .Where(g =>
-                (
-                    g.Type == GameType.MainGame
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            var results = await gameService
+                .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+                .Include(
+                    g => g.DependentGames,
+                    g => g.Media.Where(m => m.Type == MediaType.Icon),
+                    g => g.Keys,
+                    g => g.CreatedBy,
+                    g => g.UpdatedBy,
+                    g => g.Collections,
+                    g => g.MultiplayerModes,
+                    g => g.Developers,
+                    g => g.Publishers,
+                    g => g.Genres,
+                    g => g.Platforms
+                )
+                .PaginateAsync(
+                    g => g.Type == GameType.MainGame
                     ||
                     g.Type == GameType.StandaloneExpansion
                     ||
                     g.Type == GameType.StandaloneMod
                     ||
-                    g.BaseGame == null
-                )
-                &&
-                (
-                    g.Title.ToLower().Contains(Search.ToLower().Trim())
-                    ||
-                    g.SortTitle.ToLower().Contains(Search.ToLower().Trim())
-                )
-            ))
-            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+                    g.BaseGame == null,
+                    PageIndex,
+                    PageSize);
+
+            TotalCount = results.Count;
+            Games = results.Results;
+        }
 
         if (Table != null)
             Table.ReloadData();
@@ -281,23 +293,24 @@
 
     private async Task Delete(Game game)
     {
-        Games = new List<Game>();
-
         Loading = true;
 
-        try
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
         {
-            await GameService.DeleteAsync(game);
+            try
+            {
+                await gameService.DeleteAsync(game);
 
-            MessageService.Success($"{game.Title} was successfully deleted!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not delete the game!");
-            Logger.LogError(ex, "Could not delete the game!");
+                MessageService.Success($"{game.Title} was successfully deleted!");
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("Could not delete the game!");
+                Logger.LogError(ex, "Could not delete the game!");
+            }
         }
 
-        Games = (await GameService.GetAsync()).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+        await LoadData();
 
         Loading = false;
     }

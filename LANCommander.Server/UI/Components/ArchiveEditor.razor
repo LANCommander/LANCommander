@@ -1,9 +1,9 @@
-﻿@inherits OwningComponentBase
-@using System.Net;
+﻿@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ModalService ModalService
@@ -62,15 +62,12 @@
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
 
-    ArchiveService ArchiveService;
-
     ICollection<Archive> Archives { get; set; } = new List<Archive>();
 
     ArchiveUploader Uploader;
 
     protected override void OnInitialized()
     {
-        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
     }
 
@@ -81,10 +78,13 @@
 
     private async Task LoadData()
     {
-        if (GameId != Guid.Empty)
-            Archives = await ArchiveService.GetAsync(a => a.GameId == GameId);
-        else if (RedistributableId != Guid.Empty)
-            Archives = await ArchiveService.GetAsync(a => a.RedistributableId == RedistributableId);
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        {
+            if (GameId != Guid.Empty)
+                Archives = await archiveService.GetAsync(a => a.GameId == GameId);
+            else if (RedistributableId != Guid.Empty)
+                Archives = await archiveService.GetAsync(a => a.RedistributableId == RedistributableId);
+        }
     }
 
     private async Task Download(Archive archive)
@@ -117,7 +117,10 @@
     {
         try
         {
-            await ArchiveService.UpdateAsync(archive);
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+            {
+                await archiveService.UpdateAsync(archive);
+            }
 
             MessageService.Success("Archive updated!");
         }
@@ -132,7 +135,10 @@
     {
         try
         {
-            await ArchiveService.DeleteAsync(archive);
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+            {
+                await archiveService.DeleteAsync(archive);
+            }
 
             await LoadData();
 

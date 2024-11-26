@@ -2,13 +2,14 @@
 @page "/Servers/{id:guid}/{panel}"
 @page "/Servers/{id:guid}/{panel}/{logId}"
 @page "/Servers/Add"
-@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using LANCommander.Server.Extensions
 @using Microsoft.EntityFrameworkCore
 @using System.Runtime.InteropServices
+@inject ServerProcessService ServerProcessService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -211,10 +212,6 @@
     [Parameter] public string Panel { get; set; }
     [Parameter] public string LogId { get; set; }
 
-    GameService GameService;
-    ServerService ServerService;
-    ServerProcessService ServerProcessService;
-
     IEnumerable<Game> Games = new List<Game>();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -247,14 +244,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        GameService = ScopedServices.GetService<GameService>()!;
-        ServerService = ScopedServices.GetService<ServerService>()!;
-        ServerProcessService = ScopedServices.GetService<ServerProcessService>()!;
-
-        if (Id != Guid.Empty && Panel == null)
-            NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
-        else if (Id != Guid.Empty)
-            Server = await ServerService.GetAsync(Id);
+        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+        {
+            if (Id != Guid.Empty && Panel == null)
+                NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
+            else if (Id != Guid.Empty)
+                Server = await serverService.GetAsync(Id);
+        }        
 
         if (Server.GameId.HasValue)
             GameId = Server.GameId.Value;
@@ -262,7 +258,10 @@
         if (Server.HttpPaths == null)
             Server.HttpPaths = new List<ServerHttpPath>();
 
-        Games = await GameService.Include(g => g.Media).GetAsync();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService.Include(g => g.Media).GetAsync();
+        }
 
         await OnPortNumberChanged(Server.Port);
     }
@@ -273,19 +272,22 @@
         {
             Server.GameId = GameId;
 
-            if (Server.Id != Guid.Empty)
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
             {
-                Server = await ServerService.UpdateAsync(Server);
+                if (Server.Id != Guid.Empty)
+                {
+                    Server = await serverService.UpdateAsync(Server);
 
-                await MessageService.Success("Server updated!");
-            }
-            else
-            {
-                Server = await ServerService.AddAsync(Server);
+                    await MessageService.Success("Server updated!");
+                }
+                else
+                {
+                    Server = await serverService.AddAsync(Server);
 
-                NavigationManager.LocationChanged += NotifyServerAdded;
+                    NavigationManager.LocationChanged += NotifyServerAdded;
 
-                NavigationManager.NavigateTo($"/Servers/{Server.Id}");
+                    NavigationManager.NavigateTo($"/Servers/{Server.Id}");
+                }
             }
         }
         catch (Exception ex)
@@ -328,6 +330,11 @@
     async Task OnPortNumberChanged(int value)
     {
         if (value > 0)
-            PortInUse = (await ServerService.GetAsync(s => s.Port == value && s.Id != Id)).Any();
+        {
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            {
+                PortInUse = await serverService.ExistsAsync(s => s.Port == value && s.Id != Id);
+            }
+        }
     }
 }

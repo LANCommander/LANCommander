@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/Mods"
-@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Mods> Logger
@@ -32,18 +32,14 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    GameService GameService;
-
-    protected override void OnInitialized()
-    {
-        GameService = ScopedServices.GetService<GameService>()!;
-    }
-
     private async Task Delete(Game game)
     {
         try
         {
-            await GameService.DeleteAsync(game);
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                await gameService.DeleteAsync(game);
+            }
         }
         catch (Exception ex)
         {

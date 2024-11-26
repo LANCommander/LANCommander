@@ -1,9 +1,9 @@
-﻿@inherits OwningComponentBase
-@using System.Net;
+﻿@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager Navigator
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -34,8 +34,6 @@
     [Parameter] public EventCallback<Guid> OnRedistributableImported { get; set; }
     [Parameter] public RenderFragment Hint { get; set; }
 
-    RedistributableService RedistributableService;
-
     IBrowserFile File;
     ChunkUploader ChunkUploader;
 
@@ -45,11 +43,6 @@
     string Filename;
 
     string Status;
-
-    protected override void OnInitialized()
-    {
-        RedistributableService = ScopedServices.GetService<RedistributableService>()!;
-    }
 
     async Task Start()
     {
@@ -80,16 +73,19 @@
         {
             try
             {
-                var redistributable = await RedistributableService.ImportAsync(objectKey);
+                using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+                {
+                    var redistributable = await redistributableService.ImportAsync(objectKey);
 
-                Visible = false;
+                    Visible = false;
 
-                await InvokeAsync(StateHasChanged);
+                    await InvokeAsync(StateHasChanged);
 
-                if (OnRedistributableImported.HasDelegate)
-                    await OnRedistributableImported.InvokeAsync(redistributable.Id);
+                    if (OnRedistributableImported.HasDelegate)
+                        await OnRedistributableImported.InvokeAsync(redistributable.Id);
 
-                MessageService.Success($"{redistributable.Name} successfully imported!");
+                    MessageService.Success($"{redistributable.Name} successfully imported!");
+                }
             }
             catch (Exception ex)
             {

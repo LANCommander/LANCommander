@@ -1,5 +1,4 @@
-﻿@inherits OwningComponentBase
-@using AntDesign.TableModels;
+﻿@using AntDesign.TableModels;
 @using LANCommander.PCGamingWiki
 @using LANCommander.SDK.Enums
 @inject IGDBService IGDBService
@@ -71,10 +70,6 @@ else
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 
-    CompanyService CompanyService;
-    GenreService GenreService;
-    TagService TagService;
-
     ITable? ResultsTable;
 
     List<Game> Results { get; set; } = new List<Game>();
@@ -87,10 +82,6 @@ else
 
     protected override void OnInitialized()
     {
-        CompanyService = ScopedServices.GetService<CompanyService>()!;
-        GenreService = ScopedServices.GetService<GenreService>()!;
-        TagService = ScopedServices.GetService<TagService>()!;
-
         PCGamingWikiClient = new PCGamingWikiClient();
     }
 

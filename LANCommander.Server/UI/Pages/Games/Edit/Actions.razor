@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/Actions"
-@inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Actions> Logger
 
@@ -21,13 +21,6 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    GameService GameService;
-
-    protected override void OnInitialized()
-    {
-        GameService = ScopedServices.GetService<GameService>()!;
-    }
-
     Guid GetLatestArchiveId(Game game)
     {
         if (game != null && game.Archives != null && game.Archives.Count > 0)
@@ -40,7 +33,10 @@
     {
         try
         {
-            game = await GameService.UpdateAsync(game);
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                game = await gameService.UpdateAsync(game);
+            }
 
             await MessageService.Success("Save paths updated!");
         }

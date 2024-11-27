@@ -13,9 +13,9 @@ namespace LANCommander.Server.Services.Factories
 
         public T Create<T>() where T : BaseService
         {
-            var service = ServiceProvider.GetService<T>();
+            var scope = ServiceProvider.CreateScope();
 
-            return service;
+            return scope.ServiceProvider.GetService<T>();
         }
     }
 }

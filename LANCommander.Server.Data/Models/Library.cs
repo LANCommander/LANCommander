@@ -13,7 +13,7 @@ namespace LANCommander.Server.Data.Models
     {
         public Guid UserId { get; set; }
         [ForeignKey(nameof(UserId))]
-        public virtual User User { get; set; }
-        public virtual ICollection<Game> Games { get; set; }
+        public User User { get; set; }
+        public ICollection<Game> Games { get; set; }
     }
 }

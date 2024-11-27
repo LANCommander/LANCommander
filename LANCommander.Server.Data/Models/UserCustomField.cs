@@ -16,6 +16,6 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(UserId))]
         [InverseProperty("CustomFields")]
-        public virtual User? User { get; set; }
+        public User? User { get; set; }
     }
 }

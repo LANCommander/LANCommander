@@ -12,6 +12,6 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(ServerId))]
         [InverseProperty("HttpPaths")]
-        public virtual Server Server { get; set; }
+        public Server Server { get; set; }
     }
 }

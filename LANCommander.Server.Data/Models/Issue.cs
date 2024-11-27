@@ -14,9 +14,9 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Issues")]
-        public virtual Game Game { get; set; }
+        public Game Game { get; set; }
 
         [Display(Name = "Resolved By")]
-        public virtual User? ResolvedBy { get; set; }
+        public User? ResolvedBy { get; set; }
     }
 }

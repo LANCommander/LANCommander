@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Castle.Core.Logging;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;

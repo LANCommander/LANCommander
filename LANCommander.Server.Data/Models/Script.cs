@@ -19,18 +19,18 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Scripts")]
-        public virtual Game? Game { get; set; }
+        public Game? Game { get; set; }
 
         public Guid? RedistributableId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(RedistributableId))]
         [InverseProperty("Scripts")]
-        public virtual Redistributable? Redistributable { get; set; }
+        public Redistributable? Redistributable { get; set; }
 
         public Guid? ServerId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(ServerId))]
         [InverseProperty("Scripts")]
-        public virtual Server? Server { get; set; }
+        public Server? Server { get; set; }
     }
 }

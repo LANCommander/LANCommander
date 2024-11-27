@@ -22,7 +22,6 @@ namespace LANCommander.Launcher.Data
 
             optionsBuilder.UseLoggerFactory(LoggerFactory);
             optionsBuilder.UseSqlite($"Data Source={dbPath};Cache=Shared");
-            optionsBuilder.UseLazyLoadingProxies();
         }
 
         protected override void OnModelCreating(ModelBuilder builder)

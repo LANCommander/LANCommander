@@ -31,6 +31,7 @@
     string AvatarUrl;
 
     User User = new User();
+    ICollection<Media> Media = new List<Media>();
 
     string[] ValidMimeTypes = new string[]
     {
@@ -42,20 +43,23 @@
     {
         using (var userService = DatabaseServiceFactory.Create<UserService>())
         {
-            User = await userService.Include(u => u.Media).GetAsync(UserId);
+            User = await userService.GetAsync(UserId);
         }
 
-        LoadAvatar();
+        await LoadAvatar();
     }
 
-    void LoadAvatar()
+    async Task LoadAvatar()
     {
-        var avatar = User?.Media?.FirstOrDefault(a => a.Type == SDK.Enums.MediaType.Avatar);
+        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+        {
+            var avatar = await mediaService.FirstOrDefaultAsync(m => m.Type == SDK.Enums.MediaType.Avatar && m.UserId == UserId);
 
-        if (avatar != null)
-            AvatarUrl = $"/api/Media/{avatar.Id}/Download?fileId={avatar.FileId}";
-        else
-            AvatarUrl = String.Empty;
+            if (avatar != null)
+                AvatarUrl = $"/api/Media/{avatar.Id}/Download?fileId={avatar.FileId}";
+            else
+                AvatarUrl = String.Empty;
+        }
     }
 
     async Task UploadAvatar(InputFileChangeEventArgs e)
@@ -100,6 +104,6 @@
             }
         }
 
-        LoadAvatar();
+        await LoadAvatar();
     }
 }

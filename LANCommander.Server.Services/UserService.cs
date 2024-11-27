@@ -413,7 +413,6 @@ namespace LANCommander.Server.Services
 
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
     }
 }

@@ -73,6 +73,9 @@ namespace LANCommander.Server.Data
                 queryable = modifier.Invoke(queryable);
             }
 
+            if (Modifiers.Any(m => m.Method.Name.StartsWith("<Include>")))
+                queryable = queryable.AsSplitQuery();
+
             return queryable;
         }
 

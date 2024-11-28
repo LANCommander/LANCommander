@@ -91,7 +91,11 @@
 
         using (var genreService = DatabaseServiceFactory.Create<GenreService>())
         {
-            Genres = await genreService.GetAsync(g => g.Name.ToLower().Contains(fuzzySearch));
+            Genres = await genreService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(t => t.Name)
+                .GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
         }
     }
 

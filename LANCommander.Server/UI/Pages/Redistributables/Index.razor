@@ -85,7 +85,11 @@
 
         using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
         {
-            Redistributables = await redistributableService.SortBy(r => r.Name).GetAsync(r => r.Name.ToLower().Contains(fuzzySearch));
+            Redistributables = await redistributableService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(r => r.Name)
+                .GetAsync(r => r.Name.ToLower().Contains(fuzzySearch));
         }
     }
 

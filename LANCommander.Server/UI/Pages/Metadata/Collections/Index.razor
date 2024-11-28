@@ -90,7 +90,11 @@
 
         using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
         {
-            Collections = await collectionService.SortBy(r => r.Name).GetAsync(r => r.Name.ToLower().Contains(fuzzySearch));
+            Collections = await collectionService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(t => t.Name)
+                .GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
         }
     }
 

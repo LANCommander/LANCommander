@@ -91,7 +91,11 @@
 
         using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
         {
-            Platforms = await platformService.SortBy(p => p.Name).GetAsync(p => p.Name.ToLower().Contains(fuzzySearch));
+            Platforms = await platformService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(t => t.Name)
+                .GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
         }
     }
 

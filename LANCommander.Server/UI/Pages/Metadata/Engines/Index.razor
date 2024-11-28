@@ -91,7 +91,11 @@
 
         using (var engineService = DatabaseServiceFactory.Create<EngineService>())
         {
-            Engines = await engineService.SortBy(e => e.Name).GetAsync(e => e.Name.ToLower().Contains(fuzzySearch));
+            Engines = await engineService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(t => t.Name)
+                .GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
         }
     }
 

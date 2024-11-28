@@ -91,7 +91,11 @@
 
         using (var tagService = DatabaseServiceFactory.Create<TagService>())
         {
-            Tags = await tagService.SortBy(t => t.Name).GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
+            Tags = await tagService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(t => t.Name)
+                .GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
         }
     }
 

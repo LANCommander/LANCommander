@@ -92,7 +92,11 @@
 
         using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
         {
-            Companies = await companyService.SortBy(c => c.Name).GetAsync(c => c.Name.ToLower().Contains(fuzzySearch));
+            Companies = await companyService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(t => t.Name)
+                .GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
         }
     }
 

@@ -108,6 +108,8 @@
         using (var serverService = DatabaseServiceFactory.Create<ServerService>())
         {
             Servers = await serverService
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
                 .SortBy(s => s.Name)
                 .GetAsync(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))));
         }

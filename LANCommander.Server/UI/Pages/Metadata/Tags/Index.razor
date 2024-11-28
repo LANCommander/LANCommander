@@ -1,5 +1,6 @@
 ﻿@page "/Metadata/Tags"
 @using Microsoft.EntityFrameworkCore;
+@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
@@ -21,7 +22,17 @@
 
 <TableColumnPicker @ref="Picker" Key="Tags" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Data.Models.Tag" DataSource="@Tags" Loading="@Loading" PageSize="25" Responsive>
+<Table
+    TItem="Data.Models.Tag"
+    DataSource="@Tags"
+    Loading="@Loading"
+    PageSize="@PageSize"
+    PageIndex="@PageIndex"
+    Total="@TotalCount"
+    OnPageIndexChange="PageIndexChanged"
+    OnPageSizeChange="PageSizeChanged"
+    Size="@TableSize.Small"
+    Responsive>
     <PropertyColumn Property="c => c.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
     <PropertyColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     <PropertyColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
@@ -64,8 +75,12 @@
     IEnumerable<Data.Models.Tag> Tags { get; set; } = new List<Data.Models.Tag>();
 
     bool Loading = true;
+    int PageIndex = 1;
+    int PageSize = 50;
+    int TotalCount = 0;
 
     string Search = "";
+    string Url;
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
@@ -73,16 +88,14 @@
     bool EditTagVisible = false;
     Data.Models.Tag TagContext = new Data.Models.Tag();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
     async Task LoadData()
@@ -91,12 +104,53 @@
 
         using (var tagService = DatabaseServiceFactory.Create<TagService>())
         {
-            Tags = await tagService
+            var results = await tagService
                 .Include(s => s.CreatedBy)
                 .Include(s => s.UpdatedBy)
                 .SortBy(t => t.Name)
-                .GetAsync(t => t.Name.ToLower().Contains(fuzzySearch));
+                .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
+                    PageIndex,
+                    PageSize);
+
+            TotalCount = results.Count;
+            Tags = results.Results;
         }
+    }
+
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Tags?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Tags?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"/Metadata/Tags?Search={Search}&Size={PageSize}");
     }
 
     async Task UpdateOrAdd()
@@ -175,5 +229,10 @@
     async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

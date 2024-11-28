@@ -1,6 +1,7 @@
 ﻿@page "/Servers"
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using Microsoft.EntityFrameworkCore;
+@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ServerProcessService ServerProcessService
@@ -34,7 +35,18 @@
 
 <TableColumnPicker @ref="Picker" Key="Servers" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Server" DataSource="@Servers" Loading="@Loading" Size="@TableSize.Small" PageSize="50" @bind-SelectedRows="SelectedServers" Responsive>
+<Table
+    TItem="Server"
+    DataSource="@Servers"
+    Loading="@Loading"
+    PageSize="@PageSize"
+    PageIndex="@PageIndex"
+    Total="@TotalCount"
+    OnPageIndexChange="PageIndexChanged"
+    OnPageSizeChange="PageSizeChanged"
+    Size="@TableSize.Small"
+    @bind-SelectedRows="SelectedServers"
+    Responsive>
     <Selection Key="@(context.Id.ToString())" />
     <PropertyColumn
         Property="s => s.Game"
@@ -81,24 +93,26 @@
     IEnumerable<Server> Servers { get; set; } = new List<Server>();
 
     bool Loading = true;
+    int PageIndex = 1;
+    int PageSize = 50;
+    int TotalCount = 0;
 
     string Search = "";
+    string Url;
 
     ImportUploadDialog ImportUploadDialog;
     IEnumerable<Server> SelectedServers;
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            await LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
     async Task LoadData()
@@ -107,7 +121,7 @@
 
         using (var serverService = DatabaseServiceFactory.Create<ServerService>())
         {
-            Servers = await serverService
+            var results = await serverService
                 .Query((q) =>
                 {
                     return q.Include(s => s.Game).ThenInclude(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon));
@@ -115,8 +129,51 @@
                 .Include(s => s.CreatedBy)
                 .Include(s => s.UpdatedBy)
                 .SortBy(s => s.Name)
-                .GetAsync(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))));
+                .PaginateAsync(
+                    s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))),
+                    PageIndex,
+                    PageSize
+                );
+
+            TotalCount = results.Count;
+            Servers = results.Results;
         }
+    }
+
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Servers?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Servers?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"/Servers?Search={Search}&Size={PageSize}");
     }
 
     void Add()

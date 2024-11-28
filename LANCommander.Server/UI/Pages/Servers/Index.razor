@@ -108,6 +108,10 @@
         using (var serverService = DatabaseServiceFactory.Create<ServerService>())
         {
             Servers = await serverService
+                .Query((q) =>
+                {
+                    return q.Include(s => s.Game).ThenInclude(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon));
+                })
                 .Include(s => s.CreatedBy)
                 .Include(s => s.UpdatedBy)
                 .SortBy(s => s.Name)

@@ -99,8 +99,9 @@
         using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
         {
             var results = await redistributableService
-                .Include(s => s.CreatedBy)
-                .Include(s => s.UpdatedBy)
+                .Include(r => r.Games)
+                .Include(r => r.CreatedBy)
+                .Include(r => r.UpdatedBy)
                 .SortBy(r => r.Name)
                 .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
                     PageIndex,

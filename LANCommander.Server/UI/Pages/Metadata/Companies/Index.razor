@@ -106,10 +106,12 @@
         using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
         {
             var results = await companyService
-                .Include(s => s.CreatedBy)
-                .Include(s => s.UpdatedBy)
-                .SortBy(t => t.Name)
-                .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
+                .Include(c => c.DevelopedGames)
+                .Include(c => c.PublishedGames)
+                .Include(c => c.CreatedBy)
+                .Include(c => c.UpdatedBy)
+                .SortBy(c => c.Name)
+                .PaginateAsync(c => c.Name.ToLower().Contains(fuzzySearch),
                     PageIndex,
                     PageSize);
 

@@ -105,10 +105,11 @@
         using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
         {
             var results = await platformService
-                .Include(s => s.CreatedBy)
-                .Include(s => s.UpdatedBy)
-                .SortBy(t => t.Name)
-                .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
+                .Include(p => p.Games)
+                .Include(p => p.CreatedBy)
+                .Include(p => p.UpdatedBy)
+                .SortBy(p => p.Name)
+                .PaginateAsync(p => p.Name.ToLower().Contains(fuzzySearch),
                     PageIndex,
                     PageSize);
 

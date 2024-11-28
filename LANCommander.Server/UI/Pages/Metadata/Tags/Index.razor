@@ -105,8 +105,9 @@
         using (var tagService = DatabaseServiceFactory.Create<TagService>())
         {
             var results = await tagService
-                .Include(s => s.CreatedBy)
-                .Include(s => s.UpdatedBy)
+                .Include(t => t.Games)
+                .Include(t => t.CreatedBy)
+                .Include(t => t.UpdatedBy)
                 .SortBy(t => t.Name)
                 .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
                     PageIndex,

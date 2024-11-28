@@ -104,10 +104,11 @@
         using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
         {
             var results = await collectionService
-                .Include(s => s.CreatedBy)
-                .Include(s => s.UpdatedBy)
-                .SortBy(t => t.Name)
-                .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
+                .Include(c => c.Games)
+                .Include(c => c.CreatedBy)
+                .Include(c => c.UpdatedBy)
+                .SortBy(c => c.Name)
+                .PaginateAsync(c => c.Name.ToLower().Contains(fuzzySearch),
                     PageIndex,
                     PageSize);
 

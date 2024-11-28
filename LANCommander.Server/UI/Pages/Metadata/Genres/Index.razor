@@ -105,10 +105,11 @@
         using (var genreService = DatabaseServiceFactory.Create<GenreService>())
         {
             var results = await genreService
-                .Include(s => s.CreatedBy)
-                .Include(s => s.UpdatedBy)
-                .SortBy(t => t.Name)
-                .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
+                .Include(g => g.Games)
+                .Include(g => g.CreatedBy)
+                .Include(g => g.UpdatedBy)
+                .SortBy(g => g.Name)
+                .PaginateAsync(g => g.Name.ToLower().Contains(fuzzySearch),
                     PageIndex,
                     PageSize);
 

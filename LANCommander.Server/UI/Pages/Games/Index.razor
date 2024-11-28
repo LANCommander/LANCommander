@@ -181,7 +181,7 @@
     bool ColumnPickerVisible = false;
 
     int PageIndex = 1;
-    int PageSize = 25;
+    int PageSize = 50;
     int TotalCount = 0;
 
     protected override async Task OnInitializedAsync()
@@ -194,7 +194,7 @@
         Loading = false;
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         using (var gameService = DatabaseServiceFactory.Create<GameService>())
         {
@@ -234,20 +234,20 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async void LocationChanged(object sender, LocationChangedEventArgs e)
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
     {
         Url = e.Location;
         LoadTableParameter();
         await LoadData();
     }
 
-    private void LoadTableParameter()
+    void LoadTableParameter()
     {
         var uri = NavigationManager.ToAbsoluteUri(Url);
         var query = HttpUtility.ParseQueryString(uri.Query);
 
         PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
-        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 25 : 25;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
 
         if (query["Search"] != null)
             Search = query["Search"];
@@ -255,22 +255,22 @@
             Search = "";
     }
 
-    private void PageIndexChanged(PaginationEventArgs args)
+    void PageIndexChanged(PaginationEventArgs args)
     {
         NavigationManager.NavigateTo($"Games?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
     }
 
-    private void PageSizeChanged(PaginationEventArgs args)
+    void PageSizeChanged(PaginationEventArgs args)
     {
         NavigationManager.NavigateTo($"Games?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
     }
 
-    private void SearchChanged()
+    void SearchChanged()
     {
         NavigationManager.NavigateTo($"Games?Search={Search}");
     }
 
-    private string GetIcon(Game game)
+    string GetIcon(Game game)
     {
         var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
@@ -280,17 +280,17 @@
             return "/favicon.ico";
     }
 
-    private void Add()
+    void Add()
     {
         NavigationManager.NavigateTo("/Games/Add");
     }
 
-    private void Edit(Game game)
+    void Edit(Game game)
     {
         NavigationManager.NavigateTo($"/Games/{game.Id}/Edit", true);
     }
 
-    private async Task Delete(Game game)
+    async Task Delete(Game game)
     {
         Loading = true;
 
@@ -314,7 +314,7 @@
         Loading = false;
     }
 
-    private async void AddToCollection()
+    async void AddToCollection()
     {
         var modalOptions = new ModalOptions()
             {
@@ -339,12 +339,12 @@
         };
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

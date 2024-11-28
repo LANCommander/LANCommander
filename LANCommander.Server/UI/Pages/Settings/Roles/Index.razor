@@ -29,7 +29,7 @@
             <Select
                 TItem="RoleViewModel"
                 TItemValue="Guid"
-                DataSource="Roles"
+                DataSource="RolesDetails"
                 @bind-Value="context.Roles.DefaultRoleId"
                 LabelName="@nameof(RoleViewModel.Name)"
                 ValueName="@nameof(RoleViewModel.Id)"
@@ -39,7 +39,7 @@
         </FormItem>
     </Form>
 
-    <Table TItem="RoleViewModel" DataSource="@Roles" Loading="@(Loading)" Responsive>
+    <Table TItem="RoleViewModel" DataSource="@RolesDetails" Loading="@(Loading)" Responsive>
         <PropertyColumn Property="r => r.Name" Title="Name" />
         <PropertyColumn Property="r => r.Collections" Title="Collections" />
         <PropertyColumn Property="r => r.Users" Title="Users" />
@@ -76,7 +76,8 @@
 </Modal>
 
 @code {
-    ICollection<RoleViewModel> Roles { get; set; } = new List<RoleViewModel>();
+    ICollection<RoleViewModel> RolesDetails { get; set; } = new List<RoleViewModel>();
+    ICollection<Role> Roles { get; set; } = new List<Role>();
 
     Settings Settings = SettingService.GetSettings();
     bool Loading = true;
@@ -92,15 +93,20 @@
 
     async Task LoadData()
     {
-        Roles = new List<RoleViewModel>();
+        RolesDetails = new List<RoleViewModel>();
 
         using (var roleService = DatabaseServiceFactory.Create<RoleService>())
         {
-            foreach (var role in await roleService.GetAsync())
+            Roles = await roleService.Include(r => r.Collections).SortBy(r => r.Name).GetAsync();
+        }
+
+        foreach (var role in Roles)
+        {
+            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
             {
                 var users = await roleService.GetUsersAsync(role.Name);
 
-                Roles.Add(new RoleViewModel
+                RolesDetails.Add(new RoleViewModel
                 {
                     Id = role.Id,
                     Name = role.Name,

@@ -58,9 +58,9 @@
                       DefaultExpandAll="true"
                       TItem="Page"
                       DataSource="Pages"
-                      TitleExpression="p => p.DataItem.Title"
-                      ChildrenExpression="p => p.DataItem.Children.OrderBy(p => p.SortOrder)"
-                      KeyExpression="p => p.DataItem.Id.ToString()"
+                      TitleExpression="p => p.DataItem?.Title"
+                      ChildrenExpression="p => p.DataItem?.Children?.OrderBy(p => p.SortOrder)"
+                      KeyExpression="p => p.DataItem?.Id.ToString()"
                       OnDrop="OnDrop"
                       OnSelect="SelectPage"
                       />
@@ -78,7 +78,7 @@
                             <SlugEditorInput @bind-Page="context" />
                         </FormItem>
 
-                        @if (!SelectedPage.Children.Any())
+                        @if (SelectedPage.Children == null || !SelectedPage.Children.Any())
                         {
                             <FormItem Style="margin-bottom: 8px">
                                 <FormItem Class="ant-typography">

@@ -361,21 +361,18 @@ namespace LANCommander.Server.Data
             try
             {
                 var currentUserId = await GetCurrentUserId();
-                var existing = await FindAsync(entity.Id);
 
-                //using (var op = Logger.BeginOperation("Updating entity with ID {EntityId}", entity.Id))
-                //{
-                    Context.Entry(existing).CurrentValues.SetValues(entity);
+                entity.UpdatedById = currentUserId;
+                entity.UpdatedOn = DateTime.UtcNow;
 
-                    entity.UpdatedById = currentUserId;
-                    entity.UpdatedOn = DateTime.UtcNow;
+                DbSet.Attach(entity);
+                Context.Entry(entity).State = EntityState.Modified;
 
-                    Context.Update(entity);
-
-                //    op.Complete();
-
-                    return entity;
-                //}
+                return entity;
+            }
+            catch (Exception ex)
+            {
+                return entity;
             }
             finally
             {

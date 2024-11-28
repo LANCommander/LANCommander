@@ -34,7 +34,7 @@
 
 <TableColumnPicker @ref="Picker" Key="Servers" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25" @bind-SelectedRows="SelectedServers" Responsive>
+<Table TItem="Server" DataSource="@Servers" Loading="@Loading" Size="@TableSize.Small" PageSize="50" @bind-SelectedRows="SelectedServers" Responsive>
     <Selection Key="@(context.Id.ToString())" />
     <PropertyColumn
         Property="s => s.Game"

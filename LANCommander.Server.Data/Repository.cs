@@ -418,7 +418,7 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                return await UserDbSet.FirstOrDefaultAsync(u => u.UserName == username);
+                return await UserDbSet.AsNoTracking().FirstOrDefaultAsync(u => u.UserName == username);
             }
             finally
             {

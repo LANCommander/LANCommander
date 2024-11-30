@@ -5,6 +5,7 @@ using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using System.Text.RegularExpressions;
 using YamlDotNet.Core.Tokens;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -27,6 +28,32 @@ namespace LANCommander.Server.Services
             if (String.IsNullOrWhiteSpace(entity.Slug))
                 entity.Slug = entity.Title.ToUrlSlug();
 
+            entity.Route = RenderRoute(entity);
+
+            int i = 1;
+
+            // Fetch all siblings with the same ParentId
+            var siblings = await GetAsync(p => p.ParentId == entity.ParentId);
+
+            // Filter siblings that match the slug pattern
+            var matchingSiblings = siblings
+                .Where(s => Regex.IsMatch(s.Slug, @$"^{Regex.Escape(entity.Slug)}(?:-(\d+))?$"))
+                .Select(s =>
+                {
+                    // Extract numeric suffix, or use 0 for the base slug
+                    var match = Regex.Match(s.Slug, @$"^{Regex.Escape(entity.Slug)}(?:-(\d+))?$");
+                    return match.Groups[1].Success ? int.Parse(match.Groups[1].Value) : 0;
+                })
+                .ToList();
+
+            // Find the next available number
+            while (matchingSiblings.Contains(i))
+            {
+                i++;
+            }
+
+            // Set the new slug and route
+            entity.Slug = $"{entity.Slug}-{i}";
             entity.Route = RenderRoute(entity);
 
             await Cache.ExpireAsync("MappedGames");

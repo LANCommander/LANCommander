@@ -14,7 +14,7 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Keys")]
-        public virtual Game Game { get; set; }
+        public Game Game { get; set; }
         public KeyAllocationMethod AllocationMethod { get; set; }
         [MaxLength(17)]
         public string? ClaimedByMacAddress { get; set; }
@@ -22,7 +22,7 @@ namespace LANCommander.Server.Data.Models
         public string? ClaimedByIpv4Address { get; set; }
         [MaxLength(255)]
         public string? ClaimedByComputerName { get; set; }
-        public virtual User? ClaimedByUser { get; set; }
+        public User? ClaimedByUser { get; set; }
         public DateTime? ClaimedOn { get; set; }
 
         public bool IsAllocated()

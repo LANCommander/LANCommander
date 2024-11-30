@@ -33,6 +33,8 @@ namespace LANCommander.SDK
         public string DefaultInstallDirectory;
 
         public readonly GameService Games;
+        public readonly LibraryService Library;
+        public readonly DepotService Depot;
         public readonly SaveService Saves;
         public readonly RedistributableService Redistributables;
         public readonly ScriptService Scripts;
@@ -60,6 +62,8 @@ namespace LANCommander.SDK
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory);
+            Library = new LibraryService(this);
+            Depot = new DepotService(this);
             Saves = new SaveService(this);
             Redistributables = new RedistributableService(this);
             Scripts = new ScriptService(this);
@@ -82,6 +86,8 @@ namespace LANCommander.SDK
             DefaultInstallDirectory = defaultInstallDirectory;
 
             Games = new GameService(this, DefaultInstallDirectory, logger);
+            Library = new LibraryService(this, logger);
+            Depot = new DepotService(this, logger);
             Saves = new SaveService(this, logger);
             Redistributables = new RedistributableService(this, logger);
             Scripts = new ScriptService(this, logger);
@@ -187,6 +193,23 @@ namespace LANCommander.SDK
                 request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
             var response = await ApiClient.PostAsync<T>(request);
+
+            return response;
+        }
+
+        internal async Task<T> PutRequestAsync<T>(string route, object body, bool ignoreVersion = false)
+        {
+            if (Token == null)
+                return default;
+
+            var request = new RestRequest(route)
+                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            if (!ignoreVersion)
+                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+            var response = await ApiClient.PutAsync<T>(request);
 
             return response;
         }

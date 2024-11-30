@@ -29,9 +29,9 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Init")]
-        public async Task<string> Init(SDK.Models.UploadInitRequest request)
+        public async Task<string> InitAsync(SDK.Models.UploadInitRequest request)
         {
-            var storageLocation = await StorageLocationService.Get(request.StorageLocationId);
+            var storageLocation = await StorageLocationService.GetAsync(request.StorageLocationId);
             var key = Guid.NewGuid().ToString();
 
             if (!Directory.Exists(storageLocation.Path))
@@ -44,7 +44,7 @@ namespace LANCommander.Server.Controllers.Api
                 Version = ""
             };
 
-            archive = await ArchiveService.Add(archive);
+            archive = await ArchiveService.AddAsync(archive);
 
             var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
@@ -59,7 +59,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Chunk")]
-        public async Task Chunk([FromForm] ChunkUpload chunk)
+        public async Task ChunkAsync([FromForm] ChunkUpload chunk)
         {
             var filePath = await Cache.GetOrDefaultAsync($"Archive|{chunk.Key}", String.Empty);
 

@@ -1,8 +1,9 @@
 ﻿@page "/Servers"
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using Microsoft.EntityFrameworkCore;
+@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject ServerService ServerService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
@@ -34,7 +35,18 @@
 
 <TableColumnPicker @ref="Picker" Key="Servers" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Server" DataSource="@Servers" Loading="@Loading" PageSize="25" @bind-SelectedRows="SelectedServers" Responsive>
+<Table
+    TItem="Server"
+    DataSource="@Servers"
+    Loading="@Loading"
+    PageSize="@PageSize"
+    PageIndex="@PageIndex"
+    Total="@TotalCount"
+    OnPageIndexChange="PageIndexChanged"
+    OnPageSizeChange="PageSizeChanged"
+    Size="@TableSize.Small"
+    @bind-SelectedRows="SelectedServers"
+    Responsive>
     <Selection Key="@(context.Id.ToString())" />
     <PropertyColumn
         Property="s => s.Game"
@@ -81,57 +93,116 @@
     IEnumerable<Server> Servers { get; set; } = new List<Server>();
 
     bool Loading = true;
+    int PageIndex = 1;
+    int PageSize = 50;
+    int TotalCount = 0;
 
     string Search = "";
+    string Url;
 
     ImportUploadDialog ImportUploadDialog;
     IEnumerable<Server> SelectedServers;
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Servers = (await ServerService.Get(s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))))).OrderBy(s => s.Name);
+        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+        {
+            var results = await serverService
+                .Query((q) =>
+                {
+                    return q.Include(s => s.Game).ThenInclude(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon));
+                })
+                .Include(s => s.CreatedBy)
+                .Include(s => s.UpdatedBy)
+                .SortBy(s => s.Name)
+                .PaginateAsync(
+                    s => s.Name.ToLower().Contains(fuzzySearch) || (s.Game != null && (s.Game.Title.ToLower().Contains(fuzzySearch) || s.Game.SortTitle.ToLower().Contains(fuzzySearch))),
+                    PageIndex,
+                    PageSize
+                );
+
+            TotalCount = results.Count;
+            Servers = results.Results;
+        }
     }
 
-    private void Add()
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Servers?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Servers?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"/Servers?Search={Search}&Size={PageSize}");
+    }
+
+    void Add()
     {
         NavigationManager.NavigateTo("/Servers/Add");
     }
 
-    private void Edit(Server server)
+    void Edit(Server server)
     {
         NavigationManager.NavigateTo($"/Servers/{server.Id}/General");
     }
 
-    private async Task Delete(Server server)
+    async Task Delete(Server server)
     {
         Servers = new List<Server>();
 
         Loading = true;
 
-        await ServerService.Delete(server);
+        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+        {
+            await serverService.DeleteAsync(server);
+        }
 
-        Servers = (await ServerService.Get(x => true)).OrderBy(s => s.Name);
+        await LoadData();
 
         Loading = false;
     }
 
-    private string GetIcon(Game game)
+    string GetIcon(Game game)
     {
         var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
@@ -141,7 +212,7 @@
             return "/favicon.ico";
     }
 
-    private async Task StartServers()
+    async Task StartServers()
     {
         foreach (var server in SelectedServers)
         {
@@ -158,21 +229,21 @@
         }
     }
 
-    private void StopServers()
+    void StopServers()
     {
         foreach (var server in SelectedServers)
         {
             if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                ServerProcessService.StopServer(server.Id);
+                ServerProcessService.StopServerAsync(server.Id);
         }
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

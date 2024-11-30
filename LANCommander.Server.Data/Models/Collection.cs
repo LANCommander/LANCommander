@@ -7,6 +7,6 @@ namespace LANCommander.Server.Data.Models
     public class Collection : BaseTaxonomyModel
     {
         [JsonIgnore]
-        public virtual ICollection<Role> Roles { get; set; }
+        public ICollection<Role> Roles { get; set; }
     }
 }

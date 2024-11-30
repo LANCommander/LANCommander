@@ -1,10 +1,8 @@
 ﻿@page "/Settings/Tools/OrphanedFiles"
 @using LANCommander.Helpers;
 @using LANCommander.Server.Models;
-@inject ArchiveService ArchiveService;
-@inject MediaService MediaService;
-@inject StorageLocationService StorageLocationService;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <PageHeader>
     <PageHeaderTitle>Orphaned Files</PageHeaderTitle>
@@ -42,7 +40,7 @@
     ICollection<OrphanedFile> Orphans = new List<OrphanedFile>();
     bool Loading = true;
 
-    private readonly Settings Settings = SettingService.GetSettings();
+    readonly Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {
@@ -55,47 +53,51 @@
 
         Orphans = new List<OrphanedFile>();
 
-        var storageLocations = await StorageLocationService.Get();
-        var archives = await ArchiveService.Get();
-        var archiveFiles = archives.Select(a => ArchiveService.GetArchiveFileLocation(a));
-
-        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
         {
-            var localArchiveFiles = Directory.GetFiles(storageLocation.Path);
+            var storageLocations = await storageLocationService.GetAsync();
+            var archives = await archiveService.GetAsync();
+            var archiveFiles = archives.Select(a => archiveService.GetArchiveFileLocation(a));
 
-            foreach (var file in localArchiveFiles.Where(f => !archiveFiles.Contains(f)))
+            foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
             {
-                var fileInfo = new FileInfo(file);
+                var localArchiveFiles = Directory.GetFiles(storageLocation.Path);
 
-                Orphans.Add(new OrphanedFile
+                foreach (var file in localArchiveFiles.Where(f => !archiveFiles.Contains(f)))
                 {
-                    Path = file,
-                    Size = fileInfo.Length,
-                    CreatedOn = fileInfo.CreationTime
-                });
+                    var fileInfo = new FileInfo(file);
+
+                    Orphans.Add(new OrphanedFile
+                    {
+                        Path = file,
+                        Size = fileInfo.Length,
+                        CreatedOn = fileInfo.CreationTime
+                    });
+                }
+            }
+
+            var media = await mediaService.GetAsync();
+            var mediaFiles = media.Select(m => MediaService.GetMediaPath(m));
+
+            foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
+            {
+                var localMediaFiles = Directory.GetFiles(storageLocation.Path);
+
+                foreach (var file in localMediaFiles.Where(f => !mediaFiles.Contains(f)))
+                {
+                    var fileInfo = new FileInfo(file);
+
+                    Orphans.Add(new OrphanedFile
+                    {
+                        Path = file,
+                        Size = fileInfo.Length,
+                        CreatedOn = fileInfo.CreationTime
+                    });
+                }
             }
         }
-
-        var media = await MediaService.Get();
-        var mediaFiles = media.Select(m => MediaService.GetImagePath(m));
-
-        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
-        {
-            var localMediaFiles = Directory.GetFiles(storageLocation.Path);
-
-            foreach (var file in localMediaFiles.Where(f => !mediaFiles.Contains(f)))
-            {
-                var fileInfo = new FileInfo(file);
-
-                Orphans.Add(new OrphanedFile
-                {
-                    Path = file,
-                    Size = fileInfo.Length,
-                    CreatedOn = fileInfo.CreationTime
-                });
-            }
-        }
-
 
         Orphans = Orphans.OrderByDescending(f => f.Size).ToList();
 

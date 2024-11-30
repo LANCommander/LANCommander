@@ -16,6 +16,6 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("SavePaths")]
-        public virtual Game? Game { get; set; }
+        public Game? Game { get; set; }
     }
 }

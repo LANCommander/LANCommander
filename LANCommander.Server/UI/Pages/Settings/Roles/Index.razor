@@ -1,9 +1,7 @@
 ﻿@page "/Settings/Roles"
 @using LANCommander.Server.Models;
 @using Microsoft.EntityFrameworkCore
-@inject RoleManager<Role> RoleManager
-@inject UserManager<User> UserManager
-@inject UserService UserService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Index> Logger
@@ -31,7 +29,7 @@
             <Select
                 TItem="RoleViewModel"
                 TItemValue="Guid"
-                DataSource="Roles"
+                DataSource="RolesDetails"
                 @bind-Value="context.Roles.DefaultRoleId"
                 LabelName="@nameof(RoleViewModel.Name)"
                 ValueName="@nameof(RoleViewModel.Id)"
@@ -41,7 +39,7 @@
         </FormItem>
     </Form>
 
-    <Table TItem="RoleViewModel" DataSource="@Roles" Loading="@(Loading)" Responsive>
+    <Table TItem="RoleViewModel" DataSource="@RolesDetails" Loading="@(Loading)" Responsive>
         <PropertyColumn Property="r => r.Name" Title="Name" />
         <PropertyColumn Property="r => r.Collections" Title="Collections" />
         <PropertyColumn Property="r => r.Users" Title="Users" />
@@ -78,7 +76,8 @@
 </Modal>
 
 @code {
-    ICollection<RoleViewModel> Roles { get; set; }
+    ICollection<RoleViewModel> RolesDetails { get; set; } = new List<RoleViewModel>();
+    ICollection<Role> Roles { get; set; } = new List<Role>();
 
     Settings Settings = SettingService.GetSettings();
     bool Loading = true;
@@ -86,32 +85,35 @@
 
     RoleViewModel NewRole = new RoleViewModel();
 
-    protected override async Task OnInitializedAsync()
-    {
-        Roles = new List<RoleViewModel>();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
             await LoadData();
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
-        Roles = new List<RoleViewModel>();
+        RolesDetails = new List<RoleViewModel>();
 
-        foreach (var role in await RoleManager.Roles.ToListAsync())
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
         {
-            var users = await UserManager.GetUsersInRoleAsync(role.Name);
+            Roles = await roleService.Include(r => r.Collections).SortBy(r => r.Name).GetAsync();
+        }
 
-            Roles.Add(new RoleViewModel
+        foreach (var role in Roles)
+        {
+            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
             {
-                Id = role.Id,
-                Name = role.Name,
-                Collections = role.Collections != null ? role.Collections.Count : 0,
-                Users = users.Count
-            });
+                var users = await roleService.GetUsersAsync(role.Name);
+
+                RolesDetails.Add(new RoleViewModel
+                {
+                    Id = role.Id,
+                    Name = role.Name,
+                    Collections = role.Collections != null ? role.Collections.Count : 0,
+                    Users = users.Count()
+                });
+            }
         }
 
         Loading = false;
@@ -119,57 +121,67 @@
         StateHasChanged();
     }
 
-    private async Task DeleteRole(RoleViewModel roleViewModel)
+    async Task DeleteRole(RoleViewModel roleViewModel)
     {
-        var role = await RoleManager.FindByNameAsync(roleViewModel.Name);
-
-        if (role.Name == RoleService.AdministratorRoleName)
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
         {
-            MessageService.Error("Cannot delete the administrator role!");
-        }
-        else
-        {
-            await RoleManager.DeleteAsync(role);
-            await LoadData();
+            var role = await roleService.FirstOrDefaultAsync(r => r.Name == roleViewModel.Name);
 
-            MessageService.Success($"Deleted {role.Name}!");
+            if (role.Name == RoleService.AdministratorRoleName)
+            {
+                MessageService.Error("Cannot delete the administrator role!");
+            }
+            else
+            {
+                await roleService.DeleteAsync(role);
+
+                await LoadData();
+
+                MessageService.Success($"Deleted {role.Name}!");
+            }
         }
     }
 
-    private void ShowNewRoleDialog()
+    void ShowNewRoleDialog()
     {
         NewRole = new RoleViewModel();
 
         AddRoleDialogVisible = true;
     }
 
-    private async Task AddRole()
+    async Task AddRole()
     {
-        if ((await RoleManager.FindByNameAsync(NewRole.Name)) != null)
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
         {
-            MessageService.Error("A role with that name already exists!");
-            AddRoleDialogVisible = false;
-            return;
-        }
-
-        try
-        {
-            await RoleManager.CreateAsync(new Role
+            if ((await roleService.ExistsAsync(r => r.Name == NewRole.Name)))
             {
-                Name = NewRole.Name
-            });
+                MessageService.Error("A role with that name already exists!");
 
-            await LoadData();
-            MessageService.Success("Role added!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not add role!");
-            Logger.LogError(ex, "Could not add role!");
+                AddRoleDialogVisible = false;
+
+                return;
+            }
+
+            try
+            {
+                await roleService.AddAsync(new Role
+                {
+                    Name = NewRole.Name
+                });
+
+                await LoadData();
+
+                MessageService.Success("Role added!");
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("Could not add role!");
+                Logger.LogError(ex, "Could not add role!");
+            }
         }
     }
 
-    private void Save()
+    void Save()
     {
         try
         {

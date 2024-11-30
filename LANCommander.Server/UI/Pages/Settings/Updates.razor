@@ -2,7 +2,6 @@
 @using Markdig
 @using Octokit
 @using Semver
-@inject SettingService SettingService
 @inject IMessageService MessageService
 @inject UpdateService UpdateService
 @inject ILogger<Updates> Logger
@@ -69,7 +68,7 @@
 </div>
 
 @code {
-    Settings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
@@ -82,12 +81,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
-
         CurrentVersion = UpdateService.GetCurrentVersion();
-        UpdateAvailable = await UpdateService.UpdateAvailable();
-        LatestVersion = await UpdateService.GetLatestVersion();
-        Releases = await UpdateService.GetReleases(5);
+        UpdateAvailable = await UpdateService.UpdateAvailableAsync();
+        LatestVersion = await UpdateService.GetLatestVersionAsync();
+        Releases = await UpdateService.GetReleasesAsync(5);
 
         Loading = false;
     }
@@ -98,9 +95,9 @@
             Updating = true;
 
             if (Settings.Launcher.HostUpdates)
-                await UpdateService.DownloadLauncherRelease(Releases.First());
+                await UpdateService.DownloadLauncherReleaseAsync(Releases.First());
 
-            await UpdateService.DownloadServerRelease(Releases.First());
+            await UpdateService.DownloadServerReleaseAsync(Releases.First());
         }
         catch (NotImplementedException ex) {
             MessageService.Error(ex.Message);

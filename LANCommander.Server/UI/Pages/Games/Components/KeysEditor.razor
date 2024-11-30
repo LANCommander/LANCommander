@@ -1,5 +1,5 @@
 ﻿@using LANCommander.SDK.Enums
-@inject KeyService KeyService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 
 @if (Keys != null)
@@ -100,7 +100,10 @@
 
     private async Task Release(Key key)
     {
-        key = await KeyService.Release(key);
+        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
+        {
+            key = await keyService.ReleaseAsync(key);
+        }
 
         await MessageService.Success("Key was unallocated!");
     }
@@ -113,15 +116,18 @@
         var keysDeleted = Keys.Where(k => !keys.Contains(k.Value)).ToList();
         var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k)).ToList();
 
-        foreach (var key in keysDeleted)
-            KeyService.Delete(key);
+        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
+        {
+            foreach (var key in keysDeleted)
+                keyService.DeleteAsync(key);
 
-        foreach (var key in keysAdded)
-            await KeyService.Add(new Key()
+            foreach (var key in keysAdded)
+                await keyService.AddAsync(new Key()
                 {
                     GameId = GameId,
                     Value = key
                 });
+        }
 
         EditModalVisible = false;
 

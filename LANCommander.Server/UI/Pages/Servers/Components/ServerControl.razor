@@ -1,4 +1,4 @@
-﻿@inject ServerService ServerService
+﻿@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
 @inject INotificationService NotificationService
@@ -58,7 +58,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Server = await ServerService.Get(ServerId);
+        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+        {
+            Server = await serverService.GetAsync(ServerId);
+        }
 
         ServerProcessService.OnStatusUpdate += OnStatusUpdate;
     }
@@ -76,7 +79,7 @@
         }
     }
 
-    private void OnStatusUpdate(object sender, ServerStatusUpdateEventArgs args)
+    void OnStatusUpdate(object sender, ServerStatusUpdateEventArgs args)
     {
         if (args?.Server?.Id == ServerId)
         {
@@ -93,14 +96,14 @@
         }
     }
 
-    private async Task Start()
+    async Task Start()
     {
         await ServerProcessService.StartServerAsync(Server.Id);
     }
 
-    private void Stop()
+    void Stop()
     {
-        ServerProcessService.StopServer(Server.Id);
+        ServerProcessService.StopServerAsync(Server.Id);
     }
 
     public async ValueTask DisposeAsync()

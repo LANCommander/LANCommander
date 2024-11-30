@@ -1,7 +1,7 @@
 ﻿@using LANCommander.SDK.Enums
 @using System.IO.Compression
 @using Microsoft.EntityFrameworkCore
-@inject ScriptService ScriptService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
 @inject IMessageService MessageService
 
@@ -57,19 +57,22 @@
         await LoadData();
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
-        if (GameId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.GameId == GameId);
-        else if (RedistributableId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.RedistributableId == RedistributableId);
-        else if (ServerId != Guid.Empty)
-            Scripts = await ScriptService.Get(s => s.ServerId == ServerId);
+        using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
+        {
+            if (GameId != Guid.Empty)
+                Scripts = await scriptService.GetAsync(s => s.GameId == GameId);
+            else if (RedistributableId != Guid.Empty)
+                Scripts = await scriptService.GetAsync(s => s.RedistributableId == RedistributableId);
+            else if (ServerId != Guid.Empty)
+                Scripts = await scriptService.GetAsync(s => s.ServerId == ServerId);
+        }
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async void Edit(Guid? scriptId = null)
+    async void Edit(Guid? scriptId = null)
     {
         var modalOptions = new ModalOptions()
         {
@@ -98,10 +101,13 @@
         };
     }
 
-    private async void Delete(Script script = null)
+    async void Delete(Script script = null)
     {
-        if (script != null)
-            await ScriptService.Delete(script);
+        using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
+        {
+            if (script != null)
+                await scriptService.DeleteAsync(script);
+        }
 
         await MessageService.Success("Script deleted!");
     }

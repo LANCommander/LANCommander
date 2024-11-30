@@ -53,6 +53,8 @@ namespace LANCommander.SDK.Extensions
 
             parameters[Parameters.Length] = Stopwatch.Elapsed;
 
+            Stopwatch.Stop();
+
             Enrich("ElapsedMilliseconds", Stopwatch.ElapsedMilliseconds);
 
             using (Logger?.BeginScope(AdditionalData))

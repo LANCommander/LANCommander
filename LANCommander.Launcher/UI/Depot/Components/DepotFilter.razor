@@ -1,0 +1,84 @@
+﻿@using LANCommander.Launcher.Models.Enums
+@using LANCommander.SDK.Models
+@inject DepotService DepotService
+
+<div class="depot-filter">
+    <Form @ref="Form" Model="DepotService.Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical">
+        <FormItem Label="Title">
+            <Input @bind-Value="@context.SelectedOptions.Title" />
+        </FormItem>
+        <FormItem Label="Group By">
+            <Select @bind-Value="@context.SelectedOptions.GroupBy" TItem="GroupBy" TItemValue="GroupBy" DataSource="Enum.GetValues<GroupBy>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+        <FormItem Label="Sort By">
+            <Flex>
+                <Select @bind-Value="@context.SelectedOptions.SortBy" TItem="SortBy" TItemValue="SortBy" DataSource="Enum.GetValues<SortBy>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
+
+                @if (context.SelectedOptions.SortDirection == Models.Enums.SortDirection.Ascending)
+                {
+                    <Button Icon="@IconType.Outline.SortAscending" OnClick="() => context.SelectedOptions.SortDirection = Models.Enums.SortDirection.Descending" />
+                }
+                else
+                {
+                    <Button Icon="@IconType.Outline.SortDescending" OnClick="() => context.SelectedOptions.SortDirection = Models.Enums.SortDirection.Ascending" />
+                }
+            </Flex>
+        </FormItem>
+        <FormItem Label="Engine">
+            <TagsInput Entities="context.DataSource.Engines" @bind-Values="@context.SelectedOptions.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
+        </FormItem>
+        <FormItem Label="Genre">
+            <TagsInput Entities="context.DataSource.Genres" @bind-Values="@context.SelectedOptions.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
+        </FormItem>
+        <FormItem Label="Tag">
+            <TagsInput Entities="context.DataSource.Tags" @bind-Values="@context.SelectedOptions.Tags" OptionLabelSelector="t => t.Name" TItem="SDK.Models.Tag" />
+        </FormItem>
+        <FormItem Label="Platform">
+            <TagsInput Entities="context.DataSource.Platforms" @bind-Values="@context.SelectedOptions.Platforms" OptionLabelSelector="p => p.Name" TItem="Platform" />
+        </FormItem>
+        <FormItem Label="Developers">
+            <TagsInput Entities="context.DataSource.Developers" @bind-Values="@context.SelectedOptions.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+        </FormItem>
+        <FormItem Label="Publishers">
+            <TagsInput Entities="context.DataSource.Publishers" @bind-Values="@context.SelectedOptions.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+        </FormItem>
+        <FormItem Label="Players">
+            <InputGroup Compact>
+                <AntDesign.InputNumber @bind-Value="@context.SelectedOptions.MinPlayers" Min="@context.DataSource.MinPlayers" Max="@context.DataSource.MaxPlayers" PlaceHolder="Minimum" Style="flex-grow: 1;" />
+                <Input TValue="string" InputElementSuffixClass="site-input-split" Style="width: 30px; border-left: 0; border-right: 0; pointer-events: none; text-align: center;" Placeholder="~" Disabled />
+                <AntDesign.InputNumber @bind-Value="@context.SelectedOptions.MaxPlayers" Min="@context.DataSource.MinPlayers" Max="@context.DataSource.MaxPlayers" PlaceHolder="Maximum" Style="flex-grow: 1;" />
+            </InputGroup>
+        </FormItem>
+        <FormItem>
+            <Button Type="@ButtonType.Primary" HtmlType="submit">Apply</Button>
+            <Button Type="@ButtonType.Text" OnClick="ResetFilter" Icon="@IconType.Outline.Close" Danger />
+        </FormItem>
+    </Form>
+</div>
+
+@code {
+    [Parameter] public IEnumerable<Models.ListItem> Items { get; set; }
+
+    Form<Models.DepotFilter> Form;
+
+    async Task ResetFilter()
+    {
+        await DepotService.Filter.ResetFilter();
+    }
+
+    async Task ApplyFilter()
+    {
+        await DepotService.Filter.UpdateFilter();
+    }
+
+    public void Dispose()
+    {
+        //LibraryService.OnPreLibraryItemsFiltered -= PopulateFilter;
+    }
+}

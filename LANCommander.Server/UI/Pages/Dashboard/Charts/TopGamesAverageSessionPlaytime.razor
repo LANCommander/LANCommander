@@ -1,6 +1,6 @@
 ﻿@using AntDesign.Charts
 @using ByteSizeLib
-@inject PlaySessionService PlaySessionService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <Spin Spinning="Loading">
     <div class="dashboard-chart">
@@ -9,6 +9,8 @@
 </Spin>
 
 @code {
+    ICollection<PlaySession> PlaySessions;
+
     Settings Settings = SettingService.GetSettings();
 
     object[] Data;
@@ -47,9 +49,16 @@
 
         Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
 
-        var sessions = await PlaySessionService.Get();
+        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+        {
+            PlaySessions = await playSessionService
+                .Include(ps => ps.Game)
+                .Include(ps => ps.CreatedBy)
+                .Include(ps => ps.User)
+                .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty);
+        }
 
-        foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.GameId))
+        foreach (var gameSessions in PlaySessions.GroupBy(s => s.GameId))
         {
             var total = new TimeSpan();
 

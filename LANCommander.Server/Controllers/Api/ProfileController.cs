@@ -30,11 +30,11 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<User>> Get()
+        public async Task<ActionResult<User>> GetAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync<SDK.Models.User>(User?.Identity?.Name);
 
                 if (user != null)
                     return Ok(user);
@@ -45,16 +45,16 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
         }
 
-        [HttpPost("ChangeAlias")]
-        public async Task<IActionResult> ChangeAlias(ChangeAliasRequest request)
+        [HttpPut("ChangeAlias")]
+        public async Task<IActionResult> ChangeAliasAsync(ChangeAliasRequest request)
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 user.Alias = request.Alias;
 
-                await UserService.Update(user);
+                await UserService.UpdateAsync(user);
 
                 return Ok(request.Alias);
             }
@@ -63,18 +63,18 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Avatar")]
-        public async Task<IActionResult> Avatar()
+        public async Task<IActionResult> AvatarAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
 
                 if (media == null)
                     return NotFound();
 
-                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }
@@ -84,11 +84,11 @@ namespace LANCommander.Server.Controllers.Api
 
         [AllowAnonymous]
         [HttpGet("{userName}/Avatar")]
-        public async Task<IActionResult> Avatar(string userName)
+        public async Task<IActionResult> AvatarAsync(string userName)
         {
             try
             {
-                var user = await UserService.Get(userName);
+                var user = await UserService.GetAsync(userName);
 
                 if (user == null)
                     return NotFound();
@@ -98,7 +98,7 @@ namespace LANCommander.Server.Controllers.Api
                 if (media == null)
                     return NotFound();
 
-                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }
@@ -109,13 +109,13 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("CustomField/{name}")]
-        public async Task<IActionResult> CustomField(string name)
+        public async Task<IActionResult> GetCustomFieldAsync(string name)
         {
             try
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                var field = await UserCustomFieldService.Get(user.Id, name);
+                var field = await UserCustomFieldService.GetAsync(user.Id, name);
 
                 return Ok(field.Value);
             }
@@ -127,14 +127,14 @@ namespace LANCommander.Server.Controllers.Api
             }
         }
 
-        [HttpPost("CustomField/{name}")]
-        public async Task<IActionResult> CustomField(string name, string value)
+        [HttpPut("CustomField/{name}")]
+        public async Task<IActionResult> UpdateCustomFieldAsync(string name, string value)
         {
             try
             {
-                var user = await UserService.Get(User?.Identity?.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                await UserCustomFieldService.Update(user.Id, name, value);
+                await UserCustomFieldService.UpdateAsync(user.Id, name, value);
 
                 return Ok(value);
             }

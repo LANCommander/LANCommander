@@ -3,7 +3,7 @@
 @using Markdig
 @using Microsoft.EntityFrameworkCore
 @using ZiggyCreatures.Caching.Fusion
-@inject PageService PageService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IFusionCache Cache
 @inject NavigationManager NavigationManager
 
@@ -35,22 +35,26 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Route == null) {
-            var firstParent = await PageService.FirstOrDefault(p => p.Parent == null, p => p.SortOrder);
-
-            if (firstParent == null)
-                NavigationManager.NavigateTo("/");
-            else
-                NavigationManager.NavigateTo($"/{firstParent.Route}");
-        }
-        else
+        using (var pageService = DatabaseServiceFactory.Create<PageService>())
         {
-            var route = Route.TrimEnd('/').ToLower();
-
-            Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+            if (Route == null)
             {
-                return await PageService.FirstOrDefault(p => p.Route == $"Pages/{route}");
-            });
+                var firstParent = await pageService.FirstOrDefaultAsync(p => p.Parent == null, p => p.SortOrder);
+
+                if (firstParent == null)
+                    NavigationManager.NavigateTo("/");
+                else
+                    NavigationManager.NavigateTo($"/{firstParent.Route}");
+            }
+            else
+            {
+                var route = Route.TrimEnd('/').ToLower();
+
+                Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+                {
+                    return await pageService.FirstOrDefaultAsync(p => p.Route == $"Pages/{route}");
+                });
+            }
         }
     }
 }

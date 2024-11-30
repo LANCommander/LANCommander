@@ -18,15 +18,15 @@ namespace LANCommander.Server.Services
         public ServerService(
             ILogger<ServerService> logger,
             IFusionCache cache,
-            Repository<Data.Models.Server> repository,
+            RepositoryFactory repositoryFactory,
             GameService gameService,
-            ArchiveService archiveService) : base(logger, cache, repository)
+            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
         {
             GameService = gameService;
             ArchiveService = archiveService;
         }
 
-        public async Task<Data.Models.Server> Import(Guid objectKey)
+        public async Task<Data.Models.Server> ImportAsync(Guid objectKey)
         {
             var settings = SettingService.GetSettings();
 
@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
             {
                 var manifest = ManifestHelper.Deserialize<SDK.Models.Server>(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                var server = await Get(manifest.Id);
+                var server = await GetAsync(manifest.Id);
 
                 var exists = server != null;
 
@@ -61,7 +61,7 @@ namespace LANCommander.Server.Services
 
                 if (manifest.Game.Id != Guid.Empty)
                 {
-                    var game = await GameService.Get(manifest.Game.Id);
+                    var game = await GameService.GetAsync(manifest.Game.Id);
 
                     if (game != null)
                         server.Game = game;
@@ -216,9 +216,9 @@ namespace LANCommander.Server.Services
                 #endregion
 
                 if (exists)
-                    server = await Update(server);
+                    server = await UpdateAsync(server);
                 else
-                    server = await Add(server);
+                    server = await AddAsync(server);
 
                 return server;
             }

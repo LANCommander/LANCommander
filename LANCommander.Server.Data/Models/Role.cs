@@ -7,9 +7,9 @@ namespace LANCommander.Server.Data.Models
     [Table("Roles")]
     public class Role : IdentityRole<Guid>, IBaseModel
     {
-        public virtual ICollection<Collection> Collections { get; set; }
+        public ICollection<Collection> Collections { get; set; }
         [NotMapped]
-        public virtual ICollection<User> Users { get; set; }
+        public ICollection<User> Users { get; set; }
 
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }
@@ -18,7 +18,7 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(CreatedById))]
 
         [Display(Name = "Created By")]
-        public virtual User? CreatedBy { get; set; }
+        public User? CreatedBy { get; set; }
 
         [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
@@ -27,6 +27,6 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(UpdatedById))]
 
         [Display(Name = "Updated By")]
-        public virtual User? UpdatedBy { get; set; }
+        public User? UpdatedBy { get; set; }
     }
 }

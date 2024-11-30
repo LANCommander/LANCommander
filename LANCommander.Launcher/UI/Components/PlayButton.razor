@@ -42,7 +42,7 @@ else
 
 @code {
     [Parameter] public Guid LibraryItemId { get; set; }
-    [Parameter] public LibraryItem LibraryItem { get; set; }
+    [Parameter] public Models.ListItem LibraryItem { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
 
     Timer StateTimer;
@@ -58,7 +58,7 @@ else
     protected override async Task OnParametersSetAsync()
     {
         if (LibraryItem == null && LibraryItemId != Guid.Empty)
-            LibraryItem = await LibraryService.GetLibraryItemAsync(LibraryItemId);
+            LibraryItem = await LibraryService.GetItemAsync(LibraryItemId);
     }
 
     async Task UpdateState()

@@ -3,7 +3,7 @@
 @using LANCommander.Launcher.Models
 @using LANCommander.Launcher.Services.Extensions
 @using System.ComponentModel.DataAnnotations
-@inherits FeedbackComponent<LibraryItem, string>
+@inherits FeedbackComponent<Models.ListItem, string>
 @inject InstallService InstallService
 @inject SDK.Client Client
 
@@ -88,7 +88,19 @@
 
         RemoteGame = await Client.Games.GetAsync(Options.Key);
 
-        Addons = RemoteGame.DependentGames.Where(g => g.Type.IsIn(SDK.Enums.GameType.Expansion, SDK.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
+        if (RemoteGame.DependentGames != null)
+        {
+            var dependentGames = new List<SDK.Models.Game>();
+
+            foreach (var dependentGame in RemoteGame.DependentGames)
+            {
+                dependentGames.Add(await Client.Games.GetAsync(dependentGame));
+            }
+
+            Addons = dependentGames.Where(g => g.Type.IsIn(SDK.Enums.GameType.Expansion, SDK.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
+        }
+        else
+            Addons = new List<SDK.Models.Game>();
     }
 
     async Task Close()
@@ -101,7 +113,7 @@
         var game = Options.DataItem as Game;
 
         InstallService.Add(game, SelectedDirectory, SelectedAddonIds);
-        
+
         await CloseFeedbackAsync();
     }
 
@@ -139,10 +151,7 @@
         {
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
 
-            foreach (var dependentGame in RemoteGame.DependentGames.Where(dg => SelectedAddonIds.Contains(dg.Id)))
-            {
-                size += dependentGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
-            }
+            size += Addons.Where(a => SelectedAddonIds.Contains(a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
         }
 
         return size;
@@ -156,10 +165,7 @@
         {
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
 
-            foreach (var dependentGame in RemoteGame.DependentGames)
-            {
-                size += dependentGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
-            }
+            size += Addons.Where(a => SelectedAddonIds.Contains(a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
         }
 
         return size;

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -16,25 +17,28 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class ArchivesController : BaseApiController
     {
+        private readonly IFusionCache Cache;
         private readonly ArchiveService ArchiveService;
 
         public ArchivesController(
             ILogger<ArchivesController> logger,
+            IFusionCache cache,
             ArchiveService archiveService) : base(logger)
         {
+            Cache = cache;
             ArchiveService = archiveService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Archive>>> Get()
+        public async Task<ActionResult<IEnumerable<Archive>>> GetAsync()
         {
-            return Ok(await ArchiveService.Get());
+            return Ok(await ArchiveService.GetAsync<SDK.Models.Archive>());
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<Archive>> Get(Guid id)
+        public async Task<ActionResult<Archive>> GetAsync(Guid id)
         {
-            var archive = await ArchiveService.Get(id);
+            var archive = await ArchiveService.GetAsync<SDK.Models.Archive>(id);
 
             if (archive != null)
                 return Ok(archive);
@@ -43,9 +47,9 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Download/{id}")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            var archive = await ArchiveService.Get(id);
+            var archive = await ArchiveService.GetAsync(id);
 
             if (archive == null)
             {
@@ -64,10 +68,21 @@ namespace LANCommander.Server.Controllers.Api
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{archive.Game.Title.SanitizeFilename()}.zip");
         }
 
-        [HttpGet("Contents/{id}")]
-        public async Task<IActionResult> Contents(Guid id)
+        [HttpGet("Contents/{gameId}/{version}")]
+        public async Task<IActionResult> ByVersionAsync(Guid gameId, string version)
         {
-            var archive = await ArchiveService.Get(id);
+            var archive = await ArchiveService.FirstOrDefaultAsync(a => a.GameId == gameId && a.Version == version);
+
+            if (archive == null)
+                return NotFound();
+            else
+                return await ContentsAsync(archive.Id);
+        }
+
+        [HttpGet("Contents/{id}")]
+        public async Task<IActionResult> ContentsAsync(Guid id, string version = null)
+        {
+            var archive = await ArchiveService.GetAsync(id);
 
             if (archive == null)
             {
@@ -75,30 +90,39 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var filename = ArchiveService.GetArchiveFileLocation(archive);
-
-            if (!System.IO.File.Exists(filename))
+            var entries = await Cache.GetOrSetAsync<IEnumerable<ArchiveEntry>>($"ArchiveContents:{archive.Id}", async _ =>
             {
-                Logger?.LogError("Archive ({ArchiveId}) file not found at {FileName}", filename);
-                return NotFound();
-            }
+                var filename = ArchiveService.GetArchiveFileLocation(archive);
 
-            var entries = new List<ArchiveEntry>();
-
-            using (var zip = ZipFile.OpenRead(filename))
-            {
-                foreach (var entry in zip.Entries)
+                if (!System.IO.File.Exists(filename))
                 {
-                    entries.Add(new ArchiveEntry
-                    {
-                        FullName = entry.FullName,
-                        Name = entry.Name,
-                        Crc32 = entry.Crc32
-                    });
+                    Logger?.LogError("Archive ({ArchiveId}) file not found at {FileName}", filename);
+                    return new List<ArchiveEntry>();
                 }
-            }
 
-            return Ok(entries);
+                var entries = new List<ArchiveEntry>();
+
+                using (var zip = ZipFile.OpenRead(filename))
+                {
+                    foreach (var entry in zip.Entries)
+                    {
+                        entries.Add(new ArchiveEntry
+                        {
+                            FullName = entry.FullName,
+                            Name = entry.Name,
+                            Crc32 = entry.Crc32,
+                            Length = entry.Length,
+                        });
+                    }
+                }
+
+                return entries;
+            }, TimeSpan.MaxValue);
+
+            if (entries.Count() == 0)
+                return NotFound();
+            else
+                return Ok(entries);
         }
     }
 }

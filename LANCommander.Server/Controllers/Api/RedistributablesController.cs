@@ -33,15 +33,15 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> GetAsync()
         {
-            return Ok(Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.Get()));
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.GetAsync()));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SDK.Models.Redistributable>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Redistributable>> GetAsync(Guid id)
         {
-            var redistributable = await RedistributableService.Get(id);
+            var redistributable = await RedistributableService.GetAsync(id);
 
             if (redistributable == null)
                 return NotFound();
@@ -50,9 +50,9 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            var redistributable = await RedistributableService.Get(id);
+            var redistributable = await RedistributableService.GetAsync(id);
 
             if (redistributable == null)
                 return NotFound();
@@ -72,11 +72,11 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("Import/{objectKey}")]
-        public async Task<IActionResult> Import(Guid objectKey)
+        public async Task<IActionResult> ImportAsync(Guid objectKey)
         {
             try
             {
-                var game = await RedistributableService.Import(objectKey);
+                var game = await RedistributableService.ImportAsync(objectKey);
 
                 return Ok();
             }
@@ -89,12 +89,12 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("UploadArchive")]
-        public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
+        public async Task<IActionResult> UploadArchiveAsync(SDK.Models.UploadArchiveRequest request)
         {
             try
             {
-                var storageLocation = await StorageLocationService.FirstOrDefault(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
-                var archive = await ArchiveService.FirstOrDefault(a => a.RedistributableId == request.Id && a.Version == request.Version);
+                var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
+                var archive = await ArchiveService.FirstOrDefaultAsync(a => a.RedistributableId == request.Id && a.Version == request.Version);
                 var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (archive != null)
@@ -106,7 +106,7 @@ namespace LANCommander.Server.Controllers.Api
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
                     archive.StorageLocation = storageLocation;
 
-                    archive = await ArchiveService.Update(archive);
+                    archive = await ArchiveService.UpdateAsync(archive);
                 }
                 else
                 {
@@ -119,7 +119,7 @@ namespace LANCommander.Server.Controllers.Api
                         StorageLocation = storageLocation,
                     };
 
-                    await ArchiveService.Add(archive);
+                    await ArchiveService.AddAsync(archive);
                 }
 
                 return Ok();

@@ -1,10 +1,29 @@
 ﻿@using LANCommander.Launcher.Models
 @using System.Diagnostics
-@inject InstallService InstallService
 @inject SDK.Client Client
+@inject InstallService InstallService
 @inject GameService GameService
+@inject NavigationManager NavigationManager
 
-<footer>
+<Flex Justify="space-between" Class="footer">
+    @if (NavigationManager.Uri.Contains("/Depot"))
+    {
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">Library</Button>
+    }
+    else
+    {
+        if (Client.IsConnected())
+        {
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
+        }
+        else
+        {
+            <Tooltip Title="You are currently offline">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
+            </Tooltip>
+        }
+    }
+
     @if (InstallService.Queue.Any(qi => qi.State))
     {
         <div class="downloader" @onclick="() => ShowDownloadQueue()">
@@ -15,7 +34,9 @@
     {
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
     }
-</footer>
+
+    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Team">Friends</Button>
+</Flex>
 
 <DownloadQueue @ref="DownloadQueue" />
 

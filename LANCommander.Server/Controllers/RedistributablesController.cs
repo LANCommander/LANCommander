@@ -26,9 +26,9 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpGet("/Redistributables/{id:guid}/Export")]
-        public async Task Export(Guid id)
+        public async Task ExportAsync(Guid id)
         {
-            var redistributable = await RedistributableService.Get(id);
+            var redistributable = await RedistributableService.GetAsync(id);
 
             if (redistributable == null)
             {
@@ -41,7 +41,7 @@ namespace LANCommander.Server.Controllers
 
             using (ZipArchive export = new ZipArchive(Response.BodyWriter.AsStream(), ZipArchiveMode.Create))
             {
-                var manifest = Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.Get(redistributable.Id));
+                var manifest = Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.GetAsync(redistributable.Id));
 
                 var serializedManifest = ManifestHelper.Serialize(manifest);
 

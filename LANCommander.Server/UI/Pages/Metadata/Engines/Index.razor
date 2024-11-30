@@ -1,7 +1,8 @@
 ﻿@page "/Metadata/Engines"
 @using Microsoft.EntityFrameworkCore;
+@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject EngineService EngineService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -21,7 +22,17 @@
 
 <TableColumnPicker @ref="Picker" Key="Engines" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Engine" DataSource="@Engines" Loading="@Loading" PageSize="25" Responsive>
+<Table
+    TItem="Engine"
+    DataSource="@Engines"
+    Loading="@Loading"
+    PageSize="@PageSize"
+    PageIndex="@PageIndex"
+    Total="@TotalCount"
+    OnPageIndexChange="PageIndexChanged"
+    OnPageSizeChange="PageSizeChanged"
+    Size="@TableSize.Small"
+    Responsive>
     <PropertyColumn Property="c => c.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
     <PropertyColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     <PropertyColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
@@ -64,8 +75,12 @@
     IEnumerable<Engine> Engines { get; set; } = new List<Engine>();
 
     bool Loading = true;
+    int PageIndex = 1;
+    int PageSize = 50;
+    int TotalCount = 0;
 
     string Search = "";
+    string Url;
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
@@ -73,40 +88,90 @@
     bool EditEngineVisible = false;
     Engine EngineContext = new Engine();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Engines = (await EngineService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var engineService = DatabaseServiceFactory.Create<EngineService>())
+        {
+            var results = await engineService
+                .Include(e => e.Games)
+                .Include(e => e.CreatedBy)
+                .Include(e => e.UpdatedBy)
+                .SortBy(e => e.Name)
+                .PaginateAsync(e => e.Name.ToLower().Contains(fuzzySearch),
+                    PageIndex,
+                    PageSize);
+
+            TotalCount = results.Count;
+            Engines = results.Results;
+        }
     }
 
-    private async Task UpdateOrAdd()
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Engines?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Engines?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"/Metadata/Engines?Search={Search}&Size={PageSize}");
+    }
+
+    async Task UpdateOrAdd()
     {
         try
         {
-            if (EngineContext.Id == Guid.Empty)
+            using (var engineService = DatabaseServiceFactory.Create<EngineService>())
             {
-                await EngineService.AddMissing(x => x.Name == EngineContext.Name, EngineContext);
+                if (EngineContext.Id == Guid.Empty)
+                {
+                    await engineService.AddMissingAsync(x => x.Name == EngineContext.Name, EngineContext);
 
-                MessageService.Success($"{EngineContext.Name} was added!");
-            }
-            else
-            {
-                await EngineService.Update(EngineContext);
+                    MessageService.Success($"{EngineContext.Name} was added!");
+                }
+                else
+                {
+                    await engineService.UpdateAsync(EngineContext);
 
-                MessageService.Success($"{EngineContext.Name} was updated!");
+                    MessageService.Success($"{EngineContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -124,7 +189,7 @@
         await CloseEdit();
     }
 
-    private async Task OpenEdit(Engine engine)
+    async Task OpenEdit(Engine engine)
     {
         if (engine != null)
             EngineContext = engine;
@@ -134,33 +199,41 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseEdit()
+    async Task CloseEdit()
     {
         EditEngineVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Delete(Engine Engine)
+    async Task Delete(Engine Engine)
     {
         Engines = new List<Engine>();
 
         Loading = true;
 
-        await EngineService.Delete(Engine);
+        using (var engineService = DatabaseServiceFactory.Create<EngineService>())
+        {
+            await engineService.DeleteAsync(Engine);
+        }
 
-        Engines = (await EngineService.Get(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

@@ -1,7 +1,8 @@
 ﻿@page "/Metadata/Tags"
 @using Microsoft.EntityFrameworkCore;
+@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject TagService TagService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -21,7 +22,17 @@
 
 <TableColumnPicker @ref="Picker" Key="Tags" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Data.Models.Tag" DataSource="@Tags" Loading="@Loading" PageSize="25" Responsive>
+<Table
+    TItem="Data.Models.Tag"
+    DataSource="@Tags"
+    Loading="@Loading"
+    PageSize="@PageSize"
+    PageIndex="@PageIndex"
+    Total="@TotalCount"
+    OnPageIndexChange="PageIndexChanged"
+    OnPageSizeChange="PageSizeChanged"
+    Size="@TableSize.Small"
+    Responsive>
     <PropertyColumn Property="c => c.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
     <PropertyColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     <PropertyColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
@@ -64,8 +75,12 @@
     IEnumerable<Data.Models.Tag> Tags { get; set; } = new List<Data.Models.Tag>();
 
     bool Loading = true;
+    int PageIndex = 1;
+    int PageSize = 50;
+    int TotalCount = 0;
 
     string Search = "";
+    string Url;
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
@@ -73,40 +88,90 @@
     bool EditTagVisible = false;
     Data.Models.Tag TagContext = new Data.Models.Tag();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Tags = (await TagService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var tagService = DatabaseServiceFactory.Create<TagService>())
+        {
+            var results = await tagService
+                .Include(t => t.Games)
+                .Include(t => t.CreatedBy)
+                .Include(t => t.UpdatedBy)
+                .SortBy(t => t.Name)
+                .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
+                    PageIndex,
+                    PageSize);
+
+            TotalCount = results.Count;
+            Tags = results.Results;
+        }
     }
 
-    private async Task UpdateOrAdd()
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Tags?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Tags?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"/Metadata/Tags?Search={Search}&Size={PageSize}");
+    }
+
+    async Task UpdateOrAdd()
     {
         try
         {
-            if (TagContext.Id == Guid.Empty)
+            using (var tagService = DatabaseServiceFactory.Create<TagService>())
             {
-                await TagService.AddMissing(x => x.Name == TagContext.Name, TagContext);
+                if (TagContext.Id == Guid.Empty)
+                {
+                    await tagService.AddMissingAsync(x => x.Name == TagContext.Name, TagContext);
 
-                MessageService.Success($"{TagContext.Name} was added!");
-            }
-            else
-            {
-                await TagService.Update(TagContext);
+                    MessageService.Success($"{TagContext.Name} was added!");
+                }
+                else
+                {
+                    await tagService.UpdateAsync(TagContext);
 
-                MessageService.Success($"{TagContext.Name} was updated!");
+                    MessageService.Success($"{TagContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -124,7 +189,7 @@
         await CloseEdit();
     }
 
-    private async Task OpenEdit(Data.Models.Tag tag)
+    async Task OpenEdit(Data.Models.Tag tag)
     {
         if (tag != null)
             TagContext = tag;
@@ -134,33 +199,41 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseEdit()
+    async Task CloseEdit()
     {
         EditTagVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Delete(Data.Models.Tag Tag)
+    async Task Delete(Data.Models.Tag Tag)
     {
         Tags = new List<Data.Models.Tag>();
 
         Loading = true;
 
-        await TagService.Delete(Tag);
+        using (var tagService = DatabaseServiceFactory.Create<TagService>())
+        {
+            await tagService.DeleteAsync(Tag);
+        }
 
-        Tags = (await TagService.Get(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

@@ -3,8 +3,8 @@
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager Navigator
-@inject RedistributableService RedistributableService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
@@ -44,17 +44,17 @@
 
     string Status;
 
-    private async Task Start()
+    async Task Start()
     {
         await ChunkUploader.Start();
     }
 
-    private async Task Clear()
+    async Task Clear()
     {
         await ChunkUploader.Clear();
     }
 
-    private async Task Cancel()
+    async Task Cancel()
     {
         await ChunkUploader.Clear();
         Visible = false;
@@ -73,16 +73,19 @@
         {
             try
             {
-                var redistributable = await RedistributableService.Import(objectKey);
+                using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+                {
+                    var redistributable = await redistributableService.ImportAsync(objectKey);
 
-                Visible = false;
+                    Visible = false;
 
-                await InvokeAsync(StateHasChanged);
+                    await InvokeAsync(StateHasChanged);
 
-                if (OnRedistributableImported.HasDelegate)
-                    await OnRedistributableImported.InvokeAsync(redistributable.Id);
+                    if (OnRedistributableImported.HasDelegate)
+                        await OnRedistributableImported.InvokeAsync(redistributable.Id);
 
-                MessageService.Success($"{redistributable.Name} successfully imported!");
+                    MessageService.Success($"{redistributable.Name} successfully imported!");
+                }
             }
             catch (Exception ex)
             {

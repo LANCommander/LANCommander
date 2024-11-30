@@ -5,6 +5,7 @@ using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using System.Text.RegularExpressions;
 using YamlDotNet.Core.Tokens;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -15,9 +16,9 @@ namespace LANCommander.Server.Services
         public PageService(
             ILogger<PageService> logger,
             IFusionCache cache,
-            Repository<Page> repository) : base(logger, cache,repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
-        public override async Task<Page> Add(Page entity)
+        public override async Task<Page> AddAsync(Page entity)
         {
             if (entity.Parent != null && entity.Parent.Parent != null && entity.Parent.Parent.Id == entity.Id)
                 throw new Exception("Tried creating page with circular reference");
@@ -29,12 +30,38 @@ namespace LANCommander.Server.Services
 
             entity.Route = RenderRoute(entity);
 
+            int i = 1;
+
+            // Fetch all siblings with the same ParentId
+            var siblings = await GetAsync(p => p.ParentId == entity.ParentId);
+
+            // Filter siblings that match the slug pattern
+            var matchingSiblings = siblings
+                .Where(s => Regex.IsMatch(s.Slug, @$"^{Regex.Escape(entity.Slug)}(?:-(\d+))?$"))
+                .Select(s =>
+                {
+                    // Extract numeric suffix, or use 0 for the base slug
+                    var match = Regex.Match(s.Slug, @$"^{Regex.Escape(entity.Slug)}(?:-(\d+))?$");
+                    return match.Groups[1].Success ? int.Parse(match.Groups[1].Value) : 0;
+                })
+                .ToList();
+
+            // Find the next available number
+            while (matchingSiblings.Contains(i))
+            {
+                i++;
+            }
+
+            // Set the new slug and route
+            entity.Slug = $"{entity.Slug}-{i}";
+            entity.Route = RenderRoute(entity);
+
             await Cache.ExpireAsync("MappedGames");
 
-            return await base.Add(entity);
+            return await base.AddAsync(entity);
         }
 
-        public override async Task<Page> Update(Page entity)
+        public override async Task<Page> UpdateAsync(Page entity)
         {
             if (entity.Parent != null && entity.Parent.Parent != null && entity.Parent.Parent.Id == entity.Id)
                 throw new Exception("Tried updating page with circular reference");
@@ -48,24 +75,24 @@ namespace LANCommander.Server.Services
 
             await Cache.ExpireAsync($"Page|{entity.Route}");
 
-            return await base.Update(entity);
+            return await base.UpdateAsync(entity);
         }
 
-        public async Task ChangeParent(Guid childId, Guid parentId)
+        public async Task ChangeParentAsync(Guid childId, Guid parentId)
         {
-            var child = await Get(childId);
+            var child = await GetAsync(childId);
 
             if (child.ParentId != parentId)
             {
-                var parent = await Get(parentId);
+                var parent = await GetAsync(parentId);
 
                 child.Parent = parent;
 
-                await Update(child);
+                await UpdateAsync(child);
             }
         }
 
-        public async Task UpdateOrder(Guid parentId, IEnumerable<Guid> childOrder)
+        public async Task UpdateOrderAsync(Guid parentId, IEnumerable<Guid> childOrder)
         {
             var childOrderList = new List<Guid>(childOrder);
             var children = new List<Page>();
@@ -76,7 +103,7 @@ namespace LANCommander.Server.Services
 
             foreach (var childId in childOrder)
             {
-                var child = await Get(childId);
+                var child = await GetAsync(childId);
 
                 child.SortOrder = i;
 
@@ -92,38 +119,38 @@ namespace LANCommander.Server.Services
             {
                 foreach (var child in children)
                 {
-                    await Update(child);
+                    await UpdateAsync(child);
                 }
             }
             else
             {
-                var parent = await Get(parentId);
+                var parent = await GetAsync(parentId);
 
                 parent.Children = children;
 
-                await Update(parent);
+                await UpdateAsync(parent);
             }
         }
 
-        public async Task FixRoutes()
+        public async Task FixRoutesAsync()
         {
-            var parentPages = await Get(p => p.Parent == null);
+            var parentPages = await GetAsync(p => p.Parent == null);
 
             foreach (var page in parentPages)
             {
-                await FixRoute(page);
+                await FixRouteAsync(page);
             }
         }
 
-        private async Task FixRoute(Page page)
+        private async Task FixRouteAsync(Page page)
         {
             page.Route = RenderRoute(page);
 
-            await Update(page);
+            await UpdateAsync(page);
 
             foreach (var child in page.Children)
             {
-                await FixRoute(child);
+                await FixRouteAsync(child);
             }
         }
 

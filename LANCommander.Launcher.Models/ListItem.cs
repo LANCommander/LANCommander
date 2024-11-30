@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    public enum LibraryItemState
+    public enum ListItemState
     {
         NotInstalled,
         Installed,
@@ -18,35 +18,35 @@ namespace LANCommander.Launcher.Models
         UpdateAvailable
     }
 
-    public enum LibraryItemType
+    public enum ListItemType
     {
         Game,
         Redistributable
     }
 
-    public class LibraryItem
+    public class ListItem
     {
         public Guid Key { get; set; }
         public Guid IconId { get; set; }
-        public LibraryItemType Type { get; set; }
-        public LibraryItemState State { get; set; }
+        public ListItemType Type { get; set; }
+        public ListItemState State { get; set; }
         public string Name { get; set; }
         public string SortName { get; set; }
         public string[] Groups { get; set; }
         public object DataItem { get; set; }
 
-        public LibraryItem(Collection collection)
+        public ListItem(Collection collection)
         {
             Key = collection.Id;
-            Type = LibraryItemType.Game;
+            Type = ListItemType.Game;
             Name = collection.Name;
             DataItem = collection;
         }
 
-        public LibraryItem(Game game)
+        public ListItem(Game game)
         {
             Key = game.Id;
-            Type = LibraryItemType.Game;
+            Type = ListItemType.Game;
             Name = game.Title;
             SortName = game.SortTitle;
             DataItem = game;
@@ -54,11 +54,11 @@ namespace LANCommander.Launcher.Models
             var manifestPath = ManifestHelper.GetPath(game.InstallDirectory, game.Id);
 
             if (game.Installed && !String.IsNullOrWhiteSpace(game.LatestVersion) && game.InstalledVersion != game.LatestVersion)
-                State = LibraryItemState.UpdateAvailable;
+                State = ListItemState.UpdateAvailable;
             else if (game.Installed && File.Exists(manifestPath))
-                State = LibraryItemState.Installed;
+                State = ListItemState.Installed;
             else
-                State = LibraryItemState.NotInstalled;
+                State = ListItemState.NotInstalled;
 
             var icon = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
@@ -66,12 +66,30 @@ namespace LANCommander.Launcher.Models
                 IconId = icon.Id;
         }
 
-        public LibraryItem(Redistributable redistributable)
+        public ListItem(Redistributable redistributable)
         {
             Key = redistributable.Id;
-            Type = LibraryItemType.Redistributable;
+            Type = ListItemType.Redistributable;
             Name = redistributable.Name;
             DataItem = redistributable;
+        }
+
+        public ListItem(SDK.Models.Game game)
+        {
+            Key = game.Id;
+            Type = ListItemType.Game;
+            Name = game.Title;
+            SortName = game.SortTitle;
+            DataItem = game;
+        }
+
+        public ListItem(SDK.Models.DepotGame game)
+        {
+            Key = game.Id;
+            Type = ListItemType.Game;
+            Name = game.Title;
+            SortName = game.SortTitle;
+            DataItem = game;
         }
     }
 }

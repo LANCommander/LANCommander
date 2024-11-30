@@ -10,6 +10,6 @@ namespace LANCommander.Server.Services
         public PlatformService(
             ILogger<PlatformService> logger,
             IFusionCache cache,
-            Repository<Platform> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
     }
 }

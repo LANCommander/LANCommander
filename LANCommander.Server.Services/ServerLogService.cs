@@ -14,11 +14,11 @@ namespace LANCommander.Server.Services
         public ServerConsoleService(
             ILogger<ServerConsoleService> logger,
             IFusionCache cache,
-            Repository<ServerConsole> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
-        public async Task<string[]> ReadLog(Guid logId)
+        public async Task<string[]> ReadLogAsync(Guid logId)
         {
-            var log = await Get(logId);
+            var log = await GetAsync(logId);
 
             if (log.Type != ServerConsoleType.LogFile)
                 throw new Exception("Invalid console type");

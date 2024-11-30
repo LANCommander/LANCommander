@@ -1,8 +1,7 @@
 ﻿@page "/Settings/Archives"
 @using LANCommander.Server.Models;
 @using Microsoft.EntityFrameworkCore
-@inject SettingService SettingService
-@inject StorageLocationService StorageLocationService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Archives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -62,7 +61,7 @@
 </div>
 
 @code {
-    Settings Settings;
+    Settings Settings = SettingService.GetSettings();
     ICollection<StorageLocation> StorageLocations;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -70,10 +69,14 @@
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
-        StorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+        {
+            StorageLocations = await storageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+        }
     }
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
@@ -84,10 +87,13 @@
                 if (!StorageLocations.Any(l => l.Default))
                     storageLocation.Default = true;
 
-                if (storageLocation.Id != Guid.Empty)
-                    await StorageLocationService.Update(storageLocation);
-                else
-                    await StorageLocationService.Add(storageLocation);
+                using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+                {
+                    if (storageLocation.Id != Guid.Empty)
+                        await storageLocationService.UpdateAsync(storageLocation);
+                    else
+                        await storageLocationService.AddAsync(storageLocation);
+                }
             }
 
             MessageService.Success("Settings saved!");
@@ -99,7 +105,7 @@
         }
     }
 
-    private void OnPathSelected(StorageLocation storageLocation, string path)
+    void OnPathSelected(StorageLocation storageLocation, string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 

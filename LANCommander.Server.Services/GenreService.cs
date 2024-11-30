@@ -10,6 +10,6 @@ namespace LANCommander.Server.Services
         public GenreService(
             ILogger<GenreService> logger,
             IFusionCache cache,
-            Repository<Genre> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
     }
 }

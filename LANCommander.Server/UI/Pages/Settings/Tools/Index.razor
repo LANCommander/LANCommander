@@ -1,10 +1,9 @@
 ﻿@page "/Settings/Tools"
 @using LANCommander.Server.Models;
 @using ZiggyCreatures.Caching.Fusion
-@inject IMessageService MessageService
-@inject ArchiveService ArchiveService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject UpdateService UpdateService
-@inject PageService PageService
+@inject IMessageService MessageService
 @inject IFusionCache FusionCache
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -68,18 +67,21 @@
 
         await InvokeAsync(StateHasChanged);
 
-        var archives = await ArchiveService.Get();
-
-        foreach (var archive in archives)
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
-            var path = ArchiveService.GetArchiveFileLocation(archive);
+            var archives = await archiveService.GetAsync();
 
-            if (File.Exists(path))
+            foreach (var archive in archives)
             {
-                archive.CompressedSize = ArchiveService.GetCompressedSize(archive);
-                archive.UncompressedSize = ArchiveService.GetUncompressedSize(archive);
+                var path = archiveService.GetArchiveFileLocation(archive);
 
-                await ArchiveService.Update(archive);
+                if (File.Exists(path))
+                {
+                    archive.CompressedSize = archiveService.GetCompressedSize(archive);
+                    archive.UncompressedSize = archiveService.GetUncompressedSize(archive);
+
+                    await archiveService.UpdateAsync(archive);
+                }
             }
         }
 
@@ -102,11 +104,11 @@
         await InvokeAsync(StateHasChanged);
 
         var currentVersion = UpdateService.GetCurrentVersion();
-        var currentRelease = await UpdateService.GetRelease(currentVersion);
+        var currentRelease = await UpdateService.GetReleaseAsync(currentVersion);
 
         if (currentRelease != null)
         {
-            await UpdateService.DownloadLauncherRelease(currentRelease);
+            await UpdateService.DownloadLauncherReleaseAsync(currentRelease);
 
             MessageService.Success("Clients downloaded!");
         }
@@ -126,7 +128,10 @@
 
         try
         {
-            await PageService.FixRoutes();
+            using (var pageService = DatabaseServiceFactory.Create<PageService>())
+            {
+                await pageService.FixRoutesAsync();
+            }
 
             MessageService.Success("Routes fixed!");
         }

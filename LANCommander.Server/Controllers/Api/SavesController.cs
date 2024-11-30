@@ -36,15 +36,15 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetAsync()
         {
-            return Ok(Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.Get()));
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.GameSave>>(await GameSaveService.GetAsync()));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SDK.Models.GameSave>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.GameSave>> GetAsync(Guid id)
         {
-            var gameSave = await GameSaveService.Get(id);
+            var gameSave = await GameSaveService.GetAsync(id);
 
             if (gameSave == null)
                 return NotFound();
@@ -53,27 +53,27 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Game/{gameId}")]
-        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetGameSaves(Guid gameId)
+        public async Task<ActionResult<IEnumerable<SDK.Models.GameSave>>> GetGameSavesAsync(Guid gameId)
         {
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var userSaves = await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == gameId);
+            var userSaves = await GameSaveService.GetAsync(gs => gs.UserId == user.Id && gs.GameId == gameId);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.GameSave>>(userSaves));
         }
 
         [HttpGet("Latest/{gameId}")]
-        public async Task<ActionResult<SDK.Models.GameSave>> Latest(Guid gameId)
+        public async Task<ActionResult<SDK.Models.GameSave>> LatestAsync(Guid gameId)
         {
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var latestSave = await GameSaveService.FirstOrDefault(gs => gs.UserId == user.Id && gs.GameId == gameId, gs => gs.CreatedOn);
+            var latestSave = await GameSaveService.FirstOrDefaultAsync(gs => gs.UserId == user.Id && gs.GameId == gameId, gs => gs.CreatedOn);
 
             // Should probably return 404 if no latest save exists
             // Not sure if this will affect launcher stability
@@ -82,15 +82,15 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("DownloadLatest/{gameId}")]
-        public async Task<IActionResult> DownloadLatest(Guid gameId)
+        public async Task<IActionResult> DownloadLatestAsync(Guid gameId)
         {
-            var user = await UserService.Get(User?.Identity?.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
                 return NotFound();
 
             var save = await GameSaveService
-                .FirstOrDefault(gs => gs.GameId == gameId && gs.UserId == user.Id, gs => gs.CreatedOn);
+                .FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == user.Id, gs => gs.CreatedOn);
 
             if (save == null)
                 return NotFound();
@@ -104,9 +104,9 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Download/{id}")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            var save = await GameSaveService.Get(id);
+            var save = await GameSaveService.GetAsync(id);
 
             if (save == null)
                 return NotFound();
@@ -120,12 +120,12 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Upload/{id}")]
-        public async Task<IActionResult> Upload(Guid id)
+        public async Task<IActionResult> UploadAsync(Guid id)
         {
             var file = Request.Form.Files.First();
 
-            var user = await UserService.Get(User?.Identity?.Name);
-            var game = await GameService.Get(id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
                 return NotFound();
@@ -137,7 +137,7 @@ namespace LANCommander.Server.Controllers.Api
                 Size = file.Length,
             };
 
-            save = await GameSaveService.Add(save);
+            save = await GameSaveService.AddAsync(save);
 
             var saveUploadPath = Path.GetDirectoryName(save.GetUploadPath());
 
@@ -151,23 +151,23 @@ namespace LANCommander.Server.Controllers.Api
 
             if (Settings.UserSaves.MaxSaves > 0)
             {
-                var saves = (await GameSaveService.Get(gs => gs.UserId == user.Id && gs.GameId == game.Id)).OrderByDescending(gs => gs.CreatedOn).Skip(Settings.UserSaves.MaxSaves).ToList();
+                var saves = (await GameSaveService.GetAsync(gs => gs.UserId == user.Id && gs.GameId == game.Id)).OrderByDescending(gs => gs.CreatedOn).Skip(Settings.UserSaves.MaxSaves).ToList();
 
                 foreach (var extraSave in saves)
-                    await GameSaveService.Delete(extraSave);
+                    await GameSaveService.DeleteAsync(extraSave);
             }
 
             return Ok(Mapper.Map<SDK.Models.GameSave>(save));
         }
 
-        [HttpPost("Delete/{id}")]
-        public async Task<IActionResult> Delete(Guid id)
+        [HttpDelete("Delete/{id}")]
+        public async Task<IActionResult> DeleteAsync(Guid id)
         {
             try
             {
-                var save = await GameSaveService.Get(id);
+                var save = await GameSaveService.GetAsync(id);
 
-                await GameSaveService.Delete(save);
+                await GameSaveService.DeleteAsync(save);
 
                 return Ok();
             }

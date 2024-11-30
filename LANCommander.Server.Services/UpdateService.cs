@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
             return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
         }
 
-        public async Task<SemVersion> GetLatestVersion()
+        public async Task<SemVersion> GetLatestVersionAsync()
         {
             var release = await GitHub.Repository.Release.GetLatest("LANCommander", "LANCommander");
 
@@ -47,16 +47,16 @@ namespace LANCommander.Server.Services
             return version;
         }
 
-        public async Task<bool> UpdateAvailable()
+        public async Task<bool> UpdateAvailableAsync()
         {
-            var latestVersion = await GetLatestVersion();
+            var latestVersion = await GetLatestVersionAsync();
 
             var sortOrder = GetCurrentVersion().ComparePrecedenceTo(latestVersion);
 
             return sortOrder < 0;
         }
 
-        public async Task<IEnumerable<Release>> GetReleases(int count)
+        public async Task<IEnumerable<Release>> GetReleasesAsync(int count)
         {
             return await GitHub.Repository.Release.GetAll("LANCommander", "LANCommander", new ApiOptions
             {
@@ -65,14 +65,14 @@ namespace LANCommander.Server.Services
             });
         }
 
-        public async Task<Release?> GetRelease(SemVersion version)
+        public async Task<Release?> GetReleaseAsync(SemVersion version)
         {
-            var releases = await GetReleases(10);
+            var releases = await GetReleasesAsync(10);
 
             return releases.FirstOrDefault(r => r.TagName == $"v{version}");
         }
 
-        public async Task DownloadServerRelease(Release release)
+        public async Task DownloadServerReleaseAsync(Release release)
         {
             string releaseFile = release.Assets.FirstOrDefault(a => a.Name.StartsWith($"LANCommander.Server-{GetOS()}-{GetArchitecture()}-"))?.BrowserDownloadUrl ?? String.Empty;
 
@@ -81,12 +81,12 @@ namespace LANCommander.Server.Services
 
             Logger?.LogInformation("Stopping all servers");
 
-            var servers = await ServerService.Get();
+            var servers = await ServerService.GetAsync();
 
             foreach (var server in servers)
             {
                 if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                    ServerProcessService.StopServer(server.Id);
+                    ServerProcessService.StopServerAsync(server.Id);
             }
 
             Logger?.LogInformation("Servers stopped");
@@ -103,7 +103,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task DownloadLauncherRelease(Release release)
+        public async Task DownloadLauncherReleaseAsync(Release release)
         {
             var releaseFiles = release.Assets.Where(a => a.Name.StartsWith("LANCommander.Launcher-")).Select(a => a.BrowserDownloadUrl);
 

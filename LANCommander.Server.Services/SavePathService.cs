@@ -10,6 +10,6 @@ namespace LANCommander.Server.Services
         public SavePathService(
             ILogger<SavePathService> logger,
             IFusionCache cache,
-            Repository<SavePath> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
     }
 }

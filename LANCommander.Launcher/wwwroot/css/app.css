@@ -58,6 +58,7 @@
 
 .pb-custom-window > * {
   position: absolute;
+  z-index: 500;
 }
 .pb-custom-window-content {
   top: 0 !important;
@@ -67,9 +68,19 @@
   display: flex;
   flex-direction: column;
 }
-.pb-custom-window-header-drag-area {
-  background: rgba(0, 0, 0, 0.5) !important;
+.pb-custom-window-content::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 37px;
   backdrop-filter: blur(3px);
+  z-index: 700;
+  background: rgba(0, 0, 0, 0.5);
+}
+.pb-custom-window-drag-area {
+  background: none !important;
 }
 .pb-custom-window-controls {
   background: none !important;
@@ -171,12 +182,9 @@ app {
     background-position: -200% 0;
   }
 }
-footer {
+.footer {
   background: #1f1f1f;
-  display: flex;
-  justify-content: center;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  padding: 8px;
 }
 
 .ant-btn,
@@ -483,6 +491,115 @@ footer {
 .game-metadata h3 {
   font-weight: bold;
   margin-bottom: 0;
+}
+
+.depot {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  position: relative;
+  flex-direction: row;
+}
+.depot .ant-drawer-content-wrapper {
+  height: calc(100% - 128px) !important;
+  transform: none !important;
+}
+
+.depot-filter {
+  position: relative;
+  z-index: 500;
+  width: 320px;
+  margin-top: 74px;
+  flex-shrink: 0;
+}
+
+.depot-games {
+  width: 100%;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  padding-top: 59.5px;
+  padding-left: 31px;
+  padding-right: 31px;
+  padding-bottom: 38.5px;
+}
+
+.depot-game {
+  display: flex;
+  align-items: center;
+  aspect-ratio: 2/3;
+}
+.depot-game-cover {
+  transition: all 0.25s;
+  box-shadow: 0px 0px 0px 0px #000;
+  position: relative;
+  cursor: pointer;
+}
+.depot-game-cover:hover {
+  transform: scale(1.2);
+  box-shadow: 0px 0px 64px 32px #000;
+  z-index: 100;
+}
+.depot-game-add-btn, .depot-game-add-btn.ant-btn.ant-btn-loading {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.depot-game-cover:hover .depot-game-add-btn {
+  display: block;
+  opacity: 1;
+}
+.depot-game img {
+  width: 100%;
+}
+
+.depot-game-details {
+  z-index: 600;
+}
+.depot-game-details .ant-drawer-mask {
+  background: linear-gradient(45deg, rgba(0, 0, 0, 0.5882352941), rgba(58, 58, 58, 0.5411764706));
+  backdrop-filter: blur(3px);
+  z-index: auto;
+}
+.depot-game-details .ant-drawer-content {
+  background: #000;
+}
+.depot-game-details .ant-drawer-header-no-title {
+  display: none;
+}
+.depot-game-details .ant-drawer-content-wrapper {
+  height: calc(100% - 128px) !important;
+  width: 106.6666666667vh;
+  transform: none !important;
+  left: calc(50vw - 53.33vh);
+  right: auto;
+  box-shadow: 0 0 64px black;
+}
+.depot-game-details .ant-drawer-body {
+  padding: 0;
+}
+.depot-game-details .ant-drawer-body::-webkit-scrollbar {
+  width: 0;
+}
+.depot-game-details .game-hero {
+  position: relative;
+  aspect-ratio: 2.6666666667;
+  height: 40vh;
+}
+.depot-game-details-background {
+  object-fit: cover;
+  max-height: 20vw;
+}
+.depot-game-details .game-details-close-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 100;
 }
 
 .downloader {

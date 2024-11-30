@@ -11,12 +11,12 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("PlaySessions")]
-        public virtual Game? Game { get; set; }
+        public Game? Game { get; set; }
 
         public Guid UserId { get; set; }
         [ForeignKey(nameof(UserId))]
         [InverseProperty("PlaySessions")]
-        public virtual User? User { get; set; }
+        public User? User { get; set; }
 
         [Display(Name = "Start")]
         public DateTime? Start { get; set; }
@@ -24,7 +24,7 @@ namespace LANCommander.Server.Data.Models
         [Display(Name = "End")]
         public DateTime? End { get; set; }
 
-        public virtual TimeSpan? Duration
+        public TimeSpan? Duration
         {
             get
             {

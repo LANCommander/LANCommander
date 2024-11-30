@@ -43,17 +43,17 @@ namespace LANCommander.Server.Data.Models
         public DateTime RefreshTokenExpiration { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<GameSave>? GameSaves { get; set; }
+        public ICollection<GameSave>? GameSaves { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<PlaySession>? PlaySessions { get; set; }
+        public ICollection<PlaySession>? PlaySessions { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<Media>? Media { get; set; }
+        public ICollection<Media>? Media { get; set; }
 
         [NotMapped]
-        public virtual ICollection<Role>? Roles { get; set; }
-        public virtual ICollection<UserCustomField>? CustomFields { get; set; }
+        public ICollection<Role>? Roles { get; set; }
+        public ICollection<UserCustomField>? CustomFields { get; set; }
 
         [JsonIgnore]
         public bool Approved { get; set; }
@@ -63,22 +63,30 @@ namespace LANCommander.Server.Data.Models
 
         public string? Alias { get; set; }
 
+        [JsonIgnore]
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }
 
+        [JsonIgnore]
         public Guid? CreatedById { get; set; }
         [ForeignKey(nameof(CreatedById))]
 
+        [JsonIgnore]
         [Display(Name = "Created By")]
-        public virtual User? CreatedBy { get; set; }
+        public User? CreatedBy { get; set; }
 
+        [JsonIgnore]
         [Display(Name = "Updated On")]
         public DateTime UpdatedOn { get; set; }
 
+        [JsonIgnore]
         public Guid? UpdatedById { get; set; }
         [ForeignKey(nameof(UpdatedById))]
 
+        [JsonIgnore]
         [Display(Name = "Updated By")]
-        public virtual User? UpdatedBy { get; set; }
+        public User? UpdatedBy { get; set; }
+
+        public Library Library { get; set; }
     }
 }

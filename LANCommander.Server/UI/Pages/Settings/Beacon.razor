@@ -1,6 +1,5 @@
 ﻿@page "/Settings/Beacon"
 @using LANCommander.Server.Models;
-@inject SettingService SettingService
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
@@ -32,14 +31,9 @@
 </div>
 
 @code {
-    Settings Settings;
+    Settings Settings = SettingService.GetSettings();
 
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
-
-    private void Save()
+    void Save()
     {
         try
         {

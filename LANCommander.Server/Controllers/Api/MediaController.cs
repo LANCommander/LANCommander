@@ -16,27 +16,27 @@ namespace LANCommander.Server.Controllers.Api
     public class MediaController : BaseApiController
     {
         private readonly IMapper Mapper;
-        private readonly Services.MediaService MediaService;
+        private readonly MediaService MediaService;
 
         public MediaController(
             ILogger<MediaController> logger,
             IMapper mapper,
-            Services.MediaService mediaService) : base(logger)
+            MediaService mediaService) : base(logger)
         {
             Mapper = mapper;
             MediaService = mediaService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.Media>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Media>>> GetAsync()
         {
-            return Ok(Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.Get()));
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Media>>(await MediaService.GetAsync()));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SDK.Models.Media>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Media>> GetAsync(Guid id)
         {
-            var media = await MediaService.Get(id);
+            var media = await MediaService.GetAsync(id);
 
             if (media == null)
                 return NotFound();
@@ -45,14 +45,32 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [AllowAnonymous]
-        [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        [HttpGet("{id}/Thumbnail")]
+        public async Task<IActionResult> ThumbnailAsync(Guid id)
         {
             try
             {
-                var media = await MediaService.Get(id);
+                var media = await MediaService.GetAsync(id);
 
-                var fs = System.IO.File.OpenRead(Services.MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(MediaService.GetThumbnailPath(media));
+
+                return File(fs, media.MimeType);
+            }
+            catch (Exception ex)
+            {
+                return NotFound();
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{id}/Download")]
+        public async Task<IActionResult> DownloadAsync(Guid id)
+        {
+            try
+            {
+                var media = await MediaService.GetAsync(id);
+
+                var fs = System.IO.File.OpenRead(Services.MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }

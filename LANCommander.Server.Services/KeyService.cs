@@ -11,41 +11,41 @@ namespace LANCommander.Server.Services
         public KeyService(
             ILogger<KeyService> logger,
             IFusionCache cache,
-            Repository<Key> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
-        public async Task<Key> Allocate(Key key, User user)
+        public async Task<Key> AllocateAsync(Key key, User user)
         {
             key.ClaimedByUser = user;
             key.ClaimedOn = DateTime.UtcNow;
             key.AllocationMethod = KeyAllocationMethod.UserAccount;
 
-            key = await Update(key);
+            key = await UpdateAsync(key);
 
             return key;
         }
 
-        public async Task<Key> Allocate(Key key, string macAddress)
+        public async Task<Key> AllocateAsync(Key key, string macAddress)
         {
             key.ClaimedByMacAddress = macAddress;
             key.ClaimedOn = DateTime.UtcNow;
             key.AllocationMethod = KeyAllocationMethod.MacAddress;
 
-            key = await Update(key);
+            key = await UpdateAsync(key);
 
             return key;
         }
 
-        public async Task<Key> Release(Guid id)
+        public async Task<Key> ReleaseAsync(Guid id)
         {
-            var key = await Get(id);
+            var key = await GetAsync(id);
 
             if (key == null)
                 return null;
 
-            return await Release(key);
+            return await ReleaseAsync(key);
         }
 
-        public async Task<Key> Release(Key key)
+        public async Task<Key> ReleaseAsync(Key key)
         {
             switch (key.AllocationMethod)
             {
@@ -60,7 +60,7 @@ namespace LANCommander.Server.Services
                     break;
             }
 
-            return await Update(key);
+            return await UpdateAsync(key);
         }
     }
 }

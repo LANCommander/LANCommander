@@ -3,8 +3,8 @@
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
-@inject NavigationManager Navigator
-@inject GameService GameService
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
@@ -82,16 +82,19 @@
         {
             try
             {
-                var game = await GameService.Import(objectKey);
+                using (var gameService = DatabaseServiceFactory.Create<GameService>())
+                {
+                    var game = await gameService.ImportAsync(objectKey);
 
-                Visible = false;
+                    Visible = false;
 
-                await InvokeAsync(StateHasChanged);
+                    await InvokeAsync(StateHasChanged);
 
-                if (OnGameImported.HasDelegate)
-                    await OnGameImported.InvokeAsync(game.Id);
+                    if (OnGameImported.HasDelegate)
+                        await OnGameImported.InvokeAsync(game.Id);
 
-                MessageService.Success($"{game.Title} successfully imported!");
+                    MessageService.Success($"{game.Title} successfully imported!");
+                }
             }
             catch (Exception ex)
             {
@@ -125,16 +128,19 @@
     {
         try
         {
-            var game = await GameService.ImportLocalFile(path);
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                var game = await gameService.ImportLocalFileAsync(path);
 
-            Visible = false;
+                Visible = false;
 
-            await InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
 
-            if (OnGameImported.HasDelegate)
-                await OnGameImported.InvokeAsync(game.Id);
+                if (OnGameImported.HasDelegate)
+                    await OnGameImported.InvokeAsync(game.Id);
 
-            MessageService.Success($"{game.Title} successfully imported!");
+                MessageService.Success($"{game.Title} successfully imported!");
+            }
         }
         catch (Exception ex)
         {

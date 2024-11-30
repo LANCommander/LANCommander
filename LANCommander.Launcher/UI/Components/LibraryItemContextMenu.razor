@@ -52,6 +52,9 @@
     <MenuItem OnClick="() => ValidateFiles()">
         Validate Files
     </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()">
+        Remove
+    </MenuItem>
     <MenuItem OnClick="() => Uninstall()">
         Uninstall
     </MenuItem>
@@ -60,6 +63,9 @@ else
 {
     <MenuItem OnClick="() => Install()">
         Install
+    </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()">
+        Remove
     </MenuItem>
 }
 
@@ -93,7 +99,7 @@ else
 @MenuExtra
 
 @code {
-    [Parameter] public LibraryItem Model { get; set; }
+    [Parameter] public Models.ListItem Model { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
 
     Data.Models.Game Game { get; set; }
@@ -153,7 +159,7 @@ else
                 Footer = null,
             };
 
-            var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, Model);
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
         }
         else
         {
@@ -177,7 +183,7 @@ else
             Footer = null,
         };
 
-        var modalRef = ModalService.CreateModal<InstallDialog, LibraryItem, string>(modalOptions, Model);
+        var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
     }
 
     async Task ValidateFiles()
@@ -186,12 +192,11 @@ else
         {
             Title = $"File Conflicts",
             Maximizable = false,
-            DefaultMaximized = false,
+            DefaultMaximized = true,
             Closable = true,
             Draggable = true,
             Centered = true,
-            OkText = "Replace",
-            Footer = null,
+            OkText = "Replace Selected",
         };
 
         var modalRef = ModalService.CreateModal<ValidateFilesDialog, Game>(modalOptions, Model.DataItem as Game);
@@ -225,6 +230,11 @@ else
         InstallService.Remove(Game.Id);
 
         await LibraryService.LibraryChanged();
+    }
+
+    async Task RemoveFromLibrary()
+    {
+        await LibraryService.RemoveFromLibraryAsync(Game.Id);
     }
 
     async Task RunInstallScripts()

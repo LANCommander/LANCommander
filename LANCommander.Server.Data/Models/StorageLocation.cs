@@ -14,8 +14,8 @@ namespace LANCommander.Server.Data.Models
         public bool Default { get; set; }
         public string Path { get; set; }
         public StorageLocationType Type { get; set; }
-        public virtual ICollection<Archive>? Archives { get; set; } = new List<Archive>();
-        public virtual ICollection<GameSave>? GameSaves { get; set; } = new List<GameSave>();
-        public virtual ICollection<Media>? Media { get; set; } = new List<Media>();
+        public ICollection<Archive>? Archives { get; set; } = new List<Archive>();
+        public ICollection<GameSave>? GameSaves { get; set; } = new List<GameSave>();
+        public ICollection<Media>? Media { get; set; } = new List<Media>();
     }
 }

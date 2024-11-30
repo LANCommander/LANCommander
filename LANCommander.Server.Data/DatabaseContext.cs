@@ -12,7 +12,6 @@ namespace LANCommander.Server.Data
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static string ConnectionString = "";
-        public static Dictionary<Guid, Stopwatch> ContextTracker;
 
         private readonly ILogger Logger;
 
@@ -39,7 +38,8 @@ namespace LANCommander.Server.Data
                     break;
             }
 
-            optionsBuilder.AddInterceptors(new DatabaseContextConnectionInterceptor(Logger));
+            // optionsBuilder.UseLazyLoadingProxies();
+
             base.OnConfiguring(optionsBuilder);
         }
 
@@ -56,6 +56,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<GameSave>();
             builder.ConfigureBaseRelationships<Genre>();
             builder.ConfigureBaseRelationships<Key>();
+            builder.ConfigureBaseRelationships<Library>();
             builder.ConfigureBaseRelationships<Media>();
             builder.ConfigureBaseRelationships<MultiplayerMode>();
             builder.ConfigureBaseRelationships<Platform>();
@@ -93,6 +94,20 @@ namespace LANCommander.Server.Data
             builder.Entity<Platform>()
                 .HasMany(p => p.Games)
                 .WithMany(g => g.Platforms);
+
+            builder.Entity<Library>()
+                .HasOne(l => l.User)
+                .WithOne(u => u.Library)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Library>()
+                .HasMany(l => l.Games)
+                .WithMany(l => l.Libraries)
+                .UsingEntity<Dictionary<string, object>>(
+                    "LibraryGame",
+                    lg => lg.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
+                    lg => lg.HasOne<Library>().WithMany().HasForeignKey("LibraryId").OnDelete(DeleteBehavior.Cascade)
+                );
 
             #region Game Relationships
             builder.Entity<Game>()
@@ -194,6 +209,22 @@ namespace LANCommander.Server.Data
                 .WithOne(m => m.Parent)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Media>()
+                .HasOne(m => m.StorageLocation)
+                .WithMany(l => l.Media)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Media>()
+                .Navigation(m => m.StorageLocation)
+                .AutoInclude();
+            #endregion
+
+            #region Archive Relationships
+            builder.Entity<Archive>()
+                .Navigation(a => a.StorageLocation)
+                .AutoInclude();
             #endregion
 
             #region User Relationships

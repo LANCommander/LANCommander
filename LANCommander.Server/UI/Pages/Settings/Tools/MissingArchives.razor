@@ -1,8 +1,8 @@
 ﻿@page "/Settings/Tools/MissingArchives"
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Games.Components;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
-@inject ArchiveService ArchiveService
 @inject ILogger<MissingArchives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -55,15 +55,18 @@
 
         Archives = new List<Archive>();
 
-        foreach (var archive in await ArchiveService.Get())
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
-            var archivePath = ArchiveService.GetArchiveFileLocation(archive);
-            var exists = await ArchiveService.Exists(archive.Id);
+            foreach (var archive in await archiveService.GetAsync())
+            {
+                var archivePath = archiveService.GetArchiveFileLocation(archive);
+                var exists = await archiveService.ExistsAsync(archive.Id);
 
-            if (!exists)
-                Archives.Add(archive);
-            else if (new FileInfo(archivePath).Length == 0)
-                Archives.Add(archive);
+                if (!exists)
+                    Archives.Add(archive);
+                else if (new FileInfo(archivePath).Length == 0)
+                    Archives.Add(archive);
+            }
         }
 
         Loading = false;
@@ -71,12 +74,15 @@
 
     async Task Upload(Archive archive)
     {
-        var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive);
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        {
+            var archiveFilePath = archiveService.GetArchiveFileLocation(archive);
 
-        if (await ArchiveService.Exists(archive.Id))
-            File.Delete(archiveFilePath);
+            if (await archiveService.ExistsAsync(archive.Id))
+                File.Delete(archiveFilePath);
 
-        System.IO.File.Create(archiveFilePath).Close();
+            System.IO.File.Create(archiveFilePath).Close();
+        }
 
         await Uploader.Open(archive.Id);
     }
@@ -85,7 +91,10 @@
     {
         try
         {
-            await ArchiveService.Delete(archive);
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+            {
+                await archiveService.DeleteAsync(archive);
+            }
 
             await LoadData();
 

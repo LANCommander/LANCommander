@@ -7,7 +7,7 @@
 @using Microsoft.EntityFrameworkCore
 @using MySqlConnector
 @using Npgsql
-@inject SetupService SetupService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -44,21 +44,18 @@
 </Form>
 
 @code {
-    [CascadingParameter]
-    FirstTimeSetupLayout Layout { get; set; }
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
 
-    Settings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     bool Loading = false;
 
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
-
-        Settings = SettingService.GetSettings();
     }
 
-    async Task OnDatabaseProviderChanged()
+    void OnDatabaseProviderChanged()
     {
         switch (Settings.DatabaseProvider)
         {
@@ -86,7 +83,10 @@
 
         try
         {
-            SetupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+            /*using (var setupService = DatabaseServiceFactory.Create<SetupService>())
+            {
+                setupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+            }*/
 
             valid = true;
         }
@@ -117,7 +117,10 @@
             {
                 await InvokeAsync(async () =>
                 {
-                    await SetupService.ChangeProvider(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+                    /*using (var setupService = DatabaseServiceFactory.Create<SetupService>())
+                    {
+                        await setupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
+                    }*/
 
                     SettingService.SaveSettings(Settings);
 

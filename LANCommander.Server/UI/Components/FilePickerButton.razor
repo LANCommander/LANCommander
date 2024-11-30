@@ -1,7 +1,7 @@
 ﻿@using LANCommander.Server.Models
 @using System.IO.Compression
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
-@inject ArchiveService ArchiveService
 
 @if (ArchiveId != Guid.Empty)
 {
@@ -33,31 +33,34 @@ else if (!String.IsNullOrWhiteSpace(Root))
 
     protected override async Task OnInitializedAsync()
     {
-        if (ArchiveId != Guid.Empty)
-            ArchiveExists = await ArchiveService.Exists(ArchiveId);
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        {
+            if (ArchiveId != Guid.Empty)
+                ArchiveExists = await archiveService.ExistsAsync(ArchiveId);
+        }
     }
 
     private async void BrowseForFile()
     {
         var modalOptions = new ModalOptions()
-            {
-                Title = Title,
-                Maximizable = false,
-                DefaultMaximized = true,
-                Closable = true,
-                OkText = OkText,
-                WrapClassName = "file-picker-dialog"
-            };
+        {
+            Title = Title,
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = OkText,
+            WrapClassName = "file-picker-dialog"
+        };
 
         var browserOptions = new FilePickerOptions()
-            {
-                ArchiveId = ArchiveId,
-                Root = Root,
-                Select = true,
-                Multiple = false,
-                EntrySelectable = EntrySelectable,
-                EntryVisible = EntryVisible
-            };
+        {
+            ArchiveId = ArchiveId,
+            Root = Root,
+            Select = true,
+            Multiple = false,
+            EntrySelectable = EntrySelectable,
+            EntryVisible = EntryVisible
+        };
 
         var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 

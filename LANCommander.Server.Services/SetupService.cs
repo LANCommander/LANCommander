@@ -26,7 +26,7 @@ namespace LANCommander.Server.Services
             ServiceProvider = serviceProvider;
         }
 
-        public async Task ChangeProvider(DatabaseProvider provider, string connectionString)
+        public async Task ChangeProviderAsync(DatabaseProvider provider, string connectionString)
         {
             DatabaseContext.Provider = provider;
             DatabaseContext.ConnectionString = connectionString;

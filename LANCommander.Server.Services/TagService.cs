@@ -10,6 +10,6 @@ namespace LANCommander.Server.Services
         public TagService(
             ILogger<TagService> logger,
             IFusionCache cache,
-            Repository<Tag> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
     }
 }

@@ -1,6 +1,6 @@
 ﻿@page "/Settings/Users"
 @using LANCommander.Server.UI.Pages.Settings.Users.Components
-@inject UserService UserService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -60,15 +60,10 @@
 </div>
 
 @code {
-    ICollection<UserViewModel> UserList { get; set; }
+    ICollection<UserViewModel> UserList { get; set; } = new List<UserViewModel>();
 
     Settings Settings = SettingService.GetSettings();
     bool Loading = true;
-
-    protected override async Task OnInitializedAsync()
-    {
-        UserList = new List<UserViewModel>();
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -80,25 +75,28 @@
     {
         UserList = new List<UserViewModel>();
 
-        foreach (var user in await UserService.Get())
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
         {
-            var savePath = user.GetGameSaveUploadPath();
-
-            long saveSize = 0;
-
-            if (Directory.Exists(savePath))
-                saveSize = new DirectoryInfo(savePath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
-
-            var roles = await UserService.GetRoles(user.UserName);
-
-            UserList.Add(new UserViewModel()
+            foreach (var user in await userService.GetAsync())
             {
-                Id = user.Id,
-                UserName = user.UserName,
-                Roles = roles.Select(r => r.Name).ToList(),
-                SavesSize = saveSize,
-                Approved = user.Approved
-            });
+                var savePath = user.GetGameSaveUploadPath();
+
+                long saveSize = 0;
+
+                if (Directory.Exists(savePath))
+                    saveSize = new DirectoryInfo(savePath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
+
+                var roles = await userService.GetRolesAsync(user.UserName);
+
+                UserList.Add(new UserViewModel()
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Roles = roles.Select(r => r.Name).ToList(),
+                    SavesSize = saveSize,
+                    Approved = user.Approved
+                });
+            }
         }
 
         Loading = false;
@@ -107,63 +105,75 @@
 
     private async Task ApproveUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
-
-        if (dbUser != null)
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
         {
-            dbUser.Approved = true;
-            dbUser.ApprovedOn = DateTime.UtcNow;
+            var dbUser = await userService.GetAsync(user.Id);
 
-            await UserService.Update(dbUser);
+            if (dbUser != null)
+            {
+                dbUser.Approved = true;
+                dbUser.ApprovedOn = DateTime.UtcNow;
 
-            user.Approved = true;
+                await userService.UpdateAsync(dbUser);
 
-            await MessageService.Success($"Approved {user.UserName}!");
+                user.Approved = true;
+
+                await MessageService.Success($"Approved {user.UserName}!");
+            }
         }
     }
 
     private async Task PromoteUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            var dbUser = await userService.GetAsync(user.Id);
 
-        await UserService.AddToRole(dbUser.UserName, RoleService.AdministratorRoleName);
+            await userService.AddToRoleAsync(dbUser.UserName, RoleService.AdministratorRoleName);
+
+            await MessageService.Success($"Promoted {user.UserName}!");
+        }
 
         await RefreshUserList();
-
-        await MessageService.Success($"Promoted {user.UserName}!");
     }
 
     private async Task DemoteUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
-
-        if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1)
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
         {
-            MessageService.Error("Cannot demote the only administrator!");
-        }
-        else
-        {
-            await UserService.RemoveFromRole(dbUser.UserName, RoleService.AdministratorRoleName);
+            var dbUser = await userService.GetAsync(user.Id);
 
-            await RefreshUserList();
+            if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1)
+            {
+                MessageService.Error("Cannot demote the only administrator!");
+            }
+            else
+            {
+                await userService.RemoveFromRole(dbUser.UserName, RoleService.AdministratorRoleName);
+
+                await RefreshUserList();
+            }
         }
     }
 
     private async Task DeleteUser(UserViewModel user)
     {
-        var dbUser = await UserService.Get(user.Id);
-
-        if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1 && user.Roles.Contains(RoleService.AdministratorRoleName))
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
         {
-            MessageService.Error("Cannot delete the only administrator!");
-        }
-        else
-        {
-            await UserService.Delete(dbUser);
+            var dbUser = await userService.GetAsync(user.Id);
 
-            await RefreshUserList();
+            if (UserList.SelectMany(u => u.Roles).Count(r => r == RoleService.AdministratorRoleName) == 1 && user.Roles.Contains(RoleService.AdministratorRoleName))
+            {
+                MessageService.Error("Cannot delete the only administrator!");
+            }
+            else
+            {
+                await userService.DeleteAsync(dbUser);
 
-            MessageService.Success($"Deleted {user.UserName}!");
+                await RefreshUserList();
+
+                MessageService.Success($"Deleted {user.UserName}!");
+            }
         }
     }
 

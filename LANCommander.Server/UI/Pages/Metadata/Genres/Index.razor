@@ -1,7 +1,8 @@
 ﻿@page "/Metadata/Genres"
 @using Microsoft.EntityFrameworkCore;
+@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject GenreService GenreService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -21,7 +22,17 @@
 
 <TableColumnPicker @ref="Picker" Key="Genres" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Genre" DataSource="@Genres" Loading="@Loading" PageSize="25" Responsive>
+<Table
+    TItem="Genre"
+    DataSource="@Genres"
+    Loading="@Loading"
+    PageSize="@PageSize"
+    PageIndex="@PageIndex"
+    Total="@TotalCount"
+    OnPageIndexChange="PageIndexChanged"
+    OnPageSizeChange="PageSizeChanged"
+    Size="@TableSize.Small"
+    Responsive>
     <PropertyColumn Property="c => c.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
     <PropertyColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
     <PropertyColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
@@ -64,8 +75,12 @@
     IEnumerable<Genre> Genres { get; set; } = new List<Genre>();
 
     bool Loading = true;
+    int PageIndex = 1;
+    int PageSize = 50;
+    int TotalCount = 0;
 
     string Search = "";
+    string Url;
 
     TableColumnPicker Picker;
     bool ColumnPickerVisible = false;
@@ -73,40 +88,90 @@
     bool EditGenreVisible = false;
     Genre GenreContext = new Genre();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Genres = (await GenreService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
+        {
+            var results = await genreService
+                .Include(g => g.Games)
+                .Include(g => g.CreatedBy)
+                .Include(g => g.UpdatedBy)
+                .SortBy(g => g.Name)
+                .PaginateAsync(g => g.Name.ToLower().Contains(fuzzySearch),
+                    PageIndex,
+                    PageSize);
+
+            TotalCount = results.Count;
+            Genres = results.Results;
+        }
     }
 
-    private async Task UpdateOrAdd()
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Genres?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Metadata/Genres?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"/Metadata/Genres?Search={Search}&Size={PageSize}");
+    }
+
+    async Task UpdateOrAdd()
     {
         try
         {
-            if (GenreContext.Id == Guid.Empty)
+            using (var genreService = DatabaseServiceFactory.Create<GenreService>())
             {
-                await GenreService.AddMissing(x => x.Name == GenreContext.Name, GenreContext);
+                if (GenreContext.Id == Guid.Empty)
+                {
+                    await genreService.AddMissingAsync(x => x.Name == GenreContext.Name, GenreContext);
 
-                MessageService.Success($"{GenreContext.Name} was added!");
-            }
-            else
-            {
-                await GenreService.Update(GenreContext);
+                    MessageService.Success($"{GenreContext.Name} was added!");
+                }
+                else
+                {
+                    await genreService.UpdateAsync(GenreContext);
 
-                MessageService.Success($"{GenreContext.Name} was updated!");
+                    MessageService.Success($"{GenreContext.Name} was updated!");
+                }
             }
 
             await LoadData();
@@ -124,7 +189,7 @@
         await CloseEdit();
     }
 
-    private async Task OpenEdit(Genre genre)
+    async Task OpenEdit(Genre genre)
     {
         if (genre != null)
             GenreContext = genre;
@@ -134,33 +199,41 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseEdit()
+    async Task CloseEdit()
     {
         EditGenreVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Delete(Genre Genre)
+    async Task Delete(Genre Genre)
     {
         Genres = new List<Genre>();
 
         Loading = true;
 
-        await GenreService.Delete(Genre);
+        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
+        {
+            await genreService.DeleteAsync(Genre);
+        }
 
-        Genres = (await GenreService.Get(x => true)).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

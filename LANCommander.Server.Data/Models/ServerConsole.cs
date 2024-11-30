@@ -21,6 +21,6 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(ServerId))]
         [InverseProperty("ServerConsoles")]
-        public virtual Server? Server { get; set; }
+        public Server? Server { get; set; }
     }
 }

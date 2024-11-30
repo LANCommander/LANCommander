@@ -12,7 +12,7 @@ namespace LANCommander.Server.Services
         public ScriptService(
             ILogger<ScriptService> logger,
             IFusionCache cache,
-            Repository<Script> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
         public static IEnumerable<Snippet> GetSnippets()
         {

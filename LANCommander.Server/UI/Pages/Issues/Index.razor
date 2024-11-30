@@ -1,7 +1,7 @@
 ﻿@page "/Issues"
 @using Microsoft.EntityFrameworkCore;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject IssueService IssueService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 
@@ -48,6 +48,8 @@
 </Table>
 
  @code {
+    IssueService IssueService;
+
     IEnumerable<Issue> Issues { get; set; } = new List<Issue>();
 
     bool Loading = true;
@@ -69,37 +71,48 @@
         }
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Issues = (await IssueService.Get(r => r.Game.Title.ToLower().Contains(fuzzySearch))).OrderByDescending(r => r.CreatedOn);
+        using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+        {
+            Issues = await issueService
+                .Include(i => i.CreatedBy)
+                .Include(i => i.UpdatedBy)
+                .Include(i => i.Game)
+                .SortBy(i => i.CreatedOn, Data.Enums.SortDirection.Descending)
+                .GetAsync(i => i.Game.Title.ToLower().Contains(fuzzySearch));
+        }
     }
 
-    private void Add()
+    void Add()
     {
         NavigationManager.NavigateTo("/Issues/Add");
     }
 
-    private async Task Delete(Issue redistributable)
+    async Task Delete(Issue issue)
     {
         Issues = new List<Issue>();
 
         Loading = true;
 
-        await IssueService.Delete(redistributable);
+        using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+        {
+            await IssueService.DeleteAsync(issue);
+        }
 
-        Issues = (await IssueService.Get(x => true)).OrderByDescending(r => r.CreatedOn);
+        await LoadData();
 
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
     }

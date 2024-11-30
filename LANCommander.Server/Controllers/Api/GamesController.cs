@@ -19,6 +19,7 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly GameService GameService;
+        private readonly LibraryService LibraryService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
         private readonly UserService UserService;
@@ -30,6 +31,7 @@ namespace LANCommander.Server.Controllers.Api
             IMapper mapper,
             IFusionCache cache,
             GameService gameService,
+            LibraryService libraryService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
             UserService userService,
@@ -37,6 +39,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             Mapper = mapper;
             GameService = gameService;
+            LibraryService = libraryService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
             UserService = userService;
@@ -45,55 +48,65 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Game>> Get()
+        public async Task<IEnumerable<SDK.Models.Game>> GetAsync()
         {
-            var accessibleGames = new List<SDK.Models.Game>();
-            var games = await GameService.Get();
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var userLibrary = await LibraryService.GetByUserIdAsync(user.Id);
 
             var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");
-                return Mapper.Map<IEnumerable<SDK.Models.Game>>(games);
-            }, TimeSpan.FromHours(1));
+
+                var games = await GameService.GetAsync<SDK.Models.Game>();
+
+                return games;
+            }, TimeSpan.MaxValue);
+
+            foreach (var mappedGame in mappedGames)
+            {
+                mappedGame.PlaySessions = mappedGame.PlaySessions.Where(ps => ps.UserId == user.Id);
+
+                if (userLibrary.Games != null)
+                    mappedGame.InLibrary = userLibrary.Games.Any(g => g.Id == mappedGame.Id);
+            }
 
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole(RoleService.AdministratorRoleName))
             {
-                var roles = await UserService.GetRoles(User?.Identity.Name);
+                var roles = await UserService.GetRolesAsync(User?.Identity.Name);
 
-                var accessibleCollections = roles.SelectMany(r => r.Collections).DistinctBy(c => c.Id);
-                var accessibleCollectionGames = accessibleCollections.SelectMany(c => c.Games).DistinctBy(g => g.Id).Select(g => g.Id);
+                var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
 
-                accessibleGames.AddRange(mappedGames.Where(mg => accessibleCollectionGames.Contains(mg.Id)));
+                var accessibleGames = mappedGames.Where(g => g.Collections.Any(c => accessibleCollectionIds.Contains(c.Id)));
 
                 foreach (var game in accessibleGames)
                 {
-                    game.Collections = game.Collections.Where(c => accessibleCollections.Any(ac => ac.Id == c.Id));
+                    game.Collections = game.Collections.Where(c => accessibleCollectionIds.Contains(c.Id));
                 }
+
+                return accessibleGames;
             }
             else
             {
-                accessibleGames = mappedGames.ToList();
+                return mappedGames;
             }
-
-            return accessibleGames;
         }
 
         [HttpGet("{id}")]
-        public async Task<SDK.Models.Game> Get(Guid id)
+        public async Task<SDK.Models.Game> GetAsync(Guid id)
         {
-            return Mapper.Map<SDK.Models.Game>(await GameService.Get(id));
+            return Mapper.Map<SDK.Models.Game>(await GameService.GetAsync(id));
         }
 
         [HttpGet("{id}/Manifest")]
         public async Task<SDK.GameManifest> GetManifest(Guid id)
         {
-            var manifest = await GameService.GetManifest(id);
+            var manifest = await GameService.GetManifestAsync(id);
 
             return manifest;
         }
 
         [AllowAnonymous]
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
             if (!Settings.Archives.AllowInsecureDownloads && (User == null || User.Identity == null || !User.Identity.IsAuthenticated))
             {
@@ -101,7 +114,7 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
             }
 
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -130,11 +143,11 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("Import/{objectKey}")]
-        public async Task<IActionResult> Import(Guid objectKey)
+        public async Task<IActionResult> ImportAsync(Guid objectKey)
         {
             try
             {
-                var game = await GameService.Import(objectKey);
+                var game = await GameService.ImportAsync(objectKey);
 
                 return Ok();
             }
@@ -147,12 +160,12 @@ namespace LANCommander.Server.Controllers.Api
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("UploadArchive")]
-        public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
+        public async Task<IActionResult> UploadArchiveAsync(SDK.Models.UploadArchiveRequest request)
         {
             try
             {
-                var storageLocation = await StorageLocationService.FirstOrDefault(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
-                var archive = await ArchiveService.FirstOrDefault(a => a.GameId == request.Id && a.Version == request.Version);
+                var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
+                var archive = await ArchiveService.FirstOrDefaultAsync(a => a.GameId == request.Id && a.Version == request.Version);
                 var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
                 if (archive != null)
@@ -166,7 +179,7 @@ namespace LANCommander.Server.Controllers.Api
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
                     archive.StorageLocation = storageLocation;
 
-                    archive = await ArchiveService.Update(archive);
+                    archive = await ArchiveService.UpdateAsync(archive);
                 }
                 else
                 {
@@ -179,7 +192,7 @@ namespace LANCommander.Server.Controllers.Api
                         StorageLocation = storageLocation
                     };
 
-                    await ArchiveService.Add(archive);
+                    await ArchiveService.AddAsync(archive);
                 }
 
                 return Ok();

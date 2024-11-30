@@ -12,18 +12,18 @@ namespace LANCommander.Server.Services
         public GameSaveService(
             ILogger<GameSaveService> logger,
             IFusionCache cache,
-            Repository<GameSave> repository) : base(logger, cache, repository) { }
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
 
-        public override async Task Delete(GameSave entity)
+        public override async Task DeleteAsync(GameSave entity)
         {
-            FileHelpers.DeleteIfExists(await GetSavePath(entity.Id));
+            FileHelpers.DeleteIfExists(await GetSavePathAsync(entity.Id));
 
-            await base.Delete(entity);
+            await base.DeleteAsync(entity);
         }
 
-        public async Task<string> GetSavePath(Guid gameId, Guid userId)
+        public async Task<string> GetSavePathAsync(Guid gameId, Guid userId)
         {
-            var save = await FirstOrDefault(gs => gs.GameId == gameId && gs.UserId == userId);
+            var save = await FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == userId);
 
             if (save == null)
                 return null;
@@ -31,10 +31,10 @@ namespace LANCommander.Server.Services
             return GetSavePath(save);
         }
 
-        public async Task<string> GetSavePath(Guid id)
+        public async Task<string> GetSavePathAsync(Guid id)
         {
             // Use get with predicate to avoid async
-            var save = await FirstOrDefault(gs => gs.Id == id);
+            var save = await FirstOrDefaultAsync(gs => gs.Id == id);
 
             if (save == null)
                 return null;

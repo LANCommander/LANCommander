@@ -20,12 +20,12 @@ namespace LANCommander.Server.Data.Models
 
         public Guid? ParentId { get; set; }
         [ForeignKey(nameof(ParentId))]
-        public virtual Page? Parent { get; set; }
+        public Page? Parent { get; set; }
 
-        public virtual ICollection<Page> Children { get; set; }
+        public ICollection<Page> Children { get; set; }
 
-        public virtual ICollection<Game> Games { get; set; }
-        public virtual ICollection<Redistributable> Redistributables { get; set; }
-        public virtual ICollection<Server> Servers { get; set; }
+        public ICollection<Game> Games { get; set; }
+        public ICollection<Redistributable> Redistributables { get; set; }
+        public ICollection<Server> Servers { get; set; }
     }
 }

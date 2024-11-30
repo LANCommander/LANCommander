@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/Mods"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject GameService GameService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Mods> Logger
@@ -36,7 +36,10 @@
     {
         try
         {
-            await GameService.Delete(game);
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                await gameService.DeleteAsync(game);
+            }
         }
         catch (Exception ex)
         {

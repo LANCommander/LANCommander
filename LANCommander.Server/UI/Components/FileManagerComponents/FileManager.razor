@@ -1,6 +1,6 @@
-﻿@using AntDesign.TableModels;
+﻿@inherits OwningComponentBase
+@using AntDesign.TableModels;
 @using LANCommander.Server.UI.Components.FileManagerComponents.Sources
-@inject ArchiveService ArchiveService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<FileManager> Logger
@@ -169,6 +169,8 @@
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
+    ArchiveService ArchiveService;
+
     IFileManagerSource FileSource;
 
     List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
@@ -193,6 +195,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
+
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
             FileSource = new FileManagerLocalDiskSource(WorkingDirectory);
         else if (ArchiveId != Guid.Empty)

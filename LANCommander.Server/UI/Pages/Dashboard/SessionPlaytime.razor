@@ -1,5 +1,5 @@
 ﻿@page "/Dashboard/SessionPlaytime"
-@inject GameService GameService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <PageHeader Title="Session Playtime" />
 
@@ -25,16 +25,20 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
-        {
-            LoadData();
-        }
+            await LoadData();
     }
 
     private async Task LoadData()
     {
         Loading = true;
 
-        Games = await GameService.Get();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService
+                .Include(g => g.PlaySessions)
+                .Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon))
+                .GetAsync();
+        }
 
         SessionData = Games.Select(g =>
         {

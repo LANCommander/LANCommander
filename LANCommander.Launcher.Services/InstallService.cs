@@ -92,9 +92,9 @@ namespace LANCommander.Launcher.Services
             Logger?.LogTrace("Adding game {GameTitle} to the queue", gameInfo.Title);
 
             // Check to see if we need to install the base game (this game is probably a mod or expansion)
-            if (gameInfo.BaseGame != null)
+            if (gameInfo.BaseGameId != Guid.Empty)
             {
-                var baseGame = await GameService.Get(gameInfo.BaseGame.Id);
+                var baseGame = await GameService.Get(gameInfo.BaseGameId);
 
                 if (baseGame != null && !baseGame.Installed)
                 {
@@ -324,7 +324,7 @@ namespace LANCommander.Launcher.Services
         {
             using (var operation = Logger.BeginOperation("Moving game {GameTitle} ({GameId}) to {Destination}", localGame.Title, localGame.Id, currentItem.InstallDirectory))
             {
-                var newInstallDirectory = Client.Games.GetInstallDirectory(remoteGame, currentItem.InstallDirectory);
+                var newInstallDirectory = await Client.Games.GetInstallDirectory(remoteGame, currentItem.InstallDirectory);
 
                 newInstallDirectory = await Client.Games.MoveAsync(remoteGame, localGame.InstallDirectory, newInstallDirectory);
 

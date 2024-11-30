@@ -33,18 +33,18 @@ namespace LANCommander.Launcher.Services
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
-        public ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
+        public ObservableCollection<ListItem> Items { get; set; } = new ObservableCollection<ListItem>();
 
-        public delegate Task OnLibraryChangedHandler(IEnumerable<LibraryItem> items);
+        public delegate Task OnLibraryChangedHandler(IEnumerable<ListItem> items);
         public event OnLibraryChangedHandler OnLibraryChanged;
 
-        public delegate Task OnPreLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
+        public delegate Task OnPreLibraryItemsFilteredHandler(IEnumerable<ListItem> items);
         public event OnPreLibraryItemsFilteredHandler OnPreLibraryItemsFiltered;
 
-        public delegate Task OnLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
-        public event OnLibraryItemsFilteredHandler OnLibraryItemsFiltered;
+        public delegate Task OnItemsFilteredHandler(IEnumerable<ListItem> items);
+        public event OnItemsFilteredHandler OnItemsFiltered;
 
-        public Filter Filter { get; set; } = new Filter();
+        public LibraryFilter Filter { get; set; } = new LibraryFilter();
 
         public LibraryService(
             SDK.Client client,
@@ -72,13 +72,13 @@ namespace LANCommander.Launcher.Services
 
         private async Task Filter_OnChanged()
         {
-            if (OnLibraryItemsFiltered != null)
-                await OnLibraryItemsFiltered.Invoke(Filter.ApplyFilter(LibraryItems));
+            if (OnItemsFiltered != null)
+                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
         }
 
         private async Task ImportService_OnImportComplete()
         {
-            await RefreshLibraryItemsAsync();
+            await RefreshItemsAsync();
 
             LibraryChanged();
         }
@@ -86,81 +86,103 @@ namespace LANCommander.Launcher.Services
         private async Task InstallService_OnInstallComplete(Game game)
         {
             if (OnLibraryChanged != null)
-                await OnLibraryChanged.Invoke(LibraryItems);
+                await OnLibraryChanged.Invoke(Items);
         }
 
-        public async Task<IEnumerable<LibraryItem>> RefreshLibraryItemsAsync()
+        public async Task<IEnumerable<ListItem>> RefreshItemsAsync()
         {
-            LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
+            Items = new ObservableCollection<ListItem>(await GetItemsAsync());
 
-            if (OnLibraryItemsFiltered != null)
-                await OnLibraryItemsFiltered.Invoke(Filter.ApplyFilter(LibraryItems));
+            if (OnItemsFiltered != null)
+                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
 
-            return LibraryItems;
+            return Items;
         }
 
-        public IEnumerable<LibraryItem> GetLibraryItems<T>()
+        public IEnumerable<ListItem> GetItems<T>()
         {
-            return LibraryItems.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
+            return Items.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
         }
 
-        public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
+        public async Task<IEnumerable<ListItem>> GetItemsAsync()
         {
-            LibraryItems.Clear();
+            Items.Clear();
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
-                var games = await GameService.Get(x => true).AsNoTracking().ToListAsync();
+                var games = await GameService
+                    .Get(x => true)
+                    .ToListAsync();
 
                 Filter.Populate(games);
 
-                foreach (var item in games.Select(g => new LibraryItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
+                foreach (var item in games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
                 {
-                    LibraryItems.Add(item);
+                    Items.Add(item);
                 }
 
                 op.Complete();
             }
 
-            return LibraryItems;
+            return Items;
         }
 
-        public IEnumerable<LibraryItem> GetFilteredItems()
+        public IEnumerable<ListItem> GetFilteredItems()
         {
-            return Filter.ApplyFilter(LibraryItems);
+            return Filter.ApplyFilter(Items);
         }
 
-        public LibraryItem GetLibraryItem(Guid key)
+        public ListItem GetItem(Guid key)
         {
-            var item = LibraryItems.FirstOrDefault(i => i.Key == key);
+            var item = Items.FirstOrDefault(i => i.Key == key);
 
             if (item == null)
-                item = LibraryItems.FirstOrDefault(i => i.Key == key);
+                item = Items.FirstOrDefault(i => i.Key == key);
 
             return item;
         }
 
-        public async Task<LibraryItem> GetLibraryItemAsync(LibraryItem libraryItem)
+        public async Task<ListItem> GetItemAsync(ListItem libraryItem)
         {
-            return await GetLibraryItemAsync(libraryItem.Key);
+            return await GetItemAsync(libraryItem.Key);
         }
 
-        public async Task<LibraryItem> GetLibraryItemAsync(Guid key)
+        public async Task<ListItem> GetItemAsync(Guid key)
         {
             var game = await GameService.Get(key);
 
-            return new LibraryItem(game);
+            return new ListItem(game);
+        }
+
+        public async Task AddToLibraryAsync(Guid id)
+        {
+            await Client.Library.AddToLibrary(id);
+
+            await ImportService.ImportGamesAsync(id);
+
+            await LibraryChanged();
+        }
+
+        public async Task RemoveFromLibraryAsync(Guid id)
+        {
+            await Client.Library.RemoveFromLibrary(id);
+
+            var localGame = await GameService.Get(id);
+
+            await GameService.Delete(localGame);
+
+            await LibraryChanged();
         }
 
         public async Task LibraryChanged()
         {
             if (OnLibraryChanged != null)
-                await OnLibraryChanged.Invoke(LibraryItems);
+                await OnLibraryChanged.Invoke(Items);
         }
 
         public async Task FilterChanged()
         {
-            LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
+            Items = new ObservableCollection<ListItem>(await GetItemsAsync());
         }
     }
 }

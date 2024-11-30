@@ -1,0 +1,160 @@
+﻿$window-drag-area-height: 37px;
+$cover-hover-scale: 1.2;
+$cover-aspect-ratio: 2 / 3;
+$cover-max-width: 150px;
+$cover-max-height: $cover-aspect-ratio * $cover-max-width;
+$cover-hover-width: $cover-max-width * $cover-hover-scale;
+$cover-hover-height: $cover-max-height * $cover-hover-scale;
+$cover-vertical-padding: ($cover-hover-height - $cover-max-height) / 2;
+$cover-horizontal-padding: ($cover-hover-width - $cover-max-width) / 2;
+$cover-gap: 16px;
+$hero-aspect-ratio: 8 / 3;
+$hero-max-height: 40vh;
+
+.depot {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    position: relative;
+    flex-direction: row;
+
+    .ant-drawer-content-wrapper {
+        height: calc(100% - 128px) !important;
+        transform: none !important;
+    }
+}
+
+.depot-filter {
+    position: relative;
+    z-index: 500;
+    width: 320px;
+    margin-top: 74px;
+    flex-shrink: 0;
+    padding: 16px;
+    overflow-y: scroll;
+    background-color: #141414;
+
+    .ant-form-item {
+        margin-bottom: 16px;
+    }
+}
+
+.depot-list {
+    width: 100%;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding-top: $window-drag-area-height + $cover-vertical-padding;
+    padding-left: $cover-horizontal-padding + $cover-gap;
+    padding-right: $cover-horizontal-padding + $cover-gap;
+    padding-bottom: $cover-vertical-padding + $cover-gap;
+}
+
+.depot-list-items,
+.depot-list-group-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax($cover-max-width, 1fr));
+    gap: $cover-gap;
+}
+
+.depot-game {
+    display: flex;
+    align-items: center;
+    aspect-ratio: 2 / 3;
+
+    &-cover {
+        transition: all .25s;
+        box-shadow: 0px 0px 0px 0px #000;
+        position: relative;
+        cursor: pointer;
+        flex-grow: 1;
+
+        &:hover {
+            transform: scale($cover-hover-scale);
+            box-shadow: 0px 0px 64px 32px #000;
+            z-index: 100;
+        }
+    }
+
+    &-add-btn,
+    &-add-btn.ant-btn.ant-btn-loading {
+        position: absolute;
+        top: 0;
+        right: 0;
+        display: none;
+        opacity: 0;
+        transition: opacity .25s;
+    }
+
+    &-cover:hover &-add-btn {
+        display: block;
+        opacity: 1;
+    }
+
+    &-default-cover {
+        aspect-ratio: $cover-aspect-ratio;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #555 0%, #333 100%);
+        font-size: 20px;
+        padding: 16px;
+        text-align: center;
+    }
+
+    img {
+        width: 100%;
+    }
+}
+
+.depot-game-details {
+    z-index: 600;
+
+    .ant-drawer-mask {
+        background: linear-gradient(45deg, #00000096, #3a3a3a8a);
+        backdrop-filter: blur(3px);
+        z-index: auto;
+    }
+
+    .ant-drawer-content {
+        background: #000;
+    }
+
+    .ant-drawer-header-no-title {
+        display: none;
+    }
+
+    .ant-drawer-content-wrapper {
+        height: calc(100% - 128px) !important;
+        width: $hero-aspect-ratio * $hero-max-height;
+        transform: none !important;
+        left: calc(50vw - 53.33vh);
+        right: auto;
+        box-shadow: 0 0 64px black;
+    }
+
+    .ant-drawer-body {
+        padding: 0;
+
+        &::-webkit-scrollbar {
+            width: 0;
+        }
+    }
+
+    .game-hero {
+        position: relative;
+        aspect-ratio: $hero-aspect-ratio;
+        height: $hero-max-height;
+    }
+
+    &-background {
+        object-fit: cover;
+        max-height: 20vw;
+    }
+
+    .game-details-close-btn {
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 100;
+    }
+}

@@ -5,13 +5,34 @@
 @inject SDK.Client Client
 @inject IMessageService MessageService
 
-<Table DataSource="Conflicts" Size="TableSize.Small" RowKey="c => c.FullName" @bind-SelectedRows="Selected">
+<Table DataSource="Conflicts" Resizable Size="TableSize.Small" RowKey="c => c.FullName" @bind-SelectedRows="Selected" Loading="Loading">
+    <Selection Type="checkbox" />
     <PropertyColumn Property="c => c.FullName" Title="Name" />
+    <Column TData="string" Title="Created">
+        @context.LocalFileInfo?.CreationTime
+    </Column>
+    <Column TData="string" Title="Modified">
+        @context.LocalFileInfo?.LastWriteTime
+    </Column>
+    <Column TData="string" Title="Local Size">
+        @if (context.LocalFileInfo?.Length > 0)
+        {
+            @ByteSizeLib.ByteSize.FromBytes(context.LocalFileInfo.Length)
+        }
+    </Column>
+    <PropertyColumn Property="c => c.Length" Title="Original Size">
+        @if (context.Length > 0)
+        {
+            @ByteSizeLib.ByteSize.FromBytes(context.Length)
+        }
+    </PropertyColumn>
 </Table>
 
 @code {
-    IEnumerable<ArchiveEntry> Conflicts = new List<ArchiveEntry>();
-    IEnumerable<ArchiveEntry> Selected = new List<ArchiveEntry>();
+    IEnumerable<ArchiveValidationConflict> Conflicts = new List<ArchiveValidationConflict>();
+    IEnumerable<ArchiveValidationConflict> Selected = new List<ArchiveValidationConflict>();
+
+    bool Loading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -26,11 +47,21 @@
     async Task LoadData()
     {
         Conflicts = await Client.Games.ValidateFilesAsync(Options.InstallDirectory, Options.Id);
+
+        Loading = false;
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
+        Loading = true;
+        StateHasChanged();
+        await Task.Yield();
+
         await Client.Games.DownloadFilesAsync(Options.InstallDirectory, Options.Id, Selected.Select(e => e.FullName));
+
+        Loading = false;
+        StateHasChanged();
+        await Task.Yield();
 
         await base.CloseFeedbackAsync();
     }

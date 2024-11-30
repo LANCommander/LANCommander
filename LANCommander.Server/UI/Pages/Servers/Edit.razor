@@ -8,9 +8,8 @@
 @using LANCommander.Server.Extensions
 @using Microsoft.EntityFrameworkCore
 @using System.Runtime.InteropServices
-@inject GameService GameService
-@inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -91,7 +90,6 @@
                                 DefaultActiveFirstOption="false"
                                 EnableSearch>
                                 <ItemTemplate Context="game">
-                                    <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
                                     @game.Title
                                 </ItemTemplate>
                         </Select>
@@ -246,10 +244,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id != Guid.Empty && Panel == null)
-            NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
-        else if (Id != Guid.Empty)
-            Server = await ServerService.Get(Id);
+        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+        {
+            if (Id != Guid.Empty && Panel == null)
+                NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
+            else if (Id != Guid.Empty)
+                Server = await serverService.GetAsync(Id);
+        }        
 
         if (Server.GameId.HasValue)
             GameId = Server.GameId.Value;
@@ -257,30 +258,36 @@
         if (Server.HttpPaths == null)
             Server.HttpPaths = new List<ServerHttpPath>();
 
-        Games = await GameService.Get();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService.Include(g => g.Media).GetAsync();
+        }
 
         await OnPortNumberChanged(Server.Port);
     }
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
             Server.GameId = GameId;
 
-            if (Server.Id != Guid.Empty)
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
             {
-                Server = await ServerService.Update(Server);
+                if (Server.Id != Guid.Empty)
+                {
+                    Server = await serverService.UpdateAsync(Server);
 
-                await MessageService.Success("Server updated!");
-            }
-            else
-            {
-                Server = await ServerService.Add(Server);
+                    await MessageService.Success("Server updated!");
+                }
+                else
+                {
+                    Server = await serverService.AddAsync(Server);
 
-                NavigationManager.LocationChanged += NotifyServerAdded;
+                    NavigationManager.LocationChanged += NotifyServerAdded;
 
-                NavigationManager.NavigateTo($"/Servers/{Server.Id}");
+                    NavigationManager.NavigateTo($"/Servers/{Server.Id}");
+                }
             }
         }
         catch (Exception ex)
@@ -290,7 +297,7 @@
         }
     }
 
-    private async Task AddPath()
+    async Task AddPath()
     {
         Server.HttpPaths.Add(new ServerHttpPath()
         {
@@ -298,19 +305,19 @@
         });
     }
 
-    private void OnPathSelected(string path)
+    void OnPathSelected(string path)
     {
         Server.WorkingDirectory = Path.GetDirectoryName(path);
     }
 
-    private void NotifyServerAdded(object? sender, LocationChangedEventArgs e)
+    void NotifyServerAdded(object? sender, LocationChangedEventArgs e)
     {
         NavigationManager.LocationChanged -= NotifyServerAdded;
 
         MessageService.Success("Server added!");
     }
 
-    private string GetIcon(Game game)
+    string GetIcon(Game game)
     {
         var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
@@ -320,9 +327,14 @@
             return "/favicon.ico";
     }
 
-    private async Task OnPortNumberChanged(int value)
+    async Task OnPortNumberChanged(int value)
     {
         if (value > 0)
-            PortInUse = (await ServerService.Get(s => s.Port == value && s.Id != Id)).Any();
+        {
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            {
+                PortInUse = await serverService.ExistsAsync(s => s.Port == value && s.Id != Id);
+            }
+        }
     }
 }

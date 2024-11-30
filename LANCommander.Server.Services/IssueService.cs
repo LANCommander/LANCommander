@@ -16,18 +16,18 @@ namespace LANCommander.Server.Services
         public IssueService(
             ILogger<IssueService> logger,
             IFusionCache cache,
-            Repository<Issue> repository) : base(logger, cache, repository)
+            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory)
         {
         }
 
         public async Task ResolveAsync(Guid issueId)
         {
-            var issue = await Get(issueId);
+            var issue = await GetAsync(issueId);
 
             issue.ResolvedOn = DateTime.UtcNow;
             // issue.ResolvedBy = await GetCurrentUserAsync();
 
-            await Update(issue);
+            await UpdateAsync(issue);
         }
     }
 }

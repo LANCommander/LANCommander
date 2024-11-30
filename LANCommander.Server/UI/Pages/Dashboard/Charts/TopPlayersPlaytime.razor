@@ -1,6 +1,6 @@
 ﻿@using AntDesign.Charts
 @using ByteSizeLib
-@inject PlaySessionService PlaySessionService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <Spin Spinning="Loading">
     <div class="dashboard-chart">
@@ -49,25 +49,32 @@
 
         Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
 
-        var sessions = await PlaySessionService.Get();
-
-        foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.UserId))
+        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
         {
-            var total = new TimeSpan();
+            var sessions = await playSessionService
+                .Include(ps => ps.Game)
+                .Include(ps => ps.CreatedBy)
+                .Include(ps => ps.User)
+                .GetAsync();
 
-            foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
+            foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.UserId))
             {
-                total = total.Add(session.End.Value.Subtract(session.Start.Value));
+                var total = new TimeSpan();
+
+                foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
+                {
+                    total = total.Add(session.End.Value.Subtract(session.Start.Value));
+                }
+
+                playtimes[gameSessions.First().User.UserName] = total;
             }
 
-            playtimes[gameSessions.First().User.UserName] = total;
+            Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
+            {
+                Player = pt.Key,
+                Playtime = (int)pt.Value.TotalSeconds
+            }).ToArray();
         }
-
-        Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
-        {
-            Player = pt.Key,
-            Playtime = (int)pt.Value.TotalSeconds
-        }).ToArray();
 
         Loading = false;
 

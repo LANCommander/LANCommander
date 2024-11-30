@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/PlaySessions"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject PlaySessionService PlaySessionService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<PlaySessions> Logger
 
@@ -34,7 +34,10 @@
     {
         try
         {
-            await PlaySessionService.Delete(session);
+            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+            {
+                await playSessionService.DeleteAsync(session);
+            }
         }
         catch (Exception ex)
         {

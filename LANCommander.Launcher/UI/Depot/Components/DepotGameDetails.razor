@@ -1,0 +1,333 @@
+﻿@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models
+@inject DepotService DepotService
+@inject LibraryService LibraryService
+@inject GameService GameService
+@inject InstallService InstallService
+@inject SDK.Client Client
+@inject ILogger<DepotGameDetails> Logger
+@inject NavigationManager NavigationManager
+@inject ModalService ModalService
+@inject IMessageService MessageService
+
+<Drawer Placement="bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
+    @if (SelectedGame != null)
+    {
+        <div class="game-details no-scrollbar">
+            <Button Class="game-details-close-btn" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" OnClick="Hide" />
+
+            @if (SelectedGame != null)
+            {
+                <div class="game-hero">
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
+                    {
+                        <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo)))" class="game-details-logo" />
+                    }
+                    else
+                    {
+                        <h1>@SelectedGame.Title</h1>
+                    }
+
+                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
+                    {
+                        <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background)))" class="game-details-background" />
+                    }
+                </div>
+
+                <GridRow Gutter="32" Class="game-info" Wrap="false">
+                    <GridCol Flex="@("auto")">
+                        <div class="game-action-bar">
+                            <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                                <SpaceItem>
+                                    @if (IsInstalled)
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" OnClick="@(() => NavigationManager.NavigateTo($"/{SelectedGame.Id}"))">View in Library</Button>
+                                    }
+                                    else
+                                    {
+                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install" Loading="Installing">Install</Button>
+                                    }
+
+                                    @if (SelectedGame.InLibrary)
+                                    {
+                                        <Tooltip Title="Remove from Library">
+                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" Loading="RemovingFromLibrary" />
+                                        </Tooltip>
+                                    }
+                                    else
+                                    {
+                                        <Tooltip Title="Add to Library">
+                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Plus" OnClick="AddToLibrary" Loading="AddingToLibrary" />
+                                        </Tooltip>
+                                    }
+                                </SpaceItem>
+
+                                @if (!IsInstalled && Client.IsConnected())
+                                {
+                                    <SpaceItem>
+                                        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
+                                    </SpaceItem>
+                                }
+
+                                @if (SelectedGame.PlaySessions.Any())
+                                {
+                                    <SpaceItem>
+                                        <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
+                                    </SpaceItem>
+                                    <SpaceItem>
+                                        <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
+                                    </SpaceItem>
+                                }
+                            </Space>
+                        </div>
+
+                        <div class="game-metadata">
+                            @if (!String.IsNullOrWhiteSpace(SelectedGame.Description))
+                            {
+                                <div class="game-metadata-description">@SelectedGame.Description</div>
+                            }
+
+                            @if (SelectedGame.ReleasedOn != null)
+                            {
+                                <div class="game-metadata-released-on">
+                                    <h3>Released On</h3>
+                                    <span>@SelectedGame.ReleasedOn.ToString("MMMM d, yyyy")</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Developers != null && SelectedGame.Developers.Any())
+                            {
+                                <div class="game-metadata-developers">
+                                    <h3>Developers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Publishers != null && SelectedGame.Publishers.Any())
+                            {
+                                <div class="game-metadata-publishers">
+                                    <h3>Publishers</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Genres != null && SelectedGame.Genres.Any())
+                            {
+                                <div class="game-metadata-genres">
+                                    <h3>Genres</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
+                                </div>
+                            }
+
+                            @if (SelectedGame.Tags != null && SelectedGame.Tags.Any())
+                            {
+                                <div class="game-metadata-tags">
+                                    <h3>Tags</h3>
+                                    <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
+                                </div>
+                            }
+                        </div>
+                    </GridCol>
+
+                    <GridCol Flex="@("256px")" Class="game-cover">
+                        @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
+                        {
+                            <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)))" />
+                        }
+                    </GridCol>
+                </GridRow>
+            }
+        </div>
+    }
+</Drawer>
+
+@code {
+    [Parameter] public Guid ItemId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    SDK.Models.Game SelectedGame { get; set; }
+    bool Visible { get; set; } = false;
+    bool IsInstalled { get; set; } = false;
+
+    bool Installing { get; set; } = false;
+    bool AddingToLibrary { get; set; } = false;
+    bool RemovingFromLibrary { get; set; } = false;
+
+    Settings Settings = SettingService.GetSettings();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Installing = false;
+        AddingToLibrary = false;
+        RemovingFromLibrary = false;
+
+        try
+        {
+            if (ItemId != Guid.Empty)
+            {
+                SelectedGame = await Client.Games.GetAsync(ItemId);
+
+                var game = await GameService.Get(ItemId);
+
+                if (game == null || !game.Installed)
+                    IsInstalled = false;
+                else
+                    IsInstalled = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SelectedGame = null;
+
+            Logger?.LogError(ex, "Could not load game with ID {GameId}", ItemId);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Show()
+    {
+        Visible = true;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Hide()
+    {
+        Visible = false;
+
+        if (OnClose.HasDelegate)
+            await OnClose.InvokeAsync();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Install()
+    {
+        Installing = true;
+        StateHasChanged();
+        await Task.Yield();
+
+        if (!SelectedGame.InLibrary)
+            await AddToLibrary();
+
+        var libraryItem = LibraryService.GetItem(SelectedGame.Id);
+        var game = libraryItem.DataItem as Game;
+
+        await Hide();
+
+        if (Settings.Games.InstallDirectories.Length > 1 || game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
+        {
+            var modalOptions = new ModalOptions()
+            {
+                Title = $"Install {SelectedGame.Title}",
+                Maximizable = false,
+                DefaultMaximized = false,
+                Closable = true,
+                OkText = "Install",
+                Draggable = true,
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
+            };
+
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, libraryItem);
+        }
+        else
+        {
+            await InstallService.Add(game);
+        }
+    }
+
+    async Task AddToLibrary()
+    {
+        if (!Installing)
+        {
+            AddingToLibrary = true;
+            StateHasChanged();
+            await Task.Yield();
+        }
+
+        try {
+            await LibraryService.AddToLibraryAsync(SelectedGame.Id);
+            await LibraryService.RefreshItemsAsync();
+
+            MessageService.Success($"{SelectedGame.Title} was added to your library!");
+
+            SelectedGame.InLibrary = true;
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, $"{SelectedGame.Title} ({SelectedGame.Id}) could not be added to your library!");
+            MessageService.Error($"{SelectedGame.Title} could not be added to your library!");
+        }
+
+
+        AddingToLibrary = false;
+        StateHasChanged();
+        await Task.Yield();
+    }
+
+    async Task RemoveFromLibrary()
+    {
+        if (!Installing)
+        {
+            RemovingFromLibrary = true;
+            StateHasChanged();
+            await Task.Yield();
+        }
+
+        try
+        {
+            await LibraryService.RemoveFromLibraryAsync(SelectedGame.Id);
+            await LibraryService.RefreshItemsAsync();
+
+            MessageService.Success($"{SelectedGame.Title} was removed from your library!");
+
+            SelectedGame.InLibrary = false;
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, $"{SelectedGame.Title} ({SelectedGame.Id}) could not be removed from your library!");
+            MessageService.Error($"{SelectedGame.Title} could not be removed from your library!");
+        }
+
+        RemovingFromLibrary = false;
+        StateHasChanged();
+        await Task.Yield();
+    }
+
+    long GetDownloadSize()
+    {
+        long size = 0;
+
+        if (SelectedGame != null && SelectedGame.Archives.Any())
+            size = SelectedGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+
+        return size;
+    }
+
+    string GetPlayTime(SDK.Models.Game game)
+    {
+        var totalTime = new TimeSpan(game.PlaySessions
+            .Where(ps => ps.End != null && ps.Start != null)
+            .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
+            .Sum(ts => ts.Ticks));
+        if (totalTime.TotalMinutes < 1)
+            return "None";
+        else if (totalTime.TotalHours < 1)
+            return totalTime.TotalMinutes.ToString("0") + " minutes";
+        else
+            return totalTime.TotalHours.ToString("0.##") + " hours";
+    }
+
+    string GetLastPlayed(SDK.Models.Game game)
+    {
+        var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
+
+        if (lastSession == null)
+            return "Never";
+        else
+            return lastSession.End.Value.ToRelativeDate();
+    }
+}

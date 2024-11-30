@@ -2,7 +2,6 @@
 @using LANCommander.Server.Models;
 @using Octokit
 @using Semver
-@inject SettingService SettingService
 @inject IMessageService MessageService
 @inject ILogger<Updates> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -26,14 +25,9 @@
 </div>
 
 @code {
-    Settings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
-
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
 
     void Save()
     {

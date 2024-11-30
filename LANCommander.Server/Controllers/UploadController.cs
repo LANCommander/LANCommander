@@ -27,9 +27,9 @@ namespace LANCommander.Server.Controllers
             Cache = cache;
         }
 
-        public async Task<JsonResult> Init([FromBody]SDK.Models.UploadInitRequest request)
+        public async Task<JsonResult> InitAsync([FromBody]SDK.Models.UploadInitRequest request)
         {
-            var storageLocation = await StorageLocationService.Get(request.StorageLocationId);
+            var storageLocation = await StorageLocationService.GetAsync(request.StorageLocationId);
 
             if (!Directory.Exists(storageLocation.Path))
                 Directory.CreateDirectory(storageLocation.Path);
@@ -41,7 +41,7 @@ namespace LANCommander.Server.Controllers
                 Version = "",
             };
 
-            archive = await ArchiveService.Add(archive);
+            archive = await ArchiveService.AddAsync(archive);
 
             var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 
@@ -59,7 +59,7 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Chunk([FromForm] ChunkUpload chunk)
+        public async Task<IActionResult> ChunkAsync([FromForm] ChunkUpload chunk)
         {
             var filePath = await Cache.GetOrDefaultAsync($"ArchivePath|{chunk.Key}", String.Empty);
 
@@ -85,7 +85,7 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> File(IFormFile file, string path)
+        public async Task<IActionResult> FileAsync(IFormFile file, string path)
         {
             try
             {

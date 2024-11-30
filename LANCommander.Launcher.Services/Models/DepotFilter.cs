@@ -2,6 +2,7 @@
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,19 +13,19 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Models
 {
-    public class Filter
+    public class DepotFilter
     {
         private bool Initialized = false;
 
-        public FilterModel DataSource { get; set; } = new FilterModel();
-        public FilterModel SelectedOptions { get; set; } = new FilterModel();
+        public DepotFilterModel DataSource { get; set; } = new DepotFilterModel();
+        public DepotFilterModel SelectedOptions { get; set; } = new DepotFilterModel();
 
         public delegate Task OnChangedHandler();
         public event OnChangedHandler OnChanged;
 
-        public Func<LibraryItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
+        public Func<ListItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
 
-        public void Populate(IEnumerable<Game> games)
+        public void Populate(IEnumerable<SDK.Models.DepotGame> games)
         {
             var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
 
@@ -78,42 +79,36 @@ namespace LANCommander.Launcher.Models
             if (multiplayerModes.Any())
                 DataSource.MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
 
-            if (!Initialized)
-                LoadSelectedOptions();
-
             Initialized = true;
         }
 
-        public IEnumerable<LibraryItem> ApplyFilter(IEnumerable<LibraryItem> items)
+        public IEnumerable<ListItem> ApplyFilter(IEnumerable<ListItem> items)
         {
             if (!String.IsNullOrWhiteSpace(SelectedOptions.Title))
                 items = items.Where(i => i.Name?.IndexOf(SelectedOptions.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(SelectedOptions.Title, StringComparison.OrdinalIgnoreCase) >= 0);
 
             if (SelectedOptions.Engines != null && SelectedOptions.Engines.Any())
-                items = items.Where(i => SelectedOptions.Engines.Any(e => e.Id == (i.DataItem as Game)?.Engine?.Id));
+                items = items.Where(i => SelectedOptions.Engines.Any(e => e.Id == (i.DataItem as DepotGame)?.Engine?.Id));
 
             if (SelectedOptions.Genres != null && SelectedOptions.Genres.Any())
-                items = items.Where(i => SelectedOptions.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg.Id == g.Id)));
+                items = items.Where(i => SelectedOptions.Genres.Any(fg => (i.DataItem as DepotGame).Genres.Any(g => fg.Id == g.Id)));
 
             if (SelectedOptions.Tags != null && SelectedOptions.Tags.Any())
-                items = items.Where(i => SelectedOptions.Tags.Any(ft => (i.DataItem as Game).Tags.Any(t => ft.Id == t.Id)));
+                items = items.Where(i => SelectedOptions.Tags.Any(ft => (i.DataItem as DepotGame).Tags.Any(t => ft.Id == t.Id)));
 
             if (SelectedOptions.Developers != null && SelectedOptions.Developers.Any())
-                items = items.Where(i => SelectedOptions.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc.Id == c.Id)));
+                items = items.Where(i => SelectedOptions.Developers.Any(fc => (i.DataItem as DepotGame).Developers.Any(c => fc.Id == c.Id)));
 
             if (SelectedOptions.Publishers != null && SelectedOptions.Publishers.Any())
-                items = items.Where(i => SelectedOptions.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc.Id == c.Id)));
+                items = items.Where(i => SelectedOptions.Publishers.Any(fc => (i.DataItem as DepotGame).Publishers.Any(c => fc.Id == c.Id)));
 
             if (SelectedOptions.MinPlayers != null)
-                items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= SelectedOptions.MinPlayers && mm.MaxPlayers >= SelectedOptions.MinPlayers));
+                items = items.Where(i => (i.DataItem as DepotGame).MultiplayerModes.Any(mm => mm.MinPlayers <= SelectedOptions.MinPlayers && mm.MaxPlayers >= SelectedOptions.MinPlayers));
 
             if (SelectedOptions.MaxPlayers != null)
-                items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= SelectedOptions.MaxPlayers));
+                items = items.Where(i => (i.DataItem as DepotGame).MultiplayerModes.Any(mm => mm.MaxPlayers <= SelectedOptions.MaxPlayers));
 
-            if (SelectedOptions.Installed)
-                items = items.Where(i => (i.DataItem as Game).Installed);
-
-            items = items.Where(i => (i.DataItem as Game).Type.IsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
+            items = items.Where(i => (i.DataItem as DepotGame).Type.IsIn(SDK.Enums.GameType.MainGame, SDK.Enums.GameType.StandaloneExpansion, SDK.Enums.GameType.StandaloneMod));
 
             switch (SelectedOptions.SortBy)
             {
@@ -123,22 +118,13 @@ namespace LANCommander.Launcher.Models
 
                 case Enums.SortBy.DateAdded:
                     items = items.OrderBy(i =>
-                        (i.DataItem as Game)?.CreatedOn ?? DateTime.MinValue,
+                        (i.DataItem as DepotGame)?.CreatedOn ?? DateTime.MinValue,
                         SelectedOptions.SortDirection);
                     break;
 
                 case Enums.SortBy.DateReleased:
                     items = items.OrderBy(i =>
-                        (i.DataItem as Game)?.ReleasedOn ?? DateTime.MinValue,
-                        SelectedOptions.SortDirection);
-                    break;
-
-                case Enums.SortBy.RecentActivity:
-                    items = items.OrderBy(i =>
-                        (i.DataItem as Game)?.PlaySessions?
-                            .Where(ps => ps?.End != null)
-                            .OrderByDescending(ps => ps.End ?? DateTime.MinValue)
-                            .FirstOrDefault()?.End ?? DateTime.MinValue,
+                        (i.DataItem as DepotGame)?.ReleasedOn ?? DateTime.MinValue,
                         SelectedOptions.SortDirection);
                     break;
             }
@@ -151,7 +137,7 @@ namespace LANCommander.Launcher.Models
 
                 case Enums.GroupBy.Collection:
                     GroupSelector = (g) =>
-                        (g.DataItem as Game)?.Collections?
+                        (g.DataItem as DepotGame)?.Collections?
                             .Where(c => c?.Name != null)
                             .Select(c => c.Name)
                             .ToArray() ?? Array.Empty<string>();
@@ -159,7 +145,7 @@ namespace LANCommander.Launcher.Models
 
                 case Enums.GroupBy.Genre:
                     GroupSelector = (g) =>
-                        (g.DataItem as Game)?.Genres?
+                        (g.DataItem as DepotGame)?.Genres?
                             .Where(ge => ge?.Name != null)
                             .Select(ge => ge.Name)
                             .ToArray() ?? Array.Empty<string>();
@@ -167,7 +153,7 @@ namespace LANCommander.Launcher.Models
 
                 case Enums.GroupBy.Platform:
                     GroupSelector = (g) =>
-                        (g.DataItem as Game)?.Platforms?
+                        (g.DataItem as DepotGame)?.Platforms?
                             .Where(p => p?.Name != null)
                             .Select(p => p.Name)
                             .ToArray() ?? Array.Empty<string>();
@@ -186,61 +172,14 @@ namespace LANCommander.Launcher.Models
         {
             if (OnChanged != null)
                 await OnChanged();
-
-            SaveSelectedOptions();
         }
 
         public async Task ResetFilter()
         {
-            SelectedOptions = new FilterModel();
+            SelectedOptions = new DepotFilterModel();
 
             if (OnChanged != null)
                 await OnChanged();
-
-            SaveSelectedOptions();
-        }
-
-        void LoadSelectedOptions()
-        {
-            var settings = SettingService.GetSettings();
-
-            SelectedOptions.Title = settings.Filter.Title;
-            SelectedOptions.GroupBy = settings.Filter.GroupBy;
-            SelectedOptions.SortBy = settings.Filter.SortBy;
-            SelectedOptions.SortDirection = settings.Filter.SortDirection;
-            SelectedOptions.Engines = settings.Filter.Engines != null ? DataSource.Engines?.Where(e => settings.Filter.Engines.Contains(e.Name)).ToList() : null;
-            SelectedOptions.Genres = settings.Filter.Genres != null ? DataSource.Genres?.Where(e => settings.Filter.Genres.Contains(e.Name)).ToList() : null;
-            SelectedOptions.Tags = settings.Filter.Tags != null ? DataSource.Tags?.Where(e => settings.Filter.Tags.Contains(e.Name)).ToList() : null;
-            SelectedOptions.Platforms = settings.Filter.Platforms != null ? DataSource.Platforms?.Where(e => settings.Filter.Platforms.Contains(e.Name)).ToList() : null;
-            SelectedOptions.Publishers = settings.Filter.Publishers != null ? DataSource.Publishers?.Where(e => settings.Filter.Publishers.Contains(e.Name)).ToList() : null;
-            SelectedOptions.Developers = settings.Filter.Developers != null ? DataSource.Developers?.Where(e => settings.Filter.Developers.Contains(e.Name)).ToList() : null;
-            SelectedOptions.MinPlayers = settings.Filter.MinPlayers;
-            SelectedOptions.MaxPlayers = settings.Filter.MaxPlayers;
-            SelectedOptions.Installed = settings.Filter.Installed;
-        }
-
-        void SaveSelectedOptions()
-        {
-            var settings = SettingService.GetSettings();
-
-            settings.Filter = new FilterSettings()
-            {
-                Title = SelectedOptions.Title,
-                GroupBy = SelectedOptions.GroupBy,
-                SortBy = SelectedOptions.SortBy,
-                SortDirection = SelectedOptions.SortDirection,
-                Engines = SelectedOptions.Engines?.Select(e => e.Name),
-                Genres = SelectedOptions.Genres?.Select(g => g.Name),
-                Tags = SelectedOptions.Tags?.Select(t => t.Name),
-                Platforms = SelectedOptions.Platforms?.Select(p => p.Name),
-                Developers = SelectedOptions.Developers?.Select(c => c.Name),
-                Publishers = SelectedOptions.Publishers?.Select(c => c.Name),
-                MinPlayers = SelectedOptions.MinPlayers,
-                MaxPlayers = SelectedOptions.MaxPlayers,
-                Installed = SelectedOptions.Installed
-            };
-
-            SettingService.SaveSettings(settings);
         }
     }
 }

@@ -1,9 +1,4 @@
 ﻿@inherits FeedbackComponent<Guid, Guid>
 @using FileManagerComponents
-@inject ArchiveService ArchiveService
 
 <FileManager ArchiveId="Options" Features="@(FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Breadcrumbs)" />
-
-@code {
-
-}

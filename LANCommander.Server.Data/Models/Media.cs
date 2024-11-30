@@ -22,27 +22,27 @@ namespace LANCommander.Server.Data.Models
         [MaxLength(8)]
         public string Crc32 { get; set; }
 
-        public virtual Media? Thumbnail { get; set; }
+        public Media? Thumbnail { get; set; }
 
         [JsonIgnore]
-        public virtual Media? Parent { get; set; }
+        public Media? Parent { get; set; }
 
         public Guid StorageLocationId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(StorageLocationId))]
         [InverseProperty(nameof(StorageLocation.Media))]
-        public virtual StorageLocation StorageLocation { get; set; }
+        public StorageLocation StorageLocation { get; set; }
 
         public Guid? GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Media")]
-        public virtual Game? Game { get; set; }
+        public Game? Game { get; set; }
 
         public Guid? UserId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(UserId))]
         [InverseProperty("Media")]
-        public virtual User? User { get; set; }
+        public User? User { get; set; }
     }
 }

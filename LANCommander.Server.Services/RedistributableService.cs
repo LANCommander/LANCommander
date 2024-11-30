@@ -20,22 +20,22 @@ namespace LANCommander.Server.Services
         public RedistributableService(
             ILogger<RedistributableService> logger,
             IFusionCache cache,
-            Repository<Redistributable> repository,
-            ArchiveService archiveService) : base(logger, cache, repository)
+            RepositoryFactory repositoryFactory,
+            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
         {
             ArchiveService = archiveService;
         }
 
-        public async Task<Redistributable> Import(Guid objectKey)
+        public async Task<Redistributable> ImportAsync(Guid objectKey)
         {
-            var importArchive = await ArchiveService.FirstOrDefault(a => a.ObjectKey == objectKey.ToString());
+            var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
             var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
 
             using (var importZip = ZipFile.OpenRead(importArchivePath))
             {
                 var manifest = ManifestHelper.Deserialize<Redistributable>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                var redistributable = await Get(manifest.Id);
+                var redistributable = await GetAsync(manifest.Id);
 
                 var exists = redistributable != null;
 
@@ -133,11 +133,11 @@ namespace LANCommander.Server.Services
                 #endregion
 
                 if (exists)
-                    redistributable = await Update(redistributable);
+                    redistributable = await UpdateAsync(redistributable);
                 else
-                    redistributable = await Add(redistributable);
+                    redistributable = await AddAsync(redistributable);
 
-                await ArchiveService.Delete(importArchive);
+                await ArchiveService.DeleteAsync(importArchive);
 
                 return redistributable;
             }

@@ -3,10 +3,9 @@
 @using Microsoft.AspNetCore.Components.Authorization;
 @using Microsoft.EntityFrameworkCore;
 @layout ProfileLayout
-@inject UserService UserService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject GameSaveService GameSaveService
 @inject IJSRuntime JSRuntime
 @attribute [Authorize]
 
@@ -62,13 +61,30 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadData();
+    }
+
+    async Task LoadData() {
+        Loading = true;
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (authState.User.Identity.IsAuthenticated)
-        User = await UserService.Get(authState.User.Identity.Name);
-            
-        if (User != null)
-            GameSaves = User.GameSaves.OrderBy(s => s.CreatedOn).ToList();
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            /*if (authState.User.Identity.IsAuthenticated)
+                User = await userService
+                    .Include(u => u.GameSaves)
+                    //.Include(u => u.GameSaves.Game)
+                    .GetAsync(authState.User.Identity.Name);*/
+        }
+
+        using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
+        {
+            GameSaves = (await gameSaveService
+                .Include(gs => gs.Game)
+                .SortBy(gs => gs.Game.Title)
+                .GetAsync(gs => gs.UserId == User.Id)).OrderByDescending(gs => gs.UpdatedOn).ToList();
+        }
 
         if (GameSaves != null && GameSaves.Count > 0)
             Games = GameSaves.Where(gs => gs.Game != null).Select(gs => gs.Game).DistinctBy(g => g.Id).ToList();
@@ -76,25 +92,28 @@
         Loading = false;
     }
 
-    private async Task Download(Guid id)
+    async Task Download(Guid id)
     {
         await JSRuntime.InvokeAsync<object>("open", $"/Saves/Download/{id}", "_blank");
     }
 
-    private async Task Delete(GameSave gameSave)
+    async Task Delete(GameSave gameSave)
     {
         GameSaves = new List<GameSave>();
 
         Loading = true;
 
-        await GameSaveService.Delete(gameSave);
+        using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
+        {
+            await gameSaveService.DeleteAsync(gameSave);
+        }
 
-        GameSaves = (await GameSaveService.Get(gs => gs.UserId == User.Id)).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToList();
+        await LoadData();
 
         Loading = false;
     }
 
-    private string GetIcon(Game game)
+    string GetIcon(Game game)
     {
         var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 

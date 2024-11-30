@@ -1,7 +1,7 @@
 ﻿@page "/FirstTimeSetup/Paths"
 @layout FirstTimeSetupLayout
 @using Microsoft.EntityFrameworkCore
-@inject StorageLocationService StorageLocationService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -77,8 +77,7 @@
 </Form>
 
 @code {
-    [CascadingParameter]
-    FirstTimeSetupLayout Layout { get; set; }
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
 
     ICollection<StorageLocation> ArchiveStorageLocations = new List<StorageLocation>();
     StorageLocation MediaStorageLocation = new StorageLocation();
@@ -91,58 +90,61 @@
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Paths);
 
-        try
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
         {
-            ArchiveStorageLocations = await StorageLocationService.Get(l => l.Type == SDK.Enums.StorageLocationType.Archive);
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Couldn't retrieve existing archive storage locations");
-        }
-        finally
-        {
-            if (!ArchiveStorageLocations.Any())
-                ArchiveStorageLocations.Add(new StorageLocation
+            try
+            {
+                ArchiveStorageLocations = await storageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Couldn't retrieve existing archive storage locations");
+            }
+            finally
+            {
+                if (!ArchiveStorageLocations.Any())
+                    ArchiveStorageLocations.Add(new StorageLocation
+                    {
+                        Path = "Uploads",
+                        Type = SDK.Enums.StorageLocationType.Archive,
+                        Default = true,
+                    });
+            }
+
+            try
+            {
+
+                SavesStorageLocation = await storageLocationService.FirstAsync(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Couldn't retrieve existing store locations");
+
+                SavesStorageLocation = new StorageLocation
                 {
-                    Path = "Uploads",
-                    Type = SDK.Enums.StorageLocationType.Archive,
-                    Default = true,
-                });
-        }
+                    Path = "Saves",
+                    Type = SDK.Enums.StorageLocationType.Save
+                };
+            }
 
-        try
-        {
-            
-            SavesStorageLocation = await StorageLocationService.First(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default);
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Couldn't retrieve existing store locations");
-
-            SavesStorageLocation = new StorageLocation
+            try
             {
-                Path = "Saves",
-                Type = SDK.Enums.StorageLocationType.Save
-            };
-        }
-
-        try
-        {
-            MediaStorageLocation = await StorageLocationService.First(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Couldn't retrieve existing store locations");
-
-            MediaStorageLocation = new StorageLocation
+                MediaStorageLocation = await storageLocationService.FirstAsync(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
+            }
+            catch (Exception ex)
             {
-                Path = "Media",
-                Type = SDK.Enums.StorageLocationType.Media
-            };
+                Logger?.LogError(ex, "Couldn't retrieve existing store locations");
+
+                MediaStorageLocation = new StorageLocation
+                {
+                    Path = "Media",
+                    Type = SDK.Enums.StorageLocationType.Media
+                };
+            }
         }
     }
 
-    async Task ValidatePaths()
+    void ValidatePaths()
     {
         var valid = false;
 
@@ -172,7 +174,7 @@
             NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
     }
 
-    async Task SetDefault(StorageLocation storageLocation)
+    void SetDefault(StorageLocation storageLocation)
     {
         foreach (var archiveStorageLocation in ArchiveStorageLocations)
         {
@@ -190,14 +192,14 @@
         storageLocation.Path = path;
     }
 
-    async Task AddArchiveStorageLocation()
+    void AddArchiveStorageLocation()
     {
         ArchiveStorageLocations.Add(new StorageLocation());
 
         StateHasChanged();
     }
 
-    async Task RemoveArchiveStorageLocation(StorageLocation storageLocation)
+    void RemoveArchiveStorageLocation(StorageLocation storageLocation)
     {
         ArchiveStorageLocations.Remove(storageLocation);
     }

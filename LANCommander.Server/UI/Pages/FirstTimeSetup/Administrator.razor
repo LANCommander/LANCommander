@@ -1,7 +1,6 @@
 ﻿@page "/FirstTimeSetup/Administrator"
 @layout FirstTimeSetupLayout
-@inject RoleService RoleService
-@inject UserManager<User> UserManager
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Administrator> Logger
@@ -33,8 +32,7 @@
 </Form>
 
 @code {
-    [CascadingParameter]
-    FirstTimeSetupLayout Layout { get; set; }
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
 
     FirstTimeSetupModel Model = new FirstTimeSetupModel();
 
@@ -53,51 +51,57 @@
 
         try
         {
-            var role = await RoleService.Get(RoleService.AdministratorRoleName);
-
-            if (role == null)
-                await RoleService.Add(new Role
-                {
-                    Name = RoleService.AdministratorRoleName
-                });
-
-            var administrators = await RoleService.GetUsers(RoleService.AdministratorRoleName);
-
-            if (administrators != null && administrators.Any())
-                NavigationManager.NavigateTo("/");
-            else
+            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
             {
-                var user = Activator.CreateInstance<User>();
+                var role = await roleService.GetAsync(RoleService.AdministratorRoleName);
 
-                user.Approved = true;
-                user.ApprovedOn = DateTime.UtcNow;
-                user.UserName = Model.Username;
-
-                var result = await UserManager.CreateAsync(user, Model.Password);
-
-                if (!result.Succeeded)
-                {
-                    foreach (var error in result.Errors)
+                if (role == null)
+                    await roleService.AddAsync(new Role
                     {
-                        MessageService.Error(error.Description);
-                    }
+                        Name = RoleService.AdministratorRoleName
+                    });
 
-                    Loading = false;
-                    StateHasChanged();
+                var administrators = await roleService.GetUsersAsync(RoleService.AdministratorRoleName);
 
-                    return;
-                }
+                if (administrators != null && administrators.Any())
+                    NavigationManager.NavigateTo("/");
                 else
                 {
-                    await UserManager.AddToRolesAsync(user, new string[] { RoleService.AdministratorRoleName });
+                    using (var userService = DatabaseServiceFactory.Create<UserService>())
+                    {
+                        var user = Activator.CreateInstance<User>();
 
-                    Logger?.LogInformation("Administrator created a new account with password.");
+                        user.Approved = true;
+                        user.ApprovedOn = DateTime.UtcNow;
+                        user.UserName = Model.Username;
 
-                    await MessageService.Success("Setup completed! Redirecting...", 3);
+                        var result = await userService.AddAsync(user);
 
-                    Loading = false;
+                        if (result == null)
+                        {
+                            /*foreach (var error in result.Errors)
+                            {
+                                MessageService.Error(error.Description);
+                            }*/
 
-                    NavigationManager.NavigateTo("/");
+                            Loading = false;
+                            StateHasChanged();
+
+                            return;
+                        }
+                        else
+                        {
+                            await userService.AddToRolesAsync(user.UserName, new string[] { RoleService.AdministratorRoleName });
+
+                            Logger?.LogInformation("Administrator created a new account with password.");
+
+                            await MessageService.Success("Setup completed! Redirecting...", 3);
+
+                            Loading = false;
+
+                            NavigationManager.NavigateTo("/");
+                        }
+                    }
                 }
             }
         }

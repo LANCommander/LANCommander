@@ -27,12 +27,12 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
         [InverseProperty("Servers")]
-        public virtual Game? Game { get; set; }
+        public Game? Game { get; set; }
 
-        public virtual ICollection<ServerConsole>? ServerConsoles { get; set; }
-        public virtual ICollection<ServerHttpPath>? HttpPaths { get; set; }
-        public virtual ICollection<Script>? Scripts { get; set; }
-        public virtual ICollection<Action>? Actions { get; set; } = new List<Action>();
-        public virtual ICollection<Page>? Pages { get; set; }
+        public ICollection<ServerConsole>? ServerConsoles { get; set; }
+        public ICollection<ServerHttpPath>? HttpPaths { get; set; }
+        public ICollection<Script>? Scripts { get; set; }
+        public ICollection<Action>? Actions { get; set; } = new List<Action>();
+        public ICollection<Page>? Pages { get; set; }
     }
 }

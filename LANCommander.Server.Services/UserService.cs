@@ -1,4 +1,7 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
+using LANCommander.Server.Data;
+using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Models;
@@ -6,132 +9,181 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace LANCommander.Server.Services
 {
     public class UserService : BaseService, IBaseDatabaseService<User>
     {
-        private readonly IdentityContextFactory IdentityContextFactory;
+        private readonly IdentityContext IdentityContext;
+        private readonly IMapper Mapper;
 
-        public Repository<User> Repository { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public RepositoryFactory repositoryFactory { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
         public UserService(
             ILogger<UserService> logger,
-            Repository<User> repository,
+            IMapper mapper,
+            RepositoryFactory repositoryFactory,
             RoleService roleService,
             IdentityContextFactory identityContextFactory) : base(logger)
         {
-            IdentityContextFactory = identityContextFactory;
+            IdentityContext = identityContextFactory.Create();
+            Mapper = mapper;
         }
 
-        public async Task<User> Get(string userName)
+        public async Task<User> GetAsync(string userName)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                return await identityContext.UserManager.FindByNameAsync(userName);
+                return await IdentityContext.UserManager.FindByNameAsync(userName);
+            }
+            finally
+            {
             }
         }
 
-        public async Task<IEnumerable<Role>> GetRoles(string userName)
+        public async Task<T> GetAsync<T>(string userName)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                var roleNames = await identityContext.UserManager.GetRolesAsync(user);
-
-                return await identityContext.RoleManager.Roles.Where(r => roleNames.Contains(r.Name)).ToListAsync();
+                return Mapper.Map<T>(user);
+            }
+            finally
+            {
             }
         }
 
-        public async Task<bool> IsInRole(string userName, string roleName)
+        public async Task<IEnumerable<Role>> GetRolesAsync(string userName)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                return await identityContext.UserManager.IsInRoleAsync(user, roleName);
+                var roleNames = await IdentityContext.UserManager.GetRolesAsync(user);
+
+                return await IdentityContext.RoleManager.Roles.Where(r => roleNames.Contains(r.Name)).ToListAsync();
+            }
+            finally
+            {
             }
         }
 
-        public async Task<User> Add(User user)
+        public async Task<bool> IsInRoleAsync(string userName, string roleName)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var result = await identityContext.UserManager.CreateAsync(user);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
+
+                return await IdentityContext.UserManager.IsInRoleAsync(user, roleName);
+            }
+            finally
+            {
+            }
+        }
+
+        public async Task<User> AddAsync(User user)
+        {
+            try
+            {
+                var result = await IdentityContext.UserManager.CreateAsync(user);
 
                 if (result.Succeeded)
-                    return await identityContext.UserManager.FindByNameAsync(user.UserName);
+                    return await IdentityContext.UserManager.FindByNameAsync(user.UserName);
                 else
                     return null;
             }
-        }
-
-        public async Task AddToRole(string userName, string roleName)
-        {
-            using (var identityContext = IdentityContextFactory.Create())
+            finally
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
-
-                await identityContext.UserManager.AddToRoleAsync(user, roleName);
             }
         }
 
-        public async Task AddToRoles(string userName, IEnumerable<string> roleNames)
+        public async Task AddToRoleAsync(string userName, string roleName)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                await identityContext.UserManager.AddToRolesAsync(user, roleNames);
+                await IdentityContext.UserManager.AddToRoleAsync(user, roleName);
+            }
+            finally
+            {
+            }
+        }
+
+        public async Task AddToRolesAsync(string userName, IEnumerable<string> roleNames)
+        {
+            try
+            {
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
+
+                await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
+            }
+            finally
+            {
             }
         }
 
         public async Task RemoveFromRole(string userName, string roleName)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                await identityContext.UserManager.RemoveFromRoleAsync(user, roleName);
+                await IdentityContext.UserManager.RemoveFromRoleAsync(user, roleName);
+            }
+            finally
+            {
             }
         }
 
         public async Task<bool> CheckPassword(string userName, string password)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                return await identityContext.UserManager.CheckPasswordAsync(user, password);
+                return await IdentityContext.UserManager.CheckPasswordAsync(user, password);
+            }
+            finally
+            {
             }
         }
 
         public async Task<IdentityResult> ChangePassword(string userName, string currentPassword, string newPassword)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                var result = await identityContext.UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
+                var result = await IdentityContext.UserManager.ChangePasswordAsync(user, currentPassword, newPassword);
 
                 return result;
+            }
+            finally
+            {
             }
         }
 
         public async Task<IdentityResult> ChangePassword(string userName, string newPassword)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByNameAsync(userName);
+                var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                var token = await identityContext.UserManager.GeneratePasswordResetTokenAsync(user);
+                var token = await IdentityContext.UserManager.GeneratePasswordResetTokenAsync(user);
 
-                return await identityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+                return await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+            }
+            finally
+            {
             }
         }
 
@@ -140,70 +192,145 @@ namespace LANCommander.Server.Services
 
         }
 
-        public async Task<ICollection<User>> Get()
+        public async Task<ICollection<User>> GetAsync()
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                return await identityContext.UserManager.Users.ToListAsync();
+                return await IdentityContext.UserManager.Users.ToListAsync();
+            }
+            finally
+            {
             }
         }
 
-        public async Task<User> Get(Guid id)
+        public async Task<ICollection<T>> GetAsync<T>()
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                return await identityContext.UserManager.FindByIdAsync(id.ToString());
+                return await IdentityContext.UserManager.Users.ProjectTo<T>(Mapper.ConfigurationProvider).ToListAsync();
+            }
+            finally
+            {
             }
         }
 
-        public async Task<ICollection<User>> Get(Expression<Func<User, bool>> predicate)
+        public async Task<User> GetAsync(Guid id)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                return await identityContext.UserManager.Users.Where(predicate).ToListAsync();
+                return await IdentityContext.UserManager.FindByIdAsync(id.ToString());
+            }
+            finally
+            {
             }
         }
 
-        public async Task<User> FirstOrDefault(Expression<Func<User, bool>> predicate)
+        public async Task<T> GetAsync<T>(Guid id)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                return await identityContext.UserManager.Users.FirstOrDefaultAsync(predicate);
+                var user = await IdentityContext.UserManager.FindByIdAsync(id.ToString());
+
+                return Mapper.Map<T>(user);
+            }
+            finally
+            {
             }
         }
 
-        public async Task<User> FirstOrDefault<TKey>(Expression<Func<User, bool>> predicate, Expression<Func<User, TKey>> orderKeySelector)
+        public async Task<ICollection<User>> GetAsync(Expression<Func<User, bool>> predicate)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                return await identityContext.UserManager.Users.Where(predicate).OrderBy(orderKeySelector).FirstOrDefaultAsync();
+                return await IdentityContext.UserManager.Users.Where(predicate).ToListAsync();
+            }
+            finally
+            {
             }
         }
 
-        public async Task<bool> Exists(Guid id)
+        public async Task<ICollection<T>> GetAsync<T>(Expression<Func<User, bool>> predicate)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByIdAsync(id.ToString());
+                return await IdentityContext.UserManager.Users.Where(predicate).ProjectTo<T>(Mapper.ConfigurationProvider).ToListAsync();
+            }
+            finally
+            {
+            }
+        }
+
+        public async Task<User> FirstOrDefaultAsync(Expression<Func<User, bool>> predicate)
+        {
+            try
+            {
+                return await IdentityContext.UserManager.Users.FirstOrDefaultAsync(predicate);
+            }
+            finally
+            {
+            }
+        }
+
+        public async Task<T> FirstOrDefaultAsync<T>(Expression<Func<User, bool>> predicate)
+        {
+            try
+            {
+                return await IdentityContext.UserManager.Users.Where(predicate).ProjectTo<T>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
+            }
+            finally
+            {
+            }
+        }
+
+        public async Task<User> FirstOrDefaultAsync<TKey>(Expression<Func<User, bool>> predicate, Expression<Func<User, TKey>> orderKeySelector)
+        {
+            try
+            {
+                return await IdentityContext.UserManager.Users.Where(predicate).OrderBy(orderKeySelector).FirstOrDefaultAsync();
+            }
+            finally
+            {
+            }
+        }
+
+        public async Task<T> FirstOrDefaultAsync<T, TKey>(Expression<Func<User, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
+        {
+            try
+            {
+                return await IdentityContext.UserManager.Users.Where(predicate).ProjectTo<T>(Mapper.ConfigurationProvider).OrderBy(orderKeySelector).FirstOrDefaultAsync();
+            }
+            finally
+            {
+            }
+        }
+
+        public async Task<bool> ExistsAsync(Guid id)
+        {
+            try
+            {
+                var user = await IdentityContext.UserManager.FindByIdAsync(id.ToString());
 
                 return user != null;
             }
+            finally
+            {
+            }
         }
 
-        public async Task<ExistingEntityResult<User>> AddMissing(Expression<Func<User, bool>> predicate, User entity)
+        public async Task<ExistingEntityResult<User>> AddMissingAsync(Expression<Func<User, bool>> predicate, User entity)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
                 var result = new ExistingEntityResult<User>();
 
-                var user = await identityContext.UserManager.Users.FirstOrDefaultAsync(predicate);
+                var user = await IdentityContext.UserManager.Users.FirstOrDefaultAsync(predicate);
 
                 if (user == null)
                 {
-                    await identityContext.UserManager.CreateAsync(entity);
+                    await IdentityContext.UserManager.CreateAsync(entity);
 
                     result.Existing = false;
-                    result.Value = await identityContext.UserManager.FindByNameAsync(user.UserName);
+                    result.Value = await IdentityContext.UserManager.FindByNameAsync(user.UserName);
                 }
                 else
                 {
@@ -213,13 +340,16 @@ namespace LANCommander.Server.Services
 
                 return result;
             }
+            finally
+            {
+            }
         }
 
-        public async Task<User> Update(User entity)
+        public async Task<User> UpdateAsync(User entity)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByIdAsync(entity.Id.ToString());
+                var user = await IdentityContext.UserManager.FindByIdAsync(entity.Id.ToString());
 
                 user.UserName = entity.UserName;
                 user.PhoneNumber = entity.PhoneNumber;
@@ -229,20 +359,60 @@ namespace LANCommander.Server.Services
                 user.Approved = entity.Approved;
                 user.ApprovedOn = entity.ApprovedOn;
 
-                await identityContext.UserManager.UpdateAsync(user);
+                await IdentityContext.UserManager.UpdateAsync(user);
 
                 return user;
             }
+            finally
+            {
+            }
         }
 
-        public async Task Delete(User entity)
+        public async Task DeleteAsync(User entity)
         {
-            using (var identityContext = IdentityContextFactory.Create())
+            try
             {
-                var user = await identityContext.UserManager.FindByIdAsync(entity.Id.ToString());
+                var user = await IdentityContext.UserManager.FindByIdAsync(entity.Id.ToString());
 
-                await identityContext.UserManager.DeleteAsync(user);
+                await IdentityContext.UserManager.DeleteAsync(user);
             }
+            finally
+            {
+            }
+        }
+
+        public IBaseDatabaseService<User> Include(Expression<Func<User, object>> includeExpression)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IBaseDatabaseService<User> Query(Func<IQueryable<User>, IQueryable<User>> modifier)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IBaseDatabaseService<User> Include(params Expression<Func<User, object>>[] expressions)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IBaseDatabaseService<User> SortBy(Expression<Func<User, object>> expression, SortDirection direction)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IBaseDatabaseService<User> DisableTracking()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<PaginatedResults<User>> PaginateAsync(Expression<Func<User, bool>> expression, int pageNumber, int pageSize)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

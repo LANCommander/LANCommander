@@ -10,9 +10,9 @@
 }
 
 .pb-custom-window {
-
     & > * {
         position: absolute;
+        z-index: 500;
     }
 
     &-content {
@@ -22,11 +22,22 @@
         width: 100vw !important;
         display: flex;
         flex-direction: column;
+
+        &::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 37px;
+            backdrop-filter: blur(3px);
+            z-index: 700;
+            background: rgba(0, 0, 0, .5);
+        }
     }
 
-    &-header-drag-area {
-        background: rgba(0, 0, 0, .5) !important;
-        backdrop-filter: blur(3px);
+    &-drag-area {
+        background: none !important;
     }
 
     &-controls {

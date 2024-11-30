@@ -1,8 +1,9 @@
 ﻿@page "/Redistributables"
 @using Microsoft.EntityFrameworkCore;
 @using LANCommander.Server.UI.Pages.Redistributables.Components
+@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject RedistributableService RedistributableService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 
@@ -24,7 +25,17 @@
 
 <TableColumnPicker @ref="Picker" Key="Redistributables" @bind-Visible="ColumnPickerVisible" />
 
-<Table TItem="Redistributable" DataSource="@Redistributables" Loading="@Loading" PageSize="25" Responsive>
+<Table
+    TItem="Redistributable"
+    DataSource="@Redistributables"
+    Loading="@Loading"
+    PageSize="@PageSize"
+    PageIndex="@PageIndex"
+    Total="@TotalCount"
+    OnPageIndexChange="PageIndexChanged"
+    OnPageSizeChange="PageSizeChanged"
+    Size="@TableSize.Small"
+    Responsive>
     <PropertyColumn Property="r => r.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
     <Column TData="int" Title="Games" Sortable Hidden="@(Picker.IsColumnHidden("Games"))">
         @context.Games?.Count
@@ -60,57 +71,116 @@
     IEnumerable<Redistributable> Redistributables { get; set; } = new List<Redistributable>();
 
     bool Loading = true;
+    int PageIndex = 1;
+    int PageSize = 50;
+    int TotalCount = 0;
 
     string Search = "";
+    string Url;
 
     TableColumnPicker Picker;
     ImportUploadDialog ImportUploadDialog;
     bool ColumnPickerVisible = false;
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
+        Url = NavigationManager.Uri;
+        NavigationManager.LocationChanged += LocationChanged;
+        LoadTableParameter();
+        await LoadData();
 
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
-    private async Task LoadData()
+    async Task LoadData()
     {
         var fuzzySearch = Search.ToLower().Trim();
 
-        Redistributables = (await RedistributableService.Get(r => r.Name.ToLower().Contains(fuzzySearch))).OrderBy(r => r.Name);
+        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+        {
+            var results = await redistributableService
+                .Include(r => r.Games)
+                .Include(r => r.CreatedBy)
+                .Include(r => r.UpdatedBy)
+                .SortBy(r => r.Name)
+                .PaginateAsync(t => t.Name.ToLower().Contains(fuzzySearch),
+                    PageIndex,
+                    PageSize);
+
+            TotalCount = results.Count;
+            Redistributables = results.Results;
+        }
     }
 
-    private void Add()
+    async void LocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        Url = e.Location;
+        LoadTableParameter();
+        await LoadData();
+    }
+
+    void LoadTableParameter()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        var query = HttpUtility.ParseQueryString(uri.Query);
+
+        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+
+        if (query["Search"] != null)
+            Search = query["Search"];
+        else
+            Search = "";
+    }
+
+    void PageIndexChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Redistributables?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void PageSizeChanged(PaginationEventArgs args)
+    {
+        NavigationManager.NavigateTo($"/Redistributables?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    void SearchChanged()
+    {
+        NavigationManager.NavigateTo($"/Redistributables?Search={Search}&Size={PageSize}");
+    }
+
+    void Add()
     {
         NavigationManager.NavigateTo("/Redistributables/Add");
     }
 
-    private async Task Delete(Redistributable redistributable)
+    async Task Delete(Redistributable redistributable)
     {
         Redistributables = new List<Redistributable>();
 
         Loading = true;
 
-        await RedistributableService.Delete(redistributable);
+        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+        {
+            await redistributableService.DeleteAsync(redistributable);
+        }
 
-        Redistributables = (await RedistributableService.Get()).OrderBy(r => r.Name);
+        await LoadData();
 
         Loading = false;
     }
 
-    private async Task OpenColumnPicker()
+    async Task OpenColumnPicker()
     {
         ColumnPickerVisible = true;
     }
 
-    private async Task CloseColumnPicker()
+    async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

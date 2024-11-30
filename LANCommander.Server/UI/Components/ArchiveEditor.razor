@@ -3,9 +3,9 @@
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
-@inject ArchiveService ArchiveService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -66,7 +66,7 @@
 
     ArchiveUploader Uploader;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
     }
@@ -78,10 +78,13 @@
 
     private async Task LoadData()
     {
-        if (GameId != Guid.Empty)
-            Archives = await ArchiveService.Get(a => a.GameId == GameId);
-        else if (RedistributableId != Guid.Empty)
-            Archives = await ArchiveService.Get(a => a.RedistributableId == RedistributableId);
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        {
+            if (GameId != Guid.Empty)
+                Archives = await archiveService.GetAsync(a => a.GameId == GameId);
+            else if (RedistributableId != Guid.Empty)
+                Archives = await archiveService.GetAsync(a => a.RedistributableId == RedistributableId);
+        }
     }
 
     private async Task Download(Archive archive)
@@ -114,7 +117,10 @@
     {
         try
         {
-            await ArchiveService.Update(archive);
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+            {
+                await archiveService.UpdateAsync(archive);
+            }
 
             MessageService.Success("Archive updated!");
         }
@@ -129,7 +135,10 @@
     {
         try
         {
-            await ArchiveService.Delete(archive);
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+            {
+                await archiveService.DeleteAsync(archive);
+            }
 
             await LoadData();
 

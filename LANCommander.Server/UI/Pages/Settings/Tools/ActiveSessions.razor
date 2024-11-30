@@ -2,8 +2,8 @@
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Games.Components;
 @using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
-@inject PlaySessionService PlaySessionService
 @inject ILogger<ActiveSessions> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -48,7 +48,10 @@
     {
         Loading = true;
 
-        PlaySessions = await PlaySessionService.Get(ps => !ps.End.HasValue);
+        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+        {
+            PlaySessions = await playSessionService.GetAsync(ps => !ps.End.HasValue);
+        }
 
         Loading = false;
     }
@@ -57,7 +60,10 @@
     {
         try
         {
-            await PlaySessionService.Delete(playSession);
+            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+            {
+                await playSessionService.DeleteAsync(playSession);
+            }
 
             await LoadData();
 

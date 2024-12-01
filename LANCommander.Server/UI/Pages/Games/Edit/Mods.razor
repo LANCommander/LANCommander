@@ -11,9 +11,9 @@
         <PropertyColumn Property="e => e.SortTitle" Sortable Filterable />
         <PropertyColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
         <PropertyColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Sortable Filterable />
+        <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Sortable Filterable Title="Created By" />
         <PropertyColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Sortable Filterable />
+        <PropertyColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Sortable Filterable Title="Created By" />
         <ActionColumn Style="text-align: right">
             <Space Direction="DirectionVHType.Horizontal">
                 <SpaceItem>

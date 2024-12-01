@@ -1,0 +1,80 @@
+﻿@using LANCommander.SDK.Enums
+@using LANCommander.Server.Extensions;
+@using LANCommander.Server.Models;
+@using LANCommander.Server.UI.Components;
+@inherits FeedbackComponent<string>
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ModalService ModalService
+@inject IMessageService MessageService
+@inject ILogger<ScriptEditorDialog> Logger
+
+<StandaloneCodeEditor @ref="Editor" Id="@("editor-" + Id.ToString())" ConstructionOptions="EditorConstructionOptions" OnDidInit="InitEditor" />
+
+<style>
+    .monaco-editor-container {
+        height: 600px;
+    }
+</style>
+
+@code {
+    Guid Id = Guid.NewGuid();
+    string Contents = "";
+    StandaloneCodeEditor? Editor;
+
+    string FilePath { get { return $"wwwroot/css/{Options}"; } }
+
+    StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "css",
+            Value = Contents,
+            Theme = "vs-dark",
+        };
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (File.Exists(FilePath))
+            Contents = File.ReadAllText(FilePath);
+    }
+
+    async Task InitEditor()
+    {
+        if (Editor != null)
+        {
+            await Editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, (editor) =>
+            {
+                Save();
+            }, null);
+        }
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        var success = await Save();
+
+        if (!success)
+            args.Reject();
+    }
+
+    async Task<bool> Save()
+    {
+        try
+        {
+            File.WriteAllText(FilePath, await Editor.GetValue());
+
+            MessageService.Success("Stylesheet saved!");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Stylesheet could not be saved!");
+            Logger.LogError(ex, "Stylesheet could not be saved!");
+
+            return false;
+        }
+    }
+}

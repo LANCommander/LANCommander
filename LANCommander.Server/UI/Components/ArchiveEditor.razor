@@ -81,9 +81,9 @@
         using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
             if (GameId != Guid.Empty)
-                Archives = await archiveService.GetAsync(a => a.GameId == GameId);
+                Archives = await archiveService.Include(a => a.CreatedBy).GetAsync(a => a.GameId == GameId);
             else if (RedistributableId != Guid.Empty)
-                Archives = await archiveService.GetAsync(a => a.RedistributableId == RedistributableId);
+                Archives = await archiveService.Include(a => a.CreatedBy).GetAsync(a => a.RedistributableId == RedistributableId);
         }
     }
 

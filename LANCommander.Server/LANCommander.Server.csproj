@@ -80,9 +80,9 @@
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
-    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.14" />
-    <PackageReference Include="Hangfire.Core" Version="1.8.14" />
-    <PackageReference Include="Hangfire.InMemory" Version="0.10.4" />
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.16" />
+    <PackageReference Include="Hangfire.Core" Version="1.8.16" />
+    <PackageReference Include="Hangfire.InMemory" Version="1.0.0" />
     <PackageReference Include="IGDB" Version="5.1.0" />
     <PackageReference Include="IPXRelayDotNet" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
@@ -113,7 +113,7 @@
     <PackageReference Include="Serilog.Sinks.AspNetCore.App.SignalR" Version="1.2.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="8.0.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
     <PackageReference Include="swashbuckle" Version="5.6.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.1" />
     <PackageReference Include="Syncfusion.PdfToImageConverter.Net" Version="26.2.14" />

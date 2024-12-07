@@ -21,11 +21,11 @@
     <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.5" />
-    <PackageReference Include="PeanutButter.INI" Version="3.0.321" />
+    <PackageReference Include="PeanutButter.INI" Version="3.0.330" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
     <PackageReference Include="Semver" Version="2.3.0" />
     <PackageReference Include="SharpCompress" Version="0.38.0" />
-    <PackageReference Include="System.Management.Automation" Version="7.4.5" />
+    <PackageReference Include="System.Management.Automation" Version="7.4.6" />
 	  <PackageReference Include="YamlDotNet" Version="16.1.3" />
   </ItemGroup>
 

@@ -1,0 +1,38 @@
+﻿@page "/Settings/Appearance"
+@using LANCommander.Server.Models;
+@inject ModalService ModalService
+@inject IMessageService MessageService
+@inject ILogger<Appearance> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Appearance" />
+
+<div style="padding: 0 24px;">
+    <h3>Custom Stylesheet</h3>
+    <p>Modify the appearance of the web UI using a custom stylesheet.</p>
+    <Button Type="@ButtonType.Primary" OnClick="@(() => EditStylesheet("custom.css", "Custom Stylesheet"))">Edit</Button>
+
+    <Divider />
+
+    <h3>Pages Stylesheet</h3>
+    <p>Define a custom stylesheet to be used in <a href="/Pages/Edit">Pages</a>.</p>
+    <Button Type="@ButtonType.Primary" OnClick="@(() => EditStylesheet("pages.css", "Pages Stylesheet"))">Edit</Button>
+
+    <Divider />
+</div>
+
+@code {
+    async void EditStylesheet(string fileName, string title)
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = title,
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Save"
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<StylesheetEditorDialog, string>(modalOptions, fileName);
+    }
+}

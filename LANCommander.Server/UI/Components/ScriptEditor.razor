@@ -62,11 +62,11 @@
         using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
         {
             if (GameId != Guid.Empty)
-                Scripts = await scriptService.GetAsync(s => s.GameId == GameId);
+                Scripts = await scriptService.Include(s => s.CreatedBy).GetAsync(s => s.GameId == GameId);
             else if (RedistributableId != Guid.Empty)
-                Scripts = await scriptService.GetAsync(s => s.RedistributableId == RedistributableId);
+                Scripts = await scriptService.Include(s => s.CreatedBy).GetAsync(s => s.RedistributableId == RedistributableId);
             else if (ServerId != Guid.Empty)
-                Scripts = await scriptService.GetAsync(s => s.ServerId == ServerId);
+                Scripts = await scriptService.Include(s => s.CreatedBy).GetAsync(s => s.ServerId == ServerId);
         }
 
         await InvokeAsync(StateHasChanged);

@@ -34,6 +34,7 @@ namespace LANCommander.Launcher.Data.Models
         public Guid? EngineId { get; set; }
         [ForeignKey(nameof(EngineId))]
         public virtual Engine Engine { get; set; }
+        public double TotalSizeInGb { get; set; }
 
         public virtual ICollection<MultiplayerMode>? MultiplayerModes { get; set; } = new List<MultiplayerMode>();
         public virtual ICollection<Genre>? Genres { get; set; } = new List<Genre>();

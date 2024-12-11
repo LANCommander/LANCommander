@@ -14,6 +14,7 @@ namespace LANCommander.SDK.Models
         public bool Singleplayer { get; set; }
         public DateTime ReleasedOn { get; set; }
         public string InstallDirectory { get; set; }
+        public double TotalSizeInGb { get; set; }
         public GameType Type { get; set; }
         public Game BaseGame { get; set; }
         public Engine Engine { get; set; }

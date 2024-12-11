@@ -64,6 +64,9 @@
                                     }
                                 </SpaceItem>
                                 <SpaceItem>
+                                      <Statistic Title="Installation Size" Value="@GetTotalSizeInGb(SelectedGame)" />
+                                </SpaceItem>
+                                <SpaceItem>
                                     <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
                                 </SpaceItem>
                                 <SpaceItem>
@@ -321,5 +324,9 @@
             return "Never";
         else
             return lastSession.End.Value.ToRelativeDate();
+    }
+
+    string GetTotalSizeInGb(Data.Models.Game game) {
+        return $"{game.TotalSizeInGb:F1} GB";
     }
 }

@@ -247,6 +247,7 @@ namespace LANCommander.Launcher.Services
                             localGame.Type = (Data.Enums.GameType)(int)remoteGame.Type;
                             localGame.BaseGameId = remoteGame.BaseGame?.Id;
                             localGame.Singleplayer = remoteGame.Singleplayer;
+                            localGame.TotalSizeInGb = remoteGame.TotalSizeInGb;
 
                             #region Update Game Engine
                             if (remoteGame.Engine == null && localGame.Engine != null)

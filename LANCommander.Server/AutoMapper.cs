@@ -11,7 +11,11 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Company, SDK.Models.Company>();
             CreateMap<Data.Models.Collection, SDK.Models.Collection>();
             CreateMap<Data.Models.Engine, SDK.Models.Engine>();
-            CreateMap<Data.Models.Game, SDK.Models.Game>();
+            CreateMap<Data.Models.Game, SDK.Models.Game>()
+                            .ForMember(dest => dest.TotalSizeInGb, opt => opt.MapFrom(src =>
+                src.Archives != null
+                    ? src.Archives.Sum(a => a.CompressedSize) / (1024 * 1024 * 1024)
+                    : 0));
             CreateMap<Data.Models.GameSave, SDK.Models.GameSave>();
             CreateMap<Data.Models.Genre, SDK.Models.Genre>();
             CreateMap<Data.Models.Key, SDK.Models.Key>();

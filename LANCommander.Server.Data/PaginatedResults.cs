@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Server.Data
 {
-    public class PaginatedResults<T> where T : class, IBaseModel
+    public class PaginatedResults<T>
     {
         public ICollection<T> Results { get; set; }
         public int Count { get; set; }

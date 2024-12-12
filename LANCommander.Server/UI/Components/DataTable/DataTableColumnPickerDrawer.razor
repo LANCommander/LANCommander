@@ -1,0 +1,23 @@
+﻿@inherits FeedbackComponent<IEnumerable<DataTableColumn>, IEnumerable<DataTableColumn>>
+@namespace LANCommander.Server.UI.Components
+
+<Space Direction="@DirectionVHType.Vertical">
+    @foreach (var column in Options)
+    {
+        <SpaceItem>
+            <Switch @bind-Checked="column.Visible" /> @column.Name
+        </SpaceItem>
+    }
+</Space>
+
+<Button Type="@ButtonType.Primary" Block OnClick="Apply">Apply</Button>
+
+@code {
+
+    async Task Apply()
+    {
+        DrawerRef<IEnumerable<DataTableColumn>> drawerRef = base.FeedbackRef as DrawerRef<IEnumerable<DataTableColumn>>;
+
+        await drawerRef!.CloseAsync(Options);
+    }
+}

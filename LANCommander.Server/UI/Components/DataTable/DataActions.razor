@@ -1,0 +1,13 @@
+﻿@namespace LANCommander.Server.UI.Components
+@typeparam TItem
+
+<ActionColumn Title="" Style="text-align: right">
+    <Flex Gap="small">
+        @ChildContent
+    </Flex>
+</ActionColumn>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [CascadingParameter] public DataTable<TItem> DataTable { get; set; }
+}

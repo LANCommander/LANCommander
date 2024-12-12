@@ -17,188 +17,123 @@
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Games" Subtitle="@TotalCount.ToString()">
-    <PageHeaderExtra>
-        <Space Direction="DirectionVHType.Horizontal">
-            @if (Selected != null && Selected.Count() > 0)
-            {
-                <SpaceItem>
-                    <Button OnClick="() => AddToCollection()" Type="@ButtonType.Primary">Add to Collection</Button>
-                </SpaceItem>
-            }
-            <SpaceItem>
-                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250" OnChange="SearchChanged" />
-            </SpaceItem>
-            <SpaceItem>
-                <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
-            </SpaceItem>
-            <SpaceItem>
-                <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
-            </SpaceItem>
-        </Space>
-    </PageHeaderExtra>
-</PageHeader>
+<PageHeader Title="Games" />
 
-<TableColumnPicker @ref="Picker" Key="Games" @bind-Visible="ColumnPickerVisible" />
-
-<Table
+<DataTable
     @ref="Table"
     TItem="Game"
-    DataSource="@Games"
+    LoadData="LoadData"
     TreeChildren="game => game.DependentGames.Where(g => g.Type.IsIn(GameType.Mod, GameType.Expansion) && g.Id != game.Id)"
     @bind-SelectedRows="Selected"
-    Loading="@Loading"
-    PageSize="@PageSize"
-    PageIndex="@PageIndex"
-    Total="@TotalCount"
-    OnPageIndexChange="PageIndexChanged"
-    OnPageSizeChange="PageSizeChanged"
     Size="@TableSize.Small"
     Responsive>
-    <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
-    <Column TData="string" Title="Icon" Hidden="@(Picker.IsColumnHidden("Icon"))">
-        <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
-    </Column>
+    <RightToolbar>
+        @if (Selected != null && Selected.Count() > 0)
+        {
+            <Button OnClick="() => AddToCollection()" Type="@ButtonType.Primary">Add to Collection</Button>
+        }
+        <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
+        <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
+    </RightToolbar>
+    <Columns>
+        <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
+
+        <DataColumn TData="string" Title="Icon">
+            <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
+        </DataColumn>
+
+        <BoundDataColumn Property="g => g.Title" Hidden="@(true)" />
     
-    <PropertyColumn Property="g => g.Title" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Title"))" />
-    
-    <PropertyColumn Property="g => g.SortTitle" Title="Sort Title" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Sort Title", false))" />
-    
-    <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Released On"))" />
-    
-    <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable SorterCompare="@((a, b) => a.CompareTo(b))" Hidden="@(Picker.IsColumnHidden("Created On"))" />
-    
-    <PropertyColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
-    
-    <PropertyColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
-    
-    <PropertyColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
-    
-    <PropertyColumn Property="g => g.Singleplayer" Sortable Filterable Hidden="@(Picker.IsColumnHidden("Singleplayer", false))">
-        <Checkbox Disabled="true" Checked="context.Singleplayer" />
-    </PropertyColumn>
-    
-    <Column TData="bool" Title="Multiplayer" Hidden="@(Picker.IsColumnHidden("Multiplayer", false))">
-        <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
-    </Column>
+        <DataColumn TData="bool" Title="Multiplayer">
+            <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
+        </DataColumn>
 
-    <Column TData="int" Title="Total Keys" Hidden="@(Picker.IsColumnHidden("Total Keys"))">
-        @context.Keys?.Count
-    </Column>
+        <DataColumn TData="int" Title="Total Keys">
+            @context.Keys?.Count
+        </DataColumn>
 
-    <Column TData="int" Title="Keys Allocated" Hidden="@(Picker.IsColumnHidden("Keys Allocated"))">
-        @context.Keys?.Count(k => k.ClaimedOn.HasValue)
-    </Column>
+        <DataColumn TData="int" Title="Keys Allocated">
+            @context.Keys?.Count(k => k.ClaimedOn.HasValue)
+        </DataColumn>
 
-    <Column TData="string[]" Title="Collections" Hidden="@(Picker.IsColumnHidden("Collections"))">
-        @if (context.Collections != null)
-            foreach (var collection in context.Collections)
-            {
-                <Tag>@collection.Name</Tag>
-            }
-    </Column>
+        <DataColumn TData="string[]" Title="Collections">
+            @if (context.Collections != null)
+                foreach (var collection in context.Collections)
+                {
+                    <Tag>@collection.Name</Tag>
+                }
+        </DataColumn>
 
-    <Column TData="string[]" Title="Developers" Hidden="@(Picker.IsColumnHidden("Developers", false))">
-        @if (context.Developers != null)
-            foreach (var dev in context.Developers)
-            {
-                <Tag>@dev.Name</Tag>
-            }
-    </Column>
+        <DataColumn TData="string[]" Title="Developers">
+            @if (context.Developers != null)
+                foreach (var dev in context.Developers)
+                {
+                    <Tag>@dev.Name</Tag>
+                }
+        </DataColumn>
 
-    <Column TData="string[]" Title="Publishers" Hidden="@(Picker.IsColumnHidden("Publishers", false))">
-        @if (context.Publishers != null)
-            foreach (var pub in context.Publishers)
-            {
-                <Tag>@pub.Name</Tag>
-            }
-    </Column>
+        <DataColumn TData="string[]" Title="Publishers">
+            @if (context.Publishers != null)
+                foreach (var pub in context.Publishers)
+                {
+                    <Tag>@pub.Name</Tag>
+                }
+        </DataColumn>
 
-    <Column TData="string[]" Title="Genres" Hidden="@(Picker.IsColumnHidden("Genres", false))">
-        @if (context.Genres != null)
-            foreach (var genre in context.Genres)
-            {
-                <Tag>@genre.Name</Tag>
-            }
-    </Column>
+        <DataColumn TData="string[]" Title="Genres">
+            @if (context.Genres != null)
+                foreach (var genre in context.Genres)
+                {
+                    <Tag>@genre.Name</Tag>
+                }
+        </DataColumn>
 
-    <Column TData="string[]" Title="Platforms" Hidden="@(Picker.IsColumnHidden("Platforms", false))">
-        @if (context.Platforms != null)
-            foreach (var platform in context.Platforms)
-            {
-                <Tag>@platform.Name</Tag>
-            }
-    </Column>
+        <DataColumn TData="string[]" Title="Platforms">
+            @if (context.Platforms != null)
+                foreach (var platform in context.Platforms)
+                {
+                    <Tag>@platform.Name</Tag>
+                }
+        </DataColumn>
 
-    <Column TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes" Hidden="@(Picker.IsColumnHidden("Multiplayer Modes"))">
-        @if (context.MultiplayerModes != null)
-            foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
-            {
-                <Tag>@mode.GetDisplayName()</Tag>
-            }
-    </Column>
+        <DataColumn TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes">
+            @if (context.MultiplayerModes != null)
+                foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
+                {
+                    <Tag>@mode.GetDisplayName()</Tag>
+                }
+        </DataColumn>
 
-    <ActionColumn Title="" Style="text-align: right">
-        <TitleTemplate>
-            <div style="text-align: right">
-                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
-            </div>
-        </TitleTemplate>
-        <ChildContent>
-            <Space Direction="DirectionVHType.Horizontal">
-                <SpaceItem>
-                    <a href="/Games/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ChildContent>
-    </ActionColumn>
-</Table>
+        <DataActions>
+            <a href="@($"/Games/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">
+                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+</DataTable>
 
-<ImportUploadDialog @ref="ImportUploadDialog" OnGameImported="LoadData">
+<ImportUploadDialog @ref="ImportUploadDialog" OnGameImported="() => LoadData(0,0,String.Empty)">
     <Hint>Only LCX files are supported for importing games</Hint>
 </ImportUploadDialog>
 
 @code {
     IEnumerable<Game> Games { get; set; } = new List<Game>();
 
-    bool Loading = true;
-
-    string Search = "";
     string Url;
 
     bool Visibility = false;
 
     IEnumerable<Game> Selected;
 
-    ITable Table;
+    DataTable<Game> Table;
     ImportUploadDialog ImportUploadDialog;
-    TableColumnPicker Picker;
-    bool ColumnPickerVisible = false;
 
-    int PageIndex = 1;
-    int PageSize = 50;
-    int TotalCount = 0;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Url = NavigationManager.Uri;
-        NavigationManager.LocationChanged += LocationChanged;
-        LoadTableParameter();
-        await LoadData();
-
-        Loading = false;
-    }
-
-    async Task LoadData()
+    async Task<PaginatedResults<Game>> LoadData(int pageIndex, int pageSize, string search)
     {
         using (var gameService = DatabaseServiceFactory.Create<GameService>())
         {
-            var results = await gameService
+            return await gameService
                 .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
                 .Include(
                     g => g.DependentGames,
@@ -221,53 +156,9 @@
                     g.Type == GameType.StandaloneMod
                     ||
                     g.BaseGame == null,
-                    PageIndex,
-                    PageSize);
-
-            TotalCount = results.Count;
-            Games = results.Results;
+                    pageIndex,
+                    pageSize);
         }
-
-        if (Table != null)
-            Table.ReloadData();
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    async void LocationChanged(object sender, LocationChangedEventArgs e)
-    {
-        Url = e.Location;
-        LoadTableParameter();
-        await LoadData();
-    }
-
-    void LoadTableParameter()
-    {
-        var uri = NavigationManager.ToAbsoluteUri(Url);
-        var query = HttpUtility.ParseQueryString(uri.Query);
-
-        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
-        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
-
-        if (query["Search"] != null)
-            Search = query["Search"];
-        else
-            Search = "";
-    }
-
-    void PageIndexChanged(PaginationEventArgs args)
-    {
-        NavigationManager.NavigateTo($"Games?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
-    }
-
-    void PageSizeChanged(PaginationEventArgs args)
-    {
-        NavigationManager.NavigateTo($"Games?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
-    }
-
-    void SearchChanged()
-    {
-        NavigationManager.NavigateTo($"Games?Search={Search}");
     }
 
     string GetIcon(Game game)
@@ -285,15 +176,8 @@
         NavigationManager.NavigateTo("/Games/Add");
     }
 
-    void Edit(Game game)
-    {
-        NavigationManager.NavigateTo($"/Games/{game.Id}/Edit", true);
-    }
-
     async Task Delete(Game game)
     {
-        Loading = true;
-
         using (var gameService = DatabaseServiceFactory.Create<GameService>())
         {
             try
@@ -309,9 +193,7 @@
             }
         }
 
-        await LoadData();
-
-        Loading = false;
+        // await LoadData();
     }
 
     async void AddToCollection()
@@ -335,22 +217,7 @@
         modalRef.OnOk = async (collections) =>
         {
             Table.UnselectAll();
-            await LoadData();
+            // await LoadData();
         };
-    }
-
-    async Task OpenColumnPicker()
-    {
-        ColumnPickerVisible = true;
-    }
-
-    async Task CloseColumnPicker()
-    {
-        ColumnPickerVisible = false;
-    }
-
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

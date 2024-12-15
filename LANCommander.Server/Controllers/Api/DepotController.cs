@@ -42,7 +42,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var library = await LibraryService.GetByUserIdAsync(user.Id);
-            var libraryGameIds = library.Games.Select(g => g.Id).ToList();
+            var libraryGameIds = library.Games.Where(g => g != null).Select(g => g.Id).ToList();
 
             var games = await Cache.GetOrSetAsync("DepotGames", async _ =>
             {

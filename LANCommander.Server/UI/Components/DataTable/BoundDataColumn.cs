@@ -48,16 +48,9 @@ namespace LANCommander.Server.UI.Components
 
         protected override void OnParametersSet()
         {
-            if (ColumnVisibility.ContainsKey(ColIndex))
-            {
-                Hidden = !ColumnVisibility[ColIndex];
+            ClassMapper.If("column-hidden", () => ColumnVisibility.ContainsKey(ColIndex) && !ColumnVisibility[ColIndex]);
 
-                StateHasChanged();
-            }
-            else
-            {
-                Hidden = false;
-            }
+            StateHasChanged();
 
             base.OnParametersSet();
         }

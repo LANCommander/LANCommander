@@ -42,7 +42,7 @@
             <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
         </DataColumn>
 
-        <BoundDataColumn Property="g => g.Title" Hidden="@(true)" />
+        <BoundDataColumn Property="g => g.Title" />
     
         <DataColumn TData="bool" Title="Multiplayer">
             <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />

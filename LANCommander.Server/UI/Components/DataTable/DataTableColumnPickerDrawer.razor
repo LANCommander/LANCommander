@@ -1,16 +1,18 @@
 ﻿@inherits FeedbackComponent<IEnumerable<DataTableColumn>, IEnumerable<DataTableColumn>>
 @namespace LANCommander.Server.UI.Components
 
-<Space Direction="@DirectionVHType.Vertical">
-    @foreach (var column in Options)
-    {
-        <SpaceItem>
-            <Switch @bind-Checked="column.Visible" /> @column.Name
-        </SpaceItem>
-    }
-</Space>
+<Flex Vertical Justify="space-between" Style="height: 100%;">
+    <Space Direction="@DirectionVHType.Vertical">
+        @foreach (var column in Options)
+        {
+            <SpaceItem>
+                <Switch @bind-Checked="column.Visible" /> @column.Name
+            </SpaceItem>
+        }
+    </Space>
 
-<Button Type="@ButtonType.Primary" Block OnClick="Apply">Apply</Button>
+    <Button Type="@ButtonType.Primary" Block OnClick="Apply">Apply</Button>
+</Flex>
 
 @code {
 

@@ -27,9 +27,21 @@
     </Flex>
 
     <CascadingValue Value="ColumnVisibility" IsFixed>
-        @RenderBase()
+        <div id="@Id" class="ant-table-visibility-container">
+            @RenderBase()
+        </div>
     </CascadingValue>
 </CascadingValue>
+
+<style>
+    @foreach (var columnVisibility in ColumnVisibility) {
+        if (!columnVisibility.Value)
+        {
+            @($"#{Id} tbody td:nth-child({columnVisibility.Key + 1}) {{display: none;}}")
+            @($"#{Id} thead th:nth-child({columnVisibility.Key + 1}) {{display: none;}}")
+        }
+    }
+</style>
 
 @code {
     [Parameter] public RenderFragment LeftToolbar { get; set; }
@@ -142,26 +154,15 @@
         NavigationManager.NavigateTo($"{uri.AbsolutePath}?Search={Search}&Size={PageSize}");
     }
 
-    async Task ChangeColumnVisibility(IColumn column, bool state)
-    {
-        ColumnVisibility[column.ColIndex] = state;
-    }
-
-    void RenderColumnVisibility()
-    {
-        base.InvokeStateHasChanged();
-        StateHasChanged();
-    }
-
     public async Task OpenDrawer()
     {
         var options = new DrawerOptions
-            {
-                Title = "Columns",
-                Width = "350",
-                MaskClosable = false,
-                Placement = "right",
-            };
+        {
+            Title = "Columns",
+            Width = "350",
+            MaskClosable = false,
+            Placement = "right",
+        };
 
         var columns = new List<DataTableColumn>();
 
@@ -173,7 +174,7 @@
                 {
                     Index = column.ColIndex,
                     Name = column.Title,
-                    Visible = !(column as ColumnBase).Hidden
+                    Visible = true
                 });
             }
         }
@@ -185,21 +186,29 @@
             ColumnVisibility[column.Index] = column.Visible;
         }
 
-        foreach (var column in ColumnContext.Columns)
+        /*foreach (var column in ColumnContext.Columns)
+        {
+            if (ColumnVisibility.ContainsKey(column.ColIndex))
+                (column as ColumnBase).Class = "found";
+        }*/
+
+        /*foreach (var column in ColumnContext.Columns)
         {
             if (ColumnVisibility.ContainsKey(column.ColIndex))
                 (column as ColumnBase).Hidden = !ColumnVisibility[column.ColIndex];
         }
 
-        base.ReloadData(PageIndex, PageSize);
+        foreach (var column in ColumnContext.HeaderColumns)
+        {
+            if (ColumnVisibility.ContainsKey(column.ColIndex))
+                (column as ColumnBase).Hidden = !ColumnVisibility[column.ColIndex];
+        }*/
 
-        await base.InvokeStateHasChangedAsync();
-        StateHasChanged();
+        base.ReloadData(PageIndex, PageSize);
     }
 
     public void CloseDrawer()
     {
-        RenderColumnVisibility();
         base.InvokeStateHasChanged();
         StateHasChanged();
     }

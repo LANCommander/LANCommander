@@ -42,6 +42,9 @@ namespace LANCommander.Server.Controllers.Api
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var library = await LibraryService.GetByUserIdAsync(user.Id);
+
+            library = await LibraryService.Include(l => l.Games).GetAsync(library.Id);
+
             var libraryGameIds = library.Games.Where(g => g != null).Select(g => g.Id).ToList();
 
             var games = await Cache.GetOrSetAsync("DepotGames", async _ =>

@@ -25,53 +25,21 @@ namespace LANCommander.Launcher.Models
 
         public Func<ListItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
 
-        public void Populate(IEnumerable<SDK.Models.DepotGame> games)
+        public void Populate(DepotResults results)
         {
-            var multiplayerModes = games.Where(g => g.MultiplayerModes != null).SelectMany(g => g.MultiplayerModes);
+            var multiplayerModes = results.Games
+                .Where(g => g.MultiplayerModes != null)
+                .SelectMany(g => g.MultiplayerModes);
 
-            DataSource.Engines = games
-                .Select(i => i.Engine)
-                .Where(e => e != null)
-                .DistinctBy(e => e.Id)
-                .OrderBy(e => e.Name)
-                .ToList();
+            DataSource.Collections = results.Collections.OrderBy(c => c.Name).ToList();
+            DataSource.Engines = results.Engines.OrderBy(e => e.Name).ToList();
+            DataSource.Genres = results.Genres.OrderBy(g => g.Name).ToList();
+            DataSource.Tags = results.Tags.OrderBy(t => t.Name).ToList();
+            DataSource.Platforms = results.Platforms.OrderBy(p => p.Name).ToList();
+            DataSource.Developers = results.Companies.OrderBy(c => c.Name).ToList();
+            DataSource.Publishers = results.Companies.OrderBy(c => c.Name).ToList();
 
-            DataSource.Genres = games
-                .SelectMany(i => i.Genres)
-                .Where(g => g != null)
-                .DistinctBy(g => g.Id)
-                .OrderBy(g => g.Name)
-                .ToList();
-
-            DataSource.Tags = games
-                .SelectMany(i => i.Tags)
-                .Where(t => t != null)
-                .DistinctBy(t => t.Id)
-                .OrderBy(t => t.Name)
-                .ToList();
-
-            DataSource.Platforms = games
-                .SelectMany(i => i.Platforms)
-                .Where(p => p != null)
-                .DistinctBy(p => p.Id)
-                .OrderBy(p => p.Name)
-                .ToList();
-
-            DataSource.Developers = games
-                .SelectMany(i => i.Developers)
-                .Where(c => c != null)
-                .DistinctBy(c => c.Id)
-                .OrderBy(c => c.Name)
-            .ToList();
-
-            DataSource.Publishers = games
-                .SelectMany(i => i.Publishers)
-                .Where(c => c != null)
-                .DistinctBy(c => c.Id)
-                .OrderBy(c => c.Name)
-                .ToList();
-
-            if (games.Any(li => li.Singleplayer))
+            if (results.Games.Any(li => li.Singleplayer))
                 DataSource.MinPlayers = 1;
             else if (multiplayerModes.Any())
                 DataSource.MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
@@ -88,19 +56,25 @@ namespace LANCommander.Launcher.Models
                 items = items.Where(i => i.Name?.IndexOf(SelectedOptions.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(SelectedOptions.Title, StringComparison.OrdinalIgnoreCase) >= 0);
 
             if (SelectedOptions.Engines != null && SelectedOptions.Engines.Any())
-                items = items.Where(i => SelectedOptions.Engines.Any(e => e.Id == (i.DataItem as DepotGame)?.Engine?.Id));
+                items = items.Where(i => SelectedOptions.Engines.Any(e => (i.DataItem as DepotGame).EngineId == e.Id));
+
+            if (SelectedOptions.Collections != null && SelectedOptions.Collections.Any())
+                items = items.Where(i => SelectedOptions.Collections.Any(fc => (i.DataItem as DepotGame).Collections.Contains(fc.Id)));
 
             if (SelectedOptions.Genres != null && SelectedOptions.Genres.Any())
-                items = items.Where(i => SelectedOptions.Genres.Any(fg => (i.DataItem as DepotGame).Genres.Any(g => fg.Id == g.Id)));
+                items = items.Where(i => SelectedOptions.Genres.Any(fg => (i.DataItem as DepotGame).Genres.Contains(fg.Id)));
 
             if (SelectedOptions.Tags != null && SelectedOptions.Tags.Any())
-                items = items.Where(i => SelectedOptions.Tags.Any(ft => (i.DataItem as DepotGame).Tags.Any(t => ft.Id == t.Id)));
+                items = items.Where(i => SelectedOptions.Tags.Any(ft => (i.DataItem as DepotGame).Tags.Contains(ft.Id)));
 
             if (SelectedOptions.Developers != null && SelectedOptions.Developers.Any())
-                items = items.Where(i => SelectedOptions.Developers.Any(fc => (i.DataItem as DepotGame).Developers.Any(c => fc.Id == c.Id)));
+                items = items.Where(i => SelectedOptions.Developers.Any(fc => (i.DataItem as DepotGame).Developers.Contains(fc.Id)));
 
             if (SelectedOptions.Publishers != null && SelectedOptions.Publishers.Any())
-                items = items.Where(i => SelectedOptions.Publishers.Any(fc => (i.DataItem as DepotGame).Publishers.Any(c => fc.Id == c.Id)));
+                items = items.Where(i => SelectedOptions.Publishers.Any(fc => (i.DataItem as DepotGame).Publishers.Contains(fc.Id)));
+
+            if (SelectedOptions.Platforms != null && SelectedOptions.Platforms.Any())
+                items = items.Where(i => SelectedOptions.Platforms.Any(fp => (i.DataItem as DepotGame).Platforms.Contains(fp.Id)));
 
             if (SelectedOptions.MinPlayers != null)
                 items = items.Where(i => (i.DataItem as DepotGame).MultiplayerModes.Any(mm => mm.MinPlayers <= SelectedOptions.MinPlayers && mm.MaxPlayers >= SelectedOptions.MinPlayers));
@@ -137,25 +111,25 @@ namespace LANCommander.Launcher.Models
 
                 case Enums.GroupBy.Collection:
                     GroupSelector = (g) =>
-                        (g.DataItem as DepotGame)?.Collections?
-                            .Where(c => c?.Name != null)
+                        DataSource.Collections
+                            .Where(c => (g.DataItem as DepotGame).Collections.Contains(c.Id))
                             .Select(c => c.Name)
                             .ToArray() ?? Array.Empty<string>();
                     break;
 
                 case Enums.GroupBy.Genre:
                     GroupSelector = (g) =>
-                        (g.DataItem as DepotGame)?.Genres?
-                            .Where(ge => ge?.Name != null)
-                            .Select(ge => ge.Name)
+                        DataSource.Genres
+                            .Where(ge => (g.DataItem as DepotGame).Genres.Contains(ge.Id))
+                            .Select(g => g.Name)
                             .ToArray() ?? Array.Empty<string>();
                     break;
 
                 case Enums.GroupBy.Platform:
                     GroupSelector = (g) =>
-                        (g.DataItem as DepotGame)?.Platforms?
-                            .Where(p => p?.Name != null)
-                            .Select(p => p.Name)
+                        DataSource.Platforms
+                            .Where(p => (g.DataItem as DepotGame).Platforms.Contains(p.Id))
+                            .Select(g => g.Name)
                             .ToArray() ?? Array.Empty<string>();
                     break;
             }

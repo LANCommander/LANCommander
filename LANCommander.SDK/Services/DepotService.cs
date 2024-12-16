@@ -27,9 +27,9 @@ namespace LANCommander.SDK.Services
             Logger = logger;
         }
 
-        public async Task<IEnumerable<DepotGame>> GetGamesAsync()
+        public async Task<DepotResults> GetAsync()
         {
-            return await Client.GetRequestAsync<IEnumerable<DepotGame>>("/api/Depot/Games");
+            return await Client.GetRequestAsync<DepotResults>("/api/Depot");
         }
 
         public async Task<DepotGame> GetGameAsync(Guid gameId)

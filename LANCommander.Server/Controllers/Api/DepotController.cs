@@ -20,69 +20,66 @@ namespace LANCommander.Server.Controllers.Api
         private readonly IMapper Mapper;
         private readonly IFusionCache Cache;
         private readonly GameService GameService;
+        private readonly CollectionService CollectionService;
+        private readonly CompanyService CompanyService;
+        private readonly EngineService EngineService;
+        private readonly GenreService GenreService;
+        private readonly PlatformService PlatformService;
+        private readonly TagService TagService;
         private readonly LibraryService LibraryService;
         private readonly UserService UserService;
+        private readonly DatabaseContext DatabaseContext;
 
         public DepotController(
             ILogger<DepotController> logger,
             IMapper mapper,
             IFusionCache cache,
             GameService gameService,
+            CollectionService collectionService,
+            CompanyService companyService,
+            EngineService engineService,
+            GenreService genreService,
+            PlatformService platformService,
+            TagService tagService,
             LibraryService libraryService,
-            UserService userService) : base(logger)
+            UserService userService,
+            DatabaseContext databaseContext) : base(logger)
         {
             Mapper = mapper;
             Cache = cache;
             GameService = gameService;
+            CollectionService = collectionService;
+            CompanyService = companyService;
+            EngineService = engineService;
+            GenreService = genreService;
+            PlatformService = platformService;
+            TagService = tagService;
             LibraryService = libraryService;
             UserService = userService;
+            DatabaseContext = databaseContext;
         }
 
-        [HttpGet("Games")]
-        public async Task<IEnumerable<SDK.Models.DepotGame>> GetGamesAsync()
+        [HttpGet]
+        public async Task<SDK.Models.DepotResults> GetAsync()
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var library = await LibraryService.GetByUserIdAsync(user.Id);
 
-            var libraryGameIds = library.Games.Where(g => g != null).Select(g => g.Id).ToList();
-
-            var games = await Cache.GetOrSetAsync("DepotGames", async _ =>
+            var results = await Cache.GetOrSetAsync("DepotResults", async _ =>
             {
-                return await GameService
-                    .Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover))
-                    .Include(g => g.Collections.Select(c => c.Id))
-                    .Include(g => g.Developers.Select(c => c.Id))
-                    .Include(g => g.Genres.Select(g => g.Id))
-                    .Include(g => g.MultiplayerModes)
-                    .Include(g => g.Platforms.Select(p => p.Id))
-                    .Include(g => g.Publishers.Select(c => c.Id))
-                    .Include(g => g.Tags.Select(t => t.Id))
-                    .GetAsync<SDK.Models.DepotGame>();
-            }, TimeSpan.MaxValue);
-
-            var accessibleGames = games.ToList();
-
-            if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole(RoleService.AdministratorRoleName))
-            {
-                var roles = await UserService.GetRolesAsync(User?.Identity.Name);
-
-                var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
-
-                accessibleGames = games.Where(g => g.Collections.Any(c => accessibleCollectionIds.Contains(c.Id))).ToList();
-
-                foreach (var game in accessibleGames)
+                return new SDK.Models.DepotResults
                 {
-                    game.Collections = game.Collections.Where(c => accessibleCollectionIds.Contains(c.Id));
-                }
-            }
+                    Games = await GameService.GetAsync<DepotGame>(),
+                    Collections = await CollectionService.GetAsync<SDK.Models.Collection>(),
+                    Companies = await CompanyService.GetAsync<SDK.Models.Company>(),
+                    Engines = await EngineService.GetAsync<SDK.Models.Engine>(),
+                    Genres = await GenreService.GetAsync<SDK.Models.Genre>(),
+                    Platforms = await PlatformService.GetAsync<SDK.Models.Platform>(),
+                    Tags = await TagService.GetAsync<SDK.Models.Tag>(),
+                };
+            });
 
-            foreach (var game in accessibleGames)
-            {
-                if (libraryGameIds.Contains(game.Id))
-                    game.InLibrary = true;
-            }
-
-            return accessibleGames;
+            return results;
         }
 
         [HttpGet("Games/{id}")]

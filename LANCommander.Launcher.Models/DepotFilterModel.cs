@@ -9,6 +9,7 @@ namespace LANCommander.Launcher.Models
         public GroupBy GroupBy { get; set; } = GroupBy.None;
         public SortBy SortBy { get; set; } = SortBy.Title;
         public SortDirection SortDirection { get; set; } = SortDirection.Ascending;
+        public ICollection<Collection> Collections { get; set; }
         public ICollection<Engine> Engines { get; set; }
         public ICollection<Genre> Genres { get; set; }
         public ICollection<Tag> Tags { get; set; }

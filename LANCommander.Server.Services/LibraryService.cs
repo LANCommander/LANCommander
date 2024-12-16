@@ -29,7 +29,7 @@ namespace LANCommander.Server.Services
 
         public async Task<Library> GetByUserIdAsync(Guid userId)
         {
-            var library = await Include(l => l.Games.Select(g => g.Id)).FirstOrDefaultAsync(l => l.User.Id == userId);
+            var library = await Include(l => l.Games).FirstOrDefaultAsync(l => l.User.Id == userId);
 
             if (library == null)
             {

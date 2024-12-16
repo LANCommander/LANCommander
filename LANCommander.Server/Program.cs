@@ -23,6 +23,7 @@ using LANCommander.Server.Jobs.Background;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;
+using Scalar.AspNetCore;
 
 namespace LANCommander.Server
 {
@@ -234,7 +235,7 @@ namespace LANCommander.Server
             builder.Services.AddSwaggerGen(options =>
             {
                 options.CustomSchemaIds(type => type.ToString());
-                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     In = ParameterLocation.Header,
                     Description = "Enter a valid access token",
@@ -363,8 +364,11 @@ namespace LANCommander.Server
                 app.UseHsts();
             }
 
-            app.UseSwagger();
-            app.UseSwaggerUI();
+            app.UseSwagger(options =>
+            {
+                options.RouteTemplate = "/openapi/{documentName}.json";
+            });
+            app.MapScalarApiReference();
             app.UseHangfireDashboard();
 
             // app.UseHttpsRedirection();

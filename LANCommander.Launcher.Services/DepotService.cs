@@ -44,11 +44,11 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading depot items from host"))
             {
-                var games = await Client.Depot.GetGamesAsync();
+                var results = await Client.Depot.GetAsync();
 
-                Filter.Populate(games);
+                Filter.Populate(results);
 
-                foreach (var item in games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
+                foreach (var item in results.Games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
                 {
                     Items.Add(item);
                 }

@@ -21,13 +21,13 @@ namespace LANCommander.SDK.Models
         public bool InLibrary { get; set; }
         public GameType Type { get; set; }
         public Media Cover { get; set; }
-        public IEnumerable<Collection> Collections { get; set; }
-        public IEnumerable<Company> Developers { get; set; }
-        public IEnumerable<Company> Publishers { get; set; }
-        public Engine Engine { get; set; }
-        public IEnumerable<Genre> Genres { get; set; }
+        public IEnumerable<Guid> Collections { get; set; }
+        public IEnumerable<Guid> Developers { get; set; }
+        public IEnumerable<Guid> Publishers { get; set; }
+        public Guid EngineId { get; set; }
+        public IEnumerable<Guid> Genres { get; set; }
         public IEnumerable<MultiplayerMode> MultiplayerModes { get; set; }
-        public IEnumerable<Platform> Platforms { get; set; }
-        public IEnumerable<Tag> Tags { get; set; }
+        public IEnumerable<Guid> Platforms { get; set; }
+        public IEnumerable<Guid> Tags { get; set; }
     }
 }

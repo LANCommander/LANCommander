@@ -33,6 +33,9 @@
         <FormItem Label="Engine">
             <TagsInput Entities="context.DataSource.Engines" @bind-Values="@context.SelectedOptions.Engines" OptionLabelSelector="e => e.Name" TItem="Engine" />
         </FormItem>
+        <FormItem Label="Collection">
+            <TagsInput Entities="context.DataSource.Collections" @bind-Values="@context.SelectedOptions.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
+        </FormItem>
         <FormItem Label="Genre">
             <TagsInput Entities="context.DataSource.Genres" @bind-Values="@context.SelectedOptions.Genres" OptionLabelSelector="g => g.Name" TItem="Genre" />
         </FormItem>

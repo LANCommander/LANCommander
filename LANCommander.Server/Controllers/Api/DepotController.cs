@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Controllers.Api
@@ -67,17 +68,18 @@ namespace LANCommander.Server.Controllers.Api
 
             var results = await Cache.GetOrSetAsync("DepotResults", async _ =>
             {
-                return new SDK.Models.DepotResults
-                {
-                    Games = await GameService.GetAsync<DepotGame>(),
-                    Collections = await CollectionService.GetAsync<SDK.Models.Collection>(),
-                    Companies = await CompanyService.GetAsync<SDK.Models.Company>(),
-                    Engines = await EngineService.GetAsync<SDK.Models.Engine>(),
-                    Genres = await GenreService.GetAsync<SDK.Models.Genre>(),
-                    Platforms = await PlatformService.GetAsync<SDK.Models.Platform>(),
-                    Tags = await TagService.GetAsync<SDK.Models.Tag>(),
-                };
-            });
+                var results = new SDK.Models.DepotResults();
+
+                results.Games = await GameService.GetAsync<DepotGame>();
+                results.Collections = await CollectionService.GetAsync<SDK.Models.Collection>();
+                results.Companies = await CompanyService.GetAsync<SDK.Models.Company>();
+                results.Engines = await EngineService.GetAsync<SDK.Models.Engine>();
+                results.Genres = await GenreService.GetAsync<SDK.Models.Genre>();
+                results.Platforms = await PlatformService.GetAsync<SDK.Models.Platform>();
+                results.Tags = await TagService.GetAsync<SDK.Models.Tag>();
+
+                return results;
+            }, TimeSpan.MaxValue);
 
             return results;
         }

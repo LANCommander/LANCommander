@@ -49,25 +49,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Game, SDK.Models.DepotGame>()
                 .ForMember(dest =>
                     dest.Cover,
-                    opt => opt.MapFrom(src => src.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover).FirstOrDefault()))
-                .ForMember(dest =>
-                    dest.Collections,
-                    opt => opt.MapFrom(src => src.Tags.Select(c => c.Id)))
-                .ForMember(dest =>
-                    dest.Developers,
-                    opt => opt.MapFrom(src => src.Developers.Select(c => c.Id)))
-                .ForMember(dest =>
-                    dest.Publishers,
-                    opt => opt.MapFrom(src => src.Publishers.Select(c => c.Id)))
-                .ForMember(dest =>
-                    dest.Genres,
-                    opt => opt.MapFrom(src => src.Genres.Select(g => g.Id)))
-                .ForMember(dest =>
-                    dest.Platforms,
-                    opt => opt.MapFrom(src => src.Platforms.Select(p => p.Id)))
-                .ForMember(dest =>
-                    dest.Tags,
-                    opt => opt.MapFrom(src => src.Tags.Select(t => t.Id)));
+                    opt => opt.MapFrom(src => src.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover).FirstOrDefault()));
         }
     }
 }

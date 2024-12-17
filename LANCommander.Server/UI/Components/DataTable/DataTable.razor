@@ -11,7 +11,7 @@
 @inject DrawerService DrawerService
 
 <CascadingValue Value="this">
-    <Flex Justify="space-between">
+    <Flex Justify="space-between" Style="padding: 12px;">
         <Flex Gap="small">
             <Search Placeholder="Search" BindOnInput DebounceMilliseconds="250" />
             <Button Icon="@IconType.Outline.Control" Type="@ButtonType.Text" OnClick="OpenDrawer" />
@@ -186,25 +186,8 @@
             ColumnVisibility[column.Index] = column.Visible;
         }
 
-        /*foreach (var column in ColumnContext.Columns)
-        {
-            if (ColumnVisibility.ContainsKey(column.ColIndex))
-                (column as ColumnBase).Class = "found";
-        }*/
-
-        /*foreach (var column in ColumnContext.Columns)
-        {
-            if (ColumnVisibility.ContainsKey(column.ColIndex))
-                (column as ColumnBase).Hidden = !ColumnVisibility[column.ColIndex];
-        }
-
-        foreach (var column in ColumnContext.HeaderColumns)
-        {
-            if (ColumnVisibility.ContainsKey(column.ColIndex))
-                (column as ColumnBase).Hidden = !ColumnVisibility[column.ColIndex];
-        }*/
-
         base.ReloadData(PageIndex, PageSize);
+        base.InvokeStateHasChanged();
     }
 
     public void CloseDrawer()

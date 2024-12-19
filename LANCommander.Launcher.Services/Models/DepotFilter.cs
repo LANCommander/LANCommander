@@ -59,22 +59,22 @@ namespace LANCommander.Launcher.Models
                 items = items.Where(i => SelectedOptions.Engines.Any(e => (i.DataItem as DepotGame).EngineId == e.Id));
 
             if (SelectedOptions.Collections != null && SelectedOptions.Collections.Any())
-                items = items.Where(i => SelectedOptions.Collections.Any(fc => (i.DataItem as DepotGame).Collections.Contains(fc.Id)));
+                items = items.Where(i => SelectedOptions.Collections.Any(fc => (i.DataItem as DepotGame).Collections.Any(c => c.Id == fc.Id)));
 
             if (SelectedOptions.Genres != null && SelectedOptions.Genres.Any())
-                items = items.Where(i => SelectedOptions.Genres.Any(fg => (i.DataItem as DepotGame).Genres.Contains(fg.Id)));
+                items = items.Where(i => SelectedOptions.Genres.Any(fg => (i.DataItem as DepotGame).Genres.Any(g => g.Id == fg.Id)));
 
             if (SelectedOptions.Tags != null && SelectedOptions.Tags.Any())
-                items = items.Where(i => SelectedOptions.Tags.Any(ft => (i.DataItem as DepotGame).Tags.Contains(ft.Id)));
+                items = items.Where(i => SelectedOptions.Tags.Any(ft => (i.DataItem as DepotGame).Tags.Any(t => t.Id == ft.Id)));
 
             if (SelectedOptions.Developers != null && SelectedOptions.Developers.Any())
-                items = items.Where(i => SelectedOptions.Developers.Any(fc => (i.DataItem as DepotGame).Developers.Contains(fc.Id)));
+                items = items.Where(i => SelectedOptions.Developers.Any(fc => (i.DataItem as DepotGame).Developers.Any(c => c.Id == fc.Id)));
 
             if (SelectedOptions.Publishers != null && SelectedOptions.Publishers.Any())
-                items = items.Where(i => SelectedOptions.Publishers.Any(fc => (i.DataItem as DepotGame).Publishers.Contains(fc.Id)));
+                items = items.Where(i => SelectedOptions.Publishers.Any(fc => (i.DataItem as DepotGame).Publishers.Any(c => c.Id == fc.Id)));
 
             if (SelectedOptions.Platforms != null && SelectedOptions.Platforms.Any())
-                items = items.Where(i => SelectedOptions.Platforms.Any(fp => (i.DataItem as DepotGame).Platforms.Contains(fp.Id)));
+                items = items.Where(i => SelectedOptions.Platforms.Any(fp => (i.DataItem as DepotGame).Platforms.Any(p => p.Id == fp.Id)));
 
             if (SelectedOptions.MinPlayers != null)
                 items = items.Where(i => (i.DataItem as DepotGame).MultiplayerModes.Any(mm => mm.MinPlayers <= SelectedOptions.MinPlayers && mm.MaxPlayers >= SelectedOptions.MinPlayers));
@@ -112,7 +112,7 @@ namespace LANCommander.Launcher.Models
                 case Enums.GroupBy.Collection:
                     GroupSelector = (g) =>
                         DataSource.Collections
-                            .Where(c => (g.DataItem as DepotGame).Collections.Contains(c.Id))
+                            .Where(c => (g.DataItem as DepotGame).Collections.Any(gc => gc.Id == c.Id))
                             .Select(c => c.Name)
                             .ToArray() ?? Array.Empty<string>();
                     break;
@@ -120,7 +120,7 @@ namespace LANCommander.Launcher.Models
                 case Enums.GroupBy.Genre:
                     GroupSelector = (g) =>
                         DataSource.Genres
-                            .Where(ge => (g.DataItem as DepotGame).Genres.Contains(ge.Id))
+                            .Where(ge => (g.DataItem as DepotGame).Genres.Any(gge => gge.Id == ge.Id))
                             .Select(g => g.Name)
                             .ToArray() ?? Array.Empty<string>();
                     break;
@@ -128,7 +128,7 @@ namespace LANCommander.Launcher.Models
                 case Enums.GroupBy.Platform:
                     GroupSelector = (g) =>
                         DataSource.Platforms
-                            .Where(p => (g.DataItem as DepotGame).Platforms.Contains(p.Id))
+                            .Where(p => (g.DataItem as DepotGame).Platforms.Any(gp => gp.Id == p.Id))
                             .Select(g => g.Name)
                             .ToArray() ?? Array.Empty<string>();
                     break;

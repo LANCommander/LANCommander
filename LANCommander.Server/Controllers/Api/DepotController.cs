@@ -81,6 +81,11 @@ namespace LANCommander.Server.Controllers.Api
                 return results;
             }, TimeSpan.MaxValue);
 
+            foreach (var game in results.Games)
+            {
+                game.InLibrary = library.Games.Any(g => g.Id == game.Id);
+            }
+
             return results;
         }
 

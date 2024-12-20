@@ -41,7 +41,10 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<ActionResult<SDK.Models.Redistributable>> GetAsync(Guid id)
         {
-            var redistributable = await RedistributableService.GetAsync(id);
+            var redistributable = await RedistributableService
+                .Include(r => r.Archives)
+                .Include(r => r.Scripts)
+                .GetAsync(id);
 
             if (redistributable == null)
                 return NotFound();

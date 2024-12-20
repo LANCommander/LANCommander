@@ -93,7 +93,28 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<SDK.Models.Game> GetAsync(Guid id)
         {
-            return Mapper.Map<SDK.Models.Game>(await GameService.GetAsync(id));
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+
+            var game = await GameService
+                .Include(g => g.Actions)
+                .Include(g => g.Archives)
+                .Include(g => g.BaseGame)
+                .Include(g => g.Categories)
+                .Include(g => g.Collections)
+                .Include(g => g.DependentGames)
+                .Include(g => g.Developers)
+                .Include(g => g.Engine)
+                .Include(g => g.Genres)
+                .Include(g => g.Media)
+                .Include(g => g.MultiplayerModes)
+                .Include(g => g.Platforms)
+                .Include(g => g.PlaySessions.Where(ps => ps.UserId == user.Id))
+                .Include(g => g.Publishers)
+                .Include(g => g.Redistributables)
+                .Include(g => g.Tags)
+                .GetAsync(id);
+
+            return Mapper.Map<SDK.Models.Game>(game);
         }
 
         [HttpGet("{id}/Manifest")]
@@ -114,7 +135,9 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
             }
 
-            var game = await GameService.GetAsync(id);
+            var game = await GameService
+                .Include(g => g.Archives)
+                .GetAsync(id);
 
             if (game == null)
             {

@@ -32,7 +32,9 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<ActionResult<SDK.Models.GameSave>> GetAsync(Guid id)
         {
-            var gameSave = await GameSaveService.GetAsync<SDK.Models.GameSave>(id);
+            var gameSave = await GameSaveService
+                .Include(gs => gs.User)
+                .GetAsync<SDK.Models.GameSave>(id);
 
             if (gameSave == null || gameSave.User == null)
             {

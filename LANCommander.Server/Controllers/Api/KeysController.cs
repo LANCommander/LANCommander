@@ -56,7 +56,9 @@ namespace LANCommander.Server.Controllers.Api
                 Data.Models.Key key = null;
 
                 var user = await UserService.GetAsync(User?.Identity?.Name);
-                var game = await GameService.GetAsync(id);
+                var game = await GameService
+                    .Include(g => g.Keys)
+                    .GetAsync(id);
 
                 if (game == null)
                 {
@@ -106,7 +108,9 @@ namespace LANCommander.Server.Controllers.Api
                 Data.Models.Key key = null;
 
                 var user = await UserService.GetAsync(User?.Identity?.Name);
-                var game = await GameService.GetAsync(id);
+                var game = await GameService
+                    .Include(g => g.Keys)
+                    .GetAsync(id);
 
                 if (game == null)
                 {
@@ -176,7 +180,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
-            var keys = await KeyService.GetAsync(k => k.Game.Id == id);
+            var keys = await KeyService.GetAsync(k => k.GameId == id);
             var availableKey = keys.Where(k =>
                 (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
                 ||

@@ -18,14 +18,17 @@ namespace LANCommander.Server.Controllers.Api
     public class ProfileController : BaseApiController
     {
         private readonly UserService UserService;
+        private readonly MediaService MediaService;
         private readonly UserCustomFieldService UserCustomFieldService;
 
         public ProfileController(
             ILogger<ProfileController> logger,
             UserService userService,
+            MediaService mediaService,
             UserCustomFieldService userCustomFieldService) : base(logger)
         {
             UserService = userService;
+            MediaService = mediaService;
             UserCustomFieldService = userCustomFieldService;
         }
 
@@ -69,7 +72,10 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
+                if (user == null)
+                    return NotFound();
+
+                var media = await MediaService.FirstOrDefaultAsync(m => m.Type == SDK.Enums.MediaType.Avatar && m.UserId == user.Id);
 
                 if (media == null)
                     return NotFound();
@@ -93,7 +99,7 @@ namespace LANCommander.Server.Controllers.Api
                 if (user == null)
                     return NotFound();
 
-                var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
+                var media = await MediaService.FirstOrDefaultAsync(m => m.Type == SDK.Enums.MediaType.Avatar && m.UserId == user.Id);
 
                 if (media == null)
                     return NotFound();

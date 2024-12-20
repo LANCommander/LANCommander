@@ -23,6 +23,9 @@ namespace LANCommander.Server.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            optionsBuilder.EnableDetailedErrors();
+            optionsBuilder.EnableSensitiveDataLogging();
+
             switch (Provider)
             {
                 case DatabaseProvider.SQLite:
@@ -224,6 +227,12 @@ namespace LANCommander.Server.Data
             #region Archive Relationships
             builder.Entity<Archive>()
                 .Navigation(a => a.StorageLocation)
+                .AutoInclude();
+            #endregion
+
+            #region Game Save Relationships
+            builder.Entity<GameSave>()
+                .Navigation(gs => gs.StorageLocation)
                 .AutoInclude();
             #endregion
 

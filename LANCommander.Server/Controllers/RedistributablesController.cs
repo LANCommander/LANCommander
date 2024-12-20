@@ -28,7 +28,11 @@ namespace LANCommander.Server.Controllers
         [HttpGet("/Redistributables/{id:guid}/Export")]
         public async Task ExportAsync(Guid id)
         {
-            var redistributable = await RedistributableService.GetAsync(id);
+            var redistributable = await RedistributableService
+                .Include(r => r.Archives)
+                .Include(r => r.Games)
+                .Include(r => r.Scripts)
+                .GetAsync(id);
 
             if (redistributable == null)
             {

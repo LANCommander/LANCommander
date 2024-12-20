@@ -40,10 +40,12 @@ namespace LANCommander.Server.Controllers.Api
             if (game == null || user == null)
                 return BadRequest();
 
-            var activeSessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id && ps.End == null);
+            var activeSessions = await PlaySessionService
+                .Include(ps => ps.Game)
+                .GetAsync(ps => ps.UserId == user.Id && ps.End == null);
 
             foreach (var activeSession in activeSessions)
-                await PlaySessionService.EndSessionAsync(activeSession.Game.Id, activeSession.UserId);
+                await PlaySessionService.EndSessionAsync(game.Id, activeSession.UserId);
 
             await PlaySessionService.StartSessionAsync(game.Id, user.Id);
 

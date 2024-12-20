@@ -23,7 +23,7 @@ namespace LANCommander.Server.Services
 
         public async Task<string> GetSavePathAsync(Guid gameId, Guid userId)
         {
-            var save = await FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == userId);
+            var save = await SortBy(gs => gs.CreatedOn, Data.Enums.SortDirection.Descending).FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == userId);
 
             if (save == null)
                 return null;

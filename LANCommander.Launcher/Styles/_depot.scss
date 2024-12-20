@@ -107,7 +107,7 @@ $hero-max-height: 40vh;
 }
 
 .depot-game-details {
-    z-index: 600;
+    z-index: 600 !important;
 
     .ant-drawer-mask {
         background: linear-gradient(45deg, #00000096, #3a3a3a8a);
@@ -126,7 +126,6 @@ $hero-max-height: 40vh;
     .ant-drawer-content-wrapper {
         height: calc(100% - 128px) !important;
         width: $hero-aspect-ratio * $hero-max-height;
-        transform: none !important;
         left: calc(50vw - 53.33vh);
         right: auto;
         box-shadow: 0 0 64px black;

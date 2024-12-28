@@ -1,0 +1,155 @@
+﻿@inject IJSRuntime JSRuntime
+
+<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+    @if (!Providers.Any())
+    {
+        <Empty Description="@("No external authentication providers have been configured")" />
+    }
+
+    @foreach (var externalProvider in Providers)
+    {
+        <SpaceItem>
+            <Card Bordered Size="small">
+                <Body>
+                    <Form Model="externalProvider" Layout="@FormLayout.Vertical">
+                        <FormItem Label="Name">
+                            <Space Style="width: 100%">
+                                <SpaceItem Style="width: 100%">
+                                    <Input @bind-Value="context.Name" BindOnInput />
+                                </SpaceItem>
+
+                                <SpaceItem>
+                                    <Space>
+                                        @if (Templates.Any())
+                                        {
+                                            <SpaceItem>
+                                                <Dropdown>
+                                                    <Overlay>
+                                                        <Menu>
+                                                            @foreach (var template in Templates)
+                                                            {
+                                                                <MenuItem OnClick="() => UseTemplate(externalProvider, template)">
+                                                                    @template.Name
+                                                                </MenuItem>
+                                                            }
+                                                        </Menu>
+                                                    </Overlay>
+                                                    <ChildContent>
+                                                        <Button>Templates</Button>
+                                                    </ChildContent>
+                                                </Dropdown>
+                                            </SpaceItem>
+                                        }
+
+                                        @if (!String.IsNullOrWhiteSpace(externalProvider.Documentation))
+                                        {
+                                            <SpaceItem>
+                                                <Tooltip Title="Documentation">
+                                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Question" OnClick="() => OpenDocumentation(externalProvider)" />
+                                                </Tooltip>
+                                            </SpaceItem>
+                                        }
+
+                                        <SpaceItem>
+                                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(externalProvider)" />
+                                        </SpaceItem>
+                                    </Space>
+                                </SpaceItem>
+                            </Space>
+                        </FormItem>
+
+                        <FormItem Label="Client ID">
+                            <Input @bind-Value="context.ClientId" />
+                        </FormItem>
+
+                        <FormItem Label="Client Secret">
+                            <Input @bind-Value="context.ClientSecret" />
+                        </FormItem>
+
+                        <FormItem Label="Authority">
+                            <Input @bind-Value="context.Authority" />
+                        </FormItem>
+
+                        <FormItem Label="Authorization Endpoint">
+                            <Input @bind-Value="context.AuthorizationEndpoint" />
+                        </FormItem>
+
+                        <FormItem Label="Token Endpoint">
+                            <Input @bind-Value="context.TokenEndpoint" />
+                        </FormItem>
+
+                        <FormItem Label="User Info Endpoint">
+                            <Input @bind-Value="context.UserInfoEndpoint" />
+                        </FormItem>
+
+                        <FormItem Label="Scopes">
+                            <ScopesEditor @bind-Values="context.Scopes" />
+                        </FormItem>
+                    </Form>
+                </Body>
+            </Card>
+        </SpaceItem>
+    }
+
+    <SpaceItem>
+        <Flex Justify="end">
+            <Button OnClick="Add" Type="@ButtonType.Primary">Add Provider</Button>
+        </Flex>
+    </SpaceItem>
+</Space>
+
+@code {
+    [Parameter] public IEnumerable<ExternalProvider> Values { get; set; }
+    [Parameter] public EventCallback<IEnumerable<ExternalProvider>> ValuesChanged { get; set; }
+
+    List<ExternalProvider> Templates = new();
+    List<ExternalProvider> Providers = new();
+
+    ExternalProvider SelectedTemplate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Templates = await AuthenticationService.GetExternalProviderTemplatesAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        Providers = Values.ToList();
+    }
+
+    void OpenDocumentation(ExternalProvider externalProvider)
+    {
+        JSRuntime.InvokeVoidAsync("open", externalProvider.Documentation, "_blank");
+    }
+
+    async Task Add()
+    {
+        Providers.Add(new ExternalProvider());
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Providers);
+    }
+
+    async Task Remove(ExternalProvider externalProvider)
+    {
+        Providers.Remove(externalProvider);
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Providers);
+    }
+
+    async Task UseTemplate(ExternalProvider externalProvider, ExternalProvider template)
+    {
+        externalProvider.Authority = template.Authority;
+        externalProvider.AuthorizationEndpoint = template.AuthorizationEndpoint;
+        externalProvider.ClientId = template.ClientId;
+        externalProvider.ClientSecret = template.ClientSecret;
+        externalProvider.Documentation = template.Documentation;
+        externalProvider.Name = template.Name;
+        externalProvider.Scopes = template.Scopes;
+        externalProvider.TokenEndpoint = template.TokenEndpoint;
+        externalProvider.UserInfoEndpoint = template.UserInfoEndpoint;
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

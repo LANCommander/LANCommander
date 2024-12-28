@@ -1,4 +1,5 @@
 ﻿using LANCommander.Server.Data.Enums;
+using System.Text.RegularExpressions;
 
 namespace LANCommander.Server.Services.Models
 {
@@ -66,6 +67,32 @@ namespace LANCommander.Server.Services.Models
         public bool PasswordRequireUppercase { get; set; } = false;
         public bool PasswordRequireDigit { get; set; } = true;
         public int PasswordRequiredLength { get; set; } = 8;
+        public IEnumerable<ExternalProvider> ExternalProviders { get; set; } = new List<ExternalProvider>();
+    }
+
+    public class ExternalProvider
+    {
+        public string Name { get; set; }
+        public string Documentation { get; set; }
+        public string ClientId { get; set; }
+        public string ClientSecret { get; set; }
+        public string Authority { get; set; }
+        public string AuthorizationEndpoint { get; set; }
+        public string TokenEndpoint { get; set; }
+        public string UserInfoEndpoint { get; set; }
+        public IEnumerable<string> Scopes { get; set; } = new List<string>();
+
+        public string GetSlug()
+        {
+            var slug = Name.ToLower();
+                      
+            slug = Regex.Replace(slug, @"[^a-z0-9\s-]", "");
+            slug = Regex.Replace(slug, @"\s+", " ").Trim();
+            slug = slug.Substring(0, slug.Length <= 45 ? slug.Length : 45).Trim();
+            slug = Regex.Replace(slug, @"\s", "-");
+
+            return slug;
+        }
     }
 
     public class RoleSettings

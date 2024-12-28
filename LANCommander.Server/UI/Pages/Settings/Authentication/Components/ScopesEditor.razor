@@ -1,0 +1,53 @@
+﻿<Flex Vertical Gap="16">
+    @if (!Scopes.Any())
+    {
+        <Empty Small Description="@("No scopes have been defined")" />
+    }
+
+    @foreach (var scope in Scopes)
+    {
+        <Flex>
+            <Input @bind-Value="scope.Name" OnBlur="Update" />
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(scope)" />
+        </Flex>
+    }
+
+    <Flex Justify="end">
+        <Button Type="@ButtonType.Primary" OnClick="Add">Add Scope</Button>
+    </Flex>
+</Flex>
+
+@code {
+    [Parameter] public IEnumerable<string> Values { get; set; }
+    [Parameter] public EventCallback<IEnumerable<string>> ValuesChanged { get; set; }
+
+    List<ExternalProviderScope> Scopes = new();
+
+    protected override void OnParametersSet()
+    {
+        if (Values != null)
+            Scopes = Values.Select(v => new ExternalProviderScope { Name = v }).ToList();
+    }
+
+    async Task Add()
+    {
+        Scopes.Add(new ExternalProviderScope());
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Scopes.Select(s => s.Name));
+    }
+
+    async Task Remove(ExternalProviderScope scope)
+    {
+        Scopes.Remove(scope);
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Scopes.Select(s => s.Name));
+    }
+
+    async Task Update()
+    {
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Scopes.Select(s => s.Name));
+    }
+}

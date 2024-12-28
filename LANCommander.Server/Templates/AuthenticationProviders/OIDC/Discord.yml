@@ -1,0 +1,12 @@
+﻿Name: Discord
+Documentation: https://docs.lancommander.app/en/Server/Settings/ExternalAuthenticationProviders/Discord
+ClientId: <Your Application Client ID>
+ClientSecret: <Your Application Client Secret>
+Authority: https://discord.com/api
+AuthorizationEndpoint: https://discord.com/api/oauth2/authorize
+TokenEndpoint: https://discord.com/api/oauth2/token
+UserInfoEndpoint: https://discord.com/api/users/@me
+Scopes:
+    - identify
+    - email
+    - guilds

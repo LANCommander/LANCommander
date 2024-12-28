@@ -1,10 +1,15 @@
 ﻿@page "/Settings/Authentication"
 @using LANCommander.Server.Models;
+@using LANCommander.Server.UI.Pages.Settings.Authentication.Components
 @inject IMessageService MessageService
-@inject ILogger<Authentication> Logger
+@inject ILogger<Index> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Authentication" />
+<PageHeader Title="Authentication">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <div style="padding: 0 24px;">
     <Form Model="Settings" Layout="@FormLayout.Vertical">
@@ -36,22 +41,22 @@
         <FormItem Label="Minimum Length">
             <AntDesign.InputNumber @bind-Value="context.Authentication.PasswordRequiredLength" Min="1" />
         </FormItem>
-
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
     </Form>
+
+    <Divider Text="External Providers" />
+
+    <ExternalProviderEditor @bind-Values="Settings.Authentication.ExternalProviders" />
 </div>
 
 @code {
     Settings Settings = SettingService.GetSettings();
 
-    private string FormatTokenLifetime(int value)
+    string FormatTokenLifetime(int value)
     {
         return value.ToString() + " days";
     }
 
-    private void Save()
+    void Save()
     {
         try
         {

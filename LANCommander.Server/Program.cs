@@ -24,6 +24,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;
 using Scalar.AspNetCore;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace LANCommander.Server
 {
@@ -196,6 +197,33 @@ namespace LANCommander.Server
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;*/
             });
+
+            foreach (var externalProvider in settings.Authentication.ExternalProviders)
+            {
+                authBuilder.AddOpenIdConnect(externalProvider.GetSlug(), externalProvider.Name, x =>
+                {
+                    
+                    x.ClientId = externalProvider.ClientId;
+                    x.ClientSecret = externalProvider.ClientSecret;
+                    x.Authority = externalProvider.Authority;
+                    x.ResponseType = OpenIdConnectResponseType.Code;
+                    x.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = false
+                    };
+
+                    x.Configuration = new OpenIdConnectConfiguration
+                    {
+                        AuthorizationEndpoint = externalProvider.AuthorizationEndpoint,
+                        TokenEndpoint = externalProvider.TokenEndpoint,
+                        UserInfoEndpoint = externalProvider.UserInfoEndpoint,
+                    };
+
+                    // Callbacks for middleware to properly correlate
+                    x.CallbackPath = new PathString($"/signin-oidc-{externalProvider.GetSlug()}");
+                    x.SignedOutCallbackPath = new PathString($"/signout-oidc-{externalProvider.GetSlug()}");
+                });
+            }
 
             authBuilder.AddIdentityCookies();
 

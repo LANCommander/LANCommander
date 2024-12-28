@@ -1,4 +1,5 @@
 ﻿Name: Discord
+Type: OAuth2
 Documentation: https://docs.lancommander.app/en/Server/Settings/ExternalAuthenticationProviders/Discord
 ClientId: <Your Application Client ID>
 ClientSecret: <Your Application Client Secret>
@@ -9,4 +10,10 @@ UserInfoEndpoint: https://discord.com/api/users/@me
 Scopes:
     - identify
     - email
-    - guilds
+ClaimMappings:
+    - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+      Value: id
+    - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+      Value: username
+    - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/email
+      Value: email

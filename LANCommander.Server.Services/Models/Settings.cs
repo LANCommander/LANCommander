@@ -19,6 +19,13 @@ namespace LANCommander.Server.Services.Models
         Minute
     }
 
+    public enum AuthenticationProviderType
+    {
+        OAuth2,
+        OpenIdConnect,
+        Saml
+    }
+
     public class Settings
     {
         public int Port { get; set; } = 1337;
@@ -67,12 +74,13 @@ namespace LANCommander.Server.Services.Models
         public bool PasswordRequireUppercase { get; set; } = false;
         public bool PasswordRequireDigit { get; set; } = true;
         public int PasswordRequiredLength { get; set; } = 8;
-        public IEnumerable<ExternalProvider> ExternalProviders { get; set; } = new List<ExternalProvider>();
+        public IEnumerable<AuthenticationProvider> AuthenticationProviders { get; set; } = new List<AuthenticationProvider>();
     }
 
-    public class ExternalProvider
+    public class AuthenticationProvider
     {
         public string Name { get; set; }
+        public AuthenticationProviderType Type { get; set; } = AuthenticationProviderType.OAuth2;
         public string Documentation { get; set; }
         public string ClientId { get; set; }
         public string ClientSecret { get; set; }
@@ -81,6 +89,7 @@ namespace LANCommander.Server.Services.Models
         public string TokenEndpoint { get; set; }
         public string UserInfoEndpoint { get; set; }
         public IEnumerable<string> Scopes { get; set; } = new List<string>();
+        public IEnumerable<ClaimMapping> ClaimMappings { get; set; } = new List<ClaimMapping>();
 
         public string GetSlug()
         {
@@ -93,6 +102,12 @@ namespace LANCommander.Server.Services.Models
 
             return slug;
         }
+    }
+
+    public class ClaimMapping
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
     }
 
     public class RoleSettings

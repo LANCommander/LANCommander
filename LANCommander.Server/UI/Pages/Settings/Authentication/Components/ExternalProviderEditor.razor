@@ -57,13 +57,17 @@
                                 </SpaceItem>
                             </Space>
                         </FormItem>
+                        
+                        <FormItem Label="Type">
+                            <EnumSelect TEnum="AuthenticationProviderType" @bind-Value="context.Type" />
+                        </FormItem>
 
                         <FormItem Label="Client ID">
                             <Input @bind-Value="context.ClientId" />
                         </FormItem>
 
                         <FormItem Label="Client Secret">
-                            <Input @bind-Value="context.ClientSecret" />
+                            <InputPassword @bind-Value="context.ClientSecret" />
                         </FormItem>
 
                         <FormItem Label="Authority">
@@ -85,6 +89,10 @@
                         <FormItem Label="Scopes">
                             <ScopesEditor @bind-Values="context.Scopes" />
                         </FormItem>
+                        
+                        <FormItem Label="Claim Mappings">
+                            <ClaimMappingsEditor @bind-Values="context.ClaimMappings" />
+                        </FormItem>
                     </Form>
                 </Body>
             </Card>
@@ -99,17 +107,17 @@
 </Space>
 
 @code {
-    [Parameter] public IEnumerable<ExternalProvider> Values { get; set; }
-    [Parameter] public EventCallback<IEnumerable<ExternalProvider>> ValuesChanged { get; set; }
+    [Parameter] public IEnumerable<AuthenticationProvider> Values { get; set; }
+    [Parameter] public EventCallback<IEnumerable<AuthenticationProvider>> ValuesChanged { get; set; }
 
-    List<ExternalProvider> Templates = new();
-    List<ExternalProvider> Providers = new();
+    List<AuthenticationProvider> Templates = new();
+    List<AuthenticationProvider> Providers = new();
 
-    ExternalProvider SelectedTemplate;
+    AuthenticationProvider SelectedTemplate;
 
     protected override async Task OnInitializedAsync()
     {
-        Templates = await AuthenticationService.GetExternalProviderTemplatesAsync();
+        Templates = await AuthenticationService.GetAuthenticationProviderTemplatesAsync();
     }
 
     protected override void OnParametersSet()
@@ -117,38 +125,38 @@
         Providers = Values.ToList();
     }
 
-    void OpenDocumentation(ExternalProvider externalProvider)
+    void OpenDocumentation(AuthenticationProvider authenticationProvider)
     {
-        JSRuntime.InvokeVoidAsync("open", externalProvider.Documentation, "_blank");
+        JSRuntime.InvokeVoidAsync("open", authenticationProvider.Documentation, "_blank");
     }
 
     async Task Add()
     {
-        Providers.Add(new ExternalProvider());
+        Providers.Add(new AuthenticationProvider());
 
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(Providers);
     }
 
-    async Task Remove(ExternalProvider externalProvider)
+    async Task Remove(AuthenticationProvider authenticationProvider)
     {
-        Providers.Remove(externalProvider);
+        Providers.Remove(authenticationProvider);
 
         if (ValuesChanged.HasDelegate)
             await ValuesChanged.InvokeAsync(Providers);
     }
 
-    async Task UseTemplate(ExternalProvider externalProvider, ExternalProvider template)
+    async Task UseTemplate(AuthenticationProvider authenticationProvider, AuthenticationProvider template)
     {
-        externalProvider.Authority = template.Authority;
-        externalProvider.AuthorizationEndpoint = template.AuthorizationEndpoint;
-        externalProvider.ClientId = template.ClientId;
-        externalProvider.ClientSecret = template.ClientSecret;
-        externalProvider.Documentation = template.Documentation;
-        externalProvider.Name = template.Name;
-        externalProvider.Scopes = template.Scopes;
-        externalProvider.TokenEndpoint = template.TokenEndpoint;
-        externalProvider.UserInfoEndpoint = template.UserInfoEndpoint;
+        authenticationProvider.Authority = template.Authority;
+        authenticationProvider.AuthorizationEndpoint = template.AuthorizationEndpoint;
+        authenticationProvider.ClientId = template.ClientId;
+        authenticationProvider.ClientSecret = template.ClientSecret;
+        authenticationProvider.Documentation = template.Documentation;
+        authenticationProvider.Name = template.Name;
+        authenticationProvider.Scopes = template.Scopes;
+        authenticationProvider.TokenEndpoint = template.TokenEndpoint;
+        authenticationProvider.UserInfoEndpoint = template.UserInfoEndpoint;
 
         await InvokeAsync(StateHasChanged);
     }

@@ -20,6 +20,7 @@ using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using LANCommander.Server.Jobs.Background;
+using LANCommander.Server.Services.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;
@@ -198,31 +199,30 @@ namespace LANCommander.Server
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;*/
             });
 
-            foreach (var externalProvider in settings.Authentication.ExternalProviders)
+            foreach (var authenticationProvider in settings.Authentication.AuthenticationProviders)
             {
-                authBuilder.AddOpenIdConnect(externalProvider.GetSlug(), externalProvider.Name, x =>
+                try
                 {
-                    
-                    x.ClientId = externalProvider.ClientId;
-                    x.ClientSecret = externalProvider.ClientSecret;
-                    x.Authority = externalProvider.Authority;
-                    x.ResponseType = OpenIdConnectResponseType.Code;
-                    x.TokenValidationParameters = new TokenValidationParameters
+                    switch (authenticationProvider.Type)
                     {
-                        ValidateIssuer = false
-                    };
+                        case AuthenticationProviderType.OAuth2:
+                            authBuilder.AddOAuth(authenticationProvider);
+                            break;
 
-                    x.Configuration = new OpenIdConnectConfiguration
-                    {
-                        AuthorizationEndpoint = externalProvider.AuthorizationEndpoint,
-                        TokenEndpoint = externalProvider.TokenEndpoint,
-                        UserInfoEndpoint = externalProvider.UserInfoEndpoint,
-                    };
+                        case AuthenticationProviderType.OpenIdConnect:
+                            authBuilder.AddOpenIdConnect(authenticationProvider);
+                            break;
 
-                    // Callbacks for middleware to properly correlate
-                    x.CallbackPath = new PathString($"/signin-oidc-{externalProvider.GetSlug()}");
-                    x.SignedOutCallbackPath = new PathString($"/signout-oidc-{externalProvider.GetSlug()}");
-                });
+                        case AuthenticationProviderType.Saml:
+                            throw new NotImplementedException("SAML providers are not supported at this time.");
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Authentication Provider {Name} could not be registered",
+                        authenticationProvider.Name);
+                }
             }
 
             authBuilder.AddIdentityCookies();

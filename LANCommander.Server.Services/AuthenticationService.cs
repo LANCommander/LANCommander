@@ -19,11 +19,11 @@ namespace LANCommander.Server.Services
         {
         }
 
-        public static async Task<List<ExternalProvider>> GetExternalProviderTemplatesAsync()
+        public static async Task<List<AuthenticationProvider>> GetAuthenticationProviderTemplatesAsync()
         {
             var files = Directory.GetFiles(@"Templates/AuthenticationProviders", "*.yml", SearchOption.AllDirectories);
 
-            var externalProviders = new List<ExternalProvider>();
+            var externalProviders = new List<AuthenticationProvider>();
 
 
             var deserializer = new DeserializerBuilder()
@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
                 {
                     var contents = await File.ReadAllTextAsync(file);
 
-                    externalProviders.Add(deserializer.Deserialize<ExternalProvider>(contents));
+                    externalProviders.Add(deserializer.Deserialize<AuthenticationProvider>(contents));
                 }
                 catch { }
             }

@@ -403,7 +403,7 @@ namespace LANCommander.SDK
 
         public async Task<AuthToken> AuthenticateAsync(string username, string password, bool ignoreVersion = false)
         {
-            var request = new RestRequest("/api/Auth", Method.Post);
+            var request = new RestRequest("/api/Auth/Login", Method.Post);
 
             request.AddJsonBody(new AuthRequest()
             {
@@ -463,7 +463,7 @@ namespace LANCommander.SDK
 
         public async Task<AuthToken> RegisterAsync(string username, string password)
         {
-            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/auth/register", Method.Post).AddJsonBody(new AuthRequest()
+            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/Auth/Register", Method.Post).AddJsonBody(new AuthRequest()
             {
                 UserName = username,
                 Password = password

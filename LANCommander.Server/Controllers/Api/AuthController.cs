@@ -47,7 +47,7 @@ namespace LANCommander.Server.Controllers.Api
             RoleService = roleService;
         }
 
-        [HttpPost]
+        [HttpPost("Login")]
         public async Task<IActionResult> LoginAsync([FromBody] LoginModel model)
         {
             var user = await UserService.GetAsync(model.UserName);

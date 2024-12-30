@@ -123,12 +123,12 @@
                     <input type="hidden" name="Provider" value="@provider.Slug" />
                     <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
 
-                    <button class="ant-btn ant-btn-primary ant-btn-block" type="submit">
+                    <button class="ant-btn ant-btn-primary ant-btn-block" type="submit" style="@(!String.IsNullOrWhiteSpace(provider.Color) ? $"background-color: {provider.Color}; border-color: {provider.Color}" : "")">
                         @if (!String.IsNullOrWhiteSpace(provider.Icon))
                         {
                             <span class="anticon" role="img">
-                                <svg class="bi" width="32" height="32" fill="currentColor">
-                                    <use xlink:href="bootstrap-icons.svg#@provider.Icon"/>
+                                <svg focusable="false" width="1em" height="1em" fill="currentColor">
+                                    <use xlink:href="_content/LANCommander.UI/bootstrap-icons.svg#@provider.Icon"/>
                                 </svg>
                             </span>
                         }

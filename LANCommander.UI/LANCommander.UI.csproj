@@ -8,6 +8,9 @@
 
   <ItemGroup>
     <Content Include="webpack.config.js" />
+    <Content Update="wwwroot\bootstrap-icons.svg">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

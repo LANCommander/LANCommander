@@ -5,99 +5,108 @@
     {
         <Empty Description="@("No external authentication providers have been configured")" />
     }
+    
+    <SpaceItem>
+        <Collapse>
+            @foreach (var externalProvider in Providers)
+            {
+                <Panel Header="@externalProvider.Name">
+                    <ExtraTemplate>
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(externalProvider)"/>
+                    </ExtraTemplate>
+                    <ChildContent>
+                        <Form Model="externalProvider" Layout="@FormLayout.Vertical">
+                            <FormItem Label="Name">
+                                <Space Style="width: 100%">
+                                    <SpaceItem Style="width: 100%">
+                                        <Input @bind-Value="context.Name" BindOnInput/>
+                                    </SpaceItem>
 
-    @foreach (var externalProvider in Providers)
-    {
-        <SpaceItem>
-            <Card Bordered Size="small">
-                <Body>
-                    <Form Model="externalProvider" Layout="@FormLayout.Vertical">
-                        <FormItem Label="Name">
-                            <Space Style="width: 100%">
-                                <SpaceItem Style="width: 100%">
-                                    <Input @bind-Value="context.Name" BindOnInput />
-                                </SpaceItem>
+                                    <SpaceItem>
+                                        <Space>
+                                            @if (Templates.Any())
+                                            {
+                                                <SpaceItem>
+                                                    <Dropdown>
+                                                        <Overlay>
+                                                            <Menu>
+                                                                @foreach (var template in Templates)
+                                                                {
+                                                                    <MenuItem OnClick="() => UseTemplate(externalProvider, template)">
+                                                                        @template.Name
+                                                                    </MenuItem>
+                                                                }
+                                                            </Menu>
+                                                        </Overlay>
+                                                        <ChildContent>
+                                                            <Button>Templates</Button>
+                                                        </ChildContent>
+                                                    </Dropdown>
+                                                </SpaceItem>
+                                            }
 
-                                <SpaceItem>
-                                    <Space>
-                                        @if (Templates.Any())
-                                        {
-                                            <SpaceItem>
-                                                <Dropdown>
-                                                    <Overlay>
-                                                        <Menu>
-                                                            @foreach (var template in Templates)
-                                                            {
-                                                                <MenuItem OnClick="() => UseTemplate(externalProvider, template)">
-                                                                    @template.Name
-                                                                </MenuItem>
-                                                            }
-                                                        </Menu>
-                                                    </Overlay>
-                                                    <ChildContent>
-                                                        <Button>Templates</Button>
-                                                    </ChildContent>
-                                                </Dropdown>
-                                            </SpaceItem>
-                                        }
+                                            @if (!String.IsNullOrWhiteSpace(externalProvider.Documentation))
+                                            {
+                                                <SpaceItem>
+                                                    <Tooltip Title="Documentation">
+                                                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Question" OnClick="() => OpenDocumentation(externalProvider)"/>
+                                                    </Tooltip>
+                                                </SpaceItem>
+                                            }
+                                        </Space>
+                                    </SpaceItem>
+                                </Space>
+                            </FormItem>
 
-                                        @if (!String.IsNullOrWhiteSpace(externalProvider.Documentation))
-                                        {
-                                            <SpaceItem>
-                                                <Tooltip Title="Documentation">
-                                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Question" OnClick="() => OpenDocumentation(externalProvider)" />
-                                                </Tooltip>
-                                            </SpaceItem>
-                                        }
+                            <FormItem Label="Color">
+                                <Input @bind-Value="context.Color" />
+                            </FormItem>
+                            
+                            <FormItem Label="Icon">
+                                <Input @bind-Value="context.Icon" />
+                            </FormItem>
+                            
+                            <FormItem Label="Type">
+                                <EnumSelect TEnum="AuthenticationProviderType" @bind-Value="context.Type"/>
+                            </FormItem>
 
-                                        <SpaceItem>
-                                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(externalProvider)" />
-                                        </SpaceItem>
-                                    </Space>
-                                </SpaceItem>
-                            </Space>
-                        </FormItem>
-                        
-                        <FormItem Label="Type">
-                            <EnumSelect TEnum="AuthenticationProviderType" @bind-Value="context.Type" />
-                        </FormItem>
+                            <FormItem Label="Client ID">
+                                <Input @bind-Value="context.ClientId"/>
+                            </FormItem>
 
-                        <FormItem Label="Client ID">
-                            <Input @bind-Value="context.ClientId" />
-                        </FormItem>
+                            <FormItem Label="Client Secret">
+                                <InputPassword @bind-Value="context.ClientSecret"/>
+                            </FormItem>
 
-                        <FormItem Label="Client Secret">
-                            <InputPassword @bind-Value="context.ClientSecret" />
-                        </FormItem>
+                            <FormItem Label="Authority">
+                                <Input @bind-Value="context.Authority"/>
+                            </FormItem>
 
-                        <FormItem Label="Authority">
-                            <Input @bind-Value="context.Authority" />
-                        </FormItem>
+                            <FormItem Label="Authorization Endpoint">
+                                <Input @bind-Value="context.AuthorizationEndpoint"/>
+                            </FormItem>
 
-                        <FormItem Label="Authorization Endpoint">
-                            <Input @bind-Value="context.AuthorizationEndpoint" />
-                        </FormItem>
+                            <FormItem Label="Token Endpoint">
+                                <Input @bind-Value="context.TokenEndpoint"/>
+                            </FormItem>
 
-                        <FormItem Label="Token Endpoint">
-                            <Input @bind-Value="context.TokenEndpoint" />
-                        </FormItem>
+                            <FormItem Label="User Info Endpoint">
+                                <Input @bind-Value="context.UserInfoEndpoint"/>
+                            </FormItem>
 
-                        <FormItem Label="User Info Endpoint">
-                            <Input @bind-Value="context.UserInfoEndpoint" />
-                        </FormItem>
+                            <FormItem Label="Scopes">
+                                <ScopesEditor @bind-Values="context.Scopes"/>
+                            </FormItem>
 
-                        <FormItem Label="Scopes">
-                            <ScopesEditor @bind-Values="context.Scopes" />
-                        </FormItem>
-                        
-                        <FormItem Label="Claim Mappings">
-                            <ClaimMappingsEditor @bind-Values="context.ClaimMappings" />
-                        </FormItem>
-                    </Form>
-                </Body>
-            </Card>
-        </SpaceItem>
-    }
+                            <FormItem Label="Claim Mappings">
+                                <ClaimMappingsEditor @bind-Values="context.ClaimMappings"/>
+                            </FormItem>
+                        </Form>
+                    </ChildContent>
+                </Panel>
+            }
+        </Collapse>
+    </SpaceItem>
 
     <SpaceItem>
         <Flex Justify="end">

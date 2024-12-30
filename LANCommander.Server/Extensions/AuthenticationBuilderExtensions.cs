@@ -104,7 +104,7 @@ public static class AuthenticationBuilderExtensions
                 var userService = context.HttpContext.RequestServices.GetService<UserService>();
                 var userCustomFieldService = context.HttpContext.RequestServices.GetService<UserCustomFieldService>();
                 
-                var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == $"ExternalId/{authenticationProvider.Slug}" && cf.Value == context.Identity.Name);
+                var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.Value == context.Identity.Name);
                 var user = await userService.GetAsync(customField.UserId.GetValueOrDefault());
 
                 await signInManager.SignInAsync(user, true);

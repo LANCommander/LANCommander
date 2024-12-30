@@ -1,0 +1,90 @@
+@page "/Profile/ConnectedAccounts"
+@using Microsoft.AspNetCore.Components.Authorization
+@layout ProfileLayout
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject UserCustomFieldService UserCustomFieldService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageHeader Title="Connected Accounts" />
+
+<AntList DataSource="Settings.Authentication.AuthenticationProviders">
+    <ListItem>
+        <Flex Align="middle" Justify="space-between" Gap="small">
+            <div>
+                @if (!String.IsNullOrWhiteSpace(context.Icon))
+                {
+                    <BootstrapIcon Type="@context.Icon" Width="32px" Height="32px" Color="@(String.IsNullOrWhiteSpace(context.Color) ? "" : context.Color)"/>
+                }
+
+                <h4 style="margin: 0;">@context.Name</h4>
+            </div>
+
+            @{
+                var customField = CustomFields.FirstOrDefault(cf => cf.Name == context.GetCustomFieldName());
+
+                if (customField != null)
+                {
+                    <Button Type="@ButtonType.Primary" OnClick="() => Unlink(customField)">Unlink</Button>
+                }
+                else
+                {
+                    <form method="post" action="/AccountLink">
+                        <input type="hidden" name="providerSlug" value="@context.Slug" />
+                        <input type="hidden" name="returnUrl" value="@NavigationManager.Uri" />
+
+                        <button class="ant-btn ant-btn-primary" type="submit">
+                            <span>Link</span>
+                        </button>
+                    </form>
+                }
+            }
+        </Flex>
+    </ListItem>
+</AntList>
+
+@code {
+    Settings Settings = SettingService.GetSettings();
+
+    User User = new();
+    List<UserCustomField> CustomFields = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            if (authState.User.Identity.IsAuthenticated)
+            {
+                User = await userService.GetAsync(authState.User.Identity.Name);
+            }
+        }
+        
+        using (var userCustomFieldService = DatabaseServiceFactory.Create<UserCustomFieldService>())
+        {
+            foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
+            {
+                var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.UserId == User.Id);
+                
+                if (customField != null)
+                    CustomFields.Add(customField);
+            }
+        }
+    }
+
+    async Task Link(AuthenticationProvider authenticationProvider)
+    {
+        
+    }
+
+    async Task Unlink(UserCustomField customField)
+    {
+        using (var userCustomFieldService = DatabaseServiceFactory.Create<UserCustomFieldService>())
+        {
+            userCustomFieldService.DeleteAsync(customField.UserId.Value, customField.Name);
+        }
+    }
+
+}

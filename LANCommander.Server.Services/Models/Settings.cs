@@ -93,6 +93,11 @@ namespace LANCommander.Server.Services.Models
         public string UserInfoEndpoint { get; set; }
         public IEnumerable<string> Scopes { get; set; } = new List<string>();
         public IEnumerable<ClaimMapping> ClaimMappings { get; set; } = new List<ClaimMapping>();
+        
+        public string GetCustomFieldName()
+        {
+            return $"ExternalId/{Slug}";
+        }
     }
 
     public class ClaimMapping

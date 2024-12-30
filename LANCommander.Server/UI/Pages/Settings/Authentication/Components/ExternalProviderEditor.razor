@@ -12,7 +12,7 @@
             {
                 <Panel Header="@externalProvider.Name">
                     <ExtraTemplate>
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(externalProvider)"/>
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Size="@ButtonSize.Small" Danger OnClick="() => Remove(externalProvider)"/>
                     </ExtraTemplate>
                     <ChildContent>
                         <Form Model="externalProvider" Layout="@FormLayout.Vertical">

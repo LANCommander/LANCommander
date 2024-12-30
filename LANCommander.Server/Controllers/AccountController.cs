@@ -35,52 +35,18 @@ public class AccountController : BaseController
 
         return Ok();
     }
-
-    [HttpGet("/AccountLink")]
-    public async Task<IActionResult> AccountLink(Guid code, string returnUrl = "/")
-    {
-        var payload = await Cache.GetOrDefaultAsync<AccountLinkPayload>($"AccountLink/{code}", null);
-        
-        if (payload == null)
-            return Unauthorized();
-
-        var provider =
-            Settings.Authentication.AuthenticationProviders.FirstOrDefault(ap =>
-                ap.Slug == payload.AuthenticationProviderSlug);
-
-        var idClaim = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-
-        if (idClaim == null)
-            return Unauthorized();
-
-        await UserCustomFieldService.AddAsync(new UserCustomField
-        {
-            UserId = payload.UserId,
-            Name = provider.GetCustomFieldName(),
-            Value =  idClaim.Value,
-        });
-        
-        return Redirect(returnUrl);
-    }
     
     [HttpPost("/AccountLink")]
     public async Task<IActionResult> AccountLink(string providerSlug, string returnUrl = "/")
     {
         var user = await UserService.GetAsync(User.Identity.Name);
         var provider = Settings.Authentication.AuthenticationProviders.FirstOrDefault(ap => ap.Slug == providerSlug);
-        var code = Guid.NewGuid();
 
-        await Cache.SetAsync($"AccountLink/{code}", new AccountLinkPayload
+        var items = new Dictionary<string, string>()
         {
-            Code = code,
-            UserId = user.Id,
-            AuthenticationProviderSlug = provider.Slug
-        }, TimeSpan.FromMinutes(5));
-
-        var queryBuilder = new QueryBuilder();
-
-        var redemptionUrl = Url.Action("AccountLink", new { code = code, returnUrl = returnUrl });
+            { "UserId", user.Id.ToString() },
+        };
         
-        return Challenge(new AuthenticationProperties { RedirectUri = redemptionUrl }, provider.Slug);
+        return Challenge(new AuthenticationProperties(items) { RedirectUri = returnUrl, AllowRefresh = true }, provider.Slug);
     }
 }

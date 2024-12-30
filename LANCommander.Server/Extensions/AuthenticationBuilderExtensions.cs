@@ -104,12 +104,40 @@ public static class AuthenticationBuilderExtensions
                 var userService = context.HttpContext.RequestServices.GetService<UserService>();
                 var userCustomFieldService = context.HttpContext.RequestServices.GetService<UserCustomFieldService>();
                 
-                var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.Value == context.Identity.Name);
-                var user = await userService.GetAsync(customField.UserId.GetValueOrDefault());
+                var idClaim = context.Principal.FindFirst(ClaimTypes.NameIdentifier);
+
+                User user;
+
+                if (context.Properties.Items.ContainsKey("UserId"))
+                {
+                    // Link accounts if needed
+                    var userId = Guid.Parse(context.Properties.Items["UserId"]);
+                    
+                    user = await userService.GetAsync(userId);
+                    
+                    var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == authenticationProvider.GetCustomFieldName());
+
+                    if (customField == null)
+                    {
+                        await userCustomFieldService.AddAsync(new UserCustomField
+                        {
+                            Name = authenticationProvider.GetCustomFieldName(),
+                            UserId = userId,
+                            Value = idClaim.Value
+                        });
+                    }
+                }
+                else
+                {
+                    var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.Value == idClaim.Value);
+                    
+                    user = await userService.GetAsync(customField.UserId.GetValueOrDefault());
+                }
 
                 await signInManager.SignInAsync(user, true);
 
-                context.Response.Redirect("/");
+                context.Response.Redirect(context.Properties.RedirectUri);
+                
                 await context.Response.CompleteAsync();
             };
         });

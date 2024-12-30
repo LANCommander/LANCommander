@@ -1,9 +1,9 @@
-﻿@page
+﻿@page "/Login"
 @using LANCommander.Server.Extensions
 @using LANCommander.Server.Models
 @using LANCommander.Server.Services
 @using LANCommander.Server.Services.Models
-@model LANCommander.Server.Areas.Identity.Pages.Account.LoginModel
+@model LANCommander.Server.UI.Pages.Account.LoginModel
 @{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
 
 @{
@@ -45,17 +45,19 @@
             </div>
 
             <form id="account" method="post" class="ant-card-body" autocomplete="off">
+                @Html.AntiForgeryToken()
+                
                 <div class="ant-form ant-form-vertical">
                     <div class="ant-form-item">
                         <div class="ant-form-item-row ant-row">
                             <div class="ant-form-item-label ant-col">
-                                <label asp-for="Input.UserName" class="form-label"></label>
+                                <label asp-for="Model.Username" class="form-label"></label>
                             </div>
 
                             <div class="ant-form-item-control ant-col">
                                 <div class="ant-form-item-control-input">
                                     <div class="ant-form-item-control-input-content">
-                                        <input asp-for="Input.UserName" class="ant-input" autocomplete="username" aria-required="true" />
+                                        <input asp-for="Model.Username" class="ant-input" autocomplete="username" aria-required="true"/>
                                     </div>
                                 </div>
                             </div>
@@ -65,13 +67,13 @@
                     <div class="ant-form-item">
                         <div class="ant-form-item-row ant-row">
                             <div class="ant-form-item-label ant-col">
-                                <label asp-for="Input.Password" class="form-label"></label>
+                                <label asp-for="Model.Password" class="form-label"></label>
                             </div>
 
                             <div class="ant-form-item-control ant-col">
                                 <div class="ant-form-item-control-input">
                                     <div class="ant-form-item-control-input-content">
-                                        <input asp-for="Input.Password" class="ant-input" autocomplete="current-password" aria-required="true" />
+                                        <input asp-for="Model.Password" class="ant-input" autocomplete="current-password" aria-required="true"/>
                                     </div>
                                 </div>
                             </div>
@@ -85,11 +87,11 @@
                                     <div class="ant-form-item-control-input-content">
                                         <label class="ant-checkbox-wrapper">
                                             <span class="ant-checkbox">
-                                                <input class="ant-checkbox-input" asp-for="Input.RememberMe" />
+                                                <input class="ant-checkbox-input" asp-for="Model.RememberMe"/>
                                                 <span class="ant-checkbox-inner"></span>
                                             </span>
                                             <span>
-                                                @Html.DisplayNameFor(m => m.Input.RememberMe)
+                                                @Html.DisplayNameFor(m => m.Model.RememberMe)
                                             </span>
                                         </label>
                                     </div>
@@ -122,6 +124,15 @@
                     <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
 
                     <button class="ant-btn ant-btn-primary ant-btn-block" type="submit">
+                        @if (!String.IsNullOrWhiteSpace(provider.Icon))
+                        {
+                            <span class="anticon" role="img">
+                                <svg class="bi" width="32" height="32" fill="currentColor">
+                                    <use xlink:href="bootstrap-icons.svg#@provider.Icon"/>
+                                </svg>
+                            </span>
+                        }
+                        
                         <span>Sign in using @provider.Name</span>
                     </button>
                 </form>

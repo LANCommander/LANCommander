@@ -80,7 +80,10 @@ namespace LANCommander.Server.Services.Models
     public class AuthenticationProvider
     {
         public string Name { get; set; }
+        public string Slug { get; set; }
         public AuthenticationProviderType Type { get; set; } = AuthenticationProviderType.OAuth2;
+        public string Color { get; set; }
+        public string Icon { get; set; }
         public string Documentation { get; set; }
         public string ClientId { get; set; }
         public string ClientSecret { get; set; }
@@ -90,18 +93,6 @@ namespace LANCommander.Server.Services.Models
         public string UserInfoEndpoint { get; set; }
         public IEnumerable<string> Scopes { get; set; } = new List<string>();
         public IEnumerable<ClaimMapping> ClaimMappings { get; set; } = new List<ClaimMapping>();
-
-        public string GetSlug()
-        {
-            var slug = Name.ToLower();
-                      
-            slug = Regex.Replace(slug, @"[^a-z0-9\s-]", "");
-            slug = Regex.Replace(slug, @"\s+", " ").Trim();
-            slug = slug.Substring(0, slug.Length <= 45 ? slug.Length : 45).Trim();
-            slug = Regex.Replace(slug, @"\s", "-");
-
-            return slug;
-        }
     }
 
     public class ClaimMapping

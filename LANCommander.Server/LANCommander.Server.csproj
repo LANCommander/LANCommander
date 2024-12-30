@@ -77,6 +77,7 @@
   <ItemGroup>
     <PackageReference Include="AntDesign.Charts" Version="0.5.6" />
     <PackageReference Include="ByteSize" Version="2.1.2" />
+    <PackageReference Include="CaseConverter" Version="2.0.1" />
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
     <PackageReference Include="Crc32.NET" Version="1.2.0" />

@@ -1,4 +1,5 @@
 ﻿@page "/Settings/Authentication"
+@using CaseConverter
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Settings.Authentication.Components
 @inject IMessageService MessageService
@@ -60,6 +61,12 @@
     {
         try
         {
+            foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
+            {
+                if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
+                    authenticationProvider.Slug = authenticationProvider.Name.ToPascalCase();
+            }
+            
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
         }

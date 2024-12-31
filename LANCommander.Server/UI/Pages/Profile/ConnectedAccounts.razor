@@ -1,6 +1,5 @@
 @page "/Profile/ConnectedAccounts"
 @using Microsoft.AspNetCore.Components.Authorization
-@layout ProfileLayout
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject UserCustomFieldService UserCustomFieldService
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -9,40 +8,42 @@
 
 <PageHeader Title="Connected Accounts" />
 
-<AntList DataSource="Settings.Authentication.AuthenticationProviders">
-    <ListItem>
-        <Flex Align="middle" Justify="space-between" Gap="small">
-            <div>
-                @if (!String.IsNullOrWhiteSpace(context.Icon))
-                {
-                    <BootstrapIcon Type="@context.Icon" Width="32px" Height="32px" Color="@(String.IsNullOrWhiteSpace(context.Color) ? "" : context.Color)"/>
+<div style="padding: 0 24px">
+    <AntList DataSource="Settings.Authentication.AuthenticationProviders" Bordered Size="large">
+        <ListItem>
+            <Flex Align="center" Justify="space-between" Style="width: 100%">
+                <Flex Align="center" Gap="large">
+                    @if (!String.IsNullOrWhiteSpace(context.Icon))
+                    {
+                        <BootstrapIcon Type="@context.Icon" Width="32px" Height="32px" Color="@(String.IsNullOrWhiteSpace(context.Color) ? "" : context.Color)"/>
+                    }
+
+                    <h3 style="margin: 0;">@context.Name</h3>
+                </Flex>
+
+                @{
+                    var customField = CustomFields.FirstOrDefault(cf => cf.Name == context.GetCustomFieldName());
+
+                    if (customField != null)
+                    {
+                        <Button Type="@ButtonType.Primary" OnClick="() => Unlink(customField)">Unlink</Button>
+                    }
+                    else
+                    {
+                        <form method="post" action="/AccountLink">
+                            <input type="hidden" name="providerSlug" value="@context.Slug" />
+                            <input type="hidden" name="returnUrl" value="@NavigationManager.Uri" />
+
+                            <button class="ant-btn ant-btn-primary" type="submit">
+                                <span>Link</span>
+                            </button>
+                        </form>
+                    }
                 }
-
-                <h4 style="margin: 0;">@context.Name</h4>
-            </div>
-
-            @{
-                var customField = CustomFields.FirstOrDefault(cf => cf.Name == context.GetCustomFieldName());
-
-                if (customField != null)
-                {
-                    <Button Type="@ButtonType.Primary" OnClick="() => Unlink(customField)">Unlink</Button>
-                }
-                else
-                {
-                    <form method="post" action="/AccountLink">
-                        <input type="hidden" name="providerSlug" value="@context.Slug" />
-                        <input type="hidden" name="returnUrl" value="@NavigationManager.Uri" />
-
-                        <button class="ant-btn ant-btn-primary" type="submit">
-                            <span>Link</span>
-                        </button>
-                    </form>
-                }
-            }
-        </Flex>
-    </ListItem>
-</AntList>
+            </Flex>
+        </ListItem>
+    </AntList>
+</div>
 
 @code {
     Settings Settings = SettingService.GetSettings();

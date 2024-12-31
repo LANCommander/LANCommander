@@ -104,26 +104,43 @@ public static class AuthenticationBuilderExtensions
                 
                 context.RunClaimActions(oauthUser.RootElement);
 
-                var signInManager = context.HttpContext.RequestServices.GetService<SignInManager<User>>();
-                var userService = context.HttpContext.RequestServices.GetService<UserService>();
-                var userCustomFieldService = context.HttpContext.RequestServices.GetService<UserCustomFieldService>();
+                var signInManager = context.HttpContext.RequestServices.GetService<SignInManager<User>>()!;
+                var userService = context.HttpContext.RequestServices.GetService<UserService>()!;
+                var userCustomFieldService = context.HttpContext.RequestServices.GetService<UserCustomFieldService>()!;
                 
                 var idClaim = context.Principal.FindFirst(ClaimTypes.NameIdentifier);
 
                 User user;
+                UserCustomField customField;
 
                 var action = context.Properties.Items["Action"];
 
                 switch (action)
                 {
                     case AuthenticationProviderActionType.Login:
+                        customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.Value == idClaim.Value);
+
+                        if (customField != null)
+                        {
+                            user = await userService.GetAsync(customField.UserId.Value);
+
+                            await signInManager.SignInAsync(user, true);
+                            
+                            context.Response.Redirect(context.Properties.RedirectUri);
+                        }
+                        else
+                        {
+                            context.Response.Redirect($"/Register?Provider={authenticationProvider.Slug}");
+                        }
+                        break;
+                    
                     case AuthenticationProviderActionType.AccountLink:
                         // Link accounts if needed
                         var userId = Guid.Parse(context.Properties.Items["UserId"]);
                     
                         user = await userService.GetAsync(userId);
                     
-                        var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == authenticationProvider.GetCustomFieldName());
+                        customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == authenticationProvider.GetCustomFieldName());
 
                         if (customField == null)
                         {

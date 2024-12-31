@@ -1,0 +1,154 @@
+﻿@page "/Register"
+@using LANCommander.Server.Extensions
+@using LANCommander.Server.Models;
+@using LANCommander.Server.Services;
+@using LANCommander.Server.Services.Models
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@using LANCommander.Server.UI.Pages.Account
+@model LANCommander.Server.UI.Pages.Account.RegisterModel
+@{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
+@{
+    ViewData["Title"] = "Register";
+
+    var errors = ModelState.Where(x => x.Value != null && x.Value.Errors != null && x.Value.Errors.Count > 0).SelectMany(kvp => kvp.Value.Errors.Select(e => e.ErrorMessage)).ToList();
+    
+    var providers = HttpContext.GetExternalProviders();
+}
+
+<div class="ant-row ant-row-middle ant-row-space-around" style="min-height: 100vh; margin-top: -24px;">
+    <div class="ant-col ant-col-xs-24 ant-col-md-10">
+
+        <div style="text-align: center; margin-bottom: 24px;">
+            @switch (SettingService.GetSettings().Theme)
+            {
+                case LANCommanderTheme.Light:
+                    <img src="~/static/logo.svg" />
+                    break;
+
+                case LANCommanderTheme.Dark:
+                    <img src="~/static/logo-dark.svg" />
+                    break;
+            }
+        </div>
+
+        <div class="ant-card ant-card-bordered">
+            <div class="ant-card-head">
+                <div class="ant-card-head-wrapper">
+                    <div class="ant-card-head-title">Create An Account</div>
+                </div>
+            </div>
+            <form id="registerForm" method="post" class="ant-card-body" autocomplete="off">
+                <input asp-for="Model.RegistrationType" type="hidden" />
+                <input asp-for="Model.Email" type="hidden" />
+                
+                @foreach (var error in errors)
+                {
+                    <div data-show="true" class="ant-alert ant-alert-error ant-alert-no-icon" style="margin-bottom: 12px">
+                        <div class="ant-alert-content">
+                            <div class="ant-alert-message">@error</div>
+                        </div>
+                    </div>
+                }
+
+                <div class="ant-form ant-form-vertical">
+                    <div class="ant-form-item">
+                        <div class="ant-form-item-row ant-row">
+                            <div class="ant-form-item-label ant-col">
+                                <label asp-for="Model.UserName" class="form-label"></label>
+                            </div>
+
+                            <div class="ant-form-item-control ant-col">
+                                <div class="ant-form-item-control-input">
+                                    <div class="ant-form-item-control-input-content">
+                                        <input asp-for="Model.UserName" class="ant-input" autocomplete="username" aria-required="true"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.Model.RegistrationType == RegistrationType.Basic)
+                    {
+                        <div class="ant-form-item">
+                            <div class="ant-form-item-row ant-row">
+                                <div class="ant-form-item-label ant-col">
+                                    <label asp-for="Model.Password" class="form-label"></label>
+                                </div>
+
+                                <div class="ant-form-item-control ant-col">
+                                    <div class="ant-form-item-control-input">
+                                        <div class="ant-form-item-control-input-content">
+                                            <input asp-for="Model.Password" class="ant-input" autocomplete="current-password" aria-required="true"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ant-form-item">
+                            <div class="ant-form-item-row ant-row">
+                                <div class="ant-form-item-label ant-col">
+                                    <label asp-for="Model.PasswordConfirmation" class="form-label"></label>
+                                </div>
+
+                                <div class="ant-form-item-control ant-col">
+                                    <div class="ant-form-item-control-input">
+                                        <div class="ant-form-item-control-input-content">
+                                            <input asp-for="Model.PasswordConfirmation" class="ant-input" autocomplete="new-password" aria-required="true"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (Model.Model.RegistrationType == RegistrationType.AuthenticationProvider)
+                    {
+                        <input asp-for="Model.Password" type="hidden"/>
+                        <input asp-for="Model.PasswordConfirmation" type="hidden"/>
+                    }
+
+                    <div class="ant-form-item" style="margin-bottom: 0;">
+                        <div class="ant-form-item-row ant-row">
+                            <button id="register-submit" type="submit" class="ant-btn ant-btn-primary ant-btn-block">Register</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        @if (Model.Model.RegistrationType == RegistrationType.Basic && providers != null && providers.Count() > 0)
+        {
+            <span class="ant-divider ant-divider-horizontal ant-divider-with-text ant-divider-with-text-center">
+                <span class="ant-divider-inner-text">
+                    Or
+                </span>
+            </span>
+
+            @foreach (var provider in providers)
+            {
+                <form method="post" action="@Url.Action("RegisterByAuthenticationProvider", "Account")">
+                    <input type="hidden" name="Provider" value="@provider.Slug" />
+                    <input type="hidden" name="ReturnUrl" value="@Url.Page("Register")" />
+
+                    <button class="ant-btn ant-btn-primary ant-btn-block" type="submit" style="@(!String.IsNullOrWhiteSpace(provider.Color) ? $"background-color: {provider.Color}; border-color: {provider.Color}" : "")">
+                        @if (!String.IsNullOrWhiteSpace(provider.Icon))
+                        {
+                            <span class="anticon" role="img">
+                                <svg focusable="false" width="1em" height="1em" fill="currentColor">
+                                    <use xlink:href="_content/LANCommander.UI/bootstrap-icons.svg#@provider.Icon"/>
+                                </svg>
+                            </span>
+                        }
+
+                        <span>Register using @provider.Name</span>
+                    </button>
+                </form>
+            }
+        }
+
+        <div style="text-align: center; margin-top: 16px;">
+            Already have an account? <a asp-page="/Login" asp-route-returnUrl="@Model.ReturnUrl" tabindex="-1">Login</a>
+        </div>
+    </div>
+</div>

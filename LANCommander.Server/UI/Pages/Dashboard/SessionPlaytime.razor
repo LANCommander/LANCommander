@@ -35,6 +35,7 @@
         using (var gameService = DatabaseServiceFactory.Create<GameService>())
         {
             Games = await gameService
+                .DisableTracking()
                 .Include(g => g.PlaySessions)
                 .Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon))
                 .GetAsync();

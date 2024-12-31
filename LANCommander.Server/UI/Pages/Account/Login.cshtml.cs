@@ -18,6 +18,8 @@ using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Data;
+using LANCommander.Server.Models;
+using LANCommander.Server.Services.Models;
 
 namespace LANCommander.Server.UI.Pages.Account
 {
@@ -101,7 +103,14 @@ namespace LANCommander.Server.UI.Pages.Account
 
             if (!String.IsNullOrWhiteSpace(provider) && await HttpContext.IsProviderSupportedAsync(provider))
             {
-                return Challenge(new AuthenticationProperties { RedirectUri = returnUrl }, provider);
+                var properties = new AuthenticationProperties(new Dictionary<string, string>()
+                {
+                    { "Action", AuthenticationProviderActionType.Login.ToString() }
+                });
+
+                properties.RedirectUri = returnUrl;
+                
+                return Challenge(properties, provider);
             }
 
             if (ModelState.IsValid)

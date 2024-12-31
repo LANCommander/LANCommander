@@ -49,4 +49,24 @@ public class AccountController : BaseController
         
         return Challenge(new AuthenticationProperties(items) { RedirectUri = returnUrl, AllowRefresh = true }, provider.Slug);
     }
+
+    [HttpPost("/RegisterByAuthenticationProvider")]
+    public async Task<IActionResult> RegisterByAuthenticationProvider(string provider, string returnUrl = "/")
+    {
+        if (!String.IsNullOrWhiteSpace(provider))
+        {
+            var properties = new AuthenticationProperties(new Dictionary<string, string>()
+            {
+                { "Action", AuthenticationProviderActionType.Register }
+            });
+
+            properties.RedirectUri = returnUrl;
+                
+            return Challenge(properties, provider);
+        }
+        else
+        {
+            return BadRequest();
+        }
+    }
 }

@@ -1,10 +1,14 @@
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Web;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
@@ -108,35 +112,46 @@ public static class AuthenticationBuilderExtensions
 
                 User user;
 
-                if (context.Properties.Items.ContainsKey("UserId"))
-                {
-                    // Link accounts if needed
-                    var userId = Guid.Parse(context.Properties.Items["UserId"]);
-                    
-                    user = await userService.GetAsync(userId);
-                    
-                    var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == authenticationProvider.GetCustomFieldName());
+                var action = context.Properties.Items["Action"];
 
-                    if (customField == null)
-                    {
-                        await userCustomFieldService.AddAsync(new UserCustomField
+                switch (action)
+                {
+                    case AuthenticationProviderActionType.Login:
+                    case AuthenticationProviderActionType.AccountLink:
+                        // Link accounts if needed
+                        var userId = Guid.Parse(context.Properties.Items["UserId"]);
+                    
+                        user = await userService.GetAsync(userId);
+                    
+                        var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == authenticationProvider.GetCustomFieldName());
+
+                        if (customField == null)
                         {
-                            Name = authenticationProvider.GetCustomFieldName(),
-                            UserId = userId,
-                            Value = idClaim.Value
-                        });
-                    }
-                }
-                else
-                {
-                    var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.Value == idClaim.Value);
+                            await userCustomFieldService.AddAsync(new UserCustomField
+                            {
+                                Name = authenticationProvider.GetCustomFieldName(),
+                                UserId = userId,
+                                Value = idClaim.Value
+                            });
+                        }
                     
-                    user = await userService.GetAsync(customField.UserId.GetValueOrDefault());
+                        await signInManager.SignInAsync(user, true);
+                        
+                        context.Response.Redirect(context.Properties.RedirectUri);
+                        break;
+                    
+                    case AuthenticationProviderActionType.Register:
+                        await context.HttpContext.SignInAsync(IdentityConstants.ApplicationScheme,
+                            new ClaimsPrincipal(context.Identity),
+                            new AuthenticationProperties
+                            {
+                                AllowRefresh = false,
+                                IsPersistent = true,
+                            });
+                        
+                        context.Response.Redirect($"/Register?Provider={authenticationProvider.Slug}");
+                        break;
                 }
-
-                await signInManager.SignInAsync(user, true);
-
-                context.Response.Redirect(context.Properties.RedirectUri);
                 
                 await context.Response.CompleteAsync();
             };

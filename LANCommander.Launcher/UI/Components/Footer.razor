@@ -5,7 +5,7 @@
 @inject GameService GameService
 @inject NavigationManager NavigationManager
 
-<Flex Justify="space-between" Class="footer">
+<Flex Justify="FlexJustify.SpaceBetween" Class="footer">
     @if (NavigationManager.Uri.Contains("/Depot"))
     {
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">Library</Button>

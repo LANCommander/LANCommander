@@ -130,11 +130,11 @@
                    OnRow="OnRow"
                    SelectedRowsChanged="SelectedChanged"
                    Size="@TableSize.Small">
-                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" Hidden="EntrySelectable == null" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
+                <Selection Key="@context.Path" Type="@(SelectMultiple ? SelectionType.Checkbox : SelectionType.Radio)" Hidden="EntrySelectable == null" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
                 <Column TData="string" Width="32">
                     @if (context is FileManagerFile)
                     {
-                        <Icon Type="@(((FileManagerFile)context).GetIcon())" Theme="outline" />
+                        <Icon Type="@(((FileManagerFile)context).GetIcon())" Theme="IconThemeType.Outline" />
                     }
                     else if (context is FileManagerDirectory)
                     {
@@ -173,12 +173,12 @@
 
     IFileManagerSource FileSource;
 
-    List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
-    List<FileManagerDirectory> Future { get; set; } = new List<FileManagerDirectory>();
-    List<FileManagerDirectory> Breadcrumbs = new List<FileManagerDirectory>();
+    List<FileManagerDirectory> Past { get; set; } = new();
+    List<FileManagerDirectory> Future { get; set; } = new();
+    List<FileManagerDirectory> Breadcrumbs = new();
 
-    List<IFileManagerEntry> Entries { get; set; } = new List<IFileManagerEntry>();
-    HashSet<FileManagerDirectory> Directories { get; set; } = new HashSet<FileManagerDirectory>();
+    List<IFileManagerEntry> Entries { get; set; } = new();
+    HashSet<FileManagerDirectory> Directories { get; set; } = new();
 
     NewFolderModal NewFolderModal;
     UploadModal UploadModal;

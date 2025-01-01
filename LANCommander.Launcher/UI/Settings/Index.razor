@@ -9,21 +9,21 @@
 <div style="flex-grow: 1">
     <PageHeader Title="Settings" OnBack="@(() => { NavigationManager.NavigateTo("/"); })" Style="padding-top: 48px">
         <PageHeaderExtra>
-            <Space Direction="@DirectionVHType.Horizontal">
+            <Space Direction="SpaceDirection.Horizontal">
                 <SpaceItem>
                     <Button OnClick="CheckForUpdates">Check for Updates</Button>
                 </SpaceItem>
                 <SpaceItem>
-                    <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+                    <Button OnClick="Save" Type="ButtonType.Primary">Save</Button>
                 </SpaceItem>
             </Space>
         </PageHeaderExtra>
     </PageHeader>
 
     <Form Model="Settings" Layout="@FormLayout.Vertical" Style="padding: 0 24px">
-        <Divider Orientation="left" Plain>Games</Divider>
+        <Divider Orientation="DividerOrientation.Left" Plain>Games</Divider>
         <FormItem Label="Storage Paths">
-            <Space Direction="DirectionVHType.Vertical" Size="@("middle")" Style="width: 100%">
+            <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Middle" Style="width: 100%">
                 @foreach (var installDirectory in InstallDirectories)
                 {
                     <SpaceItem>
@@ -40,21 +40,21 @@
                 }
 
                 <SpaceItem>
-                    <GridRow Justify="end">
+                    <GridRow Justify="RowJustify.End">
                         <GridCol>
-                            <Button OnClick="AddInstallDirectory" Type="@ButtonType.Primary">Add Path</Button>
+                            <Button OnClick="AddInstallDirectory" Type="ButtonType.Primary">Add Path</Button>
                         </GridCol>
                     </GridRow>
                 </SpaceItem>
             </Space>
         </FormItem>
 
-        <Divider Orientation="left" Plain>Media</Divider>
+        <Divider Orientation="DividerOrientation.Left" Plain>Media</Divider>
         <FormItem Label="Storage Path">
             <Input @bind-Value="@context.Media.StoragePath" />
         </FormItem>
 
-        <Divider Orientation="left" Plain>Debug</Divider>
+        <Divider Orientation="DividerOrientation.Left" Plain>Debug</Divider>
         <FormItem Label="Enable Script Debugging">
             <Switch @bind-Checked="@context.Debug.EnableScriptDebugging" />
         </FormItem>

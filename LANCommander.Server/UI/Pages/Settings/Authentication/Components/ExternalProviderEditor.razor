@@ -1,6 +1,6 @@
 ﻿@inject IJSRuntime JSRuntime
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
     @if (!Providers.Any())
     {
         <Empty Description="@("No external authentication providers have been configured")" />
@@ -12,10 +12,10 @@
             {
                 <Panel Header="@externalProvider.Name">
                     <ExtraTemplate>
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Size="@ButtonSize.Small" Danger OnClick="() => Remove(externalProvider)"/>
+                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(externalProvider)"/>
                     </ExtraTemplate>
                     <ChildContent>
-                        <Form Model="externalProvider" Layout="@FormLayout.Vertical">
+                        <Form Model="externalProvider" Layout="FormLayout.Vertical">
                             <FormItem Label="Name">
                                 <Space Style="width: 100%">
                                     <SpaceItem Style="width: 100%">
@@ -49,7 +49,7 @@
                                             {
                                                 <SpaceItem>
                                                     <Tooltip Title="Documentation">
-                                                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Question" OnClick="() => OpenDocumentation(externalProvider)"/>
+                                                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Question" OnClick="() => OpenDocumentation(externalProvider)"/>
                                                     </Tooltip>
                                                 </SpaceItem>
                                             }
@@ -109,8 +109,8 @@
     </SpaceItem>
 
     <SpaceItem>
-        <Flex Justify="end">
-            <Button OnClick="Add" Type="@ButtonType.Primary">Add Provider</Button>
+        <Flex Justify="FlexJustify.End">
+            <Button OnClick="Add" Type="ButtonType.Primary">Add Provider</Button>
         </Flex>
     </SpaceItem>
 </Space>

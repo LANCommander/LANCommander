@@ -4,32 +4,32 @@
 @inject INotificationService NotificationService
 @implements IAsyncDisposable
 
-<Space Size="@("large")">
+<Space Size="SpaceSize.Large">
     <SpaceItem>
         @switch (Status)
         {
             case ServerProcessStatus.Running:
-                <Badge Status="success" Text="Running" />
+                <Badge Status="BadgeStatus.Success" Text="Running" />
                 break;
 
             case ServerProcessStatus.Starting:
-                <Badge Status="processing" Text="Starting" />
+                <Badge Status="BadgeStatus.Processing" Text="Starting" />
                 break;
 
             case ServerProcessStatus.Error:
-                <Badge Status="error" Text="Error" />
+                <Badge Status="BadgeStatus.Error" Text="Error" />
                 break;
 
             case ServerProcessStatus.Stopped:
-                <Badge Status="default" Text="Stopped" />
+                <Badge Status="BadgeStatus.Default" Text="Stopped" />
                 break;
 
             case ServerProcessStatus.Stopping:
-                <Badge Status="error" Text="Stopping" />
+                <Badge Status="BadgeStatus.Error" Text="Stopping" />
                 break;
 
             default:
-                <Badge Status="warning" Text="Retrieving" />
+                <Badge Status="BadgeStatus.Warning" Text="Retrieving" />
                 break;
         }
     </SpaceItem>

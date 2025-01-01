@@ -4,7 +4,7 @@
 @inject IMessageService MessageService
 @inject ILogger<MediaGrabberDialog> Logger
 
-<GridRow Justify="space-between">
+<GridRow Justify="RowJustify.SpaceBetween">
     <GridCol Span="6">
         <Search @bind-Value="Search" OnSearch="(x) => GetResults(Type, x)" DefaultValue="@Search" />
     </GridCol>

@@ -6,7 +6,7 @@
 @inject IMessageService MessageService
 
 <Table DataSource="Conflicts" Resizable Size="TableSize.Small" RowKey="c => c.FullName" @bind-SelectedRows="Selected" Loading="Loading">
-    <Selection Type="checkbox" />
+    <Selection Type="SelectionType.Checkbox" />
     <PropertyColumn Property="c => c.FullName" Title="Name" />
     <Column TData="string" Title="Created">
         @context.LocalFileInfo?.CreationTime

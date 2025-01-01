@@ -27,7 +27,7 @@
         <Alert Type="@AlertType.Warning" Message="Loading release information..." ShowIcon="true" />
     }
 
-    <Space Direction="DirectionVHType.Vertical" Style="width: 100%;">
+    <Space Direction="SpaceDirection.Vertical" Style="width: 100%;">
         @if (Releases != null && Releases.Count() > 0)
         {
             foreach (var release in Releases)

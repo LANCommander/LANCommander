@@ -9,7 +9,7 @@
 
 <PageHeader Title="Platforms">
     <PageHeaderExtra>
-        <Space Direction="DirectionVHType.Horizontal">
+        <Space Direction="SpaceDirection.Horizontal">
             <SpaceItem>
                 <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
             </SpaceItem>
@@ -46,7 +46,7 @@
             </div>
         </TitleTemplate>
         <ChildContent>
-            <Space Direction="DirectionVHType.Horizontal">
+            <Space Direction="SpaceDirection.Horizontal">
                 <SpaceItem>
                     <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenEdit(context)" />
                 </SpaceItem>

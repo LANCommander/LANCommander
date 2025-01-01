@@ -10,7 +10,7 @@
         @ByteSizeLib.ByteSize.FromBytes(context.Size)
     </PropertyColumn>
     <ActionColumn>
-        <Flex Justify="end">
+        <Flex Justify="FlexJustify.End">
             <Popconfirm Title="Are you sure? This will replace any local save files!" OnConfirm="() => Download(context)">
                 <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" />
             </Popconfirm>
@@ -31,12 +31,12 @@
     </GridCol>
 
     <GridCol>
-        <Space Direction="DirectionVHType.Horizontal">
+        <Space Direction="SpaceDirection.Horizontal">
             <SpaceItem>
                 <Button OnClick="() => Upload()">Upload</Button>
             </SpaceItem>
             <SpaceItem>
-                <Button Type="@ButtonType.Primary" OnClick="() => Close()">Close</Button>
+                <Button Type="ButtonType.Primary" OnClick="() => Close()">Close</Button>
             </SpaceItem>
         </Space>
     </GridCol>

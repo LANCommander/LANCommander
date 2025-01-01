@@ -6,7 +6,7 @@
 
 <PageTitle>Metadata Connections - First Time Setup</PageTitle>
 
-<Form Model="@Settings" Loading="Loading" OnFinish="ValidateMetadataConnections" Layout="@FormLayout.Vertical">
+<Form Model="@Settings" Loading="Loading" OnFinish="ValidateMetadataConnections" Layout="FormLayout.Vertical">
     <FormItem>
         LANCommander has the ability to pull metadata and media from external sources. Required credentials can be added here, or can be set later in Settings.
     </FormItem>
@@ -14,7 +14,7 @@
     <Divider Text="IGDB Credentials" />
 
     <p>
-        <Text Type="@TextElementType.Secondary">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
+        <Text Type="TextElementType.Secondary">In order to use IGDB metadata, you need a Twitch developer account. <a href="https://api-docs.igdb.com/#account-creation" target="_blank">Click here</a> for more details.</Text>
     </p>
 
     <FormItem Label="Client ID">
@@ -27,7 +27,7 @@
     <Divider Text="SteamGridDB Credentials" />
 
     <p>
-        <Text Type="@TextElementType.Secondary">In order to automatically search SteamGridDB for media, you need an API key. <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank">Click here</a> to get your key.</Text>
+        <Text Type="TextElementType.Secondary">In order to automatically search SteamGridDB for media, you need an API key. <a href="https://www.steamgriddb.com/profile/preferences/api" target="_blank">Click here</a> to get your key.</Text>
     </p>
 
     <FormItem Label="API Key">
@@ -35,9 +35,9 @@
     </FormItem>
 
     <FormItem>
-        <GridRow Justify="end" Style="margin-top: 16px;">
+        <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
             <GridCol>
-                <Button Type="@ButtonType.Primary" HtmlType="submit">
+                <Button Type="ButtonType.Primary" HtmlType="submit">
                     Save
                 </Button>
             </GridCol>

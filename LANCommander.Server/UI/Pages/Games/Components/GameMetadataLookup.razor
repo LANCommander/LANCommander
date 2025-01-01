@@ -9,7 +9,7 @@
 @{
     RenderFragment Footer =
     @<Template>
-        <Button OnClick="SelectGame" Disabled="@(Loading || (SelectedResults != null && SelectedResults.Count() == 0) || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
+        <Button OnClick="SelectGame" Disabled="@(Loading || (SelectedResults != null && SelectedResults.Count() == 0) || Results.Count() == 0)" Type="ButtonType.Primary">Select</Button>
         <Button OnClick="() => ModalVisible = false">Cancel</Button>
     </Template>;
 }
@@ -25,7 +25,7 @@
         @bind-SelectedRows="SelectedResults"
         Responsive>
 
-        <Selection Key="@context.IGDBId.ToString()" Type="radio" />
+        <Selection Key="@context.IGDBId.ToString()" Type="SelectionType.Radio" />
         <PropertyColumn Property="g => g.Title" Title="Title" />
         <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Title="Released" />
         <PropertyColumn Property="g => g.Developers">
@@ -35,7 +35,7 @@
 
     @if (MoreResults && IGDBService.Authenticated)
     {
-        <Button Type="@ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
+        <Button Type="ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
     }
 </Modal>
 
@@ -46,7 +46,7 @@
             <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" />
         </SpaceItem>
         <SpaceItem>
-            <Button OnClick="() => SearchForGame(Value)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
+            <Button OnClick="() => SearchForGame(Value)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
         </SpaceItem>
     </Space>
 }
@@ -58,7 +58,7 @@ else
         </SpaceItem>
         <SpaceItem>
             <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
-                <Button Type="@ButtonType.Primary">@ButtonText</Button>
+                <Button Type="ButtonType.Primary">@ButtonText</Button>
             </Popconfirm>
         </SpaceItem>
     </Space>

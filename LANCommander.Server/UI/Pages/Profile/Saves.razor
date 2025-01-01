@@ -35,7 +35,7 @@
         <PropertyColumn Property="s => (s.Game == null ? String.Empty : s.Game.Title)" Sortable Title="Game" />
         <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
          <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
-            <Space Direction="DirectionVHType.Horizontal">
+            <Space Direction="SpaceDirection.Horizontal">
                 <SpaceItem>
                      <a href="/Download/Save/@(context.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                          <Icon Type="@IconType.Outline.Download" />

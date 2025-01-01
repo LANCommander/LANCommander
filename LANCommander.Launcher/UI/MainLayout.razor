@@ -11,7 +11,7 @@
 
 <CustomWindow HeaderHeight="37">
     <HeaderExtraControlsLayout>
-        <Space Direction="@DirectionVHType.Horizontal">
+        <Space Direction="SpaceDirection.Horizontal">
             @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
             {
                 @if (!Settings.Authentication.OfflineMode)

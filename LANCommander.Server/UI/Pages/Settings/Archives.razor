@@ -23,7 +23,7 @@
         </FormItem>
 
         <FormItem Label="Storage Paths">
-            <Space Direction="DirectionVHType.Vertical" Size="@("middle")" Style="width: 100%">
+            <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Middle" Style="width: 100%">
                 <SpaceItem>
                     <Table TItem="Data.Models.StorageLocation" DataSource="@StorageLocations" HidePagination="true" Responsive Context="storageLocation">
                         <PropertyColumn Property="l => l.Path">
@@ -45,7 +45,7 @@
                 </SpaceItem>
 
                 <SpaceItem>
-                    <GridRow Justify="end">
+                    <GridRow Justify="RowJustify.End">
                         <GridCol>
                             <Button OnClick="AddStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
                         </GridCol>

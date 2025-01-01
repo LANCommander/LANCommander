@@ -7,7 +7,7 @@
 
 <Select
     AllowClear
-    Mode="multiple"
+    Mode="SelectMode.Multiple"
     TItem="Collection"
     TItemValue="Guid"
     DataSource="@Collections"
@@ -44,12 +44,12 @@
                 <div>
                     @originNode
                     <Divider Style="margin: 4px 0"></Divider>
-                    <Space Direction="@DirectionVHType.Horizontal" Style="padding: 4px 8px; width: 100%;">
+                    <Space Direction="SpaceDirection.Horizontal" Style="padding: 4px 8px; width: 100%;">
                         <SpaceItem Style="flex-grow: 1;">
                             <Input Style="flex: auto;" @bind-Value="@NewCollectionName" BindOnInput="true" />
                         </SpaceItem>
                         <SpaceItem>
-                            <Button Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(NewCollectionName))" OnClick="AddCollection">Add New Collection</Button>
+                            <Button Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(NewCollectionName))" OnClick="AddCollection">Add New Collection</Button>
                         </SpaceItem>
                     </Space>
                 </div>

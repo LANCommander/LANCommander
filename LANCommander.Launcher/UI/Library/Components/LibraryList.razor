@@ -11,7 +11,7 @@
             foreach (var group in Groups.OrderByTitle(g => g))
             {
                 <Panel Header="@group" Key="@group">
-                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="small">
+                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
                         <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                     </AntList>
                 </Panel>
@@ -20,7 +20,7 @@
         else
         {
             <Panel Class="no-header">
-                <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="small">
+                <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
                     <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                 </AntList>
             </Panel>

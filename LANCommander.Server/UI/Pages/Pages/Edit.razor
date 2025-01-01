@@ -20,7 +20,7 @@
                     @if (SelectedPage != null)
                     {
                         <SpaceItem>
-                            <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                            <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
                         </SpaceItem>
 
                         <SpaceItem>
@@ -33,7 +33,7 @@
                                 </Overlay>
                                 
                                 <ChildContent>
-                                    <Button Type="@ButtonType.Default" Icon="@IconType.Outline.Ellipsis" />
+                                    <Button Type="ButtonType.Default" Icon="@IconType.Outline.Ellipsis" />
                                 </ChildContent>
                             </Dropdown>
                         </SpaceItem>
@@ -41,7 +41,7 @@
                     else
                     {
                         <SpaceItem>
-                            <Button Type="@ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
+                            <Button Type="ButtonType.Primary" OnClick="AddNewPage">New Page</Button>
                         </SpaceItem>
                     }
                 </Space>
@@ -71,7 +71,7 @@
                 {
                     <Form @ref="Form" Model="SelectedPage">
                         <FormItem Style="margin-bottom: 8px">
-                            <Input @bind-Value="context.Title" Size="large" Placeholder="Page Title" />
+                            <Input @bind-Value="context.Title" Size="InputSize.Large" Placeholder="Page Title" />
                         </FormItem>
 
                         <FormItem Label="Slug" Style="margin-bottom: 8px; padding-left: 8px">

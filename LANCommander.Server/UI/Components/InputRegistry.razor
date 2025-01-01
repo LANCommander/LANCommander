@@ -1,4 +1,4 @@
-﻿<AntDesign.Input Type="text" @bind-Value="Path" OnBlur="() => OnChanged()">
+﻿<AntDesign.Input Type="InputType.Text" @bind-Value="Path" OnBlur="() => OnChanged()">
     <AddOnBefore>
         <SimpleSelect @bind-Value="Hive" Style="width: auto;" OnSelectedItemsChanged="() => OnChanged()">
             <SelectOptions>

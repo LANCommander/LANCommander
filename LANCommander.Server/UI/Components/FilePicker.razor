@@ -4,11 +4,11 @@
 
 <Space Style="display: flex">
     <SpaceItem Style="flex-grow: 1">
-        <Input TValue="string" Type="text" @bind-Value="Value" OnInput="OnInput" BindOnInput="true" />
+        <Input TValue="string" Type="InputType.Text" @bind-Value="Value" OnInput="OnInput" BindOnInput="true" />
     </SpaceItem>
     <SpaceItem>
         <FilePickerButton
-            Type="@ButtonType.Primary"
+            Type="ButtonType.Primary"
             Icon="@IconType.Outline.FolderOpen"
             ArchiveId="@ArchiveId"
             Title="@Title"

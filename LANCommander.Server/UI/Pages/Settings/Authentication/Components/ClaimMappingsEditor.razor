@@ -1,4 +1,4 @@
-﻿<Flex Vertical Gap="16">
+﻿<Flex Vertical Gap="@("16")">
     <Table DataSource="ClaimMappings" Size="TableSize.Small" HidePagination>
         <PropertyColumn Property="cm => cm.Name">
             <Input @bind-Value="context.Name" OnBlur="Update" />
@@ -7,12 +7,12 @@
             <Input @bind-Value="context.Value" OnBlur="Update" />
         </PropertyColumn>
         <ActionColumn>
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(context)" />
+            <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(context)" />
         </ActionColumn>
     </Table>
 
-    <Flex Justify="end">
-        <Button Type="@ButtonType.Primary" OnClick="Add">Add Claim Mapping</Button>
+    <Flex Justify="FlexJustify.End">
+        <Button Type="ButtonType.Primary" OnClick="Add">Add Claim Mapping</Button>
     </Flex>
 </Flex>
 

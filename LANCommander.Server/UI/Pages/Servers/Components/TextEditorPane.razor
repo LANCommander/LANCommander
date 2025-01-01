@@ -4,7 +4,7 @@
 {
     <TabPane Key="@FileInfo.FullName" ForceRender Tab="@FileInfo.Name">
         <ChildContent>
-        <GridRow Align="middle" Class="text-editor-info-bar">
+        <GridRow Align="RowAlign.Middle" Class="text-editor-info-bar">
                 <GridCol Flex=@("auto")>
                     <Breadcrumb>
                         @foreach (var part in FileInfo.FullName.Split(Path.DirectorySeparatorChar))
@@ -15,7 +15,7 @@
                 </GridCol>
 
                 <GridCol>
-                    <Button Type="@ButtonType.Primary" OnClick="async () => await Save()" Disabled="!HasUnsavedChanges">Save</Button>
+                    <Button Type="ButtonType.Primary" OnClick="async () => await Save()" Disabled="!HasUnsavedChanges">Save</Button>
                 </GridCol>
             </GridRow>
 

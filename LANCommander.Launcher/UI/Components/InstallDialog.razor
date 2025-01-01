@@ -13,7 +13,7 @@
             <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;" />
         </Col>
         <Col Span="12">
-            <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;" />
+            <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;"/>
         </Col>
     </Row>
 
@@ -22,13 +22,13 @@
     {
         <Divider Text="Addons" />
 
-        <CheckboxButtonGroup DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="DirectionVHType.Vertical" />
+        <CheckboxButtonGroup DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
     }
 
     @if (Settings.Games.InstallDirectories.Length > 1)
     {
         <Divider Text="Install Location" />
-        <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
+        <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="InputSize.Large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
             @foreach (var directory in Settings.Games.InstallDirectories)
             {
                 <Radio RadioButton Value="@directory">
@@ -47,10 +47,10 @@
 </div>
 
 
-<Flex Gap="middle" Style="padding: 16px; padding-top: 0px" Justify="flex-end">
+<Flex Gap="FlexGap.Middle" Style="padding: 16px; padding-top: 0px" Justify="FlexJustify.FlexEnd">
     @if (GetOperation() != InstallOperation.None)
     {
-        <Button Type="@ButtonType.Primary" OnClick="Install">@GetOperation()</Button>
+        <Button Type="ButtonType.Primary" OnClick="Install">@GetOperation()</Button>
     }
 
     <Button OnClick="() => Close()">Close</Button>

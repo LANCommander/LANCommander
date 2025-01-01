@@ -11,11 +11,11 @@
 @inject IJSRuntime JS
 @inject ILogger<ArchiveEditor> Logger
 
-<Space Direction="DirectionVHType.Vertical" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Style="width: 100%">
     <SpaceItem>
         <Table TItem="Archive" DataSource="@Archives" HidePagination="true" Responsive>
             <PropertyColumn Property="a => a.Version">
-                <Input Type="text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)" />
+                <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.CompressedSize">
                 @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
@@ -48,7 +48,7 @@
     </SpaceItem>
 
     <SpaceItem>
-        <GridRow Justify="end">
+        <GridRow Justify="RowJustify.End">
             <GridCol>
                 <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
             </GridCol>

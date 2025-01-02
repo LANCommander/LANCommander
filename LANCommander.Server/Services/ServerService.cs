@@ -15,8 +15,7 @@ namespace LANCommander.Server.Services
         public ServerService(
             ILogger<ServerService> logger,
             DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor,
-            GameService gameService) : base(logger, dbContext, httpContextAccessor)
+            GameService gameService) : base(logger, dbContext)
         {
             GameService = gameService;
         }

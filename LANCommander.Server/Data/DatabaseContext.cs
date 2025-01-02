@@ -4,13 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Data
 {
-    public class DatabaseContext : IdentityDbContext<User, Role, Guid>
+    public class DatabaseContext(
+        DbContextOptions<DatabaseContext> options) : IdentityDbContext<User, Role, Guid>(options)
     {
-        public DatabaseContext(DbContextOptions<DatabaseContext> options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

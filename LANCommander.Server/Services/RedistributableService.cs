@@ -14,8 +14,7 @@ namespace LANCommander.Server.Services
     {
         public RedistributableService(
             ILogger<RedistributableService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
+            DatabaseContext dbContext) : base(logger, dbContext) { }
 
         public async Task<Redistributable> Import(Guid objectKey)
         {

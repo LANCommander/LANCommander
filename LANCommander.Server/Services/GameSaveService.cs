@@ -9,8 +9,7 @@ namespace LANCommander.Server.Services
     {
         public GameSaveService(
             ILogger<GameSaveService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
+            DatabaseContext dbContext) : base(logger, dbContext) { }
 
         public override Task Delete(GameSave entity)
         {

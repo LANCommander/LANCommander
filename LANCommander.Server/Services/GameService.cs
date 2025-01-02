@@ -28,7 +28,6 @@ namespace LANCommander.Server.Services
         public GameService(
             ILogger<GameService> logger,
             DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor,
             IMapper mapper,
             ArchiveService archiveService,
             MediaService mediaService,
@@ -36,7 +35,7 @@ namespace LANCommander.Server.Services
             TagService tagService,
             CompanyService companyService,
             GenreService genreService,
-            IFusionCache cache) : base(logger, dbContext, httpContextAccessor)
+            IFusionCache cache) : base(logger, dbContext)
         {
             Mapper = mapper;
             ArchiveService = archiveService;

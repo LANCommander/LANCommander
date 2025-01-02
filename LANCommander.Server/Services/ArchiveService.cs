@@ -12,19 +12,11 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class ArchiveService : BaseDatabaseService<Archive>
+    public class ArchiveService(
+        ILogger<ArchiveService> logger,
+        DatabaseContext dbContext,
+        IFusionCache cache) : BaseDatabaseService<Archive>(logger, dbContext)
     {
-        private readonly IFusionCache Cache;
-
-        public ArchiveService(
-            ILogger<ArchiveService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor,
-            IFusionCache cache) : base(logger, dbContext, httpContextAccessor)
-        {
-            Cache = cache;
-        }
-
         public static string GetArchiveFileLocation(Archive archive)
         {
             return GetArchiveFileLocation(archive.ObjectKey);
@@ -39,21 +31,21 @@ namespace LANCommander.Server.Services
 
         public override async Task<Archive> Add(Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireAsync("MappedGames");
 
             return await base.Add(entity);
         }
 
         public override async Task<ExistingEntityResult<Archive>> AddMissing(Expression<Func<Archive, bool>> predicate, Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireAsync("MappedGames");
 
             return await base.AddMissing(predicate, entity);
         }
 
         public override async Task<Archive> Update(Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireAsync("MappedGames");
 
             return await base.Update(entity);
         }
@@ -62,7 +54,7 @@ namespace LANCommander.Server.Services
         {
             FileHelpers.DeleteIfExists(GetArchiveFileLocation(archive));
 
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireAsync("MappedGames");
 
             await base.Delete(archive);
         }

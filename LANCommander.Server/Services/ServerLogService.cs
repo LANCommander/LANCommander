@@ -11,8 +11,7 @@ namespace LANCommander.Server.Services
     {
         public ServerConsoleService(
             ILogger<ServerConsoleService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
+            DatabaseContext dbContext) : base(logger, dbContext) { }
 
         public async Task<string[]> ReadLog(Guid logId)
         {

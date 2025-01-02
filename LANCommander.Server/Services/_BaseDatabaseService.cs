@@ -9,12 +9,12 @@ namespace LANCommander.Server.Services
     public abstract class BaseDatabaseService<T> : BaseService where T : BaseModel
     {
         public DatabaseContext Context { get; set; }
-        public HttpContext HttpContext { get; set; }
+        public HttpContext? HttpContext { get; set; }
 
         public BaseDatabaseService(ILogger logger, DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(logger)
         {
             Context = dbContext;
-            HttpContext = httpContextAccessor.HttpContext;
+            HttpContext = httpContextAccessor?.HttpContext;
         }
 
         public virtual async Task<ICollection<T>> Get()

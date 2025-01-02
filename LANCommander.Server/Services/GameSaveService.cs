@@ -1,25 +1,31 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
-using LANCommander.Server.Models;
+using System.IO.Abstractions;
 
 namespace LANCommander.Server.Services
 {
-    public class GameSaveService : BaseDatabaseService<GameSave>
+    public class GameSaveService(
+        ILogger<GameSaveService> logger,
+        DatabaseContext dbContext,
+        IHttpContextAccessor httpContextAccessor,
+        IPath path) : BaseDatabaseService<GameSave>(logger, dbContext, httpContextAccessor)
     {
-        public GameSaveService(
-            ILogger<GameSaveService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
-
         public override Task Delete(GameSave entity)
         {
-            FileHelpers.DeleteIfExists(GetSavePath(entity.Id));
+            string? savesPath = GetSavePath(entity.Id);
+
+            if (savesPath is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            FileHelpers.DeleteIfExists(savesPath);
 
             return base.Delete(entity);
         }
 
-        public string GetSavePath(Guid gameId, Guid userId)
+        public string? GetSavePath(Guid gameId, Guid userId)
         {
             var save = Get(gs => gs.GameId == gameId && gs.UserId == userId).FirstOrDefault();
 
@@ -29,7 +35,7 @@ namespace LANCommander.Server.Services
             return GetSavePath(save.Id);
         }
 
-        public string GetSavePath(Guid id)
+        public string? GetSavePath(Guid id)
         {
             // Use get with predicate to avoid async
             var save = Get(gs => gs.Id == id).FirstOrDefault();
@@ -42,7 +48,7 @@ namespace LANCommander.Server.Services
 
         public string GetSavePath(GameSave save)
         {
-            return Path.Combine(Settings.UserSaves.StoragePath, save.UserId.ToString(), save.GameId.ToString(), $"{save.Id}");
+            return path.Combine(Settings.UserSaves.StoragePath, save.UserId.ToString(), save.GameId.ToString(), $"{save.Id}");
         }
     }
 }

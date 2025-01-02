@@ -6,6 +6,7 @@ using Serilog;
 using Hangfire;
 using LANCommander.Server.Data;
 using Microsoft.EntityFrameworkCore;
+using Octokit;
 
 namespace LANCommander.Server;
 
@@ -48,6 +49,8 @@ public static class ServiceExtensions
             Log.Debug("The beacons have been lit! LANCommander calls for players!");
             builder.Services.AddHostedService<BeaconService>();
         }
+
+        builder.Services.AddScoped<IGitHubClient>(_ => new GitHubClient(new ProductHeaderValue("LANCommander")));
     }
 
     public static void AddHangfire(this WebApplicationBuilder builder)

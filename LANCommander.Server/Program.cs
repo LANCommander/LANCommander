@@ -9,6 +9,8 @@ using LANCommander.SDK.Enums;
 using Serilog;
 using LANCommander.Server;
 using LANCommander.Server.Models;
+using LANCommander.Server.Endpoints;
+using System.IO.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,6 +73,23 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = long.MaxValue;
 });
 
+builder.Services.AddSingleton<IFileSystem>(new FileSystem());
+builder.Services.AddSingleton(sp =>
+{
+    var fs = sp.GetRequiredService<IFileSystem>();
+    return fs.Directory;
+});
+builder.Services.AddSingleton(sp =>
+{
+    var fs = sp.GetRequiredService<IFileSystem>();
+    return fs.File;
+});
+builder.Services.AddSingleton(sp =>
+{
+    var fs = sp.GetRequiredService<IFileSystem>();
+    return fs.Path;
+});
+
 Log.Debug("Building Application");
 var app = builder.Build();
 
@@ -105,6 +124,8 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapDownloadEndpoints();
 
 app.UseMvcWithDefaultRoute();
 

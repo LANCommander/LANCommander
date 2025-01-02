@@ -9,10 +9,10 @@
 
 <PageHeader>
     <PageHeaderTitle>
-        <Input Size="@InputSize.Large" @bind-Value="@Collection.Name" />
+        <Input Size="InputSize.Large" @bind-Value="@Collection.Name" />
     </PageHeaderTitle>
     <PageHeaderExtra>
-        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+        <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
     </PageHeaderExtra>
 </PageHeader>
 
@@ -63,10 +63,10 @@
 
     <ActionColumn Title="" Style="text-align: right">
         <ChildContent>
-            <Space Direction="DirectionVHType.Horizontal">
+            <Space Direction="SpaceDirection.Horizontal">
                 <SpaceItem>
                     <Popconfirm OnConfirm="() => RemoveGame(context)" Title="Are you sure you want to remove this game from the collection?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                        <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
                     </Popconfirm>
                 </SpaceItem>
             </Space>

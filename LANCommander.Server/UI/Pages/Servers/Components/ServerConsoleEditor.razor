@@ -2,7 +2,7 @@
 @using LANCommander.Server.Data.Models
 @using LANCommander.Server.Extensions;
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
     @if (Value == null || Value.Count == 0)
     {
         <Empty />
@@ -13,7 +13,7 @@
         <SpaceItem>
             @if (console.Type == ServerConsoleType.RCON)
             {
-                <Card Size="small" Title="@console.Name">
+                <Card Size="CardSize.Small" Title="@console.Name">
                     <Extra>
                         <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
                     </Extra>
@@ -50,7 +50,7 @@
             }
             else if (console.Type == ServerConsoleType.LogFile)
             {
-                <Card Size="small" Title="@console.Name">
+                <Card Size="CardSize.Small" Title="@console.Name">
                     <Extra>
                         <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
                     </Extra>
@@ -65,12 +65,12 @@
                                         </Select>
                                     </FormItem>
                                     <FormItem Label="Name">
-                                        <Input Type="text" @bind-Value="context.Name" />
+                                        <Input Type="InputType.Text" @bind-Value="context.Name" />
                                     </FormItem>
                                 </GridCol>
                                 <GridCol Span="16">
                                     <FormItem Label="Path">
-                                        <Input Type="text" @bind-Value="context.Path" />
+                                        <Input Type="InputType.Text" @bind-Value="context.Path" />
                                     </FormItem>
                                 </GridCol>
                             </GridRow>
@@ -82,7 +82,7 @@
     }
 
     <SpaceItem>
-        <GridRow Justify="end">
+        <GridRow Justify="RowJustify.End">
             <GridCol>
                 <Button OnClick="Add" Type="@ButtonType.Primary">Add Console</Button>
             </GridCol>

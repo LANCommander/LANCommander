@@ -11,8 +11,8 @@
 @inject DrawerService DrawerService
 
 <CascadingValue Value="this">
-    <Flex Justify="space-between" Style="padding: 12px;">
-        <Flex Gap="small">
+    <Flex Justify="FlexJustify.SpaceBetween" Style="padding: 12px;">
+        <Flex Gap="FlexGap.Small">
             <Search Placeholder="Search" BindOnInput DebounceMilliseconds="250" />
             <Button Icon="@IconType.Outline.Control" Type="@ButtonType.Text" OnClick="OpenDrawer" />
             @LeftToolbar
@@ -20,7 +20,7 @@
 
         @if (RightToolbar != null)
         {
-            <Flex Gap="small">
+            <Flex Gap="FlexGap.Small">
                 @RightToolbar
             </Flex>
         }
@@ -161,7 +161,7 @@
             Title = "Columns",
             Width = "350",
             MaskClosable = false,
-            Placement = "right",
+            Placement = DrawerPlacement.Right,
         };
 
         var columns = new List<DataTableColumn>();

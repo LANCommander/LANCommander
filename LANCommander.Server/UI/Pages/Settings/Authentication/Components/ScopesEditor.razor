@@ -1,4 +1,4 @@
-﻿<Flex Vertical Gap="16">
+﻿<Flex Vertical Gap="@("16")">
     @if (!Scopes.Any())
     {
         <Empty Small Description="@("No scopes have been defined")" />
@@ -12,7 +12,7 @@
         </Flex>
     }
 
-    <Flex Justify="end">
+    <Flex Justify="FlexJustify.End">
         <Button Type="@ButtonType.Primary" OnClick="Add">Add Scope</Button>
     </Flex>
 </Flex>

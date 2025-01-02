@@ -7,7 +7,7 @@
 
 <PageTitle>Create Administrator User - First Time Setup</PageTitle>
 
-<Form Model="@Model" Loading="Loading" OnFinish="CreateAdministratorUser" Layout="@FormLayout.Vertical">
+<Form Model="@Model" Loading="Loading" OnFinish="CreateAdministratorUser" Layout="FormLayout.Vertical">
     <FormItem>
         To get started, you will need to create an administrator user.
     </FormItem>
@@ -21,9 +21,9 @@
         <InputPassword @bind-Value="@context.PasswordConfirm" />
     </FormItem>
     <FormItem>
-        <GridRow Justify="end" Style="margin-top: 16px;">
+        <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
             <GridCol>
-                <Button Type="@ButtonType.Primary" HtmlType="submit">
+                <Button Type="ButtonType.Primary" HtmlType="submit">
                     Create
                 </Button>
             </GridCol>

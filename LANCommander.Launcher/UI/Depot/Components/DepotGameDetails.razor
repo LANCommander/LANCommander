@@ -10,7 +10,7 @@
 @inject ModalService ModalService
 @inject IMessageService MessageService
 
-<Drawer Placement="bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
+<Drawer Placement="DrawerPlacement.Bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
     @if (SelectedGame != null)
     {
         <div class="game-details no-scrollbar">
@@ -37,27 +37,27 @@
                 <GridRow Gutter="32" Class="game-info" Wrap="false">
                     <GridCol Flex="@("auto")">
                         <div class="game-action-bar">
-                            <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                            <Space Direction="SpaceDirection.Horizontal" Size="SpaceSize.Large">
                                 <SpaceItem>
                                     @if (IsInstalled)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" OnClick="@(() => NavigationManager.NavigateTo($"/{SelectedGame.Id}"))">View in Library</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="@(() => NavigationManager.NavigateTo($"/{SelectedGame.Id}"))">View in Library</Button>
                                     }
                                     else
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install" Loading="Installing">Install</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install" Loading="Installing">Install</Button>
                                     }
 
                                     @if (SelectedGame.InLibrary)
                                     {
                                         <Tooltip Title="Remove from Library">
-                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" Loading="RemovingFromLibrary" />
+                                            <Button Size="ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" Loading="RemovingFromLibrary" />
                                         </Tooltip>
                                     }
                                     else
                                     {
                                         <Tooltip Title="Add to Library">
-                                            <Button Size="@ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Plus" OnClick="AddToLibrary" Loading="AddingToLibrary" />
+                                            <Button Size="ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Plus" OnClick="AddToLibrary" Loading="AddingToLibrary" />
                                         </Tooltip>
                                     }
                                 </SpaceItem>

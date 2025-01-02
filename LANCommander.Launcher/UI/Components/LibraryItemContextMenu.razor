@@ -219,7 +219,10 @@ else
             CancelText = "Cancel",
             Title = "Uninstall",
             Content = message,
-            OkType = "danger",
+            OkButtonProps = new ButtonProps()
+            {
+                Danger = true
+            },
             Centered = true,
             Icon = @<Icon Type="@IconType.Outline.Delete" />
         });

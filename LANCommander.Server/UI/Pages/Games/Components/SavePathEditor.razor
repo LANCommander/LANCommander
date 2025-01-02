@@ -1,7 +1,7 @@
 ﻿@using LANCommander.SDK.Enums
 @using LANCommander.Server.Extensions;
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
     <SpaceItem>
         <Table TItem="SavePath" DataSource="@Value" HidePagination="true" Responsive>
             <PropertyColumn Property="p => p.Type">
@@ -37,7 +37,7 @@
     </SpaceItem>
 
     <SpaceItem>
-        <GridRow Justify="end">
+        <GridRow Justify="RowJustify.End">
             <GridCol>
                 <Button OnClick="AddPath" Type="@ButtonType.Primary">Add Path</Button>
             </GridCol>

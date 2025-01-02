@@ -3,10 +3,10 @@
 
 <Select 
     @ref="@Select"
-    Mode="multiple"
+    Mode="SelectMode.Multiple"
     DataSource="Entities"
-    ValueProperty="e => e.Id"
-    LabelProperty="OptionLabelSelector"
+    ItemValue="e => e.Id"
+    ItemLabel="OptionLabelSelector"
     @bind-Values="@SelectedValues"
     EnableSearch
     EnableVirtualization>

@@ -20,7 +20,7 @@
         }
     </TitleTemplate>
     <TitleExtraTemplate>
-        <Space Direction="DirectionVHType.Horizontal">
+        <Space Direction="SpaceDirection.Horizontal">
             @if (context != null && context.Id != Guid.Empty)
             {
                 <SpaceItem>
@@ -43,7 +43,7 @@
                 </SpaceItem>
             }
             <SpaceItem>
-                <Button Type="@ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
             </SpaceItem>
         </Space>
     </TitleExtraTemplate>

@@ -14,14 +14,14 @@
 @if (IsRunning)
 {
     <Popconfirm Title="Do you want to stop this game?" OkText="Yes" OnConfirm="() => Stop()">
-        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
+        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
     </Popconfirm>
 }
 else
 {
-    <Space Direction="@DirectionVHType.Horizontal">
+    <Space Direction="SpaceDirection.Horizontal">
         <SpaceItem>
-            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">Play</Button>
+            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">Play</Button>
         </SpaceItem>
 
         <SpaceItem>
@@ -33,7 +33,7 @@ else
                 </Overlay>
 
                 <ChildContent>
-                    <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
+                    <Button Type="@ButtonType.Default" Size="ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
                 </ChildContent>
             </Dropdown>
         </SpaceItem>

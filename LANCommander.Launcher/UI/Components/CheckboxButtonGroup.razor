@@ -41,7 +41,7 @@
     [Parameter] public IEnumerable<TItem> Selected { get; set; }
     [Parameter] public EventCallback<IEnumerable<TItem>> SelectedChanged { get; set; }
 
-    [Parameter] public DirectionVHType Direction { get; set; } = DirectionVHType.Horizontal;
+    [Parameter] public SpaceDirection Direction { get; set; } = SpaceDirection.Horizontal;
 
     [Parameter] public RenderFragment<TItem>? ButtonSelectedTemplate { get; set; }
     [Parameter] public RenderFragment<TItem>? ButtonUnselectedTemplate { get; set; }

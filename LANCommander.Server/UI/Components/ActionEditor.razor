@@ -5,20 +5,20 @@
 @using System.Collections.ObjectModel
 @inject ModalService ModalService
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
     <SpaceItem>
-        <Table TItem="Data.Models.Action" DataSource="@Actions.OrderBy(a => a.SortOrder)" HidePagination="true" Style="border: 1px solid #f0f0f0" Responsive>
+        <Table TItem="Data.Models.Action" DataSource="@Actions.OrderBy(a => a.SortOrder)" HidePagination Style="border: 1px solid #f0f0f0" Responsive>
             <PropertyColumn Property="a => a.Name">
-                <Input Type="text" @bind-Value="context.Name" />
+                <Input Type="InputType.Text" @bind-Value="context.Name" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Path">
-                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" Title="Select Action Executable" OnSelected="(path) => OnPathSelected(path, context)" />
+                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories Title="Select Action Executable" OnSelected="(path) => OnPathSelected(path, context)" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.Arguments">
-                <Input Type="text" @bind-Value="context.Arguments" />
+                <Input Type="InputType.Text" @bind-Value="context.Arguments" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.WorkingDirectory" Title="Working Dir">
-                <Input Type="text" @bind-Value="context.WorkingDirectory" />
+                <Input Type="InputType.Text" @bind-Value="context.WorkingDirectory" />
             </PropertyColumn>
             <PropertyColumn Property="a => a.PrimaryAction" Title="Primary" Style="text-align: center">
                 <Checkbox @bind-Checked="context.PrimaryAction" />
@@ -26,11 +26,11 @@
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>
-                        <Button OnClick="() => MoveUp(context)" Icon="@IconType.Outline.Up" Type="@ButtonType.Text" />
-                        <Button OnClick="() => MoveDown(context)" Icon="@IconType.Outline.Down" Type="@ButtonType.Text" />
+                        <Button OnClick="() => MoveUp(context)" Icon="@IconType.Outline.Up" Type="ButtonType.Text" />
+                        <Button OnClick="() => MoveDown(context)" Icon="@IconType.Outline.Down" Type="ButtonType.Text" />
 
                         <Popconfirm OnConfirm="() => RemoveAction(context)" Title="Are you sure you want to remove this action?">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                            <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
                         </Popconfirm>
                     </SpaceItem>
                 </Space>
@@ -39,9 +39,9 @@
     </SpaceItem>
 
     <SpaceItem>
-        <GridRow Justify="end">
+        <GridRow Justify="RowJustify.End">
             <GridCol>
-                <Button OnClick="AddAction" Type="@ButtonType.Primary">Add Action</Button>
+                <Button OnClick="AddAction" Type="ButtonType.Primary">Add Action</Button>
             </GridCol>
         </GridRow>
     </SpaceItem>

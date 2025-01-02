@@ -2,7 +2,7 @@
 @inject InstallService InstallService
 @inject NavigationManager NavigationManager
 
-<Drawer Placement="bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
+<Drawer Placement="DrawerPlacement.Bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
 
     @if (InstallService.Queue.Any(qi => qi.State))
     {
@@ -34,7 +34,7 @@
                 </div>
             </div>
             <div class="queue-item-actions">
-                <Button Icon="@IconType.Outline.Close" Size="@ButtonSize.Large" Danger OnClick="() => Remove(queueItem)" />
+                <Button Icon="@IconType.Outline.Close" Size="ButtonSize.Large" Danger OnClick="() => Remove(queueItem)" />
             </div>
         </div>
     }

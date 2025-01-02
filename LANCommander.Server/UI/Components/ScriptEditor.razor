@@ -5,7 +5,7 @@
 @inject ModalService ModalService
 @inject IMessageService MessageService
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
     <SpaceItem>
         <Table TItem="Script" DataSource="@Scripts" HidePagination="true" Responsive>
             <PropertyColumn Property="s => s.Type">@context.Type.GetDisplayName()</PropertyColumn>
@@ -16,11 +16,11 @@
             <ActionColumn Title="">
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>
-                        <Button OnClick="() => Edit(context.Id)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
+                        <Button OnClick="() => Edit(context.Id)" Icon="@IconType.Outline.Edit" Type="ButtonType.Text" />
                     </SpaceItem>
                     <SpaceItem>
                         <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this script?">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                            <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
                         </Popconfirm>
                     </SpaceItem>
                 </Space>
@@ -29,9 +29,9 @@
     </SpaceItem>
 
     <SpaceItem>
-        <GridRow Justify="end">
+        <GridRow Justify="RowJustify.End">
             <GridCol>
-                <Button OnClick="() => Edit()" Type="@ButtonType.Primary">Add Script</Button>
+                <Button OnClick="() => Edit()" Type="ButtonType.Primary">Add Script</Button>
             </GridCol>
         </GridRow>
     </SpaceItem>

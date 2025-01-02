@@ -1,8 +1,8 @@
 ﻿@inherits FeedbackComponent<IEnumerable<DataTableColumn>, IEnumerable<DataTableColumn>>
 @namespace LANCommander.Server.UI.Components
 
-<Flex Vertical Justify="space-between" Style="height: 100%;">
-    <Space Direction="@DirectionVHType.Vertical">
+<Flex Vertical Justify="FlexJustify.SpaceBetween" Style="height: 100%;">
+    <Space Direction="SpaceDirection.Vertical">
         @foreach (var column in Options)
         {
             <SpaceItem>
@@ -11,7 +11,7 @@
         }
     </Space>
 
-    <Button Type="@ButtonType.Primary" Block OnClick="Apply">Apply</Button>
+    <Button Type="ButtonType.Primary" Block OnClick="Apply">Apply</Button>
 </Flex>
 
 @code {

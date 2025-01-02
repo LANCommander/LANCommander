@@ -16,9 +16,9 @@
     <Divider Text="Archives" />
 
     <FormItem>
-        <Space Direction="DirectionVHType.Vertical" Size="@("middle")" Style="width: 100%">
+        <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Middle" Style="width: 100%">
             <SpaceItem>
-                <Table TItem="Data.Models.StorageLocation" DataSource="@ArchiveStorageLocations" HidePagination="true" Responsive Context="storageLocation" Size="@TableSize.Small">
+                <Table TItem="Data.Models.StorageLocation" DataSource="@ArchiveStorageLocations" HidePagination="true" Responsive Context="storageLocation" Size="TableSize.Small">
                     <PropertyColumn Property="l => l.Path">
                         <FilePicker @bind-Value="storageLocation.Path" AllowDirectories="true" Title="Select Storage Location" Root="@RootPath" OnSelected="(path) => OnPathSelected(storageLocation, path)" />
                     </PropertyColumn>
@@ -29,7 +29,7 @@
                         <Space Style="display: flex; justify-content: end">
                             <SpaceItem>
                                 <Popconfirm OnConfirm="() => RemoveArchiveStorageLocation(storageLocation)" Title="Are you sure you want to remove this storage location?">
-                                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                    <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
                                 </Popconfirm>
                             </SpaceItem>
                         </Space>
@@ -38,7 +38,7 @@
             </SpaceItem>
 
             <SpaceItem>
-                <GridRow Justify="end">
+                <GridRow Justify="RowJustify.End">
                     <GridCol>
                         <Button OnClick="AddArchiveStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
                     </GridCol>
@@ -66,9 +66,9 @@
     }
 
     <FormItem>
-        <GridRow Justify="end" Style="margin-top: 16px;">
+        <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
             <GridCol>
-                <Button Type="@ButtonType.Primary" HtmlType="submit">
+                <Button Type="ButtonType.Primary" HtmlType="submit">
                     Next
                 </Button>
             </GridCol>

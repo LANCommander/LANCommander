@@ -30,7 +30,7 @@
             }
 
             <GridCol Flex="2" Class="login-form-pane">
-                <Form Model="@Model" Loading="@Loading" Layout="@FormLayout.Vertical" OnFinish="OnFinish">
+                <Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
                     <FormItem Label="Server Address">
                         <Input @bind-Value="@context.ServerAddress" />
                     </FormItem>
@@ -41,7 +41,7 @@
                         <InputPassword @bind-Value="@context.Password" />
                     </FormItem>
                     <FormItem>
-                        <Button Type="@ButtonType.Primary" HtmlType="submit">
+                        <Button Type="ButtonType.Primary" HtmlType="submit">
                             Login
                         </Button>
 
@@ -52,7 +52,7 @@
                             </Button>
                         }
 
-                        <Button Type="@ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate/Register"))">
+                        <Button Type="ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate/Register"))">
                             Register
                         </Button>
                     </FormItem>

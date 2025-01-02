@@ -1,8 +1,8 @@
 ﻿@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 @inject ProtectedLocalStorage BrowserStorage
 
-<Drawer Closable="true" Visible="@Visible" Placement="right" Title="@("Columns")" OnClose="() => Close()">
-    <Space Direction="@DirectionVHType.Vertical">
+<Drawer Closable="true" Visible="@Visible" Placement="DrawerPlacement.Right" Title="@("Columns")" OnClose="() => Close()">
+    <Space Direction="@SpaceDirection.Vertical">
         @foreach (var column in ColumnVisibility.Keys)
         {
             <SpaceItem>

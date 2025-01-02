@@ -2,7 +2,7 @@
 @using LANCommander.Server.Extensions;
 @using LANCommander.SDK.Enums
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
     <SpaceItem>
         <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true" Responsive>
             <PropertyColumn Property="m => m.Type">
@@ -24,7 +24,7 @@
                 </Select>
             </PropertyColumn>
             <PropertyColumn Property="m => m.Description">
-                <Input Type="text" @bind-Value="context.Description" />
+                <Input Type="InputType.Text" @bind-Value="context.Description" />
             </PropertyColumn>
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
@@ -37,7 +37,7 @@
     </SpaceItem>
 
     <SpaceItem>
-        <GridRow Justify="end">
+        <GridRow Justify="RowJustify.End">
             <GridCol>
                 <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
             </GridCol>

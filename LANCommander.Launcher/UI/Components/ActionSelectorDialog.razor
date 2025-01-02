@@ -4,7 +4,7 @@
 @inherits FeedbackComponent<ActionSelectorDialogOptions, Process>
 @inject GameService GameService
 
-<AntList DataSource="Options.Actions" TItem="SDK.Models.Action" Class="ant-list-clickable" Size="small">
+<AntList DataSource="Options.Actions" TItem="SDK.Models.Action" Class="ant-list-clickable" Size="ListSize.Small">
     <ListItem OnClick="() => Run(Options.Game, context)">
         @context.Name
     </ListItem>

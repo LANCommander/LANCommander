@@ -22,7 +22,7 @@
     </Overlay>
 
     <ChildContent>
-        <Button Type="@ButtonType.Primary" Class="appbar-profile-button">
+        <Button Type="ButtonType.Primary" Class="appbar-profile-button">
             @if (Settings.Profile.AvatarId != null && Settings.Profile.AvatarId != Guid.Empty)
             {
                 <MediaImage Id="@Settings.Profile.AvatarId" />

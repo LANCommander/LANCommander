@@ -40,7 +40,7 @@
                 <GridRow Gutter="32" Class="game-info" Wrap="false">
                     <GridCol Flex="@("auto")">
                         <div class="game-action-bar">
-                            <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                            <Space Direction="SpaceDirection.Horizontal" Size="SpaceSize.Large">
                                 <SpaceItem>
                                     @if (SelectedItem.State == ListItemState.Installed)
                                     {
@@ -48,19 +48,19 @@
                                     }
                                     else if (SelectedItem.State == ListItemState.NotInstalled)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
                                     }
                                     else if (SelectedItem.State == ListItemState.Queued)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
                                     }
                                     else if (SelectedItem.State == ListItemState.UpdateAvailable)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
                                     }
                                     else if (SelectedItem.State == ListItemState.Installing)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
                                     }
                                 </SpaceItem>
 

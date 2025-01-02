@@ -23,6 +23,7 @@
     <PackageReference Include="Semver" Version="2.3.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
     <PackageReference Include="Syncfusion.PdfToImageConverter.Net" Version="26.2.14" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
     <PackageReference Include="YamlDotNet" Version="16.1.3" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="1.4.0" />
   </ItemGroup>

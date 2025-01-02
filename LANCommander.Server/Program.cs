@@ -328,6 +328,7 @@ namespace LANCommander.Server
             builder.Services.AddScoped<UserService>();
             builder.Services.AddScoped<UserCustomFieldService>();
             builder.Services.AddScoped<RoleService>();
+            builder.Services.AddScoped<Services.AuthenticationService>();
             builder.Services.AddScoped<SetupService>();
 
             builder.Services.AddSingleton<ServerProcessService>();

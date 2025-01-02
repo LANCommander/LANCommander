@@ -1,0 +1,21 @@
+Name: Microsoft
+Slug: Microsoft
+Type: OAuth2
+Color: '#2F2F2F'
+Icon: microsoft
+Documentation: https://learn.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
+ClientId: YOUR_MICROSOFT_CLIENT_ID
+ClientSecret: YOUR_MICROSOFT_CLIENT_SECRET
+Authority: https://login.microsoftonline.com/common
+AuthorizationEndpoint: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+TokenEndpoint: https://login.microsoftonline.com/common/oauth2/v2.0/token
+UserInfoEndpoint: https://graph.microsoft.com/v1.0/me
+Scopes:
+  - User.Read
+ClaimMappings:
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+    Value: id
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+    Value: displayName
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/email
+    Value: mail

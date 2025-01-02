@@ -1,0 +1,22 @@
+Name: Google
+Slug: Google
+Type: OAuth2
+Color: '#DB4437'
+Icon: google
+Documentation: https://developers.google.com/identity/protocols/oauth2
+ClientId: YOUR_GOOGLE_CLIENT_ID
+ClientSecret: YOUR_GOOGLE_CLIENT_SECRET
+Authority: https://accounts.google.com
+AuthorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
+TokenEndpoint: https://oauth2.googleapis.com/token
+UserInfoEndpoint: https://www.googleapis.com/oauth2/v3/userinfo
+Scopes:
+  - email
+  - profile
+ClaimMappings:
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+    Value: sub
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+    Value: name
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/email
+    Value: email

@@ -1,0 +1,15 @@
+Name: Steam
+Slug: Steam
+Type: OpenId
+Color: '#171A21'
+Icon: steam
+Documentation: https://partner.steamgames.com/doc/features/auth
+Authority: https://steamcommunity.com/openid
+LoginEndpoint: https://steamcommunity.com/openid/login
+UserInfoEndpoint: https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/
+Scopes: []
+ClaimMappings:
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+    Value: steamid
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+    Value: personaname

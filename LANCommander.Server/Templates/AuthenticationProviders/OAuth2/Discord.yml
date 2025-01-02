@@ -1,0 +1,22 @@
+﻿Name: Discord
+Slug: Discord
+Type: OAuth2
+Color: '#5865F2'
+Icon: discord
+Documentation: https://docs.lancommander.app/en/Server/Settings/ExternalAuthenticationProviders/Discord
+ClientId: YOUR_DISCORD_CLIENT_ID
+ClientSecret: YOUR_DISCORD_CLIENT_SECRET
+Authority: https://discord.com/api
+AuthorizationEndpoint: https://discord.com/api/oauth2/authorize
+TokenEndpoint: https://discord.com/api/oauth2/token
+UserInfoEndpoint: https://discord.com/api/users/@me
+Scopes:
+  - identify
+  - email
+ClaimMappings:
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+    Value: id
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+    Value: username
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/email
+    Value: email

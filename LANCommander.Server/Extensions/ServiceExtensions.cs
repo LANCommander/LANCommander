@@ -1,0 +1,80 @@
+﻿using LANCommander.SDK;
+using LANCommander.Server.Models;
+using LANCommander.Server.Services.MediaGrabbers;
+using LANCommander.Server.Services;
+using Serilog;
+using Hangfire;
+using LANCommander.Server.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace LANCommander.Server;
+
+public static class ServiceExtensions
+{
+    public static void AddLANCommanderServices(this WebApplicationBuilder builder, LANCommanderSettings settings)
+    {
+        Log.Debug("Registering services");
+        builder.Services.AddSingleton(new Client("", ""));
+        builder.Services.AddScoped<SettingService>();
+        builder.Services.AddScoped<ArchiveService>();
+        builder.Services.AddScoped<CategoryService>();
+        builder.Services.AddScoped<CollectionService>();
+        builder.Services.AddScoped<GameService>();
+        builder.Services.AddScoped<ScriptService>();
+        builder.Services.AddScoped<GenreService>();
+        builder.Services.AddScoped<PlatformService>();
+        builder.Services.AddScoped<KeyService>();
+        builder.Services.AddScoped<TagService>();
+        builder.Services.AddScoped<EngineService>();
+        builder.Services.AddScoped<CompanyService>();
+        builder.Services.AddScoped<IGDBService>();
+        builder.Services.AddScoped<ServerService>();
+        builder.Services.AddScoped<ServerConsoleService>();
+        builder.Services.AddScoped<GameSaveService>();
+        builder.Services.AddScoped<PlaySessionService>();
+        builder.Services.AddScoped<MediaService>();
+        builder.Services.AddScoped<RedistributableService>();
+        builder.Services.AddScoped<IMediaGrabberService, SteamGridDBMediaGrabber>();
+        builder.Services.AddScoped<UpdateService>();
+        builder.Services.AddScoped<IssueService>();
+        builder.Services.AddScoped<PageService>();
+        builder.Services.AddScoped<UserService>();
+
+        builder.Services.AddSingleton<ServerProcessService>();
+        builder.Services.AddSingleton<IPXRelayService>();
+
+        if (settings.Beacon.Enabled)
+        {
+            Log.Debug("The beacons have been lit! LANCommander calls for players!");
+            builder.Services.AddHostedService<BeaconService>();
+        }
+    }
+
+    public static void AddHangfire(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddHangfire(static (sp, configuration) =>
+        {
+            var logger = sp.GetRequiredService<ILogger<Program>>();
+            logger.LogDebug("Initializing Hangfire");
+            configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_170)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseInMemoryStorage();
+        });
+        builder.Services.AddHangfireServer();
+    }
+
+    public static void AddDatabase(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddDbContext<DatabaseContext>(static (sp, b) =>
+        {
+            var logger = sp.GetRequiredService<ILogger<DatabaseContext>>();
+            var settings = sp.GetRequiredService<LANCommanderSettings>();
+            logger.LogDebug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
+            b.UseLazyLoadingProxies();
+            b.UseSqlite(settings.DatabaseConnectionString);
+        });
+        builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+    }
+}

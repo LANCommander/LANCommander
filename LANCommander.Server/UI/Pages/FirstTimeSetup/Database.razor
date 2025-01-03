@@ -65,7 +65,7 @@
                 break;
 
             case DatabaseProvider.MySQL:
-                Settings.DatabaseConnectionString = "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
+                Settings.DatabaseConnectionString = Configuration.GetConnectionString("lancommander") ?? "Server=localhost;Uid=root;Pwd=password;Database=LANCommander";
                 break;
 
             case DatabaseProvider.PostgreSQL:

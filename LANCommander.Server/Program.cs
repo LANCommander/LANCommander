@@ -22,6 +22,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.DotNet.Scaffolding.Shared;
+using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 
 namespace LANCommander.Server
 {
@@ -191,6 +193,10 @@ namespace LANCommander.Server
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
 
             builder.Services.AddScoped<IInterceptor, AuditingInterceptor>();
+
+            // We have a bit of a clunky registration here due to https://github.com/dotnet/aspire/issues/7016
+            // once that is resolved we should be able to use the builder.AddNpgsqlDbContext<DatabaseContext>() (or similar) method.
+            // Instead, we'll register the DatabaseContext and then manually enrich it with Aspire.
             builder.Services.AddDbContext<DatabaseContext>((sp, optionsBuilder) =>
             {
                 var settings = sp.GetRequiredService<Settings>();
@@ -218,6 +224,17 @@ namespace LANCommander.Server
                 var interceptors = sp.GetServices<IInterceptor>();
                 optionsBuilder.AddInterceptors(interceptors);
             });
+
+            switch (settings.DatabaseProvider)
+            {
+                case DatabaseProvider.PostgreSQL:
+                    builder.EnrichNpgsqlDbContext<DatabaseContext>();
+                    break;
+
+                case DatabaseProvider.MySQL:
+                    builder.EnrichMySqlDbContext<DatabaseContext>();
+                    break;
+            }
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 

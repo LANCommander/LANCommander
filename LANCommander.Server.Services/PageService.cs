@@ -1,4 +1,5 @@
-﻿using JetBrains.Annotations;
+﻿using AutoMapper;
+using JetBrains.Annotations;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
@@ -16,7 +17,8 @@ namespace LANCommander.Server.Services
         public PageService(
             ILogger<PageService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper) { }
 
         public override async Task<Page> AddAsync(Page entity)
         {

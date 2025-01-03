@@ -31,14 +31,14 @@ namespace LANCommander.Server.Services
         public GameService(
             ILogger<GameService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
             IMapper mapper,
             ArchiveService archiveService,
             MediaService mediaService,
             EngineService engineService,
             TagService tagService,
             CompanyService companyService,
-            GenreService genreService) : base(logger, cache, repositoryFactory)
+            GenreService genreService,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             Mapper = mapper;
             ArchiveService = archiveService;

@@ -26,6 +26,10 @@ using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;
 using Scalar.AspNetCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.DotNet.Scaffolding.Shared;
+using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace LANCommander.Server
 {
@@ -66,15 +70,17 @@ namespace LANCommander.Server
             var databaseProviderParameter = args.FirstOrDefault(arg => arg.StartsWith("--database-provider="))?.Split('=', 2).Last();
             var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
 
-            if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
+            if (!string.IsNullOrWhiteSpace(databaseProviderParameter))
                 DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
             else
                 DatabaseContext.Provider = settings.DatabaseProvider;
 
-            if (!String.IsNullOrWhiteSpace(connectionStringParameter))
+            if (!string.IsNullOrWhiteSpace(connectionStringParameter))
                 DatabaseContext.ConnectionString = connectionStringParameter;
             else
                 DatabaseContext.ConnectionString = settings.DatabaseConnectionString;
+
+            builder.Services.AddSingleton(settings);
 
             Log.Debug("Loaded!");
 
@@ -168,8 +174,34 @@ namespace LANCommander.Server
 
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
 
-            builder.Services.AddDbContextFactory<DatabaseContext>();
-            builder.Services.AddDbContext<DatabaseContext>();
+            builder.Services.AddScoped<IInterceptor, AuditingInterceptor>();
+            builder.Services.AddDbContext<DatabaseContext>((sp, optionsBuilder) =>
+            {
+                var settings = sp.GetRequiredService<Settings>();
+
+                optionsBuilder.EnableDetailedErrors();
+                optionsBuilder.EnableSensitiveDataLogging();
+
+                switch (settings.DatabaseProvider)
+                {
+                    case DatabaseProvider.SQLite:
+                        optionsBuilder.UseSqlite(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
+                        break;
+
+                    case DatabaseProvider.MySQL:
+                        optionsBuilder.UseMySql(settings.DatabaseConnectionString, ServerVersion.AutoDetect(settings.DatabaseConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
+                        break;
+
+                    case DatabaseProvider.PostgreSQL:
+                        optionsBuilder.UseNpgsql(settings.DatabaseConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
+                        break;
+                }
+
+                // optionsBuilder.UseLazyLoadingProxies();
+
+                var interceptors = sp.GetServices<IInterceptor>();
+                optionsBuilder.AddInterceptors(interceptors);
+            });
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -296,7 +328,6 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
-            builder.Services.AddSingleton<RepositoryFactory>();
             builder.Services.AddScoped(typeof(Repository<>));
             builder.Services.AddScoped<DatabaseServiceFactory>();
             builder.Services.AddScoped<IdentityContextFactory>();
@@ -445,7 +476,7 @@ namespace LANCommander.Server
             if (DatabaseContext.Provider != DatabaseProvider.Unknown)
             {
                 await using var scope = app.Services.CreateAsyncScope();
-                using var db = scope.ServiceProvider.GetService<DatabaseContext>();
+                using var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
 
                 if ((await db.Database.GetPendingMigrationsAsync()).Any())
                 {

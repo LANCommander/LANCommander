@@ -3,48 +3,13 @@ using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace LANCommander.Server.Data
 {
-    public class DatabaseContext : IdentityDbContext<User, Role, Guid>
+    public class DatabaseContext(DbContextOptions<DatabaseContext> options) : IdentityDbContext<User, Role, Guid>(options)
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static string ConnectionString = "";
-
-        private readonly ILogger Logger;
-
-        public DatabaseContext(DbContextOptions<DatabaseContext> options, ILogger<DatabaseContext> logger)
-            : base(options)
-        {
-            Logger = logger;
-        }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.EnableDetailedErrors();
-            optionsBuilder.EnableSensitiveDataLogging();
-
-            switch (Provider)
-            {
-                case DatabaseProvider.SQLite:
-                    optionsBuilder.UseSqlite(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
-                    break;
-
-                case DatabaseProvider.MySQL:
-                    optionsBuilder.UseMySql(ConnectionString, ServerVersion.AutoDetect(ConnectionString), options => options.MigrationsAssembly("LANCommander.Server.Data.MySQL"));
-                    break;
-
-                case DatabaseProvider.PostgreSQL:
-                    optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
-                    break;
-            }
-
-            // optionsBuilder.UseLazyLoadingProxies();
-
-            base.OnConfiguring(optionsBuilder);
-        }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -435,7 +400,5 @@ namespace LANCommander.Server.Data
         public DbSet<Issue>? Issues { get; set; }
         public DbSet<Page>? Pages { get; set; }
         public DbSet<StorageLocation>? StorageLocations { get; set; }
-        public DbSet<Role>? Roles { get; set; }
-        public DbSet<User>? Users { get; set; }
     }
 }

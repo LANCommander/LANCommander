@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,8 @@ namespace LANCommander.Server.Services
         public ScriptService(
             ILogger<ScriptService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper) { }
 
         public static IEnumerable<Snippet> GetSnippets()
         {

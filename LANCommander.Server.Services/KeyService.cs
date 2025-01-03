@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Enums;
+﻿using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,8 @@ namespace LANCommander.Server.Services
         public KeyService(
             ILogger<KeyService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper) { }
 
         public async Task<Key> AllocateAsync(Key key, User user)
         {

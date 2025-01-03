@@ -1,4 +1,5 @@
-﻿using CoreRCON;
+﻿using AutoMapper;
+using CoreRCON;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
@@ -14,7 +15,8 @@ namespace LANCommander.Server.Services
         public ServerConsoleService(
             ILogger<ServerConsoleService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper) { }
 
         public async Task<string[]> ReadLogAsync(Guid logId)
         {

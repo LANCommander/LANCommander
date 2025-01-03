@@ -11,6 +11,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using SixLabors.ImageSharp.PixelFormats;
+using AutoMapper;
 
 namespace LANCommander.Server.Services
 {
@@ -31,8 +32,9 @@ namespace LANCommander.Server.Services
         public MediaService(
             ILogger<MediaService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
+            StorageLocationService storageLocationService,
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             StorageLocationService = storageLocationService;
         }

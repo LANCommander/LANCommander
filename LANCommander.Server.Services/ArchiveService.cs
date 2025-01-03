@@ -11,6 +11,7 @@ using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 
 namespace LANCommander.Server.Services
 {
@@ -21,8 +22,9 @@ namespace LANCommander.Server.Services
         public ArchiveService(
             ILogger<ArchiveService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
+            StorageLocationService storageLocationService,
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             StorageLocationService = storageLocationService;
         }
@@ -93,7 +95,7 @@ namespace LANCommander.Server.Services
 
             var deserializer = new DeserializerBuilder()
                 .IgnoreUnmatchedProperties()
-                .WithNamingConvention(new PascalCaseNamingConvention())
+                .WithNamingConvention(new YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention())
                 .Build();
 
             var manifest = deserializer.Deserialize<GameManifest>(manifestContents);

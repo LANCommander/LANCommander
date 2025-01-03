@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
+using AutoMapper;
 
 namespace LANCommander.Server.Services
 {
@@ -17,9 +18,10 @@ namespace LANCommander.Server.Services
         public PlaySessionService(
             ILogger<PlaySessionService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
             ServerService serverService,
-            ServerProcessService serverProcessService) : base(logger, cache, repositoryFactory)
+            ServerProcessService serverProcessService,
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             ServerService = serverService;
             ServerProcessService = serverProcessService;

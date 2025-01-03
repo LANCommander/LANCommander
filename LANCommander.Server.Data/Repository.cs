@@ -1,11 +1,8 @@
-﻿using LANCommander.SDK.Extensions;
-using LANCommander.SDK;
-using LANCommander.Server.Data.Models;
+﻿using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
-using System.Threading;
 using AutoMapper.QueryableExtensions;
 using AutoMapper;
 using LANCommander.Server.Data.Enums;
@@ -14,37 +11,22 @@ namespace LANCommander.Server.Data
 {
     public class Repository<T> : IDisposable where T : class, IBaseModel
     {
-        public readonly DatabaseContext Context;
+        private readonly DatabaseContext Context;
         private readonly IMapper Mapper;
-        private readonly IHttpContextAccessor HttpContextAccessor;
         private readonly ILogger Logger;
 
         private List<Func<IQueryable<T>, IQueryable<T>>> Modifiers = new List<Func<IQueryable<T>, IQueryable<T>>>();
 
-        private User User;
-
         public Repository(
-            IDbContextFactory<DatabaseContext> contextFactory,
+            DatabaseContext databaseContext,
             IMapper mapper,
-            IHttpContextAccessor httpContextAccessor,
             ILogger logger)
         {
-            Context = contextFactory.CreateDbContext();
+            Context = databaseContext;
             Mapper = mapper;
-            HttpContextAccessor = httpContextAccessor;
             Logger = logger;
 
             Logger?.LogDebug("Opened up context {ContextId}", Context.ContextId);
-        }
-
-        public Repository(
-            IDbContextFactory<DatabaseContext> contextFactory,
-            IMapper mapper,
-            IHttpContextAccessor httpContextAccessor)
-        {
-            Context = contextFactory.CreateDbContext();
-            Mapper = mapper;
-            HttpContextAccessor = httpContextAccessor;
         }
 
         private DbSet<T> DbSet
@@ -54,7 +36,7 @@ namespace LANCommander.Server.Data
 
         private DbSet<User> UserDbSet
         {
-            get { return Context.Set<User>(); }
+            get { return Context.Users; }
         }
 
         public Repository<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier)
@@ -159,7 +141,7 @@ namespace LANCommander.Server.Data
             }
         }
 
-        public async Task <ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
+        public async Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
         {
             try
             {
@@ -233,14 +215,15 @@ namespace LANCommander.Server.Data
 
         public async Task<T> FindAsync(Guid id)
         {
-            try {
+            try
+            {
                 //using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 //{
-                    var entity = await Query(x => x.Id == id).FirstAsync();
+                var entity = await Query(x => x.Id == id).FirstAsync();
 
                 ///    op.Complete();
 
-                    return entity;
+                return entity;
                 //}
             }
             finally
@@ -255,11 +238,11 @@ namespace LANCommander.Server.Data
             {
                 //using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 //{
-                    var entity = await Query(x => x.Id == id).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
+                var entity = await Query(x => x.Id == id).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
 
                 //    op.Complete();
 
-                    return entity;
+                return entity;
                 //}
             }
             finally
@@ -274,11 +257,11 @@ namespace LANCommander.Server.Data
             {
                 //using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
                 //{
-                    var entity = await Query(predicate).FirstOrDefaultAsync();
+                var entity = await Query(predicate).FirstOrDefaultAsync();
 
                 //    op.Complete();
 
-                    return entity;
+                return entity;
                 //}
             }
             finally
@@ -293,11 +276,11 @@ namespace LANCommander.Server.Data
             {
                 //using (var op = Logger.BeginOperation("Getting first or default of type {EntityType}", typeof(T).Name))
                 //{
-                    var entity = await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
+                var entity = await Query(predicate).ProjectTo<U>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
 
                 //    op.Complete();
 
-                    return entity;
+                return entity;
                 //}
             }
             finally
@@ -334,21 +317,9 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                var currentUser = await GetCurrentUserId();
+                await Context.AddAsync(entity);
 
-                //using (var op = Logger.BeginOperation("Adding entity of type {EntityType}", typeof(T).Name))
-                //{
-                    entity.CreatedById = currentUser;
-                    entity.UpdatedById = currentUser;
-                    entity.CreatedOn = DateTime.UtcNow;
-                    entity.UpdatedOn = DateTime.UtcNow;
-
-                    await Context.AddAsync(entity);
-
-                    //op.Complete();
-
-                    return entity;
-                //}
+                return entity;
             }
             finally
             {
@@ -360,11 +331,6 @@ namespace LANCommander.Server.Data
         {
             try
             {
-                var currentUserId = await GetCurrentUserId();
-
-                entity.UpdatedById = currentUserId;
-                entity.UpdatedOn = DateTime.UtcNow;
-
                 DbSet.Attach(entity);
                 Context.Entry(entity).State = EntityState.Modified;
 
@@ -386,7 +352,7 @@ namespace LANCommander.Server.Data
             {
                 //using (var op = Logger.BeginOperation("Deleting entity with ID {EntityId}", entity.Id))
                 //{
-                    Context.Remove(entity);
+                Context.Remove(entity);
 
                 //    op.Complete();
                 //}
@@ -403,7 +369,7 @@ namespace LANCommander.Server.Data
             {
                 //using (var op = Logger.BeginOperation("Saving changes!"))
                 //{
-                    await Context.SaveChangesAsync();
+                await Context.SaveChangesAsync();
 
                 //    op.Complete();
                 //}
@@ -424,22 +390,6 @@ namespace LANCommander.Server.Data
             {
                 Reset();
             }
-        }
-
-        private async Task<Guid?> GetCurrentUserId()
-        {
-            if (HttpContextAccessor?.HttpContext?.User?.Identity?.IsAuthenticated == true)
-            {
-                if (User == null)
-                    User = await GetUser(HttpContextAccessor.HttpContext.User.Identity.Name);
-
-                if (User == null)
-                    return null;
-                else
-                    return User.Id;
-            }
-            else
-                return null;
         }
 
         private void Reset()

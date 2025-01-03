@@ -1,26 +1,18 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public abstract class BaseDatabaseService<T> : BaseService, IBaseDatabaseService<T> where T : class, IBaseModel
+    public abstract class BaseDatabaseService<T>(ILogger logger, IFusionCache cache, DatabaseContext databaseContext, IMapper mapper) : BaseService(logger), IBaseDatabaseService<T> where T : class, IBaseModel
     {
-        protected readonly IFusionCache Cache;
-        protected Repository<T> Repository { get; set; }
-
-        public BaseDatabaseService(ILogger logger, IFusionCache cache, RepositoryFactory repositoryFactory) : base(logger)
-        {
-            Cache = cache;
-            Repository = repositoryFactory.Create<T>();
-        }
+        protected readonly IFusionCache Cache = cache;
+        protected readonly Repository<T> Repository = new Repository<T>(databaseContext, mapper, logger);
 
         public IBaseDatabaseService<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier)
         {
@@ -80,17 +72,17 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
         {
-            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
+            Logger?.LogDebug("Getting data from context ID {ContextId}", databaseContext.ContextId);
             var results = await Repository.GetAsync(predicate);
-            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
+            Logger?.LogDebug("Done getting data from context ID {ContextId}", databaseContext.ContextId);
             return results;
         }
 
         public virtual async Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate)
         {
-            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
+            Logger?.LogDebug("Getting data from context ID {ContextId}", databaseContext.ContextId);
             var results = await Repository.GetAsync<U>(predicate);
-            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
+            Logger?.LogDebug("Done getting data from context ID {ContextId}", databaseContext.ContextId);
             return results;
         }
 

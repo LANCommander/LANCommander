@@ -20,11 +20,11 @@ namespace LANCommander.Server.Services
 
         public RoleService(
             ILogger<RoleService> logger,
-            IMapper mapper,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
             IdentityContextFactory identityContextFactory,
-            CollectionService collectionService) : base(logger, cache, repositoryFactory)
+            CollectionService collectionService,
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             IdentityContext = identityContextFactory.Create();
             Mapper = mapper;

@@ -24,12 +24,9 @@ namespace LANCommander.Server.Services
         private readonly IdentityContext IdentityContext;
         private readonly IMapper Mapper;
 
-        public RepositoryFactory repositoryFactory { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
         public UserService(
             ILogger<UserService> logger,
             IMapper mapper,
-            RepositoryFactory repositoryFactory,
             RoleService roleService,
             IdentityContextFactory identityContextFactory) : base(logger)
         {

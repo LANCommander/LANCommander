@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -11,7 +12,8 @@ namespace LANCommander.Server.Services
         public UserCustomFieldService(
             ILogger<UserCustomFieldService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper) { }
 
         public async Task<UserCustomField> GetAsync(Guid userId, string name)
         {

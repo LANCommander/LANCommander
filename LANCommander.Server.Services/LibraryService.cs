@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -19,9 +20,10 @@ namespace LANCommander.Server.Services
         public LibraryService(
             ILogger<LibraryService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
             UserService userService,
-            GameService gameService) : base(logger, cache, repositoryFactory)
+            GameService gameService,
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             UserService = userService;
             GameService = gameService;

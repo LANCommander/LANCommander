@@ -10,6 +10,7 @@ using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
+using AutoMapper;
 
 namespace LANCommander.Server.Services
 {
@@ -20,8 +21,9 @@ namespace LANCommander.Server.Services
         public RedistributableService(
             ILogger<RedistributableService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
+            ArchiveService archiveService,
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             ArchiveService = archiveService;
         }

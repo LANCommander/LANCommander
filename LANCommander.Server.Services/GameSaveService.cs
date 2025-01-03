@@ -4,6 +4,7 @@ using LANCommander.Helpers;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
+using AutoMapper;
 
 namespace LANCommander.Server.Services
 {
@@ -12,7 +13,8 @@ namespace LANCommander.Server.Services
         public GameSaveService(
             ILogger<GameSaveService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper) { }
 
         public override async Task DeleteAsync(GameSave entity)
         {

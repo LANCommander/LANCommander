@@ -7,6 +7,7 @@ using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
 using ZiggyCreatures.Caching.Fusion;
+using AutoMapper;
 
 namespace LANCommander.Server.Services
 {
@@ -18,9 +19,10 @@ namespace LANCommander.Server.Services
         public ServerService(
             ILogger<ServerService> logger,
             IFusionCache cache,
-            RepositoryFactory repositoryFactory,
             GameService gameService,
-            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
+            ArchiveService archiveService,
+            IMapper mapper,
+            DatabaseContext databaseContext) : base(logger, cache, databaseContext, mapper)
         {
             GameService = gameService;
             ArchiveService = archiveService;

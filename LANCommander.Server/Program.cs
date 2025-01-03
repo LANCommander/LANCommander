@@ -45,6 +45,16 @@ namespace LANCommander.Server
 
             var builder = WebApplication.CreateBuilder(args);
 
+            var switchMappings = new Dictionary<string, string>
+            {
+                { "--database-provider", "DatabaseProvider" },
+                { "--connection-string", "ConnectionString__lancommander" }
+            };
+
+            builder.Configuration.AddCommandLine(args, switchMappings);
+
+            builder.AddServiceDefaults();
+
             ConfigurationManager configuration = builder.Configuration;
 
             #region Debug
@@ -67,16 +77,22 @@ namespace LANCommander.Server
             Log.Debug("Loading settings");
             var settings = SettingService.GetSettings(true);
 
-            var databaseProviderParameter = args.FirstOrDefault(arg => arg.StartsWith("--database-provider="))?.Split('=', 2).Last();
-            var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
+            var databaseProviderParameter = configuration["DatabaseProvider"];
+            var connectionStringParameter = configuration.GetConnectionString("lancommander");
 
             if (!string.IsNullOrWhiteSpace(databaseProviderParameter))
+            {
                 DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
+                settings.DatabaseProvider = DatabaseContext.Provider;
+            }
             else
                 DatabaseContext.Provider = settings.DatabaseProvider;
 
             if (!string.IsNullOrWhiteSpace(connectionStringParameter))
+            {
                 DatabaseContext.ConnectionString = connectionStringParameter;
+                settings.DatabaseConnectionString = connectionStringParameter;
+            }
             else
                 DatabaseContext.ConnectionString = settings.DatabaseConnectionString;
 
@@ -158,11 +174,11 @@ namespace LANCommander.Server
             builder.Services.AddAutoMapper(typeof(AutoMapper));
 
             Log.Debug("Starting web server on port {Port}", settings.Port);
-            builder.WebHost.ConfigureKestrel(options =>
-            {
-                // Configure as HTTP only
-                options.ListenAnyIP(settings.Port);
-            });
+            //builder.WebHost.ConfigureKestrel(options =>
+            //{
+            //    // Configure as HTTP only
+            //    options.ListenAnyIP(settings.Port);
+            //});
 
             builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>
             {
@@ -386,6 +402,7 @@ namespace LANCommander.Server
 
             Log.Debug("Building Application");
             var app = builder.Build();
+            app.MapDefaultEndpoints();
 
             app.UseCors("CorsPolicy");
 

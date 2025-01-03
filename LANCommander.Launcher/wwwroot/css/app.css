@@ -177,6 +177,10 @@ app {
   opacity: 1;
 }
 
+.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+  line-height: 2;
+}
+
 @keyframes a {
   to {
     background-position: -200% 0;
@@ -511,19 +515,29 @@ app {
   width: 320px;
   margin-top: 74px;
   flex-shrink: 0;
+  padding: 16px;
+  overflow-y: scroll;
+  background-color: #141414;
+}
+.depot-filter .ant-form-item {
+  margin-bottom: 16px;
 }
 
-.depot-games {
+.depot-list {
   width: 100%;
   overflow-y: scroll;
   overflow-x: hidden;
+  padding-top: 47px;
+  padding-left: 31px;
+  padding-right: 31px;
+  padding-bottom: 26px;
+}
+
+.depot-list-items,
+.depot-list-group-items {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 16px;
-  padding-top: 59.5px;
-  padding-left: 31px;
-  padding-right: 31px;
-  padding-bottom: 38.5px;
 }
 
 .depot-game {
@@ -536,6 +550,7 @@ app {
   box-shadow: 0px 0px 0px 0px #000;
   position: relative;
   cursor: pointer;
+  flex-grow: 1;
 }
 .depot-game-cover:hover {
   transform: scale(1.2);
@@ -554,12 +569,22 @@ app {
   display: block;
   opacity: 1;
 }
+.depot-game-default-cover {
+  aspect-ratio: 0.6666666667;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, #555 0%, #333 100%);
+  font-size: 20px;
+  padding: 16px;
+  text-align: center;
+}
 .depot-game img {
   width: 100%;
 }
 
 .depot-game-details {
-  z-index: 600;
+  z-index: 600 !important;
 }
 .depot-game-details .ant-drawer-mask {
   background: linear-gradient(45deg, rgba(0, 0, 0, 0.5882352941), rgba(58, 58, 58, 0.5411764706));
@@ -575,9 +600,11 @@ app {
 .depot-game-details .ant-drawer-content-wrapper {
   height: calc(100% - 128px) !important;
   width: 106.6666666667vh;
-  transform: none !important;
   left: calc(50vw - 53.33vh);
   right: auto;
+  box-shadow: none;
+}
+.depot-game-details .ant-drawer-open .ant-drawer-content-wrapper {
   box-shadow: 0 0 64px black;
 }
 .depot-game-details .ant-drawer-body {

@@ -11,6 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
+@inject IConfiguration Configuration
 
 <PageTitle>Database Config - First Time Setup</PageTitle>
 
@@ -68,7 +69,7 @@
                 break;
 
             case DatabaseProvider.PostgreSQL:
-                Settings.DatabaseConnectionString = "Host=localhost;Port=5432;Database=LANCommander;User Id=postgres;Password=password";
+                Settings.DatabaseConnectionString = Configuration.GetConnectionString("lancommander") ?? "Host=localhost;Port=5432;Database=LANCommander;User Id=postgres;Password=password";
                 break;
         }
     }

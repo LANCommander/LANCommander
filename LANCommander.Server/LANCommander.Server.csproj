@@ -132,6 +132,7 @@
     <ProjectReference Include="..\LANCommander.Server.Data.SQLite\LANCommander.Server.Data.SQLite.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
+    <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
     <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
     <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />
   </ItemGroup>

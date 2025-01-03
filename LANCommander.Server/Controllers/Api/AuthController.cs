@@ -63,7 +63,7 @@ namespace LANCommander.Server.Controllers.Api
                     { "Action", AuthenticationProviderActionType.Login }
                 });
                 
-                properties.RedirectUri = Url.Action(nameof(LoginAsync), "Auth", new { provider = provider });
+                properties.RedirectUri = Url.Action("Login", "Auth", new { provider = provider });
                 
                 return Challenge(properties, provider);
             }

@@ -13,23 +13,15 @@ using Microsoft.AspNetCore.Http.Features;
 using LANCommander.SDK.Enums;
 using Serilog;
 using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
-using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
 using LANCommander.Server.Services.Factories;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Authentication;
 using LANCommander.Server.Jobs.Background;
 using LANCommander.Server.Services.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
-using Microsoft.CodeAnalysis.Options;
 using Scalar.AspNetCore;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.DotNet.Scaffolding.Shared;
-using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
-using Microsoft.EntityFrameworkCore.Internal;
 
 namespace LANCommander.Server
 {
@@ -109,17 +101,25 @@ namespace LANCommander.Server
             });
 
             builder.Services.AddSerilogHub<LoggingHub>();
-            builder.Services.AddSerilog((serviceProvider, config) => config
-                .WriteTo.Console()
-                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery)
+            builder.Services.AddSerilog(((serviceProvider, config) =>
+            {
+                config
+                    .WriteTo.Console()
+                    .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery)
 #if DEBUG
-                .WriteTo.Seq("http://localhost:5341")
-                .MinimumLevel.Debug()
+                    .WriteTo.Seq("http://localhost:5341")
+                    .MinimumLevel.Debug()
 #endif
-                .WriteTo.SignalR<LoggingHub>(
-                    serviceProvider,
-                    (context, message, logEvent) => LoggingHub.Log(context, message, logEvent)
-                ));
+                    .WriteTo.SignalR<LoggingHub>(
+                        serviceProvider,
+                        (context, message, logEvent) => LoggingHub.Log(context, message, logEvent)
+                    );
+
+                if (!string.IsNullOrEmpty(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+                {
+                    AddSerilogOtel(config, builder);
+                }
+            }));
 
             #region Validate Settings
             Log.Debug("Validating settings");
@@ -339,7 +339,7 @@ namespace LANCommander.Server
 
             Log.Debug("Registering AntDesign Blazor");
             builder.Services.AddAntDesign();
-            
+
             builder.Services.AddHttpClient();
 
             Log.Debug("Registering Services");
@@ -546,6 +546,37 @@ namespace LANCommander.Server
                 Log.Debug("No database provider has been setup, application is fresh and needs first time setup");
 
             app.Run();
+        }
+
+        private static void AddSerilogOtel(LoggerConfiguration config, WebApplicationBuilder builder)
+        {
+            config
+                .WriteTo.OpenTelemetry(options =>
+                {
+                    options.Endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+                    var headers = builder.Configuration["OTEL_EXPORTER_OTLP_HEADERS"]?.Split(',') ?? [];
+                    foreach (var header in headers)
+                    {
+                        var (key, value) = header.Split('=') switch
+                        {
+                        [string k, string v] => (k, v),
+                            var v => throw new Exception($"Invalid header format {v}")
+                        };
+
+                        options.Headers.Add(key, value);
+                    }
+                    options.ResourceAttributes.Add("service.name", "apiservice");
+
+                    //To remove the duplicate issue, we can use the below code to get the key and value from the configuration
+
+                    var (otelResourceAttribute, otelResourceAttributeValue) = builder.Configuration["OTEL_RESOURCE_ATTRIBUTES"]?.Split('=') switch
+                    {
+                    [string k, string v] => (k, v),
+                        _ => throw new Exception($"Invalid header format {builder.Configuration["OTEL_RESOURCE_ATTRIBUTES"]}")
+                    };
+
+                    options.ResourceAttributes.Add(otelResourceAttribute, otelResourceAttributeValue);
+                });
         }
     }
 }

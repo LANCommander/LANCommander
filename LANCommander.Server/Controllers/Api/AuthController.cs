@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using AutoMapper;
 using LANCommander.SDK.Models;
 using Microsoft.AspNetCore.Authentication;
 using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
@@ -41,16 +42,19 @@ namespace LANCommander.Server.Controllers.Api
         private readonly AuthenticationService AuthenticationService;
         private readonly UserService UserService;
         private readonly RoleService RoleService;
+        private readonly IMapper Mapper;
 
         public AuthController(
             AuthenticationService authenticationService,
             UserService userService,
             RoleService roleService,
+            IMapper mapper,
             ILogger<AuthController> logger) : base(logger)
         {
             AuthenticationService = authenticationService;
             UserService = userService;
             RoleService = roleService;
+            Mapper = mapper;
         }
 
         [HttpGet("Login")]
@@ -185,6 +189,12 @@ namespace LANCommander.Server.Controllers.Api
             {
                 //Message = "Error:\n" + String.Join('\n', result.Errors.Select(e => e.Description))
             });
+        }
+
+        [HttpGet("AuthenticationProviders")]
+        public IActionResult GetAuthenticationProviders()
+        {
+            return Ok(Mapper.Map<IEnumerable<AuthenticationProvider>>(Settings.Authentication.AuthenticationProviders));
         }
     }
 }

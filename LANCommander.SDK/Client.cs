@@ -509,6 +509,16 @@ namespace LANCommander.SDK
             }
         }
 
+        public async Task<IEnumerable<AuthenticationProvider>> GetAuthenticationProviders()
+        {
+            return await GetRequestAsync<IEnumerable<AuthenticationProvider>>("/api/Auth/AuthenticationProviders");
+        }
+
+        public string GetAuthenticationProviderLoginUrl(string provider)
+        {
+            return $"{BaseUrl}api/Auth/Login?Provider={provider}";
+        }
+
         public async Task<bool> PingAsync()
         {
             var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.Get));

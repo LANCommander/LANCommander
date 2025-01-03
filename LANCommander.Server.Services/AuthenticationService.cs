@@ -169,11 +169,11 @@ namespace LANCommander.Server.Services
             return token;
         }
 
-        public static async Task<List<AuthenticationProvider>> GetAuthenticationProviderTemplatesAsync()
+        public static async Task<List<Models.AuthenticationProvider>> GetAuthenticationProviderTemplatesAsync()
         {
             var files = Directory.GetFiles(@"Templates/AuthenticationProviders", "*.yml", SearchOption.AllDirectories);
 
-            var externalProviders = new List<AuthenticationProvider>();
+            var externalProviders = new List<Models.AuthenticationProvider>();
 
 
             var deserializer = new DeserializerBuilder()
@@ -186,7 +186,7 @@ namespace LANCommander.Server.Services
                 {
                     var contents = await File.ReadAllTextAsync(file);
 
-                    externalProviders.Add(deserializer.Deserialize<AuthenticationProvider>(contents));
+                    externalProviders.Add(deserializer.Deserialize<Models.AuthenticationProvider>(contents));
                 }
                 catch { }
             }

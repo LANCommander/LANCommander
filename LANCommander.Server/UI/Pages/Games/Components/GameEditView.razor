@@ -72,41 +72,47 @@
     [Parameter] public RenderFragment<Game>? ChildContent { get; set; }
 
     Game Game { get; set; } = new Game();
+    Guid _id;
 
     protected override async Task OnParametersSetAsync()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        if (_id != Id)
         {
-            if (Id != Guid.Empty)
-                Game = await gameService
-                    .Include(g => g.Actions)
-                    .Include(g => g.Archives)
-                    .Include(g => g.BaseGame)
-                    .Include(g => g.Categories)
-                    .Include(g => g.Collections)
-                    .Include(g => g.CreatedBy)
-                    .Include(g => g.DependentGames)
-                    .Include(g => g.Developers)
-                    .Include(g => g.Engine)
-                    .Include(g => g.GameSaves)
-                    .Include(g => g.Genres)
-                    .Include(g => g.Keys)
-                    .Include(g => g.Media)
-                    .Include(g => g.MultiplayerModes)
-                    .Include(g => g.Platforms)
-                    .Include(g => g.PlaySessions)
-                    .Include(g => g.Publishers)
-                    .Include(g => g.Redistributables)
-                    .Include(g => g.SavePaths)
-                    .Include(g => g.Scripts)
-                    .Include(g => g.Tags)
-                    .Include(g => g.UpdatedBy)
-                    .GetAsync(Id);
-            else
-                Game = new Game();
-        }
+            _id = Id;
+            
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                if (_id != Guid.Empty)
+                    Game = await gameService
+                        .Include(g => g.Actions)
+                        .Include(g => g.Archives)
+                        .Include(g => g.BaseGame)
+                        .Include(g => g.Categories)
+                        .Include(g => g.Collections)
+                        .Include(g => g.CreatedBy)
+                        .Include(g => g.DependentGames)
+                        .Include(g => g.Developers)
+                        .Include(g => g.Engine)
+                        .Include(g => g.GameSaves)
+                        .Include(g => g.Genres)
+                        .Include(g => g.Keys)
+                        .Include(g => g.Media)
+                        .Include(g => g.MultiplayerModes)
+                        .Include(g => g.Platforms)
+                        .Include(g => g.PlaySessions)
+                        .Include(g => g.Publishers)
+                        .Include(g => g.Redistributables)
+                        .Include(g => g.SavePaths)
+                        .Include(g => g.Scripts)
+                        .Include(g => g.Tags)
+                        .Include(g => g.UpdatedBy)
+                        .GetAsync(_id);
+                else
+                    Game = new Game();
+            }
 
-        if (Game == null)
-            NavigationManager.NavigateTo("/Games");
+            if (Game == null)
+                NavigationManager.NavigateTo("/Games");
+        }
     }
 }

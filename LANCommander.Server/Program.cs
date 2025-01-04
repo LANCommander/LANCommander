@@ -415,6 +415,11 @@ namespace LANCommander.Server
 
             app.UseAntiforgery();
             app.UseStaticFiles();
+            
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto
+            });
 
             app.MapRazorComponents<UI.App>()
                 .AddInteractiveServerRenderMode();

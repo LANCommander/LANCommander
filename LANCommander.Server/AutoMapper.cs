@@ -50,6 +50,8 @@ namespace LANCommander.Server
                 .ForMember(dest =>
                     dest.Cover,
                     opt => opt.MapFrom(src => src.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover).FirstOrDefault()));
+
+            CreateMap<Services.Models.AuthenticationProvider, SDK.Models.AuthenticationProvider>();
         }
     }
 }

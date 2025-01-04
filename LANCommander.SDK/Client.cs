@@ -509,7 +509,7 @@ namespace LANCommander.SDK
             }
         }
 
-        public async Task<IEnumerable<AuthenticationProvider>> GetAuthenticationProviders()
+        public async Task<IEnumerable<AuthenticationProvider>> GetAuthenticationProvidersAsync()
         {
             return await GetRequestAsync<IEnumerable<AuthenticationProvider>>("/api/Auth/AuthenticationProviders");
         }

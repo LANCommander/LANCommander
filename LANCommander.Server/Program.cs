@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using LANCommander.Server.Jobs.Background;
 using LANCommander.Server.Services.Models;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;

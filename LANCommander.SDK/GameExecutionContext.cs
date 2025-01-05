@@ -96,13 +96,17 @@ namespace LANCommander.SDK
 
         public void Dispose()
         {
-            if (Process != null)
+            try
             {
-                if (!Process.HasExited)
-                    Process.Close();
+                if (Process != null)
+                {
+                    if (!Process.HasExited)
+                        Process.Close();
 
-                Process.Dispose();
+                    Process.Dispose();
+                }
             }
+            catch { }
 
             Client.Lobbies.ReleaseSteam();
         }

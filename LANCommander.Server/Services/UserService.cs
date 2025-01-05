@@ -1,42 +1,28 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Services
 {
-    public class UserService : BaseService
+    public class UserService(
+        ILogger<UserService> logger,
+        DatabaseContext databaseContext,
+        UserManager<User> userManager) : BaseService(logger)
     {
-        private readonly DatabaseContext DatabaseContext;
-        private readonly UserManager<User> UserManager;
-        private readonly HttpContext HttpContext;
-
-        public UserService(
-            ILogger<UserService> logger,
-            DatabaseContext databaseContext,
-            IHttpContextAccessor httpContextAccessor,
-            UserManager<User> userManager) : base(logger)
+        public Task<User> Get(Guid id)
         {
-            DatabaseContext = databaseContext;
-            UserManager = userManager;
-            HttpContext = httpContextAccessor.HttpContext;
+            return userManager.FindByIdAsync(id.ToString());
         }
 
-        public async Task<User> Get(Guid id)
+        public Task<User> Get(string username)
         {
-            return await UserManager.FindByIdAsync(id.ToString());
+            return userManager.FindByNameAsync(username);
         }
 
-        public async Task<User> Get(string username)
+        public Task<UserCustomField> GetCustomField(Guid userId, string name)
         {
-            return await UserManager.FindByNameAsync(username);
-        }
-
-        public async Task<UserCustomField> GetCustomField(Guid userId, string name)
-        {
-            using (var repo = new Repository<UserCustomField>(DatabaseContext, HttpContext))
-            {
-                return repo.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
-            }
+            return databaseContext.Set<UserCustomField>().FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == name);
         }
 
         public async Task UpdateCustomField(Guid userId, string name, string value)
@@ -47,58 +33,54 @@ namespace LANCommander.Server.Services
             if (value.Length > 1024)
                 throw new ArgumentException("Field value must be 1024 characters or less");
 
-            using (var repo = new Repository<UserCustomField>(DatabaseContext, HttpContext))
+
+            var existing = await databaseContext.Set<UserCustomField>().FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == name);
+
+            if (existing is not null && existing.Value == value)
+                return;
+
+            if (existing == null)
             {
-                var existing = repo.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
-
-                if (existing.Value == value)
-                    return;
-
-                if (existing == null)
+                databaseContext.Set<UserCustomField>().Add(new UserCustomField
                 {
-                    await repo.Add(new UserCustomField
-                    {
-                        Name = name,
-                        Value = value
-                    });
+                    Name = name,
+                    Value = value
+                });
 
-                    await repo.SaveChanges();
-                }
-                else if (!String.IsNullOrWhiteSpace(value))
-                {
-                    existing.Value = value;
+                await databaseContext.SaveChangesAsync();
+            }
+            else if (!string.IsNullOrWhiteSpace(value))
+            {
+                existing.Value = value;
 
-                    repo.Update(existing);
+                databaseContext.Set<UserCustomField>().Update(existing);
 
-                    await repo.SaveChanges();
-                }
-                else
-                {
-                    await DeleteCustomField(userId, name);
-                }
+                await databaseContext.SaveChangesAsync();
+            }
+            else
+            {
+                await DeleteCustomField(userId, name);
             }
         }
 
         public async Task DeleteCustomField(Guid userId, string name)
         {
-            using (var repo = new Repository<UserCustomField>(DatabaseContext, HttpContext))
-            {
-                var existing = repo.FirstOrDefault(cf => cf.UserId == userId && cf.Name == name);
+            var existing = await databaseContext.Set<UserCustomField>().FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == name);
 
-                repo.Delete(existing);
-                await repo.SaveChanges();
-            }
+            if (existing is null) return;
+
+            databaseContext.Set<UserCustomField>().Remove(existing);
+            await databaseContext.SaveChangesAsync();
         }
 
         public async Task DeleteCustomField(Guid userId, Guid id)
         {
-            using (var repo = new Repository<UserCustomField>(DatabaseContext, HttpContext))
-            {
-                var existing = repo.FirstOrDefault(cf => cf.UserId == userId && cf.Id == id);
+            var existing = await databaseContext.Set<UserCustomField>().FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Id == id);
 
-                repo.Delete(existing);
-                await repo.SaveChanges();
-            }
+            if (existing is null) return;
+
+            databaseContext.Set<UserCustomField>().Remove(existing);
+            await databaseContext.SaveChangesAsync();
         }
     }
 }

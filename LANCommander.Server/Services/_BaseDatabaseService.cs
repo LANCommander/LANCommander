@@ -6,16 +6,9 @@ using System.Linq.Expressions;
 
 namespace LANCommander.Server.Services
 {
-    public abstract class BaseDatabaseService<T> : BaseService where T : BaseModel
+    public abstract class BaseDatabaseService<T>(ILogger logger, DatabaseContext dbContext) : BaseService(logger) where T : BaseModel
     {
-        public DatabaseContext Context { get; set; }
-        public HttpContext HttpContext { get; set; }
-
-        public BaseDatabaseService(ILogger logger, DatabaseContext dbContext, IHttpContextAccessor httpContextAccessor) : base(logger)
-        {
-            Context = dbContext;
-            HttpContext = httpContextAccessor.HttpContext;
-        }
+        protected readonly DatabaseContext Context = dbContext;
 
         public virtual async Task<ICollection<T>> Get()
         {
@@ -24,18 +17,12 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> Get(Guid id)
         {
-            using (var repo = new Repository<T>(Context, HttpContext))
-            {
-                return await repo.Find(id);
-            }
+            return await Context.Set<T>().FindAsync(id);
         }
 
         public virtual IQueryable<T> Get(Expression<Func<T, bool>> predicate)
         {
-            using (var repo = new Repository<T>(Context, HttpContext))
-            {
-                return repo.Get(predicate);
-            }
+            return Context.Set<T>().Where(predicate);
         }
 
         public virtual bool Exists(Guid id)
@@ -45,72 +32,63 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> Add(T entity)
         {
-            using (var repo = new Repository<T>(Context, HttpContext))
-            {
-                entity = await repo.Add(entity);
-                await repo.SaveChanges();
+            Context.Set<T>().Add(entity);
+            await Context.SaveChangesAsync();
 
-                return entity;
-            }
+            return entity;
         }
 
         /// <summary>
         /// Adds an entity to the database if it does exist as dictated by the predicate
         /// </summary>
-        /// <param name="predicate">Qualifier expressoin</param>
+        /// <param name="predicate">Qualifier expression</param>
         /// <param name="entity">Entity to add</param>
         /// <returns>Newly created or existing entity</returns>
         public virtual async Task<ExistingEntityResult<T>> AddMissing(Expression<Func<T, bool>> predicate, T entity)
         {
-            using (var repo = new Repository<T>(Context, HttpContext))
+            var existing = await Context.Set<T>().FirstOrDefaultAsync(predicate);
+
+            if (existing == null)
             {
-                var existing = repo.Get(predicate).FirstOrDefault();
+                Context.Set<T>().Add(entity);
 
-                if (existing == null)
+                await Context.SaveChangesAsync();
+
+                return new ExistingEntityResult<T>
                 {
-                    entity = await repo.Add(entity);
-
-                    await repo.SaveChanges();
-
-                    return new ExistingEntityResult<T>
-                    {
-                        Value = entity,
-                        Existing = false
-                    };
-                }
-                else
+                    Value = entity,
+                    Existing = false
+                };
+            }
+            else
+            {
+                return new ExistingEntityResult<T>
                 {
-                    return new ExistingEntityResult<T>
-                    {
-                        Value = existing,
-                        Existing = true
-                    };
-                }
+                    Value = existing,
+                    Existing = true
+                };
             }
         }
 
         public virtual async Task<T> Update(T entity)
         {
-            using (var repo = new Repository<T>(Context, HttpContext))
-            {
-                var existing = await repo.Find(entity.Id);
+            var existing = await Context.Set<T>().FindAsync(entity.Id);
 
-                Context.Entry(existing).CurrentValues.SetValues(entity);
+            if (existing == null)
+                throw new InvalidOperationException("Attempted to update an entity that does not exist in the database.");
 
-                entity = repo.Update(existing);
-                await repo.SaveChanges();
+            Context.Entry(existing).CurrentValues.SetValues(entity);
 
-                return entity;
-            }
+            Context.Set<T>().Update(existing);
+            await Context.SaveChangesAsync();
+
+            return entity;
         }
 
         public virtual async Task Delete(T entity)
         {
-            using (var repo = new Repository<T>(Context, HttpContext))
-            {
-                repo.Delete(entity);
-                await repo.SaveChanges();
-            }
+            Context.Set<T>().Remove(entity);
+            await Context.SaveChangesAsync();
         }
     }
 }

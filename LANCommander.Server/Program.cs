@@ -15,6 +15,7 @@ using LANCommander.SDK.Enums;
 using Serilog;
 using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 using LANCommander.Server.Logging;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace LANCommander.Server
 {
@@ -124,10 +125,12 @@ namespace LANCommander.Server
             }));
 
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
-            builder.Services.AddDbContext<DatabaseContext>(b =>
+            builder.Services.AddScoped<IInterceptor, AuditingInterceptor>();
+            builder.Services.AddDbContext<DatabaseContext>((sp, b) =>
             {
                 b.UseLazyLoadingProxies();
                 b.UseSqlite(settings.DatabaseConnectionString);
+                b.AddInterceptors(sp.GetServices<IInterceptor>());
             });
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();

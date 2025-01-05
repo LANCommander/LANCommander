@@ -7,7 +7,6 @@ namespace LANCommander.Server.Services
     {
         public CompanyService(
             ILogger<CompanyService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
+            DatabaseContext dbContext) : base(logger, dbContext) { }
     }
 }

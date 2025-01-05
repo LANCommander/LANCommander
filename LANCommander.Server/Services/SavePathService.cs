@@ -8,7 +8,6 @@ namespace LANCommander.Server.Services
     {
         public SavePathService(
             ILogger<SavePathService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
+            DatabaseContext dbContext) : base(logger, dbContext) { }
     }
 }

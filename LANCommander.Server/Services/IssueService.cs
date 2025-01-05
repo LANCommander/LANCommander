@@ -12,14 +12,14 @@ namespace LANCommander.Server.Services
 {
     public class IssueService : BaseDatabaseService<Issue>
     {
-        private readonly HttpContext HttpContext;
+        private readonly HttpContext? HttpContext;
         private readonly UserManager<User> UserManager;
 
         public IssueService(
             ILogger<IssueService> logger,
             DatabaseContext dbContext,
             IHttpContextAccessor httpContextAccessor,
-            UserManager<User> userManager) : base(logger, dbContext, httpContextAccessor)
+            UserManager<User> userManager) : base(logger, dbContext)
         {
             HttpContext = httpContextAccessor.HttpContext;
             UserManager = userManager;

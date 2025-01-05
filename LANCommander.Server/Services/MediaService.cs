@@ -13,8 +13,7 @@ namespace LANCommander.Server.Services
     {
         public MediaService(
             ILogger<MediaService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
+            DatabaseContext dbContext) : base(logger, dbContext) { }
 
         public override Task Delete(Media entity)
         {

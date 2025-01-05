@@ -16,8 +16,7 @@ namespace LANCommander.Server.Services
         public PageService(
             ILogger<PageService> logger,
             DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor,
-            IFusionCache cache) : base(logger, dbContext, httpContextAccessor)
+            IFusionCache cache) : base(logger, dbContext)
         {
             Cache = cache;
         }

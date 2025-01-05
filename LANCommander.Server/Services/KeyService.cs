@@ -8,8 +8,7 @@ namespace LANCommander.Server.Services
     {
         public KeyService(
             ILogger<CollectionService> logger,
-            DatabaseContext dbContext,
-            IHttpContextAccessor httpContextAccessor) : base(logger, dbContext, httpContextAccessor) { }
+            DatabaseContext dbContext) : base(logger, dbContext) { }
 
         public async Task<Key> Allocate(Key key, User user)
         {

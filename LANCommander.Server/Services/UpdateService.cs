@@ -1,8 +1,7 @@
-﻿using LANCommander.Server.Models;
-using Octokit;
+﻿using Octokit;
 using Semver;
-using System;
 using System.Diagnostics;
+using System.IO.Abstractions;
 using System.IO.Compression;
 using System.Net;
 using System.Reflection;
@@ -10,25 +9,14 @@ using System.Runtime.InteropServices;
 
 namespace LANCommander.Server.Services
 {
-    public class UpdateService : BaseService
+    public class UpdateService(
+        ILogger<UpdateService> logger,
+        IHostApplicationLifetime applicationLifetime,
+        ServerProcessService serverProcessService,
+        ServerService serverService,
+        IGitHubClient githubClient,
+        IPath path) : BaseService(logger)
     {
-        private GitHubClient GitHub;
-        private IHostApplicationLifetime ApplicationLifetime;
-        private ServerService ServerService;
-        private ServerProcessService ServerProcessService;
-
-        public UpdateService(
-            ILogger<UpdateService> logger,
-            IHostApplicationLifetime applicationLifetime,
-            ServerProcessService serverProcessService,
-            ServerService serverService) : base(logger)
-        {
-            GitHub = new GitHubClient(new ProductHeaderValue("LANCommander"));
-            ApplicationLifetime = applicationLifetime;
-            ServerService = serverService;
-            ServerProcessService = serverProcessService;
-        }
-
         public static SemVersion GetCurrentVersion()
         {
             return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
@@ -36,11 +24,9 @@ namespace LANCommander.Server.Services
 
         public async Task<SemVersion> GetLatestVersion()
         {
-            var release = await GitHub.Repository.Release.GetLatest("LANCommander", "LANCommander");
+            var release = await githubClient.Repository.Release.GetLatest("LANCommander", "LANCommander");
 
-            SemVersion version = null;
-
-            SemVersion.TryParse(release.TagName.TrimStart('v'), SemVersionStyles.Strict, out version);
+            SemVersion.TryParse(release.TagName.TrimStart('v'), SemVersionStyles.Strict, out SemVersion? version);
 
             return version;
         }
@@ -56,7 +42,7 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<Release>> GetReleases(int count)
         {
-            return await GitHub.Repository.Release.GetAll("LANCommander", "LANCommander", new ApiOptions
+            return await githubClient.Repository.Release.GetAll("LANCommander", "LANCommander", new ApiOptions
             {
                 PageSize = count,
                 PageCount = 1,
@@ -74,23 +60,23 @@ namespace LANCommander.Server.Services
         {
             string releaseFile = release.Assets.FirstOrDefault(a => a.Name.StartsWith($"LANCommander.Server-{GetOS()}-{GetArchitecture()}-"))?.BrowserDownloadUrl ?? String.Empty;
 
-            if (String.IsNullOrWhiteSpace(releaseFile))
+            if (string.IsNullOrWhiteSpace(releaseFile))
                 throw new NotImplementedException("Your platform is not supported");
 
             Logger?.LogInformation("Stopping all servers");
 
-            var servers = await ServerService.Get();
+            var servers = await serverService.Get();
 
             foreach (var server in servers)
             {
-                if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                    ServerProcessService.StopServer(server.Id);
+                if (serverProcessService.GetStatus(server) == ServerProcessStatus.Running)
+                    serverProcessService.StopServer(server.Id);
             }
 
             Logger?.LogInformation("Servers stopped");
             Logger?.LogInformation("Downloading release version {Version}", release.TagName);
 
-            if (!String.IsNullOrWhiteSpace(releaseFile))
+            if (!string.IsNullOrWhiteSpace(releaseFile))
             {
                 WebClient client = new WebClient();
 
@@ -111,7 +97,7 @@ namespace LANCommander.Server.Services
             {
                 Logger?.LogInformation($"Downloading launcher from {releaseFile}");
 
-                if (!String.IsNullOrWhiteSpace(releaseFile))
+                if (!string.IsNullOrWhiteSpace(releaseFile))
                 {
                     WebClient client = new WebClient();
 
@@ -123,7 +109,7 @@ namespace LANCommander.Server.Services
             }
         }
 
-        private string GetOS()
+        private static string GetOS()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return "Windows";
@@ -132,45 +118,40 @@ namespace LANCommander.Server.Services
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 return "macOS";
 
-            return String.Empty;
+            return string.Empty;
         }
 
-        private string GetArchitecture()
+        private static string GetArchitecture()
         {
-            switch (RuntimeInformation.ProcessArchitecture)
+            return RuntimeInformation.ProcessArchitecture switch
             {
-                case Architecture.X64:
-                    return "x64";
-
-                case Architecture.Arm64:
-                    return "arm64";
-
-                default:
-                    return String.Empty;
-            }
+                Architecture.X64 => "x64",
+                Architecture.Arm64 => "arm64",
+                _ => string.Empty,
+            };
         }
 
         private void ReleaseDownloaded(object? sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
             string version = ((WebClient)sender).QueryString["Version"];
-            string path = Path.Combine(Settings.Update.StoragePath, $"{version}.zip");
+            string zipPath = path.Combine(Settings.Update.StoragePath, $"{version}.zip");
 
             Logger?.LogInformation("Update version {Version} has been downloaded", version);
 
             Logger?.LogInformation("New autoupdater is being extracted");
 
-            string processExecutable = String.Empty;
+            string processExecutable = string.Empty;
 
             if (File.Exists("LANCommander.AutoUpdater.exe"))
                 processExecutable = "LANCommander.AutoUpdater.exe";
             else if (File.Exists("LANCommander.AutoUpdater"))
                 processExecutable = "LANCommander.AutoUpdater";
 
-            using (ZipArchive archive = ZipFile.OpenRead(path))
+            using (ZipArchive archive = ZipFile.OpenRead(zipPath))
             {
                 foreach (ZipArchiveEntry entry in archive.Entries.Where(e => e.FullName == processExecutable))
                 {
-                    entry.ExtractToFile(Path.Combine(processExecutable, entry.FullName));
+                    entry.ExtractToFile(path.Combine(processExecutable, entry.FullName));
                 }
             }
 
@@ -186,7 +167,7 @@ namespace LANCommander.Server.Services
 
             Logger?.LogInformation("Shutting down to get out of the way");
 
-            ApplicationLifetime.StopApplication();
+            applicationLifetime.StopApplication();
         }
     }
 }

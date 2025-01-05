@@ -358,6 +358,7 @@ namespace LANCommander.Server
             var app = builder.Build();
 
             app.UseCors("CorsPolicy");
+            app.UseHttpsRedirection();
 
             app.MapHub<GameServerHub>("/hubs/gameserver");
 

@@ -90,7 +90,7 @@ namespace LANCommander.Server.UI.Pages.Account
                 
                 Model.UserName = User.Identity.Name ?? string.Empty;
                 Model.Email = User.FindFirst(ClaimTypes.Email)?.Value;
-                Model.Password = Guid.NewGuid().ToString();
+                Model.Password = Guid.Empty.ToString();
                 Model.PasswordConfirmation = Model.Password;
                 
                 AuthenticationProvider = Settings.Authentication.AuthenticationProviders.FirstOrDefault(p => p.Slug == provider);
@@ -118,11 +118,17 @@ namespace LANCommander.Server.UI.Pages.Account
                 }
 
                 await UserStore.SetUserNameAsync(user, Model.UserName, CancellationToken.None);
-                var result = await UserManager.CreateAsync(user, Model.Password);
+
+                IdentityResult result;
+
+                if (Model.RegistrationType == RegistrationType.AuthenticationProvider)
+                    result = await UserManager.CreateAsync(user);
+                else
+                    result = await UserManager.CreateAsync(user, Model.Password);
 
                 if (result.Succeeded)
                 {
-                    Logger.LogInformation("User created a new account with password.");
+                    Logger.LogInformation("User created a new account.");
 
                     if (Settings.Roles.DefaultRoleId != Guid.Empty)
                     {

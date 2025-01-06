@@ -1,0 +1,31 @@
+@page "/RedeemToken/{code:guid}"
+@using KristofferStrube.Blazor.Window
+@using LANCommander.SDK.Models
+@using Newtonsoft.Json
+@using ZiggyCreatures.Caching.Fusion
+@inject IFusionCache Cache
+@inject IWindowService WindowService
+@inject IJSRuntime JSRuntime
+
+Redeeming token...
+
+@code {
+    [Parameter] public Guid Code { get; set; }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var token = await Cache.GetOrDefaultAsync<AuthToken>($"AuthToken/{Code}", null);
+
+            // Invalidate code, send token back to parent window, close
+            if (token != null)
+            {
+                await Cache.RemoveAsync($"AuthToken/{Code}");
+
+                await JSRuntime.InvokeVoidAsync("window.external.sendMessage", JsonConvert.SerializeObject(token));
+            }
+        }
+    }
+
+}

@@ -461,7 +461,7 @@ namespace LANCommander.SDK
             Token = null;
         }
 
-        public async Task<AuthToken> RegisterAsync(string username, string password)
+        public async Task<AuthToken> RegisterAsync(string username, string password, string passwordConfirmation)
         {
             var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/Auth/Register", Method.Post).AddJsonBody(new AuthRequest()
             {

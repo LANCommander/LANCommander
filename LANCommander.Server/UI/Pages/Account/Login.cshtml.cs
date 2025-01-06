@@ -7,8 +7,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
+using LANCommander.SDK.Models;
 using Microsoft.AspNetCore.Authorization;
-using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -20,6 +20,8 @@ using LANCommander.Server.Extensions;
 using LANCommander.Server.Data;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
+using ZiggyCreatures.Caching.Fusion;
+using User = LANCommander.Server.Data.Models.User;
 
 namespace LANCommander.Server.UI.Pages.Account
 {
@@ -28,17 +30,20 @@ namespace LANCommander.Server.UI.Pages.Account
         private readonly SignInManager<User> SignInManager;
         private readonly UserService UserService;
         private readonly RoleService RoleService;
+        private readonly IFusionCache Cache;
         private readonly ILogger<LoginModel> Logger;
 
         public LoginModel(
             SignInManager<User> signInManager,
             UserService userService,
             RoleService roleService,
+            IFusionCache cache,
             ILogger<LoginModel> logger)
         {
             SignInManager = signInManager;
             UserService = userService;
             RoleService = roleService;
+            Cache = cache;
             Logger = logger;
         }
 
@@ -67,8 +72,10 @@ namespace LANCommander.Server.UI.Pages.Account
         /// </summary>
         [TempData]
         public string ErrorMessage { get; set; }
+        
+        public AuthToken Token { get; set; }
 
-        public async Task<IActionResult> OnGetAsync(string returnUrl = null)
+        public async Task<IActionResult> OnGetAsync(string returnUrl = null, string code = null)
         {
             if (!string.IsNullOrEmpty(ErrorMessage))
             {
@@ -91,6 +98,16 @@ namespace LANCommander.Server.UI.Pages.Account
 
             if (administrators == null || !administrators.Any())
                 return Redirect("/FirstTimeSetup");
+
+            if (!String.IsNullOrWhiteSpace(code))
+            {
+                var token = await Cache.GetOrDefaultAsync<AuthToken>($"AuthToken/{code}", null);
+
+                if (token != null)
+                {
+                    Token = token;
+                }
+            }
 
             return Page();
         }

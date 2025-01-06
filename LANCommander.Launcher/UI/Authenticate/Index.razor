@@ -1,0 +1,44 @@
+﻿@page "/Authenticate"
+@page "/Authenticate/{stage}"
+@using System.Security.Policy
+@using BeaconLib
+@using LANCommander.Launcher.Models
+@using LANCommander.SDK
+@using LANCommander.SDK.Models
+@using LANCommander.Launcher.UI.Authenticate.Components
+@inject ProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject SDK.Client Client
+@inject IMessageService MessageService
+@inject ILogger<System.Index> Logger
+
+<Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
+    <Content Class="authentication-form">
+        <div class="authentication-logo">
+            <img src="/assets/logo.svg" width="300" />
+        </div>
+        
+        <div class="authentication-box">
+            @if (Stage == AuthenticationStage.SelectServer || String.IsNullOrWhiteSpace(Stage))
+            {
+                <ServerSelector @bind-ServerAddress="ServerAddress" />
+            }
+            
+            @if (Stage == AuthenticationStage.Login)
+            {
+                <LoginForm @bind-ServerAddress="ServerAddress" />
+            }
+            
+            @if (Stage == AuthenticationStage.Register)
+            {
+                <RegistrationForm @bind-ServerAddress="ServerAddress" />
+            }
+        </div>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public string Stage { get; set; }
+    
+    string ServerAddress { get; set; }
+}

@@ -11,6 +11,7 @@ using System.Text;
 using AutoMapper;
 using LANCommander.SDK.Models;
 using Microsoft.AspNetCore.Authentication;
+using ZiggyCreatures.Caching.Fusion;
 using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
 using User = LANCommander.Server.Data.Models.User;
 
@@ -33,6 +34,7 @@ namespace LANCommander.Server.Controllers.Api
     {
         public string UserName { get; set; }
         public string Password { get; set; }
+        public string PasswordConfirmation { get; set; }
     }
 
     [Route("api/[controller]")]
@@ -42,18 +44,21 @@ namespace LANCommander.Server.Controllers.Api
         private readonly AuthenticationService AuthenticationService;
         private readonly UserService UserService;
         private readonly RoleService RoleService;
+        private readonly IFusionCache Cache;
         private readonly IMapper Mapper;
 
         public AuthController(
             AuthenticationService authenticationService,
             UserService userService,
             RoleService roleService,
+            IFusionCache cache,
             IMapper mapper,
             ILogger<AuthController> logger) : base(logger)
         {
             AuthenticationService = authenticationService;
             UserService = userService;
             RoleService = roleService;
+            Cache = cache;
             Mapper = mapper;
         }
 
@@ -73,7 +78,12 @@ namespace LANCommander.Server.Controllers.Api
             }
             else if (!String.IsNullOrWhiteSpace(provider) && User.Identity.IsAuthenticated)
             {
-                return Ok(await AuthenticationService.LoginAsync(User.Identity.Name));
+                var code = Guid.NewGuid().ToString();
+                var token = await AuthenticationService.LoginAsync(User.Identity.Name);
+                
+                await Cache.SetAsync($"AuthToken/{code}", token, TimeSpan.FromMinutes(5));
+
+                return Redirect($"/RedeemToken/{code}");
             }
             else
             {
@@ -137,6 +147,12 @@ namespace LANCommander.Server.Controllers.Api
         [HttpPost("Register")]
         public async Task<IActionResult> RegisterAsync([FromBody] RegisterModel model)
         {
+            if (model.Password != model.PasswordConfirmation)
+                return Unauthorized(new
+                {
+                    Message = "Passwords don't match."
+                });
+            
             var user = await UserService.GetAsync(model.UserName);
 
             if (user != null)

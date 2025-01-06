@@ -99,7 +99,7 @@ namespace LANCommander.Launcher.Services
             await Login(serverAddress, token);
         }
 
-        public async Task Register(string serverAddress, string username, string password, string confirmPassword)
+        public async Task Register(string serverAddress, string username, string password, string passwordConfirmation)
         {
             if (String.IsNullOrWhiteSpace(serverAddress))
                 throw new Exception("Server address cannot be blank");
@@ -110,12 +110,12 @@ namespace LANCommander.Launcher.Services
             if (String.IsNullOrWhiteSpace(password))
                 throw new Exception("Password cannot be blank");
 
-            if (password != confirmPassword)
+            if (password != passwordConfirmation)
                 throw new Exception("Passwords do not match");
 
             Client.ChangeServerAddress(serverAddress);
 
-            var token = await Client.RegisterAsync(username, password);
+            var token = await Client.RegisterAsync(username, password, passwordConfirmation);
 
             Settings = SettingService.GetSettings();
 

@@ -1,0 +1,57 @@
+@using KristofferStrube.Blazor.DOM
+@using KristofferStrube.Blazor.Window
+@using LANCommander.SDK.Models
+@using Newtonsoft.Json
+@using Photino.NET
+@inject SDK.Client Client
+@inject IJSRuntime JSRuntime
+@inject IMessageService MessageService
+@inject ILogger<AuthenticationProviderDialog> Logger
+
+@code {
+    [Parameter] public EventCallback<AuthToken> OnTokenReceived { get; set; }
+    
+    string AuthenticationProviderLoginUrl;
+
+    EventListener<MessageEvent> MessageEventListener;
+
+    PhotinoWindow Window;
+    
+    public async Task Open(string baseUrl, AuthenticationProvider authenticationProvider)
+    {
+        Client.UseServerAddress(baseUrl);
+        
+        AuthenticationProviderLoginUrl = Client.GetAuthenticationProviderLoginUrl(authenticationProvider.Slug);
+
+        Window = new PhotinoWindow()
+            .SetTitle($"Sign in using {authenticationProvider.Name}")
+            .Load(AuthenticationProviderLoginUrl)
+            .SetContextMenuEnabled(false);
+
+        Window.RegisterWebMessageReceivedHandler(MessageHandler);
+        
+        Window.WaitForClose();
+    }
+
+    async void MessageHandler(object? sender, string message)
+    {
+        try
+        {
+            var token = JsonConvert.DeserializeObject<AuthToken>(message);
+
+            await InvokeAsync(() =>
+            {
+                OnTokenReceived.InvokeAsync(token);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not process login");
+            MessageService.Error("Could not process login");
+        }
+        finally
+        {
+            Window.Close();
+        }
+    }
+}

@@ -13,20 +13,28 @@
         min-width: 640px;
         max-width: 800px;
         box-shadow: 0px 0px 32px rgba(255, 255, 255, .05);
-    }
-
-    .discovered-servers-pane {
         background: rgba(0, 0, 0, .75);
         backdrop-filter: blur(8px);
-
-        .ant-list-header {
-            padding: 12px;
-            text-align: center;
-            border: none;
+        
+        .ant-page-header {
+            background: none;
+            padding-bottom: 0;
+        }
+        
+        .ant-form {
+            padding: 24px;
+        }
+        
+        .ant-form-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .ant-divider {
+            margin: 0;
         }
 
         .ant-list-item {
-            padding: 12px;
+            padding: 12px 16px;
 
             &:hover {
                 background-color: rgba(255, 255, 255, .1);
@@ -37,17 +45,22 @@
                 margin-bottom: 0;
             }
         }
+        
+        .ant-list > div:not(.load-more):not(.ant-spin-nested-loading) {
+            display: none;
+        }
+        
+        .load-more {
+            padding: 16px;
+        }
     }
+}
 
-    .login-form-pane {
-        background: #000;
-
-        .ant-form {
-            padding: 24px;
-        }
-
-        .ant-form-item:last-child {
-            margin-bottom: 0;
-        }
+.authentication-provider-btn {
+    text-align: left;
+    width: 100%;
+    
+    .anticon {
+        margin-right: 8px;
     }
 }

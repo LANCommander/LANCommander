@@ -1,0 +1,157 @@
+@using LANCommander.SDK.Models
+@inject ProfileService ProfileService
+@inject SDK.Client Client
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<LoginForm> Logger
+
+<PageHeader OnBack="Back">
+    <TitleTemplate>
+        Sign In
+    </TitleTemplate>
+</PageHeader>
+<Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
+    <FormItem Label="Server Address">
+        <Input @bind-Value="@ServerAddress" Disabled />
+    </FormItem>
+    <FormItem Label="Username">
+        <Input @bind-Value="@context.UserName"/>
+    </FormItem>
+    <FormItem Label="Password">
+        <InputPassword @bind-Value="@context.Password"/>
+    </FormItem>
+    <FormItem>
+        <Button Type="ButtonType.Primary" HtmlType="submit">
+            Login
+        </Button>
+
+        @if (Settings.Profile.Id != Guid.Empty && !String.IsNullOrWhiteSpace(Settings.Profile.Alias))
+        {
+            <Button OnClick="OfflineMode">
+                Offline
+            </Button>
+        }
+
+        <Button Type="ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate/Register"))">
+            Register
+        </Button>
+    </FormItem>
+</Form>
+
+@if (AuthenticationProviders.Any())
+{
+    <Divider Orientation="DividerOrientation.Center" Text="Or" Style="margin-bottom: 16px" />
+
+    <Flex Justify="FlexJustify.Center">
+        <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Middle">
+            @foreach (var authenticationProvider in AuthenticationProviders)
+            {
+                <SpaceItem>
+                    <Button
+                        Type="ButtonType.Primary"
+                        OnClick="() => AuthenticationProviderDialog.Open(ServerAddress, authenticationProvider)"
+                        Class="authentication-provider-btn"
+                        Style="@(!String.IsNullOrWhiteSpace(authenticationProvider.Color) ? $"background: {authenticationProvider.Color}; border-color: {authenticationProvider.Color}" : "")">
+                        @if (!String.IsNullOrWhiteSpace(authenticationProvider.Icon))
+                        {
+                            <BootstrapIcon Type="@authenticationProvider.Icon"/>
+                        }
+                        Sign in using @authenticationProvider.Name
+                    </Button>
+                </SpaceItem>
+            }
+        </Space>
+    </Flex>
+}
+
+<AuthenticationProviderDialog @ref="AuthenticationProviderDialog" OnTokenReceived="UseToken" />
+
+@code {
+    [Parameter] public string ServerAddress { get; set; }
+    [Parameter] public EventCallback<string> ServerAddressChanged { get; set; }
+    
+    List<AuthenticationProvider> AuthenticationProviders = new();
+
+    AuthRequest Model = new();
+    bool Loading = false;
+    AuthenticationProviderDialog AuthenticationProviderDialog;
+    
+    Models.Settings Settings = SettingService.GetSettings();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        AuthenticationProviders = new();
+        
+        Client.ChangeServerAddress(ServerAddress);
+
+        try
+        {
+            var authenticationProviders = await Client.GetAuthenticationProvidersAsync();
+
+            if (authenticationProviders != null && authenticationProviders.Any())
+                AuthenticationProviders = authenticationProviders.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not get authentication providers");
+        }
+        
+        StateHasChanged();
+    }
+
+    async Task OnFinish(EditContext editContext)
+    {
+        Loading = true;
+
+        try
+        {
+            await ProfileService.Login(Client.GetServerAddress(), Model.UserName, Model.Password);
+
+            MainLayout.Import();
+
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(ex.Message, 5);
+            Logger.LogError(ex, ex.Message);
+            Loading = false;
+        }
+    }
+
+    void Back()
+    {
+        AuthenticationProviders = new();
+        
+        NavigationManager.NavigateTo("/Authenticate");
+    }
+    
+    async Task UseToken(AuthToken token)
+    {
+        Settings.Authentication.AccessToken = token.AccessToken;
+        Settings.Authentication.RefreshToken = token.RefreshToken;
+        
+        try
+        {
+            await ProfileService.Login(ServerAddress, token);
+
+            MainLayout.Import();
+
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(ex.Message, 5);
+            Logger.LogError(ex, ex.Message);
+            Loading = false;
+        }
+    }
+
+    async Task OfflineMode()
+    {
+        Settings.Authentication.OfflineMode = true;
+        SettingService.SaveSettings(Settings);
+
+        NavigationManager.NavigateTo("/");
+    }
+}

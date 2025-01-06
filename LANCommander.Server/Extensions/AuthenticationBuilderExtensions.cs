@@ -152,6 +152,11 @@ public static class AuthenticationBuilderExtensions
                         user = await userService.GetAsync(userId);
                     
                         customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == authenticationProvider.GetCustomFieldName());
+                        
+                        var collidingCustomField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.Value == idClaim.Value);
+                        
+                        if (collidingCustomField != null)
+                            throw new Exception("This account is already linked to an existing user.");
 
                         if (customField == null)
                         {

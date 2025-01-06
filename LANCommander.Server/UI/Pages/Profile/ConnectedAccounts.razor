@@ -62,7 +62,12 @@
                 User = await userService.GetAsync(authState.User.Identity.Name);
             }
         }
-        
+
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
         using (var userCustomFieldService = DatabaseServiceFactory.Create<UserCustomFieldService>())
         {
             foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
@@ -73,11 +78,8 @@
                     CustomFields.Add(customField);
             }
         }
-    }
 
-    async Task Link(AuthenticationProvider authenticationProvider)
-    {
-        
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task Unlink(UserCustomField customField)
@@ -86,6 +88,8 @@
         {
             userCustomFieldService.DeleteAsync(customField.UserId.Value, customField.Name);
         }
+
+        await LoadData();
     }
 
 }

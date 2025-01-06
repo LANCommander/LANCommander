@@ -45,6 +45,7 @@ public class AccountController : BaseController
         var items = new Dictionary<string, string>()
         {
             { "UserId", user.Id.ToString() },
+            { "Action", AuthenticationProviderActionType.AccountLink },
         };
         
         return Challenge(new AuthenticationProperties(items) { RedirectUri = returnUrl, AllowRefresh = true }, provider.Slug);

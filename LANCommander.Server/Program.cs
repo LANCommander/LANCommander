@@ -368,6 +368,11 @@ namespace LANCommander.Server
             app.UseHttpsRedirection();
 
             app.MapHub<GameServerHub>("/hubs/gameserver");
+            
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
 
             app.Use(async (context, next) =>
             {

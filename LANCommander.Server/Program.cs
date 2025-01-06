@@ -228,6 +228,13 @@ namespace LANCommander.Server
 
             authBuilder.AddIdentityCookies();
 
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Login";
+                options.LogoutPath = "/Logout";
+                options.AccessDeniedPath = "/AccessDenied";
+            });
+
             authBuilder.AddJwtBearer(options =>
             {
                 options.SaveToken = true;

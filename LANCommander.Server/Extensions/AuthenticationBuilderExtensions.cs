@@ -112,6 +112,9 @@ public static class AuthenticationBuilderExtensions
 
                 User user;
                 UserCustomField customField;
+                
+                var identity = new ClaimsIdentity(context.Identity.Claims, IdentityConstants.ApplicationScheme);
+                var principal = new ClaimsPrincipal(identity);
 
                 var action = context.Properties.Items["Action"];
 
@@ -130,6 +133,14 @@ public static class AuthenticationBuilderExtensions
                         }
                         else
                         {
+                            await context.HttpContext.SignInAsync(IdentityConstants.ApplicationScheme,
+                                principal,
+                                new AuthenticationProperties
+                                {
+                                    AllowRefresh = false,
+                                    IsPersistent = false,
+                                });
+                            
                             context.Response.Redirect($"/Register?Provider={authenticationProvider.Slug}");
                         }
                         break;
@@ -159,11 +170,11 @@ public static class AuthenticationBuilderExtensions
                     
                     case AuthenticationProviderActionType.Register:
                         await context.HttpContext.SignInAsync(IdentityConstants.ApplicationScheme,
-                            new ClaimsPrincipal(context.Identity),
+                            principal,
                             new AuthenticationProperties
                             {
                                 AllowRefresh = false,
-                                IsPersistent = true,
+                                IsPersistent = false,
                             });
                         
                         context.Response.Redirect($"/Register?Provider={authenticationProvider.Slug}");

@@ -117,26 +117,30 @@
                 </span>
             </span>
 
-            @foreach (var provider in providers)
-            {
-                <form method="post">
-                    <input type="hidden" name="Provider" value="@provider.Slug" />
-                    <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+            <div class="authentication-provider-button-group">
+                @foreach (var provider in providers)
+                {
+                    <div class="authentication-provider-button">
+                        <form method="post">
+                            <input type="hidden" name="Provider" value="@provider.Slug" />
+                            <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
 
-                    <button class="ant-btn ant-btn-primary ant-btn-block" type="submit" style="@(!String.IsNullOrWhiteSpace(provider.Color) ? $"background-color: {provider.Color}; border-color: {provider.Color}" : "")">
-                        @if (!String.IsNullOrWhiteSpace(provider.Icon))
-                        {
-                            <span class="anticon" role="img">
-                                <svg focusable="false" width="1em" height="1em" fill="currentColor">
-                                    <use xlink:href="_content/LANCommander.UI/bootstrap-icons.svg#@provider.Icon"/>
-                                </svg>
-                            </span>
-                        }
-                        
-                        <span>Sign in using @provider.Name</span>
-                    </button>
-                </form>
-            }
+                            <button class="ant-btn ant-btn-primary ant-btn-block" type="submit" style="@(!String.IsNullOrWhiteSpace(provider.Color) ? $"background-color: {provider.Color}; border-color: {provider.Color}" : "")">
+                                @if (!String.IsNullOrWhiteSpace(provider.Icon))
+                                {
+                                    <span class="anticon" role="img">
+                                        <svg focusable="false" width="1em" height="1em" fill="currentColor">
+                                            <use xlink:href="_content/LANCommander.UI/bootstrap-icons.svg#@provider.Icon"/>
+                                        </svg>
+                                    </span>
+                                }
+
+                                <span>Sign in using @provider.Name</span>
+                            </button>
+                        </form>
+                    </div>
+                }
+            </div>
         }
 
         <div style="text-align: center; margin-top: 16px;">

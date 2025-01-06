@@ -34,7 +34,14 @@
         <div class="ant-card ant-card-bordered">
             <div class="ant-card-head">
                 <div class="ant-card-head-wrapper">
-                    <div class="ant-card-head-title">Create An Account</div>
+                    @if (Model.AuthenticationProvider != null && User.Identity.IsAuthenticated)
+                    {
+                        <div class="ant-card-head-title">Set Username</div>
+                    }
+                    else
+                    {
+                        <div class="ant-card-head-title">Create New Account</div>
+                    }
                 </div>
             </div>
             <form id="registerForm" method="post" class="ant-card-body" autocomplete="off">

@@ -1,5 +1,3 @@
-@using KristofferStrube.Blazor.DOM
-@using KristofferStrube.Blazor.Window
 @using LANCommander.SDK.Models
 @using Newtonsoft.Json
 @using Photino.NET
@@ -12,8 +10,6 @@
     [Parameter] public EventCallback<AuthToken> OnTokenReceived { get; set; }
     
     string AuthenticationProviderLoginUrl;
-
-    EventListener<MessageEvent> MessageEventListener;
 
     PhotinoWindow Window;
     

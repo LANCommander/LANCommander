@@ -191,6 +191,12 @@ namespace LANCommander.Server
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
 
+            builder.Services.Configure<CookiePolicyOptions>(options =>
+            {
+                options.Secure = settings.Authentication.CookieSecurePolicy;
+                options.MinimumSameSitePolicy = settings.Authentication.MinimumSameSitePolicy;
+            });
+
             var authBuilder = builder.Services.AddAuthentication(options =>
             {
                 options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -416,6 +422,7 @@ namespace LANCommander.Server
 
             // app.UseHttpsRedirection();
 
+            app.UseCookiePolicy();
             app.UseRouting();
 
             app.UseAuthentication();

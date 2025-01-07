@@ -1,5 +1,6 @@
 ﻿using LANCommander.Server.Data.Enums;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Http;
 
 namespace LANCommander.Server.Services.Models
 {
@@ -74,6 +75,8 @@ namespace LANCommander.Server.Services.Models
         public bool PasswordRequireUppercase { get; set; } = false;
         public bool PasswordRequireDigit { get; set; } = true;
         public int PasswordRequiredLength { get; set; } = 8;
+        public SameSiteMode MinimumSameSitePolicy { get; set; } = SameSiteMode.Strict;
+        public CookieSecurePolicy CookieSecurePolicy { get; set; } = CookieSecurePolicy.Always;
         public IEnumerable<AuthenticationProvider> AuthenticationProviders { get; set; } = new List<AuthenticationProvider>();
     }
 

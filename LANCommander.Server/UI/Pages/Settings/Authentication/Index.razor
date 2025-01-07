@@ -42,6 +42,16 @@
         <FormItem Label="Minimum Length">
             <AntDesign.InputNumber @bind-Value="context.Authentication.PasswordRequiredLength" Min="1" />
         </FormItem>
+        
+        <Divider Text="Security" />
+        
+        <FormItem Label="Minimum Same Site Cookie Policy">
+            <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.MinimumSameSitePolicy" />
+        </FormItem>
+        
+        <FormItem Label="Cookie Secure Policy">
+            <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.CookieSecurePolicy" />
+        </FormItem>
     </Form>
 
     <Divider Text="External Providers" />

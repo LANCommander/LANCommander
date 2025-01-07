@@ -46,10 +46,7 @@
     <!-- <BeautyGitTree>master</BeautyGitTree> -->
   </PropertyGroup>
 
-	<Target Name="CompileGlobalSass" BeforeTargets="Compile">
-		<Message Text="Compiling global SCSS files" Importance="high" />
-		<Exec Command="npm run sass" />
-	</Target>
+
 
 	<ItemGroup>
 		<ComponentScssFiles Include="**/*/*.scss" Exclude="node_modules/**;wwwroot/**;Styles/**" />

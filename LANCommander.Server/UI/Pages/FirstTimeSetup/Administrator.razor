@@ -58,8 +58,11 @@
                 if (role == null)
                     await roleService.AddAsync(new Role
                     {
-                        Name = RoleService.AdministratorRoleName
+                        Name = RoleService.AdministratorRoleName,
+                        NormalizedName = RoleService.AdministratorRoleName.ToUpper()
                     });
+
+                role = await roleService.GetAsync(RoleService.AdministratorRoleName);
 
                 var administrators = await roleService.GetUsersAsync(RoleService.AdministratorRoleName);
 
@@ -77,12 +80,13 @@
 
                         var result = await userService.AddAsync(user);
 
+
                         if (result == null)
                         {
-                            /*foreach (var error in result.Errors)
-                            {
-                                MessageService.Error(error.Description);
-                            }*/
+                            // foreach (var error in result.Errors)
+                            // {
+                            //     MessageService.Error(error.Description);
+                            // }
 
                             Loading = false;
                             StateHasChanged();
@@ -91,7 +95,9 @@
                         }
                         else
                         {
-                            await userService.AddToRolesAsync(user.UserName, new string[] { RoleService.AdministratorRoleName });
+                            await userService.ChangePassword(user.UserName, Model.Password);
+
+                            await userService.AddToRoleAsync(user, role);
 
                             Logger?.LogInformation("Administrator created a new account with password.");
 
@@ -109,6 +115,12 @@
         {
             Logger?.LogError(ex, "Could not create administrator");
             MessageService.Error($"Could not create administrator: {ex.Message}", 10);
+            using (var userService = DatabaseServiceFactory.Create<UserService>()) {
+                
+                var user = await userService.GetAsync(Model.Username);
+                await userService.DeleteAsync(user);
+                MessageService.Success($"User '{Model.Username}' was successfully deleted due to previous error.", 10);
+            }
         }
 
         Loading = false;

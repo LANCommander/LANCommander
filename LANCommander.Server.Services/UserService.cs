@@ -118,6 +118,17 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public async Task AddToRoleAsync(User user, Role role)
+        {
+            try
+            {
+                await IdentityContext.UserManager.AddToRoleAsync(user, role.Name);
+            }
+            finally
+            { 
+            }
+        }
+
         public async Task AddToRolesAsync(string userName, IEnumerable<string> roleNames)
         {
             try

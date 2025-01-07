@@ -5,6 +5,7 @@ using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using ZiggyCreatures.Caching.Fusion;
 using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
@@ -15,17 +16,28 @@ public class AccountController : BaseController
 {
     private readonly UserService UserService;
     private readonly UserCustomFieldService UserCustomFieldService;
+    private readonly SignInManager<User> SignInManager;
     private readonly IFusionCache Cache;
     
     public AccountController(
         UserService userService,
         UserCustomFieldService userCustomFieldService,
+        SignInManager<User> signInManager,
         IFusionCache cache,
         ILogger<AccountController> logger) : base(logger)
     {
         UserService = userService;
         UserCustomFieldService = userCustomFieldService;
+        SignInManager = signInManager;
         Cache = cache;
+    }
+
+    [HttpGet("/Logout")]
+    public async Task<IActionResult> Logout()
+    {
+        await SignInManager.SignOutAsync();
+
+        return Redirect("/Login");
     }
 
     [HttpGet("/SignInOAuth")]

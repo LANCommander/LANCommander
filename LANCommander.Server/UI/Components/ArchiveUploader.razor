@@ -36,14 +36,14 @@
 
         <FormItem Label="Path">
             <Select TItem="StorageLocation"
-                TItemValue="Guid"
-                DataSource="@StorageLocations.OrderBy(l => l.Default)"
-                @bind-Value="@context.StorageLocationId"
-                LabelName="Path"
-                ValueName="Id"
-                Placeholder="Select a Path"
-                DefaultActiveFirstOption="true"
-                EnableSearch />
+            TItemValue="Guid"
+            DataSource="@StorageLocations.OrderBy(l => l.Default)"
+            @bind-Value="@context.StorageLocationId"
+            LabelName="Path"
+            ValueName="Id"
+            Placeholder="Select a Path"
+            DefaultActiveFirstOption="true"
+            EnableSearch />
         </FormItem>
 
         <FormItem>
@@ -166,10 +166,16 @@
                     if (lastArchive != null && settings.Archives.EnablePatching)
                         BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
                 }
+
+                // Generate archive contents manifest
+                var fileManifestJson = archiveService.GenerateManifestInMemory(uploadedArchive);
+                archiveService.PutManifestInArchive(uploadedArchive, fileManifestJson);
             }
 
             if (OnArchiveUploaded.HasDelegate)
                 await OnArchiveUploaded.InvokeAsync(Archive.Id);
+
+            
 
             MessageService.Success("Archive uploaded!");
         }

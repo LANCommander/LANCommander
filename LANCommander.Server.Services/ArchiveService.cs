@@ -11,9 +11,20 @@ using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using SharpCompress.Archives;
+using System.Text.Json;
+using Force.Crc32;
 
 namespace LANCommander.Server.Services
 {
+
+    public class FileManifestEntry // Prolly shouldn't be here
+    {
+        public string FileName { get; set; }
+        public long Size { get; set; }
+        public uint CRC { get; set; }
+    }
+
     public class ArchiveService : BaseDatabaseService<Archive>
     {
         private readonly StorageLocationService StorageLocationService;
@@ -182,6 +193,57 @@ namespace LANCommander.Server.Services
             }
 
             return size;
+        }
+
+        public void PutManifestInArchive(Archive archive, string? manifest)
+        {
+            System.IO.File.WriteAllText(Path.Combine(archive.StorageLocation.Path, archive.ObjectKey+".json"), manifest);
+        }
+
+        public string GenerateManifestInMemory(Archive archive)
+        {
+            var manifest = new List<FileManifestEntry>();
+
+            var archivePath = GetArchiveFileLocation(archive);
+
+            using (var gameArchive = ArchiveFactory.Open(archivePath))
+            {
+                foreach (var entry in gameArchive.Entries.Where(e => !e.IsDirectory))
+                {
+                    using (var entryStream = entry.OpenEntryStream())
+                    {
+                        
+                        var crc = ComputeCRC(entryStream);
+
+                        
+                        manifest.Add(new FileManifestEntry
+                        {
+                            FileName = entry.Key,
+                            Size = entry.Size,
+                            CRC = crc
+                        });
+                    }
+                }
+            }
+
+            // Serialize the manifest to JSON
+            return JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }); //possibly indentation not required
+        }
+
+        public uint ComputeCRC(Stream stream)
+        {
+            var crc32 = new Crc32Algorithm();
+            var buffer = new byte[8192]; // 8 KB buffer
+            int bytesRead;
+
+            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                crc32.TransformBlock(buffer, 0, bytesRead, null, 0);
+            }
+
+            crc32.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+            return BitConverter.ToUInt32(crc32.Hash, 0);
         }
 
         public async Task PatchArchiveAsync(Archive originalArchive, Archive alteredArchive, CompressionLevel compressionLevel = CompressionLevel.Optimal)

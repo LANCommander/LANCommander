@@ -1,0 +1,30 @@
+﻿@inherits FeedbackComponent<string>
+@using AntDesign
+@inject ModalService ModalService
+
+
+<div>
+    <pre><code>@FormattedJson</code></pre>
+</div>
+
+@code {
+
+    private string FormattedJson => FormatJson(Options);
+
+    private string FormatJson(string json)
+    {
+        try
+        {
+            var parsed = System.Text.Json.JsonSerializer.Deserialize<object>(json);
+            return System.Text.Json.JsonSerializer.Serialize(parsed, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+        }
+        catch
+        {
+            return json; // Return raw JSON if parsing fails
+        }
+    }
+
+}

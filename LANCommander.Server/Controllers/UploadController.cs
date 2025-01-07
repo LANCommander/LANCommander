@@ -34,14 +34,15 @@ namespace LANCommander.Server.Controllers
             if (!Directory.Exists(storageLocation.Path))
                 Directory.CreateDirectory(storageLocation.Path);
 
-            var archive = new Archive
+            var result = await ArchiveService.AddAsync(new Archive
             {
                 ObjectKey = Guid.NewGuid().ToString(),
-                StorageLocation = storageLocation,
+                StorageLocationId = storageLocation.Id, //Put ID, ensure EF Core doesn't create new storageLocation entity
                 Version = "",
-            };
+            });
+                
 
-            archive = await ArchiveService.AddAsync(archive);
+            var archive = await ArchiveService.GetAsync(result.Id); //Get newly created archive again, this time with relationships
 
             var archivePath = ArchiveService.GetArchiveFileLocation(archive);
 

@@ -30,6 +30,9 @@
             <ActionColumn Title="">
                 <Space Style="display: flex; justify-content: end">
                     <SpaceItem>
+                        <Button Icon="@IconType.Outline.OrderedList" Type="@ButtonType.Text" OnClick="() => BrowseArchiveManifest(context)" />
+                    </SpaceItem>
+                    <SpaceItem>
                         <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                             <Icon Type="@IconType.Outline.Download" />
                         </a>
@@ -97,6 +100,29 @@
     private async Task UploadArchive()
     {
         await Uploader.Open();
+    }
+
+    private async Task BrowseArchiveManifest(Archive archive)
+    {
+
+        string fileContent = "";
+        var manifestPath = Path.Combine(archive.StorageLocation.Path, archive.ObjectKey+".json");
+        if (File.Exists(manifestPath))
+        {
+            // Read the content of the file
+            fileContent = File.ReadAllText(manifestPath);
+        }
+
+        var modalOptions = new ModalOptions
+            {
+                Title = "View JSON",
+                Width = "800px",
+            };
+
+        ModalService.CreateModal<JsonViewerDialog, string>(
+            modalOptions,
+            fileContent
+        );
     }
 
     private async Task BrowseArchive(Archive archive)

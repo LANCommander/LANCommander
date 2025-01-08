@@ -32,7 +32,7 @@
         {
             <Button OnClick="() => AddToCollection()" Type="@ButtonType.Primary">Add to Collection</Button>
         }
-        <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
+        <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>
         <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
     </RightToolbar>
     <Columns>
@@ -112,10 +112,6 @@
         </DataActions>
     </Columns>
 </DataTable>
-
-<ImportUploadDialog @ref="ImportUploadDialog" OnGameImported="() => LoadData(0,0,String.Empty)">
-    <Hint>Only LCX files are supported for importing games</Hint>
-</ImportUploadDialog>
 
 @code {
     IEnumerable<Game> Games { get; set; } = new List<Game>();
@@ -219,5 +215,23 @@
             Table.UnselectAll();
             // await LoadData();
         };
+    }
+
+    async Task OpenImportDialog()
+    {
+        var options = new ImportDialogOptions
+        {
+            Hint = "Only LCX files are supported for importing games"
+        };
+
+        var modalOptions = new ModalOptions
+        {
+            Title = "Import Game",
+            DestroyOnClose = true,
+            OnOk = (e) => Table.LoadData(Table.PageIndex, Table.PageSize, Table.Search),
+            OnCancel = (e) => Table.LoadData(Table.PageIndex, Table.PageSize, Table.Search),
+        };
+
+        ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
     }
 }

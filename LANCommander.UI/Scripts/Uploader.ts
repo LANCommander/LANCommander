@@ -13,8 +13,8 @@ export class Uploader {
 
     File: File | undefined;
 
-    InitRoute: string = "/Upload/Init";
-    ChunkRoute: string = "/Upload/Chunk";
+    InitRoute: string = "/api/Upload/Init";
+    ChunkRoute: string = "/api/Upload/Chunk";
 
     MaxChunkSize: number = 1024 * 1024 * 50;
     TotalChunks: number = 0;
@@ -25,7 +25,9 @@ export class Uploader {
     StorageLocationId: string = "";
     Id: string = "";
 
-    async Init(fileInputId: string, storageLocationId: string, objectKey: string) {
+    async Init(fileInputId: string, storageLocationId: string, objectKey: string)
+    {
+        debugger;
         this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
         this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-circle-path');
         this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
@@ -38,9 +40,9 @@ export class Uploader {
                 request.storageLocationId = storageLocationId;
                 request.key = objectKey;
 
-                var response = await axios.post<UploadInitResponse>(this.InitRoute, request);
+                var response = await axios.post<string>(this.InitRoute, request);
 
-                this.Key = response.data.key;
+                this.Key = response.data;
             }
             catch (ex) {
                 this.Key = null;
@@ -145,7 +147,9 @@ export class Uploader {
 
     Clear() {
         this.File = undefined;
-        this.FileInput.value = "";
+        
+        if (this.FileInput != null)
+            this.FileInput.value = "";
     }
 
     OnStart: () => void;

@@ -289,7 +289,7 @@ namespace LANCommander.Server.Services
         public async Task<Game> ImportAsync(Guid objectKey)
         {
             var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-            var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
+            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
 
             Game game;
 
@@ -298,27 +298,29 @@ namespace LANCommander.Server.Services
                 // Read manifest
                 GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                game = await Include(g => g.Actions)
-                    .Include(g => g.Archives)
-                    .Include(g => g.BaseGame)
-                    .Include(g => g.Categories)
-                    .Include(g => g.Collections)
-                    .Include(g => g.DependentGames)
-                    .Include(g => g.Developers)
-                    .Include(g => g.Engine)
-                    .Include(g => g.Genres)
-                    .Include(g => g.Media)
-                    .Include(g => g.MultiplayerModes)
-                    .Include(g => g.Platforms)
-                    .Include(g => g.Publishers)
-                    .Include(g => g.Redistributables)
-                    .Include(g => g.Tags)
-                    .GetAsync(manifest.Id);
-
-                var exists = game != null;
-
+                var exists = await ExistsAsync(manifest.Id);
+                
                 if (!exists)
                     game = new Game();
+                else
+                {
+                    game = await Include(g => g.Actions)
+                        .Include(g => g.Archives)
+                        .Include(g => g.BaseGame)
+                        .Include(g => g.Categories)
+                        .Include(g => g.Collections)
+                        .Include(g => g.DependentGames)
+                        .Include(g => g.Developers)
+                        .Include(g => g.Engine)
+                        .Include(g => g.Genres)
+                        .Include(g => g.Media)
+                        .Include(g => g.MultiplayerModes)
+                        .Include(g => g.Platforms)
+                        .Include(g => g.Publishers)
+                        .Include(g => g.Redistributables)
+                        .Include(g => g.Tags)
+                        .FirstOrDefaultAsync(g => g.Id == manifest.Id);
+                }
 
                 game.Id = manifest.Id;
                 game.Description = manifest.Description;
@@ -609,7 +611,7 @@ namespace LANCommander.Server.Services
                         archive.CreatedOn = manifestArchive.CreatedOn;
                         archive.StorageLocation = importArchive.StorageLocation;
 
-                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
+                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
 
@@ -630,7 +632,7 @@ namespace LANCommander.Server.Services
                             StorageLocation = importArchive.StorageLocation,
                         };
 
-                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
+                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{manifestArchive.ObjectKey}", extractionLocation, true);
 

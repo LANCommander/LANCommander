@@ -57,7 +57,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var filename = ArchiveService.GetArchiveFileLocation(archive);
+            var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
             if (!System.IO.File.Exists(filename))
             {
@@ -92,7 +92,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var entries = await Cache.GetOrSetAsync<IEnumerable<ArchiveEntry>>($"ArchiveContents:{archive.Id}", async _ =>
             {
-                var filename = ArchiveService.GetArchiveFileLocation(archive);
+                var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                 if (!System.IO.File.Exists(filename))
                 {

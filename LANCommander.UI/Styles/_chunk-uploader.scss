@@ -1,0 +1,42 @@
+.chunk-uploader {
+    .uploader-progress-rate {
+        position: absolute;
+        text-align: center;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        opacity: 0;
+        transform: translateY(72px) scale(0);
+    }
+
+    .uploader-progress {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        transition: transform .15s;
+    }
+
+    .ant-upload {
+        transition: transform .15s;
+        transform: scale(1);
+    }
+
+    &[data-status="active"] .uploader-progress,
+    &[data-status="success"] .uploader-progress {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    &[data-status="active"] .uploader-progress-rate,
+    &[data-status="success"] .uploader-progress-rate {
+        opacity: 1;
+        transform: translateY(72px) scale(1);
+    }
+
+    &[data-status="active"] .ant-upload,
+    &[data-status="success"] .ant-upload {
+        opacity: 0;
+        transform: scale(0);
+    }
+}

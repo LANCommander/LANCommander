@@ -67,7 +67,7 @@ namespace LANCommander.Server.Controllers
                 if (redistributable.Archives != null)
                 foreach (var archive in redistributable.Archives)
                 {
-                    var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive);
+                    var archiveFilePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
                     var entry = export.CreateEntry($"Archives/{archive.ObjectKey}", CompressionLevel.NoCompression);
 
                     using (var entryStream = entry.Open())

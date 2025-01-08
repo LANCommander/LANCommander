@@ -613,8 +613,11 @@ namespace LANCommander.Server.Services
                         var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
+                        
+                        var archiveFile = ZipFile.Open(extractionLocation, ZipArchiveMode.Read);
 
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
+                        archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
                     }
                 }
 
@@ -635,7 +638,10 @@ namespace LANCommander.Server.Services
 
                         importZip.ExtractEntry($"Archives/{manifestArchive.ObjectKey}", extractionLocation, true);
 
+                        var archiveFile = ZipFile.Open(extractionLocation, ZipArchiveMode.Read);
+
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
+                        archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
 
                         game.Archives.Add(archive);
                     }

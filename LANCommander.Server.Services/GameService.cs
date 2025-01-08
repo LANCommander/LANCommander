@@ -428,9 +428,8 @@ namespace LANCommander.Server.Services
                 #region Multiplayer Modes
                 if (game.MultiplayerModes == null)
                     game.MultiplayerModes = new List<Data.Models.MultiplayerMode>();
-
-                foreach (var multiplayerMode in game.MultiplayerModes)
-                    game.MultiplayerModes.Remove(multiplayerMode);
+                else
+                    game.MultiplayerModes.Clear();
 
                 if (manifest.LanMultiplayer != null)
                     game.MultiplayerModes.Add(new MultiplayerMode()
@@ -609,7 +608,7 @@ namespace LANCommander.Server.Services
                         archive.ObjectKey = manifestArchive.ObjectKey;
                         archive.Version = manifestArchive.Version;
                         archive.CreatedOn = manifestArchive.CreatedOn;
-                        archive.StorageLocation = importArchive.StorageLocation;
+                        archive.StorageLocationId = importArchive.StorageLocation.Id;
 
                         var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
@@ -629,7 +628,7 @@ namespace LANCommander.Server.Services
                             Changelog = manifestArchive.Changelog,
                             Version = manifestArchive.Version,
                             CreatedOn = manifestArchive.CreatedOn,
-                            StorageLocation = importArchive.StorageLocation,
+                            StorageLocationId = importArchive.StorageLocation.Id,
                         };
 
                         var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);

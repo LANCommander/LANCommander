@@ -230,6 +230,7 @@
             DestroyOnClose = true,
             OnOk = (e) => Table.LoadData(Table.PageIndex, Table.PageSize, Table.Search),
             OnCancel = (e) => Table.LoadData(Table.PageIndex, Table.PageSize, Table.Search),
+            Footer = null,
         };
 
         ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);

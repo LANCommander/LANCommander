@@ -13,7 +13,7 @@
     <label tabindex="0" class="ant-upload" style="display: grid;" for="ChunkFileInput" role="button">
         <InputFile @ref="FileInput" @key="@UploaderId" id="@($"ChunkFileInput-{UploaderId}")" OnChange="OnFileSelected" accept="@Accept" style="position: absolute; width: 100%; height: 100%; opacity: 0; top: 0;left: 0; z-index:2;" />
         
-        <div class="ant-upload-drag-container">            
+        <div class="ant-upload-drag-container">
             <p class="ant-upload-drag-icon">
                 <Icon Type="@IconType.Outline.Upload" />
             </p>

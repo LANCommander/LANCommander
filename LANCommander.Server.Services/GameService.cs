@@ -27,6 +27,7 @@ namespace LANCommander.Server.Services
         private readonly TagService TagService;
         private readonly CompanyService CompanyService;
         private readonly GenreService GenreService;
+        private readonly StorageLocationService StorageLocationService;
 
         public GameService(
             ILogger<GameService> logger,
@@ -38,7 +39,8 @@ namespace LANCommander.Server.Services
             EngineService engineService,
             TagService tagService,
             CompanyService companyService,
-            GenreService genreService) : base(logger, cache, repositoryFactory)
+            GenreService genreService,
+            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
         {
             Mapper = mapper;
             ArchiveService = archiveService;
@@ -47,6 +49,7 @@ namespace LANCommander.Server.Services
             TagService = tagService;
             CompanyService = companyService;
             GenreService = genreService;
+            StorageLocationService = storageLocationService;
         }
 
         public override async Task<Game> AddAsync(Game entity)
@@ -290,6 +293,7 @@ namespace LANCommander.Server.Services
         {
             var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
             var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
+            var storageLocation = await StorageLocationService.GetAsync(importArchive.StorageLocationId);
 
             Game game;
 
@@ -608,7 +612,6 @@ namespace LANCommander.Server.Services
                         archive.ObjectKey = manifestArchive.ObjectKey;
                         archive.Version = manifestArchive.Version;
                         archive.CreatedOn = manifestArchive.CreatedOn;
-                        archive.StorageLocationId = importArchive.StorageLocation.Id;
 
                         var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
@@ -631,7 +634,7 @@ namespace LANCommander.Server.Services
                             Changelog = manifestArchive.Changelog,
                             Version = manifestArchive.Version,
                             CreatedOn = manifestArchive.CreatedOn,
-                            StorageLocationId = importArchive.StorageLocation.Id,
+                            StorageLocation = storageLocation,
                         };
 
                         var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);

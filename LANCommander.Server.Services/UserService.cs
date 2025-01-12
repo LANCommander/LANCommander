@@ -22,6 +22,7 @@ namespace LANCommander.Server.Services
     public class UserService : BaseService, IBaseDatabaseService<User>
     {
         private readonly IdentityContext IdentityContext;
+        private readonly CollectionService CollectionService;
         private readonly IMapper Mapper;
 
         public RepositoryFactory repositoryFactory { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
@@ -31,9 +32,11 @@ namespace LANCommander.Server.Services
             IMapper mapper,
             RepositoryFactory repositoryFactory,
             RoleService roleService,
+            CollectionService collectionService,
             IdentityContextFactory identityContextFactory) : base(logger)
         {
             IdentityContext = identityContextFactory.Create();
+            CollectionService = collectionService;
             Mapper = mapper;
         }
 
@@ -86,6 +89,28 @@ namespace LANCommander.Server.Services
             }
             finally
             {
+            }
+        }
+
+        public async Task<IEnumerable<Collection>> GetCollectionsAsync(Guid userId)
+        {
+            try
+            {
+                var user = await GetAsync(userId);
+                var roles = await GetRolesAsync(user.UserName);
+                var roleIds = roles.Select(r => r.Id).ToList();
+
+                if (roles.Any(r => r.Name == RoleService.AdministratorRoleName))
+                    return await CollectionService.GetAsync();
+                else
+                    return await CollectionService
+                    .Include(c => c.Roles)
+                    .GetAsync(c => c.Roles.Any(r => roleIds.Contains(r.Id)));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not get user collections");
+                return new List<Collection>();
             }
         }
 

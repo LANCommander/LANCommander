@@ -1,8 +1,7 @@
-﻿
-using AutoMapper;
+﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using LANCommander.SDK.Extensions;
 using LANCommander.Server.Data;
-using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +20,7 @@ namespace LANCommander.Server.Controllers.Api
         private readonly GameService GameService;
         private readonly LibraryService LibraryService;
         private readonly UserService UserService;
+        private readonly DatabaseContext DatabaseContext;
 
         public LibraryController(
             ILogger<LibraryController> logger,
@@ -28,6 +28,7 @@ namespace LANCommander.Server.Controllers.Api
             IFusionCache cache,
             GameService gameService,
             LibraryService libraryService,
+            DatabaseContext databaseContext,
             UserService userService) : base(logger)
         {
             Mapper = mapper;
@@ -35,32 +36,27 @@ namespace LANCommander.Server.Controllers.Api
             GameService = gameService;
             LibraryService = libraryService;
             UserService = userService;
+            DatabaseContext = databaseContext;
         }
 
         [HttpGet]
-        public async Task<IEnumerable<SDK.Models.Game>> GetAsync()
+        public async Task<IEnumerable<SDK.Models.EntityReference>> GetAsync()
         {
             try
             {
                 var user = await UserService.GetAsync(User.Identity.Name);
-                var roles = await UserService.GetRolesAsync(User?.Identity.Name);
-                var library = await LibraryService.GetByUserIdAsync(user.Id);
-                var libraryGameIds = library.Games.Select(g => g.Id).ToList();
-
-                var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
-
-                return await Cache.GetOrSetAsync($"LibraryGames:{user.Id}", async _ =>
+                
+                return await Cache.GetOrSetAsync($"Library/{user.Id}", async _ =>
                 {
-                    var games = await GameService.GetAsync<SDK.Models.Game>(g => libraryGameIds.Contains(g.Id));
-
-                    foreach (var game in games)
-                    {
-                        game.PlaySessions = game.PlaySessions.Where(ps => ps.UserId == user.Id);
-                        game.Collections = game.Collections.Where(c => accessibleCollectionIds.Contains(c.Id));
-                        game.InLibrary = true;
-                    }
-
-                    return games;
+                    var library = await LibraryService.GetByUserIdAsync(user.Id);
+                    var libraryGameIds = library.Games.Select(g => g.Id).ToList();
+                    
+                    var games = await DatabaseContext.Games
+                        .AsNoTracking()
+                        .Where(g => libraryGameIds.Contains(g.Id))
+                        .ToListAsync();
+                    
+                    return Mapper.Map<IEnumerable<SDK.Models.EntityReference>>(games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle));
                 }, TimeSpan.MaxValue);
             }
             catch (Exception ex)
@@ -78,7 +74,7 @@ namespace LANCommander.Server.Controllers.Api
 
                 await LibraryService.AddToLibraryAsync(user.Id, id);
 
-                await Cache.ExpireAsync($"LibraryGames:{user.Id}");
+                await Cache.ExpireAsync($"Library/{user.Id}");
 
                 return true;
             }
@@ -97,7 +93,7 @@ namespace LANCommander.Server.Controllers.Api
 
                 await LibraryService.RemoveFromLibraryAsync(user.Id, id);
 
-                await Cache.ExpireAsync($"LibraryGames:{user.Id}");
+                await Cache.ExpireAsync($"Library/{user.Id}");
 
                 return true;
             }

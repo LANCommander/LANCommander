@@ -1,4 +1,5 @@
 ﻿using LANCommander.Launcher.Models.Enums;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 
 namespace LANCommander.Launcher.Models

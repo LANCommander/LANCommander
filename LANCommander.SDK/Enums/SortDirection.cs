@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LANCommander.Launcher.Models.Enums
+namespace LANCommander.SDK.Enums
 {
     public enum SortDirection
     {

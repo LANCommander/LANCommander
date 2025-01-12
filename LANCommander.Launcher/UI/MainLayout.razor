@@ -64,6 +64,7 @@
         Messages = MessageService;
 
         ImportService.OnImportComplete += OnImportComplete;
+        ImportService.OnImportUpdated += OnImportUpdated;
 
         if (!(await LANCommander.ValidateTokenAsync()) && !Settings.Authentication.OfflineMode)
             NavigationManager.NavigateTo("/Authenticate");
@@ -72,6 +73,11 @@
     async Task OnImportComplete()
     {
         MessageService.Success("Import Complete", 3);
+    }
+
+    async Task OnImportUpdated(ImportStatusUpdate status)
+    {
+        MessageService.Info($"Importing {status.CurrentItem.Name}");
     }
 
     async Task Connect()

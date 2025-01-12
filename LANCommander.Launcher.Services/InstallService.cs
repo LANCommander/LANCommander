@@ -173,7 +173,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task Next()
         {
-            var currentItem = Queue.FirstOrDefault(i => i.Status.IsIn(GameInstallStatus.Queued, GameInstallStatus.Starting));
+            var currentItem = Queue.FirstOrDefault(i => i.Status.ValueIsIn(GameInstallStatus.Queued, GameInstallStatus.Starting));
 
             if (currentItem == null)
                 return;

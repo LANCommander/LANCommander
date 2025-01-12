@@ -129,7 +129,7 @@ namespace LANCommander.Launcher.Services
                 if (Filter.Installed)
                     items = items.Where(i => (i.DataItem as Game).Installed);
 
-                items = items.Where(i => (i.DataItem as Game).Type.IsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
+                items = items.Where(i => (i.DataItem as Game).Type.ValueIsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
 
                 op.Complete();
             }

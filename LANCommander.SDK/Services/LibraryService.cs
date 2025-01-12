@@ -35,9 +35,9 @@ namespace LANCommander.SDK.Services
             Logger = logger;
         }
 
-        public async Task<IEnumerable<Game>> GetAsync()
+        public async Task<IEnumerable<EntityReference>> GetAsync()
         {
-            return await Client.GetRequestAsync<IEnumerable<Game>>("/api/Library");
+            return await Client.GetRequestAsync<IEnumerable<EntityReference>>("/api/Library");
         }
 
         public async Task<bool> AddToLibrary(Guid gameId)

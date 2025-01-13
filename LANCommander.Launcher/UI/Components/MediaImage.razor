@@ -6,11 +6,12 @@
 @inject MessageBusService MessageBusService
 @inject ILogger<MediaImage> Logger
 
-<img @ref="Ref" @key="Id" src="@MediaUrl" class="@Class @HiddenClass" @onerror="Hide" />
+<img @ref="Ref" @key="@(String.IsNullOrWhiteSpace(Key) ? Id.ToString() : Key)" src="@MediaUrl" class="@Class @HiddenClass" @onerror="Hide" />
 
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Class { get; set; }
+    [Parameter] public string Key { get; set; }
 
     string MediaUrl { get; set; }
     string HiddenClass { get; set; }

@@ -28,7 +28,7 @@
             var media = await MediaService.Get(Id);
 
             if (media == null && Client.IsConnected())
-                media = await ImportService.ImportMedia(Id);
+                media = await ImportService.ImportMediaAsync(Id);
 
             UpdateMediaUrl(media);
         }

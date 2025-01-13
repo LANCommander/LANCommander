@@ -118,6 +118,7 @@ namespace LANCommander.Launcher.Data
             #endregion
         }
 
+        public DbSet<Engine>? Engines { get; set; }
         public DbSet<Game>? Games { get; set; }
 
         public DbSet<Genre>? Genres { get; set; }

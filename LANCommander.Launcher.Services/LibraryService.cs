@@ -23,6 +23,7 @@ namespace LANCommander.Launcher.Services
 {
     public class LibraryService : BaseService
     {
+        private readonly DatabaseContext DatabaseContext;
         private readonly InstallService InstallService;
         private readonly GameService GameService;
         private readonly SaveService SaveService;
@@ -49,6 +50,7 @@ namespace LANCommander.Launcher.Services
         public LibraryService(
             SDK.Client client,
             ILogger<LibraryService> logger,
+            DatabaseContext databaseContext,
             InstallService installService,
             GameService gameService,
             SaveService saveService,
@@ -57,6 +59,7 @@ namespace LANCommander.Launcher.Services
             ImportService importService,
             MessageBusService messageBusService) : base(client, logger)
         {
+            DatabaseContext = databaseContext;
             InstallService = installService;
             GameService = gameService;
             SaveService = saveService;
@@ -110,8 +113,17 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
-                var games = await GameService
-                    .Get(x => true)
+                var games = await DatabaseContext.Games
+                    .Include(g => g.Collections)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Tags)
+                    .Include(g => g.PlaySessions)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Media)
+                    .Include(g => g.MultiplayerModes)
                     .ToListAsync();
 
                 Filter.Populate(games);
@@ -149,7 +161,18 @@ namespace LANCommander.Launcher.Services
 
         public async Task<ListItem> GetItemAsync(Guid key)
         {
-            var game = await GameService.Get(key);
+            var game = await DatabaseContext.Games
+                .Include(g => g.Collections)
+                .Include(g => g.Developers)
+                .Include(g => g.Genres)
+                .Include(g => g.Publishers)
+                .Include(g => g.Tags)
+                .Include(g => g.PlaySessions)
+                .Include(g => g.Engine)
+                .Include(g => g.Platforms)
+                .Include(g => g.Media)
+                .Include(g => g.MultiplayerModes)
+                .FirstOrDefaultAsync(g => g.Id == key);
 
             return new ListItem(game);
         }

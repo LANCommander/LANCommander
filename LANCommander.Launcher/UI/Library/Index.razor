@@ -170,7 +170,7 @@
     {
         if (Id != Guid.Empty)
         {
-            await OnLibraryItemSelected(LibraryService.GetItem(Id));
+            await OnLibraryItemSelected(await LibraryService.GetItemAsync(Id));
 
             if (SelectedGame != null && Client.IsConnected())
                 RemoteGame = await Client.Games.GetAsync(SelectedGame.Id);

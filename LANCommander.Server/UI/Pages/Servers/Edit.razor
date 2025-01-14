@@ -248,7 +248,17 @@
             if (Id != Guid.Empty && Panel == null)
                 NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
             else if (Id != Guid.Empty)
-                Server = await serverService.GetAsync(Id);
+                Server = await serverService.Query((query) =>
+                    {
+                        return query
+                            .Include(s => s.Actions)
+                            .Include(s => s.HttpPaths)
+                            .Include(s => s.ServerConsoles)
+                            .Include(s => s.Scripts)
+                            .Include(s => s.Game)
+                            .ThenInclude(g => g.Archives);
+                    })
+                    .GetAsync(Id);
         }        
 
         if (Server.GameId.HasValue)

@@ -4,49 +4,45 @@
 @inject INotificationService NotificationService
 @implements IAsyncDisposable
 
-<Space Size="SpaceSize.Large">
-    <SpaceItem>
-        @switch (Status)
-        {
-            case ServerProcessStatus.Running:
-                <Badge Status="BadgeStatus.Success" Text="Running" />
-                break;
+<Flex Gap="FlexGap.Large" Align="FlexAlign.Center">
+    @switch (Status)
+    {
+        case ServerProcessStatus.Running:
+            <Badge Status="BadgeStatus.Success" Text="Running" />
+            break;
 
-            case ServerProcessStatus.Starting:
-                <Badge Status="BadgeStatus.Processing" Text="Starting" />
-                break;
+        case ServerProcessStatus.Starting:
+            <Badge Status="BadgeStatus.Processing" Text="Starting" />
+            break;
 
-            case ServerProcessStatus.Error:
-                <Badge Status="BadgeStatus.Error" Text="Error" />
-                break;
+        case ServerProcessStatus.Error:
+            <Badge Status="BadgeStatus.Error" Text="Error" />
+            break;
 
-            case ServerProcessStatus.Stopped:
-                <Badge Status="BadgeStatus.Default" Text="Stopped" />
-                break;
+        case ServerProcessStatus.Stopped:
+            <Badge Status="BadgeStatus.Default" Text="Stopped" />
+            break;
 
-            case ServerProcessStatus.Stopping:
-                <Badge Status="BadgeStatus.Error" Text="Stopping" />
-                break;
+        case ServerProcessStatus.Stopping:
+            <Badge Status="BadgeStatus.Error" Text="Stopping" />
+            break;
 
-            default:
-                <Badge Status="BadgeStatus.Warning" Text="Retrieving" />
-                break;
-        }
-    </SpaceItem>
+        default:
+            <Badge Status="BadgeStatus.Warning" Text="Retrieving" />
+            break;
+    }
 
-    <SpaceItem>
-        @if (Status != ServerProcessStatus.Running)
-        {
-            <Button Type="@ButtonType.Primary" OnClick="() => Start()" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
-        }
-        else
-        {
-            <Popconfirm OnConfirm="() => Stop()" Title="Are you sure you want to kill this server process?">
-                <Button Danger Type="@ButtonType.Primary">Stop</Button>
-            </Popconfirm>
-        }
-    </SpaceItem>
-</Space>
+    @if (Status != ServerProcessStatus.Running)
+    {
+        <Button Type="@ButtonType.Primary" OnClick="() => Start()" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
+    }
+    else
+    {
+        <Popconfirm OnConfirm="() => Stop()" Title="Are you sure you want to kill this server process?">
+            <Button Danger Type="@ButtonType.Primary">Stop</Button>
+        </Popconfirm>
+    }
+</Flex>
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
@@ -75,7 +71,7 @@
                 Status = ServerProcessService.GetStatus(Server);
 
                 await InvokeAsync(StateHasChanged);
-            }, new AutoResetEvent(false), 1000, 1000);
+            }, new AutoResetEvent(false), 2000, 2000);
         }
     }
 

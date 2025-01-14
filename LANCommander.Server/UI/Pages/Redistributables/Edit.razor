@@ -131,7 +131,9 @@ else
             if (Id != Guid.Empty && Panel == null)
                 NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
             else if (Id != Guid.Empty)
-                Redistributable = await redistributableService.GetAsync(Id);
+                Redistributable = await redistributableService
+                    .Include(r => r.Games)
+                    .GetAsync(Id);
         }
 
         using (var gameService = DatabaseServiceFactory.Create<GameService>())

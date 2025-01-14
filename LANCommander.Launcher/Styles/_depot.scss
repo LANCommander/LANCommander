@@ -47,26 +47,7 @@ $hero-max-height: 40vh;
     padding-left: $cover-horizontal-padding + $cover-gap;
     padding-right: $cover-horizontal-padding + $cover-gap;
     padding-bottom: $cover-vertical-padding + ($cover-gap * 2);
-    
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: $window-drag-area-height * 2;
-        background: linear-gradient(0deg, #000 0%, #111 100%);
-    }
-    
-    &::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        height: $window-drag-area-height * 2;
-        background: linear-gradient(0deg, #111 0%, #000 100%);
-    }
+    background: linear-gradient(0deg, #111 0%, #000 25%, #000 75%, #111 100%);
 }
 
 .depot-list-items,

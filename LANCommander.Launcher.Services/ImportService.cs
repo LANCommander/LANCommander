@@ -11,7 +11,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.Launcher.Services.Extensions;
 using LANCommander.SDK.Models;
+using Microsoft.EntityFrameworkCore.Storage;
 using BaseModel = LANCommander.Launcher.Data.Models.BaseModel;
 using Collection = LANCommander.Launcher.Data.Models.Collection;
 using Company = LANCommander.Launcher.Data.Models.Company;
@@ -216,23 +218,102 @@ namespace LANCommander.Launcher.Services
                     }
                     #endregion
 
-                    localGame.Collections = await ImportBulkAsync(localGame.Collections, game.Collections, (target, source) =>
+                    await DatabaseContext.BulkImport<Collection, SDK.Models.Collection>()
+                        .SetTarget(localGame.Collections)
+                        .UseSource(game.Collections)
+                        .Include(c => c.Games)
+                        .Assign((t, s) => t.Games.Add(localGame))
+                        .ImportAsync();
+
+                    await DatabaseContext.BulkImport<Genre, SDK.Models.Genre>()
+                        .SetTarget(localGame.Genres)
+                        .UseSource(game.Genres)
+                        .Include(g => g.Games)
+                        .Assign((t, s) => t.Games.Add(localGame))
+                        .ImportAsync();
+                    
+                    await DatabaseContext.BulkImport<Company, SDK.Models.Company>()
+                        .SetTarget(localGame.Publishers)
+                        .UseSource(game.Publishers)
+                        .Include(c => c.PublishedGames)
+                        .Assign((t, s) => t.PublishedGames.Add(localGame))
+                        .ImportAsync();
+                    
+                    await DatabaseContext.BulkImport<Company, SDK.Models.Company>()
+                        .SetTarget(localGame.Developers)
+                        .UseSource(game.Developers)
+                        .Include(c => c.DevelopedGames)
+                        .Assign((t, s) => t.DevelopedGames.Add(localGame))
+                        .ImportAsync();
+                    
+                    await DatabaseContext.BulkImport<Tag, SDK.Models.Tag>()
+                        .SetTarget(localGame.Tags)
+                        .UseSource(game.Tags)
+                        .Include(t => t.Games)
+                        .Assign((t, s) => t.Games.Add(localGame))
+                        .ImportAsync();
+                    
+                    await DatabaseContext.BulkImport<MultiplayerMode, SDK.Models.MultiplayerMode>()
+                        .SetTarget(localGame.MultiplayerModes)
+                        .UseSource(game.MultiplayerModes)
+                        .Include(m => m.Game)
+                        .Assign((t, s) =>
+                        {
+                            t.Game = localGame;
+                            t.Description = s.Description;
+                            t.MinPlayers = s.MinPlayers;
+                            t.MaxPlayers = s.MaxPlayers;
+                            t.Spectators = s.Spectators;
+                            t.Type = s.Type;
+                            t.NetworkProtocol = s.NetworkProtocol;
+                        })
+                        .ImportAsync();
+                    
+                    await DatabaseContext.BulkImport<Platform, SDK.Models.Platform>()
+                        .SetTarget(localGame.Platforms)
+                        .UseSource(game.Platforms)
+                        .Include(p => p.Games)
+                        .Assign((t, s) => t.Games.Add(localGame))
+                        .ImportAsync();
+                    
+                    await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
+                        .SetTarget(localGame.PlaySessions)
+                        .UseSource(game.PlaySessions)
+                        .Include(p => p.Game)
+                        .Assign((t, s) =>
+                        {
+                            t.Game = localGame;
+                            t.Start = s.Start;
+                            t.End = s.End;
+                            t.UserId = s.UserId;
+                        })
+                        .AsNoRemove()
+                        .ImportAsync();
+                    
+                    /*localGame.Collections = await ImportBulkAsync(localGame.Collections, game.Collections, (target, source) =>
                     {
+                        DatabaseContext.Entry(target).Collection(t => t.Games).Load();
                         target.Name = source.Name;
                     });
                     
                     localGame.Genres = await ImportBulkAsync(localGame.Genres, game.Genres, (target, source) =>
                     {
+                        DatabaseContext.Entry(target).Collection(t => t.Games).Load();
+                        
                         target.Name = source.Name;
                     });
                     
                     localGame.Publishers = await ImportBulkAsync(localGame.Publishers, game.Publishers, (target, source) =>
                     {
+                        DatabaseContext.Entry(target).Collection(t => t.PublishedGames).Load();
+                        
                         target.Name = source.Name;
                     });
                     
                     localGame.Tags = await ImportBulkAsync(localGame.Tags, game.Tags, (target, source) =>
                     {
+                        DatabaseContext.Entry(target).Collection(t => t.Games).Load();
+                        
                         target.Name = source.Name;
                     });
                     
@@ -248,6 +329,8 @@ namespace LANCommander.Launcher.Services
                     
                     localGame.Platforms = await ImportBulkAsync(localGame.Platforms, game.Platforms, (target, source) =>
                     {
+                        DatabaseContext.Entry(target).Collection(t => t.Games).Load();
+                        
                         target.Name = source.Name;
                     });
                     
@@ -256,7 +339,7 @@ namespace LANCommander.Launcher.Services
                         target.Start = source.Start;
                         target.End = source.End;
                         target.UserId = source.UserId;
-                    });
+                    });*/
 
                     #region Check Installation Status
                     foreach (var installDirectory in Settings.Games.InstallDirectories)

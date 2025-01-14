@@ -126,7 +126,7 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> FirstOrDefaultAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await Repository.FirstOrDefaultAsync<T, TKey>(predicate, orderKeySelector);
+            return await Repository.FirstOrDefaultAsync<TKey>(predicate, orderKeySelector);
         }
 
         public virtual async Task<U> FirstOrDefaultAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)

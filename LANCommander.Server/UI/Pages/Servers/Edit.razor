@@ -50,23 +50,22 @@
             <PageHeaderExtra>
                 @if (Server.Id != Guid.Empty)
                 {
-                    <ServerControl ServerId="Id" />
-                    <Space Direction="SpaceDirection.Horizontal">
-                        <SpaceItem>
-                            <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
-                                <Overlay>
-                                    <Menu>
-                                        <MenuItem>
-                                            <a href="/Server/@(Id)/Export/Full" target="_blank">Full</a>
-                                        </MenuItem>
-                                    </Menu>
-                                </Overlay>
-                                <ChildContent>
-                                    <Button>Export</Button>
-                                </ChildContent>
-                            </Dropdown>
-                        </SpaceItem>
-                    </Space>
+                    <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
+                        <ServerControl ServerId="Id" />
+
+                        <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
+                            <Overlay>
+                                <Menu>
+                                    <MenuItem>
+                                        <a href="/Server/@(Id)/Export/Full" target="_blank">Full</a>
+                                    </MenuItem>
+                                </Menu>
+                            </Overlay>
+                            <ChildContent>
+                                <Button>Export</Button>
+                            </ChildContent>
+                        </Dropdown>
+                    </Flex>
                 }
             </PageHeaderExtra>
         </PageHeader>

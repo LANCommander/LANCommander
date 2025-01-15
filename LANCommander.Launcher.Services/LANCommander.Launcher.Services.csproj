@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Emzi0767.NtfsDataStreams" Version="1.0.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
   </ItemGroup>
 
   <ItemGroup>

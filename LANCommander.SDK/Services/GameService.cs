@@ -877,18 +877,21 @@ namespace LANCommander.SDK.Services
 
         public async Task RunAsync(string installDirectory, Guid gameId, Models.Action action, DateTime? lastRun, string args = "")
         {
-            var alias = await Client.Profile.GetAliasAsync();
             var screen = DisplayHelper.GetScreen();
 
             using (var context = new GameExecutionContext(Client, Logger))
             {
                 context.AddVariable("ServerAddress", Client.GetServerAddress());
-                context.AddVariable("IPXRelayHost", await Client.GetIPXRelayHostAsync());
-                context.AddVariable("IPXRelayPort", Client.Settings.IPXRelayPort.ToString());
                 context.AddVariable("DisplayWidth", screen.Width.ToString());
                 context.AddVariable("DisplayHeight", screen.Height.ToString());
                 context.AddVariable("DisplayRefreshRate", screen.RefreshRate.ToString());
                 context.AddVariable("DisplayBitDepth", screen.BitsPerPixel.ToString());
+                
+                if (Client.IsConnected())
+                {
+                    context.AddVariable("IPXRelayHost", await Client.GetIPXRelayHostAsync());
+                    context.AddVariable("IPXRelayPort", Client.Settings.IPXRelayPort.ToString());                    
+                }
 
                 #region Run Scripts
                 var manifests = await ReadManifestsAsync(installDirectory, gameId);
@@ -900,8 +903,14 @@ namespace LANCommander.SDK.Services
                     var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
 
                     #region Check Game's Player Name
-                    if (currentGamePlayerAlias != alias)
-                        await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, alias);
+
+                    if (Client.IsConnected())
+                    {
+                        var alias = await Client.Profile.GetAliasAsync();
+                        
+                        if (currentGamePlayerAlias != alias)
+                            await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, alias);
+                    }
                     #endregion
 
                     #region Check Key Allocation

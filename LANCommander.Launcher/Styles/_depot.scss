@@ -43,10 +43,11 @@ $hero-max-height: 40vh;
     width: 100%;
     overflow-y: scroll;
     overflow-x: hidden;
-    padding-top: $window-drag-area-height + $cover-vertical-padding;
+    padding-top: $window-drag-area-height * 2;
     padding-left: $cover-horizontal-padding + $cover-gap;
     padding-right: $cover-horizontal-padding + $cover-gap;
-    padding-bottom: $cover-vertical-padding + $cover-gap;
+    padding-bottom: $cover-vertical-padding + ($cover-gap * 2);
+    background: linear-gradient(0deg, #111 0%, #000 25%, #000 75%, #111 100%);
 }
 
 .depot-list-items,
@@ -80,13 +81,11 @@ $hero-max-height: 40vh;
         position: absolute;
         top: 0;
         right: 0;
-        display: none;
         opacity: 0;
         transition: opacity .25s;
     }
 
     &-cover:hover &-add-btn {
-        display: block;
         opacity: 1;
     }
 

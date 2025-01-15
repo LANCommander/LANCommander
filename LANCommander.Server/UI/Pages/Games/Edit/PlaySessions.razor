@@ -1,4 +1,5 @@
 ﻿@page "/Games/{id:guid}/PlaySessions"
+@using SortDirection = AntDesign.SortDirection
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService

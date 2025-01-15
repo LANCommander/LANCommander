@@ -73,12 +73,12 @@
 
             foreach (var archive in archives)
             {
-                var path = archiveService.GetArchiveFileLocation(archive);
+                var path = await archiveService.GetArchiveFileLocationAsync(archive);
 
                 if (File.Exists(path))
                 {
-                    archive.CompressedSize = archiveService.GetCompressedSize(archive);
-                    archive.UncompressedSize = archiveService.GetUncompressedSize(archive);
+                    archive.CompressedSize = await archiveService.GetCompressedSizeAsync(archive);
+                    archive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(archive);
 
                     await archiveService.UpdateAsync(archive);
                 }

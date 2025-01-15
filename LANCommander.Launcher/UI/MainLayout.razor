@@ -17,7 +17,14 @@
                 @if (!Settings.Authentication.OfflineMode)
                 {
                     <SpaceItem>
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
+                        <Popover Placement="Placement.BottomRight" IsButton OnClick="Import" Trigger="new [] { Trigger.Hover }">
+                            <ChildContent>
+                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" Loading="@Importing"/>
+                            </ChildContent>
+                            <ContentTemplate>
+                                <Progress Percent="@((ImportStatusIndex / (float)ImportStatusTotal) * 100)" Steps="@ImportStatusTotal" />
+                            </ContentTemplate>
+                        </Popover>
                     </SpaceItem>
                 }
                 else
@@ -34,16 +41,37 @@
         </Space>
     </HeaderExtraControlsLayout>
     <WindowContent>
-        @Body
+        <ErrorBoundary>
+            <ChildContent>
+                @Body
 
-        @if (Settings.Debug.EnableScriptDebugging)
-        {
-            <PowerShellConsole />
-        }
+                @if (Settings.Debug.EnableScriptDebugging)
+                {
+                    <PowerShellConsole/>
+                }
 
-        <AntContainer />
-        <RedirectToLogin />
-        <UpdateChecker />
+                <UpdateChecker/>
+            </ChildContent>
+            <ErrorContent>
+                <Result Status="ResultStatus.Error"
+                        Title="Launcher Crashed"
+                        SubTitle="@RandomQuip"
+                        Class="crash-error">
+                    <Extra>
+                        <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
+                        <Button OnClick="() => CopyError(context)">Copy Error</Button>
+                    </Extra>
+                    <ChildContent>
+                        <code>
+                            @context.StackTrace
+                        </code>
+                    </ChildContent>
+                </Result>
+            </ErrorContent>
+        </ErrorBoundary>
+        
+        <AntContainer/>
+        <RedirectToLogin/>
     </WindowContent>
 </CustomWindow>
 
@@ -56,6 +84,42 @@
 
     public static MainLayout _MainLayout { get; set; }
 
+    string RandomQuip = "";
+    
+    string[] CrashQuips = new[]
+    {
+        "You Died.",
+        "Snake? SNAAAAAAKE!",
+        "WASTED",
+        "Major fracture detected",
+        "The past is a gaping hole. You try to run from it, but the more you run, the deeper, the darker, the bigger it gets.",
+        "Your town center has been destroyed",
+        "Your forces are under attack!",
+        "You have lost the lead",
+        "Terrorists Win",
+        "War... War never changes.",
+        "You have died of dysentery",
+        "You have failed to restore the books. The Ages are lost.",
+        "Player was splattered by a demon",
+        "Sure, blame it on your ISP",
+        "Baba is no more",
+        "Guests are complaining they are lost",
+        "The darkness has overcome you",
+        "Subject: Gordon Freeman. Status: Terminated",
+        "Mission failed: You were spotted.",
+        "Critical damage! Eject, eject!",
+        "Your minions are unhappy. They are leaving.",
+        "The Empire has triumphed",
+        "Your quest has ended in failure",
+        "You have been eaten by a grue",
+        "You no mess with Lo Wang!",
+        "Sam was killed. Serious carnage ensues.",
+        "Damn, those alien bastards are gonna pay for shooting up my ride"
+    };
+
+    int ImportStatusIndex = 0;
+    int ImportStatusTotal = 0;
+
     protected override async Task OnInitializedAsync()
     {
         _MainLayout = this;
@@ -64,6 +128,11 @@
         Messages = MessageService;
 
         ImportService.OnImportComplete += OnImportComplete;
+        ImportService.OnImportUpdated += OnImportUpdated;
+        
+        var randIndex = new Random().Next(0, CrashQuips.Length - 1);
+
+        RandomQuip = CrashQuips[randIndex];
 
         if (!(await LANCommander.ValidateTokenAsync()) && !Settings.Authentication.OfflineMode)
             NavigationManager.NavigateTo("/Authenticate");
@@ -72,6 +141,18 @@
     async Task OnImportComplete()
     {
         MessageService.Success("Import Complete", 3);
+    }
+
+    async Task OnImportUpdated(ImportStatusUpdate status)
+    {
+        MessageService.Info($"Importing {status.CurrentItem.Name}");
+    }
+
+    async Task CopyError(Exception ex)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", ex.Message + "\n" + ex.StackTrace);
+
+        MessageService.Info("Error copied to clipboard!");
     }
 
     async Task Connect()

@@ -32,7 +32,6 @@ namespace LANCommander.Server.Controllers.Api
         public async Task<string> InitAsync(SDK.Models.UploadInitRequest request)
         {
             var storageLocation = await StorageLocationService.GetAsync(request.StorageLocationId);
-            var key = Guid.NewGuid().ToString();
 
             if (!Directory.Exists(storageLocation.Path))
                 Directory.CreateDirectory(storageLocation.Path);
@@ -40,28 +39,28 @@ namespace LANCommander.Server.Controllers.Api
             var archive = new Archive
             {
                 ObjectKey = Guid.NewGuid().ToString(),
-                StorageLocation = storageLocation,
+                StorageLocationId = storageLocation.Id,
                 Version = ""
             };
 
             archive = await ArchiveService.AddAsync(archive);
 
-            var archivePath = ArchiveService.GetArchiveFileLocation(archive);
+            var archivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
-            await Cache.SetAsync($"ArchivePath|{archive.ObjectKey}", archivePath);
+            await Cache.SetAsync($"ChunkArchivePath/{archive.ObjectKey}", archivePath);
 
             if (!System.IO.File.Exists(archivePath))
                 System.IO.File.Create(archivePath).Close();
             else
                 System.IO.File.Delete(archivePath);
 
-            return key;
+            return archive.ObjectKey;
         }
 
         [HttpPost("Chunk")]
         public async Task ChunkAsync([FromForm] ChunkUpload chunk)
         {
-            var filePath = await Cache.GetOrDefaultAsync($"Archive|{chunk.Key}", String.Empty);
+            var filePath = await Cache.GetOrDefaultAsync($"ChunkArchivePath/{chunk.Key}", String.Empty);
 
             if (!System.IO.File.Exists(filePath))
                 throw new Exception("Destination file not initialized.");

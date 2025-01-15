@@ -153,7 +153,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var archive = game.Archives.OrderByDescending(a => a.CreatedOn).First();
 
-            var filename = ArchiveService.GetArchiveFileLocation(archive);
+            var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
             if (!System.IO.File.Exists(filename))
             {
@@ -189,11 +189,11 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
                 var archive = await ArchiveService.FirstOrDefaultAsync(a => a.GameId == request.Id && a.Version == request.Version);
-                var archivePath = ArchiveService.GetArchiveFileLocation(archive);
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                 if (archive != null)
                 {
-                    var existingArchivePath = ArchiveService.GetArchiveFileLocation(archive);
+                    var existingArchivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                     System.IO.File.Delete(existingArchivePath);
 

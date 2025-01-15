@@ -39,7 +39,8 @@ namespace LANCommander.Launcher.Services
 
                 await Add(session);
 
-                await Client.Games.StartPlaySessionAsync(gameId);
+                if (Client.IsConnected())
+                    await Client.Games.StartPlaySessionAsync(gameId);
             }
             catch (Exception ex)
             {

@@ -3,6 +3,8 @@
 @using LANCommander.SDK.Models
 @using ListItem = AntDesign.ListItem
 @inject NavigationManager NavigationManager
+@inject SDK.Client Client
+@inject AuthenticationService AuthenticationService
 
 <PageHeader>
     <TitleTemplate>
@@ -15,6 +17,11 @@
         <Flex Gap="FlexGap.Small">
             <Input @bind-Value="ServerAddress" Placeholder="Server Address"/>
             <Button Type="ButtonType.Primary" OnClick="() => SelectServer(ServerAddress)">Connect</Button>
+            
+            @if (OfflineModeAvailable)
+            {
+                <Button OnClick="() => OfflineMode()">Offline</Button>
+            }
         </Flex>
     </FormItem>
 </Form>
@@ -47,6 +54,7 @@
     [Parameter] public EventCallback<string> ServerAddressChanged { get; set; }
 
     bool BeaconActive = false;
+    bool OfflineModeAvailable = false;
     
     AuthRequest Model = new();
     List<DiscoveredServer> DiscoveredServers = new();
@@ -55,6 +63,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
+        
         ActivateBeacon();
     }
 
@@ -72,6 +82,14 @@
 
         NavigationManager.NavigateTo("Authenticate/Login");
     }
+
+    async Task OfflineMode()
+    {
+        Settings.Authentication.OfflineMode = true;
+        SettingService.SaveSettings(Settings);
+        
+        NavigationManager.NavigateTo("/");
+    }
     
     async Task ActivateBeacon()
     {
@@ -88,7 +106,6 @@
                     if (!DiscoveredServers.Any(s => s.Address.ToString() == server.Address.ToString()))
                         DiscoveredServers.Add(server);
                 }
-                    
             }
         };
         

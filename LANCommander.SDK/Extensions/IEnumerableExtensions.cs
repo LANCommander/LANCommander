@@ -1,12 +1,10 @@
-﻿using LANCommander.Launcher.Models.Enums;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+using LANCommander.SDK.Enums;
 
-namespace LANCommander.Launcher.Services.Extensions
+namespace LANCommander.SDK.Extensions
 {
     public static class IEnumerableExtensions
     {

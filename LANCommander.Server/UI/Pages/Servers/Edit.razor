@@ -50,23 +50,22 @@
             <PageHeaderExtra>
                 @if (Server.Id != Guid.Empty)
                 {
-                    <ServerControl ServerId="Id" />
-                    <Space Direction="SpaceDirection.Horizontal">
-                        <SpaceItem>
-                            <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
-                                <Overlay>
-                                    <Menu>
-                                        <MenuItem>
-                                            <a href="/Server/@(Id)/Export/Full" target="_blank">Full</a>
-                                        </MenuItem>
-                                    </Menu>
-                                </Overlay>
-                                <ChildContent>
-                                    <Button>Export</Button>
-                                </ChildContent>
-                            </Dropdown>
-                        </SpaceItem>
-                    </Space>
+                    <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
+                        <ServerControl ServerId="Id" />
+
+                        <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
+                            <Overlay>
+                                <Menu>
+                                    <MenuItem>
+                                        <a href="/Server/@(Id)/Export/Full" target="_blank">Full</a>
+                                    </MenuItem>
+                                </Menu>
+                            </Overlay>
+                            <ChildContent>
+                                <Button>Export</Button>
+                            </ChildContent>
+                        </Dropdown>
+                    </Flex>
                 }
             </PageHeaderExtra>
         </PageHeader>
@@ -249,7 +248,17 @@
             if (Id != Guid.Empty && Panel == null)
                 NavigationManager.NavigateTo($"/Servers/{Id}/General", true);
             else if (Id != Guid.Empty)
-                Server = await serverService.GetAsync(Id);
+                Server = await serverService.Query((query) =>
+                    {
+                        return query
+                            .Include(s => s.Actions)
+                            .Include(s => s.HttpPaths)
+                            .Include(s => s.ServerConsoles)
+                            .Include(s => s.Scripts)
+                            .Include(s => s.Game)
+                            .ThenInclude(g => g.Archives);
+                    })
+                    .GetAsync(Id);
         }        
 
         if (Server.GameId.HasValue)

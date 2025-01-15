@@ -11,6 +11,7 @@ namespace LANCommander.Launcher.Services
 {
     public class GameService : BaseDatabaseService<Game>
     {
+        private readonly AuthenticationService AuthenticationService;
         private readonly PlaySessionService PlaySessionService;
         private readonly SaveService SaveService;
         private readonly MessageBusService MessageBusService;
@@ -26,11 +27,13 @@ namespace LANCommander.Launcher.Services
             DatabaseContext dbContext,
             SDK.Client client,
             ILogger<GameService> logger,
+            AuthenticationService authenticationService,
             PlaySessionService playSessionService,
             SaveService saveService,
             MessageBusService messageBusService) : base(dbContext, client, logger)
         {
             Settings = SettingService.GetSettings();
+            AuthenticationService = authenticationService;
             PlaySessionService = playSessionService;
             SaveService = saveService;
             MessageBusService = messageBusService;
@@ -64,13 +67,24 @@ namespace LANCommander.Launcher.Services
 
         public async Task Run(Game game, SDK.Models.Action action)
         {
-            var profile = await Client.Profile.GetAsync();
+            Guid userId;
+
+            if (Client.IsConnected())
+            {
+                var profile = await Client.Profile.GetAsync();
+                
+                userId = profile.Id;
+            }
+            else
+            {
+                userId = AuthenticationService.GetUserId();
+            }
 
             try
             {
-                var latestSession = await PlaySessionService.GetLatestSession(game.Id, profile.Id);
+                var latestSession = await PlaySessionService.GetLatestSession(game.Id, userId);
 
-                await PlaySessionService.StartSession(game.Id, profile.Id);
+                await PlaySessionService.StartSession(game.Id, userId);
 
                 await Client.Games.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.CreatedOn);
             }
@@ -80,7 +94,7 @@ namespace LANCommander.Launcher.Services
             }
             finally
             {
-                await PlaySessionService.EndSession(game.Id, profile.Id);
+                await PlaySessionService.EndSession(game.Id, userId);
             }
         }
     }

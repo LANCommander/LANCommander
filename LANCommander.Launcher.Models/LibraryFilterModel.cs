@@ -1,10 +1,6 @@
 ﻿using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Models.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LANCommander.SDK.Enums;
 
 namespace LANCommander.Launcher.Models
 {

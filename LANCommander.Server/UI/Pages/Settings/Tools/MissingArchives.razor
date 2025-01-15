@@ -59,7 +59,7 @@
         {
             foreach (var archive in await archiveService.GetAsync())
             {
-                var archivePath = archiveService.GetArchiveFileLocation(archive);
+                var archivePath = await archiveService.GetArchiveFileLocationAsync(archive);
                 var exists = await archiveService.ExistsAsync(archive.Id);
 
                 if (!exists)
@@ -76,7 +76,7 @@
     {
         using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
-            var archiveFilePath = archiveService.GetArchiveFileLocation(archive);
+            var archiveFilePath = await archiveService.GetArchiveFileLocationAsync(archive);
 
             if (await archiveService.ExistsAsync(archive.Id))
                 File.Delete(archiveFilePath);

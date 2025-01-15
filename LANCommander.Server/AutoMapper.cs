@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.Server
 {
@@ -52,6 +53,10 @@ namespace LANCommander.Server
                     opt => opt.MapFrom(src => src.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover).FirstOrDefault()));
 
             CreateMap<Services.Models.AuthenticationProvider, SDK.Models.AuthenticationProvider>();
+
+            CreateMap<Data.Models.Game, EntityReference>()
+                .ForMember(dest => dest.Name,
+                    opt => opt.MapFrom(src => src.Title));
         }
     }
 }

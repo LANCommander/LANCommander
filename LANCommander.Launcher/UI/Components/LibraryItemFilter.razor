@@ -34,13 +34,13 @@
                             <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
                         </Select>
 
-                        @if (context.SelectedOptions.SortDirection == Models.Enums.SortDirection.Ascending)
+                        @if (context.SelectedOptions.SortDirection == SDK.Enums.SortDirection.Ascending)
                         {
-                            <Button Icon="@IconType.Outline.SortAscending" OnClick="() => context.SelectedOptions.SortDirection = Models.Enums.SortDirection.Descending" />
+                            <Button Icon="@IconType.Outline.SortAscending" OnClick="() => context.SelectedOptions.SortDirection = SDK.Enums.SortDirection.Descending" />
                         }
                         else
                         {
-                            <Button Icon="@IconType.Outline.SortDescending" OnClick="() => context.SelectedOptions.SortDirection = Models.Enums.SortDirection.Ascending" />
+                            <Button Icon="@IconType.Outline.SortDescending" OnClick="() => context.SelectedOptions.SortDirection = SDK.Enums.SortDirection.Ascending" />
                         }
                     </Flex>
                 </FormItem>

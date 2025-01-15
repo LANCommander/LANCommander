@@ -1,6 +1,7 @@
 ﻿@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
+@using LANCommander.SDK.Enums
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
 @inject DatabaseServiceFactory DatabaseServiceFactory
@@ -14,9 +15,9 @@
     RenderFragment Footer =
     @<Template>
         <FilePickerButton EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".zip"))"
-            OnSelected="OnLocalFileSelected"
-            Root="@RootPath"
-            Disabled="@(Status != "" || String.IsNullOrWhiteSpace(Archive.Version))">
+                          OnSelected="OnLocalFileSelected"
+                          Root="@RootPath"
+                          Disabled="@(Status != "" || String.IsNullOrWhiteSpace(Archive.Version))">
             Use Local File
         </FilePickerButton>
         <Button OnClick="Start" Disabled="@(File == null || Status != "" || String.IsNullOrWhiteSpace(Archive.Version))" Type="@ButtonType.Primary">Upload</Button>
@@ -47,7 +48,7 @@
         </FormItem>
 
         <FormItem>
-            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" @bind-Version="context.Version" @bind-Changelog="context.Changelog" @bind-StorageLocationId="context.StorageLocationId" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" @bind-Version="context.Version" @bind-Changelog="context.Changelog" @bind-StorageLocationId="context.StorageLocation.Id" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
                 <Text>
                     <p>Drag and Drop</p>
                     <p>or</p>
@@ -73,9 +74,8 @@
     IBrowserFile File;
     ChunkUploader ChunkUploader;
 
-    IEnumerable<StorageLocation> StorageLocations;
-
-    bool IsValid = false;
+    StorageLocation StorageLocation;
+    
     bool Visible = false;
     bool Uploading = false;
 
@@ -102,11 +102,6 @@
 
     public async Task Open(Guid? archiveId = null)
     {
-        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-        {
-            StorageLocations = await storageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
-        }
-
         if (archiveId.HasValue && archiveId != Guid.Empty)
         {
             using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
@@ -143,8 +138,8 @@
                 uploadedArchive.RedistributableId = Archive.RedistributableId;
                 uploadedArchive.Version = Archive.Version;
                 uploadedArchive.Changelog = Archive.Changelog;
-                uploadedArchive.CompressedSize = archiveService.GetCompressedSize(uploadedArchive);
-                uploadedArchive.UncompressedSize = archiveService.GetUncompressedSize(uploadedArchive);
+                uploadedArchive.CompressedSize = await archiveService.GetCompressedSizeAsync(uploadedArchive);
+                uploadedArchive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(uploadedArchive);
 
                 await archiveService.UpdateAsync(uploadedArchive);
 

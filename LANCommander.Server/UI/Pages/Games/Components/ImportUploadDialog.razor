@@ -3,77 +3,77 @@
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
+@inherits FeedbackComponent<ImportDialogOptions>
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
+@inject ModalService ModalService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
 
-@{
-    RenderFragment Footer =
-    @<Template>
-        <FilePickerButton
-            EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
-            OnSelected="OnLocalFileSelected"
-            Root="@RootPath"
-            Disabled="@(Status != "")">
-            Use Local File
-        </FilePickerButton>
-        <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
-        <Button OnClick="Cancel">Cancel</Button>
-    </Template>;
-}
+<Space Direction="SpaceDirection.Vertical" Style="width: 100%;">
+    <SpaceItem>
+        <ChunkUploader
+            @ref="ChunkUploader"
+            Accept=".lcx"
+            @bind-File="File"
+            @bind-Status="Status"
+            StorageLocationId="StorageLocation.Id"
+            OnUploadCompleted="OnUploadCompleted"
+            OnUploadError="OnUploadError">
+            <Text>
+                <p>Drag and Drop</p>
+                <p>or</p>
+                <p>
+                    <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
+                </p>
+            </Text>
+            <Hint>@Options.Hint</Hint>
+        </ChunkUploader>
+    </SpaceItem>
 
-<Modal Visible="@Visible" Title="Import Game" OnOk="Start" OnCancel="Cancel" Footer="@Footer">
-    <ChunkUploader @ref="ChunkUploader" Accept=".lcx" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
-        <Text>
-            <p>Drag and Drop</p>
-            <p>or</p>
-            <p>
-                <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
-            </p>
-        </Text>
-        <Hint>@Hint</Hint>
-    </ChunkUploader>
-</Modal>
+    <SpaceItem>
+        <StorageLocationSelector @bind-Value="StorageLocation" Type="StorageLocationType.Archive"/>
+    </SpaceItem>
+</Space>
+
+<Flex Justify="FlexJustify.End" Gap="FlexGap.Small">
+    <FilePickerButton
+        EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
+        OnSelected="OnLocalFileSelected"
+        Root="@RootPath"
+        Disabled="@(Status != "")">
+        Use Local File
+    </FilePickerButton>
+    <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
+    <Button OnClick="Cancel">Cancel</Button>
+</Flex>
 
 @code {
-    [Parameter] public EventCallback<Guid> OnGameImported { get; set; }
-    [Parameter] public RenderFragment Hint { get; set; }
-
-    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
-
     IBrowserFile File;
     ChunkUploader ChunkUploader;
+    StorageLocation StorageLocation = new();
+    
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     bool IsValid = false;
-    bool Visible = false;
-
     string Filename;
-
     string Status;
 
-    private async Task Start()
+    async Task Start()
     {
         await ChunkUploader.Start();
     }
 
-    private async Task Clear()
+    async Task Clear()
     {
         await ChunkUploader.Clear();
     }
 
-    private async Task Cancel()
+     async Task Cancel()
     {
         await ChunkUploader.Clear();
-        Visible = false;
-    }
-
-    public async Task Open()
-    {
-        Visible = true;
-
-        await InvokeAsync(StateHasChanged);
+        await CloseFeedbackAsync();
     }
 
     public async Task OnUploadCompleted(string data)
@@ -86,14 +86,11 @@
                 {
                     var game = await gameService.ImportAsync(objectKey);
 
-                    Visible = false;
-
                     await InvokeAsync(StateHasChanged);
 
-                    if (OnGameImported.HasDelegate)
-                        await OnGameImported.InvokeAsync(game.Id);
-
                     MessageService.Success($"{game.Title} successfully imported!");
+
+                    await CloseFeedbackAsync();
                 }
             }
             catch (Exception ex)
@@ -104,11 +101,11 @@
         }
         else
         {
-            Visible = false;
-
             await InvokeAsync(StateHasChanged);
 
             MessageService.Error("Import file failed to upload!");
+
+            await CloseFeedbackAsync();
         }
 
         await Clear();
@@ -116,12 +113,12 @@
 
     public async Task OnUploadError(string message)
     {
-        Visible = false;
-
         await InvokeAsync(StateHasChanged);
 
         MessageService.Error("An error occurred while trying to import");
         Logger?.LogError($"An error occurred while trying to import: {message}");
+
+        await CloseFeedbackAsync();
     }
 
     public async Task OnLocalFileSelected(string path)
@@ -132,14 +129,11 @@
             {
                 var game = await gameService.ImportLocalFileAsync(path);
 
-                Visible = false;
-
                 await InvokeAsync(StateHasChanged);
-
-                if (OnGameImported.HasDelegate)
-                    await OnGameImported.InvokeAsync(game.Id);
-
+                
                 MessageService.Success($"{game.Title} successfully imported!");
+
+                await CloseFeedbackAsync();
             }
         }
         catch (Exception ex)

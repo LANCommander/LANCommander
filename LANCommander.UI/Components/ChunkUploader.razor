@@ -1,4 +1,6 @@
-﻿@inject HttpClient HttpClient
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject IJSRuntime JS
 @inject IMessageService MessageService
@@ -8,13 +10,10 @@
 
     <span class="uploader-progress-rate"></span>
 
-    <label tabindex="0" class="ant-upload" style="display: grid;" for="ChunkFileInput"role="button">
+    <label tabindex="0" class="ant-upload" style="display: grid;" for="ChunkFileInput" role="button">
+        <InputFile @ref="FileInput" @key="@UploaderId" id="@($"ChunkFileInput-{UploaderId}")" OnChange="OnFileSelected" accept="@Accept" style="position: absolute; width: 100%; height: 100%; opacity: 0; top: 0;left: 0; z-index:2;" />
         
-        @if (!ClearInput)
-        {
-            <InputFile @ref="FileInput" @key="@UploaderId" id="ChunkFileInput" OnChange="OnFileSelected" accept="@Accept" style="position: absolute; width: 100%; height: 100%; opacity: 0; top: 0;left: 0; z-index:2;" />
-        }
-        <div class="ant-upload-drag-container">            
+        <div class="ant-upload-drag-container">
             <p class="ant-upload-drag-icon">
                 <Icon Type="@IconType.Outline.Upload" />
             </p>
@@ -52,49 +51,6 @@
     </div>
 }
 
-<style>
-    .chunk-uploader .uploader-progress-rate {
-        position: absolute;
-        text-align: center;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        opacity: 0;
-        transform: translateY(72px) scale(0);
-    }
-
-    .chunk-uploader .uploader-progress {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(0);
-        transition: transform .15s;
-    }
-
-    .chunk-uploader .ant-upload {
-        transition: transform .15s;
-        transform: scale(1);
-    }
-
-    .chunk-uploader[data-status="active"] .uploader-progress,
-    .chunk-uploader[data-status="success"] .uploader-progress {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1);
-    }
-
-    .chunk-uploader[data-status="active"] .uploader-progress-rate,
-    .chunk-uploader[data-status="success"] .uploader-progress-rate {
-        opacity: 1;
-        transform: translateY(72px) scale(1);
-    }
-
-    .chunk-uploader[data-status="active"] .ant-upload,
-    .chunk-uploader[data-status="success"] .ant-upload {
-        opacity: 0;
-        transform: scale(0);
-    }
-</style>
-
 @code {
     [Parameter] public RenderFragment Text { get; set; }
     [Parameter] public RenderFragment Hint { get; set; }
@@ -106,17 +62,13 @@
     [Parameter] public EventCallback<string> StatusChanged { get; set; }
     [Parameter] public IBrowserFile File { get; set; }
     [Parameter] public EventCallback<IBrowserFile> FileChanged { get; set; }
-    [Parameter] public string Version { get; set; }
-    [Parameter] public EventCallback<string> VersionChanged { get; set; }
-    [Parameter] public string Changelog { get; set; }
-    [Parameter] public EventCallback<string> ChangelogChanged { get; set; }
     [Parameter] public Guid StorageLocationId { get; set; }
     [Parameter] public EventCallback<Guid> StorageLocationIdChanged { get; set; }
 
     Guid UploaderId = Guid.NewGuid();
 
     InputFile FileInput;
-    List<UploadFileItem> FileList = new List<UploadFileItem>();
+    List<UploadFileItem> FileList = new();
 
     int Progress = 0;
     bool Uploading = false;
@@ -160,9 +112,9 @@
             if (FileInput != null)
             {
                 if (!String.IsNullOrWhiteSpace(ObjectKey) && ObjectKey != Guid.Empty.ToString())
-                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", StorageLocationId, ObjectKey);
+                    await JS.InvokeVoidAsync("window.Uploader.Init", $"ChunkFileInput-{UploaderId}", StorageLocationId, ObjectKey);
                 else
-                    await JS.InvokeVoidAsync("Uploader.Init", "ChunkFileInput", StorageLocationId, "");
+                    await JS.InvokeVoidAsync("window.Uploader.Init", $"ChunkFileInput-{UploaderId}", StorageLocationId, "");
 
                 break;
             }
@@ -174,14 +126,14 @@
 
         var dotNetReference = DotNetObjectReference.Create(this);
 
-        await JS.InvokeVoidAsync("Uploader.Upload", dotNetReference);
+        await JS.InvokeVoidAsync("window.Uploader.Upload", dotNetReference);
 
         await InvokeAsync(StateHasChanged);
     }
 
     public async Task Clear()
     {
-        await JS.InvokeVoidAsync("Uploader.Clear");
+        await JS.InvokeVoidAsync("window.Uploader.Clear");
 
         File = null;
 
@@ -196,7 +148,7 @@
         StateHasChanged();
     }
 
-    private async void OnFileSelected(InputFileChangeEventArgs args)
+    async void OnFileSelected(InputFileChangeEventArgs args)
     {
         var file = args.File;
 
@@ -220,19 +172,19 @@
         await ChangeStatus("");
     }
 
-    private async Task UploadArchiveJS()
+    async Task UploadArchiveJS()
     {
         Uploading = true;
         await ChangeStatus("Uploading");
 
         var dotNetReference = DotNetObjectReference.Create(this);
 
-        await JS.InvokeVoidAsync("Uploader.Upload", dotNetReference);
+        await JS.InvokeVoidAsync("window.Uploader.Upload", dotNetReference);
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task ChangeStatus(string status)
+    async Task ChangeStatus(string status)
     {
         Status = status;
 

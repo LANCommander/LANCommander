@@ -12,11 +12,27 @@ module.exports = {
             },
             {
                 test: /\.(css)$/,
-                use: [MiniCssExtractPlugin.loader, 'css-loader'],
+                use: [
+                    MiniCssExtractPlugin.loader,
+                    {
+                        loader: 'css-loader',
+                        options: { sourceMap: true }
+                    }
+                ],
             },
             {
                 test: /\.s[ac]ss$/i,
-                use: [MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader'],
+                use: [
+                        MiniCssExtractPlugin.loader,
+                        {
+                            loader: 'css-loader',
+                            options: { sourceMap: true }
+                        },
+                        {
+                            loader: 'sass-loader',
+                            options: { sourceMap: true }
+                        }
+                    ],
             }
         ],
     },
@@ -33,4 +49,5 @@ module.exports = {
         }),
     ],
     mode: 'production', // Use 'production' for minified output
+    devtool: 'source-map'
 };

@@ -29,7 +29,7 @@ namespace LANCommander.Server.Services
         public async Task<Redistributable> ImportAsync(Guid objectKey)
         {
             var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-            var importArchivePath = ArchiveService.GetArchiveFileLocation(importArchive);
+            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
 
             using (var importZip = ZipFile.OpenRead(importArchivePath))
             {
@@ -101,7 +101,7 @@ namespace LANCommander.Server.Services
                         archive.CreatedOn = manifestArchive.CreatedOn;
                         archive.StorageLocation = importArchive.StorageLocation;
 
-                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
+                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
 
@@ -122,7 +122,7 @@ namespace LANCommander.Server.Services
                             StorageLocation = importArchive.StorageLocation,
                         };
 
-                        var extractionLocation = ArchiveService.GetArchiveFileLocation(archive);
+                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
 

@@ -158,7 +158,7 @@ namespace LANCommander.Server.Services
 
                         image.Mutate(context => context.Resize(resizeOptions));
 
-                        if (media.Type.IsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && media.MimeType == MediaTypeNames.Image.Png && HasTransparentPixels(image))
+                        if (media.Type.ValueIsIn(MediaType.Icon, MediaType.Logo, MediaType.PageImage) && media.MimeType == MediaTypeNames.Image.Png && HasTransparentPixels(image))
                         {
                             await image.SaveAsPngAsync(destination);
                         }

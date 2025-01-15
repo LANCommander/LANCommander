@@ -82,7 +82,7 @@ namespace LANCommander.Launcher.Models
             if (SelectedOptions.MaxPlayers != null)
                 items = items.Where(i => (i.DataItem as DepotGame).MultiplayerModes.Any(mm => mm.MaxPlayers <= SelectedOptions.MaxPlayers));
 
-            items = items.Where(i => (i.DataItem as DepotGame).Type.IsIn(SDK.Enums.GameType.MainGame, SDK.Enums.GameType.StandaloneExpansion, SDK.Enums.GameType.StandaloneMod));
+            items = items.Where(i => (i.DataItem as DepotGame).Type.ValueIsIn(SDK.Enums.GameType.MainGame, SDK.Enums.GameType.StandaloneExpansion, SDK.Enums.GameType.StandaloneMod));
 
             switch (SelectedOptions.SortBy)
             {

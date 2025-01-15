@@ -90,7 +90,7 @@ namespace LANCommander.Server.Controllers
                 if (game.Archives != null)
                 foreach (var archive in game.Archives)
                 {
-                    var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive);
+                    var archiveFilePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
                     var entry = export.CreateEntry($"Archives/{archive.ObjectKey}", CompressionLevel.NoCompression);
 
                     using (var entryStream = entry.Open())

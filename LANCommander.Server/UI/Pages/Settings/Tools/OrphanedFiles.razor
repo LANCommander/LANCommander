@@ -59,7 +59,7 @@
         {
             var storageLocations = await storageLocationService.GetAsync();
             var archives = await archiveService.GetAsync();
-            var archiveFiles = archives.Select(a => archiveService.GetArchiveFileLocation(a));
+            var archiveFiles = await Task.WhenAll(archives.Select(a => archiveService.GetArchiveFileLocationAsync(a)));
 
             foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
             {

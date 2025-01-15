@@ -41,7 +41,7 @@
         </Space>
     </HeaderExtraControlsLayout>
     <WindowContent>
-        <ErrorBoundary @ref="ErrorBoundary">
+        <ErrorBoundary>
             <ChildContent>
                 @Body
 
@@ -58,8 +58,7 @@
                         SubTitle="@RandomQuip"
                         Class="crash-error">
                     <Extra>
-                        <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/"))">View Library</Button>
-                        <Button OnClick="ErrorBoundary.Recover">Reload</Button>
+                        <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
                         <Button OnClick="() => CopyError(context)">Copy Error</Button>
                     </Extra>
                     <ChildContent>
@@ -82,8 +81,6 @@
     public bool Importing = false;
     public bool Connecting = false;
     public IMessageService Messages { get; set; }
-
-    ErrorBoundary ErrorBoundary;
 
     public static MainLayout _MainLayout { get; set; }
 
@@ -153,7 +150,7 @@
 
     async Task CopyError(Exception ex)
     {
-        await JS.InvokeVoidAsync("clipboardCopy.copyText", ex.Message + "\n" + ex.StackTrace);
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", ex.Message + "\n" + ex.StackTrace);
 
         MessageService.Info("Error copied to clipboard!");
     }

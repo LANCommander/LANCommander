@@ -11,33 +11,25 @@
 @inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
 
-<Space Direction="SpaceDirection.Vertical" Style="width: 100%;">
-    <SpaceItem>
-        <ChunkUploader
-            @ref="ChunkUploader"
-            Accept=".lcx"
-            @bind-File="File"
-            @bind-Status="Status"
-            StorageLocationId="StorageLocation.Id"
-            OnUploadCompleted="OnUploadCompleted"
-            OnUploadError="OnUploadError">
-            <Text>
-                <p>Drag and Drop</p>
-                <p>or</p>
-                <p>
-                    <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
-                </p>
-            </Text>
-            <Hint>@Options.Hint</Hint>
-        </ChunkUploader>
-    </SpaceItem>
-    
-    <SpaceItem>
-        <StorageLocationSelector @bind-Value="StorageLocation" Type="StorageLocationType.Archive" />
-    </SpaceItem>
-</Space>
+<ChunkUploader
+    @ref="ChunkUploader"
+    Accept=".lcx"
+    @bind-File="File"
+    @bind-Status="Status"
+    StorageLocationId="StorageLocation.Id"
+    OnUploadCompleted="OnUploadCompleted"
+    OnUploadError="OnUploadError">
+    <Text>
+        <p>Drag and Drop</p>
+        <p>or</p>
+        <p>
+            <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
+        </p>
+    </Text>
+    <Hint>@Options.Hint</Hint>
+</ChunkUploader>
 
-<Flex Justify="FlexJustify.End" Gap="FlexGap.Small">
+<Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
     <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
     <Button OnClick="Cancel">Cancel</Button>
 </Flex>
@@ -52,6 +44,14 @@
     bool IsValid = false;
     string Filename;
     string Status;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+        {
+            StorageLocation = await storageLocationService.FirstAsync(l => l.Default && l.Type == StorageLocationType.Archive);
+        }
+    }
 
     async Task Start()
     {

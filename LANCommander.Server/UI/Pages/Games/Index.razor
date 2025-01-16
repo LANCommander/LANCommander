@@ -23,7 +23,6 @@
     @ref="Table"
     TItem="Game"
     LoadData="LoadData"
-    TreeChildren="game => game.DependentGames.Where(g => g.Type.IsIn(GameType.Mod, GameType.Expansion) && g.Id != game.Id)"
     @bind-SelectedRows="Selected"
     Size="@TableSize.Small"
     Responsive>

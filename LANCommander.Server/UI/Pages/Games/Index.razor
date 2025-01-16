@@ -9,6 +9,7 @@
 @using LANCommander.Server.UI.Pages.Games.Components
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 @using Microsoft.EntityFrameworkCore;
+@using SortDirection = AntDesign.SortDirection
 @using System.Web
 @attribute [Authorize]
 @inject DatabaseServiceFactory DatabaseServiceFactory
@@ -22,10 +23,10 @@
 <DataTable
     @ref="Table"
     TItem="Game"
-    LoadData="LoadData"
     @bind-SelectedRows="Selected"
     Size="@TableSize.Small"
-    Responsive>
+    Responsive
+    Searchable>
     <RightToolbar>
         @if (Selected != null && Selected.Count() > 0)
         {
@@ -37,25 +38,25 @@
     <Columns>
         <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
 
-        <DataColumn TData="string" Title="Icon">
+        <DataColumn TData="string" Title="Icon" Include="Media">
             <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
         </DataColumn>
 
-        <BoundDataColumn Property="g => g.Title" />
+        <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
     
-        <DataColumn TData="bool" Title="Multiplayer">
+        <DataColumn TData="bool" Title="Multiplayer" Include="MultiplayerModes" Sortable>
             <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
         </DataColumn>
 
-        <DataColumn TData="int" Title="Total Keys">
+        <DataColumn TData="int" Title="Total Keys" Include="Keys" Sortable>
             @context.Keys?.Count
         </DataColumn>
 
-        <DataColumn TData="int" Title="Keys Allocated">
+        <DataColumn TData="int" Title="Keys Allocated" Include="Keys" Sortable>
             @context.Keys?.Count(k => k.ClaimedOn.HasValue)
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Collections">
+        <DataColumn TData="string[]" Title="Collections" Include="Collections">
             @if (context.Collections != null)
                 foreach (var collection in context.Collections)
                 {
@@ -63,7 +64,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Developers">
+        <DataColumn TData="string[]" Title="Developers" Include="Developers">
             @if (context.Developers != null)
                 foreach (var dev in context.Developers)
                 {
@@ -71,7 +72,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Publishers">
+        <DataColumn TData="string[]" Title="Publishers" Include="Publishers">
             @if (context.Publishers != null)
                 foreach (var pub in context.Publishers)
                 {
@@ -79,7 +80,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Genres">
+        <DataColumn TData="string[]" Title="Genres" Include="Genres">
             @if (context.Genres != null)
                 foreach (var genre in context.Genres)
                 {
@@ -87,7 +88,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Platforms">
+        <DataColumn TData="string[]" Title="Platforms" Include="Platforms">
             @if (context.Platforms != null)
                 foreach (var platform in context.Platforms)
                 {
@@ -95,7 +96,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes">
+        <DataColumn TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes" Include="MultiplayerModes">
             @if (context.MultiplayerModes != null)
                 foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
                 {
@@ -113,48 +114,12 @@
 </DataTable>
 
 @code {
-    IEnumerable<Game> Games { get; set; } = new List<Game>();
-
-    string Url;
-
     bool Visibility = false;
 
     IEnumerable<Game> Selected;
 
     DataTable<Game> Table;
     ImportUploadDialog ImportUploadDialog;
-
-    async Task<PaginatedResults<Game>> LoadData(int pageIndex, int pageSize, string search)
-    {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            return await gameService
-                .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
-                .Include(
-                    g => g.DependentGames,
-                    g => g.Media.Where(m => m.Type == MediaType.Icon),
-                    g => g.Keys,
-                    g => g.CreatedBy,
-                    g => g.UpdatedBy,
-                    g => g.Collections,
-                    g => g.MultiplayerModes,
-                    g => g.Developers,
-                    g => g.Publishers,
-                    g => g.Genres,
-                    g => g.Platforms
-                )
-                .PaginateAsync(
-                    g => g.Type == GameType.MainGame
-                    ||
-                    g.Type == GameType.StandaloneExpansion
-                    ||
-                    g.Type == GameType.StandaloneMod
-                    ||
-                    g.BaseGame == null,
-                    pageIndex,
-                    pageSize);
-        }
-    }
 
     string GetIcon(Game game)
     {
@@ -188,7 +153,7 @@
             }
         }
 
-        // await LoadData();
+        await Reload();
     }
 
     async void AddToCollection()
@@ -212,7 +177,7 @@
         modalRef.OnOk = async (collections) =>
         {
             Table.UnselectAll();
-            // await LoadData();
+            await Reload();
         };
     }
 
@@ -227,11 +192,16 @@
         {
             Title = "Import Game",
             DestroyOnClose = true,
-            OnOk = (e) => Table.LoadData(Table.PageIndex, Table.PageSize, Table.Search),
-            OnCancel = (e) => Table.LoadData(Table.PageIndex, Table.PageSize, Table.Search),
+            OnOk = (e) => Reload(),
+            OnCancel = (e) => Reload(),
             Footer = null,
         };
 
         ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+    }
+
+    async Task Reload()
+    {
+        Table.ReloadData();
     }
 }

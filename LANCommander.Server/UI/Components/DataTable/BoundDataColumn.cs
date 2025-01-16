@@ -11,9 +11,15 @@ namespace LANCommander.Server.UI.Components
     {
         [Parameter]
         public Expression<Func<TItem, TProp>> Property { get; set; } = default!;
+        
+        [Parameter]
+        public string Include { get; set; } = default!;
 
         [CascadingParameter]
         public Dictionary<int, bool> ColumnVisibility { get; set; } = default!;
+
+        [CascadingParameter]
+        public List<string> Includes { get; set; } = default!;
 
         protected override void OnInitialized()
         {
@@ -51,6 +57,11 @@ namespace LANCommander.Server.UI.Components
             ClassMapper.If("column-hidden", () => ColumnVisibility.ContainsKey(ColIndex) && !ColumnVisibility[ColIndex]);
 
             StateHasChanged();
+            
+            if (!String.IsNullOrWhiteSpace(Include) && !Includes.Contains(Include))
+            {
+                Includes.Add(Include);
+            }
 
             base.OnParametersSet();
         }

@@ -2,19 +2,25 @@
 @using LANCommander.Server.Data
 @using LANCommander.Server.Models
 @using System.IO.Compression
+@using System.Linq.Expressions
+@using Microsoft.EntityFrameworkCore
 @using System.Web
 @namespace LANCommander.Server.UI.Components
 @attribute [CascadingTypeParameter(nameof(TItem))]
-@typeparam TItem
+@typeparam TItem where TItem : BaseModel
 @inherits Table<TItem>
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
 @inject NavigationManager NavigationManager
 @inject DrawerService DrawerService
 
 <CascadingValue Value="this">
     <Flex Justify="FlexJustify.SpaceBetween" Style="padding: 12px;">
         <Flex Gap="FlexGap.Small">
-            <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250" />
-            <Button Icon="@IconType.Outline.Control" Type="@ButtonType.Text" OnClick="OpenDrawer" />
+            @if (Searchable)
+            {
+                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250"/>                
+            }
+            <Button Icon="@IconType.Outline.Control" Type="@ButtonType.Text" OnClick="OpenDrawer"/>
             @LeftToolbar
         </Flex>
 
@@ -25,11 +31,13 @@
             </Flex>
         }
     </Flex>
-
-    <CascadingValue Value="ColumnVisibility" IsFixed>
-        <div id="@Id" class="ant-table-visibility-container">
-            @RenderBase()
-        </div>
+    
+    <CascadingValue Value="Includes" IsFixed>
+        <CascadingValue Value="ColumnVisibility" IsFixed>
+            <div id="@Id" class="ant-table-visibility-container">
+                @RenderBase()
+            </div>
+        </CascadingValue>
     </CascadingValue>
 </CascadingValue>
 
@@ -48,53 +56,69 @@
     [Parameter] public RenderFragment RightToolbar { get; set; }
     [Parameter] public RenderFragment<TItem> Columns { get; set; }
     [Parameter] public RenderFragment Actions { get; set; }
+    [Parameter] public bool Searchable { get; set; }
     [Parameter] public string Search { get; set; }
     [Parameter] public string SearchChanged { get; set; }
-    [Parameter] public Func<int, int, string, Task<PaginatedResults<TItem>>> LoadData { get; set; }
+    [Parameter] public Expression<Func<TItem, bool>> SearchQuery { get; set; }
     
     string Url;
     bool DrawerOpen = false;
 
-    internal Dictionary<int, bool> ColumnVisibility = new Dictionary<int, bool>();
+    internal Dictionary<int, bool> ColumnVisibility = new();
+    List<string> Includes = new();
 
     RenderFragment RenderBase() => builder => base.BuildRenderTree(builder);
 
     protected override async Task OnInitializedAsync()
     {
-        //Id = Guid.NewGuid().ToString();
+        NavigationManager.LocationChanged += LocationChanged;
+        
         Url = NavigationManager.Uri;
-        //NavigationManager.LocationChanged += LocationChanged;
+        
+        OnChange = EventCallback.Factory.Create<QueryModel<TItem>>(this,
+            async (queryModel) =>
+            {
+                using (var context = DatabaseContextFactory.CreateDbContext())
+                {
+                    var queryable = queryModel != null ? context.Set<TItem>().ExecuteTableQuery(queryModel) : context.Set<TItem>();
 
-        await LoadTableParameter();
+                    foreach (var include in Includes)
+                    {
+                        queryable = queryable.Include(include);
+                    }
 
+                    if (!String.IsNullOrWhiteSpace(Search) && SearchQuery != null)
+                    {
+                        queryable = queryable.Where(SearchQuery);
+                    }
+
+                    Total = await queryable.CountAsync();
+
+                    if (queryModel != null)
+                        DataSource = await queryable.CurrentPagedRecords(queryModel).ToListAsync();
+                    else
+                        DataSource = await queryable.Take(PageSize).ToListAsync();
+                    
+                    await base.OnParametersSetAsync();
+                    base.OnParametersSet();
+                }
+            });
+
+        await OnChange.InvokeAsync();
+        
         await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await OnChange.InvokeAsync();
     }
 
     protected override async Task OnParametersSetAsync()
     {
         if (Columns != null)
             ChildContent = Columns;
-
-        base.OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(
-            this,
-            async (args) =>
-            {
-                PageSizeChanged(args);
-            });
-
-        base.OnPageIndexChange = EventCallback.Factory.Create<PaginationEventArgs>(
-            this,
-            async (args) =>
-            {
-                PageIndexChanged(args);
-            });
-
-        base.OnChange = EventCallback.Factory.Create<QueryModel<TItem>>(
-            this,
-            async (args) =>
-            {
-                await LoadTableParameter();
-            });
 
         await base.OnParametersSetAsync();
     }
@@ -103,7 +127,6 @@
     {
         Url = e.Location;
         await LoadTableParameter();
-        // await LoadData();
     }
 
     async Task LoadTableParameter()
@@ -113,46 +136,18 @@
 
         var uri = NavigationManager.ToAbsoluteUri(Url);
         var query = HttpUtility.ParseQueryString(uri.Query);
-
-        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
-        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
+        
+        if (query.AllKeys.Contains("Page"))
+            PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
+        
+        if (query.AllKeys.Contains("Size"))
+            PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
 
         if (query["Search"] != null && query["Search"] != Search)
             Search = query["Search"];
-        else if (!String.IsNullOrWhiteSpace(Search))
-            Search = "";
-
-        if (LoadData != null)
-        {
-            var data = await LoadData(PageIndex, PageSize, Search);
-
-            DataSource = data.Results;
-            Total = data.Count;
-        }
 
         Loading = false;
         await InvokeStateHasChangedAsync();
-    }
-
-    new void PageIndexChanged(PaginationEventArgs args)
-    {
-        var uri = NavigationManager.ToAbsoluteUri(Url);
-
-        NavigationManager.NavigateTo($"{uri.AbsolutePath}?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
-    }
-
-    new void PageSizeChanged(PaginationEventArgs args)
-    {
-        var uri = NavigationManager.ToAbsoluteUri(Url);
-
-        NavigationManager.NavigateTo($"{uri.AbsolutePath}?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
-    }
-
-    void OnSearchChanged()
-    {
-        var uri = NavigationManager.ToAbsoluteUri(Url);
-
-        NavigationManager.NavigateTo($"{uri.AbsolutePath}?Search={Search}&Size={PageSize}");
     }
 
     public async Task OpenDrawer()
@@ -187,13 +182,13 @@
             ColumnVisibility[column.Index] = column.Visible;
         }
 
-        base.ReloadData(PageIndex, PageSize);
-        base.InvokeStateHasChanged();
+        ReloadData(PageIndex, PageSize);
+        InvokeStateHasChanged();
     }
 
     public void CloseDrawer()
     {
-        base.InvokeStateHasChanged();
+        InvokeStateHasChanged();
         StateHasChanged();
     }
 

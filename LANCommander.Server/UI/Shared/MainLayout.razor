@@ -13,7 +13,7 @@
                 <SubMenu Title="Profile" Placement="Placement.BottomRight">
                     <TitleTemplate>
                         <Icon Type="@IconType.Outline.User" />
-                        @User?.Identity.Name
+                        <span>@User?.Identity.Name</span>
                     </TitleTemplate>
                     <ChildContent>
                         <MenuItem RouterLink="/Profile">General</MenuItem>
@@ -28,7 +28,7 @@
             <SubMenu>
                 <TitleTemplate>
                     <Icon Type="@IconType.Outline.Dashboard" />
-                    Dashboards
+                    <span>Dashboards</span>
                 </TitleTemplate>
                 <ChildContent>
                     <MenuItem RouterLink="/">Overview</MenuItem>
@@ -42,7 +42,7 @@
                 <SubMenu>
                     <TitleTemplate>
                         <Icon Type="@IconType.Outline.Tags" />
-                        Metadata
+                        <span>Metadata</span>
                     </TitleTemplate>
                     <ChildContent>
                         <MenuItem RouterLink="/Metadata/Collections">Collections</MenuItem>
@@ -59,7 +59,7 @@
                 <SubMenu>
                     <TitleTemplate>
                         <Icon Type="@IconType.Outline.Read" />
-                        Pages
+                        <span>Pages</span>
                     </TitleTemplate>
                     <ChildContent>
                         <MenuItem RouterLink="/Pages/Edit">Edit</MenuItem>
@@ -71,7 +71,7 @@
                 <SubMenu>
                     <TitleTemplate>
                         <Icon Type="@IconType.Outline.Setting" />
-                        Settings
+                        <span>Settings</span>
                     </TitleTemplate>
                     <ChildContent>
                         <MenuItem RouterLink="/Settings/General">General</MenuItem>

@@ -196,8 +196,6 @@ label.ant-btn-icon-only {
 }
 
 .ant-table-cell-with-append {
-    display: flex;
-    align-items: center;
     padding-left: 8px !important;
 }
 

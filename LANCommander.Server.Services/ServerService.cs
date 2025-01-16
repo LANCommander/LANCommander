@@ -6,6 +6,7 @@ using System.IO.Compression;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Models;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -14,43 +15,57 @@ namespace LANCommander.Server.Services
     {
         private readonly GameService GameService;
         private readonly ArchiveService ArchiveService;
+        private readonly StorageLocationService StorageLocationService;
+
+        private readonly Settings Settings = SettingService.GetSettings();
 
         public ServerService(
             ILogger<ServerService> logger,
             IFusionCache cache,
             RepositoryFactory repositoryFactory,
             GameService gameService,
-            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
+            ArchiveService archiveService,
+            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
         {
             GameService = gameService;
             ArchiveService = archiveService;
+            StorageLocationService = storageLocationService;
         }
 
         public async Task<Data.Models.Server> ImportAsync(Guid objectKey)
         {
-            var settings = SettingService.GetSettings();
+            var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
+            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
+            var storageLocation = await StorageLocationService.GetAsync(importArchive.StorageLocationId);
 
-            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+            Data.Models.Server server;
 
-            using (var importArchive = ZipFile.OpenRead(importArchivePath))
+            using (var importZip = ZipFile.OpenRead(importArchivePath))
             {
-                var manifest = ManifestHelper.Deserialize<SDK.Models.Server>(await importArchive.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+                var manifest = ManifestHelper.Deserialize<SDK.Models.Server>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                var server = await GetAsync(manifest.Id);
-
-                var exists = server != null;
+                var exists = await ExistsAsync(manifest.Id);
 
                 if (!exists)
                     server = new Data.Models.Server()
                     {
                         Id = manifest.Id,
                     };
+                else
+                {
+                    server = await Include(s => s.Game)
+                        .Include(s => s.Actions)
+                        .Include(s => s.Scripts)
+                        .Include(s => s.HttpPaths)
+                        .Include(s => s.ServerConsoles)
+                        .FirstOrDefaultAsync(s => s.Id == manifest.Id);  
+                }
 
                 server.Name = manifest.Name;
                 server.Autostart = manifest.Autostart;
                 server.AutostartMethod = (ServerAutostartMethod)(int)manifest.AutostartMethod;
                 server.AutostartDelay = manifest.AutostartDelay;
-                server.WorkingDirectory = Path.Combine(settings.Servers.StoragePath, server.Name.SanitizeFilename());
+                server.WorkingDirectory = Path.Combine(Settings.Servers.StoragePath, server.Name.SanitizeFilename());
                 server.Path = manifest.Path.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
                 server.Arguments = manifest.Arguments.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
                 server.UseShellExecute = manifest.UseShellExecute;
@@ -58,14 +73,16 @@ namespace LANCommander.Server.Services
                 server.OnStartScriptPath = manifest.OnStartScriptPath;
                 server.OnStopScriptPath = manifest.OnStopScriptPath;
                 server.Port = manifest.Port;
+                
+                #region Game
 
-                if (manifest.Game.Id != Guid.Empty)
+                if (manifest.Game != null)
                 {
                     var game = await GameService.GetAsync(manifest.Game.Id);
 
-                    if (game != null)
-                        server.Game = game;
+                    server.Game = game;
                 }
+                #endregion
 
                 #region Consoles
                 if (server.ServerConsoles == null)
@@ -149,7 +166,7 @@ namespace LANCommander.Server.Services
 
                     if (manifestScript != null)
                     {
-                        script.Contents = await importArchive.ReadAllTextAsync($"Scripts/{script.Id}");
+                        script.Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}");
                         script.Description = manifestScript.Description;
                         script.Name = manifestScript.Name;
                         script.RequiresAdmin = manifestScript.RequiresAdmin;
@@ -166,7 +183,7 @@ namespace LANCommander.Server.Services
                         server.Scripts.Add(new Script()
                         {
                             Id = manifestScript.Id,
-                            Contents = await importArchive.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
+                            Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
                             Description = manifestScript.Description,
                             Name = manifestScript.Name,
                             RequiresAdmin = manifestScript.RequiresAdmin,
@@ -196,7 +213,7 @@ namespace LANCommander.Server.Services
                 #endregion
 
                 #region Extract Files
-                foreach (var entry in importArchive.Entries.Where(a => a.FullName.StartsWith("Files/")))
+                foreach (var entry in importZip.Entries.Where(a => a.FullName.StartsWith("Files/")))
                 {
                     var destination = entry.FullName
                         .Substring(6, entry.FullName.Length - 6)
@@ -204,13 +221,13 @@ namespace LANCommander.Server.Services
                         .Replace('/', Path.DirectorySeparatorChar);
 
                     destination = Path.Combine(server.WorkingDirectory, destination);
+                    
+                    var directory = Path.GetDirectoryName(destination);
+                    
+                    if (!String.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
 
-                    if (entry.FullName.EndsWith('/'))
-                    {
-                        if (!Directory.Exists(destination))
-                            Directory.CreateDirectory(destination);
-                    }
-                    else
+                    if (!entry.FullName.EndsWith('/'))
                         entry.ExtractToFile(destination, true);
                 }
                 #endregion

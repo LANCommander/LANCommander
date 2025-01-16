@@ -6,6 +6,7 @@
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
+@inject ModalService ModalService
 @inject IMessageService MessageService
 
 <PageHeader Title="Servers">
@@ -21,7 +22,7 @@
 
             <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()"/>
 
-            <Button Type="@ButtonType.Default" OnClick="ImportUploadDialog.Open">Import</Button>
+            <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>
 
             <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Server</Button>
         </Flex>
@@ -79,10 +80,6 @@
         </ChildContent>
     </ActionColumn>
 </Table>
-
-<ImportUploadDialog @ref="ImportUploadDialog" OnServerImported="LoadData">
-    <Hint>Only LCX files are supported for importing servers</Hint>
-</ImportUploadDialog>
 
 @code {
     IEnumerable<Server> Servers { get; set; } = new List<Server>();
@@ -241,5 +238,24 @@
     async Task CloseColumnPicker()
     {
         ColumnPickerVisible = false;
+    }
+
+    async Task OpenImportDialog()
+    {
+        var options = new ImportDialogOptions
+        {
+            Hint = "Only LCX files are supported for importing servers"
+        };
+
+        var modalOptions = new ModalOptions
+        {
+            Title = "Import Server",
+            DestroyOnClose = true,
+            // OnOk = (e) => Reload(),
+            // OnCancel = (e) => Reload(),
+            Footer = null
+        };
+
+        ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
     }
 }

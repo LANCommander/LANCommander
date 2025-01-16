@@ -136,12 +136,12 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<bool> ExistsAsync(Guid id)
         {
-            return FirstOrDefaultAsync(x => x.Id == id) != null;
+            return (await FirstOrDefaultAsync(x => x.Id == id)) != null;
         }
 
         public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
         {
-            return GetAsync(predicate) != null;
+            return (await GetAsync(predicate)) != null;
         }
 
         public virtual async Task<T> AddAsync(T entity)

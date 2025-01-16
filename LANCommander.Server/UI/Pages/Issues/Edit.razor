@@ -99,7 +99,13 @@
             if (Id == Guid.Empty)
                 Issue = new Issue();
             else
-                Issue = await issueService.Include(i => i.Game).GetAsync(Id);
+                Issue = await issueService
+                    .Include(
+                        i => i.Game,
+                        i => i.CreatedBy,
+                        i => i.UpdatedBy,
+                        i => i.ResolvedBy
+                    ).GetAsync(Id);
         }
 
         using (var gameService = DatabaseServiceFactory.Create<GameService>())

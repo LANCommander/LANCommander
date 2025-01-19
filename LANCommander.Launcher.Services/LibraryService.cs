@@ -21,16 +21,11 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class LibraryService : BaseService
+    public class LibraryService : BaseDatabaseService<Library>
     {
-        private readonly DatabaseContext DatabaseContext;
         private readonly InstallService InstallService;
         private readonly GameService GameService;
-        private readonly SaveService SaveService;
-        private readonly PlaySessionService PlaySessionService;
-        private readonly RedistributableService RedistributableService;
         private readonly ImportService ImportService;
-        private readonly MessageBusService MessageBusService;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
@@ -48,25 +43,16 @@ namespace LANCommander.Launcher.Services
         public LibraryFilter Filter { get; set; } = new LibraryFilter();
 
         public LibraryService(
+            DatabaseContext databaseContext,
             SDK.Client client,
             ILogger<LibraryService> logger,
-            DatabaseContext databaseContext,
             InstallService installService,
             GameService gameService,
-            SaveService saveService,
-            PlaySessionService playSessionService,
-            RedistributableService redistributableService,
-            ImportService importService,
-            MessageBusService messageBusService) : base(client, logger)
+            ImportService importService) : base(databaseContext, client, logger)
         {
-            DatabaseContext = databaseContext;
             InstallService = installService;
             GameService = gameService;
-            SaveService = saveService;
-            PlaySessionService = playSessionService;
-            RedistributableService = redistributableService;
             ImportService = importService;
-            MessageBusService = messageBusService;
 
             InstallService.OnInstallComplete += InstallService_OnInstallComplete;
             ImportService.OnImportComplete += ImportService_OnImportComplete;
@@ -107,13 +93,22 @@ namespace LANCommander.Launcher.Services
             return Items.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
         }
 
+        public async Task<Library> GetByUserAsync(Guid userId)
+        {
+            return Context
+                .Libraries
+                .Include(l => l.User)
+                .Include(l => l.Games)
+                .FirstOrDefault(l => l.User.Id == userId);
+        }
+
         public async Task<IEnumerable<ListItem>> GetItemsAsync()
         {
             Items.Clear();
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
-                var games = await DatabaseContext.Games
+                var games = await Context.Games
                     .Include(g => g.Collections)
                     .Include(g => g.Developers)
                     .Include(g => g.Genres)
@@ -161,7 +156,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task<ListItem> GetItemAsync(Guid key)
         {
-            var game = await DatabaseContext.Games
+            var game = await Context.Games
                 .Include(g => g.Collections)
                 .Include(g => g.Developers)
                 .Include(g => g.Genres)

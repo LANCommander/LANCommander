@@ -68,6 +68,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<GenreService>();
             services.AddScoped<ImportService>();
             services.AddScoped<LibraryService>();
+            services.AddScoped<UserService>();
             services.AddScoped<DepotService>();
             services.AddScoped<MediaService>();
             services.AddScoped<MultiplayerModeService>();

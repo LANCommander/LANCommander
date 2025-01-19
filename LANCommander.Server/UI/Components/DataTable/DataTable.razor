@@ -119,8 +119,37 @@
     {
         if (Columns != null)
             ChildContent = Columns;
+        
+        base.OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(
+            this,
+            async (args) =>
+            {
+                PageSizeChanged(args);
+            });
+
+        base.OnPageIndexChange = EventCallback.Factory.Create<PaginationEventArgs>(
+            this,
+            async (args) =>
+            {
+                PageIndexChanged(args);
+            });
+
 
         await base.OnParametersSetAsync();
+    }
+    
+    new void PageIndexChanged(PaginationEventArgs args)
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+
+        NavigationManager.NavigateTo($"{uri.AbsolutePath}?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+    }
+
+    new void PageSizeChanged(PaginationEventArgs args)
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+
+        NavigationManager.NavigateTo($"{uri.AbsolutePath}?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
     }
 
     async void LocationChanged(object sender, LocationChangedEventArgs e)

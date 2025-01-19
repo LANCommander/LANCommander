@@ -1,64 +1,37 @@
 ﻿@page "/Metadata/Platforms"
 @using Microsoft.EntityFrameworkCore;
+@using LANCommander.Server.Data
 @using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Platforms">
-    <PageHeaderExtra>
-        <Space Direction="SpaceDirection.Horizontal">
-            <SpaceItem>
-                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
-            </SpaceItem>
-            <SpaceItem>
-                <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Platform</Button>
-            </SpaceItem>
-        </Space>
-    </PageHeaderExtra>
-</PageHeader>
+<PageHeader Title="Platforms" />
 
-<TableColumnPicker @ref="Picker" Key="Platforms" @bind-Visible="ColumnPickerVisible" />
-
-<Table
+<DataTable
     TItem="Platform"
-    DataSource="@Platforms"
-    Loading="@Loading"
-    PageSize="@PageSize"
-    PageIndex="@PageIndex"
-    Total="@TotalCount"
-    OnPageIndexChange="PageIndexChanged"
-    OnPageSizeChange="PageSizeChanged"
-    Size="@TableSize.Small"
-    Responsive>
-    <PropertyColumn Property="c => c.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
-    <PropertyColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
-    <PropertyColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
-    <PropertyColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
-    <PropertyColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
-    <PropertyColumn Property="c => c.Games != null ? c.Games.Count : 0" Title="Games" Sortable Hidden="@(Picker.IsColumnHidden("Games"))" />
-    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
-        <TitleTemplate>
-            <div style="text-align: right">
-                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
-            </div>
-        </TitleTemplate>
-        <ChildContent>
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenEdit(context)" />
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this Platform?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ChildContent>
-    </ActionColumn>
-</Table>
+    Size="@TableSize.Small">
+    <RightToolbar>
+        <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Platform</Button>
+    </RightToolbar>
+    <Columns>
+        <BoundDataColumn Property="g => context.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <DataColumn Title="Games" TData="int" Include="Games" Sortable>
+            @context.Games?.Count
+        </DataColumn>
+        <BoundDataColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+        <BoundDataColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+        <DataActions>
+            <a href="@($"/Metadata/Platforms/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this platform?">
+                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+</DataTable>
 
 <Modal Title="@(PlatformContext.Id == Guid.Empty ? "New Platform" : "Edit Platform")"
     @bind-Visible="@EditPlatformVisible"
@@ -75,83 +48,13 @@
     IEnumerable<Platform> Platforms { get; set; } = new List<Platform>();
 
     bool Loading = true;
-    int PageIndex = 1;
-    int PageSize = 50;
-    int TotalCount = 0;
-
-    string Search = "";
-    string Url;
-
-    TableColumnPicker Picker;
-    bool ColumnPickerVisible = false;
 
     bool EditPlatformVisible = false;
-    Platform PlatformContext = new Platform();
+    Platform PlatformContext = new();
 
     protected override async Task OnInitializedAsync()
     {
-        Url = NavigationManager.Uri;
-        NavigationManager.LocationChanged += LocationChanged;
-        LoadTableParameter();
-        await LoadData();
-
         Loading = false;
-    }
-
-    async Task LoadData()
-    {
-        var fuzzySearch = Search.ToLower().Trim();
-
-        using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
-        {
-            var results = await platformService
-                .Include(p => p.Games)
-                .Include(p => p.CreatedBy)
-                .Include(p => p.UpdatedBy)
-                .SortBy(p => p.Name)
-                .PaginateAsync(p => p.Name.ToLower().Contains(fuzzySearch),
-                    PageIndex,
-                    PageSize);
-
-            TotalCount = results.Count;
-            Platforms = results.Results;
-        }
-    }
-
-    async void LocationChanged(object sender, LocationChangedEventArgs e)
-    {
-        Url = e.Location;
-        LoadTableParameter();
-        await LoadData();
-    }
-
-    void LoadTableParameter()
-    {
-        var uri = NavigationManager.ToAbsoluteUri(Url);
-        var query = HttpUtility.ParseQueryString(uri.Query);
-
-        PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
-        PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
-
-        if (query["Search"] != null)
-            Search = query["Search"];
-        else
-            Search = "";
-    }
-
-    void PageIndexChanged(PaginationEventArgs args)
-    {
-        NavigationManager.NavigateTo($"/Metadata/Platforms?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
-    }
-
-    void PageSizeChanged(PaginationEventArgs args)
-    {
-        NavigationManager.NavigateTo($"/Metadata/Platforms?Page={args.Page}&Size={args.PageSize}{(Search != "" ? "&Search=" + Search : "")}");
-    }
-
-    void SearchChanged()
-    {
-        NavigationManager.NavigateTo($"/Metadata/Platforms?Search={Search}&Size={PageSize}");
     }
 
     async Task UpdateOrAdd()
@@ -173,8 +76,6 @@
                     MessageService.Success($"{PlatformContext.Name} was updated!");
                 }
             }
-
-            await LoadData();
         }
         catch (Exception ex)
         {
@@ -217,23 +118,6 @@
             await platformService.DeleteAsync(Platform);
         }
 
-        await LoadData();
-
         Loading = false;
-    }
-
-    async Task OpenColumnPicker()
-    {
-        ColumnPickerVisible = true;
-    }
-
-    async Task CloseColumnPicker()
-    {
-        ColumnPickerVisible = false;
-    }
-
-    public void Dispose()
-    {
-        NavigationManager.LocationChanged -= LocationChanged;
     }
 }

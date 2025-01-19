@@ -6,6 +6,6 @@ namespace LANCommander.Launcher.Data.Models
     public class Category : BaseTaxonomyModel
     {
         public virtual Category Parent { get; set; }
-        public virtual ICollection<Category> Children { get; set; }
+        public virtual ICollection<Category> Children { get; set; } = new List<Category>();
     }
 }

@@ -6,8 +6,7 @@ namespace LANCommander.Launcher.Data.Models
     [Table("Genres")]
     public class Genre : BaseTaxonomyModel
     {
-        public string Name { get; set; }
         [JsonIgnore]
-        public virtual ICollection<Game> Games { get; set; }
+        public virtual ICollection<Game> Games { get; set; } = new List<Game>();
     }
 }

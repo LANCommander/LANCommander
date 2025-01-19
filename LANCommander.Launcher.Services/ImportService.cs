@@ -174,7 +174,7 @@ namespace LANCommander.Launcher.Services
                 try
                 {
                     var existing = false;
-                    var localGame = await GameService.Get(game.Id);
+                    var localGame = await GameService.GetAsync(game.Id);
 
                     if (localGame == null)
                         localGame = new Game();
@@ -191,17 +191,17 @@ namespace LANCommander.Launcher.Services
                     localGame.Singleplayer = game.Singleplayer;
                     
                     if (!existing)
-                        localGame = await GameService.Add(localGame);
+                        localGame = await GameService.AddAsync(localGame);
 
                     if (game.BaseGameId != Guid.Empty && localGame.BaseGameId != game.BaseGameId)
                     {
-                        var baseGame = await GameService.Get(game.BaseGameId);
+                        var baseGame = await GameService.GetAsync(game.BaseGameId);
 
                         if (baseGame == null)
                         {
                             await ImportGameAsync(game.BaseGameId);
 
-                            localGame.BaseGame = await GameService.Get(game.BaseGameId);
+                            localGame.BaseGame = await GameService.GetAsync(game.BaseGameId);
                         }
                         else
                         {
@@ -218,7 +218,7 @@ namespace LANCommander.Launcher.Services
                     }
                     else if (game.Engine != null)
                     {
-                        var engine = await EngineService.Get(game.Engine.Id);
+                        var engine = await EngineService.GetAsync(game.Engine.Id);
 
                         if (engine != null)
                         {
@@ -384,7 +384,7 @@ namespace LANCommander.Launcher.Services
 
                     #endregion
                     
-                    localGame = await GameService.Update(localGame);
+                    localGame = await GameService.UpdateAsync(localGame);
 
                     return localGame;
                 }
@@ -483,7 +483,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task<Media> ImportMediaAsync(SDK.Models.Media importMedia, SDK.Models.Game game = null)
         {
-            var media = await MediaService.Get(importMedia.Id);
+            var media = await MediaService.GetAsync(importMedia.Id);
 
             if (media == null)
                 media = new Media();
@@ -500,10 +500,10 @@ namespace LANCommander.Launcher.Services
             {
                 media.Id = importMedia.Id;
 
-                await MediaService.Add(media);
+                await MediaService.AddAsync(media);
             }
             else
-                await MediaService.Update(media);
+                await MediaService.UpdateAsync(media);
 
             var mediaStoragePath = MediaService.GetStoragePath();
             var localPath = MediaService.GetImagePath(media);
@@ -531,7 +531,7 @@ namespace LANCommander.Launcher.Services
             where V : BaseDatabaseService<T>
         {
             // This could be handled better... DI?
-            var models = await service.Get();
+            var models = await service.GetAsync();
 
             foreach (var importModel in importModels)
             {
@@ -550,10 +550,10 @@ namespace LANCommander.Launcher.Services
                         {
                             model.Id = importModel.Id;
 
-                            model = await service.Add(model);
+                            model = await service.AddAsync(model);
                         }
                         else
-                            model = await service.Update(model);
+                            model = await service.UpdateAsync(model);
 
                         transaction.Commit();
                     }
@@ -576,7 +576,7 @@ namespace LANCommander.Launcher.Services
                 {
                     try
                     {
-                        await service.Delete(model);
+                        await service.DeleteAsync(model);
                     }
                     catch
                     {
@@ -586,7 +586,7 @@ namespace LANCommander.Launcher.Services
             }
 
             // Too slow?
-            return await service.Get();
+            return await service.GetAsync();
         }
 
     }

@@ -190,9 +190,9 @@ namespace LANCommander.Launcher.Services
         {
             await Client.Library.RemoveFromLibrary(id);
 
-            var localGame = await GameService.Get(id);
+            var localGame = await GameService.GetAsync(id);
 
-            await GameService.Delete(localGame);
+            await GameService.DeleteAsync(localGame);
 
             await LibraryChanged();
         }

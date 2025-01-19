@@ -52,7 +52,7 @@ namespace LANCommander.Launcher.Services
                     game.InstalledOn = null;
                     game.InstalledVersion = null;
 
-                    await Update(game);
+                    await UpdateAsync(game);
 
                     OnUninstallComplete?.Invoke(game);
 

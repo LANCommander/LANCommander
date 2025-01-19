@@ -1,4 +1,5 @@
-﻿using LANCommander.Launcher.Data.Models;
+﻿using LANCommander.Launcher.Data.Interceptors;
+using LANCommander.Launcher.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,7 @@ namespace LANCommander.Launcher.Data
         {
             var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
 
+            optionsBuilder.AddInterceptors(new AuditingInterceptor());
             optionsBuilder.UseLoggerFactory(LoggerFactory);
             optionsBuilder.UseSqlite($"Data Source={dbPath};Cache=Shared");
         }

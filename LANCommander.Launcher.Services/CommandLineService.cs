@@ -101,12 +101,12 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.Get(options.GameId);
+                var game = await GameService.GetAsync(options.GameId);
 
                 await InstallService.Add(game, options.InstallDirectory);
                 await InstallService.Next();
 
-                game = await GameService.Get(options.GameId);
+                game = await GameService.GetAsync(options.GameId);
 
                 Logger.LogInformation($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
             }
@@ -122,7 +122,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.Get(options.GameId);
+                var game = await GameService.GetAsync(options.GameId);
 
                 await GameService.UninstallAsync(game);
 
@@ -140,7 +140,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.Get(options.GameId);
+                var game = await GameService.GetAsync(options.GameId);
                 var manifest = await ManifestHelper.ReadAsync(game.InstallDirectory, game.Id);
                 var action = manifest.Actions.FirstOrDefault(a => a.Id == options.ActionId);
 

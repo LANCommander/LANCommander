@@ -19,11 +19,11 @@ namespace LANCommander.Launcher.Services
             Settings = SettingService.GetSettings();
         }
 
-        public override Task Delete(Media entity)
+        public override Task DeleteAsync(Media entity)
         {
             DeleteLocalMediaFile(entity);
 
-            return base.Delete(entity);
+            return base.DeleteAsync(entity);
         }
 
         public bool FileExists(Media entity)
@@ -42,7 +42,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task<string> GetImagePath(Guid id)
         {
-            var entity = await Get(id);
+            var entity = await GetAsync(id);
 
             return GetImagePath(entity);
         }

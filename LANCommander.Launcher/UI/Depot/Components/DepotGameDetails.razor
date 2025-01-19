@@ -167,7 +167,7 @@
             {
                 SelectedGame = await Client.Games.GetAsync(ItemId);
 
-                var game = await GameService.Get(ItemId);
+                var game = await GameService.GetAsync(ItemId);
 
                 if (game == null || !game.Installed)
                     IsInstalled = false;

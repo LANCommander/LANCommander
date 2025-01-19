@@ -58,7 +58,7 @@ namespace LANCommander.Launcher.Services
                         Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
                     };
 
-                    media = await MediaService.Add(media);
+                    media = await MediaService.AddAsync(media);
 
                     var localPath = MediaService.GetImagePath(media);
 

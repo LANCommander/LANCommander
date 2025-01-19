@@ -94,7 +94,7 @@ namespace LANCommander.Launcher.Services
             // Check to see if we need to install the base game (this game is probably a mod or expansion)
             if (gameInfo.BaseGameId != Guid.Empty)
             {
-                var baseGame = await GameService.Get(gameInfo.BaseGameId);
+                var baseGame = await GameService.GetAsync(gameInfo.BaseGameId);
 
                 if (baseGame != null && !baseGame.Installed)
                 {
@@ -183,7 +183,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                localGame = await GameService.Get(currentItem.Id);
+                localGame = await GameService.GetAsync(currentItem.Id);
                 remoteGame = await Client.Games.GetAsync(currentItem.Id);
 
                 if (localGame == null)
@@ -298,7 +298,7 @@ namespace LANCommander.Launcher.Services
 
                     try
                     {
-                        await GameService.Update(localGame);
+                        await GameService.UpdateAsync(localGame);
                     }
                     catch (Exception ex)
                     {
@@ -330,7 +330,7 @@ namespace LANCommander.Launcher.Services
 
                 localGame.InstallDirectory = newInstallDirectory;
 
-                await GameService.Update(localGame);
+                await GameService.UpdateAsync(localGame);
 
                 currentItem.Status = GameInstallStatus.Complete;
 

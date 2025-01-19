@@ -16,41 +16,35 @@ namespace LANCommander.Launcher.Services
             Context = dbContext;
         }
 
-        public virtual async Task<ICollection<T>> Get()
+        public virtual async Task<ICollection<T>> GetAsync()
         {
-            return await Get(x => true).ToListAsync();
+            return await Query(x => true).ToListAsync();
         }
 
-        public virtual async Task<T> Get(Guid id)
+        public virtual async Task<T> GetAsync(Guid id)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                return await repo.Find(id);
-            }
+            return await Context.Set<T>().FindAsync(id);
         }
 
-        public virtual IQueryable<T> Get(Expression<Func<T, bool>> predicate)
+        public virtual IQueryable<T> Query(Expression<Func<T, bool>> predicate)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                return repo.Get(predicate);
-            }
+            return Context.Set<T>().Where(predicate);
         }
 
         public virtual bool Exists(Guid id)
         {
-            return Get(id) != null;
+            return GetAsync(id) != null;
         }
 
-        public virtual async Task<T> Add(T entity)
+        public virtual async Task<T> AddAsync(T entity)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                entity = await repo.Add(entity);
-                await repo.SaveChanges();
+            var result = await Context.Set<T>().AddAsync(entity);
 
-                return entity;
-            }
+            entity = result.Entity;
+            
+            await Context.SaveChangesAsync();
+
+            return entity;
         }
 
         /// <summary>
@@ -59,57 +53,48 @@ namespace LANCommander.Launcher.Services
         /// <param name="predicate">Qualifier expressoin</param>
         /// <param name="entity">Entity to add</param>
         /// <returns>Newly created or existing entity</returns>
-        public virtual async Task<ExistingEntityResult<T>> AddMissing(Expression<Func<T, bool>> predicate, T entity)
+        public virtual async Task<ExistingEntityResult<T>> AddMissingAsync(Expression<Func<T, bool>> predicate, T entity)
         {
-            using (var repo = new Repository<T>(Context))
+            var existing = await Query(predicate).FirstOrDefaultAsync();
+
+            if (existing == null)
             {
-                var existing = repo.Get(predicate).FirstOrDefault();
+                entity = await AddAsync(entity);
 
-                if (existing == null)
+                return new ExistingEntityResult<T>
                 {
-                    entity = await repo.Add(entity);
-
-                    await repo.SaveChanges();
-
-                    return new ExistingEntityResult<T>
-                    {
-                        Value = entity,
-                        Existing = false
-                    };
-                }
-                else
+                    Value = entity,
+                    Existing = false,
+                };
+            }
+            else
+            {
+                return new ExistingEntityResult<T>
                 {
-                    return new ExistingEntityResult<T>
-                    {
-                        Value = existing,
-                        Existing = true
-                    };
-                }
+                    Value = entity,
+                    Existing = true,
+                };
             }
         }
 
-        public virtual async Task<T> Update(T entity)
+        public virtual async Task<T> UpdateAsync(T entity)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                var existing = await repo.Find(entity.Id);
+            var existing = await GetAsync(entity.Id);
+            
+            Context.Entry(existing).CurrentValues.SetValues(entity);
+            
+            entity = Context.Update(existing).Entity;
+            
+            await Context.SaveChangesAsync();
 
-                Context.Entry(existing).CurrentValues.SetValues(entity);
-
-                entity = repo.Update(existing);
-                await repo.SaveChanges();
-
-                return entity;
-            }
+            return entity;
         }
 
-        public virtual async Task Delete(T entity)
+        public virtual async Task DeleteAsync(T entity)
         {
-            using (var repo = new Repository<T>(Context))
-            {
-                repo.Delete(entity);
-                await repo.SaveChanges();
-            }
+            Context.Set<T>().Remove(entity);
+            
+            await Context.SaveChangesAsync();
         }
     }
 }

@@ -28,7 +28,7 @@
     protected override async Task OnParametersSetAsync()
     {
         try {
-            var media = await MediaService.Get(Id);
+            var media = await MediaService.GetAsync(Id);
 
             if (media == null && (Connected || OfflineMode))
                 media = await ImportService.ImportMediaAsync(Id);

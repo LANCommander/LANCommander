@@ -18,17 +18,17 @@ namespace LANCommander.Launcher.Services
 
         public async Task<PlaySession> GetLatestSession(Guid gameId, Guid userId)
         {
-            return await Get(ps => ps.GameId == gameId && ps.UserId == userId).OrderByDescending(ps => ps.End).FirstOrDefaultAsync();
+            return await Query(ps => ps.GameId == gameId && ps.UserId == userId).OrderByDescending(ps => ps.End).FirstOrDefaultAsync();
         }
 
         public async Task StartSession(Guid gameId, Guid userId)
         {
             try
             {
-                var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
+                var existingSession = Query(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
 
                 if (existingSession != null)
-                    await Delete(existingSession);
+                    await DeleteAsync(existingSession);
 
                 var session = new PlaySession()
                 {
@@ -37,7 +37,7 @@ namespace LANCommander.Launcher.Services
                     Start = DateTime.UtcNow
                 };
 
-                await Add(session);
+                await AddAsync(session);
 
                 if (Client.IsConnected())
                     await Client.Games.StartPlaySessionAsync(gameId);
@@ -52,13 +52,13 @@ namespace LANCommander.Launcher.Services
         {
             try
             {
-                var existingSession = Get(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
+                var existingSession = Query(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null).FirstOrDefault();
 
                 if (existingSession != null)
                 {
                     existingSession.End = DateTime.UtcNow;
 
-                    await Update(existingSession);
+                    await UpdateAsync(existingSession);
                 }
             }
             catch (Exception ex)

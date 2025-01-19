@@ -57,6 +57,8 @@ namespace LANCommander.SDK
             }
         }
 
+        public EventHandler<Exception> OnError;
+
         public Client(string baseUrl, string defaultInstallDirectory)
         {
             DefaultInstallDirectory = defaultInstallDirectory;
@@ -129,195 +131,286 @@ namespace LANCommander.SDK
 
         internal T PostRequest<T>(string route, object body, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddJsonBody(body)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = ApiClient.Post<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+
                 return default;
-
-            var request = new RestRequest(route)
-                .AddJsonBody(body)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = ApiClient.Post<T>(request);
-
-            return response;
+            }
         }
 
         internal T PostRequest<T>(string route, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = ApiClient.Post<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
                 return default;
-
-            var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = ApiClient.Post<T>(request);
-
-            return response;
+            }
         }
 
         internal async Task<T> PostRequestAsync<T>(string route, object body, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddJsonBody(body)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = await ApiClient.PostAsync<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
                 return default;
-
-            var request = new RestRequest(route)
-                .AddJsonBody(body)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = await ApiClient.PostAsync<T>(request);
-
-            return response;
+            }
         }
 
         internal async Task<T> PostRequestAsync<T>(string route, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = await ApiClient.PostAsync<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
                 return default;
-
-            var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = await ApiClient.PostAsync<T>(request);
-
-            return response;
+            }
         }
 
         internal async Task<T> PutRequestAsync<T>(string route, object body, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = await ApiClient.PutAsync<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
                 return default;
-
-            var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = await ApiClient.PutAsync<T>(request);
-
-            return response;
+            }
         }
 
         internal T GetRequest<T>(string route, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = ApiClient.Get<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
                 return default;
-
-            var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = ApiClient.Get<T>(request);
-
-            return response;
+            }
         }
 
         internal async Task<T> GetRequestAsync<T>(string route, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = await ApiClient.GetAsync<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
                 return default;
-
-            var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = await ApiClient.GetAsync<T>(request);
-
-            return response;
+            }
         }
 
         internal async Task<T> DeleteRequestAsync<T>(string route, bool ignoreVersion = false)
         {
-            if (Token == null)
+            try
+            {
+                if (Token == null)
+                    return default;
+
+                var request = new RestRequest(route)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                var response = await ApiClient.DeleteAsync<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
                 return default;
-
-            var request = new RestRequest(route)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
-
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
-
-            var response = await ApiClient.DeleteAsync<T>(request);
-
-            return response;
+            }
         }
 
         internal async Task<string> DownloadRequestAsync(string route, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            route = route.TrimStart('/');
-
-            var client = new WebClient();
-            var tempFile = Path.GetTempFileName();
-
-            client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
-            client.Headers.Add("X-API-Version", GetCurrentVersion().ToString());
-            client.DownloadProgressChanged += (s, e) => progressHandler(e);
-            client.DownloadFileCompleted += (s, e) => completeHandler(e);
-
             try
             {
-                await client.DownloadFileTaskAsync(new Uri(BaseUrl, route), tempFile);
+                route = route.TrimStart('/');
+
+                var client = new WebClient();
+                var tempFile = Path.GetTempFileName();
+
+                client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+                client.Headers.Add("X-API-Version", GetCurrentVersion().ToString());
+                client.DownloadProgressChanged += (s, e) => progressHandler(e);
+                client.DownloadFileCompleted += (s, e) => completeHandler(e);
+
+                try
+                {
+                    await client.DownloadFileTaskAsync(new Uri(BaseUrl, route), tempFile);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}", route);
+
+                    if (File.Exists(tempFile))
+                        File.Delete(tempFile);
+
+                    tempFile = String.Empty;
+                }
+
+                return tempFile;
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}", route);
-
-                if (File.Exists(tempFile))
-                    File.Delete(tempFile);
-
-                tempFile = String.Empty;
+                OnError?.Invoke(this, ex);
+                
+                return null;
             }
-
-            return tempFile;
         }
 
         internal async Task<string> DownloadRequestAsync(string route, string destination)
         {
-            route = route.TrimStart('/');
-
-            var client = new WebClient();
-
-            client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
-            client.Headers.Add("X-API-Version", GetCurrentVersion().ToString());
-
             try
             {
-                await client.DownloadFileTaskAsync(new Uri(BaseUrl, route), destination);
+                route = route.TrimStart('/');
+
+                var client = new WebClient();
+
+                client.Headers.Add("Authorization", $"Bearer {Token.AccessToken}");
+                client.Headers.Add("X-API-Version", GetCurrentVersion().ToString());
+
+                try
+                {
+                    await client.DownloadFileTaskAsync(new Uri(BaseUrl, route), destination);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}",
+                        route);
+
+                    if (File.Exists(destination))
+                        File.Delete(destination);
+
+                    destination = String.Empty;
+                }
+
+                return destination;
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "An unknown error occurred while downloading from the server at route {Route}", route);
-
-                if (File.Exists(destination))
-                    File.Delete(destination);
-
-                destination = String.Empty;
+                OnError?.Invoke(this, ex);
+                
+                return null;
             }
-
-            return destination;
         }
 
         internal TrackableStream StreamRequest(string route)
@@ -336,121 +429,162 @@ namespace LANCommander.SDK
 
         internal T UploadRequest<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
-            var request = new RestRequest(route, Method.Post)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+            try
+            {
+                var request = new RestRequest(route, Method.Post)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
-            request.AddFile(fileName, data, fileName);
+                request.AddFile(fileName, data, fileName);
 
-            var response = ApiClient.Post<T>(request);
+                var response = ApiClient.Post<T>(request);
 
-            return response;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
+                return default;
+            }
         }
 
         internal async Task<T> UploadRequestAsync<T>(string route, string fileName, byte[] data, bool ignoreVersion = false)
         {
-            var request = new RestRequest(route, Method.Post)
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
-                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+            try
+            {
+                var request = new RestRequest(route, Method.Post)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
-            request.AddFile(fileName, data, fileName);
+                request.AddFile(fileName, data, fileName);
 
-            var response = await ApiClient.PostAsync<T>(request);
+                var response = await ApiClient.PostAsync<T>(request);
 
-            return response;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
+                return default;
+            }
         }
 
         internal async Task<Guid> ChunkedUploadRequestAsync(string fileName, Stream stream, bool ignoreVersion = false)
         {
-            var maxChunkSize = 1024 * 1024 * 50;
-            var initResponse = await PostRequestAsync<UploadInitResponse>("/Upload/Init", ignoreVersion);
-
-            var buffer = new byte[maxChunkSize];
-
-            while (stream.Position < stream.Length)
+            try
             {
-                var chunkRequest = new UploadChunkRequest();
+                var maxChunkSize = 1024 * 1024 * 50;
+                var initResponse = await PostRequestAsync<UploadInitResponse>("/Upload/Init", ignoreVersion);
 
-                chunkRequest.Start = stream.Position;
+                var buffer = new byte[maxChunkSize];
 
-                if (stream.Position + maxChunkSize > stream.Length)
+                while (stream.Position < stream.Length)
                 {
-                    var bytes = stream.Length - stream.Position;
+                    var chunkRequest = new UploadChunkRequest();
 
-                    buffer = new byte[bytes];
+                    chunkRequest.Start = stream.Position;
 
-                    await stream.ReadAsync(buffer, 0, (int)(stream.Length - stream.Position));
+                    if (stream.Position + maxChunkSize > stream.Length)
+                    {
+                        var bytes = stream.Length - stream.Position;
+
+                        buffer = new byte[bytes];
+
+                        await stream.ReadAsync(buffer, 0, (int)(stream.Length - stream.Position));
+                    }
+                    else
+                        await stream.ReadAsync(buffer, 0, maxChunkSize);
+
+                    chunkRequest.End = stream.Position;
+                    chunkRequest.Total = stream.Length;
+                    chunkRequest.File = buffer;
+                    chunkRequest.Key = initResponse.Key;
+
+                    await PostRequestAsync<object>("/Upload/Chunk", chunkRequest, ignoreVersion);
                 }
-                else
-                    await stream.ReadAsync(buffer, 0, maxChunkSize);
 
-                chunkRequest.End = stream.Position;
-                chunkRequest.Total = stream.Length;
-                chunkRequest.File = buffer;
-                chunkRequest.Key = initResponse.Key;
-
-                await PostRequestAsync<object>("/Upload/Chunk", chunkRequest, ignoreVersion);
+                return initResponse.Key;
             }
-
-            return initResponse.Key;
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+                
+                return default;
+            }
         }
 
         public async Task<AuthToken> AuthenticateAsync(string username, string password, bool ignoreVersion = false)
         {
-            var request = new RestRequest("/api/Auth/Login", Method.Post);
-
-            request.AddJsonBody(new AuthRequest()
+            try
             {
-                UserName = username,
-                Password = password
-            });
+                var request = new RestRequest("/api/Auth/Login", Method.Post);
 
-            if (!ignoreVersion)
-                request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+                request.AddJsonBody(new AuthRequest()
+                {
+                    UserName = username,
+                    Password = password
+                });
 
-            var response = await ApiClient.ExecuteAsync<AuthToken>(request);
+                if (!ignoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
 
-            if (response.ErrorException != null)
-            {
-                Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
+                var response = await ApiClient.ExecuteAsync<AuthToken>(request);
 
-                throw response.ErrorException;
+                if (response.ErrorException != null)
+                {
+                    Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
+
+                    throw response.ErrorException;
+                }
+
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.OK:
+                        var token = new AuthToken
+                        {
+                            AccessToken = response.Data.AccessToken,
+                            RefreshToken = response.Data.RefreshToken,
+                            Expiration = response.Data.Expiration
+                        };
+
+                        UseToken(token);
+
+                        Connected = true;
+
+                        return token;
+
+                    case HttpStatusCode.Forbidden:
+                    case HttpStatusCode.BadRequest:
+                    case HttpStatusCode.Unauthorized:
+                        Connected = false;
+                        Logger?.LogError("Authentication failed for user {UserName}: invalid username or password", username);
+                        throw new WebException("Invalid username or password");
+
+                    default:
+                        Connected = false;
+                        Logger?.LogError("Authentication failed for user {UserName}: could not communicate with the server", username);
+                        throw new WebException("Could not communicate with the server");
+                }
             }
-
-            switch (response.StatusCode)
+            catch (Exception ex)
             {
-                case HttpStatusCode.OK:
-                    var token = new AuthToken
-                    {
-                        AccessToken = response.Data.AccessToken,
-                        RefreshToken = response.Data.RefreshToken,
-                        Expiration = response.Data.Expiration
-                    };
-
-                    UseToken(token);
-
-                    Connected = true;
-
-                    return token;
-
-                case HttpStatusCode.Forbidden:
-                case HttpStatusCode.BadRequest:
-                case HttpStatusCode.Unauthorized:
-                    Connected = false;
-                    Logger?.LogError("Authentication failed for user {UserName}: invalid username or password", username);
-                    throw new WebException("Invalid username or password");
-
-                default:
-                    Connected = false;
-                    Logger?.LogError("Authentication failed for user {UserName}: could not communicate with the server", username);
-                    throw new WebException("Could not communicate with the server");
+                OnError?.Invoke(this, ex);
+                
+                return default;
             }
+        }
+
+        public void Disconnect()
+        {
+            Connected = false;
         }
 
         public async Task LogoutAsync()
@@ -476,6 +610,8 @@ namespace LANCommander.SDK
                 if (!String.IsNullOrWhiteSpace(response?.Data?.Message))
                 {
                     Logger?.LogError(response.Data.Message);
+                    
+                    OnError?.Invoke(this, response.ErrorException);
 
                     throw new Exception(response.Data.Message);
                 }
@@ -521,7 +657,7 @@ namespace LANCommander.SDK
 
         public async Task<bool> PingAsync()
         {
-            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.Get));
+            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.Head));
 
             return response.StatusCode == HttpStatusCode.OK;
         }

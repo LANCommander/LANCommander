@@ -1,0 +1,15 @@
+@if (!ConnectionState.IsConnected || ConnectionState.OfflineModeEnabled)
+{
+    @Offline
+}
+else
+{
+    @Online
+}
+
+@code {
+    [Parameter] public RenderFragment Online { get; set; }
+    [Parameter] public RenderFragment Offline { get; set; }
+    
+    [CascadingParameter] public Models.ConnectionState ConnectionState { get; set; }
+}

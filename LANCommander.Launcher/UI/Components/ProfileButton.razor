@@ -1,18 +1,20 @@
-﻿@inject ProfileService ProfileService
+﻿@using LANCommander.Launcher.Models
+@inject ProfileService ProfileService
+@inject AuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 
 <Dropdown>
     <Overlay>
         <Menu>
-            <MenuItem OnClick="ChangeAlias" Disabled="Settings.Authentication.OfflineMode">
+            <MenuItem OnClick="ChangeAlias" Disabled="ConnectionState.OfflineModeEnabled">
                 Change Name
             </MenuItem>
             <MenuItem OnClick="@(() => NavigationManager.NavigateTo("/Settings"))">
                 Settings
             </MenuItem>
 
-            @if (!Settings.Authentication.OfflineMode)
+            @if (!ConnectionState.OfflineModeEnabled)
             {
                 <MenuItem OnClick="Logout">
                     Logout
@@ -34,6 +36,7 @@
 </Dropdown>
 
 @code {
+    [CascadingParameter] public ConnectionState ConnectionState { get; set; }
     Models.Settings Settings = null;
 
     protected override async Task OnInitializedAsync()
@@ -68,7 +71,7 @@
 
     async Task Logout()
     {
-        await ProfileService.Logout();
+        await AuthenticationService.Logout();
 
         NavigationManager.NavigateTo("/Authenticate");
     }

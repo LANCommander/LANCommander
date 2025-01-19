@@ -48,7 +48,16 @@
                                     }
                                     else if (SelectedItem.State == ListItemState.NotInstalled)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                        <ConnectionStateView>
+                                            <Online>
+                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                            </Online>
+                                            <Offline>
+                                                <Tooltip Title="You are currently offline">
+                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>Install</Button>
+                                                </Tooltip>
+                                            </Offline>
+                                        </ConnectionStateView>
                                     }
                                     else if (SelectedItem.State == ListItemState.Queued)
                                     {
@@ -56,7 +65,16 @@
                                     }
                                     else if (SelectedItem.State == ListItemState.UpdateAvailable)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
+                                        <ConnectionStateView>
+                                            <Online>
+                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Update(SelectedItem)">Update</Button>
+                                            </Online>
+                                            <Offline>
+                                                <Tooltip Title="You are currently offline">
+                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>Update</Button>
+                                                </Tooltip>
+                                            </Offline>
+                                        </ConnectionStateView>
                                     }
                                     else if (SelectedItem.State == ListItemState.Installing)
                                     {
@@ -64,11 +82,15 @@
                                     }
                                 </SpaceItem>
 
-                                @if (SelectedItem.State == ListItemState.NotInstalled && Client.IsConnected())
+                                @if (SelectedItem.State == ListItemState.NotInstalled && Connected)
                                 {
-                                    <SpaceItem>
-                                        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
-                                    </SpaceItem>
+                                    <ConnectionStateView>
+                                        <Online>
+                                            <SpaceItem>
+                                                <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()"/>
+                                            </SpaceItem>
+                                        </Online>
+                                    </ConnectionStateView>
                                 }
 
                                 <SpaceItem>
@@ -148,6 +170,8 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] public bool Connected { get; set; }
+    [CascadingParameter] public bool OfflineMode { get; set; }
 
     Models.ListItem SelectedItem { get; set; }
 
@@ -172,7 +196,7 @@
         {
             await OnLibraryItemSelected(await LibraryService.GetItemAsync(Id));
 
-            if (SelectedGame != null && Client.IsConnected())
+            if (SelectedGame != null && (Connected && !OfflineMode))
                 RemoteGame = await Client.Games.GetAsync(SelectedGame.Id);
         }
 
@@ -227,6 +251,13 @@
         {
             await InstallService.Add(game);
         }
+    }
+
+    async Task Update(Models.ListItem item)
+    {
+        var game = item.DataItem as Game;
+
+        await InstallService.Add(game);
     }
 
     async Task OnQueueChanged()

@@ -21,10 +21,11 @@ namespace LANCommander.Launcher.Services.Extensions
             using (var scope = serviceProvider.CreateScope())
             {
                 var logger = scope.ServiceProvider.GetService<ILogger>();
-                var profileService = scope.ServiceProvider.GetService<ProfileService>();
+                var authenticationService = scope.ServiceProvider.GetService<AuthenticationService>();
+                var keepAliveService = scope.ServiceProvider.GetService<KeepAliveService>();
 
                 #region Sign in
-                profileService.Login().Wait();
+                authenticationService.Login().Wait();
                 #endregion
 
                 #region Scaffold Required Directories

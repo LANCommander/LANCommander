@@ -12,6 +12,8 @@
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Class { get; set; }
     [Parameter] public string Key { get; set; }
+    [CascadingParameter] public bool Connected { get; set; }
+    [CascadingParameter] public bool OfflineMode { get; set; }
 
     string MediaUrl { get; set; }
     string HiddenClass { get; set; }
@@ -28,7 +30,7 @@
         try {
             var media = await MediaService.Get(Id);
 
-            if (media == null && Client.IsConnected())
+            if (media == null && (Connected || OfflineMode))
                 media = await ImportService.ImportMediaAsync(Id);
 
             UpdateMediaUrl(media);

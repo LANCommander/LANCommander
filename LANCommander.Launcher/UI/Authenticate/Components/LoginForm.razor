@@ -1,5 +1,5 @@
 @using LANCommander.SDK.Models
-@inject ProfileService ProfileService
+@inject AuthenticationService AuthenticationService
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
@@ -105,7 +105,7 @@
 
         try
         {
-            await ProfileService.Login(Client.GetServerAddress(), Model.UserName, Model.Password);
+            await AuthenticationService.Login(Client.GetServerAddress(), Model.UserName, Model.Password);
 
             MainLayout.Import();
 
@@ -133,7 +133,7 @@
         
         try
         {
-            await ProfileService.Login(ServerAddress, token);
+            await AuthenticationService.Login(ServerAddress, token);
 
             MainLayout.Import();
 

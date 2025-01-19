@@ -55,9 +55,10 @@ namespace LANCommander.Launcher.Services.Extensions
 
             services.AddSingleton(client);
             services.AddSingleton<MessageBusService>();
+            services.AddSingleton<AuthenticationService>();
+            services.AddSingleton<KeepAliveService>();
             #endregion
-
-            services.AddScoped<AuthenticationService>();
+            
             services.AddScoped<CollectionService>();
             services.AddScoped<CommandLineService>();
             services.AddScoped<CompanyService>();

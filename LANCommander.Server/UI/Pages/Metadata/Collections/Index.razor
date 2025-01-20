@@ -17,10 +17,8 @@
         <Button OnClick="OpenAdd" Type="@ButtonType.Primary">Add Collection</Button>
     </RightToolbar>
     <Columns>
-        <BoundDataColumn Property="g => context.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <DataColumn Title="Games" TData="int" Include="Games" Sortable>
-            @context.Games?.Count
-        </DataColumn>
+        <BoundDataColumn Property="c => c.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <BoundDataColumn Property="c => c.Games.Count" Sortable Title="Games" Include="Games" />
         <BoundDataColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
         <BoundDataColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
         <BoundDataColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />

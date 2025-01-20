@@ -16,14 +16,12 @@
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Engine</Button>
     </RightToolbar>
     <Columns>
-        <BoundDataColumn Property="g => context.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <DataColumn Title="Games" TData="int" Include="Games" Sortable>
-            @context.Games?.Count
-        </DataColumn>
-        <BoundDataColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-        <BoundDataColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-        <BoundDataColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+        <BoundDataColumn Property="e => e.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <BoundDataColumn Property="e => e.Games.Count" Sortable Title="Games" Include="Games" />
+        <BoundDataColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+        <BoundDataColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions>
             <a href="@($"/Metadata/Engines/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this engine?">

@@ -44,17 +44,12 @@
 
         <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
     
-        <DataColumn TData="bool" Title="Multiplayer" Include="MultiplayerModes" Sortable>
+        <BoundDataColumn Property="g => g.MultiplayerModes.Count > 0" Include="MultiplayerModes" Sortable>
             <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
-        </DataColumn>
+        </BoundDataColumn>
 
-        <DataColumn TData="int" Title="Total Keys" Include="Keys" Sortable>
-            @context.Keys?.Count
-        </DataColumn>
-
-        <DataColumn TData="int" Title="Keys Allocated" Include="Keys" Sortable>
-            @context.Keys?.Count(k => k.ClaimedOn.HasValue)
-        </DataColumn>
+        <BoundDataColumn Property="g => g.Keys.Count" Title="Total Keys" Include="Keys" Sortable />
+        <BoundDataColumn Property="g => g.Keys.Count(k => k.ClaimedOn.HasValue)" Title="Keys Allocated" Include="Keys" Sortable />
 
         <DataColumn TData="string[]" Title="Collections" Include="Collections">
             @if (context.Collections != null)

@@ -7,8 +7,8 @@ namespace LANCommander.Server.Data.Models
         public string Name { get; set; }
 
         [JsonIgnore]
-        public ICollection<Game> PublishedGames { get; set; }
+        public ICollection<Game> PublishedGames { get; set; } = new List<Game>();
         [JsonIgnore]
-        public ICollection<Game> DevelopedGames { get; set; }
+        public ICollection<Game> DevelopedGames { get; set; } = new List<Game>();
     }
 }

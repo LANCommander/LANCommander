@@ -13,12 +13,11 @@
 @inject LANCommander.SDK.Client LANCommander
 @inject IJSRuntime JS
 
-<CascadingValue Value="ConnectionState">
     <CustomWindow HeaderHeight="37">
         <HeaderExtraControlsLayout>
             <Space Direction="SpaceDirection.Horizontal">
-                <ConnectionStateView>
-                    <Online>
+                <AuthenticatedView>
+                    <Authenticated>
                         <SpaceItem>
                             <Popover Placement="Placement.BottomRight" IsButton OnClick="Import" Trigger="new[] { Trigger.Hover }">
                                 <ChildContent>
@@ -29,63 +28,49 @@
                                 </ContentTemplate>
                             </Popover>
                         </SpaceItem>
-                    </Online>
-                    <Offline>
+
+                        <SpaceItem>
+                            <ProfileButton/>
+                        </SpaceItem>
+                    </Authenticated>
+                    
+                    <NotAuthenticated>
                         <SpaceItem>
                             <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
                         </SpaceItem>
-                    </Offline>
-                </ConnectionStateView>
-                
-                @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
-                {
-                    <SpaceItem>
-                        <ProfileButton />
-                    </SpaceItem>
-                }
+                    </NotAuthenticated>
+                </AuthenticatedView>
             </Space>
         </HeaderExtraControlsLayout>
         <WindowContent>
-            <ErrorBoundary>
-                <ChildContent>
-                    @Body
+            <ErrorHandler>
+                <AuthenticatedView>
+                    <Authenticated>
+                        @Body
 
-                    @if (Settings.Debug.EnableScriptDebugging)
-                    {
-                        <PowerShellConsole />
-                    }
+                        @if (Settings.Debug.EnableScriptDebugging)
+                        {
+                            <PowerShellConsole/>
+                        }
 
-                    <UpdateChecker />
-                    <AntContainer />
-                    <KeepAliveContainer />
-                    <RedirectToLogin />
-                </ChildContent>
-                <ErrorContent>
-                    <Result Status="ResultStatus.Error"
-                            Title="Launcher Crashed"
-                            SubTitle="@RandomQuip"
-                            Class="crash-error">
-                        <Extra>
-                            <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
-                            <Button OnClick="() => CopyError(context)">Copy Error</Button>
-                        </Extra>
-                        <ChildContent>
-                            <code>
-                                @context.StackTrace
-                            </code>
-                        </ChildContent>
-                    </Result>
-                </ErrorContent>
-            </ErrorBoundary>
+                        <KeepAliveContainer />
+                    </Authenticated>
+                    <NotAuthenticated>
+                        <AuthenticationForm />
+                    </NotAuthenticated>
+                </AuthenticatedView>
+
+                <UpdateChecker />
+                <AntContainer />
+            </ErrorHandler>
         </WindowContent>
     </CustomWindow>
-</CascadingValue>
 
 @code {
     Models.Settings Settings = null;
 
-    public bool Importing = false;
-    public bool Connecting = false;
+    public bool Importing;
+    public bool Connecting;
 
     public ConnectionState ConnectionState = new();
     
@@ -140,16 +125,10 @@
         ImportService.OnImportUpdated += OnImportUpdated;
 
         AuthenticationService.OnOfflineModeChanged += OnOfflineModeChanged;
-        
+    
         var randIndex = new Random().Next(0, CrashQuips.Length - 1);
 
         RandomQuip = CrashQuips[randIndex];
-
-        ConnectionState.IsConnected = await LANCommander.ValidateTokenAsync();
-        ConnectionState.OfflineModeEnabled = Settings.Authentication.OfflineMode;
-        
-        if (!ConnectionState.IsConnected && !ConnectionState.OfflineModeEnabled)
-            NavigationManager.NavigateTo("/Authenticate");
     }
 
     async Task OnImportComplete()

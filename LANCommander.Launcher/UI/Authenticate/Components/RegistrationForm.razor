@@ -5,14 +5,14 @@
 @inject IMessageService MessageService
 @inject ILogger<RegistrationForm> Logger
 
-<PageHeader OnBack="Back">
+<PageHeader OnBack="OnBack">
     <TitleTemplate>
         Register
     </TitleTemplate>
 </PageHeader>
 <Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
     <FormItem Label="Server Address">
-        <Input @bind-Value="@ServerAddress" Disabled />
+        <Input Value="ServerAddress" Disabled />
     </FormItem>
     <FormItem Label="Username">
         <Input @bind-Value="@context.UserName"/>
@@ -32,7 +32,7 @@
 
 @code {
     [Parameter] public string ServerAddress { get; set; }
-    [Parameter] public EventCallback<string> ServerAddressChanged { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
 
     RegistrationRequest Model = new();
     bool Loading = false;
@@ -64,11 +64,6 @@
             Logger.LogError(ex, ex.Message);
             Loading = false;
         }
-    }
-    
-    void Back()
-    {
-        NavigationManager.NavigateTo("/Authenticate/Login");
     }
     
     async Task UseToken(AuthToken token)

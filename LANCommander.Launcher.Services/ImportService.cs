@@ -31,16 +31,11 @@ namespace LANCommander.Launcher.Services
 {
     public class ImportService : BaseService
     {
+        private readonly AuthenticationService AuthenticationService;
         private readonly MediaService MediaService;
-        private readonly CollectionService CollectionService;
-        private readonly CompanyService CompanyService;
         private readonly EngineService EngineService;
         private readonly GameService GameService;
-        private readonly GenreService GenreService;
-        private readonly PlatformService PlatformService;
-        private readonly MultiplayerModeService MultiplayerModeService;
-        private readonly RedistributableService RedistributableService;
-        private readonly TagService TagService;
+        private readonly LibraryService LibraryService;
         private readonly MessageBusService MessageBusService;
         private readonly Settings Settings;
         private readonly DatabaseContext DatabaseContext;
@@ -65,29 +60,19 @@ namespace LANCommander.Launcher.Services
         public ImportService(
             SDK.Client client,
             ILogger<ImportService> logger,
+            AuthenticationService authenticationService,
+            LibraryService libraryService,
             MediaService mediaService,
-            CollectionService collectionService,
-            CompanyService companyService,
             EngineService engineService,
             GameService gameService,
-            GenreService genreService,
-            PlatformService platformService,
-            MultiplayerModeService multiplayerModeService,
-            RedistributableService redistributableService,
-            TagService tagService,
             MessageBusService messageBusService,
             DatabaseContext databaseContext) : base(client, logger)
         {
+            AuthenticationService = authenticationService;
+            LibraryService = libraryService;
             MediaService = mediaService;
-            CollectionService = collectionService;
-            CompanyService = companyService;
             EngineService = engineService;
             GameService = gameService;
-            GenreService = genreService;
-            PlatformService = platformService;
-            MultiplayerModeService = multiplayerModeService;
-            RedistributableService = redistributableService;
-            TagService = tagService;
             MessageBusService = messageBusService;
             DatabaseContext = databaseContext;
 
@@ -103,8 +88,7 @@ namespace LANCommander.Launcher.Services
         {
             try
             {
-                await ImportGamesAsync();
-                await ImportRedistributables();
+                await ImportLibraryAsync();
 
                 OnImportComplete?.Invoke();
             }
@@ -113,61 +97,15 @@ namespace LANCommander.Launcher.Services
                 OnImportFailed?.Invoke(ex);
             }
         }
-
-        private async Task<ICollection<TModel>> ImportBulkAsync<TModel, TKeyedModel>(
-            ICollection<TModel> target,
-            IEnumerable<TKeyedModel> source,
-            Action<TModel, TKeyedModel> updateAction)
-            where TModel : BaseModel
-            where TKeyedModel : IKeyedModel
-        {
-            foreach (var sourceItem in source)
-            {
-                var existingItem = await DatabaseContext.Set<TModel>().FirstOrDefaultAsync(i => i.Id == sourceItem.Id);
-
-                if (existingItem != null)
-                {
-                    updateAction(existingItem, sourceItem);
-                    
-                    DatabaseContext.Update(existingItem);
-                    
-                    await DatabaseContext.SaveChangesAsync();
-                }
-                else
-                {
-                    // Add
-                    var item = (TModel)Activator.CreateInstance(typeof(TModel));
-                    
-                    item.Id = sourceItem.Id;
-                    
-                    updateAction(item, sourceItem);
-
-                    var result = await DatabaseContext.Set<TModel>().AddAsync(item);
-
-                    await DatabaseContext.SaveChangesAsync();
-                    
-                    target.Add(result.Entity);
-                }
-            }
-            
-            var toRemove = target.Where(x => !source.Any(y => y.Id == x.Id)).ToList();
-
-            foreach (var item in toRemove)
-            {
-                target.Remove(item);
-            }
-
-            return target;
-        }
-
-        private async Task<Game> ImportGameAsync(Guid id)
+        
+        public async Task<Game> ImportGameAsync(Guid id)
         {
             var game = await Client.Games.GetAsync(id);
             
             return await ImportGameAsync(game);
         }
 
-        private async Task<Game> ImportGameAsync(SDK.Models.Game game)
+        public async Task<Game> ImportGameAsync(SDK.Models.Game game)
         {
             using (var op = Logger.BeginOperation("Importing game {GameTitle}", game.Title))
             {
@@ -324,8 +262,6 @@ namespace LANCommander.Launcher.Services
                         })
                         .AsNoRemove()
                         .ImportAsync();
-
-                    var mediaStoragePath = MediaService.GetStoragePath();
                     
                     var importedMedia = await DatabaseContext.BulkImport<Media, SDK.Models.Media>()
                         .SetTarget(localGame.Media)
@@ -401,15 +337,17 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task ImportGamesAsync()
+        public async Task ImportLibraryAsync()
         {
-            var library = await Client.Library.GetAsync();
+            var remoteLibrary = await Client.Library.GetAsync();
             
-            await ImportGamesAsync(library);
+            await ImportLibraryAsync(remoteLibrary);
         }
 
-        public async Task ImportGamesAsync(IEnumerable<SDK.Models.EntityReference> games)
+        public async Task ImportLibraryAsync(IEnumerable<SDK.Models.EntityReference> games)
         {
+            var library = await LibraryService.GetByUserAsync(AuthenticationService.GetUserId());
+            
             Logger?.LogInformation("Importing games");
 
             int i = 1;
@@ -428,7 +366,11 @@ namespace LANCommander.Launcher.Services
                             Total = games.Count()
                         });
 
-                    await ImportGameAsync(remoteGame);
+                    var importedGame = await ImportGameAsync(remoteGame);
+                    
+                    library.Games.Add(importedGame);
+                    
+                    await LibraryService.UpdateAsync(library);
                 }
                 catch (Exception ex)
                 {
@@ -461,7 +403,7 @@ namespace LANCommander.Launcher.Services
                 toImport.Add(libraryGame);
             }
 
-            await ImportGamesAsync(toImport);
+            await ImportLibraryAsync(toImport);
         }
 
         public async Task ImportRedistributables()

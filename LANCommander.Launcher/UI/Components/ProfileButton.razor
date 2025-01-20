@@ -1,4 +1,6 @@
-﻿@using LANCommander.Launcher.Models
+﻿@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models
+@inject UserService UserService
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
@@ -25,12 +27,12 @@
 
     <ChildContent>
         <Button Type="ButtonType.Primary" Class="appbar-profile-button">
-            @if (Settings.Profile.AvatarId != null && Settings.Profile.AvatarId != Guid.Empty)
+            @if (User != null && User.Avatar != null)
             {
-                <MediaImage Id="@Settings.Profile.AvatarId" />
+                <MediaImage Id="@User.Avatar.Id" />
             }
 
-            <span>@Settings.Profile.Alias</span>
+            <span>@User?.Alias</span>
         </Button>
     </ChildContent>
 </Dropdown>
@@ -39,15 +41,15 @@
     [CascadingParameter] public ConnectionState ConnectionState { get; set; }
     Models.Settings Settings = null;
 
+    User User;
+
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
+        User = await UserService.GetCurrentUser();
     }
 
     async Task ChangeAlias()
     {
-        var settings = SettingService.GetSettings();
-
         var modalOptions = new ModalOptions()
             {
                 Title = "Change Name",
@@ -57,7 +59,7 @@
                 Centered = true
             };
 
-        var modalRef = ModalService.CreateModal<ChangeAliasDialog, string, string>(modalOptions, settings.Profile.Alias);
+        var modalRef = ModalService.CreateModal<ChangeAliasDialog, string, string>(modalOptions, User.Alias);
 
         modalRef.OnOk = async (newName) =>
         {

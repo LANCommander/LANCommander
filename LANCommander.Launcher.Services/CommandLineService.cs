@@ -12,6 +12,8 @@ namespace LANCommander.Launcher.Services
 {
     public class CommandLineService : BaseService
     {
+        private readonly AuthenticationService AuthenticationService;
+        private readonly UserService UserService;
         private readonly GameService GameService;
         private readonly InstallService InstallService;
         private readonly ImportService ImportService;
@@ -22,11 +24,15 @@ namespace LANCommander.Launcher.Services
         public CommandLineService(
             SDK.Client client,
             ILogger<CommandLineService> logger,
+            AuthenticationService authenticationService,
+            UserService userService,
             GameService gameService,
             InstallService installService,
             ImportService importService,
             ProfileService profileService) : base(client, logger)
         {
+            AuthenticationService = authenticationService;
+            UserService = userService;
             GameService = gameService;
             InstallService = installService;
             ImportService = importService;
@@ -301,9 +307,11 @@ namespace LANCommander.Launcher.Services
 
         private async Task ChangeAlias(ChangeAliasCommandLineOptions options)
         {
+            var currentUser = await UserService.GetAsync(AuthenticationService.GetUserId());
+            
             await ProfileService.ChangeAlias(options.Alias);
 
-            Logger.LogInformation($"Changed current user's alias from {Settings.Profile.Alias} to {options.Alias}");
+            Logger.LogInformation($"Changed current user's alias from {currentUser.Alias} to {options.Alias}");
         }
     }
 }

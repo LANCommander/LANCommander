@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Launcher.Data.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250119055819_AddLibraries")]
-    partial class AddLibraries
+    [Migration("20250119103515_AddUserLibraries")]
+    partial class AddUserLibraries
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -532,10 +532,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Alias")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("AvatarId")
+                    b.Property<Guid?>("AvatarId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
@@ -545,14 +544,13 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("UserName")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AvatarId");
 
-                    b.ToTable("User");
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("LibraryGame", b =>
@@ -760,9 +758,7 @@ namespace LANCommander.Launcher.Data.Migrations
                 {
                     b.HasOne("LANCommander.Launcher.Data.Models.Media", "Avatar")
                         .WithMany()
-                        .HasForeignKey("AvatarId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("AvatarId");
 
                     b.Navigation("Avatar");
                 });
@@ -805,8 +801,7 @@ namespace LANCommander.Launcher.Data.Migrations
 
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.User", b =>
                 {
-                    b.Navigation("Library")
-                        .IsRequired();
+                    b.Navigation("Library");
                 });
 #pragma warning restore 612, 618
         }

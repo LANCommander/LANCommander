@@ -13,7 +13,6 @@ namespace LANCommander.Launcher.Models
         public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();
         public GameSettings Games { get; set; } = new GameSettings();
         public MediaSettings Media { get; set; } = new MediaSettings();
-        public ProfileSettings Profile { get; set; } = new ProfileSettings();
         public FilterSettings Filter { get; set; } = new FilterSettings();
         public DebugSettings Debug { get; set; } = new DebugSettings();
         public UpdateSettings Updates { get; set; } = new UpdateSettings();
@@ -44,13 +43,6 @@ namespace LANCommander.Launcher.Models
     public class MediaSettings
     {
         public string StoragePath { get; set; } = "Media";
-    }
-
-    public class ProfileSettings
-    {
-        public Guid Id { get; set; }
-        public string Alias { get; set; }
-        public Guid AvatarId { get; set; }
     }
 
     public class FilterSettings

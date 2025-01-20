@@ -13,36 +13,49 @@ namespace LANCommander.Launcher.Services
 {
     public class ProfileService : BaseService
     {
+        private readonly AuthenticationService AuthenticationService;
         private readonly MediaService MediaService;
+        private readonly UserService UserService;
 
         private Settings Settings;
 
         public ProfileService(
             SDK.Client client,
             ILogger<ProfileService> logger,
-            MediaService mediaService) : base(client, logger)
+            AuthenticationService authenticationService,
+            MediaService mediaService,
+            UserService userService) : base(client, logger)
         {
+            AuthenticationService = authenticationService;
             MediaService = mediaService;
+            UserService = userService;
             Settings = SettingService.GetSettings();
+
+            AuthenticationService.OnLogin += async (sender, args) => await DownloadProfileInfoAsync();
+            AuthenticationService.OnRegister += async (sender, args) => await DownloadProfileInfoAsync();
         }
 
         public async Task ChangeAlias(string newName)
         {
+            var currentUserId = AuthenticationService.GetUserId();
+            var currentUser = await UserService.GetAsync(currentUserId);
+            
             await Client.Profile.ChangeAliasAsync(newName);
 
-            Settings = SettingService.GetSettings();
-
-            Settings.Profile.Alias = newName;
-
-            SettingService.SaveSettings(Settings);
+            currentUser.Alias = newName;
+            
+            await UserService.UpdateAsync(currentUser);
         }
 
         public async Task DownloadProfileInfoAsync()
         {
             var remoteProfile = await Client.Profile.GetAsync();
-
-            Settings.Profile.Id = remoteProfile.Id;
-            Settings.Profile.Alias = String.IsNullOrWhiteSpace(remoteProfile.Alias) ? remoteProfile.UserName : remoteProfile.Alias;
+            var localUser = await UserService.AddMissingAsync(u => u.Id == remoteProfile.Id, new User
+            {
+                Id = remoteProfile.Id,
+                UserName = remoteProfile.UserName,
+                Alias = remoteProfile.Alias,
+            });
 
             try
             {
@@ -65,7 +78,9 @@ namespace LANCommander.Launcher.Services
                     if (File.Exists(tempAvatarPath))
                         File.Move(tempAvatarPath, localPath);
 
-                    Settings.Profile.AvatarId = media.Id;
+                    localUser.Value.Avatar = media;
+                    
+                    await UserService.UpdateAsync(localUser.Value);
                 }
             }
             catch (Exception ex)

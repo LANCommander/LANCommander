@@ -1,33 +1,27 @@
 ﻿@page "/Depot"
 @page "/Depot/{id:guid}"
-@using LANCommander.Launcher.Data.Models
-@using LANCommander.Launcher.Models.Enums
 @using LANCommander.Launcher.Models
-@using System.Diagnostics
 @using LANCommander.Launcher.UI.Depot.Components
-@using LANCommander.SDK.Helpers
-@inject SDK.Client Client
+@implements IDisposable
 @inject NavigationManager NavigationManager
 @inject DepotService DepotService
-@inject InstallService InstallService
-@inject GameService GameService
-@inject ModalService ModalService
-@inject ConfirmService ConfirmService
-@inject ImportService ImportService
+@inject KeepAliveService KeepAliveService
 
-<Layout>
-    <Content Class="depot">
-        <DepotFilter Items="@ListItems" />
+<Spin Spinning="Disabled">
+    <Layout>
+        <Content Class="depot">
+            <DepotFilter Items="@ListItems" />
 
-        <DepotList Items="@ListItems" OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
-    </Content>
-</Layout>
+            <DepotList Items="@ListItems" OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
+        </Content>
+    </Layout>
+
+    <DepotGameDetails @ref="DepotGameDetails" ItemId="@(SelectedItem?.Key ?? Guid.Empty)" OnClose="@(() => NavigationManager.NavigateTo("/Depot"))" />
+</Spin>
 
 <div class="logo">
     <img src="assets/logo-cut.svg" />
 </div>
-
-<DepotGameDetails @ref="DepotGameDetails" ItemId="@(SelectedItem?.Key ?? Guid.Empty)" OnClose="@(() => NavigationManager.NavigateTo("/Depot"))" />
 
 <LANCommander.Launcher.UI.Components.Footer />
 
@@ -42,11 +36,34 @@
 
     Settings Settings = SettingService.GetSettings();
 
+    bool Disabled = false;
+
     protected override async Task OnInitializedAsync()
     {
         DepotService.OnItemsFiltered += LoadFilteredItems;
+        
+        KeepAliveService.ConnectionSevered += KeepAliveServiceOnConnectionSevered;
+        KeepAliveService.ConnectionEstablished += KeepAliveServiceOnConnectionEstablished;
+        KeepAliveService.ConnectionLostPermanently += KeepAliveServiceOnConnectionLostPermanently;
 
         await DepotService.RefreshItemsAsync();
+    }
+
+    private void KeepAliveServiceOnConnectionLostPermanently(object? sender, EventArgs e)
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private async void KeepAliveServiceOnConnectionEstablished(object? sender, EventArgs e)
+    {
+        Disabled = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void KeepAliveServiceOnConnectionSevered(object? sender, EventArgs e)
+    {
+        Disabled = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnParametersSetAsync()
@@ -65,4 +82,12 @@
 
         await InvokeAsync(StateHasChanged);
     }
+
+    public void Dispose()
+    {
+        KeepAliveService.ConnectionEstablished -= KeepAliveServiceOnConnectionEstablished;
+        KeepAliveService.ConnectionSevered -= KeepAliveServiceOnConnectionSevered;
+        KeepAliveService.ConnectionLostPermanently -= KeepAliveServiceOnConnectionLostPermanently;
+    }
+
 }

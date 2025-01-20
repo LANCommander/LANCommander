@@ -149,5 +149,6 @@ namespace LANCommander.Launcher.Data
 
         public DbSet<Media>? Media { get; set; }
         public DbSet<Library>? Libraries { get; set; }
+        public DbSet<User>? Users { get; set; }
     }
 }

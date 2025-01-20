@@ -6,31 +6,30 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LANCommander.Launcher.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddLibraries : Migration
+    public partial class AddUserLibraries : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "User",
+                name: "Users",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserName = table.Column<string>(type: "TEXT", nullable: false),
-                    Alias = table.Column<string>(type: "TEXT", nullable: false),
-                    AvatarId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserName = table.Column<string>(type: "TEXT", nullable: true),
+                    Alias = table.Column<string>(type: "TEXT", nullable: true),
+                    AvatarId = table.Column<Guid>(type: "TEXT", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedOn = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_User", x => x.Id);
+                    table.PrimaryKey("PK_Users", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_User_Media_AvatarId",
+                        name: "FK_Users_Media_AvatarId",
                         column: x => x.AvatarId,
                         principalTable: "Media",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -46,9 +45,9 @@ namespace LANCommander.Launcher.Data.Migrations
                 {
                     table.PrimaryKey("PK_Libraries", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Libraries_User_UserId",
+                        name: "FK_Libraries_Users_UserId",
                         column: x => x.UserId,
-                        principalTable: "User",
+                        principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -89,8 +88,8 @@ namespace LANCommander.Launcher.Data.Migrations
                 column: "LibraryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_User_AvatarId",
-                table: "User",
+                name: "IX_Users_AvatarId",
+                table: "Users",
                 column: "AvatarId");
         }
 
@@ -104,7 +103,7 @@ namespace LANCommander.Launcher.Data.Migrations
                 name: "Libraries");
 
             migrationBuilder.DropTable(
-                name: "User");
+                name: "Users");
         }
     }
 }

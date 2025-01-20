@@ -3,6 +3,7 @@
 @using System.Diagnostics
 @using LANCommander.SDK.Helpers
 @inject GameService GameService
+@inject UserService UserService
 @inject LibraryService LibraryService
 @inject InstallService InstallService
 @inject ModalService ModalService
@@ -262,11 +263,12 @@ else
 
     async Task RunNameChangeScripts()
     {
+        var user = await UserService.GetCurrentUser();
         var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, Settings.Profile.Alias);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.Alias);
         }
     }
 

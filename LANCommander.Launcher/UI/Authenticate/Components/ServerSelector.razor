@@ -17,11 +17,6 @@
         <Flex Gap="FlexGap.Small">
             <Input @bind-Value="ServerAddress" Placeholder="Server Address"/>
             <Button Type="ButtonType.Primary" OnClick="() => SelectServer(ServerAddress)">Connect</Button>
-            
-            @if (OfflineModeAvailable)
-            {
-                <Button OnClick="() => OfflineMode()">Offline</Button>
-            }
         </Flex>
     </FormItem>
 </Form>
@@ -50,11 +45,12 @@
 </AntList>
 
 @code {
-    [Parameter] public string ServerAddress { get; set; }
-    [Parameter] public EventCallback<string> ServerAddressChanged { get; set; }
+    [Parameter] public EventCallback<string> OnSelected { get; set; }
 
     bool BeaconActive = false;
     bool OfflineModeAvailable = false;
+
+    string ServerAddress = String.Empty;
     
     AuthRequest Model = new();
     List<DiscoveredServer> DiscoveredServers = new();
@@ -70,25 +66,15 @@
 
     async Task SelectServer(string serverAddress)
     {
-        ServerAddress = serverAddress;
-
         Probe.Stop();
         Probe.Dispose();
 
         BeaconActive = false;
 
-        if (ServerAddressChanged.HasDelegate)
-            await ServerAddressChanged.InvokeAsync(ServerAddress);
+        if (OnSelected.HasDelegate)
+            await OnSelected.InvokeAsync(serverAddress);
 
-        NavigationManager.NavigateTo("Authenticate/Login");
-    }
-
-    async Task OfflineMode()
-    {
-        Settings.Authentication.OfflineMode = true;
-        SettingService.SaveSettings(Settings);
-        
-        NavigationManager.NavigateTo("/");
+        await InvokeAsync(StateHasChanged);
     }
     
     async Task ActivateBeacon()

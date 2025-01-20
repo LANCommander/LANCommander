@@ -2,6 +2,7 @@
 @inject SDK.Client Client
 @inject DepotService DepotService
 @inject LibraryService LibraryService
+@inject ImportService ImportService
 @inject IMessageService MessageService
 @inject ILogger<DepotGame> Logger
 
@@ -39,7 +40,9 @@
             StateHasChanged();
             await Task.Yield();
 
+            await ImportService.ImportGameAsync(Item.Key);
             await LibraryService.AddToLibraryAsync(Item.Key);
+            await LibraryService.RefreshItemsAsync();
 
             Importing = false;
             StateHasChanged();

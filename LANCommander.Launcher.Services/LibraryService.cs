@@ -23,9 +23,10 @@ namespace LANCommander.Launcher.Services
 {
     public class LibraryService : BaseDatabaseService<Library>
     {
+        private readonly AuthenticationService AuthenticationService;
         private readonly InstallService InstallService;
         private readonly GameService GameService;
-        private readonly ImportService ImportService;
+        private readonly UserService UserService;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
@@ -46,16 +47,17 @@ namespace LANCommander.Launcher.Services
             DatabaseContext databaseContext,
             SDK.Client client,
             ILogger<LibraryService> logger,
+            AuthenticationService authenticationService,
             InstallService installService,
             GameService gameService,
-            ImportService importService) : base(databaseContext, client, logger)
+            UserService userService) : base(databaseContext, client, logger)
         {
+            AuthenticationService = authenticationService;
             InstallService = installService;
             GameService = gameService;
-            ImportService = importService;
+            UserService = userService;
 
             InstallService.OnInstallComplete += InstallService_OnInstallComplete;
-            ImportService.OnImportComplete += ImportService_OnImportComplete;
             Filter.OnChanged += Filter_OnChanged;
         }
 
@@ -63,13 +65,6 @@ namespace LANCommander.Launcher.Services
         {
             if (OnItemsFiltered != null)
                 await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
-        }
-
-        private async Task ImportService_OnImportComplete()
-        {
-            await RefreshItemsAsync();
-
-            LibraryChanged();
         }
 
         private async Task InstallService_OnInstallComplete(Game game)
@@ -95,11 +90,42 @@ namespace LANCommander.Launcher.Services
 
         public async Task<Library> GetByUserAsync(Guid userId)
         {
-            return Context
-                .Libraries
-                .Include(l => l.User)
-                .Include(l => l.Games)
-                .FirstOrDefault(l => l.User.Id == userId);
+            var user = await Context
+                .Users
+                .Include(u => u.Library)
+                .ThenInclude(l => l.Games)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            try
+            {
+                if (user == null)
+                {
+                    user = new User
+                    {
+                        Id = userId,
+                    };
+                
+                    user = Context.Users.Add(user).Entity;
+
+                    await Context.SaveChangesAsync();
+                }
+
+                if (user.Library == null)
+                {
+                    user.Library = new Library();
+                
+                    user = Context.Users.Update(user).Entity;
+                
+                    await Context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                
+            }
+
+
+            return user.Library;
         }
 
         public async Task<IEnumerable<ListItem>> GetItemsAsync()
@@ -108,22 +134,26 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
-                var games = await Context.Games
-                    .Include(g => g.Collections)
-                    .Include(g => g.Developers)
-                    .Include(g => g.Genres)
-                    .Include(g => g.Publishers)
-                    .Include(g => g.Tags)
-                    .Include(g => g.PlaySessions)
-                    .Include(g => g.Engine)
-                    .Include(g => g.Platforms)
-                    .Include(g => g.Media)
-                    .Include(g => g.MultiplayerModes)
-                    .ToListAsync();
+                var library = await GetByUserAsync(AuthenticationService.GetUserId());
+                library = await Context
+                    .Libraries
+                    .AsQueryable()
+                    .Include(l => l.Games).ThenInclude(g => g.Collections)
+                    .Include(l => l.Games).ThenInclude(g => g.Collections)
+                    .Include(l => l.Games).ThenInclude(g => g.Developers)
+                    .Include(l => l.Games).ThenInclude(g => g.Genres)
+                    .Include(l => l.Games).ThenInclude(g => g.Publishers)
+                    .Include(l => l.Games).ThenInclude(g => g.Tags)
+                    .Include(l => l.Games).ThenInclude(g => g.PlaySessions)
+                    .Include(l => l.Games).ThenInclude(g => g.Engine)
+                    .Include(l => l.Games).ThenInclude(g => g.Platforms)
+                    .Include(l => l.Games).ThenInclude(g => g.Media)
+                    .Include(l => l.Games).ThenInclude(g => g.MultiplayerModes)
+                    .FirstOrDefaultAsync(l => l.UserId == AuthenticationService.GetUserId());
 
-                Filter.Populate(games);
+                Filter.Populate(library.Games);
 
-                foreach (var item in games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
+                foreach (var item in library.Games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
                 {
                     Items.Add(item);
                 }
@@ -174,20 +204,31 @@ namespace LANCommander.Launcher.Services
 
         public async Task AddToLibraryAsync(Guid id)
         {
-            await Client.Library.AddToLibrary(id);
+            var localGame = await GameService.GetAsync(id);
+            var library = await GetByUserAsync(AuthenticationService.GetUserId());
 
-            await ImportService.ImportGamesAsync(id);
+            if (localGame != null)
+            {
+                library.Games.Add(localGame);                
+            }
+
+            await UpdateAsync(library);
+            
+            await Client.Library.AddToLibrary(id);
 
             await LibraryChanged();
         }
 
         public async Task RemoveFromLibraryAsync(Guid id)
         {
-            await Client.Library.RemoveFromLibrary(id);
-
             var localGame = await GameService.GetAsync(id);
+            var library = await GetByUserAsync(AuthenticationService.GetUserId());
 
-            await GameService.DeleteAsync(localGame);
+            library.Games.Remove(localGame);
+            
+            await UpdateAsync(library);
+            
+            await Client.Library.RemoveFromLibrary(id);
 
             await LibraryChanged();
         }

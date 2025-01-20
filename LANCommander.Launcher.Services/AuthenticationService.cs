@@ -9,8 +9,6 @@ namespace LANCommander.Launcher.Services;
 
 public class AuthenticationService : BaseService
 {
-    private readonly ProfileService ProfileService;
-
     private Settings Settings;
 
     public event EventHandler OnLogin;
@@ -22,11 +20,9 @@ public class AuthenticationService : BaseService
     
     public AuthenticationService(
         Client client,
-        ILogger<AuthenticationService> logger,
-        ProfileService profileService) : base(client, logger)
+        ILogger<AuthenticationService> logger) : base(client, logger)
     {
         Settings = SettingService.GetSettings();
-        ProfileService = profileService;
     }
 
     public bool IsConnected()
@@ -83,8 +79,6 @@ public class AuthenticationService : BaseService
             SettingService.SaveSettings(Settings);
             
             OnLogin?.Invoke(this, EventArgs.Empty);
-
-            await ProfileService.DownloadProfileInfoAsync();
         }
     }
 
@@ -117,8 +111,16 @@ public class AuthenticationService : BaseService
         SettingService.SaveSettings(Settings);
         
         OnRegister?.Invoke(this, EventArgs.Empty);
-        
-        await ProfileService.DownloadProfileInfoAsync();
+    }
+
+    public async Task<bool> ValidateConnectionAsync()
+    {
+        return await Client.ValidateTokenAsync();
+    }
+
+    public bool OfflineModeEnabled()
+    {
+        return Settings.Authentication.OfflineMode;
     }
 
     public void SetOfflineMode(bool state)
@@ -140,8 +142,7 @@ public class AuthenticationService : BaseService
         await Client.LogoutAsync();
 
         Settings = SettingService.GetSettings();
-
-        Settings.Profile = new ProfileSettings();
+        
         Settings.Authentication = new AuthenticationSettings();
 
         SettingService.SaveSettings(Settings);
@@ -156,10 +157,22 @@ public class AuthenticationService : BaseService
         if (decodedToken == null)
             return Guid.Empty;
         
-        if (Guid.TryParse(decodedToken.Id, out Guid id))
+        var claim = decodedToken.Claims.First(c => c.Type == ClaimTypes.NameIdentifier);
+        
+        if (Guid.TryParse(claim.Value, out Guid id))
             return id;
 
         return Guid.Empty;
+    }
+
+    public string GetCurrentUserName()
+    {
+        var decodedToken = DecodeToken();
+
+        if (decodedToken == null)
+            return String.Empty;
+
+        return decodedToken.Claims.First(claim => claim.Type == ClaimTypes.Name).Value;
     }
 
     public JwtSecurityToken DecodeToken()

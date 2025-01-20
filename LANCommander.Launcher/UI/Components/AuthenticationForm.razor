@@ -1,0 +1,57 @@
+@using System.Security.Policy
+@using BeaconLib
+@using LANCommander.Launcher.Models
+@using LANCommander.SDK
+@using LANCommander.SDK.Models
+@using LANCommander.Launcher.UI.Authenticate.Components
+@inject ProfileService ProfileService
+@inject NavigationManager NavigationManager
+@inject SDK.Client Client
+@inject IMessageService MessageService
+@inject ILogger<System.Index> Logger
+
+<CascadingValue Value="State">
+    <Layout Style="background-image: url('/assets/auth-background.jpg'); background-size: cover;">
+        <Content Class="authentication-form">
+            <div class="authentication-logo">
+                <img src="/assets/logo.svg" width="300" />
+            </div>
+
+            <div class="authentication-box">
+                @if (State.Stage == AuthenticationStage.SelectServer)
+                {
+                    <ServerSelector OnSelected="ServerSelected" />
+                }
+
+                @if (State.Stage == AuthenticationStage.Login)
+                {
+                    <LoginForm ServerAddress="@State.ServerAddress" OnBack="() => State.Stage = AuthenticationStage.SelectServer" />
+                }
+
+                @if (State.Stage == AuthenticationStage.Register)
+                {
+                    <RegistrationForm ServerAddress="@State.ServerAddress" OnBack="() => State.Stage = AuthenticationStage.Login" />
+                }
+            </div>
+        </Content>
+    </Layout>
+</CascadingValue>
+
+@code {
+    AuthenticationFormState State { get; set; }
+
+    protected override void OnInitialized()
+    {
+        State = new()
+        {
+            Stage = AuthenticationStage.SelectServer,
+            ServerAddress = String.Empty,
+        };
+    }
+
+    void ServerSelected(string serverAddress)
+    {
+        State.ServerAddress = serverAddress;
+        State.Stage = AuthenticationStage.Login;
+    }
+}

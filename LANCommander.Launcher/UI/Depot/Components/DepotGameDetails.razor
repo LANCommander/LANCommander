@@ -4,6 +4,7 @@
 @inject LibraryService LibraryService
 @inject GameService GameService
 @inject InstallService InstallService
+@inject ImportService ImportService
 @inject SDK.Client Client
 @inject ILogger<DepotGameDetails> Logger
 @inject NavigationManager NavigationManager
@@ -41,7 +42,7 @@
                                 <SpaceItem>
                                     @if (IsInstalled)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="@(() => NavigationManager.NavigateTo($"/{SelectedGame.Id}"))">View in Library</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="@(() => NavigationManager.NavigateTo($"{SelectedGame.Id}"))">View in Library</Button>
                                     }
                                     else
                                     {
@@ -248,7 +249,9 @@
             await Task.Yield();
         }
 
-        try {
+        try
+        {
+            await ImportService.ImportGameAsync(SelectedGame.Id);
             await LibraryService.AddToLibraryAsync(SelectedGame.Id);
             await LibraryService.RefreshItemsAsync();
 
@@ -261,8 +264,7 @@
             Logger?.LogError(ex, $"{SelectedGame.Title} ({SelectedGame.Id}) could not be added to your library!");
             MessageService.Error($"{SelectedGame.Title} could not be added to your library!");
         }
-
-
+        
         AddingToLibrary = false;
         StateHasChanged();
         await Task.Yield();

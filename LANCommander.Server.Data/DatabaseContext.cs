@@ -171,8 +171,15 @@ namespace LANCommander.Server.Data
                 .WithMany(c => c.DevelopedGames)
                 .UsingEntity<Dictionary<string, object>>(
                     "GameDeveloper",
-                    g => g.HasOne<Company>().WithMany().HasForeignKey("DeveloperId").OnDelete(DeleteBehavior.Cascade),
-                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade)
+                    g => g.HasOne<Company>()
+                        .WithMany()
+                        .HasForeignKey("DeveloperId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    g => g.HasOne<Game>()
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasKey("GameId", "DeveloperId")
                 );
 
             builder.Entity<Game>()
@@ -180,8 +187,15 @@ namespace LANCommander.Server.Data
                 .WithMany(c => c.PublishedGames)
                 .UsingEntity<Dictionary<string, object>>(
                     "GamePublisher",
-                    g => g.HasOne<Company>().WithMany().HasForeignKey("PublisherId").OnDelete(DeleteBehavior.Cascade),
-                    g => g.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade)
+                    g => g.HasOne<Company>()
+                        .WithMany()
+                        .HasForeignKey("PublisherId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    g => g.HasOne<Game>()
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasKey("GameId", "PublisherId")
                 );
 
             builder.Entity<Game>()

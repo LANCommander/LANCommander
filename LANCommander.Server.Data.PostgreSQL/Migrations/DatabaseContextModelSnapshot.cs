@@ -54,15 +54,15 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
             modelBuilder.Entity("GameDeveloper", b =>
                 {
-                    b.Property<Guid>("DeveloperId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("DeveloperId", "GameId");
+                    b.Property<Guid>("DeveloperId")
+                        .HasColumnType("uuid");
 
-                    b.HasIndex("GameId");
+                    b.HasKey("GameId", "DeveloperId");
+
+                    b.HasIndex("DeveloperId");
 
                     b.ToTable("GameDeveloper");
                 });
@@ -2135,7 +2135,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
                         .WithMany("Media")
                         .HasForeignKey("StorageLocationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired();
 
                     b.HasOne("LANCommander.Server.Data.Models.Media", "Thumbnail")

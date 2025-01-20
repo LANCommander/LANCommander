@@ -54,15 +54,15 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
             modelBuilder.Entity("GameDeveloper", b =>
                 {
-                    b.Property<Guid>("DeveloperId")
-                        .HasColumnType("char(36)");
-
                     b.Property<Guid>("GameId")
                         .HasColumnType("char(36)");
 
-                    b.HasKey("DeveloperId", "GameId");
+                    b.Property<Guid>("DeveloperId")
+                        .HasColumnType("char(36)");
 
-                    b.HasIndex("GameId");
+                    b.HasKey("GameId", "DeveloperId");
+
+                    b.HasIndex("DeveloperId");
 
                     b.ToTable("GameDeveloper");
                 });
@@ -2135,7 +2135,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
                         .WithMany("Media")
                         .HasForeignKey("StorageLocationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired();
 
                     b.HasOne("LANCommander.Server.Data.Models.Media", "Thumbnail")

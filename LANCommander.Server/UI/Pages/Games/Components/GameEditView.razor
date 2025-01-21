@@ -1,4 +1,5 @@
-﻿@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
@@ -84,28 +85,27 @@
             {
                 if (_id != Guid.Empty)
                     Game = await gameService
-                        .Include(g => g.Actions)
-                        .Include(g => g.Archives)
-                        .Include(g => g.BaseGame)
-                        .Include(g => g.Categories)
-                        .Include(g => g.Collections)
-                        .Include(g => g.CreatedBy)
-                        .Include(g => g.DependentGames)
-                        .Include(g => g.Developers)
-                        .Include(g => g.Engine)
-                        .Include(g => g.GameSaves)
-                        .Include(g => g.Genres)
-                        .Include(g => g.Keys)
-                        .Include(g => g.Media)
-                        .Include(g => g.MultiplayerModes)
-                        .Include(g => g.Platforms)
-                        .Include(g => g.PlaySessions)
-                        .Include(g => g.Publishers)
-                        .Include(g => g.Redistributables)
-                        .Include(g => g.SavePaths)
-                        .Include(g => g.Scripts)
-                        .Include(g => g.Tags)
-                        .Include(g => g.UpdatedBy)
+                        .Query(query =>
+                        {
+                            return query
+                                .Include(g => g.Actions)
+                                .Include(g => g.BaseGame)
+                                .Include(g => g.Categories)
+                                .Include(g => g.Collections)
+                                .Include(g => g.CreatedBy)
+                                .Include(g => g.DependentGames)
+                                .Include(g => g.Developers)
+                                .Include(g => g.Engine)
+                                .Include(g => g.Genres)
+                                .Include(g => g.Media)
+                                .Include(g => g.MultiplayerModes)
+                                .Include(g => g.Platforms)
+                                .Include(g => g.Publishers)
+                                .Include(g => g.Redistributables)
+                                .Include(g => g.SavePaths)
+                                .Include(g => g.Tags)
+                                .Include(g => g.UpdatedBy);
+                        })
                         .GetAsync(_id);
                 else
                     Game = new Game();

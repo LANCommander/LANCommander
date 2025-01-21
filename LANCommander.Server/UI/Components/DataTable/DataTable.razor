@@ -60,6 +60,7 @@
     [Parameter] public string Search { get; set; }
     [Parameter] public string SearchChanged { get; set; }
     [Parameter] public Expression<Func<TItem, bool>> SearchQuery { get; set; }
+    [Parameter] public Expression<Func<TItem, bool>> Query { get; set; }
     
     string Url;
     bool DrawerOpen = false;
@@ -85,6 +86,11 @@
                     foreach (var include in Includes)
                     {
                         queryable = queryable.Include(include);
+                    }
+
+                    if (Query != null)
+                    {
+                        queryable = queryable.Where(Query);
                     }
 
                     if (!String.IsNullOrWhiteSpace(Search) && SearchQuery != null)
@@ -199,7 +205,7 @@
                 {
                     Index = column.ColIndex,
                     Name = column.Title,
-                    Visible = true
+                    Visible = ColumnVisibility.ContainsKey(column.ColIndex) ? ColumnVisibility[column.ColIndex] : false
                 });
             }
         }

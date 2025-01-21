@@ -61,16 +61,12 @@
         }
     </Column>
 
-    <ActionColumn Title="" Style="text-align: right">
-        <ChildContent>
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => RemoveGame(context)" Title="Are you sure you want to remove this game from the collection?">
-                        <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ChildContent>
+    <ActionColumn Title="">
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            <Popconfirm OnConfirm="() => RemoveGame(context)" Title="Are you sure you want to remove this game from the collection?">
+                <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
+            </Popconfirm>
+        </Flex>
     </ActionColumn>
 </Table>
 

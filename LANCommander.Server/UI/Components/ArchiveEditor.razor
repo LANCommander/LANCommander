@@ -11,80 +11,55 @@
 @inject IJSRuntime JS
 @inject ILogger<ArchiveEditor> Logger
 
-<Space Direction="SpaceDirection.Vertical" Style="width: 100%">
-    <SpaceItem>
-        <Table TItem="Archive" DataSource="@Archives" HidePagination="true" Responsive>
-            <PropertyColumn Property="a => a.Version">
-                <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)" />
-            </PropertyColumn>
-            <PropertyColumn Property="a => a.CompressedSize">
-                @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
-            </PropertyColumn>
-            <PropertyColumn Property="a => a.UncompressedSize">
-                @ByteSizeLib.ByteSize.FromBytes(context.UncompressedSize)
-            </PropertyColumn>
-            <PropertyColumn Property="a => a.CreatedBy">
-                @context.CreatedBy?.UserName
-            </PropertyColumn>
-            <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="@SortDirection.Descending" />
-            <ActionColumn Title="">
-                <Space Style="display: flex; justify-content: end">
-                    <SpaceItem>
-                        <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
-                            <Icon Type="@IconType.Outline.Download" />
-                        </a>
-                    </SpaceItem>
-                    <SpaceItem>
-                        <Button Icon="@IconType.Outline.FolderOpen" Type="@ButtonType.Text" OnClick="() => BrowseArchive(context)" />
-                    </SpaceItem>
-                    <SpaceItem>
-                        <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                        </Popconfirm>
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </SpaceItem>
+<Flex Vertical Gap="FlexGap.Large">
+    <DataTable
+        TItem="Archive"
+        HidePagination
+        Responsive
+        Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId)">
+        <BoundDataColumn Property="a => a.Version">
+            <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)"/>
+        </BoundDataColumn>
+        <BoundDataColumn Property="a => a.CompressedSize">
+            @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
+        </BoundDataColumn>
+        <BoundDataColumn Property="a => a.UncompressedSize">
+            @ByteSizeLib.ByteSize.FromBytes(context.UncompressedSize)
+        </BoundDataColumn>
+        <BoundDataColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Include="CreatedBy" />
+        <BoundDataColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending" />
+        
+        <DataActions>
+            <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                <Icon Type="@IconType.Outline.Download"/>
+            </a>
 
-    <SpaceItem>
-        <GridRow Justify="RowJustify.End">
-            <GridCol>
-                <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
-            </GridCol>
-        </GridRow>
-    </SpaceItem>
-</Space>
+            <Button Icon="@IconType.Outline.FolderOpen" Type="@ButtonType.Text" OnClick="() => BrowseArchive(context)"/>
 
-<ArchiveUploader @ref="Uploader" GameId="GameId" RedistributableId="RedistributableId" OnArchiveUploaded="LoadData" />
+            <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
+                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+            </Popconfirm>
+        </DataActions>
+    </DataTable>
+
+    <GridRow Justify="RowJustify.End">
+        <GridCol>
+            <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
+        </GridCol>
+    </GridRow>
+</Flex>
+
+<ArchiveUploader @ref="Uploader" GameId="GameId" RedistributableId="RedistributableId" />
 
 @code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
-
-    ICollection<Archive> Archives { get; set; } = new List<Archive>();
 
     ArchiveUploader Uploader;
 
     protected override void OnInitialized()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
-    }
-
-    protected override async Task OnParametersSetAsync()
-    {
-        await LoadData();
-    }
-
-    private async Task LoadData()
-    {
-        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-        {
-            if (GameId != Guid.Empty)
-                Archives = await archiveService.Include(a => a.CreatedBy).GetAsync(a => a.GameId == GameId);
-            else if (RedistributableId != Guid.Empty)
-                Archives = await archiveService.Include(a => a.CreatedBy).GetAsync(a => a.RedistributableId == RedistributableId);
-        }
     }
 
     private async Task Download(Archive archive)
@@ -140,7 +115,7 @@
                 await archiveService.DeleteAsync(archive);
             }
 
-            await LoadData();
+            // await LoadData();
 
             MessageService.Success("Archive deleted!");
         }

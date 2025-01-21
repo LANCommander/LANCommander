@@ -1,4 +1,5 @@
 ﻿@page "/Games/{id:guid}/Saves"
+@using SortDirection = AntDesign.SortDirection
 @inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject DatabaseServiceFactory DatabaseServiceFactory
@@ -6,29 +7,26 @@
 @inject ILogger<Saves> Logger
 
 <GameEditView Id="Id" Title="Saves">
-    <Table TItem="GameSave" DataSource="@context.GameSaves" Context="save" Responsive>
-        <PropertyColumn Property="g => g.User" Sortable>
-            @save.User?.UserName
-        </PropertyColumn>
-        <PropertyColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="AntDesign.SortDirection.Descending" Sortable />
-        <PropertyColumn Property="g => g.CreatedBy" Sortable>
-            @save.CreatedBy?.UserName
-        </PropertyColumn>
-        <ActionColumn Title="">
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <a href="/Download/Save/@(save.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
-                        <Icon Type="@IconType.Outline.Download" />
-                    </a>
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(save)" Title="Are you sure you want to delete this game save?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
+    <DataTable
+        TItem="GameSave"
+        Query="gs => gs.GameId == Id"
+        Responsive
+        Context="save">
+        <BoundDataColumn Property="g => g.User.UserName" Include="User" />
+        <BoundDataColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending" />
+        <BoundDataColumn Property="g => g.Size">
+            @ByteSizeLib.ByteSize.FromBytes(save.Size)
+        </BoundDataColumn>
+        <DataActions>
+            <a href="/Download/Save/@(save.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                <Icon Type="@IconType.Outline.Download"/>
+            </a>
+
+            <Popconfirm OnConfirm="() => Delete(save)" Title="Are you sure you want to delete this game save?">
+                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+            </Popconfirm>
+        </DataActions>
+    </DataTable>
 </GameEditView>
 
 @code {

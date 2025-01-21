@@ -1,49 +1,41 @@
 ﻿@using LANCommander.SDK.Enums
 @using LANCommander.Server.Extensions;
 
-<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
-    <SpaceItem>
-        <Table TItem="SavePath" DataSource="@Value" HidePagination="true" Responsive>
-            <PropertyColumn Property="p => p.Type">
-                <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()">
-                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                </Select>
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.Path">
-                @if (context.Type == SavePathType.Registry)
-                {
-                    <InputRegistry @bind-Value="context.Path" />
-                }
-                else
-                {
-                    <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
-                }
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
-                <Input @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" />
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.IsRegex" Title="Regex">
-                <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
-            </PropertyColumn>
-            <ActionColumn>
-                <Space Style="display: flex; justify-content: end">
-                    <SpaceItem>
-                        <Button OnClick="() => RemovePath(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </SpaceItem>
+<Flex Vertical Gap="FlexGap.Large">
+    <Table TItem="SavePath" DataSource="@Value" HidePagination="true" Responsive>
+        <PropertyColumn Property="p => p.Type">
+            <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </PropertyColumn>
+        <PropertyColumn Property="p => p.Path">
+            @if (context.Type == SavePathType.Registry)
+            {
+                <InputRegistry @bind-Value="context.Path" />
+            }
+            else
+            {
+                <FilePicker @bind-Value="context.Path" ArchiveId="@ArchiveId" AllowDirectories="true" />
+            }
+        </PropertyColumn>
+        <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
+            <Input @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" />
+        </PropertyColumn>
+        <PropertyColumn Property="p => p.IsRegex" Title="Regex">
+            <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />
+        </PropertyColumn>
+        <ActionColumn>
+            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+                <Button OnClick="() => RemovePath(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+            </Flex>
+        </ActionColumn>
+    </Table>
 
-    <SpaceItem>
-        <GridRow Justify="RowJustify.End">
-            <GridCol>
-                <Button OnClick="AddPath" Type="@ButtonType.Primary">Add Path</Button>
-            </GridCol>
-        </GridRow>
-    </SpaceItem>
-</Space>
+    <Flex Justify="FlexJustify.End">
+        <Button OnClick="AddPath" Type="@ButtonType.Primary">Add Path</Button>
+    </Flex>
+</Flex>
 
 @code {
     [Parameter] public ICollection<SavePath> Value { get; set; } = new List<SavePath>();

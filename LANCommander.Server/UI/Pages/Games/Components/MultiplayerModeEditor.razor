@@ -2,48 +2,40 @@
 @using LANCommander.Server.Extensions;
 @using LANCommander.SDK.Enums
 
-<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
-    <SpaceItem>
-        <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true" Responsive>
-            <PropertyColumn Property="m => m.Type">
-                <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
-                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                </Select>
-            </PropertyColumn>
-            <PropertyColumn Property="m => m.MinPlayers" Title="Min Players">
-                <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />
-            </PropertyColumn>
-            <PropertyColumn Property="m => m.MaxPlayers" Title="Max Players">
-                <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
-            </PropertyColumn>
-            <PropertyColumn Property="m => m.NetworkProtocol" Title="Protocol">
-                <Select @bind-Value="@context.NetworkProtocol" TItem="NetworkProtocol" TItemValue="NetworkProtocol" DataSource="Enum.GetValues<NetworkProtocol>()">
-                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                </Select>
-            </PropertyColumn>
-            <PropertyColumn Property="m => m.Description">
-                <Input Type="InputType.Text" @bind-Value="context.Description" />
-            </PropertyColumn>
-            <ActionColumn>
-                <Space Style="display: flex; justify-content: end">
-                    <SpaceItem>
-                        <Button OnClick="() => RemoveMode(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
-                    </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </SpaceItem>
+<Flex Vertical Gap="FlexGap.Large">
+    <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true" Responsive>
+        <PropertyColumn Property="m => m.Type">
+            <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </PropertyColumn>
+        <PropertyColumn Property="m => m.MinPlayers" Title="Min Players">
+            <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />
+        </PropertyColumn>
+        <PropertyColumn Property="m => m.MaxPlayers" Title="Max Players">
+            <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
+        </PropertyColumn>
+        <PropertyColumn Property="m => m.NetworkProtocol" Title="Protocol">
+            <Select @bind-Value="@context.NetworkProtocol" TItem="NetworkProtocol" TItemValue="NetworkProtocol" DataSource="Enum.GetValues<NetworkProtocol>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </PropertyColumn>
+        <PropertyColumn Property="m => m.Description">
+            <Input Type="InputType.Text" @bind-Value="context.Description" />
+        </PropertyColumn>
+        <ActionColumn>
+            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+                <Button OnClick="() => RemoveMode(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close"/>
+            </Flex>
+        </ActionColumn>
+    </Table>
 
-    <SpaceItem>
-        <GridRow Justify="RowJustify.End">
-            <GridCol>
-                <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
-            </GridCol>
-        </GridRow>
-    </SpaceItem>
-</Space>
+    <Flex Justify="FlexJustify.End">
+        <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
+    </Flex>
+</Flex>
 
 @code {
     [Parameter] public ICollection<MultiplayerMode> Value { get; set; }

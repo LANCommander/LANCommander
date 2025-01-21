@@ -20,18 +20,14 @@
                 }
             </PageHeaderTitle>
             <PageHeaderExtra>
-                <Space Direction="SpaceDirection.Horizontal">
+                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                     @if (Id != Guid.Empty)
                     {
-                        <SpaceItem>
-                            <Button OnClick="Resolve" Disabled="@(Issue?.ResolvedOn != null)">Resolve</Button>
-                        </SpaceItem>
+                        <Button OnClick="Resolve" Disabled="@(Issue?.ResolvedOn != null)">Resolve</Button>
                     }
 
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Primary" OnClick="Save" Disabled="@(Issue?.ResolvedOn != null)">Save</Button>
-                    </SpaceItem>
-                </Space>
+                    <Button Type="@ButtonType.Primary" OnClick="Save" Disabled="@(Issue?.ResolvedOn != null)">Save</Button>
+                </Flex>
             </PageHeaderExtra>
         </PageHeader>
 

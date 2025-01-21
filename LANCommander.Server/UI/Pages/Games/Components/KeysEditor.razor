@@ -4,53 +4,49 @@
 
 @if (Keys != null)
 {
-    <Space Direction="SpaceDirection.Vertical" Style="width: 100%;">
-        <SpaceItem>
-            <GridRow>
-                <GridCol Span="8">
-                    <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
-                </GridCol>
-                <GridCol Span="8">
-                    <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
-                </GridCol>
-                <GridCol Span="8">
-                    <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
-                </GridCol>
-            </GridRow>
-        </SpaceItem>
+    <Flex Vertical Gap="FlexGap.Small">
+        <GridRow>
+            <GridCol Span="8">
+                <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
+            </GridCol>
+            <GridCol Span="8">
+                <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
+            </GridCol>
+            <GridCol Span="8">
+                <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
+            </GridCol>
+        </GridRow>
 
-        <SpaceItem>
-            <Table TItem="Key" DataSource="@Keys" Responsive>
-                <PropertyColumn Property="k => k.Value">
-                    <InputPassword @bind-Value="@context.Value" />
-                </PropertyColumn>
-                <PropertyColumn Property="k => k.AllocationMethod" Title="Allocation Method" />
-                <Column TData="string" Title="Claimed By">
-                    @switch (context.AllocationMethod)
-                    {
-                        case KeyAllocationMethod.MacAddress:
-                            <text>@context.ClaimedByMacAddress</text>
-                            break;
+        <Table TItem="Key" DataSource="@Keys" Responsive>
+            <PropertyColumn Property="k => k.Value">
+                <InputPassword @bind-Value="@context.Value" />
+            </PropertyColumn>
+            <PropertyColumn Property="k => k.AllocationMethod" Title="Allocation Method" />
+            <Column TData="string" Title="Claimed By">
+                @switch (context.AllocationMethod)
+                {
+                    case KeyAllocationMethod.MacAddress:
+                        <text>@context.ClaimedByMacAddress</text>
+                        break;
 
-                        case KeyAllocationMethod.UserAccount:
-                            <text>@context.ClaimedByUser?.UserName</text>
-                            break;
-                    }
-                </Column>
-                <PropertyColumn Property="g => g.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Title="Claimed On" Sortable />
-                <ActionColumn Title="">
-                    <Space Style="display: flex; justify-content: end">
-                        <SpaceItem>
-                            @if (context.IsAllocated())
-                            {
-                                <Button OnClick="() => Release(context)">Release</Button>
-                            }
-                        </SpaceItem>
-                    </Space>
-                </ActionColumn>
-            </Table>
-        </SpaceItem>
-    </Space>
+                    case KeyAllocationMethod.UserAccount:
+                        <text>@context.ClaimedByUser?.UserName</text>
+                        break;
+                }
+            </Column>
+            <PropertyColumn Property="g => g.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Title="Claimed On" Sortable />
+            <ActionColumn Title="">
+                <Space Style="display: flex; justify-content: end">
+                    <SpaceItem>
+                        @if (context.IsAllocated())
+                        {
+                            <Button OnClick="() => Release(context)">Release</Button>
+                        }
+                    </SpaceItem>
+                </Space>
+            </ActionColumn>
+        </Table>
+    </Flex>
 
     <Modal Title="Edit Keys" Visible="EditModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => EditModalVisible = false" OnOk="Save">
         <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />

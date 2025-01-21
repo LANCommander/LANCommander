@@ -20,32 +20,28 @@
         }
     </TitleTemplate>
     <TitleExtraTemplate>
-        <Space Direction="SpaceDirection.Horizontal">
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
             @if (context != null && context.Id != Guid.Empty)
             {
-                <SpaceItem>
-                    <Dropdown Trigger="@(new Trigger[] { Trigger.Click })" OnClick='e => { Console.WriteLine("Dropdown button clicked."); }'>
-                        <Overlay>
-                            <Menu>
-                                <MenuItem>
-                                    <a href="/Games/@(context.Id)/Export/Full" target="_blank">Full</a>
-                                </MenuItem>
-                                <MenuItem>
-                                    <a href="/Games/@(context.Id)/Export/Metadata" target="_blank">Metadata</a>
-                                </MenuItem>
-                            </Menu>
-                        </Overlay>
-                        <ChildContent>
-                            <Button>Export</Button>
-                        </ChildContent>
-                    </Dropdown>
-
-                </SpaceItem>
+                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })" OnClick='e => { Console.WriteLine("Dropdown button clicked."); }'>
+                    <Overlay>
+                        <Menu>
+                            <MenuItem>
+                                <a href="/Games/@(context.Id)/Export/Full" target="_blank">Full</a>
+                            </MenuItem>
+                            <MenuItem>
+                                <a href="/Games/@(context.Id)/Export/Metadata" target="_blank">Metadata</a>
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button>Export</Button>
+                    </ChildContent>
+                </Dropdown>
             }
-            <SpaceItem>
-                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
-            </SpaceItem>
-        </Space>
+
+            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+        </Flex>
     </TitleExtraTemplate>
 
     <ChildContent>

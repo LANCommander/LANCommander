@@ -14,7 +14,7 @@
     </TitleExtraTemplate>
 
     <ChildContent>
-        <SavePathEditor @bind-Value="context.SavePaths" GameId="context.Id" ArchiveId="@GetLatestArchiveId(context)" />
+        <ActionEditor @bind-Actions="context.Actions" ArchiveId="@GetLatestArchiveId(context)" />
     </ChildContent>
 </GameEditView>
 

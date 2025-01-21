@@ -6,27 +6,25 @@
 @inject ILogger<Expansions> Logger
 
 <GameEditView Id="Id" Title="Expansions">
-    <Table TItem="Game" DataSource="@context.DependentGames.Where(g => g.Type == GameType.Expansion)" Context="expansion" Responsive>
-        <PropertyColumn Property="e => e.Title" Sortable Filterable />
-        <PropertyColumn Property="e => e.SortTitle" Sortable Filterable />
-        <PropertyColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Sortable Filterable />
-        <PropertyColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Sortable Filterable />
-        <ActionColumn Style="text-align: right">
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{expansion.Id}", true))">Edit</Button>
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(expansion)" Title="Are you sure you want to delete this expansion?">
-                        <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
+    <DataTable
+        TItem="Game"
+        Context="expansion"
+        Query="g => g.BaseGameId == Id && g.Type == GameType.Expansion">
+        <BoundDataColumn Property="e => e.Title" Sortable Filterable />
+        <BoundDataColumn Property="e => e.SortTitle" Sortable Filterable />
+        <BoundDataColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="e => e.CreatedBy.UserName" Sortable Filterable Include="CreatedBy" />
+        <BoundDataColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="e => e.UpdatedBy.UserName" Sortable Filterable Include="CreatedBy" />
+        <DataActions>
+            <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{expansion.Id}", true))">Edit</Button>
+
+            <Popconfirm OnConfirm="() => Delete(expansion)" Title="Are you sure you want to delete this expansion?">
+                <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
+            </Popconfirm>
+        </DataActions>
+    </DataTable>
 </GameEditView>
 
 @code {

@@ -36,17 +36,14 @@
                 }
             </PageHeaderTitle>
             <PageHeaderExtra>
-                <Space Direction="SpaceDirection.Horizontal">
+                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                     @if (Redistributable != null && Redistributable.Id != Guid.Empty)
                     {
-                        <SpaceItem>
-                            <a href="/Redistributables/@(Id)/Export" target="_blank" class="ant-btn ant-btn-default">Export</a>
-                        </SpaceItem>
+                        <a href="/Redistributables/@(Id)/Export" target="_blank" class="ant-btn ant-btn-default">Export</a>
                     }
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
-                    </SpaceItem>
-                </Space>
+
+                    <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                </Flex>
             </PageHeaderExtra>
         </PageHeader>
 

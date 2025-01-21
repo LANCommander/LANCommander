@@ -41,27 +41,21 @@
 
 @if (IGDBService.Authenticated)
 {
-    <Space Style="display: flex">
-        <SpaceItem Style="flex-grow: 1">
-            <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" />
-        </SpaceItem>
-        <SpaceItem>
-            <Button OnClick="() => SearchForGame(Value)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
-        </SpaceItem>
-    </Space>
+    <Flex Gap="FlexGap.Small">
+        <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" />
+
+        <Button OnClick="() => SearchForGame(Value)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
+    </Flex>
 }
 else
 {
-    <Space Style="display: flex">
-        <SpaceItem Style="flex-grow: 1">
-            <Input @bind-Value="Value" BindOnInput="true" OnChange="ValueChanged" />
-        </SpaceItem>
-        <SpaceItem>
-            <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
-                <Button Type="ButtonType.Primary">@ButtonText</Button>
-            </Popconfirm>
-        </SpaceItem>
-    </Space>
+    <Flex Gap="FlexGap.Small">
+        <Input @bind-Value="Value" BindOnInput="true" OnChange="ValueChanged" />
+
+        <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
+            <Button Type="ButtonType.Primary">@ButtonText</Button>
+        </Popconfirm>
+    </Flex>
 }
 
 @code {

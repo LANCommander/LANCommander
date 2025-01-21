@@ -106,11 +106,13 @@
     </Sider>
 
     <Flex Vertical Justify="FlexJustify.SpaceBetween">
-        <Content Style="padding: 24px;">
-            <div class="site-layout-background">
-                @Body
-            </div>
-        </Content>
+        <ErrorHandler>
+            <Content Style="padding: 24px;">
+                <div class="site-layout-background">
+                    @Body
+                </div>
+            </Content>
+        </ErrorHandler>
 
         <Footer Style="text-align: center; padding-top: 0;">
             LANCommander v@(UpdateService.GetCurrentVersion().ToString())

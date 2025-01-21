@@ -79,6 +79,8 @@
         OnChange = EventCallback.Factory.Create<QueryModel<TItem>>(this,
             async (queryModel) =>
             {
+                Loading = true;
+                
                 using (var context = DatabaseContextFactory.CreateDbContext())
                 {
                     var queryable = queryModel != null ? context.Set<TItem>().ExecuteTableQuery(queryModel) : context.Set<TItem>();
@@ -108,9 +110,11 @@
                     await base.OnParametersSetAsync();
                     base.OnParametersSet();
                 }
+
+                Loading = false;
             });
 
-        await OnChange.InvokeAsync();
+        //await OnChange.InvokeAsync();
         
         await base.OnInitializedAsync();
     }
@@ -224,6 +228,17 @@
     public void CloseDrawer()
     {
         InvokeStateHasChanged();
+        StateHasChanged();
+    }
+
+    public void Reload()
+    {
+        Loading = true;
+        StateHasChanged();
+        
+        ReloadData(PageIndex, PageSize);
+
+        Loading = false;
         StateHasChanged();
     }
 

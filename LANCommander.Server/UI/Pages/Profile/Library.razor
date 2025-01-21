@@ -7,6 +7,7 @@
 @attribute [Authorize]
 
 <DataTable
+    @ref="Table"
     TItem="Game"
     Query="g => g.Libraries.Any(l => l.UserId == User.Id)">
     <Columns>
@@ -29,6 +30,7 @@
 </DataTable>
 
 @code {
+    DataTable<Game> Table;
     User User;
 
     protected override async Task OnInitializedAsync()
@@ -53,6 +55,8 @@
             }
 
             MessageService.Success($"Removed {game.Title} from your library!");
+
+            Table.Reload();
         }
         catch (Exception ex)
         {

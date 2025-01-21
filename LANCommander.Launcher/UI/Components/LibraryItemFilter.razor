@@ -88,6 +88,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LibraryService.Filter.UpdateFilter();
+        //LibraryService.Filter.Populate();
         // LibraryService.OnPreLibraryItemsFiltered += PopulateFilter;
 
     }

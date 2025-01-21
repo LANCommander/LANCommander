@@ -134,26 +134,23 @@ namespace LANCommander.Launcher.Services
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
-                var library = await GetByUserAsync(AuthenticationService.GetUserId());
-                library = await Context
-                    .Libraries
-                    .AsQueryable()
-                    .Include(l => l.Games).ThenInclude(g => g.Collections)
-                    .Include(l => l.Games).ThenInclude(g => g.Collections)
-                    .Include(l => l.Games).ThenInclude(g => g.Developers)
-                    .Include(l => l.Games).ThenInclude(g => g.Genres)
-                    .Include(l => l.Games).ThenInclude(g => g.Publishers)
-                    .Include(l => l.Games).ThenInclude(g => g.Tags)
-                    .Include(l => l.Games).ThenInclude(g => g.PlaySessions)
-                    .Include(l => l.Games).ThenInclude(g => g.Engine)
-                    .Include(l => l.Games).ThenInclude(g => g.Platforms)
-                    .Include(l => l.Games).ThenInclude(g => g.Media)
-                    .Include(l => l.Games).ThenInclude(g => g.MultiplayerModes)
-                    .FirstOrDefaultAsync(l => l.UserId == AuthenticationService.GetUserId());
+                var games = await Context
+                    .Games
+                    .Where(g => g.Libraries.Any(l => l.UserId == AuthenticationService.GetUserId()))
+                    .Include(g => g.Media)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Collections)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Tags)
+                    .Include(g => g.MultiplayerModes)
+                    .ToListAsync();
 
-                Filter.Populate(library.Games);
+                Filter.Populate(games);
 
-                foreach (var item in library.Games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
+                foreach (var item in games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
                 {
                     Items.Add(item);
                 }

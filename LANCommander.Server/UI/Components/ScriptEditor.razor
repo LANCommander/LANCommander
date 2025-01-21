@@ -8,7 +8,7 @@
         TItem="Script"
         HidePagination
         Responsive
-        SearchQuery="s => s.GameId == GameId || s.RedistributableId == RedistributableId || s.ServerId == ServerId">
+        Query="s => (s.GameId != Guid.Empty && s.GameId == GameId) || (s.RedistributableId != Guid.Empty && s.RedistributableId == RedistributableId) || (s.ServerId != Guid.Empty && s.ServerId == ServerId)">
         <BoundDataColumn Property="s => s.Type">
             @context.Type.GetDisplayName()
         </BoundDataColumn>

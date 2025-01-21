@@ -13,11 +13,11 @@
             {
                 if (context.Thumbnail != null && context.Type == MediaType.Manual)
                 {
-                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail.Id}/Download?fileId={context.Thumbnail.FileId}")" PreviewVisible="false" OnClick="() => OpenManual(context)"/>
+                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail?.Id}/Download?fileId={context.Thumbnail?.FileId}")" PreviewVisible="false" OnClick="() => OpenManual(context)"/>
                 }
                 else if (context.Thumbnail != null)
                 {
-                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail.Id}/Download?fileId={context.Thumbnail.FileId}")"/>
+                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail?.Id}/Download?fileId={context.Thumbnail?.FileId}")"/>
                 }
                 else if (context.Type != MediaType.Manual)
                 {

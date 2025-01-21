@@ -647,7 +647,12 @@ namespace LANCommander.SDK
 
         public async Task<IEnumerable<AuthenticationProvider>> GetAuthenticationProvidersAsync()
         {
-            return await GetRequestAsync<IEnumerable<AuthenticationProvider>>("/api/Auth/AuthenticationProviders");
+            var request = new RestRequest("/api/Auth/AuthenticationProviders")
+                .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            var response = await ApiClient.GetAsync<IEnumerable<AuthenticationProvider>>(request);
+
+            return response;
         }
 
         public string GetAuthenticationProviderLoginUrl(string provider)

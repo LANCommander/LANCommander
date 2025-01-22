@@ -2,17 +2,9 @@
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <GameEditView Id="Id" Title="Keys">
-    <TitleExtraTemplate>
-        <Button Type="@ButtonType.Primary" OnClick="() => KeysEditor.Edit()">Edit</Button>
-    </TitleExtraTemplate>
-
-    <ChildContent>
-        <KeysEditor @ref="KeysEditor" @bind-Keys="context.Keys" GameId="context.Id" />
-    </ChildContent>
+    <KeysEditor GameId="context.Id"/>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-
-    private KeysEditor? KeysEditor;
 }

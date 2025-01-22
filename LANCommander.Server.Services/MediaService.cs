@@ -226,5 +226,12 @@ namespace LANCommander.Server.Services
                 return await UploadMediaAsync(response, media);
             }
         }
+
+        public async Task<StorageLocation> GetDefaultStorageLocationAsync()
+        {
+            var defaultStorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+            
+            return defaultStorageLocation;
+        }
     }
 }

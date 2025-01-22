@@ -131,14 +131,33 @@
         if (Values == null)
             Values = new List<Media>();
 
-        var types = Enum.GetValues<MediaType>();
-        var nextType = types.FirstOrDefault(t => !Values.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
-
-        Values.Add(new Media()
+        try
         {
-            GameId = GameId,
-            Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType
-        });
+            var types = Enum.GetValues<MediaType>();
+            var nextType = types.FirstOrDefault(t => !Values.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
+
+            using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+            {
+                var defaultStorageLocation = await mediaService.GetDefaultStorageLocationAsync();
+                
+                var media = new Media
+                {
+                    GameId = GameId,
+                    Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType,
+                    StorageLocationId = defaultStorageLocation.Id,
+                    Crc32 = String.Empty
+                };
+
+                await mediaService.AddAsync(media);
+
+                Values.Add(await mediaService.GetAsync(media.Id));
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not add new media!");
+            Logger.LogError(ex, "Could not add new media!");
+        }
     }
 
     private async Task SearchMedia(Media media)

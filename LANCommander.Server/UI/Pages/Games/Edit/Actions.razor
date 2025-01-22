@@ -8,42 +8,30 @@
     <TitleExtraTemplate>
         <Space Direction="SpaceDirection.Horizontal">
             <SpaceItem>
-                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+                <Button Type="ButtonType.Primary" OnClick="() => ActionEditor.Save()">Save</Button>
             </SpaceItem>
         </Space>
     </TitleExtraTemplate>
 
     <ChildContent>
-        <ActionEditor @bind-Actions="context.Actions" ArchiveId="@GetLatestArchiveId(context)" />
+        <ActionEditor @ref="ActionEditor" GameId="Id" ArchiveId="ArchiveId" />
     </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Guid GetLatestArchiveId(Game game)
-    {
-        if (game != null && game.Archives != null && game.Archives.Count > 0)
-            return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Id ?? Guid.Empty;
-        else
-            return Guid.Empty;
-    }
+    Guid ArchiveId = Guid.Empty;
 
-    async Task Save(Game game)
-    {
-        try
-        {
-            using (var gameService = DatabaseServiceFactory.Create<GameService>())
-            {
-                game = await gameService.UpdateAsync(game);
-            }
+    ActionEditor ActionEditor;
 
-            await MessageService.Success("Save paths updated!");
-        }
-        catch (Exception ex)
+    protected override async Task OnInitializedAsync()
+    {
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
-            MessageService.Error("Could not update save paths!");
-            Logger.LogError(ex, "Could not update save paths!");
+            var latestArchive = await archiveService.SortBy(a => a.CreatedOn).FirstOrDefaultAsync(a => a.GameId == Id);
+
+            ArchiveId = latestArchive.Id;
         }
     }
 }

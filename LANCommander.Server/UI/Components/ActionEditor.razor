@@ -1,9 +1,8 @@
-﻿@using LANCommander.Server.Data.Models
-@using LANCommander.Server.Extensions
-@using LANCommander.Server.Models;
-@using System.IO.Compression;
-@using System.Collections.ObjectModel
+﻿@using System.Collections.ObjectModel
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
+@inject MessageService MessageService
+@inject ILogger<ActionEditor> Logger
 
 <Flex Vertical Gap="FlexGap.Large">
     <Table TItem="Data.Models.Action" DataSource="@Actions.OrderBy(a => a.SortOrder)" HidePagination Style="border: 1px solid #f0f0f0" Responsive>
@@ -42,19 +41,43 @@
 </Flex>
 
 @code {
-    [Parameter] public ICollection<Data.Models.Action> Actions { get; set; }
-    [Parameter] public EventCallback<ICollection<Data.Models.Action>> ActionsChanged { get; set; }
-    
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid ServerId { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
+    
+    public ICollection<Data.Models.Action> Actions { get; set; }
 
-    ObservableCollection<Data.Models.Action> SortedActions = new ObservableCollection<Data.Models.Action>();
+    Game Game;
+    Server Server;
+
+    ObservableCollection<Data.Models.Action> SortedActions = new();
 
     protected override async Task OnInitializedAsync()
     {
-        if (Actions == null)
-            Actions = new List<Data.Models.Action>();
+        if (GameId != Guid.Empty)
+        {
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                Game = await gameService
+                    .Include(g => g.Actions)
+                    .Include(g => g.Archives)
+                    .GetAsync(GameId);
+
+                Actions = Game.Actions;
+            }
+        }
+        
+        if (ServerId != Guid.Empty)
+        {
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            {
+                Server = await serverService
+                    .Include(s => s.Actions)
+                    .GetAsync(ServerId);
+
+                Actions = Server.Actions;
+            }
+        }
 
         if (SortedActions.Count != Actions.Count)
         {
@@ -65,7 +88,7 @@
         }
     }
 
-    private async Task AddAction()
+    async Task AddAction()
     {
         var newAction = new Data.Models.Action()
         {
@@ -83,14 +106,14 @@
         await UpdateOrder();
     }
 
-    private async Task RemoveAction(Data.Models.Action action)
+    async Task RemoveAction(Data.Models.Action action)
     {
         SortedActions.Remove(action);
 
         await UpdateOrder();
     }
 
-    private async Task MoveUp(Data.Models.Action action)
+    async Task MoveUp(Data.Models.Action action)
     {
         var index = SortedActions.IndexOf(action);
 
@@ -100,7 +123,7 @@
         await UpdateOrder();
     }
 
-    private async Task MoveDown(Data.Models.Action action)
+    async Task MoveDown(Data.Models.Action action)
     {
         var index = SortedActions.IndexOf(action);
 
@@ -110,7 +133,7 @@
         await UpdateOrder();
     }
 
-    private async Task UpdateOrder()
+    async Task UpdateOrder()
     {
         foreach (var action in SortedActions)
         {
@@ -119,11 +142,43 @@
 
         Actions = SortedActions;
 
-        if (ActionsChanged.HasDelegate)
-            await ActionsChanged.InvokeAsync(Actions);
+        if (Game != null)
+            Game.Actions = Actions;
+
+        if (Server != null)
+            Server.Actions = Actions;
     }
 
-    private void OnPathSelected(string path, Data.Models.Action action)
+    public async Task Save()
+    {
+        try
+        {
+            if (GameId != Guid.Empty)
+            {
+                using (var gameService = DatabaseServiceFactory.Create<GameService>())
+                {
+                    await gameService.UpdateAsync(Game);
+                }
+            }
+
+            if (ServerId != Guid.Empty)
+            {
+                using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+                {
+                    await serverService.UpdateAsync(Server);
+                }
+            }
+
+            MessageService.Success("Actions updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not update actions!");
+            Logger.LogError(ex, "Could not update actions!");
+        }
+    }
+
+    void OnPathSelected(string path, Data.Models.Action action)
     {
         action.WorkingDirectory = "{InstallDir}";
     }

@@ -130,9 +130,9 @@
 
             @if (Panel == "Actions")
             {
-                <ActionEditor @bind-Actions="Server.Actions" ServerId="Server.Id" ArchiveId="Server.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
+                <ActionEditor @ref="ActionEditor" ServerId="Server.Id" ArchiveId="Server.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
 
-                <Button Type="@ButtonType.Primary" OnClick="Save" Icon="@IconType.Fill.Save">Save</Button>
+                <Button Type="@ButtonType.Primary" OnClick="() => ActionEditor.Save()" Icon="@IconType.Fill.Save">Save</Button>
             }
 
             @if (Panel == "Autostart")
@@ -219,6 +219,8 @@
 
     Server Server = new Server();
     Guid GameId;
+
+    ActionEditor ActionEditor;
 
     IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods
     {

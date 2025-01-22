@@ -47,7 +47,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var archivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
-            await Cache.SetAsync($"ChunkArchivePath/{archive.ObjectKey}", archivePath);
+            await Cache.SetAsync($"ChunkArchivePath/{archive.ObjectKey}", archivePath, TimeSpan.FromHours(6));
 
             if (!System.IO.File.Exists(archivePath))
                 System.IO.File.Create(archivePath).Close();
@@ -79,6 +79,9 @@ namespace LANCommander.Server.Controllers.Api
                     fs.Write(data, 0, data.Length);
                 }
             }
+            
+            if (chunk.End == chunk.Total)
+                await Cache.ExpireAsync($"ChunkArchivePath/{chunk.Key}");
         }
     }
 }

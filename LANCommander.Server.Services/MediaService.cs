@@ -108,6 +108,11 @@ namespace LANCommander.Server.Services
 
             var path = GetMediaPath(media);
 
+            using (var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
+            {
+                await stream.CopyToAsync(fs);
+            }
+            
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
 
             await GenerateThumbnailAsync(media);

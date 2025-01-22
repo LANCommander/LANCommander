@@ -6,7 +6,7 @@
     <UserSecretsId>aspnet-LANCommander-C1F79CFA-9767-4AD7-BD5A-2549F8328A2D</UserSecretsId>
     <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
     <TypeScriptModuleKind>none</TypeScriptModuleKind>
-	<Version>1.0.3</Version>
+	<Version>1.1.0</Version>
   </PropertyGroup>
 
   <PropertyGroup>

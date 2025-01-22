@@ -48,6 +48,10 @@ namespace LANCommander.Server.UI.Components
                     GetValue = rowData => compiledProperty.Invoke(((RowData<TItem>)rowData).DataItem.Data);
                 }
 
+                if (Sortable)
+                    SortDirections = new[] 
+                        { AntDesign.SortDirection.Descending, AntDesign.SortDirection.Ascending, AntDesign.SortDirection.Descending };
+
                 base.OnInitialized();
             }
         }

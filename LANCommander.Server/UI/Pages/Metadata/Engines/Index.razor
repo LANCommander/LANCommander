@@ -11,7 +11,9 @@
 
 <DataTable
     TItem="Engine"
-    Size="@TableSize.Small">
+    Size="@TableSize.Small"
+    Searchable
+    SearchProperty="e => e.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Engine</Button>
     </RightToolbar>

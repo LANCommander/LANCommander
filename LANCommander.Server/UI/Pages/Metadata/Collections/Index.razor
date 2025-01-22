@@ -12,7 +12,9 @@
 
 <DataTable
     TItem="Collection"
-    Size="@TableSize.Small">
+    Size="@TableSize.Small"
+    Searchable
+    SearchProperty="c => c.Name">
     <RightToolbar>
         <Button OnClick="OpenAdd" Type="@ButtonType.Primary">Add Collection</Button>
     </RightToolbar>

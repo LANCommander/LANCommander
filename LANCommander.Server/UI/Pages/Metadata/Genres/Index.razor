@@ -11,7 +11,9 @@
 
 <DataTable
     TItem="Genre"
-    Size="@TableSize.Small">
+    Size="@TableSize.Small"
+    Searchable
+    SearchProperty="g => g.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Genre</Button>
     </RightToolbar>

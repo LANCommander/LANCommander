@@ -18,7 +18,7 @@
         <Flex Gap="FlexGap.Small">
             @if (Searchable)
             {
-                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="250"/>                
+                <Search Placeholder="Search" OnChange="SearchChanged" @bind-Value="Search" />                
             }
             <Button Icon="@IconType.Outline.Control" Type="@ButtonType.Text" OnClick="OpenDrawer"/>
             @LeftToolbar
@@ -57,11 +57,10 @@
     [Parameter] public RenderFragment<TItem> Columns { get; set; }
     [Parameter] public RenderFragment Actions { get; set; }
     [Parameter] public bool Searchable { get; set; }
-    [Parameter] public string Search { get; set; }
-    [Parameter] public string SearchChanged { get; set; }
-    [Parameter] public Expression<Func<TItem, bool>> SearchQuery { get; set; }
+    [Parameter] public Expression<Func<TItem, string>> SearchProperty { get; set; }
     [Parameter] public Expression<Func<TItem, bool>> Query { get; set; }
-    
+
+    string Search { get; set; }
     string Url;
     bool DrawerOpen = false;
 
@@ -79,11 +78,16 @@
         OnChange = EventCallback.Factory.Create<QueryModel<TItem>>(this,
             async (queryModel) =>
             {
+                if (queryModel == null)
+                    return;
+                
                 Loading = true;
+                await InvokeAsync(StateHasChanged);
+                await Task.Yield();
                 
                 using (var context = DatabaseContextFactory.CreateDbContext())
                 {
-                    var queryable = queryModel != null ? context.Set<TItem>().ExecuteTableQuery(queryModel) : context.Set<TItem>();
+                    var queryable = context.Set<TItem>().ExecuteTableQuery(queryModel);
 
                     foreach (var include in Includes)
                     {
@@ -95,9 +99,27 @@
                         queryable = queryable.Where(Query);
                     }
 
-                    if (!String.IsNullOrWhiteSpace(Search) && SearchQuery != null)
+                    if (!String.IsNullOrWhiteSpace(Search) && SearchProperty != null)
                     {
-                        queryable = queryable.Where(SearchQuery);
+                        var searchPropExpression = SearchProperty.Compile();
+                        var search = Search.ToLower().Trim();
+
+                        var parameter = SearchProperty.Parameters[0];
+                        var propertyAccess = SearchProperty.Body;
+                        
+                        // Apply .ToLower()
+                        var toLowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
+                        var toLowerExpression = Expression.Call(propertyAccess, toLowerMethod);
+
+                        // Apply .Contains(search)
+                        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) });
+                        var searchExpression = Expression.Constant(search, typeof(string));
+                        var containsExpression = Expression.Call(toLowerExpression, containsMethod, searchExpression);
+
+                        // Create the final lambda: x => x.Property.ToLower().Contains(search)
+                        var lambda = Expression.Lambda<Func<TItem, bool>>(containsExpression, parameter);
+                        
+                        queryable = queryable.Where(lambda);
                     }
 
                     Total = await queryable.CountAsync();
@@ -112,6 +134,8 @@
                 }
 
                 Loading = false;
+                await InvokeAsync(StateHasChanged);
+                await Task.Yield();
             });
 
         //await OnChange.InvokeAsync();
@@ -170,7 +194,6 @@
 
     async Task LoadTableParameter()
     {
-        Loading = true;
         await InvokeStateHasChangedAsync();
 
         var uri = NavigationManager.ToAbsoluteUri(Url);
@@ -183,10 +206,22 @@
             PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
 
         if (query["Search"] != null && query["Search"] != Search)
+        {
             Search = query["Search"];
 
-        Loading = false;
+            await SearchChanged();
+        }
+        
         await InvokeStateHasChangedAsync();
+    }
+
+    async Task SearchChanged()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(Url);
+        
+        NavigationManager.NavigateTo($"{uri.AbsolutePath}?Page={PageIndex}&Size={PageSize}{(Search != "" ? "&Search=" + Search : "")}");
+
+        Reload();
     }
 
     public async Task OpenDrawer()
@@ -235,11 +270,9 @@
     {
         Loading = true;
         StateHasChanged();
+        Task.Yield();
         
         ReloadData(PageIndex, PageSize);
-
-        Loading = false;
-        StateHasChanged();
     }
 
     public void Dispose()

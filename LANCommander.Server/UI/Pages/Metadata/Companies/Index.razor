@@ -12,7 +12,9 @@
 <DataTable
     TItem="Company"
     Size="TableSize.Small"
-    Responsive>
+    Responsive
+    Searchable
+    SearchProperty="c => c.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Company</Button>
     </RightToolbar>

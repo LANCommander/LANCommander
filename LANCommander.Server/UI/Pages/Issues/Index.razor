@@ -14,7 +14,9 @@
     @ref="Table"
     TItem="Issue"
     Size="@TableSize.Small"
-    Responsive>
+    Responsive
+    Searchable
+    SearchProperty="i => i.Game.Title">
     <RightToolbar>
         <Button OnClick="() => Add()" Type="ButtonType.Primary">Add Issue</Button>
     </RightToolbar>

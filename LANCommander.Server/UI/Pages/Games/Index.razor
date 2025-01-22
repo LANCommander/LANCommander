@@ -26,7 +26,8 @@
     @bind-SelectedRows="Selected"
     Size="@TableSize.Small"
     Responsive
-    Searchable>
+    Searchable
+    SearchProperty="g => g.Title">
     <RightToolbar>
         @if (Selected != null && Selected.Count() > 0)
         {

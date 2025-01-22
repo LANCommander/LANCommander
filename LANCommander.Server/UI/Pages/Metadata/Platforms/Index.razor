@@ -11,7 +11,9 @@
 
 <DataTable
     TItem="Platform"
-    Size="@TableSize.Small">
+    Size="@TableSize.Small"
+    Searchable
+    SearchProperty="p => p.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Platform</Button>
     </RightToolbar>

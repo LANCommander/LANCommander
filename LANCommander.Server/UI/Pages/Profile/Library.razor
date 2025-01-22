@@ -9,7 +9,9 @@
 <DataTable
     @ref="Table"
     TItem="Game"
-    Query="g => g.Libraries.Any(l => l.UserId == User.Id)">
+    Query="g => g.Libraries.Any(l => l.UserId == User.Id)"
+    Searchable
+    SearchProperty="g => g.Title">
     <Columns>
         <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
 

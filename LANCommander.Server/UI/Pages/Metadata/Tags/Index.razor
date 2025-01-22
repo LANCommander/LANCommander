@@ -12,7 +12,9 @@
 
 <DataTable
     TItem="Data.Models.Tag"
-    Size="@TableSize.Small">
+    Size="@TableSize.Small"
+    Searchable
+    SearchProperty="t => t.Name">
     <RightToolbar>
         <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Tag</Button>
     </RightToolbar>

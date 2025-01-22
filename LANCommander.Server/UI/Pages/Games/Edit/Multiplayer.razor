@@ -1,0 +1,10 @@
+﻿@page "/Games/{id:guid}/Multiplayer"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView Id="Id" Title="Multiplayer">
+    <MultiplayerModeEditor @bind-Value="context.MultiplayerModes" />
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

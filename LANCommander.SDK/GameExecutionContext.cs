@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
@@ -16,8 +17,6 @@ namespace LANCommander.SDK
     {
         private readonly Client Client;
         private readonly ILogger Logger;
-
-        public Process Process { get; private set; } = new Process();
 
         private Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
 
@@ -65,33 +64,37 @@ namespace LANCommander.SDK
             }
         }
 
-        public async Task ExecuteAsync(string installDirectory, Guid gameId, Models.Action action, string args = "")
+        public async Task ExecuteAsync(string installDirectory, Guid gameId, Models.Action action, string args = "", CancellationToken cancellationToken = default)
         {
             var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
 
             if (action == null)
                 action = manifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
 
-            Process.StartInfo.Arguments = ExpandVariables(action.Arguments, installDirectory, skipSlashes: true);
-            Process.StartInfo.FileName = ExpandVariables(action.Path, installDirectory);
-            Process.StartInfo.WorkingDirectory = ExpandVariables(action.WorkingDirectory, installDirectory);
-            Process.StartInfo.UseShellExecute = true;
+            var process = new Process();
+
+            process.StartInfo.Arguments = ExpandVariables(action.Arguments, installDirectory, skipSlashes: true);
+            process.StartInfo.FileName = ExpandVariables(action.Path, installDirectory);
+            process.StartInfo.WorkingDirectory = ExpandVariables(action.WorkingDirectory, installDirectory);
+            process.StartInfo.UseShellExecute = true;
 
             if (String.IsNullOrWhiteSpace(action.WorkingDirectory))
-                Process.StartInfo.WorkingDirectory = installDirectory;
+                process.StartInfo.WorkingDirectory = installDirectory;
 
             if (!String.IsNullOrWhiteSpace(args))
-                Process.StartInfo.Arguments += " " + args;
+                process.StartInfo.Arguments += " " + args;
 
             Logger?.LogTrace("Running game executable");
-            Logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
-            Logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
-            Logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
+            Logger?.LogTrace("Arguments: {Arguments}", process.StartInfo.Arguments);
+            Logger?.LogTrace("File Name: {FileName}", process.StartInfo.FileName);
+            Logger?.LogTrace("Working Directory: {WorkingDirectory}", process.StartInfo.WorkingDirectory);
             Logger?.LogTrace("Manifest Path: {ManifestPath}", ManifestHelper.GetPath(installDirectory, gameId));
 
-            Process.Start();
+            bool exited = false;
 
-            await Process.WaitForExitAsync();
+            process.Start();
+
+            await process.WaitForAllExitAsync(cancellationToken);
         }
 
         public void Dispose()

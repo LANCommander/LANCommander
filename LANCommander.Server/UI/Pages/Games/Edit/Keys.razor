@@ -1,0 +1,10 @@
+﻿@page "/Games/{id:guid}/Keys"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView Id="Id" Title="Keys">
+    <KeysEditor GameId="context.Id"/>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

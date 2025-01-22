@@ -1,0 +1,116 @@
+﻿@page "/FirstTimeSetup/Administrator"
+@layout FirstTimeSetupLayout
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Administrator> Logger
+
+<PageTitle>Create Administrator User - First Time Setup</PageTitle>
+
+<Form Model="@Model" Loading="Loading" OnFinish="CreateAdministratorUser" Layout="FormLayout.Vertical">
+    <FormItem>
+        To get started, you will need to create an administrator user.
+    </FormItem>
+    <FormItem Label="Username">
+        <Input @bind-Value="@context.Username" />
+    </FormItem>
+    <FormItem Label="Password">
+        <InputPassword @bind-Value="@context.Password" />
+    </FormItem>
+    <FormItem Label="Confirm Password">
+        <InputPassword @bind-Value="@context.PasswordConfirm" />
+    </FormItem>
+    <FormItem>
+        <GridRow Justify="RowJustify.End" Style="margin-top: 16px;">
+            <GridCol>
+                <Button Type="ButtonType.Primary" HtmlType="submit">
+                    Create
+                </Button>
+            </GridCol>
+        </GridRow>
+    </FormItem>
+</Form>
+
+@code {
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
+
+    FirstTimeSetupModel Model = new FirstTimeSetupModel();
+
+    bool Loading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Layout.ChangeCurrentStep(FirstTimeSetupStep.Administrator);
+    }
+
+    async Task CreateAdministratorUser()
+    {
+        Loading = true;
+        StateHasChanged();
+        await Task.Yield();
+
+        try
+        {
+            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
+            {
+                var role = await roleService.GetAsync(RoleService.AdministratorRoleName);
+
+                if (role == null)
+                    await roleService.AddAsync(new Role
+                    {
+                        Name = RoleService.AdministratorRoleName
+                    });
+
+                var administrators = await roleService.GetUsersAsync(RoleService.AdministratorRoleName);
+
+                if (administrators != null && administrators.Any())
+                    NavigationManager.NavigateTo("/");
+                else
+                {
+                    using (var userService = DatabaseServiceFactory.Create<UserService>())
+                    {
+                        var user = Activator.CreateInstance<User>();
+
+                        user.Approved = true;
+                        user.ApprovedOn = DateTime.UtcNow;
+                        user.UserName = Model.Username;
+
+                        var result = await userService.AddAsync(user);
+
+                        if (result == null)
+                        {
+                            /*foreach (var error in result.Errors)
+                            {
+                                MessageService.Error(error.Description);
+                            }*/
+
+                            Loading = false;
+                            StateHasChanged();
+
+                            return;
+                        }
+                        else
+                        {
+                            await userService.AddToRolesAsync(user.UserName, new string[] { RoleService.AdministratorRoleName });
+
+                            Logger?.LogInformation("Administrator created a new account with password.");
+
+                            await MessageService.Success("Setup completed! Redirecting...", 3);
+
+                            Loading = false;
+
+                            NavigationManager.NavigateTo("/");
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Could not create administrator");
+            MessageService.Error($"Could not create administrator: {ex.Message}", 10);
+        }
+
+        Loading = false;
+    }
+}

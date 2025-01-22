@@ -8,6 +8,7 @@ using LANCommander.SDK.Helpers;
 using LANCommander.SDK.PowerShell;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Steamworks.Ugc;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,201 +21,224 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Launcher.Services
 {
-    public class LibraryService : BaseService
+    public class LibraryService : BaseDatabaseService<Library>
     {
-        private readonly DownloadService DownloadService;
+        private readonly AuthenticationService AuthenticationService;
+        private readonly InstallService InstallService;
         private readonly GameService GameService;
-        private readonly SaveService SaveService;
-        private readonly PlaySessionService PlaySessionService;
-        private readonly RedistributableService RedistributableService;
-        private readonly ImportService ImportService;
-        private readonly MessageBusService MessageBusService;
+        private readonly UserService UserService;
 
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
-        public ObservableCollection<LibraryItem> LibraryItems { get; set; } = new ObservableCollection<LibraryItem>();
+        public ObservableCollection<ListItem> Items { get; set; } = new ObservableCollection<ListItem>();
 
-        public delegate Task OnLibraryChangedHandler(IEnumerable<LibraryItem> items);
+        public delegate Task OnLibraryChangedHandler(IEnumerable<ListItem> items);
         public event OnLibraryChangedHandler OnLibraryChanged;
 
-        public delegate Task OnPreLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
+        public delegate Task OnPreLibraryItemsFilteredHandler(IEnumerable<ListItem> items);
         public event OnPreLibraryItemsFilteredHandler OnPreLibraryItemsFiltered;
 
-        public delegate Task OnLibraryItemsFilteredHandler(IEnumerable<LibraryItem> items);
-        public event OnLibraryItemsFilteredHandler OnLibraryItemsFiltered;
+        public delegate Task OnItemsFilteredHandler(IEnumerable<ListItem> items);
+        public event OnItemsFilteredHandler OnItemsFiltered;
 
-        public Func<LibraryItem, string[]> GroupSelector { get; set; } = _ => new string[] { };
+        public LibraryFilter Filter { get; set; } = new LibraryFilter();
 
         public LibraryService(
+            DatabaseContext databaseContext,
             SDK.Client client,
             ILogger<LibraryService> logger,
-            DownloadService downloadService,
+            AuthenticationService authenticationService,
+            InstallService installService,
             GameService gameService,
-            SaveService saveService,
-            PlaySessionService playSessionService,
-            RedistributableService redistributableService,
-            ImportService importService,
-            MessageBusService messageBusService) : base(client, logger)
+            UserService userService) : base(databaseContext, client, logger)
         {
-            DownloadService = downloadService;
+            AuthenticationService = authenticationService;
+            InstallService = installService;
             GameService = gameService;
-            SaveService = saveService;
-            PlaySessionService = playSessionService;
-            RedistributableService = redistributableService;
-            ImportService = importService;
-            MessageBusService = messageBusService;
+            UserService = userService;
 
-            DownloadService.OnInstallComplete += DownloadService_OnInstallComplete;
-            ImportService.OnImportComplete += ImportService_OnImportComplete;
+            InstallService.OnInstallComplete += InstallService_OnInstallComplete;
+            Filter.OnChanged += Filter_OnChanged;
         }
 
-        private async Task ImportService_OnImportComplete()
+        private async Task Filter_OnChanged()
         {
-            await RefreshLibraryItemsAsync();
-
-            LibraryChanged();
+            if (OnItemsFiltered != null)
+                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
         }
 
-        private async Task DownloadService_OnInstallComplete(Game game)
+        private async Task InstallService_OnInstallComplete(Game game)
         {
             if (OnLibraryChanged != null)
-                await OnLibraryChanged.Invoke(LibraryItems);
+                await OnLibraryChanged.Invoke(Items);
         }
 
-        public async Task<IEnumerable<LibraryItem>> RefreshLibraryItemsAsync()
+        public async Task<IEnumerable<ListItem>> RefreshItemsAsync()
         {
-            LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
+            Items = new ObservableCollection<ListItem>(await GetItemsAsync());
 
-            return LibraryItems;
+            if (OnItemsFiltered != null)
+                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
+
+            return Items;
         }
 
-        public IEnumerable<LibraryItem> GetLibraryItems<T>()
+        public IEnumerable<ListItem> GetItems<T>()
         {
-            return LibraryItems.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
+            return Items.Where(i => i.DataItem is T).DistinctBy(i => i.Key);
         }
 
-        public async Task<IEnumerable<LibraryItem>> GetLibraryItemsAsync()
+        public async Task<Library> GetByUserAsync(Guid userId)
         {
-            var settings = SettingService.GetSettings();
+            var user = await Context
+                .Users
+                .Include(u => u.Library)
+                .ThenInclude(l => l.Games)
+                .FirstOrDefaultAsync(u => u.Id == userId);
 
-            LibraryItems.Clear();
+            try
+            {
+                if (user == null)
+                {
+                    user = new User
+                    {
+                        Id = userId,
+                    };
+                
+                    user = Context.Users.Add(user).Entity;
+
+                    await Context.SaveChangesAsync();
+                }
+
+                if (user.Library == null)
+                {
+                    user.Library = new Library();
+                
+                    user = Context.Users.Update(user).Entity;
+                
+                    await Context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                
+            }
+
+
+            return user.Library;
+        }
+
+        public async Task<IEnumerable<ListItem>> GetItemsAsync()
+        {
+            Items.Clear();
 
             using (var op = Logger.BeginOperation(LogLevel.Trace, "Loading library items from local database"))
             {
-                var games = await GameService.Get(x => true).AsNoTracking().ToListAsync();
+                var games = await Context
+                    .Games
+                    .Where(g => g.Libraries.Any(l => l.UserId == AuthenticationService.GetUserId()))
+                    .Include(g => g.Media)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Collections)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Tags)
+                    .Include(g => g.MultiplayerModes)
+                    .ToListAsync();
 
-                switch (settings.Filter.GroupBy)
-                {
-                    case Models.Enums.GroupBy.None:
-                        GroupSelector = (g) => new string[] { };
-                        break;
-                    case Models.Enums.GroupBy.Collection:
-                        GroupSelector = (g) => (g.DataItem as Game).Collections.Select(c => c.Name).ToArray();
-                        break;
-                    case Models.Enums.GroupBy.Genre:
-                        GroupSelector = (g) => (g.DataItem as Game).Genres.Select(ge => ge.Name).ToArray();
-                        break;
-                    case Models.Enums.GroupBy.Platform:
-                        GroupSelector = (g) => (g.DataItem as Game).Platforms.Select(p => p.Name).ToArray();
-                        break;
-                }
+                Filter.Populate(games);
 
-                foreach (var item in games.Select(g => new LibraryItem(g, GroupSelector)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
+                foreach (var item in games.Select(g => new ListItem(g)).OrderByTitle(g => !String.IsNullOrWhiteSpace(g.SortName) ? g.SortName : g.Name))
                 {
-                    LibraryItems.Add(item);
+                    Items.Add(item);
                 }
 
                 op.Complete();
             }
 
-            return await FilterLibraryItems(LibraryItems);
+            return Items;
         }
 
-        async Task<IEnumerable<LibraryItem>> FilterLibraryItems(IEnumerable<LibraryItem> items)
+        public IEnumerable<ListItem> GetFilteredItems()
         {
-            var settings = SettingService.GetSettings();
-
-            using (var op = Logger.BeginOperation(LogLevel.Trace, "Filtering library items"))
-            {
-                if (OnPreLibraryItemsFiltered != null)
-                    await OnPreLibraryItemsFiltered.Invoke(items);
-
-                if (!String.IsNullOrWhiteSpace(settings.Filter.Title))
-                    items = items.Where(i => i.Name?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0 || i.SortName?.IndexOf(settings.Filter.Title, StringComparison.OrdinalIgnoreCase) >= 0);
-
-                if (settings.Filter.Engines != null && settings.Filter.Engines.Any())
-                    items = items.Where(i => settings.Filter.Engines.Any(e => e == (i.DataItem as Game)?.Engine?.Name));
-
-                if (settings.Filter.Genres != null && settings.Filter.Genres.Any())
-                    items = items.Where(i => settings.Filter.Genres.Any(fg => (i.DataItem as Game).Genres.Any(g => fg == g.Name)));
-
-                if (settings.Filter.Tags != null && settings.Filter.Tags.Any())
-                    items = items.Where(i => settings.Filter.Tags.Any(ft => (i.DataItem as Game).Tags.Any(t => ft == t.Name)));
-
-                if (settings.Filter.Developers != null && settings.Filter.Developers.Any())
-                    items = items.Where(i => settings.Filter.Developers.Any(fc => (i.DataItem as Game).Developers.Any(c => fc == c.Name)));
-
-                if (settings.Filter.Publishers != null && settings.Filter.Publishers.Any())
-                    items = items.Where(i => settings.Filter.Publishers.Any(fc => (i.DataItem as Game).Publishers.Any(c => fc == c.Name)));
-
-                if (settings.Filter.MinPlayers != null)
-                    items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MinPlayers <= settings.Filter.MinPlayers && mm.MaxPlayers >= settings.Filter.MinPlayers));
-
-                if (settings.Filter.MaxPlayers != null)
-                    items = items.Where(i => (i.DataItem as Game).MultiplayerModes.Any(mm => mm.MaxPlayers <= settings.Filter.MaxPlayers));
-
-                if (settings.Filter.Installed)
-                    items = items.Where(i => (i.DataItem as Game).Installed);
-
-                items = items.Where(i => (i.DataItem as Game).Type.IsIn(Data.Enums.GameType.MainGame, Data.Enums.GameType.StandaloneExpansion, Data.Enums.GameType.StandaloneMod));
-
-                if (OnLibraryItemsFiltered != null)
-                    await OnLibraryItemsFiltered.Invoke(items);
-
-                op.Complete();
-            }
-
-            return items;
+            return Filter.ApplyFilter(Items);
         }
 
-        public LibraryItem GetLibraryItem(Guid key)
+        public ListItem GetItem(Guid key)
         {
-            var item = LibraryItems.FirstOrDefault(i => i.Key == key);
+            var item = Items.FirstOrDefault(i => i.Key == key);
 
             if (item == null)
-                item = LibraryItems.FirstOrDefault(i => i.Key == key);
+                item = Items.FirstOrDefault(i => i.Key == key);
 
             return item;
         }
 
-        public async Task<LibraryItem> GetLibraryItemAsync(LibraryItem libraryItem)
+        public async Task<ListItem> GetItemAsync(ListItem libraryItem)
         {
-            return await GetLibraryItemAsync(libraryItem.Key);
+            return await GetItemAsync(libraryItem.Key);
         }
 
-        public async Task<LibraryItem> GetLibraryItemAsync(Guid key)
+        public async Task<ListItem> GetItemAsync(Guid key)
         {
-            var game = await GameService.Get(key);
+            var game = await Context.Games
+                .Include(g => g.Collections)
+                .Include(g => g.Developers)
+                .Include(g => g.Genres)
+                .Include(g => g.Publishers)
+                .Include(g => g.Tags)
+                .Include(g => g.PlaySessions)
+                .Include(g => g.Engine)
+                .Include(g => g.Platforms)
+                .Include(g => g.Media)
+                .Include(g => g.MultiplayerModes)
+                .FirstOrDefaultAsync(g => g.Id == key);
 
-            return new LibraryItem(game, GroupSelector);
+            return new ListItem(game);
         }
 
-        public async Task Install(LibraryItem libraryItem, string installDirectory = "")
+        public async Task AddToLibraryAsync(Guid id)
         {
-            var game = libraryItem.DataItem as Game;
+            var localGame = await GameService.GetAsync(id);
+            var library = await GetByUserAsync(AuthenticationService.GetUserId());
 
-            await DownloadService.Add(game, installDirectory);
+            if (localGame != null)
+            {
+                library.Games.Add(localGame);                
+            }
+
+            await UpdateAsync(library);
+            
+            await Client.Library.AddToLibrary(id);
+
+            await LibraryChanged();
+        }
+
+        public async Task RemoveFromLibraryAsync(Guid id)
+        {
+            var localGame = await GameService.GetAsync(id);
+            var library = await GetByUserAsync(AuthenticationService.GetUserId());
+
+            library.Games.Remove(localGame);
+            
+            await UpdateAsync(library);
+            
+            await Client.Library.RemoveFromLibrary(id);
+
+            await LibraryChanged();
         }
 
         public async Task LibraryChanged()
         {
             if (OnLibraryChanged != null)
-                await OnLibraryChanged.Invoke(LibraryItems);
+                await OnLibraryChanged.Invoke(Items);
         }
 
         public async Task FilterChanged()
         {
-            LibraryItems = new ObservableCollection<LibraryItem>(await GetLibraryItemsAsync());
+            Items = new ObservableCollection<ListItem>(await GetItemsAsync());
         }
     }
 }

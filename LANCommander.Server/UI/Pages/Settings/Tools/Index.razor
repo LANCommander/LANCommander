@@ -1,13 +1,11 @@
 ﻿@page "/Settings/Tools"
 @using LANCommander.Server.Models;
 @using ZiggyCreatures.Caching.Fusion
-@layout SettingsLayout
-@inject IMessageService MessageService
-@inject ArchiveService ArchiveService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject UpdateService UpdateService
-@inject PageService PageService
+@inject IMessageService MessageService
 @inject IFusionCache FusionCache
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Tools" />
 
@@ -16,7 +14,7 @@
     <p>
         Some file sizes are cached in the database. Click the button below to scan through all files and recalculate their size.
     </p>
-    <Button Type="@ButtonType.Primary" OnClick="RecalculateFileSizes" Loading="RecalculatingFileSizes">Recalculate</Button>
+    <Button Type="ButtonType.Primary" OnClick="RecalculateFileSizes" Loading="RecalculatingFileSizes">Recalculate</Button>
 
     <Divider />
 
@@ -24,13 +22,13 @@
     <p>
         A cached list of games is sent to the clients on import. Click the button below to bust this cache if you don't see your changes.
     </p>
-    <Button Type="@ButtonType.Primary" OnClick="ClearCache">Clear Cache</Button>
+    <Button Type="ButtonType.Primary" OnClick="ClearCache">Clear Cache</Button>
 
     <Divider />
 
     <h3>Download Clients</h3>
     <p>Check for any client releases for the current version and download them to this server.</p>
-    <Button Type="@ButtonType.Primary" OnClick="DownloadClients" Loading="DownloadingClients">Download</Button>
+    <Button Type="ButtonType.Primary" OnClick="DownloadClients" Loading="DownloadingClients">Download</Button>
 
     <Divider />
 
@@ -54,7 +52,7 @@
 
     <h3>Regenerate Page Routes</h3>
     <p>Fix any page routes that seem to be out of date or corrupt.</p>
-    <Button Type="@ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
+    <Button Type="ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
 </div>
 
 
@@ -69,17 +67,21 @@
 
         await InvokeAsync(StateHasChanged);
 
-        var archives = await ArchiveService.Get();
-
-        foreach (var archive in archives)
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
-            var path = ArchiveService.GetArchiveFileLocation(archive);
+            var archives = await archiveService.GetAsync();
 
-            if (File.Exists(path))
+            foreach (var archive in archives)
             {
-                archive.CompressedSize = new FileInfo(path).Length;
+                var path = await archiveService.GetArchiveFileLocationAsync(archive);
 
-                await ArchiveService.Update(archive);
+                if (File.Exists(path))
+                {
+                    archive.CompressedSize = await archiveService.GetCompressedSizeAsync(archive);
+                    archive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(archive);
+
+                    await archiveService.UpdateAsync(archive);
+                }
             }
         }
 
@@ -102,11 +104,11 @@
         await InvokeAsync(StateHasChanged);
 
         var currentVersion = UpdateService.GetCurrentVersion();
-        var currentRelease = await UpdateService.GetRelease(currentVersion);
+        var currentRelease = await UpdateService.GetReleaseAsync(currentVersion);
 
         if (currentRelease != null)
         {
-            await UpdateService.DownloadLauncherRelease(currentRelease);
+            await UpdateService.DownloadLauncherReleaseAsync(currentRelease);
 
             MessageService.Success("Clients downloaded!");
         }
@@ -126,7 +128,10 @@
 
         try
         {
-            await PageService.FixRoutes();
+            using (var pageService = DatabaseServiceFactory.Create<PageService>())
+            {
+                await pageService.FixRoutesAsync();
+            }
 
             MessageService.Success("Routes fixed!");
         }

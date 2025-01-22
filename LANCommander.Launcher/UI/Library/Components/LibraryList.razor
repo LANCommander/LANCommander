@@ -1,17 +1,18 @@
 ﻿@using LANCommander.Launcher.Models
 @using LANCommander.Launcher.Services.Extensions
+@using LANCommander.SDK.Extensions
 @inject LibraryService LibraryService
 @inject ImportService ImportService
 @inject MessageBusService MessageBusService
 
-<div class="library-list">
+<Flex Vertical Class="library-list">
     <Collapse>
         @if (Groups.Count > 1)
         {
             foreach (var group in Groups.OrderByTitle(g => g))
             {
                 <Panel Header="@group" Key="@group">
-                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
                         <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                     </AntList>
                 </Panel>
@@ -20,39 +21,46 @@
         else
         {
             <Panel Class="no-header">
-                <AntList DataSource="LibraryService.LibraryItems" TItem="LibraryItem" Class="ant-list-clickable" Size="small">
+                <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
                     <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
                 </AntList>
             </Panel>
         }
     </Collapse>
-</div>
+    
+    <LibraryItemFilter />
+</Flex>
 
 @code {
     [Parameter] public Guid? SelectedItem { get; set; }
     [Parameter] public EventCallback<Guid> OnItemSelected { get; set; }
 
-    List<string> Groups = new List<string>();
-    IEnumerable<LibraryItem> LibraryItems;
+    List<string> Groups = new();
+    IEnumerable<Models.ListItem> LibraryItems;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LibraryService.OnLibraryChanged += UpdateGroups;
-        LibraryService.OnLibraryItemsFiltered += UpdateGroups;
+        LibraryService.OnItemsFiltered += LoadFilteredItems;
 
-        UpdateGroups(LibraryService.LibraryItems);
+        await LibraryService.RefreshItemsAsync();
     }
 
-    async Task SelectItem(LibraryItem item)
+    async Task LoadFilteredItems(IEnumerable<Models.ListItem> libraryItems)
+    {
+        LibraryItems = libraryItems;
+
+        await UpdateGroups();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task SelectItem(Models.ListItem item)
     {
         if (OnItemSelected.HasDelegate)
             await OnItemSelected.InvokeAsync(item.Key);
     }
 
-    async Task UpdateGroups(IEnumerable<LibraryItem> items)
+    async Task UpdateGroups()
     {
-        LibraryItems = items;
-
         Groups = LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
 
         if (LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
@@ -63,7 +71,6 @@
 
     public void Dispose()
     {
-        LibraryService.OnLibraryChanged -= UpdateGroups;
-        LibraryService.OnLibraryItemsFiltered -= UpdateGroups;
+        LibraryService.OnItemsFiltered -= LoadFilteredItems;
     }
 }

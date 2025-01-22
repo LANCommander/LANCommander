@@ -21,25 +21,25 @@ namespace LANCommander.Server.Controllers.Api
         private readonly IMapper Mapper;
         private readonly KeyService KeyService;
         private readonly GameService GameService;
-        private readonly UserManager<Data.Models.User> UserManager;
+        private readonly UserService UserService;
 
         public KeysController(
             ILogger<KeysController> logger,
             IMapper mapper,
             KeyService keyService,
             GameService gameService,
-            UserManager<Data.Models.User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             Mapper = mapper;
             KeyService = keyService;
             GameService = gameService;
-            UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpPost]
-        public async Task<ActionResult<SDK.Models.Key>> Get(KeyRequest keyRequest)
+        public async Task<ActionResult<SDK.Models.Key>> GetAsync(KeyRequest keyRequest)
         {
-            return await GetAllocated(keyRequest.GameId, keyRequest);
+            return await GetAllocatedAsync(keyRequest.GameId, keyRequest);
         }
 
         /// <summary>
@@ -49,14 +49,16 @@ namespace LANCommander.Server.Controllers.Api
         /// <param name="keyRequest"></param>
         /// <returns>Allocated key</returns>
         [HttpPost("GetAllocated/{id}")]
-        public async Task<ActionResult<SDK.Models.Key>> GetAllocated(Guid id, KeyRequest keyRequest)
+        public async Task<ActionResult<SDK.Models.Key>> GetAllocatedAsync(Guid id, KeyRequest keyRequest)
         {
             try
             {
                 Data.Models.Key key = null;
 
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
-                var game = await GameService.Get(id);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
+                var game = await GameService
+                    .Include(g => g.Keys)
+                    .GetAsync(id);
 
                 if (game == null)
                 {
@@ -83,7 +85,7 @@ namespace LANCommander.Server.Controllers.Api
                 if (key != null)
                     return Ok(Mapper.Map<SDK.Models.Key>(key));
                 else
-                    return Ok(Mapper.Map<SDK.Models.Key>(await AllocateNewKey(id, keyRequest, game.KeyAllocationMethod)));
+                    return Ok(Mapper.Map<SDK.Models.Key>(await AllocateNewKeyAsync(id, keyRequest, game.KeyAllocationMethod)));
             }
             catch (Exception ex) {
                 Logger?.LogError(ex, "An unknown error occurred while trying to get an allocated key for game with ID {GameId}", id);
@@ -99,14 +101,16 @@ namespace LANCommander.Server.Controllers.Api
         /// <param name="keyRequest"></param>
         /// <returns>Newly allocated key</returns>
         [HttpPost("Allocate/{id}")]
-        public async Task<ActionResult<SDK.Models.Key>> Allocate(Guid id, KeyRequest keyRequest)
+        public async Task<ActionResult<SDK.Models.Key>> AllocateAsync(Guid id, KeyRequest keyRequest)
         {
             try
             {
                 Data.Models.Key key = null;
 
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
-                var game = await GameService.Get(id);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
+                var game = await GameService
+                    .Include(g => g.Keys)
+                    .GetAsync(id);
 
                 if (game == null)
                 {
@@ -142,16 +146,16 @@ namespace LANCommander.Server.Controllers.Api
                 else
                 {
                     if (key != null)
-                        await KeyService.Release(key.Id);
+                        await KeyService.ReleaseAsync(key.Id);
 
                     switch (game.KeyAllocationMethod)
                     {
                         case KeyAllocationMethod.MacAddress:
-                            key = await KeyService.Allocate(availableKey, keyRequest.MacAddress);
+                            key = await KeyService.AllocateAsync(availableKey, keyRequest.MacAddress);
                             break;
 
                         case KeyAllocationMethod.UserAccount:
-                            key = await KeyService.Allocate(availableKey, user);
+                            key = await KeyService.AllocateAsync(availableKey, user);
                             break;
                     }
 
@@ -172,12 +176,12 @@ namespace LANCommander.Server.Controllers.Api
         /// <param name="keyRequest"></param>
         /// <param name="keyAllocationMethod"></param>
         /// <returns>Allocated key</returns>
-        private async Task<SDK.Models.Key> AllocateNewKey(Guid id, KeyRequest keyRequest, KeyAllocationMethod keyAllocationMethod)
+        private async Task<SDK.Models.Key> AllocateNewKeyAsync(Guid id, KeyRequest keyRequest, KeyAllocationMethod keyAllocationMethod)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
-            var availableKey = KeyService.Get(k => k.Game.Id == id)
-                .Where(k =>
+            var keys = await KeyService.GetAsync(k => k.GameId == id);
+            var availableKey = keys.Where(k =>
                 (k.AllocationMethod == KeyAllocationMethod.MacAddress && String.IsNullOrWhiteSpace(k.ClaimedByMacAddress))
                 ||
                 (k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUser == null))
@@ -187,9 +191,9 @@ namespace LANCommander.Server.Controllers.Api
                 return null;
 
             if (keyAllocationMethod == KeyAllocationMethod.MacAddress)
-                return Mapper.Map<SDK.Models.Key>(await KeyService.Allocate(availableKey, keyRequest.MacAddress));
+                return Mapper.Map<SDK.Models.Key>(await KeyService.AllocateAsync(availableKey, keyRequest.MacAddress));
             else if (keyAllocationMethod == KeyAllocationMethod.UserAccount)
-                return Mapper.Map<SDK.Models.Key>(await KeyService.Allocate(availableKey, user));
+                return Mapper.Map<SDK.Models.Key>(await KeyService.AllocateAsync(availableKey, user));
             else
                 return null;
         }

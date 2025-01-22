@@ -1,0 +1,22 @@
+.authentication-provider-container {
+    display: flex;
+    justify-content: center;
+}
+
+.authentication-provider-button-group {
+    display: inline-flex;
+    flex-direction: column;
+
+    .authentication-provider-button {
+        margin-bottom: 16px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .ant-btn {
+        text-align: left;
+        width: 100%;
+    }
+}

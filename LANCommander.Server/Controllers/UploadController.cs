@@ -1,62 +1,34 @@
-﻿using LANCommander.Server.Models;
+﻿using HarfBuzzSharp;
+using LANCommander.Server.Data.Models;
+using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Controllers
 {
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Roles = RoleService.AdministratorRoleName)]
     public class UploadController : BaseController
     {
-        public UploadController(ILogger<UploadController> logger) : base(logger) { }
+        private readonly StorageLocationService StorageLocationService;
+        private readonly ArchiveService ArchiveService;
+        private readonly IFusionCache Cache;
 
-        public JsonResult Init()
+        public UploadController(
+            ILogger<UploadController> logger,
+            StorageLocationService storageLocationService,
+            ArchiveService archiveService,
+            IFusionCache cache) : base(logger)
         {
-            var key = Guid.NewGuid().ToString();
-
-            if (!Directory.Exists(Settings.Archives.StoragePath))
-                Directory.CreateDirectory(Settings.Archives.StoragePath);
-
-            if (!System.IO.File.Exists(Path.Combine(Settings.Archives.StoragePath, key)))
-                System.IO.File.Create(Path.Combine(Settings.Archives.StoragePath, key)).Close();
-            else
-                System.IO.File.Delete(Path.Combine(Settings.Archives.StoragePath, key));
-
-            return Json(new
-            {
-                Key = key
-            });
+            StorageLocationService = storageLocationService;
+            ArchiveService = archiveService;
+            Cache = cache;
         }
 
         [HttpPost]
-        public async Task<IActionResult> Chunk([FromForm] ChunkUpload chunk)
-        {
-            var filePath = Path.Combine(Settings.Archives.StoragePath, chunk.Key.ToString());
-
-            if (!System.IO.File.Exists(filePath))
-                return BadRequest("Destination file not initialized.");
-
-            Request.EnableBuffering();
-
-            using (var ms = new MemoryStream())
-            {
-                await chunk.File.CopyToAsync(ms);
-
-                var data = ms.ToArray();
-
-                using (var fs = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.None))
-                {
-                    fs.Position = chunk.Start;
-                    fs.Write(data, 0, data.Length);
-                }
-            }
-
-            return Json("Done!");
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> File(IFormFile file, string path)
+        public async Task<IActionResult> FileAsync(IFormFile file, string path)
         {
             try
             {

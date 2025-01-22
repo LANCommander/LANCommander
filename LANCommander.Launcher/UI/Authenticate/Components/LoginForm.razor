@@ -1,0 +1,150 @@
+@using LANCommander.SDK.Models
+@inject AuthenticationService AuthenticationService
+@inject SDK.Client Client
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<LoginForm> Logger
+
+<PageHeader OnBack="OnBack">
+    <TitleTemplate>
+        Sign In
+    </TitleTemplate>
+</PageHeader>
+<Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
+    <FormItem Label="Server Address">
+        <Input Value="ServerAddress" Disabled />
+    </FormItem>
+    <FormItem Label="Username">
+        <Input @bind-Value="@context.UserName"/>
+    </FormItem>
+    <FormItem Label="Password">
+        <InputPassword @bind-Value="@context.Password"/>
+    </FormItem>
+    <FormItem>
+        <Button Type="ButtonType.Primary" HtmlType="submit">
+            Login
+        </Button>
+
+        <Button Type="ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate/Register"))">
+            Register
+        </Button>
+    </FormItem>
+</Form>
+
+@if (AuthenticationProviders.Any())
+{
+    <Divider Orientation="DividerOrientation.Center" Text="Or" Style="margin-bottom: 16px" />
+
+    <div class="authentication-provider-container">
+        <div class="authentication-provider-button-group">
+            @foreach (var authenticationProvider in AuthenticationProviders)
+            {
+                <div class="authentication-provider-button">
+                    <Button
+                        Type="ButtonType.Primary"
+                        OnClick="() => AuthenticationProviderDialog.Open(ServerAddress, authenticationProvider)"
+                        Class="authentication-provider-btn"
+                        Style="@(!String.IsNullOrWhiteSpace(authenticationProvider.Color) ? $"background: {authenticationProvider.Color}; border-color: {authenticationProvider.Color}" : "")">
+                        @if (!String.IsNullOrWhiteSpace(authenticationProvider.Icon))
+                        {
+                            <BootstrapIcon Type="@authenticationProvider.Icon"/>
+                        }
+                        Sign in using @authenticationProvider.Name
+                    </Button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<AuthenticationProviderDialog @ref="AuthenticationProviderDialog" OnTokenReceived="UseToken" />
+
+@code {
+    [Parameter] public string ServerAddress { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+    
+    List<AuthenticationProvider> AuthenticationProviders = new();
+
+    AuthRequest Model = new();
+    bool Loading = false;
+    AuthenticationProviderDialog AuthenticationProviderDialog;
+    
+    Models.Settings Settings = SettingService.GetSettings();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        AuthenticationProviders = new();
+        
+        Client.ChangeServerAddress(ServerAddress);
+
+        try
+        {
+            var authenticationProviders = await Client.GetAuthenticationProvidersAsync();
+
+            if (authenticationProviders != null && authenticationProviders.Any())
+                AuthenticationProviders = authenticationProviders.ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not get authentication providers");
+        }
+        
+        StateHasChanged();
+    }
+
+    async Task OnFinish(EditContext editContext)
+    {
+        Loading = true;
+
+        try
+        {
+            await AuthenticationService.Login(Client.GetServerAddress(), Model.UserName, Model.Password);
+
+            MainLayout.Import();
+
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(ex.Message, 5);
+            Logger.LogError(ex, ex.Message);
+            Loading = false;
+        }
+    }
+
+    void Back()
+    {
+        AuthenticationProviders = new();
+        
+        NavigationManager.NavigateTo("/Authenticate");
+    }
+    
+    async Task UseToken(AuthToken token)
+    {
+        Settings.Authentication.AccessToken = token.AccessToken;
+        Settings.Authentication.RefreshToken = token.RefreshToken;
+        
+        try
+        {
+            await AuthenticationService.Login(ServerAddress, token);
+
+            MainLayout.Import();
+
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(ex.Message, 5);
+            Logger.LogError(ex, ex.Message);
+            Loading = false;
+        }
+    }
+
+    async Task OfflineMode()
+    {
+        Settings.Authentication.OfflineMode = true;
+        SettingService.SaveSettings(Settings);
+
+        NavigationManager.NavigateTo("/");
+    }
+}

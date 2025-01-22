@@ -2,16 +2,21 @@
 @using LANCommander.Server.Models;
 @using Microsoft.AspNetCore.Components.Authorization;
 @using Microsoft.EntityFrameworkCore;
-@layout ProfileLayout
-@inject UserManager<User> UserManager
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject GameSaveService GameSaveService
 @inject IJSRuntime JSRuntime
 @attribute [Authorize]
 
-<PageHeader Title="Game Saves">
-    <PageHeaderExtra>
+<PageHeader Title="Game Saves" />
+
+<DataTable
+    @ref="Table"
+    TItem="GameSave"
+    Query="gs => gs.Game != null && (GameId == Guid.Empty || gs.Game.Id == GameId)"
+    Searchable
+    SearchProperty="c => c.Game.Title">
+    <RightToolbar>
         <Select TItem="Game"
                 TItemValue="Guid"
                 AutoFocus="true"
@@ -22,53 +27,70 @@
                 Placeholder="Select a Game"
                 DefaultActiveFirstOption="false"
                 EnableSearch
+                OnSelectedItemChanged="() => Table.Reload()"
                 Style="min-width: 250px;">
             <ItemTemplate Context="game">
                 <Image Src="@GetIcon(game)" Height="32" Width="32" Preview="false"></Image>
                 @game.Title
             </ItemTemplate>
         </Select>
-    </PageHeaderExtra>
-</PageHeader>
+    </RightToolbar>
+    <Columns>
+        <BoundDataColumn Property="s => s.Game.Title" Sortable Title="Game" Include="Game" />
+        <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Created On" DefaultSortOrder="SortDirection.Descending" />
+        <BoundDataColumn Property="s => s.Size" Sortable Title="Size">
+            @ByteSizeLib.ByteSize.FromBytes(context.Size)
+        </BoundDataColumn>
+        <DataActions>
+            <a href="/Download/Save/@(context.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
+                <Icon Type="@IconType.Outline.Download"/>
+            </a>
 
-<div style="padding: 0 24px;">
-    <Table TItem="GameSave" DataSource="@GameSaves.Where(gs => gs.Game != null && gs.Game.Id == GameId)">
-        <PropertyColumn Property="s => (s.Game == null ? String.Empty : s.Game.Title)" Sortable Title="Game" />
-        <PropertyColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-         <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
-            <Space Direction="DirectionVHType.Horizontal">
-                <SpaceItem>
-                     <a href="/Download/Save/@(context.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
-                         <Icon Type="@IconType.Outline.Download" />
-                     </a>
-                </SpaceItem>
-                <SpaceItem>
-                     <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game save?">
-                         <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                     </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
-</div>
+            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game save?">
+                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+</DataTable>
 
- @code {
-    User User;
+@code {
+    DataTable<GameSave> Table;
+    User User = new User();
     ICollection<GameSave> GameSaves = new List<GameSave>();
     IEnumerable<Game> Games = new List<Game>();
 
     bool Loading = true;
-    Guid GameId;
+    Guid GameId = Guid.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadData();
+    }
+
+    async Task LoadData() {
+        Loading = true;
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (authState.User.Identity.IsAuthenticated)
-            User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            if (authState.User.Identity.IsAuthenticated)
+                User = await userService
+                    .GetAsync(authState.User.Identity.Name);
+        }
 
-        if (User != null)
-            GameSaves = User.GameSaves.OrderBy(s => s.CreatedOn).ToList();
+        using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
+        {
+            GameSaves = (await gameSaveService
+                .Query(q =>
+                {
+                    return q
+                        .Include(gs => gs.Game)
+                        .ThenInclude(g => g.Media);
+                })
+                .SortBy(gs => gs.Game.Title)
+                .GetAsync(gs => gs.UserId == User.Id)).OrderByDescending(gs => gs.UpdatedOn).ToList();
+        }
 
         if (GameSaves != null && GameSaves.Count > 0)
             Games = GameSaves.Where(gs => gs.Game != null).Select(gs => gs.Game).DistinctBy(g => g.Id).ToList();
@@ -76,25 +98,28 @@
         Loading = false;
     }
 
-    private async Task Download(Guid id)
+    async Task Download(Guid id)
     {
         await JSRuntime.InvokeAsync<object>("open", $"/Saves/Download/{id}", "_blank");
     }
 
-    private async Task Delete(GameSave gameSave)
+    async Task Delete(GameSave gameSave)
     {
         GameSaves = new List<GameSave>();
 
         Loading = true;
 
-        await GameSaveService.Delete(gameSave);
+        using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
+        {
+            await gameSaveService.DeleteAsync(gameSave);
+        }
 
-        GameSaves = await GameSaveService.Get(gs => gs.UserId == User.Id).OrderBy(gs => gs.Game.Title).ThenByDescending(gs => gs.UpdatedOn).ToListAsync();
+        await LoadData();
 
         Loading = false;
     }
 
-    private string GetIcon(Game game)
+    string GetIcon(Game game)
     {
         var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 

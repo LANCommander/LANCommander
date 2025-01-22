@@ -1,10 +1,6 @@
 ﻿@page "/Settings/Users/{username}"
 @using Microsoft.AspNetCore.Components.Authorization;
-@layout SettingsLayout
-@inject MediaService MediaService
-@inject UserService UserService
-@inject UserManager<User> UserManager
-@inject SignInManager<User> SignInManager
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -38,7 +34,7 @@
 
         <Divider>Custom Fields</Divider>
 
-        @if (!context.CustomFields.Any())
+        @if (context.CustomFields == null || context.CustomFields?.Count == 0)
         {
             <Empty>
                 <DescriptionTemplate>
@@ -68,7 +64,7 @@
                 </FormItem>
             }
 
-            <GridRow Justify="end">
+            <GridRow Justify="RowJustify.End">
                 <GridCol>
                     <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
                 </GridCol>
@@ -93,34 +89,40 @@
 
         if (authState.User.Identity.IsAuthenticated)
         {
-            User = await UserService.Get(Username);
+            using (var userService = DatabaseServiceFactory.Create<UserService>())
+            {
+                User = await userService.GetAsync(Username);
+            }
 
             if (User.CustomFields == null)
                 User.CustomFields = new List<UserCustomField>();
         }
     }
 
-    private void AddField()
+    void AddField()
     {
         User.CustomFields.Add(new UserCustomField());
 
         FieldsModified = true;
     }
 
-    private async Task RemoveField(UserCustomField customField)
+    async Task RemoveField(UserCustomField customField)
     {
         User.CustomFields.Remove(customField);
 
         FieldsModified = true;
     } 
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
             if (Form.IsModified || FieldsModified)
             {
-                await UserManager.UpdateAsync(User);
+                using (var userService = DatabaseServiceFactory.Create<UserService>())
+                {
+                    await userService.UpdateAsync(User);
+                }
 
                 MessageService.Success("User updated!");
             }

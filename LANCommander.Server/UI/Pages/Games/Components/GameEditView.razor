@@ -1,0 +1,118 @@
+﻿@using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
+
+<Layout Class="panel-layout" Style="padding: 24px 0;">
+    <Sider Width="200">
+        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+            <MenuItem RouterLink="@($"/Games/{Id}/General")">General</MenuItem>
+
+            @if (Id != Guid.Empty)
+            {
+                <MenuItem RouterLink="@($"/Games/{Id}/Media")">Media</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/Archives")">Archives</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/Actions")">Actions</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/Multiplayer")">Multiplayer</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/SavePaths")">Save Paths</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/Keys")">Keys</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/Scripts")">Scripts</MenuItem>
+
+                if (Game.DependentGames != null && Game.DependentGames.Any(g => g.Type == GameType.Expansion))
+                {
+                    <MenuItem RouterLink="@($"/Games/{Id}/Expansions")">Expansions</MenuItem>
+                }
+
+                if (Game.DependentGames != null && Game.DependentGames.Any(g => g.Type == GameType.Mod))
+                {
+                    <MenuItem RouterLink="@($"/Games/{Id}/Mods")">Mods</MenuItem>
+                }
+
+                if (Game.PlaySessions != null && Game.PlaySessions.Any())
+                {
+                    <MenuItem RouterLink="@($"/Games/{Id}/PlaySessions")">Play Sessions</MenuItem>
+                }
+
+                if (Game.GameSaves != null && Game.GameSaves.Any())
+                {
+                    <MenuItem RouterLink="@($"/Games/{Id}/Saves")">Saves</MenuItem>
+                }
+            }
+        </Menu>
+    </Sider>
+
+    <Content>
+        <CascadingValue Value="Game">
+            <PageHeader>
+                <PageHeaderTitle>
+                    @if (TitleTemplate != null)
+                    {
+                        @TitleTemplate(Game)
+                    }
+                    else {
+                        <Text>@Title</Text>
+                    }
+                </PageHeaderTitle>
+
+                <PageHeaderExtra>
+                    @TitleExtraTemplate?.Invoke(Game)
+                </PageHeaderExtra>
+            </PageHeader>
+        </CascadingValue>
+
+        <div class="panel-layout-content">
+            @ChildContent?.Invoke(Game)
+        </div>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment<Game>? TitleTemplate { get; set; }
+    [Parameter] public RenderFragment<Game>? TitleExtraTemplate { get; set; }
+    [Parameter] public RenderFragment<Game>? ChildContent { get; set; }
+
+    Game Game { get; set; } = new Game();
+    Guid _id;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_id != Id)
+        {
+            _id = Id;
+            
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                if (_id != Guid.Empty)
+                    Game = await gameService
+                        .Query(query =>
+                        {
+                            return query
+                                .Include(g => g.Actions)
+                                .Include(g => g.BaseGame)
+                                .Include(g => g.Categories)
+                                .Include(g => g.Collections)
+                                .Include(g => g.CreatedBy)
+                                .Include(g => g.DependentGames)
+                                .Include(g => g.Developers)
+                                .Include(g => g.Engine)
+                                .Include(g => g.Genres) 
+                                .Include(g => g.Media)
+                                .Include(g => g.MultiplayerModes)
+                                .Include(g => g.Platforms)
+                                .Include(g => g.Publishers)
+                                .Include(g => g.Redistributables)
+                                .Include(g => g.SavePaths)
+                                .Include(g => g.Tags)
+                                .Include(g => g.UpdatedBy);
+                        })
+                        .GetAsync(_id);
+                else
+                    Game = new Game();
+            }
+
+            if (Game == null)
+                NavigationManager.NavigateTo("/Games");
+        }
+    }
+}

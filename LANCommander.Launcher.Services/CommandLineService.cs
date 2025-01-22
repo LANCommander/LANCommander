@@ -12,8 +12,10 @@ namespace LANCommander.Launcher.Services
 {
     public class CommandLineService : BaseService
     {
+        private readonly AuthenticationService AuthenticationService;
+        private readonly UserService UserService;
         private readonly GameService GameService;
-        private readonly DownloadService DownloadService;
+        private readonly InstallService InstallService;
         private readonly ImportService ImportService;
         private readonly ProfileService ProfileService;
 
@@ -22,13 +24,17 @@ namespace LANCommander.Launcher.Services
         public CommandLineService(
             SDK.Client client,
             ILogger<CommandLineService> logger,
+            AuthenticationService authenticationService,
+            UserService userService,
             GameService gameService,
-            DownloadService downloadService,
+            InstallService installService,
             ImportService importService,
             ProfileService profileService) : base(client, logger)
         {
+            AuthenticationService = authenticationService;
+            UserService = userService;
             GameService = gameService;
-            DownloadService = downloadService;
+            InstallService = installService;
             ImportService = importService;
             ProfileService = profileService;
         }
@@ -101,12 +107,12 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.Get(options.GameId);
+                var game = await GameService.GetAsync(options.GameId);
 
-                await DownloadService.Add(game, options.InstallDirectory);
-                await DownloadService.Install();
+                await InstallService.Add(game, options.InstallDirectory);
+                await InstallService.Next();
 
-                game = await GameService.Get(options.GameId);
+                game = await GameService.GetAsync(options.GameId);
 
                 Logger.LogInformation($"Successfully installed {game.Title} to directory {game.InstallDirectory}");
             }
@@ -122,7 +128,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.Get(options.GameId);
+                var game = await GameService.GetAsync(options.GameId);
 
                 await GameService.UninstallAsync(game);
 
@@ -140,7 +146,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var game = await GameService.Get(options.GameId);
+                var game = await GameService.GetAsync(options.GameId);
                 var manifest = await ManifestHelper.ReadAsync(game.InstallDirectory, game.Id);
                 var action = manifest.Actions.FirstOrDefault(a => a.Id == options.ActionId);
 
@@ -301,9 +307,11 @@ namespace LANCommander.Launcher.Services
 
         private async Task ChangeAlias(ChangeAliasCommandLineOptions options)
         {
+            var currentUser = await UserService.GetAsync(AuthenticationService.GetUserId());
+            
             await ProfileService.ChangeAlias(options.Alias);
 
-            Logger.LogInformation($"Changed current user's alias from {Settings.Profile.Alias} to {options.Alias}");
+            Logger.LogInformation($"Changed current user's alias from {currentUser.Alias} to {options.Alias}");
         }
     }
 }

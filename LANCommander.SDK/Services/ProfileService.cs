@@ -78,7 +78,7 @@ namespace LANCommander.SDK.Services
 
             User.Alias = alias;
 
-            var response = await Client.PostRequestAsync<string>("/api/Profile/ChangeAlias", new
+            var response = await Client.PutRequestAsync<string>("/api/Profile/ChangeAlias", new
             {
                 Alias = alias
             });
@@ -106,7 +106,7 @@ namespace LANCommander.SDK.Services
         {
             Logger?.LogTrace("Updating player custom fields: {CustomFieldName} = {CustomFieldValue}", name, value);
 
-            return await Client.PostRequestAsync<string>($"/api/Profile/CustomField/{name}", value);
+            return await Client.PutRequestAsync<string>($"/api/Profile/CustomField/{name}", value);
         }
     }
 }

@@ -1,0 +1,33 @@
+@using LANCommander.SDK.Enums
+@inject DatabaseServiceFactory DatabaseServiceFactory
+
+<Select
+    DataSource="StorageLocations"
+    ItemValue="l => l"
+    ItemLabel="l => l.Path"
+    @bind-Value="Value"
+    OnSelectedItemChanged="ValueChanged" />
+
+@code {
+    [Parameter] public StorageLocation Value { get; set; } = new();
+    [Parameter] public EventCallback<StorageLocation> ValueChanged { get; set; }
+    [Parameter] public StorageLocationType Type { get; set; } = StorageLocationType.Archive;
+    
+    IEnumerable<StorageLocation> StorageLocations = new List<StorageLocation>();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+        {
+            StorageLocations = await storageLocationService
+                .DisableTracking()
+                .SortBy(l => l.Path)
+                .GetAsync(l => l.Type == Type);
+
+            Value = StorageLocations.First();
+
+            if (ValueChanged.HasDelegate)
+                await ValueChanged.InvokeAsync(Value);
+        }
+    }
+}

@@ -30,6 +30,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Microsoft.Common.props = Microsoft.Common.props
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server.Data", "LANCommander.Server.Data\LANCommander.Server.Data.csproj", "{EB7227DA-BCC5-464F-800A-BB0D9A2FAD0D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server.Data.SQLite", "LANCommander.Server.Data.SQLite\LANCommander.Server.Data.SQLite.csproj", "{6FE4891A-7B44-4768-89D9-2CA3D61E906B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server.Services", "LANCommander.Server.Services\LANCommander.Server.Services.csproj", "{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server.Data.MySQL", "LANCommander.Server.Data.MySQL\LANCommander.Server.Data.MySQL.csproj", "{D94610EE-EC17-4FB1-AFEA-64D365546413}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server.Data.PostgreSQL", "LANCommander.Server.Data.PostgreSQL\LANCommander.Server.Data.PostgreSQL.csproj", "{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -81,6 +90,26 @@ Global
 		{D69FF032-2013-4C4A-8719-44B79E48F898}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D69FF032-2013-4C4A-8719-44B79E48F898}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D69FF032-2013-4C4A-8719-44B79E48F898}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB7227DA-BCC5-464F-800A-BB0D9A2FAD0D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB7227DA-BCC5-464F-800A-BB0D9A2FAD0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB7227DA-BCC5-464F-800A-BB0D9A2FAD0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB7227DA-BCC5-464F-800A-BB0D9A2FAD0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FE4891A-7B44-4768-89D9-2CA3D61E906B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FE4891A-7B44-4768-89D9-2CA3D61E906B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FE4891A-7B44-4768-89D9-2CA3D61E906B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FE4891A-7B44-4768-89D9-2CA3D61E906B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D94610EE-EC17-4FB1-AFEA-64D365546413}.Release|Any CPU.Build.0 = Release|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

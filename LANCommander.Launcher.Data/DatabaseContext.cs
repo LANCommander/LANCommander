@@ -1,4 +1,5 @@
-﻿using LANCommander.Launcher.Data.Models;
+﻿using LANCommander.Launcher.Data.Interceptors;
+using LANCommander.Launcher.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -20,9 +21,9 @@ namespace LANCommander.Launcher.Data
         {
             var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
 
+            optionsBuilder.AddInterceptors(new AuditingInterceptor());
             optionsBuilder.UseLoggerFactory(LoggerFactory);
             optionsBuilder.UseSqlite($"Data Source={dbPath};Cache=Shared");
-            optionsBuilder.UseLazyLoadingProxies();
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -49,8 +50,25 @@ namespace LANCommander.Launcher.Data
             builder.Entity<Platform>()
                 .HasMany(p => p.Games)
                 .WithMany(g => g.Platforms);
+            
+            builder.Entity<Library>()
+                .HasOne(l => l.User)
+                .WithOne(u => u.Library)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Library>()
+                .HasMany(l => l.Games)
+                .WithMany(l => l.Libraries)
+                .UsingEntity<Dictionary<string, object>>(
+                    "LibraryGame",
+                    lg => lg.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
+                    lg => lg.HasOne<Library>().WithMany().HasForeignKey("LibraryId").OnDelete(DeleteBehavior.Cascade)
+                );
 
             #region Game Relationships
+            builder.Entity<Game>()
+                .Property(g => g.BaseGameId)
+                .HasConversion(new GuidToNullConverter());
 
             builder.Entity<Game>()
                 .HasMany(g => g.MultiplayerModes)
@@ -116,6 +134,7 @@ namespace LANCommander.Launcher.Data
             #endregion
         }
 
+        public DbSet<Engine>? Engines { get; set; }
         public DbSet<Game>? Games { get; set; }
 
         public DbSet<Genre>? Genres { get; set; }
@@ -129,5 +148,7 @@ namespace LANCommander.Launcher.Data
         public DbSet<Redistributable>? Redistributables { get; set; }
 
         public DbSet<Media>? Media { get; set; }
+        public DbSet<Library>? Libraries { get; set; }
+        public DbSet<User>? Users { get; set; }
     }
 }

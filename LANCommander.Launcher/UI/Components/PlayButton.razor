@@ -6,22 +6,30 @@
 @inject SDK.Client Client
 @inject GameService GameService
 @inject LibraryService LibraryService
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject ModalService ModalService
 @inject MessageService MessageService
 @inject MessageBusService MessageBusService
 
-@if (IsRunning)
+@if (State == PlayButtonState.Running)
 {
     <Popconfirm Title="Do you want to stop this game?" OkText="Yes" OnConfirm="() => Stop()">
-        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
+        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
     </Popconfirm>
+}
+else if (State == PlayButtonState.Starting)
+{
+    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading="true">Starting</Button>
+}
+else if (State == PlayButtonState.Stopping)
+{
+    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading="true">Stopping</Button>
 }
 else
 {
-    <Space Direction="@DirectionVHType.Horizontal">
+    <Space Direction="SpaceDirection.Horizontal">
         <SpaceItem>
-            <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">Play</Button>
+            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">Play</Button>
         </SpaceItem>
 
         <SpaceItem>
@@ -33,7 +41,7 @@ else
                 </Overlay>
 
                 <ChildContent>
-                    <Button Type="@ButtonType.Default" Size="@ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
+                    <Button Type="@ButtonType.Default" Size="ButtonSize.Large" Icon="@IconType.Outline.Ellipsis" />
                 </ChildContent>
             </Dropdown>
         </SpaceItem>
@@ -42,12 +50,20 @@ else
 
 @code {
     [Parameter] public Guid LibraryItemId { get; set; }
-    [Parameter] public LibraryItem LibraryItem { get; set; }
+    [Parameter] public Models.ListItem LibraryItem { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
 
     Timer StateTimer;
     Settings Settings;
-    bool IsRunning = false;
+    PlayButtonState State = PlayButtonState.Idle;
+
+    public enum PlayButtonState
+    {
+        Idle,
+        Starting,
+        Running,
+        Stopping
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -58,23 +74,25 @@ else
     protected override async Task OnParametersSetAsync()
     {
         if (LibraryItem == null && LibraryItemId != Guid.Empty)
-            LibraryItem = await LibraryService.GetLibraryItemAsync(LibraryItemId);
+            LibraryItem = await LibraryService.GetItemAsync(LibraryItemId);
     }
 
     async Task UpdateState()
     {
-        if (!IsRunning && Client.Games.IsRunning(LibraryItem.Key))
+        if (Client.Games.IsRunning(LibraryItem.Key))
         {
-            IsRunning = true;
-
-            await InvokeAsync(StateHasChanged);
+            await ChangeState(PlayButtonState.Running);
         }
-        else if (IsRunning && !Client.Games.IsRunning(LibraryItem.Key))
+        else if (State == PlayButtonState.Running && !Client.Games.IsRunning(LibraryItem.Key))
         {
-            IsRunning = false;
-
-            await InvokeAsync(StateHasChanged);
+            await ChangeState(PlayButtonState.Idle);
         }
+    }
+
+    async Task ChangeState(PlayButtonState state)
+    {
+        State = state;
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task Run()
@@ -82,9 +100,13 @@ else
         var game = LibraryItem.DataItem as Game;
         var actions = await Client.Games.GetActionsAsync(game.InstallDirectory, game.Id);
 
+        await ChangeState(PlayButtonState.Starting);
+
         if (actions == null || actions.Count() == 0)
         {
             MessageService.Error("No actions found!");
+
+            await ChangeState(PlayButtonState.Idle);
             return;
         }        
 
@@ -93,6 +115,8 @@ else
         if (primaryActions.Count() == 0)
         {
             MessageService.Error("No primary action found!");
+            
+            await ChangeState(PlayButtonState.Idle);
             return;
         }
 
@@ -137,9 +161,11 @@ else
 
     async Task Stop()
     {
+        await ChangeState(PlayButtonState.Stopping);
+        
         await Client.Games.Stop(LibraryItem.Key);
 
-        await InvokeAsync(StateHasChanged);
+        await ChangeState(PlayButtonState.Idle);
     }
 
     public void Dispose()

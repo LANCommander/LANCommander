@@ -1,0 +1,10 @@
+﻿@page "/Games/{id:guid}/Media"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView Id="Id" Title="Media">
+    <MediaEditor @bind-Values="context.Media" GameId="context.Id" GameTitle="@context.Title" />
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

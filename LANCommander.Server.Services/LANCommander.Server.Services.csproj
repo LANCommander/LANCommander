@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoMapper" Version="13.0.1" />
+    <PackageReference Include="CoreRCON" Version="5.0.5" />
+    <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
+    <PackageReference Include="Crc32.NET" Version="1.2.0" />
+    <PackageReference Include="IGDB" Version="5.1.0" />
+    <PackageReference Include="IPXRelayDotNet" Version="1.1.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="8.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
+    <PackageReference Include="Octokit" Version="12.0.0" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
+    <PackageReference Include="rix0rrr.BeaconLib" Version="1.0.2" />
+    <PackageReference Include="Semver" Version="2.3.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+    <PackageReference Include="Syncfusion.PdfToImageConverter.Net" Version="26.2.14" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
+    <PackageReference Include="YamlDotNet" Version="16.1.3" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" Version="1.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
+    <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,15 +1,15 @@
 ﻿@using LANCommander.Server.Models
 @using System.IO.Compression
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
-@inject ArchiveService ArchiveService
 
 @if (ArchiveId != Guid.Empty)
 {
-    <Button OnClick="BrowseForFile" Type="@Type" Icon="@Icon" Disabled="@(!ArchiveExists || Disabled)" ChildContent="ChildContent" />
+    <Button OnClick="BrowseForFile" Type="Type" Icon="@Icon" Disabled="@(!ArchiveExists || Disabled)" ChildContent="ChildContent" />
 }
 else if (!String.IsNullOrWhiteSpace(Root))
 {
-    <Button OnClick="BrowseForFile" Type="@Type" Icon="@Icon" Disabled="@Disabled" ChildContent="ChildContent" />
+    <Button OnClick="BrowseForFile" Type="Type" Icon="@Icon" Disabled="@Disabled" ChildContent="ChildContent" />
 }
 
 @code {
@@ -26,38 +26,41 @@ else if (!String.IsNullOrWhiteSpace(Root))
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
     [Parameter] public RenderFragment ChildContent { get; set; }
     [Parameter] public string Icon { get; set; }
-    [Parameter] public string Type { get; set; }
+    [Parameter] public ButtonType Type { get; set; }
     [Parameter] public bool Disabled { get; set; }
 
     bool ArchiveExists { get; set; } = false;
 
     protected override async Task OnInitializedAsync()
     {
-        if (ArchiveId != Guid.Empty)
-            ArchiveExists = await ArchiveService.Exists(ArchiveId);
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        {
+            if (ArchiveId != Guid.Empty)
+                ArchiveExists = await archiveService.ExistsAsync(ArchiveId);
+        }
     }
 
     private async void BrowseForFile()
     {
         var modalOptions = new ModalOptions()
-            {
-                Title = Title,
-                Maximizable = false,
-                DefaultMaximized = true,
-                Closable = true,
-                OkText = OkText,
-                WrapClassName = "file-picker-dialog"
-            };
+        {
+            Title = Title,
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = OkText,
+            WrapClassName = "file-picker-dialog"
+        };
 
         var browserOptions = new FilePickerOptions()
-            {
-                ArchiveId = ArchiveId,
-                Root = Root,
-                Select = true,
-                Multiple = false,
-                EntrySelectable = EntrySelectable,
-                EntryVisible = EntryVisible
-            };
+        {
+            ArchiveId = ArchiveId,
+            Root = Root,
+            Select = true,
+            Multiple = false,
+            EntrySelectable = EntrySelectable,
+            EntryVisible = EntryVisible
+        };
 
         var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
 

@@ -1,0 +1,37 @@
+﻿@page "/Games/{id:guid}/Actions"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject IMessageService MessageService
+@inject ILogger<Actions> Logger
+
+<GameEditView Id="Id" Title="Actions">
+    <TitleExtraTemplate>
+        <Space Direction="SpaceDirection.Horizontal">
+            <SpaceItem>
+                <Button Type="ButtonType.Primary" OnClick="() => ActionEditor.Save()">Save</Button>
+            </SpaceItem>
+        </Space>
+    </TitleExtraTemplate>
+
+    <ChildContent>
+        <ActionEditor @ref="ActionEditor" GameId="Id" ArchiveId="ArchiveId" />
+    </ChildContent>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Guid ArchiveId = Guid.Empty;
+
+    ActionEditor ActionEditor;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        {
+            var latestArchive = await archiveService.SortBy(a => a.CreatedOn).FirstOrDefaultAsync(a => a.GameId == Id);
+
+            ArchiveId = latestArchive.Id;
+        }
+    }
+}

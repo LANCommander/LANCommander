@@ -1,5 +1,4 @@
-﻿@using LANCommander.Server.Extensions
-@inject PageService PageService
+﻿@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <Space>
     @if (!Editing)
@@ -9,19 +8,19 @@
         </SpaceItem>
 
         <SpaceItem>
-            <Button Size="@ButtonSize.Small" OnClick="Edit">Edit</Button>
+            <Button Size="ButtonSize.Small" OnClick="Edit">Edit</Button>
         </SpaceItem>
     }
     else
     {
         <SpaceItem>
             <AntDesign.Input @bind-Value="Page.Slug" OnBlur="GenerateSlug" Size="@InputSize.Small">
-                <AddOnBefore>/@Page.Route.Substring(0, Page.Route.Length - Page.Slug.Length)</AddOnBefore>
+                <AddOnBefore>@ComputedParentRoute</AddOnBefore>
             </AntDesign.Input>
         </SpaceItem>
 
         <SpaceItem>
-            <Button OnClick="Save">Save</Button>
+            <Button Size="ButtonSize.Small" OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </SpaceItem>
     }
 </Space>
@@ -31,6 +30,12 @@
     [Parameter] public EventCallback<Page> PageChanged { get; set; }
 
     bool Editing { get; set; } = false;
+    string ComputedParentRoute = "";
+
+    protected override void OnInitialized()
+    {
+        GenerateSlug();
+    }
 
     void Edit()
     {
@@ -40,6 +45,9 @@
     void GenerateSlug()
     {
         Page.Slug = Page.Slug.ToUrlSlug();
+        Page.Route = PageService.RenderRoute(Page);
+
+        ComputedParentRoute = $"/" + Page.Route.Substring(0, Page.Route.Length - Page.Slug.Length);
     }
 
     async Task Save()

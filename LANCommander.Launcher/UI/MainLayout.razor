@@ -1,60 +1,124 @@
-﻿@using LANCommander.Launcher.Models
+﻿@using System.Management.Automation.Remoting
+@using LANCommander.Launcher.Models
+@using LANCommander.SDK
 @using Photino.Blazor.CustomWindow.Components
+@using ConnectionState = LANCommander.Launcher.Models.ConnectionState
 @inherits LayoutComponentBase
 @inject ImportService ImportService
 @inject ProfileService ProfileService
+@inject AuthenticationService AuthenticationService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject LANCommander.SDK.Client LANCommander
 @inject IJSRuntime JS
 
-<CustomWindow HeaderHeight="37">
-    <HeaderExtraControlsLayout>
-        <Space Direction="@DirectionVHType.Horizontal">
-            @if (Settings != null && Settings.Profile != null && ProfileService.IsAuthenticated())
-            {
-                @if (!Settings.Authentication.OfflineMode)
-                {
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="Import" Loading="@Importing" />
-                    </SpaceItem>
-                }
-                else
-                {
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger />
-                    </SpaceItem>
-                }
+    <CustomWindow HeaderHeight="37">
+        <HeaderExtraControlsLayout>
+            <Space Direction="SpaceDirection.Horizontal">
+                <AuthenticatedView>
+                    <Authenticated>
+                        <SpaceItem>
+                            <Popover Placement="Placement.BottomRight" IsButton OnClick="Import" Trigger="new[] { Trigger.Hover }">
+                                <ChildContent>
+                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" Loading="@Importing"/>
+                                </ChildContent>
+                                <ContentTemplate>
+                                    <Progress Percent="@((ImportStatusIndex / (float)ImportStatusTotal) * 100)" Steps="@ImportStatusTotal"/>
+                                </ContentTemplate>
+                            </Popover>
+                        </SpaceItem>
 
-                <SpaceItem>
-                    <ProfileButton />
-                </SpaceItem>
-            }
-        </Space>
-    </HeaderExtraControlsLayout>
-    <WindowContent>
-        @Body
+                        <SpaceItem>
+                            <ProfileButton/>
+                        </SpaceItem>
+                    </Authenticated>
+                    
+                    <NotAuthenticated>
+                        <SpaceItem>
+                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
+                        </SpaceItem>
+                    </NotAuthenticated>
+                </AuthenticatedView>
+            </Space>
+        </HeaderExtraControlsLayout>
+        <WindowContent>
+            <ErrorHandler Title="Launcher Crashed">
+                <Body>
+                    <AuthenticatedView>
+                        <Authenticated>
+                            @Body
 
-        @if (Settings.Debug.EnableScriptDebugging)
-        {
-            <PowerShellConsole />
-        }
+                            @if (Settings.Debug.EnableScriptDebugging)
+                            {
+                                <PowerShellConsole/>
+                            }
 
-        <AntContainer />
-        <RedirectToLogin />
-        <UpdateChecker />
-    </WindowContent>
-</CustomWindow>
+                            <KeepAliveContainer/>
+                        </Authenticated>
+                        <NotAuthenticated>
+                            <AuthenticationForm/>
+                        </NotAuthenticated>
+                    </AuthenticatedView>
+
+                    <UpdateChecker/>
+                    <AntContainer/>
+                </Body>
+                
+                <Extra>
+                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
+                </Extra>
+            </ErrorHandler>
+        </WindowContent>
+    </CustomWindow>
 
 @code {
     Models.Settings Settings = null;
 
-    public bool Importing = false;
-    public bool Connecting = false;
+    public bool Importing;
+    public bool Connecting;
+
+    public ConnectionState ConnectionState = new();
+    
     public IMessageService Messages { get; set; }
 
     public static MainLayout _MainLayout { get; set; }
+
+    string RandomQuip = "";
+    
+    string[] CrashQuips = new[]
+    {
+        "You Died.",
+        "Snake? SNAAAAAAKE!",
+        "WASTED",
+        "Major fracture detected",
+        "The past is a gaping hole. You try to run from it, but the more you run, the deeper, the darker, the bigger it gets.",
+        "Your town center has been destroyed",
+        "Your forces are under attack!",
+        "You have lost the lead",
+        "Terrorists Win",
+        "War... War never changes.",
+        "You have died of dysentery",
+        "You have failed to restore the books. The Ages are lost.",
+        "Player was splattered by a demon",
+        "Sure, blame it on your ISP",
+        "Baba is no more",
+        "Guests are complaining they are lost",
+        "The darkness has overcome you",
+        "Subject: Gordon Freeman. Status: Terminated",
+        "Mission failed: You were spotted.",
+        "Critical damage! Eject, eject!",
+        "Your minions are unhappy. They are leaving.",
+        "The Empire has triumphed",
+        "Your quest has ended in failure",
+        "You have been eaten by a grue",
+        "You no mess with Lo Wang!",
+        "Sam was killed. Serious carnage ensues.",
+        "Damn, those alien bastards are gonna pay for shooting up my ride"
+    };
+
+    int ImportStatusIndex = 0;
+    int ImportStatusTotal = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,14 +128,37 @@
         Messages = MessageService;
 
         ImportService.OnImportComplete += OnImportComplete;
+        ImportService.OnImportUpdated += OnImportUpdated;
 
-        if (!(await LANCommander.ValidateTokenAsync()) && !Settings.Authentication.OfflineMode)
-            NavigationManager.NavigateTo("/Authenticate");
+        AuthenticationService.OnOfflineModeChanged += OnOfflineModeChanged;
+    
+        var randIndex = new Random().Next(0, CrashQuips.Length - 1);
+
+        RandomQuip = CrashQuips[randIndex];
     }
 
     async Task OnImportComplete()
     {
         MessageService.Success("Import Complete", 3);
+    }
+
+    async Task OnImportUpdated(ImportStatusUpdate status)
+    {
+        MessageService.Info($"Importing {status.CurrentItem.Name}");
+    }
+
+    async void OnOfflineModeChanged(bool state)
+    {
+        _MainLayout.ConnectionState.OfflineModeEnabled = state;
+        _MainLayout.ConnectionState.IsConnected = LANCommander.IsConnected();
+        await InvokeAsync(_MainLayout.StateHasChanged);
+    }
+
+    async Task CopyError(Exception ex)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", ex.Message + "\n" + ex.StackTrace);
+
+        MessageService.Info("Error copied to clipboard!");
     }
 
     async Task Connect()
@@ -88,14 +175,19 @@
 
         if (await LANCommander.ValidateTokenAsync(token))
         {
-            ProfileService.SetOfflineMode(false);
+            await AuthenticationService.Login();
+
             MessageService.Success("Back Online!");
+            
+            ConnectionState.IsConnected = true;
+            ConnectionState.OfflineModeEnabled = false;
+
+            await InvokeAsync(StateHasChanged);
         }
         else
         {
             if (await LANCommander.PingAsync())
             {
-                ProfileService.SetOfflineMode(false);
                 await Logout();
             }
             else
@@ -104,7 +196,7 @@
                 {
                     Title = "Could Not Reconnect!",
                     Icon = @<Icon Type="@IconType.Outline.ExclamationCircle"></Icon>,
-                    Content = "The LANCommander server could not be reached. Click stay offline and try later, or logout and fix your credentials.",
+                    Content = "The LANCommander server could not be reached. Click stay offline and try later, or logout and enter your credentials.",
                     OkText = "Logout",
                     CancelText = "Stay Offline",
                     Centered = true,
@@ -122,7 +214,10 @@
 
     async Task Logout()
     {
-        await ProfileService.Logout();
+        await AuthenticationService.Logout();
+        
+        ConnectionState.IsConnected = false;
+        ConnectionState.OfflineModeEnabled = false;
 
         NavigationManager.NavigateTo("/Authenticate");
     }

@@ -16,29 +16,35 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
+        private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger, 
             IMapper mapper,
             RedistributableService redistributableService,
+            StorageLocationService storageLocationService,
             ArchiveService archiveService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
+            StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> Get()
+        public async Task<ActionResult<IEnumerable<SDK.Models.Redistributable>>> GetAsync()
         {
-            return Ok(Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.Get()));
+            return Ok(Mapper.Map<IEnumerable<SDK.Models.Redistributable>>(await RedistributableService.GetAsync()));
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SDK.Models.Redistributable>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.Redistributable>> GetAsync(Guid id)
         {
-            var redistributable = await RedistributableService.Get(id);
+            var redistributable = await RedistributableService
+                .Include(r => r.Archives)
+                .Include(r => r.Scripts)
+                .GetAsync(id);
 
             if (redistributable == null)
                 return NotFound();
@@ -47,9 +53,9 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            var redistributable = await RedistributableService.Get(id);
+            var redistributable = await RedistributableService.GetAsync(id);
 
             if (redistributable == null)
                 return NotFound();
@@ -59,7 +65,7 @@ namespace LANCommander.Server.Controllers.Api
 
             var archive = redistributable.Archives.OrderByDescending(a => a.CreatedOn).First();
 
-            var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
+            var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
             if (!System.IO.File.Exists(filename))
                 return NotFound();
@@ -67,13 +73,13 @@ namespace LANCommander.Server.Controllers.Api
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", $"{redistributable.Name.SanitizeFilename()}.zip");
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("Import/{objectKey}")]
-        public async Task<IActionResult> Import(Guid objectKey)
+        public async Task<IActionResult> ImportAsync(Guid objectKey)
         {
             try
             {
-                var game = await RedistributableService.Import(objectKey);
+                var game = await RedistributableService.ImportAsync(objectKey);
 
                 return Ok();
             }
@@ -84,26 +90,26 @@ namespace LANCommander.Server.Controllers.Api
             }
         }
 
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpPost("UploadArchive")]
-        public async Task<IActionResult> UploadArchive(SDK.Models.UploadArchiveRequest request)
+        public async Task<IActionResult> UploadArchiveAsync(SDK.Models.UploadArchiveRequest request)
         {
             try
             {
-                var archive = await ArchiveService.Get(a => a.RedistributableId == request.Id && a.Version == request.Version).FirstOrDefaultAsync();
-                var archivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+                var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
+                var archive = await ArchiveService.FirstOrDefaultAsync(a => a.RedistributableId == request.Id && a.Version == request.Version);
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                 if (archive != null)
                 {
-                    var existingArchivePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
-
-                    System.IO.File.Delete(existingArchivePath);
+                    System.IO.File.Delete(archivePath);
 
                     archive.ObjectKey = request.ObjectKey.ToString();
                     archive.Changelog = request.Changelog;
                     archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
+                    archive.StorageLocation = storageLocation;
 
-                    archive = await ArchiveService.Update(archive);
+                    archive = await ArchiveService.UpdateAsync(archive);
                 }
                 else
                 {
@@ -113,9 +119,10 @@ namespace LANCommander.Server.Controllers.Api
                         Changelog = request.Changelog,
                         RedistributableId = request.Id,
                         CompressedSize = new System.IO.FileInfo(archivePath).Length,
+                        StorageLocation = storageLocation,
                     };
 
-                    await ArchiveService.Add(archive);
+                    await ArchiveService.AddAsync(archive);
                 }
 
                 return Ok();

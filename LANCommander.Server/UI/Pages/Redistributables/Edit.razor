@@ -4,9 +4,8 @@
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Models
 @using Microsoft.EntityFrameworkCore
-@attribute [Authorize(Roles = "Administrator")]
-@inject RedistributableService RedistributableService
-@inject GameService GameService
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -37,17 +36,14 @@
                 }
             </PageHeaderTitle>
             <PageHeaderExtra>
-                <Space Direction="DirectionVHType.Horizontal">
+                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                     @if (Redistributable != null && Redistributable.Id != Guid.Empty)
                     {
-                        <SpaceItem>
-                            <a href="/Redistributables/@(Id)/Export" target="_blank" class="ant-btn ant-btn-default">Export</a>
-                        </SpaceItem>
+                        <a href="/Redistributables/@(Id)/Export" target="_blank" class="ant-btn ant-btn-default">Export</a>
                     }
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
-                    </SpaceItem>
-                </Space>
+
+                    <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                </Flex>
             </PageHeaderExtra>
         </PageHeader>
 
@@ -105,56 +101,66 @@ else
 }
 
 @code {
-    [Parameter] public Guid Id { get; set; }
-    [Parameter] public string Panel { get; set; }
+        [Parameter] public Guid Id { get; set; }
+        [Parameter] public string Panel { get; set; }
 
-    Redistributable Redistributable = new Redistributable();
+        Redistributable Redistributable = new Redistributable();
 
-    ICollection<Game> Games;
+        ICollection<Game> Games;
 
-    LANCommanderSettings Settings = SettingService.GetSettings();
+        Settings Settings = SettingService.GetSettings();
 
-    private Guid LatestArchiveId
-    {
-        get
+        Guid LatestArchiveId
         {
-            if (Redistributable != null && Redistributable.Archives != null && Redistributable.Archives.Count > 0)
-                return Redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
-            else
-                return Guid.Empty;
+            get
+            {
+                if (Redistributable != null && Redistributable.Archives != null && Redistributable.Archives.Count > 0)
+                    return Redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
+                else
+                    return Guid.Empty;
+            }
         }
-    }
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id != Guid.Empty && Panel == null)
-            NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
-        else if (Id != Guid.Empty)
-            Redistributable = await RedistributableService.Get(Id);
+        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+        {
+            if (Id != Guid.Empty && Panel == null)
+                NavigationManager.NavigateTo($"/Redistributables/{Id}/General", true);
+            else if (Id != Guid.Empty)
+                Redistributable = await redistributableService
+                    .Include(r => r.Games)
+                    .GetAsync(Id);
+        }
 
-        Games = await GameService
-            .Get(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null)
-            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
-            .ToListAsync();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService
+                .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+                .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
+        }
     }
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
-            if (Redistributable.Id != Guid.Empty)
+            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
             {
-                Redistributable = await RedistributableService.Update(Redistributable);
+                if (Redistributable.Id != Guid.Empty)
+                {
+                    Redistributable = await redistributableService.UpdateAsync(Redistributable);
 
-                await MessageService.Success("Redistributable updated!");
-            }
-            else
-            {
-                Redistributable = await RedistributableService.Add(Redistributable);
+                    await MessageService.Success("Redistributable updated!");
+                }
+                else
+                {
+                    Redistributable = await redistributableService.AddAsync(Redistributable);
 
-                NavigationManager.LocationChanged += NotifyRedistributableAdded;
+                    NavigationManager.LocationChanged += NotifyRedistributableAdded;
 
-                NavigationManager.NavigateTo($"/Redistributables/{Redistributable.Id}");
+                    NavigationManager.NavigateTo($"/Redistributables/{Redistributable.Id}");
+                }
             }
         }
         catch (Exception ex)
@@ -164,7 +170,7 @@ else
         }
     }
 
-    private void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
+    void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
     {
         NavigationManager.LocationChanged -= NotifyRedistributableAdded;
 

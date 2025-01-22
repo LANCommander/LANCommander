@@ -1,0 +1,16 @@
+﻿.install-dialog {
+
+    &-addons-selector {
+        .ant-collapse-header {
+            padding: 6px 8px;
+        }
+
+        .ant-collapse-content {
+            border: 0;
+        }
+    }
+
+    &-addons-selector + &-directory-selector {
+        margin-top: 16px;
+    }
+}

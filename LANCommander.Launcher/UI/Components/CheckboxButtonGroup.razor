@@ -1,0 +1,94 @@
+﻿@typeparam TItem
+
+<Space Direction="@Direction" Class="checkbox-button-group">
+    @foreach (var item in DataSource)
+    {
+        <SpaceItem>
+            @foreach (var item in Items)
+            {
+                if (SelectedKeys.Contains(item.Key))
+                {
+                    if (ButtonSelectedTemplate != null)
+                    {
+                        @ButtonSelectedTemplate?.Invoke(item.DataItem)
+                    }
+                    else
+                    {
+                        <Button OnClick="() => Deselect(item)" Block Icon="@IconType.Fill.CheckCircle">@item.Label</Button>
+                    }
+                }
+                else
+                {
+                    if (ButtonUnselectedTemplate != null)
+                    {
+                        @ButtonUnselectedTemplate?.Invoke(item.DataItem)
+                    }
+                    else
+                    {
+                        <Button OnClick="() => Select(item)" Block>@item.Label</Button>
+                    }
+                }
+            }
+
+        </SpaceItem>
+    }
+</Space>
+
+@code {
+    [Parameter] public IEnumerable<TItem> DataSource { get; set; }
+    [Parameter] public Func<TItem, object> KeySelector { get; set; }
+    [Parameter] public Func<TItem, string> LabelSelector { get; set; }
+    [Parameter] public IEnumerable<TItem> Selected { get; set; }
+    [Parameter] public EventCallback<IEnumerable<TItem>> SelectedChanged { get; set; }
+
+    [Parameter] public SpaceDirection Direction { get; set; } = SpaceDirection.Horizontal;
+
+    [Parameter] public RenderFragment<TItem>? ButtonSelectedTemplate { get; set; }
+    [Parameter] public RenderFragment<TItem>? ButtonUnselectedTemplate { get; set; }
+
+    List<TItem> SelectedItems = new List<TItem>();
+    List<string> SelectedKeys = new List<string>();
+
+    IEnumerable<CheckboxButtonGroupItem<TItem>> Items { get; set; } = new List<CheckboxButtonGroupItem<TItem>>();
+
+    class CheckboxButtonGroupItem<T>
+    {
+        public string Key { get; set; }
+        public string Label { get; set; }
+        public bool Selected { get; set; }
+        public T DataItem { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Items = DataSource.Select(i => new CheckboxButtonGroupItem<TItem>
+        {
+            Key = KeySelector.Invoke(i).ToString(),
+            Label = LabelSelector.Invoke(i),
+            Selected = false,
+            DataItem = i
+        });
+    }
+
+    async Task Select(CheckboxButtonGroupItem<TItem> item)
+    {
+        SelectedKeys.Add(item.Key);
+
+        await UpdateSelected();
+    }
+
+    async Task Deselect(CheckboxButtonGroupItem<TItem> item)
+    {
+        SelectedKeys.Remove(item.Key);
+
+        await UpdateSelected();
+    }
+
+    async Task UpdateSelected()
+    {
+        Selected = Items.Where(i => SelectedKeys.Contains(i.Key)).Select(i => i.DataItem);
+
+        if (SelectedChanged.HasDelegate)
+            await SelectedChanged.InvokeAsync(Selected);
+    }
+}

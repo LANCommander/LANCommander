@@ -20,7 +20,7 @@ namespace LANCommander.Server.UI.Components.FileManagerComponents.Sources
             ArchiveService = archiveService;
             ArchiveId = archiveId;
 
-            var task = ArchiveService.GetContents(ArchiveId);
+            var task = ArchiveService.GetContentsAsync(ArchiveId);
 
             task.Wait();
 

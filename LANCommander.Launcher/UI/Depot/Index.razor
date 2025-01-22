@@ -1,0 +1,93 @@
+﻿@page "/Depot"
+@page "/Depot/{id:guid}"
+@using LANCommander.Launcher.Models
+@using LANCommander.Launcher.UI.Depot.Components
+@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject DepotService DepotService
+@inject KeepAliveService KeepAliveService
+
+<Spin Spinning="Disabled">
+    <Layout>
+        <Content Class="depot">
+            <DepotFilter Items="@ListItems" />
+
+            <DepotList Items="@ListItems" OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
+        </Content>
+    </Layout>
+
+    <DepotGameDetails @ref="DepotGameDetails" ItemId="@(SelectedItem?.Key ?? Guid.Empty)" OnClose="@(() => NavigationManager.NavigateTo("/Depot"))" />
+</Spin>
+
+<div class="logo">
+    <img src="assets/logo-cut.svg" />
+</div>
+
+<LANCommander.Launcher.UI.Components.Footer />
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    DepotGameDetails DepotGameDetails;
+
+    IEnumerable<Models.ListItem> ListItems = new List<Models.ListItem>();
+
+    Models.ListItem SelectedItem { get; set; }
+
+    Settings Settings = SettingService.GetSettings();
+
+    bool Disabled = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        DepotService.OnItemsFiltered += LoadFilteredItems;
+        
+        KeepAliveService.ConnectionSevered += KeepAliveServiceOnConnectionSevered;
+        KeepAliveService.ConnectionEstablished += KeepAliveServiceOnConnectionEstablished;
+        KeepAliveService.ConnectionLostPermanently += KeepAliveServiceOnConnectionLostPermanently;
+
+        await DepotService.RefreshItemsAsync();
+    }
+
+    private void KeepAliveServiceOnConnectionLostPermanently(object? sender, EventArgs e)
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private async void KeepAliveServiceOnConnectionEstablished(object? sender, EventArgs e)
+    {
+        Disabled = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void KeepAliveServiceOnConnectionSevered(object? sender, EventArgs e)
+    {
+        Disabled = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        SelectedItem = DepotService.Items.FirstOrDefault(i => i.Key == Id);
+
+        if (SelectedItem != null && Id != Guid.Empty)
+        {
+            await DepotGameDetails.Show();
+        }
+    }
+
+    async Task LoadFilteredItems(IEnumerable<Models.ListItem> listItems)
+    {
+        ListItems = listItems;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        KeepAliveService.ConnectionEstablished -= KeepAliveServiceOnConnectionEstablished;
+        KeepAliveService.ConnectionSevered -= KeepAliveServiceOnConnectionSevered;
+        KeepAliveService.ConnectionLostPermanently -= KeepAliveServiceOnConnectionLostPermanently;
+    }
+
+}

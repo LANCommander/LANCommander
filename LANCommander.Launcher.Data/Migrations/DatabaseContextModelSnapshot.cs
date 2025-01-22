@@ -15,11 +15,7 @@ namespace LANCommander.Launcher.Data.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.5")
-                .HasAnnotation("Proxies:ChangeTracking", false)
-                .HasAnnotation("Proxies:CheckEquality", false)
-                .HasAnnotation("Proxies:LazyLoading", true);
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.10");
 
             modelBuilder.Entity("CategoryGame", b =>
                 {
@@ -318,6 +314,29 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.ToTable("Genres");
                 });
 
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.Library", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Libraries");
+                });
+
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Media", b =>
                 {
                     b.Property<Guid>("Id")
@@ -503,6 +522,49 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Alias")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("AvatarId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserName")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AvatarId");
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("LibraryGame", b =>
+                {
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("LibraryId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("GameId", "LibraryId");
+
+                    b.HasIndex("LibraryId");
+
+                    b.ToTable("LibraryGame");
+                });
+
             modelBuilder.Entity("CategoryGame", b =>
                 {
                     b.HasOne("LANCommander.Launcher.Data.Models.Category", null)
@@ -649,6 +711,17 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Navigation("Engine");
                 });
 
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.Library", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.User", "User")
+                        .WithOne("Library")
+                        .HasForeignKey("LANCommander.Launcher.Data.Models.Library", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Media", b =>
                 {
                     b.HasOne("LANCommander.Launcher.Data.Models.Game", "Game")
@@ -678,6 +751,30 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Navigation("Game");
                 });
 
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.User", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.Media", "Avatar")
+                        .WithMany()
+                        .HasForeignKey("AvatarId");
+
+                    b.Navigation("Avatar");
+                });
+
+            modelBuilder.Entity("LibraryGame", b =>
+                {
+                    b.HasOne("LANCommander.Launcher.Data.Models.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Launcher.Data.Models.Library", null)
+                        .WithMany()
+                        .HasForeignKey("LibraryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LANCommander.Launcher.Data.Models.Category", b =>
                 {
                     b.Navigation("Children");
@@ -697,6 +794,11 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Navigation("MultiplayerModes");
 
                     b.Navigation("PlaySessions");
+                });
+
+            modelBuilder.Entity("LANCommander.Launcher.Data.Models.User", b =>
+                {
+                    b.Navigation("Library");
                 });
 #pragma warning restore 612, 618
         }

@@ -6,11 +6,14 @@
 @inject MessageBusService MessageBusService
 @inject ILogger<MediaImage> Logger
 
-<img @ref="Ref" @key="Id" src="@MediaUrl" class="@Class @HiddenClass" @onerror="Hide" />
+<img @ref="Ref" @key="@(String.IsNullOrWhiteSpace(Key) ? Id.ToString() : Key)" src="@MediaUrl" class="@Class @HiddenClass" @onerror="Hide" />
 
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string Class { get; set; }
+    [Parameter] public string Key { get; set; }
+    [CascadingParameter] public bool Connected { get; set; }
+    [CascadingParameter] public bool OfflineMode { get; set; }
 
     string MediaUrl { get; set; }
     string HiddenClass { get; set; }
@@ -25,10 +28,10 @@
     protected override async Task OnParametersSetAsync()
     {
         try {
-            var media = await MediaService.Get(Id);
+            var media = await MediaService.GetAsync(Id);
 
-            if (media == null && Client.IsConnected())
-                media = await ImportService.ImportMedia(Id);
+            if (media == null && (Connected || OfflineMode))
+                media = await ImportService.ImportMediaAsync(Id);
 
             UpdateMediaUrl(media);
         }

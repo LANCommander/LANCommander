@@ -1,5 +1,5 @@
 ﻿@page "/Files"
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <FileManager WorkingDirectory="@RootPath" />
 

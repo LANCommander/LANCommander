@@ -1,96 +1,80 @@
-﻿@using AntDesign.TableModels;
+﻿@inherits OwningComponentBase
+@using AntDesign.TableModels;
 @using LANCommander.Server.UI.Components.FileManagerComponents.Sources
-@inject ArchiveService ArchiveService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<FileManager> Logger
 @namespace LANCommander.Server.UI.Components
 
 <div class="file-manager">
-    <GridRow Class="file-manager-nav">
-        <Space>
+    <GridRow Class="file-manager-nav" Align="RowAlign.Middle">
+        <Flex Align="FlexAlign.Center" Gap="FlexGap.Small" FlexCss="auto">
             @if (Features.HasFlag(FileManagerFeatures.NavigationBack))
             {
-                <SpaceItem>
-                    <Tooltip Title="Back" MouseEnterDelay="2">
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" Disabled="@(Past.Count == 0)" />
-                    </Tooltip>
-                </SpaceItem>
+                <Tooltip Title="Back" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.ArrowLeft" OnClick="NavigateBack" Disabled="@(Past.Count == 0)"/>
+                </Tooltip>
             }
 
             @if (Features.HasFlag(FileManagerFeatures.NavigationForward))
             {
-                <SpaceItem>
-                    <Tooltip Title="Forward" MouseEnterDelay="2">
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" Disabled="@(Future.Count == 0)" />
-                    </Tooltip>
-                </SpaceItem>
+                <Tooltip Title="Forward" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.ArrowRight" OnClick="NavigateForward" Disabled="@(Future.Count == 0)"/>
+                </Tooltip>
             }
 
             @if (Features.HasFlag(FileManagerFeatures.UpALevel))
             {
-                <SpaceItem>
-                    <Tooltip Title="Up a Level" MouseEnterDelay="2">
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(FileSource.GetCurrentPath().Parent == null)" />
-                    </Tooltip>
-                </SpaceItem>
+                <Tooltip Title="Up a Level" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.ArrowUp" OnClick="NavigateUp" Disabled="@(FileSource.GetCurrentPath().Parent == null)"/>
+                </Tooltip>
             }
 
             @if (Features.HasFlag(FileManagerFeatures.Refresh))
             {
-                <SpaceItem>
-                    <Tooltip Title="Refresh" MouseEnterDelay="2">
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Reload" OnClick="Refresh" />
-                    </Tooltip>
-                </SpaceItem>
+                <Tooltip Title="Refresh" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.Reload" OnClick="Refresh"/>
+                </Tooltip>
             }
 
             @if (Features.HasFlag(FileManagerFeatures.Breadcrumbs))
             {
-                <SpaceItem Class="file-manager-nav-breadcrumbs">
-                    <Breadcrumb Separator="@FileSource.DirectorySeparatorCharacter">
-                        @foreach (var breadcrumb in Breadcrumbs)
-                        {
-                            <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>
-                        }
-                    </Breadcrumb>
-                </SpaceItem>
+                <Breadcrumb Separator="@FileSource.DirectorySeparatorCharacter" Style="flex-grow: 1">
+                    @foreach (var breadcrumb in Breadcrumbs)
+                    {
+                        <BreadcrumbItem OnClick="() => ChangeDirectory(breadcrumb, false)">@breadcrumb.Name</BreadcrumbItem>
+                    }
+                </Breadcrumb>
             }
 
             @if (Features.HasFlag(FileManagerFeatures.NewFolder))
             {
-                <SpaceItem>
-                    <Tooltip Title="New Folder" MouseEnterDelay="2">
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.FolderAdd" OnClick="() => NewFolderModal.Open()" />
-                    </Tooltip>
-                </SpaceItem>
+                <Tooltip Title="New Folder" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.FolderAdd" OnClick="() => NewFolderModal.Open()"/>
+                </Tooltip>
             }
-            
+
             @if (Features.HasFlag(FileManagerFeatures.UploadFile))
             {
-                <SpaceItem>
-                    <Tooltip Title="Upload File" MouseEnterDelay="2">
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Upload" OnClick="() => UploadModal.Open()" />
-                    </Tooltip>
-                </SpaceItem>
+                <Tooltip Title="Upload File" MouseEnterDelay="2">
+                    <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.Upload" OnClick="() => UploadModal.Open()"/>
+                </Tooltip>
             }
-            
+
             @if (Features.HasFlag(FileManagerFeatures.Delete))
             {
-                <SpaceItem>
-                    <Tooltip Title="Delete" MouseEnterDelay="2">
-                        <Popconfirm OnConfirm="Delete">
-                            <TitleTemplate>
-                                Are you sure you want to delete the selected file@(Selected?.Count() == 1 ? "" : "s")?
-                            </TitleTemplate>
-                            <ChildContent>
-                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Delete" Disabled="@(Selected?.Count() == 0)" />
-                            </ChildContent>
-                        </Popconfirm>
-                    </Tooltip>
-                </SpaceItem>
+                <Tooltip Title="Delete" MouseEnterDelay="2">
+                    <Popconfirm OnConfirm="Delete">
+                        <TitleTemplate>
+                            Are you sure you want to delete the selected file@(Selected?.Count() == 1 ? "" : "s")?
+                        </TitleTemplate>
+                        <ChildContent>
+                            <Button Type="@ButtonType.Text" Size="ButtonSize.Large" Icon="@IconType.Outline.Delete" Disabled="@(Selected?.Count() == 0)"/>
+                        </ChildContent>
+                    </Popconfirm>
+                </Tooltip>
             }
-        </Space>
+        </Flex>
     </GridRow>
 
     <SplitPane>
@@ -130,11 +114,11 @@
                    OnRow="OnRow"
                    SelectedRowsChanged="SelectedChanged"
                    Size="@TableSize.Small">
-                <Selection Key="@context.Path" Type="@(SelectMultiple ? "checkbox" : "radio")" Hidden="EntrySelectable == null" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
+                <Selection Key="@context.Path" Type="@(SelectMultiple ? SelectionType.Checkbox : SelectionType.Radio)" Hidden="EntrySelectable == null" Disabled="!EntrySelectable.Invoke(context)" Class="@(EntrySelectable.Invoke(context) ? "" : "file-manager-selector-hidden")" />
                 <Column TData="string" Width="32">
                     @if (context is FileManagerFile)
                     {
-                        <Icon Type="@(((FileManagerFile)context).GetIcon())" Theme="outline" />
+                        <Icon Type="@(((FileManagerFile)context).GetIcon())" Theme="IconThemeType.Outline" />
                     }
                     else if (context is FileManagerDirectory)
                     {
@@ -169,14 +153,16 @@
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
+    ArchiveService ArchiveService;
+
     IFileManagerSource FileSource;
 
-    List<FileManagerDirectory> Past { get; set; } = new List<FileManagerDirectory>();
-    List<FileManagerDirectory> Future { get; set; } = new List<FileManagerDirectory>();
-    List<FileManagerDirectory> Breadcrumbs = new List<FileManagerDirectory>();
+    List<FileManagerDirectory> Past { get; set; } = new();
+    List<FileManagerDirectory> Future { get; set; } = new();
+    List<FileManagerDirectory> Breadcrumbs = new();
 
-    List<IFileManagerEntry> Entries { get; set; } = new List<IFileManagerEntry>();
-    HashSet<FileManagerDirectory> Directories { get; set; } = new HashSet<FileManagerDirectory>();
+    List<IFileManagerEntry> Entries { get; set; } = new();
+    HashSet<FileManagerDirectory> Directories { get; set; } = new();
 
     NewFolderModal NewFolderModal;
     UploadModal UploadModal;
@@ -193,6 +179,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ArchiveService = ScopedServices.GetService<ArchiveService>()!;
+
         if (!String.IsNullOrWhiteSpace(WorkingDirectory))
             FileSource = new FileManagerLocalDiskSource(WorkingDirectory);
         else if (ArchiveId != Guid.Empty)

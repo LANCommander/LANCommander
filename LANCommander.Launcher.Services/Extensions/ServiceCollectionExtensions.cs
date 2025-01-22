@@ -55,17 +55,21 @@ namespace LANCommander.Launcher.Services.Extensions
 
             services.AddSingleton(client);
             services.AddSingleton<MessageBusService>();
+            services.AddSingleton<AuthenticationService>();
+            services.AddSingleton<KeepAliveService>();
             #endregion
-
+            
             services.AddScoped<CollectionService>();
             services.AddScoped<CommandLineService>();
             services.AddScoped<CompanyService>();
-            services.AddScoped<DownloadService>();
+            services.AddScoped<InstallService>();
             services.AddScoped<EngineService>();
             services.AddScoped<GameService>();
             services.AddScoped<GenreService>();
             services.AddScoped<ImportService>();
             services.AddScoped<LibraryService>();
+            services.AddScoped<UserService>();
+            services.AddScoped<DepotService>();
             services.AddScoped<MediaService>();
             services.AddScoped<MultiplayerModeService>();
             services.AddScoped<PlatformService>();

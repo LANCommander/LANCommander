@@ -1,13 +1,13 @@
 ﻿@using LANCommander.Launcher.Models
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject NavigationManager NavigationManager
 
-<Drawer Placement="bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
+<Drawer Placement="DrawerPlacement.Bottom" Class="download-queue" @bind-Visible="@Visible" OnClose="Hide">
 
-    @if (DownloadService.Queue.Any(qi => qi.State))
+    @if (InstallService.Queue.Any(qi => qi.State))
     {
         <h2>In Progress</h2>
-        @foreach (var queueItem in DownloadService.Queue.Where(qi => qi.State))
+        @foreach (var queueItem in InstallService.Queue.Where(qi => qi.State))
         {
             <div class="queue-item">
                 <MediaImage Id="@queueItem.CoverId" Class="queue-item-cover" />
@@ -24,7 +24,7 @@
     }
 
     <h2>Up Next</h2>
-    @foreach (var queueItem in DownloadService.Queue.Where(qi => !qi.State && qi.Status == SDK.Enums.GameInstallStatus.Idle))
+    @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State && qi.Status == SDK.Enums.GameInstallStatus.Queued))
     {
         <div class="queue-item">
             <MediaImage Id="@queueItem.CoverId" Class="queue-item-cover" />
@@ -34,20 +34,20 @@
                 </div>
             </div>
             <div class="queue-item-actions">
-                <Button Icon="@IconType.Outline.Close" Size="@ButtonSize.Large" Danger OnClick="() => Remove(queueItem)" />
+                <Button Icon="@IconType.Outline.Close" Size="ButtonSize.Large" Danger OnClick="() => Remove(queueItem)" />
             </div>
         </div>
     }
 
-    @if (!DownloadService.Queue.Any(qi => qi.Status == SDK.Enums.GameInstallStatus.Idle))
+    @if (!InstallService.Queue.Any(qi => qi.Status == SDK.Enums.GameInstallStatus.Queued))
     {
         <Empty Simple Description="@("The queue is empty")" />
     }
 
-    @if (DownloadService.Queue.Any(qi => !qi.State && qi.Status != SDK.Enums.GameInstallStatus.Idle && qi.Status != SDK.Enums.GameInstallStatus.Failed && qi.Status != SDK.Enums.GameInstallStatus.Canceled))
+    @if (InstallService.Queue.Any(qi => !qi.State && qi.Status != SDK.Enums.GameInstallStatus.Queued && qi.Status != SDK.Enums.GameInstallStatus.Failed && qi.Status != SDK.Enums.GameInstallStatus.Canceled))
     {
         <h2>Completed</h2>
-        @foreach (var queueItem in DownloadService.Queue.Where(qi => !qi.State))
+        @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State))
         {
             <div class="queue-item">
                 <MediaImage Id="@queueItem.CoverId" Class="queue-item-cover" />
@@ -76,18 +76,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        DownloadService.OnQueueChanged += async () =>
+        InstallService.OnQueueChanged += async () =>
         {
             StateHasChanged();
         };
     }
 
-    async Task Remove(IDownloadQueueItem queueItem)
+    async Task Remove(IInstallQueueItem queueItem)
     {
-        DownloadService.Remove(queueItem);
+        InstallService.Remove(queueItem);
     }
 
-    async Task ViewInLibrary(IDownloadQueueItem queueItem)
+    async Task ViewInLibrary(IInstallQueueItem queueItem)
     {
         Visible = false;
         NavigationManager.NavigateTo("/" + queueItem.Id);

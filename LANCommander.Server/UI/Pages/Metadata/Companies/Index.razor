@@ -1,54 +1,38 @@
 ﻿@page "/Metadata/Companies"
+@using LANCommander.Server.Data
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize(Roles = "Administrator")]
-@inject CompanyService CompanyService
-@inject NavigationManager NavigationManager
+@using System.Web
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Companies">
-    <PageHeaderExtra>
-        <Space Direction="DirectionVHType.Horizontal">
-            <SpaceItem>
-                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
-            </SpaceItem>
-            <SpaceItem>
-                <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Company</Button>
-            </SpaceItem>
-        </Space>
-    </PageHeaderExtra>
-</PageHeader>
+<PageHeader Title="Companies" />
 
-<TableColumnPicker @ref="Picker" Key="Companies" @bind-Visible="ColumnPickerVisible" />
-
-<Table TItem="Company" DataSource="@Companies" Loading="@Loading" PageSize="25" Responsive>
-    <PropertyColumn Property="c => c.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
-    <PropertyColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
-    <PropertyColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
-    <PropertyColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
-    <PropertyColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
-    <PropertyColumn Property="c => c.DevelopedGames != null ? c.DevelopedGames.Count : 0" Title="Developed Games" Sortable Hidden="@(Picker.IsColumnHidden("Developed Games"))" />
-    <PropertyColumn Property="c => c.PublishedGames != null ? c.PublishedGames.Count : 0" Title="Published Games" Sortable Hidden="@(Picker.IsColumnHidden("Published Games"))" />
-    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
-        <TitleTemplate>
-            <div style="text-align: right">
-                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
-            </div>
-        </TitleTemplate>
-        <ChildContent>
-            <Space Direction="DirectionVHType.Horizontal">
-                <SpaceItem>
-                    <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenEdit(context)" />
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this Company?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ChildContent>
-    </ActionColumn>
-</Table>
+<DataTable
+    TItem="Company"
+    Size="TableSize.Small"
+    Responsive
+    Searchable
+    SearchProperty="c => c.Name">
+    <RightToolbar>
+        <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Company</Button>
+    </RightToolbar>
+    <Columns>
+        <BoundDataColumn Property="c => c.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <BoundDataColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+        <BoundDataColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+        <BoundDataColumn Property="c => c.DevelopedGames.Count" Sortable Title="Developed Games" Include="DevelopedGames" />
+        <BoundDataColumn Property="c => c.PublishedGames.Count" Sortable Title="Published Games" Include="PublishedGames" />
+        <DataActions>
+            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this company?">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger />
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+</DataTable>
 
 <Modal Title="@(CompanyContext.Id == Guid.Empty ? "New Company" : "Edit Company")"
     @bind-Visible="@EditCompanyVisible"
@@ -62,55 +46,30 @@
 </Modal>
 
  @code {
-    IEnumerable<Company> Companies { get; set; } = new List<Company>();
-
-    bool Loading = true;
-
-    string Search = "";
-
-    TableColumnPicker Picker;
-    bool ColumnPickerVisible = false;
-
     bool EditCompanyVisible = false;
-    Company CompanyContext = new Company();
+    Company CompanyContext = new();
 
-    protected override void OnAfterRender(bool firstRender)
-    {
-        if (firstRender)
-        {
-            LoadData();
-
-            Loading = false;
-
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadData()
-    {
-        var fuzzySearch = Search.ToLower().Trim();
-
-        Companies = await CompanyService.Get(r => r.Name.ToLower().Contains(fuzzySearch)).OrderBy(r => r.Name).ToListAsync();
-    }
-
-    private async Task UpdateOrAdd()
+    async Task UpdateOrAdd()
     {
         try
         {
-            if (CompanyContext.Id == Guid.Empty)
+            using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
             {
-                await CompanyService.AddMissing(x => x.Name == CompanyContext.Name, CompanyContext);
+                if (CompanyContext.Id == Guid.Empty)
+                {
+                    await companyService.AddMissingAsync(x => x.Name == CompanyContext.Name, CompanyContext);
 
-                MessageService.Success($"{CompanyContext.Name} was added!");
+                    MessageService.Success($"{CompanyContext.Name} was added!");
+                }
+                else
+                {
+                    await companyService.UpdateAsync(CompanyContext);
+
+                    MessageService.Success($"{CompanyContext.Name} was updated!");
+                }
             }
-            else
-            {
-                await CompanyService.Update(CompanyContext);
 
-                MessageService.Success($"{CompanyContext.Name} was updated!");
-            }
-
-            await LoadData();
+            // await LoadData();
         }
         catch (Exception ex)
         {
@@ -125,7 +84,7 @@
         await CloseEdit();
     }
 
-    private async Task OpenEdit(Company company)
+    async Task OpenEdit(Company company)
     {
         if (company != null)
             CompanyContext = company;
@@ -135,33 +94,18 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseEdit()
+    async Task CloseEdit()
     {
         EditCompanyVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Delete(Company Company)
+    async Task Delete(Company Company)
     {
-        Companies = new List<Company>();
-
-        Loading = true;
-
-        await CompanyService.Delete(Company);
-
-        Companies = await CompanyService.Get(x => true).OrderBy(r => r.Name).ToListAsync();
-
-        Loading = false;
-    }
-
-    private async Task OpenColumnPicker()
-    {
-        ColumnPickerVisible = true;
-    }
-
-    private async Task CloseColumnPicker()
-    {
-        ColumnPickerVisible = false;
+        using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
+        {
+            await companyService.DeleteAsync(Company);
+        }
     }
 }

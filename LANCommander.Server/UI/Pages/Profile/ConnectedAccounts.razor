@@ -1,0 +1,95 @@
+@page "/Profile/ConnectedAccounts"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject UserCustomFieldService UserCustomFieldService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<PageHeader Title="Connected Accounts" />
+
+<div style="padding: 0 24px">
+    <AntList DataSource="Settings.Authentication.AuthenticationProviders" Bordered Size="ListSize.Large">
+        <ListItem>
+            <Flex Align="FlexAlign.Center" Justify="FlexJustify.SpaceBetween" Style="width: 100%">
+                <Flex Align="FlexAlign.Center" Gap="FlexGap.Large">
+                    @if (!String.IsNullOrWhiteSpace(context.Icon))
+                    {
+                        <BootstrapIcon Type="@context.Icon" Width="32px" Height="32px" Color="@(String.IsNullOrWhiteSpace(context.Color) ? "" : context.Color)"/>
+                    }
+
+                    <h3 style="margin: 0;">@context.Name</h3>
+                </Flex>
+
+                @{
+                    var customField = CustomFields.FirstOrDefault(cf => cf.Name == context.GetCustomFieldName());
+
+                    if (customField != null)
+                    {
+                        <Button Type="@ButtonType.Primary" OnClick="() => Unlink(customField)">Unlink</Button>
+                    }
+                    else
+                    {
+                        <form method="post" action="/AccountLink">
+                            <input type="hidden" name="providerSlug" value="@context.Slug" />
+                            <input type="hidden" name="returnUrl" value="@NavigationManager.Uri" />
+
+                            <button class="ant-btn ant-btn-primary" type="submit">
+                                <span>Link</span>
+                            </button>
+                        </form>
+                    }
+                }
+            </Flex>
+        </ListItem>
+    </AntList>
+</div>
+
+@code {
+    Settings Settings = SettingService.GetSettings();
+
+    User User = new();
+    List<UserCustomField> CustomFields = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            if (authState.User.Identity.IsAuthenticated)
+            {
+                User = await userService.GetAsync(authState.User.Identity.Name);
+            }
+        }
+
+        await LoadData();
+    }
+
+    async Task LoadData()
+    {
+        using (var userCustomFieldService = DatabaseServiceFactory.Create<UserCustomFieldService>())
+        {
+            foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
+            {
+                var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.UserId == User.Id);
+                
+                if (customField != null)
+                    CustomFields.Add(customField);
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Unlink(UserCustomField customField)
+    {
+        using (var userCustomFieldService = DatabaseServiceFactory.Create<UserCustomFieldService>())
+        {
+            userCustomFieldService.DeleteAsync(customField.UserId.Value, customField.Name);
+        }
+
+        await LoadData();
+    }
+
+}

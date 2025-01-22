@@ -1,10 +1,7 @@
 ﻿@page "/Profile"
 @page "/Profile/General"
-@using Microsoft.AspNetCore.Components.Authorization;
-@layout ProfileLayout
-@inject MediaService MediaService
-@inject UserManager<User> UserManager
-@inject SignInManager<User> SignInManager
+@using Microsoft.AspNetCore.Components.Authorization
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -46,8 +43,11 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        if (authState.User.Identity.IsAuthenticated)
-            User = await UserManager.FindByNameAsync(authState.User.Identity.Name);
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            if (authState.User.Identity.IsAuthenticated)
+                User = await userService.GetAsync(authState.User.Identity.Name);
+        }
     }
 
     private async Task Save()
@@ -56,11 +56,14 @@
         {
             if (Form.IsModified)
             {
-                await UserManager.UpdateAsync(User);
+                using (var userService = DatabaseServiceFactory.Create<UserService>())
+                {
+                    await userService.UpdateAsync(User);
+                }
 
                 MessageService.Success("Profile updated!");
 
-                NavigationManager.NavigateTo("/Identity/Account/Logout?force=true", true);
+                NavigationManager.NavigateTo("/Logout?force=true", true);
             }
         }
         catch (Exception ex)

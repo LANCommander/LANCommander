@@ -1,17 +1,17 @@
 ﻿@page "/Settings/Media"
 @using LANCommander.Server.Models;
-@layout SettingsLayout
-@inject SettingService SettingService
+@using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Media> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Media" />
 
 <div style="padding: 0 24px;">
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Media.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@StorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
 
         <FormItem Label="Max Size (MB)">
@@ -33,16 +33,21 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
+    StorageLocation StorageLocation;
+
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+        {
+            StorageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
+        }
     }
 
-    private void Save()
+    void Save()
     {
         try
         {
@@ -56,13 +61,13 @@
         }
     }
 
-    private void OnPathSelected(string path)
+    void OnPathSelected(string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        Settings.Archives.StoragePath = path;
+        StorageLocation.Path = path;
     }
 }

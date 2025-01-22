@@ -1,0 +1,179 @@
+﻿@using LANCommander.Launcher.Data.Models
+@using LANCommander.Launcher.Models
+@using LANCommander.SDK.Extensions
+@inherits FeedbackComponent<Models.ListItem, string>
+@inject InstallService InstallService
+@inject SDK.Client Client
+
+<div style="padding: 16px;">
+    <Row Gutter="16">
+        <Col Span="12">
+            <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;" />
+        </Col>
+        <Col Span="12">
+            <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;"/>
+        </Col>
+    </Row>
+
+
+    @if (Addons.Any())
+    {
+        <Divider Text="Addons" />
+
+        <CheckboxButtonGroup DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
+    }
+
+    @if (Settings.Games.InstallDirectories.Length > 1)
+    {
+        <Divider Text="Install Location" />
+        <RadioGroup @bind-Value="SelectedDirectory" ButtonStyle="RadioButtonStyle.Solid" Size="InputSize.Large" Class="install-dialog-directory-selector radio-group-vertical radio-group-block">
+            @foreach (var directory in Settings.Games.InstallDirectories)
+            {
+                <Radio RadioButton Value="@directory">
+                    <GridRow>
+                        <GridCol Flex="@("auto")">
+                            @directory
+                        </GridCol>
+                        <GridCol>
+                            @ByteSizeLib.ByteSize.FromBytes(GetFreeSpace(directory))
+                        </GridCol>
+                    </GridRow>
+                </Radio>
+            }
+        </RadioGroup>
+    }
+</div>
+
+
+<Flex Gap="FlexGap.Middle" Style="padding: 16px; padding-top: 0px" Justify="FlexJustify.FlexEnd">
+    @if (GetOperation() != InstallOperation.None)
+    {
+        <Button Type="ButtonType.Primary" OnClick="Install">@GetOperation()</Button>
+    }
+
+    <Button OnClick="() => Close()">Close</Button>
+</Flex>
+
+@code {
+    Settings Settings = SettingService.GetSettings();
+
+    string SelectedDirectory = "";
+
+    List<SDK.Models.Game> Addons = new();
+
+    SDK.Models.Game RemoteGame;
+    Data.Models.Game Game;
+
+    Guid[] SelectedAddonIds = new Guid[] { };
+
+    enum InstallOperation
+    {
+        None,
+        Install,
+        Move,
+        Modify,
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Game = Options.DataItem as Game;
+
+        if (Game.Installed)
+            SelectedDirectory = Settings.Games.InstallDirectories.FirstOrDefault(d => Game.InstallDirectory.StartsWith(d));
+
+        if (String.IsNullOrWhiteSpace(SelectedDirectory))
+            SelectedDirectory = Settings.Games.InstallDirectories.First();
+
+        RemoteGame = await Client.Games.GetAsync(Options.Key);
+
+        if (RemoteGame.DependentGames != null)
+        {
+            var dependentGames = new List<SDK.Models.Game>();
+
+            foreach (var dependentGame in RemoteGame.DependentGames)
+            {
+                dependentGames.Add(await Client.Games.GetAsync(dependentGame));
+            }
+
+            Addons = dependentGames.Where(g => g.Type.IsIn(SDK.Enums.GameType.Expansion, SDK.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
+        }
+        else
+            Addons = new List<SDK.Models.Game>();
+    }
+
+    async Task Close()
+    {
+        await CloseFeedbackAsync();
+    }
+
+    async Task Install()
+    {
+        var game = Options.DataItem as Game;
+
+        InstallService.Add(game, SelectedDirectory, SelectedAddonIds);
+
+        await CloseFeedbackAsync();
+    }
+
+    InstallOperation GetOperation()
+    {
+        if (!Game.Installed)
+            return InstallOperation.Install;
+
+        if (Game.DependentGames.Any(g => !g.Installed && SelectedAddonIds.Contains(g.Id)))
+            return InstallOperation.Modify;
+
+        if (!Game.InstallDirectory.StartsWith(SelectedDirectory))
+            return InstallOperation.Move;
+
+        return InstallOperation.None;
+    }
+
+    void OnAddonsSelectedChange(string[] selectedIds)
+    {
+        try
+        {
+            SelectedAddonIds = selectedIds.Select(id => Guid.Parse(id)).ToArray();
+        }
+        catch (Exception ex)
+        {
+            SelectedAddonIds = new Guid[] { };
+        }
+    }
+
+    long GetDownloadSize()
+    {
+        long size = 0;
+
+        if (RemoteGame != null && RemoteGame.Archives.Any())
+        {
+            size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+
+            size += Addons.Where(a => SelectedAddonIds.Contains(a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
+        }
+
+        return size;
+    }
+
+    long GetSpaceRequired()
+    {
+        long size = 0;
+
+        if (RemoteGame != null && RemoteGame.Archives.Any())
+        {
+            size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
+
+            size += Addons.Where(a => SelectedAddonIds.Contains(a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
+        }
+
+        return size;
+    }
+
+    long GetFreeSpace(string path)
+    {
+        var root = Path.GetPathRoot(path);
+        var drive = new DriveInfo(path);
+
+        return drive.AvailableFreeSpace;
+    }
+}

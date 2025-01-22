@@ -16,23 +16,25 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly GameSaveService GameSaveService;
         private readonly GameService GameService;
-        private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
         public GameSavesController(
             ILogger<GameSavesController> logger,
             GameSaveService gameSaveService,
             GameService gameService,
-            UserManager<User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             GameSaveService = gameSaveService;
             GameService = gameService;
-            UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<GameSave>> Get(Guid id)
+        public async Task<ActionResult<SDK.Models.GameSave>> GetAsync(Guid id)
         {
-            var gameSave = await GameSaveService.Get(id);
+            var gameSave = await GameSaveService
+                .Include(gs => gs.User)
+                .GetAsync<SDK.Models.GameSave>(id);
 
             if (gameSave == null || gameSave.User == null)
             {
@@ -46,13 +48,13 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
             }
 
-            return Ok(await GameSaveService.Get(id));
+            return Ok(await GameSaveService.GetAsync<SDK.Models.GameSave>(id));
         }
 
         [HttpGet("{id}/Download")]
-        public async Task<IActionResult> Download(Guid id)
+        public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -60,7 +62,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var user = await UserManager.GetUserAsync(User);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
             {
@@ -68,7 +70,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
                 
-            var path = GameSaveService.GetSavePath(game.Id, user.Id);
+            var path = await GameSaveService.GetSavePathAsync(game.Id, user.Id);
 
             if (!System.IO.File.Exists(path))
             {
@@ -80,7 +82,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("{id}/Upload")]
-        public async Task<IActionResult> Upload(Guid id, [FromForm] SaveUpload save)
+        public async Task<IActionResult> UploadAsync(Guid id, [FromForm] SaveUpload save)
         {
             var maxSize = (ByteSizeLib.ByteSize.BytesInMebiByte * Settings.UserSaves.MaxSize);
 
@@ -90,7 +92,7 @@ namespace LANCommander.Server.Controllers.Api
                 return BadRequest("Save file archive is too large");
             }
 
-            var game = await GameService.Get(id);
+            var game = await GameService.GetAsync(id);
 
             if (game == null)
             {
@@ -98,7 +100,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var user = await UserManager.GetUserAsync(User);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
             {
@@ -106,7 +108,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var path = GameSaveService.GetSavePath(game.Id, user.Id);
+            var path = await GameSaveService.GetSavePathAsync(game.Id, user.Id);
 
             var fileInfo = new FileInfo(path);
 

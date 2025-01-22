@@ -2,11 +2,9 @@
 @using LANCommander.Server.Models;
 @using Octokit
 @using Semver
-@layout SettingsLayout
-@inject SettingService SettingService
 @inject IMessageService MessageService
 @inject ILogger<Updates> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Launcher" />
 
@@ -27,14 +25,9 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
-
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
 
     void Save()
     {

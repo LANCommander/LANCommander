@@ -1,0 +1,25 @@
+﻿@inherits FeedbackComponent<IEnumerable<DataTableColumn>, IEnumerable<DataTableColumn>>
+@namespace LANCommander.Server.UI.Components
+
+<Flex Vertical Justify="FlexJustify.SpaceBetween" Style="height: 100%;">
+    <Space Direction="SpaceDirection.Vertical">
+        @foreach (var column in Options)
+        {
+            <SpaceItem>
+                <Switch @bind-Checked="column.Visible" /> @column.Name
+            </SpaceItem>
+        }
+    </Space>
+
+    <Button Type="ButtonType.Primary" Block OnClick="Apply">Apply</Button>
+</Flex>
+
+@code {
+
+    async Task Apply()
+    {
+        DrawerRef<IEnumerable<DataTableColumn>> drawerRef = base.FeedbackRef as DrawerRef<IEnumerable<DataTableColumn>>;
+
+        await drawerRef!.CloseAsync(Options);
+    }
+}

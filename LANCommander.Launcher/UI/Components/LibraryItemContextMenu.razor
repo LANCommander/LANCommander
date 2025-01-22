@@ -3,8 +3,9 @@
 @using System.Diagnostics
 @using LANCommander.SDK.Helpers
 @inject GameService GameService
+@inject UserService UserService
 @inject LibraryService LibraryService
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject ModalService ModalService
 @inject MessageBusService MessageBusService
 @inject SDK.Client Client
@@ -35,8 +36,25 @@
         <MenuDivider />
     }
 
+    <MenuItem OnClick="() => OpenSaveManager()">
+        Manage Saves
+    </MenuItem>
+
+    if (Settings.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
+    {
+        <MenuItem OnClick="() => Modify()">
+            Modify
+        </MenuItem>
+    }
+
     <MenuItem OnClick="() => BrowseFiles()">
         Browse Files
+    </MenuItem>
+    <MenuItem OnClick="() => ValidateFiles()">
+        Validate Files
+    </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()">
+        Remove
     </MenuItem>
     <MenuItem OnClick="() => Uninstall()">
         Uninstall
@@ -46,6 +64,9 @@ else
 {
     <MenuItem OnClick="() => Install()">
         Install
+    </MenuItem>
+    <MenuItem OnClick="() => RemoveFromLibrary()">
+        Remove
     </MenuItem>
 }
 
@@ -79,7 +100,7 @@ else
 @MenuExtra
 
 @code {
-    [Parameter] public LibraryItem Model { get; set; }
+    [Parameter] public Models.ListItem Model { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
 
     Data.Models.Game Game { get; set; }
@@ -125,7 +146,7 @@ else
 
     async Task Install()
     {
-        if (Settings.Games.InstallDirectories.Length > 1)
+        if (Settings.Games.InstallDirectories.Length > 1 || (Model.DataItem as Game).DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
         {
             var modalOptions = new ModalOptions()
             {
@@ -133,17 +154,53 @@ else
                 Maximizable = false,
                 DefaultMaximized = false,
                 Closable = true,
-                OkText = "Install",
                 Draggable = true,
-                Centered = true
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
             };
 
-            var modalRef = ModalService.CreateModal<InstallDirectorySelectorDialog, LibraryItem, string>(modalOptions, Model);
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
         }
         else
         {
-            await LibraryService.Install(Model);
+            var game = Model.DataItem as Game;
+
+            await InstallService.Add(game);
         }
+    }
+
+    async Task Modify()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Modify {Model.Name}",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, Model);
+    }
+
+    async Task ValidateFiles()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"File Conflicts",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            OkText = "Replace Selected",
+        };
+
+        var modalRef = ModalService.CreateModal<ValidateFilesDialog, Game>(modalOptions, Model.DataItem as Game);
     }
 
     async Task Uninstall()
@@ -163,7 +220,10 @@ else
             CancelText = "Cancel",
             Title = "Uninstall",
             Content = message,
-            OkType = "danger",
+            OkButtonProps = new ButtonProps()
+            {
+                Danger = true
+            },
             Centered = true,
             Icon = @<Icon Type="@IconType.Outline.Delete" />
         });
@@ -171,9 +231,14 @@ else
         if (confirmed)
             await GameService.UninstallAsync(Game);
 
-        DownloadService.Remove(Game.Id);
+        InstallService.Remove(Game.Id);
 
         await LibraryService.LibraryChanged();
+    }
+
+    async Task RemoveFromLibrary()
+    {
+        await LibraryService.RemoveFromLibraryAsync(Game.Id);
     }
 
     async Task RunInstallScripts()
@@ -198,11 +263,12 @@ else
 
     async Task RunNameChangeScripts()
     {
+        var user = await UserService.GetCurrentUser();
         var manifests = await Client.Games.GetManifestsAsync(Game.InstallDirectory, Game.Id);
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, Settings.Profile.Alias);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.Alias);
         }
     }
 
@@ -233,6 +299,23 @@ else
         };
 
         var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+    }
+
+    async Task OpenSaveManager()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Manage Saves",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Resizable = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<SavesDialog, Game>(modalOptions, Game);
     }
 
     async Task ReportIssue()

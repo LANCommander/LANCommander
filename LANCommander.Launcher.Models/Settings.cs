@@ -1,4 +1,5 @@
 ﻿using LANCommander.Launcher.Models.Enums;
+using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
@@ -12,7 +13,6 @@ namespace LANCommander.Launcher.Models
         public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();
         public GameSettings Games { get; set; } = new GameSettings();
         public MediaSettings Media { get; set; } = new MediaSettings();
-        public ProfileSettings Profile { get; set; } = new ProfileSettings();
         public FilterSettings Filter { get; set; } = new FilterSettings();
         public DebugSettings Debug { get; set; } = new DebugSettings();
         public UpdateSettings Updates { get; set; } = new UpdateSettings();
@@ -45,17 +45,12 @@ namespace LANCommander.Launcher.Models
         public string StoragePath { get; set; } = "Media";
     }
 
-    public class ProfileSettings
-    {
-        public Guid Id { get; set; }
-        public string Alias { get; set; }
-        public Guid AvatarId { get; set; }
-    }
-
     public class FilterSettings
     {
         public string? Title { get; set; }
         public GroupBy GroupBy { get; set; } = GroupBy.Collection;
+        public SortBy SortBy { get; set; } = SortBy.Title;
+        public SortDirection SortDirection { get; set; } = SortDirection.Ascending;
         public IEnumerable<string> Engines { get; set; }
         public IEnumerable<string> Genres { get; set; }
         public IEnumerable<string> Tags { get; set; }

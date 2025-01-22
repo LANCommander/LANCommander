@@ -1,0 +1,10 @@
+.launcher-download {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.launcher-download img {
+    max-width: 500px;
+    width: 75vw;
+}

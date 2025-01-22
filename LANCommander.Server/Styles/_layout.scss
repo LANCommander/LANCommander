@@ -1,0 +1,15 @@
+﻿.ant-layout-has-sider > .ant-flex {
+    flex-grow: 1;
+}
+
+.site-layout-background {
+    background: #141414;
+    padding-bottom: 24px;
+
+    & > .ant-table-wrapper {
+        .ant-table-pagination {
+            margin: 24px;
+            margin-bottom: 0;
+        }
+    }
+}

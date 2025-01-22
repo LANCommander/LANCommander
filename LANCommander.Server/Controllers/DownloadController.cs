@@ -28,7 +28,7 @@ namespace LANCommander.Server.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<IActionResult> Launcher()
+        public async Task<IActionResult> LauncherAsync()
         {
             var version = UpdateService.GetCurrentVersion();
             var settings = SettingService.GetSettings();
@@ -37,7 +37,7 @@ namespace LANCommander.Server.Controllers
 
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
             {
-                var release = await UpdateService.GetRelease(version);
+                var release = await UpdateService.GetReleaseAsync(version);
                 var asset = release.Assets.FirstOrDefault(a => a.Name == fileName);
 
                 if (asset != null)
@@ -49,15 +49,15 @@ namespace LANCommander.Server.Controllers
             return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);
         }
 
-        [Authorize(Roles = "Administrator")]
-        public async Task<IActionResult> Archive(Guid id)
+        [Authorize(Roles = RoleService.AdministratorRoleName)]
+        public async Task<IActionResult> ArchiveAsync(Guid id)
         {
-            var archive = await ArchiveService.Get(id);
+            var archive = await ArchiveService.GetAsync(id);
 
             if (archive == null)
                 return NotFound();
 
-            var filename = Path.Combine(Settings.Archives.StoragePath, archive.ObjectKey);
+            var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
             if (!System.IO.File.Exists(filename))
                 return NotFound();
@@ -73,11 +73,11 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Save(Guid id)
+        public async Task<IActionResult> SaveAsync(Guid id)
         {
-            var save = await GameSaveService.Get(id);
+            var save = await GameSaveService.GetAsync(id);
 
-            if (User == null || User.Identity?.Name != save.User?.UserName && !User.IsInRole("Administrator"))
+            if (User == null || User.Identity?.Name != save.User?.UserName && !User.IsInRole(RoleService.AdministratorRoleName))
                 return Unauthorized();
 
             if (save == null)

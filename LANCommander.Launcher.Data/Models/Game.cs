@@ -47,5 +47,6 @@ namespace LANCommander.Launcher.Data.Models
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
         public virtual ICollection<Game> DependentGames { get; set; } = new List<Game>();
         public virtual ICollection<PlaySession> PlaySessions { get; set; } = new List<PlaySession>();
+        public virtual ICollection<Library> Libraries { get; set; } = new List<Library>();
     }
 }

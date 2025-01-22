@@ -8,13 +8,25 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Hangfire;
 using LANCommander.Server.Services.MediaGrabbers;
-using Microsoft.Data.Sqlite;
 using LANCommander.Server.Extensions;
 using Microsoft.AspNetCore.Http.Features;
 using LANCommander.SDK.Enums;
 using Serilog;
 using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 using LANCommander.Server.Logging;
+using LANCommander.Server.Data.Enums;
+using System.Diagnostics;
+using LANCommander.Server.Services.Factories;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Authentication;
+using LANCommander.Server.Jobs.Background;
+using LANCommander.Server.Services.Models;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Data.Sqlite;
+using Microsoft.OpenApi.Models;
+using Microsoft.CodeAnalysis.Options;
+using Scalar.AspNetCore;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace LANCommander.Server
 {
@@ -26,13 +38,45 @@ namespace LANCommander.Server
                 .WriteTo.Console()
                 .CreateBootstrapLogger();
 
+            Log.Information("Starting application...");
+
             var builder = WebApplication.CreateBuilder(args);
 
             ConfigurationManager configuration = builder.Configuration;
 
+            #region Debug
+            if (args.Contains("--debugger"))
+            {
+                var currentProcess = Process.GetCurrentProcess();
+
+                Console.WriteLine($"Waiting for debugger to attach... Process ID: {currentProcess.Id}");
+
+                while (!Debugger.IsAttached)
+                {
+                    Thread.Sleep(100);
+                }
+
+                Console.WriteLine("Debugger attached.");
+            }
+            #endregion
+
             // Add services to the container.
             Log.Debug("Loading settings");
             var settings = SettingService.GetSettings(true);
+
+            var databaseProviderParameter = args.FirstOrDefault(arg => arg.StartsWith("--database-provider="))?.Split('=', 2).Last();
+            var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
+
+            if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
+                DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
+            else
+                DatabaseContext.Provider = settings.DatabaseProvider;
+
+            if (!String.IsNullOrWhiteSpace(connectionStringParameter))
+                DatabaseContext.ConnectionString = connectionStringParameter;
+            else
+                DatabaseContext.ConnectionString = settings.DatabaseConnectionString;
+
             Log.Debug("Loaded!");
 
 
@@ -46,7 +90,11 @@ namespace LANCommander.Server
             builder.Services.AddSerilogHub<LoggingHub>();
             builder.Services.AddSerilog((serviceProvider, config) => config
                 .WriteTo.Console()
-                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: settings.Logs.ArchiveEvery)
+                .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery)
+#if DEBUG
+                .WriteTo.Seq("http://localhost:5341")
+                .MinimumLevel.Debug()
+#endif
                 .WriteTo.SignalR<LoggingHub>(
                     serviceProvider,
                     (context, message, logEvent) => LoggingHub.Log(context, message, logEvent)
@@ -97,14 +145,10 @@ namespace LANCommander.Server
                 options.RootDirectory = "/UI/Pages";
             });
 
-            builder.Services.AddServerSideBlazor().AddCircuitOptions(option =>
-            {
-                option.DetailedErrors = true;
-            }).AddHubOptions(option =>
-            {
-                option.MaximumReceiveMessageSize = 1024 * 1024 * 11;
-                option.DisableImplicitFromServicesParameters = true;
-            });
+            builder.Services.AddRazorComponents()
+                .AddInteractiveServerComponents();
+
+            builder.Services.AddCascadingAuthenticationState();
 
             builder.Services.AddAutoMapper(typeof(AutoMapper));
 
@@ -124,16 +168,14 @@ namespace LANCommander.Server
             }));
 
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
-            builder.Services.AddDbContext<DatabaseContext>(b =>
-            {
-                b.UseLazyLoadingProxies();
-                b.UseSqlite(settings.DatabaseConnectionString);
-            });
+
+            builder.Services.AddDbContextFactory<DatabaseContext>();
+            builder.Services.AddDbContext<DatabaseContext>();
 
             builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
             Log.Debug("Initializing Identity");
-            builder.Services.AddDefaultIdentity<User>((IdentityOptions options) =>
+            builder.Services.AddIdentityCore<User>((IdentityOptions options) =>
             {
                 options.SignIn.RequireConfirmedAccount = false;
                 options.SignIn.RequireConfirmedEmail = false;
@@ -145,28 +187,73 @@ namespace LANCommander.Server
                 options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
             })
                 .AddRoles<Role>()
-                .AddEntityFrameworkStores<LANCommander.Server.Data.DatabaseContext>()
+                .AddEntityFrameworkStores<DatabaseContext>()
+                .AddSignInManager()
                 .AddDefaultTokenProviders();
 
-            builder.Services.AddAuthentication(options =>
+            builder.Services.Configure<CookiePolicyOptions>(options =>
             {
+                options.Secure = settings.Authentication.CookieSecurePolicy;
+                options.MinimumSameSitePolicy = settings.Authentication.MinimumSameSitePolicy;
+            });
+
+            var authBuilder = builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
                 /*options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;*/
-            })
-                .AddJwtBearer(options =>
+            });
+
+            foreach (var authenticationProvider in settings.Authentication.AuthenticationProviders)
+            {
+                try
                 {
-                    options.SaveToken = true;
-                    options.RequireHttpsMetadata = false;
-                    options.TokenValidationParameters = new TokenValidationParameters()
+                    switch (authenticationProvider.Type)
                     {
-                        ValidateIssuer = false,
-                        ValidateAudience = false,
-                        // ValidAudience = configuration["JWT:ValidAudience"],
-                        // ValidIssuer = configuration["JWT:ValidIssuer"],
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Authentication.TokenSecret))
-                    };
-                });
+                        case AuthenticationProviderType.OAuth2:
+                            authBuilder.AddOAuth(authenticationProvider);
+                            break;
+
+                        case AuthenticationProviderType.OpenIdConnect:
+                            authBuilder.AddOpenIdConnect(authenticationProvider);
+                            break;
+
+                        case AuthenticationProviderType.Saml:
+                            throw new NotImplementedException("SAML providers are not supported at this time.");
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Authentication Provider {Name} could not be registered",
+                        authenticationProvider.Name);
+                }
+            }
+
+            authBuilder.AddIdentityCookies();
+
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Login";
+                options.LogoutPath = "/Logout";
+                options.AccessDeniedPath = "/AccessDenied";
+            });
+
+            authBuilder.AddJwtBearer(options =>
+            {
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    // ValidAudience = configuration["JWT:ValidAudience"],
+                    // ValidIssuer = configuration["JWT:ValidIssuer"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Authentication.TokenSecret))
+                };
+            });
 
             Log.Debug("Initializing Controllers");
             builder.Services.AddControllers().AddJsonOptions(x =>
@@ -187,7 +274,34 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Swashbuckle");
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.CustomSchemaIds(type => type.ToString());
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    In = ParameterLocation.Header,
+                    Description = "Enter a valid access token",
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    BearerFormat = "JWT",
+                    Scheme = "Bearer"
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[]{}
+                    }
+                });
+            });
 
             Log.Debug("Registering AntDesign Blazor");
             builder.Services.AddAntDesign();
@@ -196,11 +310,17 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
+            builder.Services.AddSingleton<RepositoryFactory>();
+            builder.Services.AddScoped(typeof(Repository<>));
+            builder.Services.AddScoped<DatabaseServiceFactory>();
+            builder.Services.AddScoped<IdentityContextFactory>();
             builder.Services.AddScoped<SettingService>();
             builder.Services.AddScoped<ArchiveService>();
+            builder.Services.AddScoped<StorageLocationService>();
             builder.Services.AddScoped<CategoryService>();
             builder.Services.AddScoped<CollectionService>();
             builder.Services.AddScoped<GameService>();
+            builder.Services.AddScoped<LibraryService>();
             builder.Services.AddScoped<ScriptService>();
             builder.Services.AddScoped<GenreService>();
             builder.Services.AddScoped<PlatformService>();
@@ -220,6 +340,10 @@ namespace LANCommander.Server
             builder.Services.AddScoped<IssueService>();
             builder.Services.AddScoped<PageService>();
             builder.Services.AddScoped<UserService>();
+            builder.Services.AddScoped<UserCustomFieldService>();
+            builder.Services.AddScoped<RoleService>();
+            builder.Services.AddScoped<Services.AuthenticationService>();
+            builder.Services.AddScoped<SetupService>();
 
             builder.Services.AddSingleton<ServerProcessService>();
             builder.Services.AddSingleton<IPXRelayService>();
@@ -247,8 +371,14 @@ namespace LANCommander.Server
             var app = builder.Build();
 
             app.UseCors("CorsPolicy");
+            app.UseHttpsRedirection();
 
             app.MapHub<GameServerHub>("/hubs/gameserver");
+            
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
 
             app.Use(async (context, next) =>
             {
@@ -275,8 +405,6 @@ namespace LANCommander.Server
             {
                 Log.Debug("App has been run in a development environment");
                 app.UseMigrationsEndPoint();
-                app.UseSwagger();
-                app.UseSwaggerUI();
             }
             else
             {
@@ -285,11 +413,16 @@ namespace LANCommander.Server
                 app.UseHsts();
             }
 
+            app.UseSwagger(options =>
+            {
+                options.RouteTemplate = "/openapi/{documentName}.json";
+            });
+            app.MapScalarApiReference();
             app.UseHangfireDashboard();
 
             // app.UseHttpsRedirection();
-            app.UseStaticFiles();
 
+            app.UseCookiePolicy();
             app.UseRouting();
 
             app.UseAuthentication();
@@ -301,22 +434,27 @@ namespace LANCommander.Server
 
             app.MapHub<LoggingHub>("/logging");
 
+            app.UseAntiforgery();
+            app.UseStaticFiles();
+            
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto
+            });
+
+            app.MapRazorComponents<UI.App>()
+                .AddInteractiveServerRenderMode();
+
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
                 endpoints.MapControllers();
             });
 
             Log.Debug("Ensuring required directories exist");
-            if (!Directory.Exists(settings.Archives.StoragePath))
-                Directory.CreateDirectory(settings.Archives.StoragePath);
 
             if (!Directory.Exists(settings.UserSaves.StoragePath))
                 Directory.CreateDirectory(settings.UserSaves.StoragePath);
-
-            if (!Directory.Exists(settings.Media.StoragePath))
-                Directory.CreateDirectory(settings.Media.StoragePath);
 
             if (!Directory.Exists(settings.Update.StoragePath))
                 Directory.CreateDirectory(settings.Update.StoragePath);
@@ -329,47 +467,61 @@ namespace LANCommander.Server
 
             // Migrate
             Log.Debug("Migrating database if required");
-            await using var scope = app.Services.CreateAsyncScope();
-            using var db = scope.ServiceProvider.GetService<DatabaseContext>();
 
-            if ((await db.Database.GetPendingMigrationsAsync()).Any())
+            if (DatabaseContext.Provider != DatabaseProvider.Unknown)
             {
-                var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
+                await using var scope = app.Services.CreateAsyncScope();
+                using var db = scope.ServiceProvider.GetService<DatabaseContext>();
 
-                var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
-
-                if (File.Exists(dataSource))
+                if ((await db.Database.GetPendingMigrationsAsync()).Any())
                 {
-                    Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
-                    File.Copy(dataSource, backupName);
+                    if (DatabaseContext.Provider == DatabaseProvider.SQLite)
+                    {
+                        var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
+
+                        var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+
+                        if (File.Exists(dataSource))
+                        {
+                            Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
+                            File.Copy(dataSource, backupName);
+                        }
+                    }
+
+                    await db.Database.MigrateAsync();
+                }
+                else
+                    Log.Debug("No pending migrations are available. Skipping database migration.");
+
+                // Autostart any server processes
+                Log.Debug("Autostarting Servers");
+                var serverService = scope.ServiceProvider.GetService<ServerService>();
+                var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
+
+                foreach (var server in await serverService.GetAsync(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
+                {
+                    try
+                    {
+                        Log.Debug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
+
+                        if (server.AutostartDelay > 0)
+                            await Task.Delay(server.AutostartDelay);
+
+                        serverProcessService.StartServerAsync(server.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
+                    }
                 }
 
-                await db.Database.MigrateAsync();
+                await db.DisposeAsync();
+                await scope.DisposeAsync();
+
+                BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
             }
             else
-                Log.Debug("No pending migrations are available. Skipping database migration.");
-
-            // Autostart any server processes
-            Log.Debug("Autostarting Servers");
-            var serverService = scope.ServiceProvider.GetService<ServerService>();
-            var serverProcessService = scope.ServiceProvider.GetService<ServerProcessService>();
-
-            foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart).ToListAsync())
-            {
-                try
-                {
-                    Log.Debug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
-
-                    if (server.AutostartDelay > 0)
-                        await Task.Delay(server.AutostartDelay);
-
-                    serverProcessService.StartServerAsync(server.Id);
-                }
-                catch (Exception ex)
-                {
-                    Log.Debug(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
-                }
-            }
+                Log.Debug("No database provider has been setup, application is fresh and needs first time setup");
 
             app.Run();
         }

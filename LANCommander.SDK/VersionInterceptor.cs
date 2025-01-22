@@ -29,6 +29,10 @@ namespace LANCommander.SDK
 
                     return new ValueTask();
                 }
+                else if (!response.IsSuccessful && header == null)
+                {
+                    return new ValueTask();
+                }
 
                 var apiVersion = SemVersion.Parse((string)header.Value, SemVersionStyles.Any);
 

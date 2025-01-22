@@ -1,0 +1,53 @@
+﻿@page "/Games/{id:guid}/PlaySessions"
+@using SortDirection = AntDesign.SortDirection
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject IMessageService MessageService
+@inject ILogger<PlaySessions> Logger
+
+<GameEditView Id="Id" Title="Play Sessions">
+    <DataTable
+        TItem="PlaySession"
+        Query="ps => ps.GameId == Id"
+        Responsive
+        Context="session">
+        <Columns>
+            <BoundDataColumn Property="ps => ps.Start" Sortable />
+            <BoundDataColumn Property="ps => ps.End" Sortable DefaultSortOrder="SortDirection.Descending" />
+            <BoundDataColumn Property="ps => ps.Duration" Sortable>
+                @if (session.Duration.HasValue)
+                {
+                    <Text>@($"{(int)session.Duration.Value.TotalHours}:{session.Duration.Value.Minutes:D2}:{session.Duration.Value.Seconds:D2}")</Text>
+                }
+            </BoundDataColumn>
+            <BoundDataColumn Property="ps => ps.CreatedBy.UserName" Sortable Include="CreatedBy" />
+            <DataActions>
+                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+                    <Popconfirm OnConfirm="() => Delete(session)" Title="Are you sure you want to delete this session?">
+                        <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
+                    </Popconfirm>
+                </Flex>
+            </DataActions>
+        </Columns>
+    </DataTable>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private async Task Delete(PlaySession session)
+    {
+        try
+        {
+            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+            {
+                await playSessionService.DeleteAsync(session);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not delete play session!");
+            Logger.LogError(ex, "Could not delete the play session!");
+        }
+    }
+}

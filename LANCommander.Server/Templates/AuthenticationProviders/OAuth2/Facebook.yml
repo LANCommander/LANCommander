@@ -1,0 +1,22 @@
+Name: Facebook
+Slug: Facebook
+Type: OAuth2
+Color: '#1877F2'
+Icon: facebook
+Documentation: https://developers.facebook.com/docs/facebook-login
+ClientId: YOUR_FACEBOOK_CLIENT_ID
+ClientSecret: YOUR_FACEBOOK_CLIENT_SECRET
+Authority: https://graph.facebook.com
+AuthorizationEndpoint: https://www.facebook.com/v11.0/dialog/oauth
+TokenEndpoint: https://graph.facebook.com/v11.0/oauth/access_token
+UserInfoEndpoint: https://graph.facebook.com/me
+Scopes:
+  - email
+  - public_profile
+ClaimMappings:
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier
+    Value: id
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+    Value: name
+  - Name: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/email
+    Value: email

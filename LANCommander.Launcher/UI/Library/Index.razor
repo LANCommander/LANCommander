@@ -9,7 +9,7 @@
 @inject SDK.Client Client
 @inject NavigationManager NavigationManager
 @inject LibraryService LibraryService
-@inject DownloadService DownloadService
+@inject InstallService InstallService
 @inject GameService GameService
 @inject ModalService ModalService
 @inject ConfirmService ConfirmService
@@ -25,7 +25,7 @@
                 <div class="game-hero">
                     @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
                     {
-                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo).Id)" Class="game-details-logo" />
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo).Id)" Key="GameDetailsLogo" Class="game-details-logo" />
                     }
                     else
                     {
@@ -34,35 +34,65 @@
 
                     @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
                     {
-                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background).Id)" Class="game-details-background" />
+                        <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background).Id)" Key="GameDetailsBackground" Class="game-details-background" />
                     }
                 </div>
                 <GridRow Gutter="32" Class="game-info" Wrap="false">
                     <GridCol Flex="@("auto")">
                         <div class="game-action-bar">
-                            <Space Direction="@DirectionVHType.Horizontal" Size="@("large")">
+                            <Space Direction="SpaceDirection.Horizontal" Size="SpaceSize.Large">
                                 <SpaceItem>
-                                    @if (SelectedItem.State == LibraryItemState.Installed)
+                                    @if (SelectedItem.State == ListItemState.Installed)
                                     {
                                         <PlayButton LibraryItem="SelectedItem" />
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.NotInstalled)
+                                    else if (SelectedItem.State == ListItemState.NotInstalled)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                        <ConnectionStateView>
+                                            <Online>
+                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Install(SelectedItem)">Install</Button>
+                                            </Online>
+                                            <Offline>
+                                                <Tooltip Title="You are currently offline">
+                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>Install</Button>
+                                                </Tooltip>
+                                            </Offline>
+                                        </ConnectionStateView>
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.Queued)
+                                    else if (SelectedItem.State == ListItemState.Queued)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Bars" Disabled="true">Queued</Button>
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.UpdateAvailable)
+                                    else if (SelectedItem.State == ListItemState.UpdateAvailable)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Download">Update</Button>
+                                        <ConnectionStateView>
+                                            <Online>
+                                                <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="() => Update(SelectedItem)">Update</Button>
+                                            </Online>
+                                            <Offline>
+                                                <Tooltip Title="You are currently offline">
+                                                    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" Disabled>Update</Button>
+                                                </Tooltip>
+                                            </Offline>
+                                        </ConnectionStateView>
                                     }
-                                    else if (SelectedItem.State == LibraryItemState.Installing)
+                                    else if (SelectedItem.State == ListItemState.Installing)
                                     {
-                                        <Button Type="@ButtonType.Primary" Size="@ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
                                     }
                                 </SpaceItem>
+
+                                @if (SelectedItem.State == ListItemState.NotInstalled && Connected)
+                                {
+                                    <ConnectionStateView>
+                                        <Online>
+                                            <SpaceItem>
+                                                <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()"/>
+                                            </SpaceItem>
+                                        </Online>
+                                    </ConnectionStateView>
+                                }
+
                                 <SpaceItem>
                                     <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
                                 </SpaceItem>
@@ -123,7 +153,7 @@
                     <GridCol Flex="@("256px")" Class="game-cover">
                         @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
                         {
-                            <MediaImage Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover).Id)" />
+                            <MediaImage Key="GameDetailsCover" Id="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover).Id)" />
                         }
                     </GridCol>
                 </GridRow>
@@ -140,42 +170,42 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] public bool Connected { get; set; }
+    [CascadingParameter] public bool OfflineMode { get; set; }
 
-    LibraryItem SelectedItem { get; set; }
+    Models.ListItem SelectedItem { get; set; }
 
     Data.Models.Game SelectedGame { get; set; }
+    SDK.Models.Game RemoteGame { get; set; }
 
     Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {
-        DownloadService.OnQueueChanged += OnQueueChanged;
-        DownloadService.OnInstallFail += OnInstallFail;
-        DownloadService.OnInstallComplete += OnInstallComplete;
+        InstallService.OnQueueChanged += OnQueueChanged;
+        InstallService.OnInstallFail += OnInstallFail;
+        InstallService.OnInstallComplete += OnInstallComplete;
         GameService.OnUninstallComplete += OnUninstallComplete;
-
-        LibraryService.GroupSelector = (libraryItem) =>
-        {
-            if (libraryItem.DataItem is Game game)
-                return game.Collections.Select(c => c.Name).ToArray();
-            else
-                return new string[] { };
-        };
-
+        
         await LoadData();
     }
 
     protected override async Task OnParametersSetAsync()
     {
         if (Id != Guid.Empty)
-            await OnLibraryItemSelected(LibraryService.GetLibraryItem(Id));
+        {
+            await OnLibraryItemSelected(await LibraryService.GetItemAsync(Id));
+
+            if (SelectedGame != null && (Connected && !OfflineMode))
+                RemoteGame = await Client.Games.GetAsync(SelectedGame.Id);
+        }
 
         await InvokeAsync(StateHasChanged);
     }
 
     async Task LoadData()
     {
-        await LibraryService.RefreshLibraryItemsAsync();
+        await LibraryService.RefreshItemsAsync();
 
         await InvokeAsync(StateHasChanged);
     }
@@ -185,7 +215,7 @@
         NavigationManager.NavigateTo($"/{id}");
     }
 
-    async Task OnLibraryItemSelected(LibraryItem item)
+    async Task OnLibraryItemSelected(Models.ListItem item)
     {
         if (item != null && item.DataItem is Data.Models.Game)
         {
@@ -196,9 +226,11 @@
         }
     }
 
-    async Task Install(LibraryItem item)
+    async Task Install(Models.ListItem item)
     {
-        if (Settings.Games.InstallDirectories.Length > 1)
+        var game = item.DataItem as Game;
+
+        if (Settings.Games.InstallDirectories.Length > 1 || game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
         {
             var modalOptions = new ModalOptions()
             {
@@ -208,24 +240,33 @@
                 Closable = true,
                 OkText = "Install",
                 Draggable = true,
-                Centered = true
+                Centered = true,
+                WrapClassName = "ant-modal-wrap-no-padding",
+                Footer = null,
             };
 
-            var modalRef = ModalService.CreateModal<InstallDirectorySelectorDialog, LibraryItem, string>(modalOptions, item);
+            var modalRef = ModalService.CreateModal<InstallDialog, Models.ListItem, string>(modalOptions, item);
         }
         else
         {
-            await LibraryService.Install(item);
+            await InstallService.Add(game);
         }
+    }
+
+    async Task Update(Models.ListItem item)
+    {
+        var game = item.DataItem as Game;
+
+        await InstallService.Add(game);
     }
 
     async Task OnQueueChanged()
     {
-        var queueItem = DownloadService.Queue.FirstOrDefault(i => SelectedItem != null && i.Id == SelectedItem.Key);
+        var queueItem = InstallService.Queue.FirstOrDefault(i => SelectedItem != null && i.Id == SelectedItem.Key);
 
         if (queueItem != null)
         {
-            SelectedItem = await LibraryService.GetLibraryItemAsync(SelectedItem);
+            SelectedItem = await LibraryService.GetItemAsync(SelectedItem);
 
             switch (queueItem.Status)
             {
@@ -235,20 +276,20 @@
                 case SDK.Enums.GameInstallStatus.InstallingExpansions:
                 case SDK.Enums.GameInstallStatus.RunningScripts:
                 case SDK.Enums.GameInstallStatus.DownloadingSaves:
-                    SelectedItem.State = LibraryItemState.Installing;
+                    SelectedItem.State = ListItemState.Installing;
                     break;
 
-                case SDK.Enums.GameInstallStatus.Idle:
-                    SelectedItem.State = LibraryItemState.Queued;
+                case SDK.Enums.GameInstallStatus.Queued:
+                    SelectedItem.State = ListItemState.Queued;
                     break;
 
                 case SDK.Enums.GameInstallStatus.Failed:
                 case SDK.Enums.GameInstallStatus.Canceled:
-                    SelectedItem.State = LibraryItemState.NotInstalled;
+                    SelectedItem.State = ListItemState.NotInstalled;
                     break;
 
                 case SDK.Enums.GameInstallStatus.Complete:
-                    SelectedItem.State = LibraryItemState.Installed;
+                    SelectedItem.State = ListItemState.Installed;
                     break;
             }
 
@@ -265,7 +306,7 @@
         if (SelectedItem.DataItem is Game selectedGame)
         {
             if (selectedGame.Id == game.Id)
-                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
+                await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
         }
     }
 
@@ -282,7 +323,7 @@
 
         if (result == ConfirmResult.Retry)
         {
-            var libraryItem = LibraryService.GetLibraryItem(game.Id);
+            var libraryItem = LibraryService.GetItem(game.Id);
 
             Install(libraryItem);
         }
@@ -295,8 +336,18 @@
         if (SelectedItem.DataItem is Game selectedGame)
         {
             if (selectedGame.Id == game.Id)
-                await OnLibraryItemSelected(LibraryService.LibraryItems.FirstOrDefault(i => i.Key == selectedGame.Id));
+                await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
         }
+    }
+
+    long GetDownloadSize()
+    {
+        long size = 0;
+
+        if (RemoteGame != null && RemoteGame.Archives.Any())
+            size = RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
+
+        return size;
     }
 
     string GetPlayTime(Data.Models.Game game)

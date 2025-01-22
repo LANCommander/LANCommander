@@ -1,5 +1,6 @@
 ﻿import { Chunk } from './Chunk';
 import { UploadInitResponse } from './UploadInitResponse';
+import { UploadInitRequest } from './UploadInitRequest';
 import axios, { AxiosProgressEvent } from 'axios';
 
 export class Uploader {
@@ -12,8 +13,8 @@ export class Uploader {
 
     File: File | undefined;
 
-    InitRoute: string = "/Upload/Init";
-    ChunkRoute: string = "/Upload/Chunk";
+    InitRoute: string = "/api/Upload/Init";
+    ChunkRoute: string = "/api/Upload/Chunk";
 
     MaxChunkSize: number = 1024 * 1024 * 50;
     TotalChunks: number = 0;
@@ -21,9 +22,12 @@ export class Uploader {
     Chunks: Chunk[] = [];
 
     Key: string = "";
+    StorageLocationId: string = "";
     Id: string = "";
 
-    async Init(fileInputId: string, objectKey: string) {
+    async Init(fileInputId: string, storageLocationId: string, objectKey: string)
+    {
+        debugger;
         this.FileInput = document.getElementById(fileInputId) as HTMLInputElement;
         this.ProgressBar = document.querySelector('.uploader-progress .ant-progress-circle-path');
         this.ProgressText = document.querySelector('.uploader-progress .ant-progress-text');
@@ -31,9 +35,14 @@ export class Uploader {
 
         if (objectKey == undefined || objectKey == "") {
             try {
-                var response = await axios.post<UploadInitResponse>(this.InitRoute);
+                var request = new UploadInitRequest();
 
-                this.Key = response.data.key;
+                request.storageLocationId = storageLocationId;
+                request.key = objectKey;
+
+                var response = await axios.post<string>(this.InitRoute, request);
+
+                this.Key = response.data;
             }
             catch (ex) {
                 this.Key = null;
@@ -101,7 +110,7 @@ export class Uploader {
             if (currentChunk == this.TotalChunks)
                 end = this.File.size;
 
-            this.Chunks.push(new Chunk(start, end, currentChunk));
+            this.Chunks.push(new Chunk(this.Key, start, end, currentChunk));
         }
     }
 
@@ -138,7 +147,9 @@ export class Uploader {
 
     Clear() {
         this.File = undefined;
-        this.FileInput.value = "";
+        
+        if (this.FileInput != null)
+            this.FileInput.value = "";
     }
 
     OnStart: () => void;

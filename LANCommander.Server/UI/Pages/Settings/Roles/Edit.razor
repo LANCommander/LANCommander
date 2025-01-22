@@ -1,19 +1,16 @@
 ﻿@page "/Settings/Roles/{id:guid}"
 @using LANCommander.Server.Models;
-@layout SettingsLayout
-@inject CollectionService CollectionService
-@inject RoleManager<Role> RoleManager
-@inject UserManager<User> UserManager
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Edit Role">
     <PageHeaderExtra>
-        <Space Direction="DirectionVHType.Horizontal">
+        <Space Direction="SpaceDirection.Horizontal">
             <SpaceItem>
-                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+                <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
             </SpaceItem>
         </Space>
     </PageHeaderExtra>
@@ -25,7 +22,7 @@
             <Input @bind-Value="Role.Name" />
         </FormItem>
         <FormItem Label="Collections">
-            <TransferInput LeftTitle="Available" RightTitle="Allowed" DataSource="Collections" TitleSelector="c => c.Name" @bind-Values="Role.Collections" />
+            <TransferInput LeftTitle="Available" RightTitle="Allowed" DataSource="Collections" TitleSelector="c => c.Name" @bind-Values="SelectedCollections" />
         </FormItem>
     </Form>
 </div>
@@ -33,20 +30,35 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Role Role;
+    Role Role = new Role();
     IEnumerable<Collection> Collections = new List<Collection>();
+
+    ICollection<Collection> SelectedCollections = new List<Collection>();
 
     protected override async Task OnInitializedAsync()
     {
-        Role = await RoleManager.FindByIdAsync(Id.ToString());
-        Collections = await CollectionService.Get();
+        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
+        {
+            Role = await roleService.DisableTracking().Include(r => r.Collections).GetAsync(Id);
+
+            SelectedCollections = Role.Collections;
+        }
+
+        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+        {
+            Collections = await collectionService.GetAsync();
+        }
     }
 
-    private async Task Save()
+    async Task Save()
     {
         try
         {
-            await RoleManager.UpdateAsync(Role);
+            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
+            {
+                await roleService.UpdateAsync(Role);
+                await roleService.AssignCollections(Id, SelectedCollections.Select(c => c.Id));
+            }
 
             MessageService.Success("Role updated!");
         }

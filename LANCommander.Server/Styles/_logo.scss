@@ -1,0 +1,35 @@
+﻿.logo {
+    width: 104%;
+    z-index: 1000;
+    position: relative;
+    background-size: contain;
+    // pointer-events: none;
+
+    & > img {
+        width: 100%;
+        filter: drop-shadow(5px 0px 5px rgba(0,0,0,0.5));
+    }
+
+    &::before {
+        content: '';
+        opacity: 0;
+        background: linear-gradient(100deg, rgba(255,0,0,1) 0%, rgba(255,154,0,1) 10%, rgba(208,222,33,1) 20%, rgba(79,220,74,1) 30%, rgba(63,218,216,1) 40%, rgba(47,201,226,1) 50%, rgba(28,127,238,1) 60%, rgba(95,21,242,1) 70%, rgba(186,12,248,1) 80%, rgba(251,7,217,1) 90%, rgba(255,0,0,1) 100%) 0 0/200% 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 4%;
+        bottom: 0;
+        transition: .5s opacity;
+        animation: a 3s linear infinite;
+    }
+
+    &:hover::before {
+        opacity: 1;
+    }
+}
+
+@keyframes a {
+    to {
+        background-position: -200% 0
+    }
+}

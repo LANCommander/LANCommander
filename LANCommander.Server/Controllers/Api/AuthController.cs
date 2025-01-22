@@ -1,5 +1,4 @@
-﻿using LANCommander.Server.Data.Models;
-using LANCommander.Server.Models;
+﻿using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -9,6 +8,12 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using AutoMapper;
+using LANCommander.SDK.Models;
+using Microsoft.AspNetCore.Authentication;
+using ZiggyCreatures.Caching.Fusion;
+using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
+using User = LANCommander.Server.Data.Models.User;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -29,40 +34,71 @@ namespace LANCommander.Server.Controllers.Api
     {
         public string UserName { get; set; }
         public string Password { get; set; }
+        public string PasswordConfirmation { get; set; }
     }
 
     [Route("api/[controller]")]
     [ApiController]
     public class AuthController : BaseApiController
     {
-        private readonly SignInManager<User> SignInManager;
-        private readonly UserManager<User> UserManager;
-        private readonly IUserStore<User> UserStore;
-        private readonly RoleManager<Role> RoleManager;
+        private readonly AuthenticationService AuthenticationService;
+        private readonly UserService UserService;
+        private readonly RoleService RoleService;
+        private readonly IFusionCache Cache;
+        private readonly IMapper Mapper;
 
         public AuthController(
-            ILogger<AuthController> logger,
-            SignInManager<User> signInManager,
-            UserManager<User> userManager,
-            IUserStore<User> userStore,
-            RoleManager<Role> roleManager) : base(logger)
+            AuthenticationService authenticationService,
+            UserService userService,
+            RoleService roleService,
+            IFusionCache cache,
+            IMapper mapper,
+            ILogger<AuthController> logger) : base(logger)
         {
-            SignInManager = signInManager;
-            UserManager = userManager;
-            UserStore = userStore;
-            RoleManager = roleManager;
+            AuthenticationService = authenticationService;
+            UserService = userService;
+            RoleService = roleService;
+            Cache = cache;
+            Mapper = mapper;
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Login([FromBody] LoginModel model)
+        [HttpGet("Login")]
+        public async Task<IActionResult> LoginAsync(string provider = "")
         {
-            var user = await UserManager.FindByNameAsync(model.UserName);
+            if (!String.IsNullOrWhiteSpace(provider) && !User.Identity.IsAuthenticated)
+            {
+                var properties = new AuthenticationProperties(new Dictionary<string, string>()
+                {
+                    { "Action", AuthenticationProviderActionType.Login }
+                });
+                
+                properties.RedirectUri = Url.Action("Login", "Auth", new { provider = provider });
+                
+                return Challenge(properties, provider);
+            }
+            else if (!String.IsNullOrWhiteSpace(provider) && User.Identity.IsAuthenticated)
+            {
+                var code = Guid.NewGuid().ToString();
+                var token = await AuthenticationService.LoginAsync(User.Identity.Name);
+                
+                await Cache.SetAsync($"AuthToken/{code}", token, TimeSpan.FromMinutes(5));
 
+                return Redirect($"/RedeemToken/{code}");
+            }
+            else
+            {
+                return BadRequest();
+            }
+        }
+
+        [HttpPost("Login")]
+        public async Task<IActionResult> LoginAsync([FromBody] LoginModel model)
+        {
             try
             {
-                var token = await Login(user, model.Password);
+                var token = await AuthenticationService.LoginAsync(model.UserName, model.Password);
 
-                Logger?.LogDebug("Successfully logged in user {UserName}", user.UserName);
+                Logger?.LogDebug("Successfully logged in user {UserName}", model.UserName);
 
                 return Ok(token);
             }
@@ -75,10 +111,10 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("Logout")]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> LogoutAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
-                await SignInManager.SignOutAsync();
+                await UserService.SignOut();
 
             Logger?.LogInformation("Logged out user {UserName}", User.Identity.Name);
 
@@ -87,7 +123,7 @@ namespace LANCommander.Server.Controllers.Api
 
         [HttpPost("Validate")]
         [Authorize(AuthenticationSchemes = "Bearer")]
-        public IActionResult Validate()
+        public IActionResult ValidateAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
                 return Ok();
@@ -96,51 +132,28 @@ namespace LANCommander.Server.Controllers.Api
         } 
 
         [HttpPost("Refresh")]
-        public async Task<IActionResult> Refresh(TokenModel token)
+        public async Task<IActionResult> RefreshAsync(AuthToken token)
         {
-            if (token == null)
+            try
             {
-                Logger?.LogDebug("Null token passed when trying to refresh");
-                return BadRequest("Invalid client request");
+                return Ok(await AuthenticationService.RefreshTokenAsync(token));
             }
-
-            var principal = GetPrincipalFromExpiredToken(token.AccessToken);
-
-            if (principal == null)
+            catch (Exception ex)
             {
-                Logger?.LogDebug("Invalid access token or refresh token");
-                return BadRequest("Invalid access token or refresh token");
-            }
-
-            var user = await UserManager.FindByNameAsync(principal.Identity.Name);
-
-            if (user == null || user.RefreshToken != token.RefreshToken || user.RefreshTokenExpiration <= DateTime.Now)
-            {
-                Logger?.LogDebug("Invalid access token or refresh token for user {UserName}", principal.Identity.Name);
-                return BadRequest("Invalid access token or refresh token");
-            }
-
-            var newAccessToken = GetToken(principal.Claims.ToList());
-            var newRefreshToken = GenerateRefreshToken();
-
-            user.RefreshToken = newRefreshToken;
-
-            await UserManager.UpdateAsync(user);
-
-            Logger?.LogDebug("Successfully refreshed token for user {UserName}", user.UserName);
-
-            return Ok(new
-            {
-                AccessToken = new JwtSecurityTokenHandler().WriteToken(newAccessToken),
-                RefreshToken = newRefreshToken,
-                Expiration = newAccessToken.ValidTo
-            });
+                return BadRequest(ex);
+            } ;
         }
 
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] RegisterModel model)
+        public async Task<IActionResult> RegisterAsync([FromBody] RegisterModel model)
         {
-            var user = await UserManager.FindByNameAsync(model.UserName);
+            if (model.Password != model.PasswordConfirmation)
+                return Unauthorized(new
+                {
+                    Message = "Passwords don't match."
+                });
+            
+            var user = await UserService.GetAsync(model.UserName);
 
             if (user != null)
             {
@@ -154,23 +167,25 @@ namespace LANCommander.Server.Controllers.Api
 
             user = new User();
 
-            await UserStore.SetUserNameAsync(user, model.UserName, CancellationToken.None);
+            user.UserName = model.UserName;
 
-            var result = await UserManager.CreateAsync(user, model.Password);
+            user = await UserService.AddAsync(user);
 
-            if (result.Succeeded)
+            if (user != null)
             {
+                await UserService.ChangePassword(user.UserName, model.Password);
+
                 try
                 {
                     if (Settings.Roles.DefaultRoleId != Guid.Empty)
                     {
-                        var defaultRole = await RoleManager.FindByIdAsync(Settings.Roles.DefaultRoleId.ToString());
+                        var defaultRole = await RoleService.GetAsync(Settings.Roles.DefaultRoleId);
 
                         if (defaultRole != null)
-                            await UserManager.AddToRoleAsync(user, defaultRole.Name);
+                            await UserService.AddToRoleAsync(user.UserName, defaultRole.Name);
                     }
 
-                    var token = await Login(user, model.Password);
+                    var token = await AuthenticationService.LoginAsync(user.UserName, model.Password);
 
                     Logger?.LogDebug("Successfully registered user {UserName}", user.UserName);
 
@@ -188,95 +203,14 @@ namespace LANCommander.Server.Controllers.Api
 
             return Unauthorized(new
             {
-                Message = "Error:\n" + String.Join('\n', result.Errors.Select(e => e.Description))
+                //Message = "Error:\n" + String.Join('\n', result.Errors.Select(e => e.Description))
             });
         }
 
-        private async Task<TokenModel> Login(User user, string password)
+        [HttpGet("AuthenticationProviders")]
+        public IActionResult GetAuthenticationProviders()
         {
-            if (user != null && await UserManager.CheckPasswordAsync(user, password))
-            {
-                Logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
-
-                if (Settings.Authentication.RequireApproval && !user.Approved && (!await UserManager.IsInRoleAsync(user, "Administrator")))
-                    throw new Exception("Account must be approved by an administrator");
-
-                var userRoles = await UserManager.GetRolesAsync(user);
-
-                var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-                };
-
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
-                }
-
-                Logger?.LogDebug("Generating authentication token for user {UserName}", user.UserName);
-
-                var token = GetToken(authClaims);
-                var refreshToken = GenerateRefreshToken();
-
-                user.RefreshToken = refreshToken;
-                user.RefreshTokenExpiration = DateTime.Now.AddDays(Settings.Authentication.TokenLifetime);
-
-                await UserManager.UpdateAsync(user);
-
-                return new TokenModel()
-                {
-                    AccessToken = new JwtSecurityTokenHandler().WriteToken(token),
-                    RefreshToken = refreshToken,
-                    Expiration = token.ValidTo
-                };
-            }
-
-            throw new Exception("Invalid username or password");
-        }
-
-        private JwtSecurityToken GetToken(List<Claim> authClaims)
-        {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.Authentication.TokenSecret));
-
-            var token = new JwtSecurityToken(
-                expires: DateTime.Now.AddDays(Settings.Authentication.TokenLifetime),
-                claims: authClaims,
-                signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-            );
-
-            return token;
-        }
-
-        private static string GenerateRefreshToken()
-        {
-            var randomNumber = new byte[64];
-
-            using (var rng = RandomNumberGenerator.Create())
-            {
-                rng.GetBytes(randomNumber);
-
-                return Convert.ToBase64String(randomNumber);
-            }
-        }
-
-        private ClaimsPrincipal? GetPrincipalFromExpiredToken(string? token)
-        {
-            var tokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateAudience = false,
-                ValidateIssuer = false,
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.Authentication.TokenSecret)),
-                ValidateLifetime = false
-            };
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
-            if (securityToken is not JwtSecurityToken jwtSecurityToken || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
-                throw new SecurityTokenException("Invalid token");
-
-            return principal;
+            return Ok(Mapper.Map<IEnumerable<AuthenticationProvider>>(Settings.Authentication.AuthenticationProviders));
         }
     }
 }

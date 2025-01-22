@@ -1,11 +1,15 @@
 ﻿@using AntDesign.Charts
 @using ByteSizeLib
+@using LANCommander.SDK.Enums
+@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <Spin Spinning="Loading">
     <Pie Data="Data" Config="Config" JsConfig="@JsConfig" />
 </Spin>
 
 @code {
+    StorageLocationService StorageLocationService;
+
     object[] Data;
 
     bool Loading = true;
@@ -38,10 +42,33 @@
             var drives = DriveInfo.GetDrives();
             var root = Path.GetPathRoot(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
-            var totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
-            var totalUploadDirectorySize = new DirectoryInfo(settings.Archives.StoragePath).EnumerateFiles().Sum(f => f.Length);
-            var totalSaveDirectorySize = new DirectoryInfo(settings.UserSaves.StoragePath).EnumerateFiles().Sum(f => f.Length);
-            var totalMediaDirectorySize = new DirectoryInfo(settings.Media.StoragePath).EnumerateFiles().Sum(f => f.Length);
+            long totalAvailableFreeSpace = drives.Where(d => d.IsReady && d.Name == root).Sum(d => d.AvailableFreeSpace);
+            long totalSaveDirectorySize = 0;
+            long totalMediaDirectorySize = 0;
+            long totalUploadDirectorySize = 0;
+
+            using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+            {
+                var storageLocations = await storageLocationService.GetAsync();
+
+                foreach (var storageLocation in storageLocations)
+                {
+                    switch (storageLocation.Type)
+                    {
+                        case StorageLocationType.Archive:
+                            totalUploadDirectorySize += new DirectoryInfo(storageLocation.Path).EnumerateFiles().Sum(f => f.Length);
+                            break;
+
+                        case StorageLocationType.Save:
+                            totalSaveDirectorySize += new DirectoryInfo(storageLocation.Path).EnumerateFiles().Sum(f => f.Length);
+                            break;
+
+                        case StorageLocationType.Media:
+                            totalSaveDirectorySize += new DirectoryInfo(storageLocation.Path).EnumerateFiles().Sum(f => f.Length);
+                            break;
+                    }
+                }
+            }
 
             Data = new object[]
             {

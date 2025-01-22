@@ -17,7 +17,7 @@
 </Dropdown>
 
 @code {
-    [Parameter] public LibraryItem Model { get; set; }
+    [Parameter] public Models.ListItem Model { get; set; }
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public Guid? SelectedItem { get; set; }
     [Parameter] public EventCallback<Guid?> SelectedItemChanged { get; set; }
@@ -26,7 +26,7 @@
     {
         HashSet<string> classes = new HashSet<string>();
 
-        if (Model.State == LibraryItemState.Installed)
+        if (Model.State == ListItemState.Installed)
             classes.Add("installed");
 
         if (SelectedItem == Model.Key)

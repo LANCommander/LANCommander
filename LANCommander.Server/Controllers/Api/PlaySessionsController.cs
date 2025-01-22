@@ -16,76 +16,78 @@ namespace LANCommander.Server.Controllers.Api
         private readonly IMapper Mapper;
         private readonly PlaySessionService PlaySessionService;
         private readonly GameService GameService;
-        private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
         public PlaySessionsController(
             ILogger<PlaySessionsController> logger,
             IMapper mapper,
             PlaySessionService playSessionService,
             GameService gameService,
-            UserManager<User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             Mapper = mapper;
             PlaySessionService = playSessionService;
             GameService = gameService;
-            UserManager = userManager;
+            UserService = UserService;
         }
 
         [HttpPost("Start/{id}")]
-        public async Task<IActionResult> Start(Guid id)
+        public async Task<IActionResult> StartAsync(Guid id)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
-            var game = await GameService.Get(id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var game = await GameService.GetAsync(id);
 
             if (game == null || user == null)
                 return BadRequest();
 
-            var activeSessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.End == null).ToListAsync();
+            var activeSessions = await PlaySessionService
+                .Include(ps => ps.Game)
+                .GetAsync(ps => ps.UserId == user.Id && ps.End == null);
 
             foreach (var activeSession in activeSessions)
-                await PlaySessionService.EndSession(activeSession.Game.Id, activeSession.UserId);
+                await PlaySessionService.EndSessionAsync(game.Id, activeSession.UserId);
 
-            await PlaySessionService.StartSession(game.Id, user.Id);
+            await PlaySessionService.StartSessionAsync(game.Id, user.Id);
 
             return Ok();
         }
 
         [HttpPost("End/{id}")]
-        public async Task<IActionResult> End(Guid id)
+        public async Task<IActionResult> EndAsync(Guid id)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
-            var game = await GameService.Get(id);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var game = await GameService.GetAsync(id);
 
             if (game == null || user == null)
                 return BadRequest();
 
-            await PlaySessionService.EndSession(game.Id, user.Id);
+            await PlaySessionService.EndSessionAsync(game.Id, user.Id);
 
             return Ok();
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> GetAsync()
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id).ToListAsync();
+            var sessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(Guid id)
+        public async Task<IActionResult> GetAsync(Guid id)
         {
-            var user = await UserManager.FindByNameAsync(User.Identity.Name);
+            var user = await UserService.GetAsync(User?.Identity?.Name);
 
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.Get(ps => ps.UserId == user.Id && ps.GameId == id).ToListAsync();
+            var sessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id && ps.GameId == id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }

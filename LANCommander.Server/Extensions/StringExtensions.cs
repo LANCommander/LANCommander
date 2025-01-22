@@ -10,18 +10,6 @@ namespace LANCommander.Server.Extensions
         static readonly Regex InvalidChars = new Regex(@"[^a-z0-9\-]", RegexOptions.Compiled);
         static readonly Regex MultipleHyphens = new Regex(@"-{2,}", RegexOptions.Compiled);
 
-        public static string ToUrlSlug(this string value)
-        {
-            value = value.ToLowerInvariant();
-
-            value = RemoveDiacritics(value);
-            value = WordDelimiters.Replace(value, "-");
-            value = InvalidChars.Replace(value, "");
-            value = MultipleHyphens.Replace(value, "-");
-
-            return value.Trim('-');
-        }
-
         private static string RemoveDiacritics(string stIn)
         {
             string stFormD = stIn.Normalize(NormalizationForm.FormD);

@@ -6,7 +6,7 @@
         <Button Icon="@IconType.Outline.Menu" Type="@ButtonType.Text" OnClick="ToggleMenu" />
     </Header>
 
-    <Drawer Closable="true" Visible="@MenuDrawerOpen" Placement="@("top")" Class="menu-drawer">
+    <Drawer Closable="true" Visible="@MenuDrawerOpen" Placement="DrawerPlacement.Top" Class="menu-drawer">
         <Menu Theme="MenuTheme.Dark" Mode="MenuMode.Vertical">
             @ChildContent
         </Menu>

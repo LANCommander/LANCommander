@@ -1,11 +1,9 @@
 ﻿@page "/Settings/IPXRelay"
-@using LANCommander.Server.Models;
-@layout SettingsLayout
-@inject SettingService SettingService
+@using LANCommander.Server.Models
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<IPXRelay> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="IPX Relay" />
 
@@ -35,12 +33,7 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
-
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
+    Settings Settings = SettingService.GetSettings();
 
     private void Save()
     {

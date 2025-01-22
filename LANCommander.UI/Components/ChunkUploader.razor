@@ -1,0 +1,212 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject HttpClient HttpClient
+@inject NavigationManager Navigator
+@inject IJSRuntime JS
+@inject IMessageService MessageService
+
+<div class="ant-upload ant-upload-select-text ant-upload-drag ant-upload-select chunk-uploader" data-status="@CurrentProgressStatus">
+    <Progress Type="ProgressType.Circle" Percent="Progress" Status="@CurrentProgressStatus" Class="uploader-progress" />
+
+    <span class="uploader-progress-rate"></span>
+
+    <label tabindex="0" class="ant-upload" style="display: grid;" for="ChunkFileInput" role="button">
+        <InputFile @ref="FileInput" @key="@UploaderId" id="@($"ChunkFileInput-{UploaderId}")" OnChange="OnFileSelected" accept="@Accept" style="position: absolute; width: 100%; height: 100%; opacity: 0; top: 0;left: 0; z-index:2;" />
+        
+        <div class="ant-upload-drag-container">
+            <p class="ant-upload-drag-icon">
+                <Icon Type="@IconType.Outline.Upload" />
+            </p>
+            <p class="ant-upload-text">
+                @Text
+            </p>
+            <p class="ant-upload-hint">
+                @Hint
+            </p>
+        </div>
+    </label>
+</div>
+
+
+@if (File != null)
+{
+    <div class="ant-upload-list ant-upload-list-picture">
+        <div class="ant-upload-list-picture-container" style="display: list-item;">
+            <div class="ant-upload-list-item ant-upload-list-item-done ant-upload-list-item-list-type-picture">
+                <div class="ant-upload-list-item-info">
+                    <span class="ant-upload-span">
+                        <div class="ant-upload-list-item-thumbnail ant-upload-list-item-file">
+                            <Icon Type="@IconType.Outline.FileZip" />
+                        </div>
+                        <span target="_blank" rel="noopener noreferrer" class="ant-upload-list-item-name" title="@File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))">
+                            @File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))
+                        </span>
+                        <span class="ant-upload-list-item-card-actions picture">
+                            <Button Type="ButtonType.Text" Size="ButtonSize.Small" Icon="@IconType.Outline.Delete" OnClick="Clear" Disabled="@(CurrentProgressStatus != ProgressStatus.Normal)" />
+                        </span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public RenderFragment Text { get; set; }
+    [Parameter] public RenderFragment Hint { get; set; }
+    [Parameter] public string Accept { get; set; }
+    [Parameter] public string ObjectKey { get; set; }
+    [Parameter] public EventCallback<string> OnUploadCompleted { get; set; }
+    [Parameter] public EventCallback<string> OnUploadError { get; set; }
+    [Parameter] public string Status { get; set; }
+    [Parameter] public EventCallback<string> StatusChanged { get; set; }
+    [Parameter] public IBrowserFile File { get; set; }
+    [Parameter] public EventCallback<IBrowserFile> FileChanged { get; set; }
+    [Parameter] public Guid StorageLocationId { get; set; }
+    [Parameter] public EventCallback<Guid> StorageLocationIdChanged { get; set; }
+
+    Guid UploaderId = Guid.NewGuid();
+
+    InputFile FileInput;
+    List<UploadFileItem> FileList = new();
+
+    int Progress = 0;
+    bool Uploading = false;
+    bool Finished = false;
+    bool ClearInput = false;
+    double Speed = 0;
+
+    ProgressStatus CurrentProgressStatus
+    {
+        get
+        {
+            ProgressStatus progressStatus;
+
+            switch (Status)
+            {
+                case "Complete":
+                    return ProgressStatus.Success;
+                case "Uploading":
+                    return ProgressStatus.Active;
+                default:
+                    return ProgressStatus.Normal;
+            }
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+    }
+
+    public async Task Start()
+    {
+        Uploading = true;
+
+        await ChangeStatus("Uploading");
+
+        ushort i = 0;
+
+        while (i < 20)
+        {
+            if (FileInput != null)
+            {
+                if (!String.IsNullOrWhiteSpace(ObjectKey) && ObjectKey != Guid.Empty.ToString())
+                    await JS.InvokeVoidAsync("window.Uploader.Init", $"ChunkFileInput-{UploaderId}", StorageLocationId, ObjectKey);
+                else
+                    await JS.InvokeVoidAsync("window.Uploader.Init", $"ChunkFileInput-{UploaderId}", StorageLocationId, "");
+
+                break;
+            }
+
+            i++;
+
+            await Task.Delay(500);
+        }
+
+        var dotNetReference = DotNetObjectReference.Create(this);
+
+        await JS.InvokeVoidAsync("window.Uploader.Upload", dotNetReference);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public async Task Clear()
+    {
+        await JS.InvokeVoidAsync("window.Uploader.Clear");
+
+        File = null;
+
+        if (FileChanged.HasDelegate)
+            await FileChanged.InvokeAsync(null);
+
+        Status = "";
+
+        if (StatusChanged.HasDelegate)
+            await StatusChanged.InvokeAsync(Status);
+
+        StateHasChanged();
+    }
+
+    async void OnFileSelected(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+
+        if (!String.IsNullOrWhiteSpace(Accept))
+        {
+            var acceptedFileExtensions = Accept.Split(',').Select(x => x.Trim());
+
+            if (!acceptedFileExtensions.Any(x => file.Name.ToLower().EndsWith(x.ToLower())))
+            {
+                MessageService.Error($"Only {String.Join(", ", acceptedFileExtensions)} can be selected!");
+                return;
+            }
+
+        }
+
+        File = file;
+
+        if (FileChanged.HasDelegate)
+            await FileChanged.InvokeAsync(File);
+
+        await ChangeStatus("");
+    }
+
+    async Task UploadArchiveJS()
+    {
+        Uploading = true;
+        await ChangeStatus("Uploading");
+
+        var dotNetReference = DotNetObjectReference.Create(this);
+
+        await JS.InvokeVoidAsync("window.Uploader.Upload", dotNetReference);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task ChangeStatus(string status)
+    {
+        Status = status;
+
+        if (StatusChanged.HasDelegate)
+            await StatusChanged.InvokeAsync(Status);
+    }
+
+    [JSInvokable]
+    public async Task JSOnUploadComplete(string objectKey)
+    {
+        Uploading = false;
+        Finished = true;
+        await ChangeStatus("Complete");
+
+        if (OnUploadCompleted.HasDelegate)
+            await OnUploadCompleted.InvokeAsync(objectKey);
+    }
+
+    [JSInvokable]
+    public async Task JSOnUploadError(string message)
+    {
+        if (OnUploadError.HasDelegate)
+            await OnUploadError.InvokeAsync(message);
+    }
+}

@@ -29,6 +29,7 @@
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
     "axios": "^1.7.4",
+    "bootstrap-icons": "^1.11.3",
     "split.js": "^1.6.5",
     "xterm-readline": "^1.1.1"
   }

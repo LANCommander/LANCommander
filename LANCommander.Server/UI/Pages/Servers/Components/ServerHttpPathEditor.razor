@@ -2,14 +2,14 @@
 @using LANCommander.Server.Extensions;
 @inject NavigationManager NavigationManager
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%">
+<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
     <SpaceItem>
         <Table TItem="ServerHttpPath" DataSource="@Values" HidePagination="true" Responsive>
             <PropertyColumn Property="p => p.LocalPath" Title="Local Path">
                 <FilePicker @bind-Value="context.LocalPath" AllowDirectories Title="Select Local Path" Root="@WorkingDirectory" />
             </PropertyColumn>
             <PropertyColumn Property="p => p.Path">
-                <Input Type="text" @bind-Value="context.Path" />
+                <Input Type="InputType.Text" @bind-Value="context.Path" />
             </PropertyColumn>
             <ActionColumn>
                 <Space Style="display: flex; justify-content: end">
@@ -30,7 +30,7 @@
     </SpaceItem>
 
     <SpaceItem>
-        <GridRow Justify="end">
+        <GridRow Justify="RowJustify.End">
             <GridCol>
                 <Button OnClick="Add" Type="@ButtonType.Primary">Add Path</Button>
             </GridCol>

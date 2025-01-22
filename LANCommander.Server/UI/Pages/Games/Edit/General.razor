@@ -1,0 +1,277 @@
+﻿@page "/Games/{id:guid}/General"
+@page "/Games/{id:guid}"
+@page "/Games/Add"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ModalService ModalService
+@inject ILogger<General> Logger
+
+<GameEditView Id="Id">
+    <TitleTemplate>
+        @if (context.Id == Guid.Empty)
+        {
+            <Text>Add New Game</Text>
+        }
+        else
+        {
+            <Text>General</Text>
+        }
+    </TitleTemplate>
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            @if (context != null && context.Id != Guid.Empty)
+            {
+                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })" OnClick='e => { Console.WriteLine("Dropdown button clicked."); }'>
+                    <Overlay>
+                        <Menu>
+                            <MenuItem>
+                                <a href="/Games/@(context.Id)/Export/Full" target="_blank">Full</a>
+                            </MenuItem>
+                            <MenuItem>
+                                <a href="/Games/@(context.Id)/Export/Metadata" target="_blank">Metadata</a>
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button>Export</Button>
+                    </ChildContent>
+                </Dropdown>
+            }
+
+            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+
+    <ChildContent>
+        <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
+            <FormItem Label="Title">
+                <GameMetadataLookup ButtonText="Lookup" @bind-Value="context.Title" OnResultSelected="(result) => OnGameLookupResultSelected(result, context)" />
+            </FormItem>
+            <FormItem Label="Sort Title">
+                <Input @bind-Value="@context.SortTitle" />
+            </FormItem>
+            <FormItem Label="Notes">
+                <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+            </FormItem>
+            <FormItem Label="Description">
+                <TextArea @bind-Value="@context.Description" />
+            </FormItem>
+            <FormItem Label="Engine">
+                <Select TItem="Engine"
+                        TItemValue="Guid?"
+                        DataSource="@Engines.OrderBy(e => e.Name)"
+                        @bind-Value="@context.EngineId"
+                        LabelName="Name"
+                        ValueName="Id"
+                        Placeholder="Select an Engine"
+                        DefaultActiveFirstOption="false"
+                        EnableSearch />
+            </FormItem>
+            <FormItem Label="Type">
+                <Select @bind-Value="@context.Type" TItem="GameType" TItemValue="GameType" DataSource="Enum.GetValues<GameType>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
+            </FormItem>
+            @if (context.Type != GameType.MainGame)
+            {
+                <FormItem Label="Base Game">
+                    <Select TItem="Game"
+                            TItemValue="Guid?"
+                            DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                            @bind-Value="@context.BaseGameId"
+                            LabelName="Title"
+                            ValueName="Id"
+                            Placeholder="Select a Game"
+                            DefaultActiveFirstOption="false"
+                            EnableSearch>
+                        <ItemTemplate Context="baseGame">
+                            <Image Src="@GetIcon(baseGame)" Height="32" Width="32" Preview="false"></Image>
+                            @baseGame.Title
+                        </ItemTemplate>
+                    </Select>
+                </FormItem>
+            }
+            <FormItem Label="Key Allocation Method">
+                <Select @bind-Value="@context.KeyAllocationMethod" TItem="KeyAllocationMethod" TItemValue="KeyAllocationMethod" DataSource="Enum.GetValues<KeyAllocationMethod>()">
+                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                </Select>
+            </FormItem>
+            <FormItem Label="Released On">
+                <DatePicker TValue="DateTime?" @bind-Value="@context.ReleasedOn" Picker="@DatePickerType.Date" />
+            </FormItem>
+            <FormItem Label="Singleplayer">
+                <Checkbox @bind-Checked="@context.Singleplayer" />
+            </FormItem>
+            <FormItem Label="Developers">
+                <TagsInput Entities="Companies" @bind-Values="context.Developers" OptionLabelSelector="c => c.Name" TItem="Company" />
+            </FormItem>
+            <FormItem Label="Publishers">
+                <TagsInput Entities="Companies" @bind-Values="context.Publishers" OptionLabelSelector="c => c.Name" TItem="Company" />
+            </FormItem>
+            <FormItem Label="Platforms">
+                <TagsInput Entities="Platforms" @bind-Values="context.Platforms" OptionLabelSelector="c => c.Name" TItem="Platform" />
+            </FormItem>
+            <FormItem Label="Genres">
+                <TagsInput Entities="Genres" @bind-Values="context.Genres" OptionLabelSelector="c => c.Name" TItem="Genre" />
+            </FormItem>
+            <FormItem Label="Tags">
+                <TagsInput Entities="Tags" @bind-Values="context.Tags" OptionLabelSelector="c => c.Name" TItem="Data.Models.Tag" />
+            </FormItem>
+            <FormItem Label="Collections">
+                <TagsInput Entities="Collections" @bind-Values="context.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
+            </FormItem>
+            <FormItem Label="Redistributables">
+                <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Redistributables" TitleSelector="r => r.Name" @bind-Values="context.Redistributables" />
+            </FormItem>
+        </Form>
+    </ChildContent>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    bool Loaded = false;
+    bool Success;
+    string[] Errors = { };
+
+    IEnumerable<Engine> Engines = new List<Engine>();
+    IEnumerable<Company> Companies = new List<Company>();
+    IEnumerable<Genre> Genres = new List<Genre>();
+    IEnumerable<Platform> Platforms = new List<Platform>();
+    IEnumerable<Data.Models.Tag> Tags = new List<Data.Models.Tag>();
+    IEnumerable<Collection> Collections = new List<Collection>();
+    IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
+    IEnumerable<TransferItem> RedistributableTargetItems = new List<TransferItem>();
+    IEnumerable<string> TargetRedistributables = new List<string>();
+    IEnumerable<Game> Games = new List<Game>();
+
+    private GameMetadataLookup? GameMetadataLookup;
+
+    private Settings Settings = SettingService.GetSettings();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!Loaded)
+            await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        using (var engineService = DatabaseServiceFactory.Create<EngineService>())
+        using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
+        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
+        using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
+        using (var tagService = DatabaseServiceFactory.Create<TagService>())
+        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+        {
+            Engines = await engineService.GetAsync();
+            Companies = await companyService.GetAsync();
+            Genres = await genreService.GetAsync();
+            Platforms = await platformService.GetAsync();
+            Tags = await tagService.GetAsync();
+            Collections = await collectionService.GetAsync();
+            Games = await gameService.GetAsync(g => g.Type == GameType.MainGame);
+            Redistributables = await redistributableService.GetAsync();
+        }
+
+        RedistributableTargetItems = Redistributables.Select(r => new TransferItem
+        {
+            Title = r.Name,
+            Description = r.Description,
+            Key = r.Id.ToString()
+        });
+
+        Loaded = true;
+    }
+
+    private async Task Save(Game game)
+    {
+        try
+        {
+            if (game.Id != Guid.Empty)
+            {
+                using (var gameService = DatabaseServiceFactory.Create<GameService>())
+                {
+                    game = await gameService.UpdateAsync(game);
+                }
+
+                await MessageService.Success("Game updated!");
+            }
+            else
+            {
+                using (var gameService = DatabaseServiceFactory.Create<GameService>())
+                {
+                    game = await gameService.AddAsync(game);
+                }
+
+                NavigationManager.LocationChanged += NotifyGameAdded;
+
+                NavigationManager.NavigateTo($"/Games/{game.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save game!");
+            Logger.LogError(ex, "Could not save game!");
+        }
+    }
+
+    private void NotifyGameAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyGameAdded;
+
+        MessageService.Success("Game added!");
+    }
+
+    private async Task OnGameLookupResultSelected(GameLookupResult result, Game game)
+    {
+        try
+        {
+            using (var igdbService = DatabaseServiceFactory.Create<IGDBService>())
+            {
+                game = await igdbService.ImportGameAsync(result, game);
+
+                NavigationManager.NavigateTo($"/Games/{game.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not import info from IGDB!");
+            Logger.LogError(ex, "Could not import info from IGDB!");
+        }
+    }
+
+    private string GetIcon(Game game)
+    {
+        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+
+        if (media != null)
+            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        else
+            return "/favicon.ico";
+    }
+
+    private async Task Delete(Game game)
+    {
+        Games = new List<Game>();
+
+        try
+        {
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                await gameService.DeleteAsync(game);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+            Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+        }
+    }
+}

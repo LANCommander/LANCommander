@@ -1,0 +1,89 @@
+﻿@page "/Settings/Authentication"
+@using CaseConverter
+@using LANCommander.Server.Models;
+@using LANCommander.Server.UI.Pages.Settings.Authentication.Components
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Authentication">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
+
+<div style="padding: 0 24px;">
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Require Account Approval">
+            <Switch @bind-Checked="context.Authentication.RequireApproval" />
+        </FormItem>
+
+        <FormItem Label="Token Secret">
+            <InputPassword @bind-Value="context.Authentication.TokenSecret" />
+        </FormItem>
+        <FormItem Label="Token Lifetime">
+            <AntDesign.InputNumber @bind-Value="context.Authentication.TokenLifetime" Formatter="FormatTokenLifetime" Min="1" />
+        </FormItem>
+
+        <Divider Text="Password Requirements" />
+
+        <FormItem Label="Require non-alphanumeric characters">
+            <Switch @bind-Checked="@context.Authentication.PasswordRequireNonAlphanumeric" />
+        </FormItem>
+        <FormItem Label="Require Lowercase characters">
+            <Switch @bind-Checked="context.Authentication.PasswordRequireLowercase" />
+        </FormItem>
+        <FormItem Label="Require Uppercase characters">
+            <Switch @bind-Checked="context.Authentication.PasswordRequireUppercase" />
+        </FormItem>
+        <FormItem Label="Require digits">
+            <Switch @bind-Checked="context.Authentication.PasswordRequireDigit" />
+        </FormItem>
+        <FormItem Label="Minimum Length">
+            <AntDesign.InputNumber @bind-Value="context.Authentication.PasswordRequiredLength" Min="1" />
+        </FormItem>
+        
+        <Divider Text="Security" />
+        
+        <FormItem Label="Minimum Same Site Cookie Policy">
+            <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.MinimumSameSitePolicy" />
+        </FormItem>
+        
+        <FormItem Label="Cookie Secure Policy">
+            <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.CookieSecurePolicy" />
+        </FormItem>
+    </Form>
+
+    <Divider Text="External Providers" />
+
+    <ExternalProviderEditor @bind-Values="Settings.Authentication.AuthenticationProviders" />
+</div>
+
+@code {
+    Settings Settings = SettingService.GetSettings();
+
+    string FormatTokenLifetime(int value)
+    {
+        return value.ToString() + " days";
+    }
+
+    void Save()
+    {
+        try
+        {
+            foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
+            {
+                if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
+                    authenticationProvider.Slug = authenticationProvider.Name.ToPascalCase();
+            }
+            
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

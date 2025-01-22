@@ -1,31 +1,37 @@
 ﻿@using LANCommander.SDK.Enums
-@inject KeyService KeyService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 
 @if (Keys != null)
 {
-    <Space Direction="@DirectionVHType.Vertical" Style="width: 100%;">
-        <SpaceItem>
-            <GridRow>
-                <GridCol Span="8">
-                    <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
-                </GridCol>
-                <GridCol Span="8">
-                    <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
-                </GridCol>
-                <GridCol Span="8">
-                    <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
-                </GridCol>
-            </GridRow>
-        </SpaceItem>
-
-        <SpaceItem>
-            <Table TItem="Key" DataSource="@Keys" Responsive>
-                <PropertyColumn Property="k => k.Value">
-                    <InputPassword @bind-Value="@context.Value" />
-                </PropertyColumn>
-                <PropertyColumn Property="k => k.AllocationMethod" Title="Allocation Method" />
-                <Column TData="string" Title="Claimed By">
+    <Flex Vertical Gap="FlexGap.Small">
+        <GridRow>
+            <GridCol Span="8">
+                <Statistic Title="Available" Value="Keys.Count - AllocatedKeys" Style="text-align: center;" />
+            </GridCol>
+            <GridCol Span="8">
+                <Statistic Title="Allocated" Value="AllocatedKeys" Style="text-align: center;" />
+            </GridCol>
+            <GridCol Span="8">
+                <Statistic Title="Total" Value="Keys.Count" Style="text-align: center;" />
+            </GridCol>
+        </GridRow>
+        
+        <DataTable
+            @ref="Table"
+            TItem="Key"
+            Responsive
+            Query="k => k.GameId == GameId">
+            <RightToolbar>
+                <Button Type="@ButtonType.Default" OnClick="() => Edit()">Edit</Button>
+                <Button Type="@ButtonType.Primary" OnClick="() => Save()">Save</Button>
+            </RightToolbar>
+            <Columns>
+                <BoundDataColumn Property="k => k.Value">
+                    <InputPassword @bind-Value="@context.Value"/>
+                </BoundDataColumn>
+                <BoundDataColumn Property="k => k.AllocationMethod" Title="Allocation Method"/>
+                <DataColumn TData="string" Title="Claimed By" Include="ClaimedByUser">
                     @switch (context.AllocationMethod)
                     {
                         case KeyAllocationMethod.MacAddress:
@@ -36,21 +42,17 @@
                             <text>@context.ClaimedByUser?.UserName</text>
                             break;
                     }
-                </Column>
-                <PropertyColumn Property="g => g.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Title="Claimed On" Sortable />
-                <ActionColumn Title="">
-                    <Space Style="display: flex; justify-content: end">
-                        <SpaceItem>
-                            @if (context.IsAllocated())
-                            {
-                                <Button OnClick="() => Release(context)">Release</Button>
-                            }
-                        </SpaceItem>
-                    </Space>
-                </ActionColumn>
-            </Table>
-        </SpaceItem>
-    </Space>
+                </DataColumn>
+                <BoundDataColumn Property="k => k.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Title="Claimed On" Sortable />
+                <DataActions>
+                    @if (context.IsAllocated())
+                    {
+                        <Button OnClick="() => Release(context)">Release</Button>
+                    }
+                </DataActions>
+            </Columns>
+        </DataTable>
+    </Flex>
 
     <Modal Title="Edit Keys" Visible="EditModalVisible" Maximizable="false" DefaultMaximized="true" OnCancel="() => EditModalVisible = false" OnOk="Save">
         <StandaloneCodeEditor @ref="Editor" Id="editor" ConstructionOptions="EditorConstructionOptions" />
@@ -65,16 +67,16 @@
 
 @code {
     [Parameter] public Guid GameId { get; set; }
-    [Parameter] public ICollection<Key> Keys { get; set; }
-    [Parameter] public EventCallback<ICollection<Key>> KeysChanged { get; set; }
 
+    ICollection<Key> Keys = new List<Key>();
     int AllocatedKeys;
 
     bool EditModalVisible = false;
 
-    private StandaloneCodeEditor? Editor;
+    DataTable<Key> Table;
+    StandaloneCodeEditor? Editor;
 
-    private StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
     {
         return new StandaloneEditorConstructionOptions
         {
@@ -90,22 +92,30 @@
         if (Keys == null)
             Keys = new List<Key>();
 
+        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
+        {
+            Keys = await keyService.GetAsync(k => k.GameId == GameId);
+        }
+
         AllocatedKeys = Keys.Count(k => k.IsAllocated());
     }
 
-    public void Edit()
+    void Edit()
     {
         EditModalVisible = true;
     }
 
-    private async Task Release(Key key)
+    async Task Release(Key key)
     {
-        key = await KeyService.Release(key);
+        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
+        {
+            key = await keyService.ReleaseAsync(key);
+        }
 
         await MessageService.Success("Key was unallocated!");
     }
 
-    private async Task Save()
+    async Task Save()
     {
         var value = await Editor.GetValue();
         var keys = value.Split("\n").Select(k => k.Trim()).Where(k => !String.IsNullOrWhiteSpace(k)).ToList();
@@ -113,15 +123,18 @@
         var keysDeleted = Keys.Where(k => !keys.Contains(k.Value)).ToList();
         var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k)).ToList();
 
-        foreach (var key in keysDeleted)
-            KeyService.Delete(key);
+        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
+        {
+            foreach (var key in keysDeleted)
+                keyService.DeleteAsync(key);
 
-        foreach (var key in keysAdded)
-            await KeyService.Add(new Key()
+            foreach (var key in keysAdded)
+                await keyService.AddAsync(new Key()
                 {
                     GameId = GameId,
                     Value = key
                 });
+        }
 
         EditModalVisible = false;
 

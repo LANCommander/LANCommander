@@ -7,25 +7,32 @@ using System.IO.Compression;
 
 namespace LANCommander.Server.Controllers
 {
-    [Authorize(Roles = "Administrator")]
+    [Authorize(Roles = RoleService.AdministratorRoleName)]
     public class RedistributablesController : BaseController
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
+        private readonly ArchiveService ArchiveService;
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger,
             IMapper mapper,
-            RedistributableService redistributableService) : base(logger)
+            RedistributableService redistributableService,
+            ArchiveService archiveService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
+            ArchiveService = archiveService;
         }
 
         [HttpGet("/Redistributables/{id:guid}/Export")]
-        public async Task Export(Guid id)
+        public async Task ExportAsync(Guid id)
         {
-            var redistributable = await RedistributableService.Get(id);
+            var redistributable = await RedistributableService
+                .Include(r => r.Archives)
+                .Include(r => r.Games)
+                .Include(r => r.Scripts)
+                .GetAsync(id);
 
             if (redistributable == null)
             {
@@ -38,7 +45,7 @@ namespace LANCommander.Server.Controllers
 
             using (ZipArchive export = new ZipArchive(Response.BodyWriter.AsStream(), ZipArchiveMode.Create))
             {
-                var manifest = Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.Get(redistributable.Id));
+                var manifest = Mapper.Map<SDK.Models.Redistributable>(await RedistributableService.GetAsync(redistributable.Id));
 
                 var serializedManifest = ManifestHelper.Serialize(manifest);
 
@@ -60,7 +67,7 @@ namespace LANCommander.Server.Controllers
                 if (redistributable.Archives != null)
                 foreach (var archive in redistributable.Archives)
                 {
-                    var archiveFilePath = ArchiveService.GetArchiveFileLocation(archive.ObjectKey);
+                    var archiveFilePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
                     var entry = export.CreateEntry($"Archives/{archive.ObjectKey}", CompressionLevel.NoCompression);
 
                     using (var entryStream = entry.Open())

@@ -1,18 +1,18 @@
 ﻿@page "/Metadata/Collections/{id:guid}"
 @page "/Metadata/Collections/Add"
 @using LANCommander.Server.Extensions
-@attribute [Authorize(Roles = "Administrator")]
-@inject CollectionService CollectionService
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
 
 <PageHeader>
     <PageHeaderTitle>
-        <Input Size="@InputSize.Large" @bind-Value="@Collection.Name" />
+        <Input Size="InputSize.Large" @bind-Value="@Collection.Name" />
     </PageHeaderTitle>
     <PageHeaderExtra>
-        <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
+        <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
     </PageHeaderExtra>
 </PageHeader>
 
@@ -61,49 +61,53 @@
         }
     </Column>
 
-    <ActionColumn Title="" Style="text-align: right">
-        <ChildContent>
-            <Space Direction="DirectionVHType.Horizontal">
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => RemoveGame(context)" Title="Are you sure you want to remove this game from the collection?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ChildContent>
+    <ActionColumn Title="">
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            <Popconfirm OnConfirm="() => RemoveGame(context)" Title="Are you sure you want to remove this game from the collection?">
+                <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
+            </Popconfirm>
+        </Flex>
     </ActionColumn>
 </Table>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    Collection Collection;
+    Collection Collection = new Collection();
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id == Guid.Empty)
-            Collection = new Collection();
-        else
-            Collection = await CollectionService.Get(Id);
+        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+        {
+            if (Id == Guid.Empty)
+                Collection = new Collection();
+            else
+                Collection = await collectionService
+                    .Include(c => c.Games)
+                    .GetAsync(Id);
+        }
     }
 
     private async Task Save()
     {
         try
         {
-            if (Collection.Id != Guid.Empty)
+            using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
             {
-                Collection = await CollectionService.Update(Collection);
+                if (Collection.Id != Guid.Empty)
+                {
+                    Collection = await collectionService.UpdateAsync(Collection);
 
-                await MessageService.Success("Collection updated!");
-            }
-            else
-            {
-                Collection = await CollectionService.Add(Collection);
+                    await MessageService.Success("Collection updated!");
+                }
+                else
+                {
+                    Collection = await collectionService.AddAsync(Collection);
 
-                NavigationManager.LocationChanged += NotifyCollectionAdded;
+                    NavigationManager.LocationChanged += NotifyCollectionAdded;
 
-                NavigationManager.NavigateTo($"/Collections/{Collection.Id}");
+                    NavigationManager.NavigateTo($"/Collections/{Collection.Id}");
+                }
             }
         }
         catch (Exception ex)
@@ -126,7 +130,10 @@
         {
             Collection.Games.Remove(game);
 
-            await CollectionService.Update(Collection);
+            using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+            {
+                await collectionService.UpdateAsync(Collection);
+            }
         }
         catch (Exception ex)
         {

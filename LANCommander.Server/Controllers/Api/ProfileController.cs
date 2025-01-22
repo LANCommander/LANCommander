@@ -17,24 +17,27 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class ProfileController : BaseApiController
     {
-        private readonly UserManager<User> UserManager;
         private readonly UserService UserService;
+        private readonly MediaService MediaService;
+        private readonly UserCustomFieldService UserCustomFieldService;
 
         public ProfileController(
             ILogger<ProfileController> logger,
-            UserManager<User> userManager,
-            UserService userService) : base(logger)
+            UserService userService,
+            MediaService mediaService,
+            UserCustomFieldService userCustomFieldService) : base(logger)
         {
-            UserManager = userManager;
             UserService = userService;
+            MediaService = mediaService;
+            UserCustomFieldService = userCustomFieldService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<User>> Get()
+        public async Task<ActionResult<User>> GetAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.GetAsync<SDK.Models.User>(User?.Identity?.Name);
 
                 if (user != null)
                     return Ok(user);
@@ -45,16 +48,16 @@ namespace LANCommander.Server.Controllers.Api
                 return Unauthorized();
         }
 
-        [HttpPost("ChangeAlias")]
-        public async Task<IActionResult> ChangeAlias(ChangeAliasRequest request)
+        [HttpPut("ChangeAlias")]
+        public async Task<IActionResult> ChangeAliasAsync(ChangeAliasRequest request)
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 user.Alias = request.Alias;
 
-                await UserManager.UpdateAsync(user);
+                await UserService.UpdateAsync(user);
 
                 return Ok(request.Alias);
             }
@@ -63,18 +66,21 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("Avatar")]
-        public async Task<IActionResult> Avatar()
+        public async Task<IActionResult> AvatarAsync()
         {
             if (User != null && User.Identity != null && User.Identity.IsAuthenticated)
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
+                if (user == null)
+                    return NotFound();
+
+                var media = await MediaService.FirstOrDefaultAsync(m => m.Type == SDK.Enums.MediaType.Avatar && m.UserId == user.Id);
 
                 if (media == null)
                     return NotFound();
 
-                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }
@@ -84,21 +90,21 @@ namespace LANCommander.Server.Controllers.Api
 
         [AllowAnonymous]
         [HttpGet("{userName}/Avatar")]
-        public async Task<IActionResult> Avatar(string userName)
+        public async Task<IActionResult> AvatarAsync(string userName)
         {
             try
             {
-                var user = await UserManager.FindByNameAsync(userName);
+                var user = await UserService.GetAsync(userName);
 
                 if (user == null)
                     return NotFound();
 
-                var media = user.Media?.FirstOrDefault(u => u.Type == SDK.Enums.MediaType.Avatar);
+                var media = await MediaService.FirstOrDefaultAsync(m => m.Type == SDK.Enums.MediaType.Avatar && m.UserId == user.Id);
 
                 if (media == null)
                     return NotFound();
 
-                var fs = System.IO.File.OpenRead(MediaService.GetImagePath(media));
+                var fs = System.IO.File.OpenRead(MediaService.GetMediaPath(media));
 
                 return File(fs, media.MimeType);
             }
@@ -109,13 +115,13 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("CustomField/{name}")]
-        public async Task<IActionResult> CustomField(string name)
+        public async Task<IActionResult> GetCustomFieldAsync(string name)
         {
             try
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                var field = await UserService.GetCustomField(user.Id, name);
+                var field = await UserCustomFieldService.GetAsync(user.Id, name);
 
                 return Ok(field.Value);
             }
@@ -127,14 +133,14 @@ namespace LANCommander.Server.Controllers.Api
             }
         }
 
-        [HttpPost("CustomField/{name}")]
-        public async Task<IActionResult> CustomField(string name, string value)
+        [HttpPut("CustomField/{name}")]
+        public async Task<IActionResult> UpdateCustomFieldAsync(string name, string value)
         {
             try
             {
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
-                await UserService.UpdateCustomField(user.Id, name, value);
+                await UserCustomFieldService.UpdateAsync(user.Id, name, value);
 
                 return Ok(value);
             }

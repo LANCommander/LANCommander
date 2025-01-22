@@ -10,6 +10,18 @@ app {
     bottom: 0;
 }
 
+// Hack for Depot spinner
+.pb-custom-window-content > .ant-spin-nested-loading {
+    height: 100%;
+    overflow: hidden;
+    
+    & > div,
+    & > div > .ant-spin-container,
+    & .ant-layout {
+        height: 100%;
+    }
+}
+
 .ant-layout {
     flex-grow: 1;
     overflow: hidden;
@@ -43,6 +55,10 @@ app {
     &:hover::before {
         opacity: 1;
     }
+}
+
+.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+    line-height: 2;
 }
 
 @keyframes a {

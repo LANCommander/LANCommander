@@ -1,53 +1,37 @@
 ﻿@page "/Metadata/Genres"
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize(Roles = "Administrator")]
-@inject GenreService GenreService
-@inject NavigationManager NavigationManager
+@using LANCommander.Server.Data
+@using System.Web
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Genres">
-    <PageHeaderExtra>
-        <Space Direction="DirectionVHType.Horizontal">
-            <SpaceItem>
-                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
-            </SpaceItem>
-            <SpaceItem>
-                <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Genre</Button>
-            </SpaceItem>
-        </Space>
-    </PageHeaderExtra>
-</PageHeader>
+<PageHeader Title="Genres" />
 
-<TableColumnPicker @ref="Picker" Key="Genres" @bind-Visible="ColumnPickerVisible" />
-
-<Table TItem="Genre" DataSource="@Genres" Loading="@Loading" PageSize="25" Responsive>
-    <PropertyColumn Property="c => c.Name" Sortable Hidden="@(Picker.IsColumnHidden("Name"))" />
-    <PropertyColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
-    <PropertyColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
-    <PropertyColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
-    <PropertyColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
-    <PropertyColumn Property="c => c.Games != null ? c.Games.Count : 0" Title="Games" Sortable Hidden="@(Picker.IsColumnHidden("Games"))" />
-    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
-        <TitleTemplate>
-            <div style="text-align: right">
-                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
-            </div>
-        </TitleTemplate>
-        <ChildContent>
-            <Space Direction="DirectionVHType.Horizontal">
-                <SpaceItem>
-                    <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenEdit(context)" />
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this Genre?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ChildContent>
-    </ActionColumn>
-</Table>
+<DataTable
+    TItem="Genre"
+    Size="@TableSize.Small"
+    Searchable
+    SearchProperty="g => g.Name">
+    <RightToolbar>
+        <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Genre</Button>
+    </RightToolbar>
+    <Columns>
+        <BoundDataColumn Property="g => g.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <BoundDataColumn Property="g => g.Games.Count" Sortable Title="Games" Include="Games" />
+        <BoundDataColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+        <BoundDataColumn Property="g => g.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+        <DataActions>
+            <a href="@($"/Metadata/Genres/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this genre?">
+                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+</DataTable>
 
 <Modal Title="@(GenreContext.Id == Guid.Empty ? "New Genre" : "Edit Genre")"
     @bind-Visible="@EditGenreVisible"
@@ -61,55 +45,35 @@
 </Modal>
 
  @code {
-    IEnumerable<Genre> Genres { get; set; } = new List<Genre>();
-
     bool Loading = true;
 
-    string Search = "";
-
-    TableColumnPicker Picker;
-    bool ColumnPickerVisible = false;
-
     bool EditGenreVisible = false;
-    Genre GenreContext = new Genre();
+    Genre GenreContext = new();
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
-        {
-            LoadData();
-
-            Loading = false;
-
-            StateHasChanged();
-        }
+        Loading = false;
     }
 
-    private async Task LoadData()
-    {
-        var fuzzySearch = Search.ToLower().Trim();
-
-        Genres = await GenreService.Get(r => r.Name.ToLower().Contains(fuzzySearch)).OrderBy(r => r.Name).ToListAsync();
-    }
-
-    private async Task UpdateOrAdd()
+    async Task UpdateOrAdd()
     {
         try
         {
-            if (GenreContext.Id == Guid.Empty)
+            using (var genreService = DatabaseServiceFactory.Create<GenreService>())
             {
-                await GenreService.AddMissing(x => x.Name == GenreContext.Name, GenreContext);
+                if (GenreContext.Id == Guid.Empty)
+                {
+                    await genreService.AddMissingAsync(x => x.Name == GenreContext.Name, GenreContext);
 
-                MessageService.Success($"{GenreContext.Name} was added!");
+                    MessageService.Success($"{GenreContext.Name} was added!");
+                }
+                else
+                {
+                    await genreService.UpdateAsync(GenreContext);
+
+                    MessageService.Success($"{GenreContext.Name} was updated!");
+                }
             }
-            else
-            {
-                await GenreService.Update(GenreContext);
-
-                MessageService.Success($"{GenreContext.Name} was updated!");
-            }
-
-            await LoadData();
         }
         catch (Exception ex)
         {
@@ -124,7 +88,7 @@
         await CloseEdit();
     }
 
-    private async Task OpenEdit(Genre genre)
+    async Task OpenEdit(Genre genre)
     {
         if (genre != null)
             GenreContext = genre;
@@ -134,33 +98,22 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task CloseEdit()
+    async Task CloseEdit()
     {
         EditGenreVisible = false;
 
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task Delete(Genre Genre)
+    async Task Delete(Genre Genre)
     {
-        Genres = new List<Genre>();
-
         Loading = true;
 
-        await GenreService.Delete(Genre);
-
-        Genres = await GenreService.Get(x => true).OrderBy(r => r.Name).ToListAsync();
+        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
+        {
+            await genreService.DeleteAsync(Genre);
+        }
 
         Loading = false;
-    }
-
-    private async Task OpenColumnPicker()
-    {
-        ColumnPickerVisible = true;
-    }
-
-    private async Task CloseColumnPicker()
-    {
-        ColumnPickerVisible = false;
     }
 }

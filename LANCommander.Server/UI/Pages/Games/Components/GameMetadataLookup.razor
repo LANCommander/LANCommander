@@ -1,11 +1,7 @@
 ﻿@using AntDesign.TableModels;
-@using LANCommander.Server.Models
 @using LANCommander.PCGamingWiki
 @using LANCommander.SDK.Enums
 @inject IGDBService IGDBService
-@inject CompanyService CompanyService
-@inject GenreService GenreService
-@inject TagService TagService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<GameMetadataLookup> Logger
@@ -13,7 +9,7 @@
 @{
     RenderFragment Footer =
     @<Template>
-        <Button OnClick="SelectGame" Disabled="@(Loading || (SelectedResults != null && SelectedResults.Count() == 0) || Results.Count() == 0)" Type="@ButtonType.Primary">Select</Button>
+        <Button OnClick="SelectGame" Disabled="@(Loading || (SelectedResults != null && SelectedResults.Count() == 0) || Results.Count() == 0)" Type="ButtonType.Primary">Select</Button>
         <Button OnClick="() => ModalVisible = false">Cancel</Button>
     </Template>;
 }
@@ -29,7 +25,7 @@
         @bind-SelectedRows="SelectedResults"
         Responsive>
 
-        <Selection Key="@context.IGDBId.ToString()" Type="radio" />
+        <Selection Key="@context.IGDBId.ToString()" Type="SelectionType.Radio" />
         <PropertyColumn Property="g => g.Title" Title="Title" />
         <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Title="Released" />
         <PropertyColumn Property="g => g.Developers">
@@ -39,33 +35,27 @@
 
     @if (MoreResults && IGDBService.Authenticated)
     {
-        <Button Type="@ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
+        <Button Type="ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
     }
 </Modal>
 
 @if (IGDBService.Authenticated)
 {
-    <Space Style="display: flex">
-        <SpaceItem Style="flex-grow: 1">
-            <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" />
-        </SpaceItem>
-        <SpaceItem>
-            <Button OnClick="() => SearchForGame(Value)" Type="@ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
-        </SpaceItem>
-    </Space>
+    <Flex Gap="FlexGap.Small">
+        <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" />
+
+        <Button OnClick="() => SearchForGame(Value)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
+    </Flex>
 }
 else
 {
-    <Space Style="display: flex">
-        <SpaceItem Style="flex-grow: 1">
-            <Input @bind-Value="Value" BindOnInput="true" OnChange="ValueChanged" />
-        </SpaceItem>
-        <SpaceItem>
-            <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
-                <Button Type="@ButtonType.Primary">@ButtonText</Button>
-            </Popconfirm>
-        </SpaceItem>
-    </Space>
+    <Flex Gap="FlexGap.Small">
+        <Input @bind-Value="Value" BindOnInput="true" OnChange="ValueChanged" />
+
+        <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid IGDB credentials. Setup now?">
+            <Button Type="ButtonType.Primary">@ButtonText</Button>
+        </Popconfirm>
+    </Flex>
 }
 
 @code {
@@ -84,7 +74,7 @@ else
     bool MoreResults = false;
     int Offset = 0;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         PCGamingWikiClient = new PCGamingWikiClient();
     }
@@ -122,7 +112,7 @@ else
             "involved_companies.company.name"
             };
 
-            var results = await IGDBService.Search(title, limit, Offset, fields);
+            var results = await IGDBService.SearchAsync(title, limit, Offset, fields);
 
             MoreResults = results.Count() == limit;
 
@@ -191,7 +181,7 @@ else
             "game_engines.*"
         };
 
-        result.IGDBMetadata = await IGDBService.Get(SelectedResults.First().IGDBId.GetValueOrDefault(), fields);
+        result.IGDBMetadata = await IGDBService.GetAsync(SelectedResults.First().IGDBId.GetValueOrDefault(), fields);
         result.MultiplayerModes = await GetMultiplayerModes(result.IGDBMetadata.Name);
 
         await OnResultSelected.InvokeAsync(result);

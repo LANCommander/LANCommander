@@ -1,10 +1,8 @@
 ﻿@page "/Settings/Servers"
 @using LANCommander.Server.Models;
-@layout SettingsLayout
-@inject SettingService SettingService
 @inject IMessageService MessageService
 @inject ILogger<Servers> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Servers" />
 
@@ -21,16 +19,11 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
-
-    private void Save()
+    void Save()
     {
         try
         {
@@ -44,7 +37,7 @@
         }
     }
 
-    private void OnPathSelected(string path)
+    void OnPathSelected(string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 

@@ -1,7 +1,4 @@
 ﻿@inherits LayoutComponentBase
-@using Microsoft.AspNetCore.Components.Authorization;
-@using System.Security.Claims;
-@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <Layout Class="layout">
     <Content Style="padding: 24px;">
@@ -12,15 +9,3 @@
         LANCommander v@(UpdateService.GetCurrentVersion().ToString())
     </Footer>
 </Layout>
-
-@code {
-    ClaimsPrincipal User;
-
-    protected override async Task OnInitializedAsync()
-    {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        if (authState.User.Identity.IsAuthenticated)
-            User = authState.User;
-    }
-}

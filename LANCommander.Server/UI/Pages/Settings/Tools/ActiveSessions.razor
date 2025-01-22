@@ -2,11 +2,10 @@
 @using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Games.Components;
 @using Microsoft.EntityFrameworkCore
-@layout SettingsLayout
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
-@inject PlaySessionService PlaySessionService
 @inject ILogger<ActiveSessions> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Active Sessions" />
 
@@ -24,7 +23,7 @@
             @context.CreatedBy?.UserName
         </PropertyColumn>
         <ActionColumn Title="" Style="text-align: right">
-            <Space Direction="DirectionVHType.Horizontal">
+            <Space Direction="SpaceDirection.Horizontal">
                 <SpaceItem>
                     <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this session?">
                         <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
@@ -49,7 +48,10 @@
     {
         Loading = true;
 
-        PlaySessions = await PlaySessionService.Get(ps => !ps.End.HasValue).ToListAsync();
+        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+        {
+            PlaySessions = await playSessionService.GetAsync(ps => !ps.End.HasValue);
+        }
 
         Loading = false;
     }
@@ -58,7 +60,10 @@
     {
         try
         {
-            await PlaySessionService.Delete(playSession);
+            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+            {
+                await playSessionService.DeleteAsync(playSession);
+            }
 
             await LoadData();
 

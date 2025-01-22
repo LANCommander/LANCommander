@@ -1,10 +1,10 @@
 ﻿@page "/Settings/Archives"
 @using LANCommander.Server.Models;
-@layout SettingsLayout
-@inject SettingService SettingService
+@using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject ILogger<Archives> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Archives" />
 
@@ -22,8 +22,36 @@
             <AntDesign.InputNumber @bind-Value="context.Archives.MaxChunkSize" Min="1" DefaultValue="50" />
         </FormItem>
 
-        <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Archives.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+        <FormItem Label="Storage Paths">
+            <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Middle" Style="width: 100%">
+                <SpaceItem>
+                    <Table TItem="Data.Models.StorageLocation" DataSource="@StorageLocations" HidePagination="true" Responsive Context="storageLocation">
+                        <PropertyColumn Property="l => l.Path">
+                            <FilePicker @bind-Value="storageLocation.Path" AllowDirectories="true" Title="Select Storage Location" Root="@RootPath" OnSelected="(path) => OnPathSelected(storageLocation, path)" />
+                        </PropertyColumn>
+                        <PropertyColumn Property="l => l.Default" Title="Default" Align="ColumnAlign.Right">
+                            <Checkbox @bind-Checked="storageLocation.Default" />
+                        </PropertyColumn>
+                        <ActionColumn>
+                            <Space Style="display: flex; justify-content: end">
+                                <SpaceItem>
+                                    <Popconfirm OnConfirm="() => RemoveStorageLocation(storageLocation)" Title="Are you sure you want to remove this storage location?">
+                                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                                    </Popconfirm>
+                                </SpaceItem>
+                            </Space>
+                        </ActionColumn>
+                    </Table>
+                </SpaceItem>
+
+                <SpaceItem>
+                    <GridRow Justify="RowJustify.End">
+                        <GridCol>
+                            <Button OnClick="AddStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
+                        </GridCol>
+                    </GridRow>
+                </SpaceItem>
+            </Space>
         </FormItem>
 
         <FormItem>
@@ -33,20 +61,41 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings = SettingService.GetSettings();
+    ICollection<StorageLocation> StorageLocations;
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
+
+        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+        {
+            StorageLocations = await storageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+        }
     }
 
-    private void Save()
+    async Task Save()
     {
         try
         {
             SettingService.SaveSettings(Settings);
+
+            foreach (var storageLocation in StorageLocations)
+            {
+                if (!StorageLocations.Any(l => l.Default))
+                    storageLocation.Default = true;
+
+                using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
+                {
+                    if (storageLocation.Id != Guid.Empty)
+                        await storageLocationService.UpdateAsync(storageLocation);
+                    else
+                        await storageLocationService.AddAsync(storageLocation);
+                }
+            }
+
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)
@@ -56,13 +105,25 @@
         }
     }
 
-    private void OnPathSelected(string path)
+    void OnPathSelected(StorageLocation storageLocation, string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        Settings.Archives.StoragePath = path;
+        storageLocation.Path = path;
+    }
+
+    async Task AddStorageLocation()
+    {
+        StorageLocations.Add(new StorageLocation());
+
+        StateHasChanged();
+    }
+
+    async Task RemoveStorageLocation(StorageLocation storageLocation)
+    {
+        StorageLocations.Remove(storageLocation);
     }
 }

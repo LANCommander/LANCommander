@@ -1,0 +1,12 @@
+<span class="anticon" role="img">
+    <svg focusable="false" width="@Width" height="@Height" fill="@Color">
+        <use href="_content/LANCommander.UI/bootstrap-icons.svg#@Type"></use>
+    </svg>
+</span>
+
+@code {
+    [Parameter] public string Type { get; set; }
+    [Parameter] public string Color { get; set; } = "currentColor";
+    [Parameter] public string Width { get; set; } = "1em";
+    [Parameter] public string Height { get; set; } = "1em";
+}

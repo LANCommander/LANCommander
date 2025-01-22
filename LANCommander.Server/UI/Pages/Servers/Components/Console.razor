@@ -1,8 +1,7 @@
 ﻿@using LANCommander.SDK.Enums
 @using Microsoft.AspNetCore.SignalR.Client
 @using XtermBlazor
-@inject ServerService ServerService
-@inject ServerConsoleService ServerConsoleService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
@@ -44,7 +43,10 @@
     {
         if (ServerConsoleId != Guid.Empty)
         {
-            ServerConsole = await ServerConsoleService.Get(ServerConsoleId);
+            using (var serverConsoleService = DatabaseServiceFactory.Create<ServerConsoleService>())
+            {
+                ServerConsole = await serverConsoleService.GetAsync(ServerConsoleId);
+            }
 
             await Connect(ServerConsole);
         }
@@ -65,11 +67,14 @@
 
             if (ServerConsoleId != Guid.Empty)
             {
-                var log = await ServerConsoleService.ReadLog(ServerConsoleId);
-
-                foreach (var line in log)
+                using (var serverConsoleService = DatabaseServiceFactory.Create<ServerConsoleService>())
                 {
-                    await Terminal.WriteLine(line);
+                    var log = await serverConsoleService.ReadLogAsync(ServerConsoleId);
+
+                    foreach (var line in log)
+                    {
+                        await Terminal.WriteLine(line);
+                    }
                 }
             }
         }

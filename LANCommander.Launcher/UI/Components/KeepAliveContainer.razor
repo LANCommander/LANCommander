@@ -1,0 +1,60 @@
+@implements IDisposable
+@inject KeepAliveService KeepAliveService
+@inject IMessageService MessageService
+
+@code {
+    string ConnectionMessageKey = Guid.NewGuid().ToString();
+
+    protected override void OnInitialized()
+    {
+        KeepAliveService.ConnectionSevered += OnConnectionSevered;
+        KeepAliveService.ConnectionLostPermanently += OnConnectionLostPermanently;
+        KeepAliveService.ConnectionEstablished += OnConnectionEstablished;
+    }
+
+    void OnConnectionSevered(object? sender, EventArgs e)
+    {
+        var messageConfig = new MessageConfig
+        {
+            Key = ConnectionMessageKey,
+            Type = MessageType.Loading,
+            Content = "Lost connection, retrying...",
+            Duration = 0,
+        };
+
+        MessageService.Open(messageConfig);
+    }
+    
+    void OnConnectionLostPermanently(object? sender, EventArgs e)
+    {
+        var messageConfig = new MessageConfig
+        {
+            Key = ConnectionMessageKey,
+            Type = MessageType.Error,
+            Content = "Server unavailable, enabling offline mode",
+            Duration = 2.5,
+        };
+
+        MessageService.Open(messageConfig);
+    }
+    
+    void OnConnectionEstablished(object? sender, EventArgs e)
+    {
+        var messageConfig = new MessageConfig
+        {
+            Key = ConnectionMessageKey,
+            Type = MessageType.Success,
+            Content = "Connection established!",
+            Duration = 2.5,
+        };
+
+        MessageService.Open(messageConfig);
+    }
+
+    public void Dispose()
+    {
+        KeepAliveService.ConnectionSevered -= OnConnectionSevered;
+        KeepAliveService.ConnectionLostPermanently -= OnConnectionLostPermanently;
+        KeepAliveService.ConnectionEstablished -= OnConnectionEstablished;
+    }
+}

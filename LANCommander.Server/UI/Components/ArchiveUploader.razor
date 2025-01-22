@@ -1,11 +1,12 @@
 ﻿@using System.Net;
 @using System.Diagnostics;
 @using Hangfire;
+@using LANCommander.SDK.Enums
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
-@inject ArchiveService ArchiveService
 @inject IMessageService MessageService
 @inject IJSRuntime JS
 @inject ILogger<ArchiveUploader> Logger
@@ -14,9 +15,9 @@
     RenderFragment Footer =
     @<Template>
         <FilePickerButton EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".zip"))"
-            OnSelected="OnLocalFileSelected"
-            Root="@RootPath"
-            Disabled="@(Status != "" || String.IsNullOrWhiteSpace(Archive.Version))">
+                          OnSelected="OnLocalFileSelected"
+                          Root="@RootPath"
+                          Disabled="@(Status != "" || String.IsNullOrWhiteSpace(Archive.Version))">
             Use Local File
         </FilePickerButton>
         <Button OnClick="Start" Disabled="@(File == null || Status != "" || String.IsNullOrWhiteSpace(Archive.Version))" Type="@ButtonType.Primary">Upload</Button>
@@ -34,8 +35,12 @@
             <TextArea @bind-Value="@context.Changelog" MaxLength=500 ShowCount />
         </FormItem>
 
+        <FormItem Label="Path">
+            <StorageLocationSelector Type="StorageLocationType.Archive" @bind-Value="@context.StorageLocation" />
+        </FormItem>
+
         <FormItem>
-            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" @bind-StorageLocationId="@(context.StorageLocation.Id)" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
                 <Text>
                     <p>Drag and Drop</p>
                     <p>or</p>
@@ -61,7 +66,9 @@
     IBrowserFile File;
     ChunkUploader ChunkUploader;
 
-    bool IsValid = false;
+    Guid StorageLocationId;
+    StorageLocation StorageLocation;
+    
     bool Visible = false;
     bool Uploading = false;
 
@@ -90,7 +97,10 @@
     {
         if (archiveId.HasValue && archiveId != Guid.Empty)
         {
-            Archive = await ArchiveService.Get(archiveId.Value);
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+            {
+                Archive = await archiveService.GetAsync(archiveId.Value);
+            }
         }
         else
         {
@@ -113,34 +123,37 @@
 
         if (Guid.TryParse(data, out var objectKey))
         {
-            Archive.ObjectKey = objectKey.ToString();
-
-            var archivePath = ArchiveService.GetArchiveFileLocation(Archive.ObjectKey);
-
-            Archive.CompressedSize = new System.IO.FileInfo(archivePath).Length;
-
-            if (Archive.Id != Guid.Empty)
-                Archive = await ArchiveService.Update(Archive);
-            else
-                Archive = await ArchiveService.Add(Archive);
-
-            Visible = false;
-
-            await InvokeAsync(StateHasChanged);
-
-            Archive? lastArchive = null;
-
-            var settings = SettingService.GetSettings();
-
-            if (settings.Archives.EnablePatching)
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
             {
-                if (Archive.GameId != Guid.Empty)
-                    lastArchive = await ArchiveService.Get(a => a.Id != Archive.Id && a.GameId == Archive.GameId).OrderByDescending(a => a.CreatedOn).FirstOrDefaultAsync();
-                else if (Archive.RedistributableId != Guid.Empty)
-                    lastArchive = await ArchiveService.Get(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId).OrderByDescending(a => a.CreatedOn).FirstOrDefaultAsync();
+                var uploadedArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
 
-                if (lastArchive != null && settings.Archives.EnablePatching)
-                    BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
+                uploadedArchive.GameId = Archive.GameId;
+                uploadedArchive.RedistributableId = Archive.RedistributableId;
+                uploadedArchive.Version = Archive.Version;
+                uploadedArchive.Changelog = Archive.Changelog;
+                uploadedArchive.CompressedSize = await archiveService.GetCompressedSizeAsync(uploadedArchive);
+                uploadedArchive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(uploadedArchive);
+
+                await archiveService.UpdateAsync(uploadedArchive);
+
+                Visible = false;
+
+                await InvokeAsync(StateHasChanged);
+
+                Archive? lastArchive = null;
+
+                var settings = SettingService.GetSettings();
+
+                if (settings.Archives.EnablePatching)
+                {
+                    if (Archive.GameId != Guid.Empty)
+                        lastArchive = await archiveService.FirstOrDefaultAsync(a => a.Id != Archive.Id && a.GameId == Archive.GameId, a => a.CreatedOn);
+                    else if (Archive.RedistributableId != Guid.Empty)
+                        lastArchive = await archiveService.FirstOrDefaultAsync(a => a.Id != Archive.Id && a.RedistributableId == Archive.RedistributableId, a => a.CreatedOn);
+
+                    if (lastArchive != null && settings.Archives.EnablePatching)
+                        BackgroundJob.Enqueue<PatchArchiveBackgroundJob>(x => x.Execute(lastArchive.Id, Archive.Id));
+                }
             }
 
             if (OnArchiveUploaded.HasDelegate)
@@ -176,9 +189,12 @@
     {
         try
         {
-            var objectKey = await ArchiveService.CopyFromLocalFile(path);
+            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+            {
+                var objectKey = await archiveService.CopyFromLocalFileAsync(path);
 
-            await OnUploadCompleted(objectKey.ToString());
+                await OnUploadCompleted(objectKey.ToString());
+            }
         }
         catch (Exception ex)
         {

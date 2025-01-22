@@ -64,6 +64,8 @@ namespace LANCommander.SDK.PowerShell
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-IniValue", typeof(UpdateIniValueCmdlet), null));
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-GameManifest", typeof(WriteGameManifestCmdlet), null));
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Write-ReplaceContentInFile", typeof(ReplaceContentInFileCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-UserCustomField", typeof(GetUserCustomFieldCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-UserCustomField", typeof(UpdateUserCustomFieldCmdlet), null));
 
             IgnoreWow64Redirection();
         }
@@ -219,7 +221,8 @@ namespace LANCommander.SDK.PowerShell
                     {
                         var returnValue = ps.Runspace.SessionStateProxy.PSVariable.GetValue("Return");
 
-                        result = (T)returnValue;
+                        if (returnValue != null)
+                            result = (T)returnValue;
                     }
                     catch
                     {

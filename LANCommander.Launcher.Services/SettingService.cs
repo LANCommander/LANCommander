@@ -52,6 +52,11 @@ namespace LANCommander.Launcher.Services
             return Settings;
         }
 
+        public static void SaveSettings()
+        {
+            SaveSettings(Settings);
+        }
+
         public static void SaveSettings(Settings settings)
         {
             if (settings != null)

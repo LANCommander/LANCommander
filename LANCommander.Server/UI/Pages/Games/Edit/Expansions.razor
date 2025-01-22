@@ -1,0 +1,48 @@
+﻿@page "/Games/{id:guid}/Expansions"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ILogger<Expansions> Logger
+
+<GameEditView Id="Id" Title="Expansions">
+    <DataTable
+        TItem="Game"
+        Context="expansion"
+        Query="g => g.BaseGameId == Id && g.Type == GameType.Expansion">
+        <BoundDataColumn Property="e => e.Title" Sortable Filterable />
+        <BoundDataColumn Property="e => e.SortTitle" Sortable Filterable />
+        <BoundDataColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="e => e.CreatedBy.UserName" Sortable Filterable Include="CreatedBy" />
+        <BoundDataColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="e => e.UpdatedBy.UserName" Sortable Filterable Include="CreatedBy" />
+        <DataActions>
+            <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{expansion.Id}", true))">Edit</Button>
+
+            <Popconfirm OnConfirm="() => Delete(expansion)" Title="Are you sure you want to delete this expansion?">
+                <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
+            </Popconfirm>
+        </DataActions>
+    </DataTable>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    async Task Delete(Game game)
+    {
+        try
+        {
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                await gameService.DeleteAsync(game);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+            Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+        }
+    }
+}

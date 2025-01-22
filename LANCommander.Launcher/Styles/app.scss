@@ -7,6 +7,7 @@
 }
 
 @import '_appbar';
+@import '_crash';
 @import '_window';
 @import '_scrollbar';
 @import '_layout';
@@ -18,5 +19,8 @@
 @import '_list';
 @import '_authentication';
 @import '_library';
+@import '_depot';
 @import '_download-queue';
 @import '_game-actions-dialog';
+@import '_install-dialog';
+@import '_checkbox-button-group';

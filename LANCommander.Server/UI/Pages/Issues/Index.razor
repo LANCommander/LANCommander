@@ -1,106 +1,79 @@
 ﻿@page "/Issues"
+@using LANCommander.Server.Data
 @using Microsoft.EntityFrameworkCore;
-@attribute [Authorize(Roles = "Administrator")]
-@inject IssueService IssueService
+@using SortDirection = LANCommander.Server.Data.Enums.SortDirection
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
-<PageHeader Title="Issues">
-    <PageHeaderExtra>
-        <Space Direction="DirectionVHType.Horizontal">
-            <SpaceItem>
-                <Search Placeholder="Search" @bind-Value="Search" BindOnInput DebounceMilliseconds="150" OnChange="() => LoadData()" />
-            </SpaceItem>
-            <SpaceItem>
-                 <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Issue</Button>
-            </SpaceItem>
-        </Space>
-    </PageHeaderExtra>
-</PageHeader>
+<PageHeader Title="Issues" />
 
-<TableColumnPicker @ref="Picker" Key="Issues" @bind-Visible="ColumnPickerVisible" />
+<DataTable
+    @ref="Table"
+    TItem="Issue"
+    Size="@TableSize.Small"
+    Responsive
+    Searchable
+    SearchProperty="i => i.Game.Title">
+    <RightToolbar>
+        <Button OnClick="() => Add()" Type="ButtonType.Primary">Add Issue</Button>
+    </RightToolbar>
+    <Columns>
+        <BoundDataColumn Property="i => i.Game.Title" Title="Game" Include="Game" Sortable />
+        <BoundDataColumn Property="i => i.CreatedOn" Title="Created On" Sortable />
+        <BoundDataColumn Property="i => i.CreatedBy != null ? i.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
+        <BoundDataColumn Property="i => i.ResolvedOn" Title="Resolved On" Sortable DefaultSortOrder="AntDesign.SortDirection.Descending" />
+        <BoundDataColumn Property="i => i.ResolvedBy != null ? i.ResolvedBy.UserName : String.Empty" Title="Resolved By" Include="ResolvedBy" Sortable />
+        <DataColumn TData="string" Title="Status" Sortable Filterable>
+            @if (context.ResolvedOn == null)
+            {
+                <Badge Color="BadgeColor.Blue" Text="Open" />
+            }
+            else
+            {
+                <Badge Status="BadgeStatus.Success" Text="Resolved" />
+            }
+        </DataColumn>
 
-<Table TItem="Issue" DataSource="@Issues" Loading="@Loading" PageSize="25" Responsive>
-    <PropertyColumn Property="r => r.Game.Title" Sortable Hidden="@(Picker.IsColumnHidden("Game"))" />
-    <PropertyColumn Property="r => r.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Created On"))" />
-    <PropertyColumn Property="r => r.CreatedBy != null ? r.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Hidden="@(Picker.IsColumnHidden("Created By"))" />
-    <PropertyColumn Property="r => r.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Hidden="@(Picker.IsColumnHidden("Updated On", false))" />
-    <PropertyColumn Property="r => r.UpdatedBy != null ? r.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Hidden="@(Picker.IsColumnHidden("Updated By"))" />
-    <ActionColumn Title="" Style="text-align: right; white-space: nowrap">
-        <TitleTemplate>
-            <div style="text-align: right">
-                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="() => OpenColumnPicker()" />
-            </div>
-        </TitleTemplate>
-        <ChildContent>
-            <Space Direction="DirectionVHType.Horizontal">
-                <SpaceItem>
-                    <a href="/Issues/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this issue?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ChildContent>
-    </ActionColumn>
-</Table>
+        <DataActions>
+            <a href="/Issues/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+
+            <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this issue?">
+                <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+</DataTable>
 
  @code {
-    IEnumerable<Issue> Issues { get; set; } = new List<Issue>();
+    IssueService IssueService;
 
-    bool Loading = true;
+    DataTable<Issue> Table;
 
-    string Search = "";
-
-    TableColumnPicker Picker;
-    bool ColumnPickerVisible = false;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await LoadData();
-
-            Loading = false;
-
-            StateHasChanged();
-        }
-    }
-
-    private async Task LoadData()
-    {
-        var fuzzySearch = Search.ToLower().Trim();
-
-        Issues = await IssueService.Get(r => r.Game.Title.ToLower().Contains(fuzzySearch)).OrderByDescending(r => r.CreatedOn).ToListAsync();
-    }
-
-    private void Add()
+    void Add()
     {
         NavigationManager.NavigateTo("/Issues/Add");
     }
 
-    private async Task Delete(Issue redistributable)
+    async Task Delete(Issue issue)
     {
-        Issues = new List<Issue>();
+        using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+        {
+            try
+            {
+                await issueService.DeleteAsync(issue);
 
-        Loading = true;
-
-        await IssueService.Delete(redistributable);
-
-        Issues = await IssueService.Get(x => true).OrderByDescending(r => r.CreatedOn).ToListAsync();
-
-        Loading = false;
-    }
-
-    private async Task OpenColumnPicker()
-    {
-        ColumnPickerVisible = true;
-    }
-
-    private async Task CloseColumnPicker()
-    {
-        ColumnPickerVisible = false;
+                MessageService.Success("Issue was successfully deleted!");
+                
+                Table.ReloadData();
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("Could not delete issue!");
+                Logger.LogError(ex, "Could not delete issue!");
+            }
+        }
     }
 }

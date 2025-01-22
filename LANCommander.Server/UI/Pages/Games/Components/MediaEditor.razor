@@ -1,82 +1,73 @@
-﻿@using LANCommander.Server.Models;
-@using LANCommander.SDK.Enums
+﻿@using LANCommander.SDK.Enums
 @using System.Net.Mime
-@inject MediaService MediaService
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<MediaEditor> Logger
 
-<Space Direction="DirectionVHType.Vertical" Size="@("large")" Style="width: 100%" Class="media-editor">
-    <SpaceItem>
-        <Table TItem="Media" DataSource="@Values" HidePagination="true" Responsive>
-            <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
-                @if (MediaService.FileExists(context))
+<Flex Vertical Gap="FlexGap.Large" Style="width: 100%" Class="media-editor">
+    <Table TItem="Media" DataSource="@Values" HidePagination="true" Responsive>
+        <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
+            @if (MediaService.FileExists(context))
+            {
+                if (context.Thumbnail != null && context.Type == MediaType.Manual)
                 {
-                    if (context.Thumbnail != null && context.Type == MediaType.Manual)
-                    {
-                        <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail.Id}/Download?fileId={context.Thumbnail.FileId}")" PreviewVisible="false" OnClick="() => OpenManual(context)" />
-                    }
-                    else if (context.Thumbnail != null)
-                    {
-                        <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail.Id}/Download?fileId={context.Thumbnail.FileId}")" />
-                    }
-                    else if (context.Type != MediaType.Manual)
-                    {
-                        <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")" />
-                    }
+                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail?.Id}/Download?fileId={context.Thumbnail?.FileId}")" PreviewVisible="false" OnClick="() => OpenManual(context)"/>
                 }
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.Type">
-                <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="AllowedMediaTypes" />
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.Name">
-                @if (context.Type == MediaType.Manual)
+                else if (context.Thumbnail != null)
                 {
-                    <Input @bind-Value="context.Name" OnBlur="() => Update(context)" />
+                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail?.Id}/Download?fileId={context.Thumbnail?.FileId}")"/>
                 }
-            </PropertyColumn>
-            <ActionColumn>
-                <Space Style="display: flex; justify-content: end">
-                    <SpaceItem>
-                        @{
-                            var fileInputId = Guid.NewGuid();
-                        }
-                        <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden accept=".jpg,.jpeg,.png,.gif,.pdf,.ico" />
-                        <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
-                            <Icon Type="@IconType.Outline.Upload" />
-                        </label>
-                    </SpaceItem>
-                    <SpaceItem>
-                        @if (String.IsNullOrWhiteSpace(Settings.Media.SteamGridDbApiKey))
-                        {
-                            <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
-                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
-                            </Popconfirm>
-                        }
-                        else
-                        {
-                            <Button OnClick="() => SearchMedia(context)" Type="@ButtonType.Text" Icon="@IconType.Outline.Search" />
-                        }
-                    </SpaceItem>
-                    <SpaceItem>
-                        <Popconfirm OnConfirm="() => RemoveMedia(context)" Title="Are you sure you want to delete this media?">
-                            <Button Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
-                        </Popconfirm>
-                     </SpaceItem>
-                 </Space>
-             </ActionColumn>
-        </Table>
-    </SpaceItem>
+                else if (context.Type != MediaType.Manual)
+                {
+                    <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")"/>
+                }
+            }
+        </PropertyColumn>
+        <PropertyColumn Property="p => p.Type">
+            <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="AllowedMediaTypes"/>
+        </PropertyColumn>
+        <PropertyColumn Property="p => p.Name">
+            @if (context.Type == MediaType.Manual)
+            {
+                <Input @bind-Value="context.Name" OnBlur="() => Update(context)"/>
+            }
+        </PropertyColumn>
+        <ActionColumn>
+            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+                @{
+                    var fileInputId = Guid.NewGuid();
+                }
+                <InputFile id="@fileInputId" OnChange="(e) => UploadMedia(e, context)" hidden accept=".jpg,.jpeg,.png,.gif,.pdf,.ico"/>
+                <label class="ant-btn ant-btn-text ant-btn-icon-only" for="@fileInputId">
+                    <Icon Type="@IconType.Outline.Upload"/>
+                </label>
 
-    <SpaceItem>
-        <GridRow Justify="end">
-            <GridCol>
-                <Button OnClick="AddMedia" Type="@ButtonType.Primary">Add Media</Button>
-            </GridCol>
-        </GridRow>
-    </SpaceItem>
-</Space>
+                @if (String.IsNullOrWhiteSpace(Settings.Media.SteamGridDbApiKey))
+                {
+                    <Popconfirm OnConfirm="() => NavigateToSettings()" Title="Invalid SteamGridDB credentials. Setup now?">
+                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Search"/>
+                    </Popconfirm>
+                }
+                else
+                {
+                    <Button OnClick="() => SearchMedia(context)" Type="ButtonType.Text" Icon="@IconType.Outline.Search"/>
+                }
+
+                <Popconfirm OnConfirm="() => RemoveMedia(context)" Title="Are you sure you want to delete this media?">
+                    <Button Type="ButtonType.Text" Danger Icon="@IconType.Outline.Close"/>
+                </Popconfirm>
+            </Flex>
+        </ActionColumn>
+    </Table>
+
+    <GridRow Justify="RowJustify.End">
+        <GridCol>
+            <Button OnClick="AddMedia" Type="@ButtonType.Primary">Add Media</Button>
+        </GridCol>
+    </GridRow>
+</Flex>
 
 @code {
     [Parameter] public ICollection<Media> Values { get; set; } = new List<Media>();
@@ -85,7 +76,7 @@
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public string GameTitle { get; set; }
 
-    LANCommanderSettings Settings = SettingService.GetSettings();
+    Settings Settings = SettingService.GetSettings();
 
     MediaType[] AllowedMediaTypes = new MediaType[]
     {
@@ -120,7 +111,10 @@
         {
             if (media.Id != Guid.Empty)
             {
-                await MediaService.Update(media);
+                using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+                {
+                    await mediaService.UpdateAsync(media);
+                }
 
                 MessageService.Success($"{media.Type} updated!");
             }
@@ -137,14 +131,33 @@
         if (Values == null)
             Values = new List<Media>();
 
-        var types = Enum.GetValues<MediaType>();
-        var nextType = types.FirstOrDefault(t => !Values.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
-
-        Values.Add(new Media()
+        try
         {
-            GameId = GameId,
-            Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType
-        });
+            var types = Enum.GetValues<MediaType>();
+            var nextType = types.FirstOrDefault(t => !Values.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
+
+            using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+            {
+                var defaultStorageLocation = await mediaService.GetDefaultStorageLocationAsync();
+                
+                var media = new Media
+                {
+                    GameId = GameId,
+                    Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType,
+                    StorageLocationId = defaultStorageLocation.Id,
+                    Crc32 = String.Empty
+                };
+
+                await mediaService.AddAsync(media);
+
+                Values.Add(await mediaService.GetAsync(media.Id));
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not add new media!");
+            Logger.LogError(ex, "Could not add new media!");
+        }
     }
 
     private async Task SearchMedia(Media media)
@@ -173,25 +186,28 @@
             media.SourceUrl = result.SourceUrl;
             media.MimeType = result.MimeType; 
 
-            if (media.Id == Guid.Empty)
+            using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
             {
-                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
+                if (media.Id == Guid.Empty)
+                {
+                    media = await mediaService.DownloadMediaAsync(result.SourceUrl, media);
 
-                await MediaService.Add(media);
+                    await mediaService.AddAsync(media);
+                }
+                else
+                {
+                    mediaService.DeleteLocalMediaFile(media);
+
+                    media = await mediaService.DownloadMediaAsync(result.SourceUrl, media);
+
+                    await mediaService.UpdateAsync(media);
+                }
+
+                Values = await mediaService.GetAsync(m => m.GameId == media.GameId);
+
+                if (ValuesChanged.HasDelegate)
+                    await ValuesChanged.InvokeAsync(Values);
             }
-            else
-            {
-                MediaService.DeleteLocalMediaFile(media.FileId);
-
-                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
-
-                await MediaService.Update(media);
-            }
-
-            Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
-
-            if (ValuesChanged.HasDelegate)
-                await ValuesChanged.InvokeAsync(Values);
         };
     }
 
@@ -213,31 +229,37 @@
         media.SourceUrl = "";
         media.MimeType = e.File.ContentType;
 
-        if (media.Id == Guid.Empty)
+        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
         {
-            media = await MediaService.UploadMediaAsync(e.File, media);
+            if (media.Id == Guid.Empty)
+            {
+                media = await mediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
 
-            await MediaService.Add(media);
+                await mediaService.AddAsync(media);
+            }
+            else
+            {
+                mediaService.DeleteLocalMediaFile(media);
+                media = await mediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
+                await mediaService.UpdateAsync(media);
+            }
+
+            Values = await mediaService.GetAsync(m => m.GameId == media.GameId);
+
+            if (ValuesChanged.HasDelegate)
+                await ValuesChanged.InvokeAsync(Values);
         }
-        else
-        {
-            MediaService.DeleteLocalMediaFile(media.FileId);
-            media = await MediaService.UploadMediaAsync(e.File, media);
-            await MediaService.Update(media);
-        }
-
-        Values = MediaService.Get(m => m.GameId == media.GameId).ToList();
-
-        if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(Values);
     }
 
     private async Task RemoveMedia(Media media)
     {
         Values.Remove(media);
 
-        if (media.Id != Guid.Empty)
-            await MediaService.Delete(media);
+        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+        {
+            if (media.Id != Guid.Empty)
+                await mediaService.DeleteAsync(media);
+        }
     }
 
     private async Task OpenManual(Media media)

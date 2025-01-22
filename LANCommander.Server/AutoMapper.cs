@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using LANCommander.SDK.Models;
 
 namespace LANCommander.Server
 {
@@ -11,7 +12,6 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Company, SDK.Models.Company>();
             CreateMap<Data.Models.Collection, SDK.Models.Collection>();
             CreateMap<Data.Models.Engine, SDK.Models.Engine>();
-            CreateMap<Data.Models.Game, SDK.Models.Game>();
             CreateMap<Data.Models.GameSave, SDK.Models.GameSave>();
             CreateMap<Data.Models.Genre, SDK.Models.Genre>();
             CreateMap<Data.Models.Key, SDK.Models.Key>();
@@ -28,13 +28,35 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Tag, SDK.Models.Tag>();
             CreateMap<Data.Models.User, SDK.Models.User>();
 
-            CreateMap<Models.LANCommanderSettings, SDK.Models.Settings>()
+            CreateMap<Services.Models.Settings, SDK.Models.Settings>()
                 .ForMember(dest =>
                     dest.IPXRelayHost,
                     opt => opt.MapFrom(src => src.IPXRelay.Host))
                 .ForMember(dest =>
                     dest.IPXRelayPort,
                     opt => opt.MapFrom(src => src.IPXRelay.Port));
+
+            CreateMap<Data.Models.Action, SDK.Models.Action>()
+                .ForMember(dest =>
+                    dest.IsPrimaryAction,
+                    opt => opt.MapFrom(src => src.PrimaryAction));
+
+            CreateMap<Data.Models.Game, SDK.Models.Game>()
+                .MaxDepth(5)
+                .ForMember(dest =>
+                    dest.DependentGames,
+                    opt => opt.MapFrom(src => src.DependentGames.Select(d => d.Id)));
+
+            CreateMap<Data.Models.Game, SDK.Models.DepotGame>()
+                .ForMember(dest =>
+                    dest.Cover,
+                    opt => opt.MapFrom(src => src.Media.Where(m => m.Type == SDK.Enums.MediaType.Cover).FirstOrDefault()));
+
+            CreateMap<Services.Models.AuthenticationProvider, SDK.Models.AuthenticationProvider>();
+
+            CreateMap<Data.Models.Game, EntityReference>()
+                .ForMember(dest => dest.Name,
+                    opt => opt.MapFrom(src => src.Title));
         }
     }
 }

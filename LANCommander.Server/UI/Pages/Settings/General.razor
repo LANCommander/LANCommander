@@ -1,18 +1,28 @@
 ﻿@page "/Settings"
 @page "/Settings/General"
+@using LANCommander.Server.Data.Enums
 @using LANCommander.Server.Models;
 @using LANCommander.Server.Extensions;
-@layout SettingsLayout
-@inject SettingService SettingService
 @inject IGDBService IGDBService
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="General" />
 
 <div style="padding: 0 24px;">
     <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Database Provider">
+            <Select @bind-Value="context.DatabaseProvider" TItem="DatabaseProvider" TItemValue="DatabaseProvider" DataSource="Enum.GetValues<DatabaseProvider>()">
+                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+            </Select>
+        </FormItem>
+
+        <FormItem Label="Database Connection String">
+            <InputPassword @bind-Value="context.DatabaseConnectionString" />
+        </FormItem>
+
         <FormItem Label="Theme">
             <Select @bind-Value="context.Theme" TItem="LANCommanderTheme" TItemValue="LANCommanderTheme" DataSource="Enum.GetValues<LANCommanderTheme>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
@@ -39,14 +49,9 @@
 
 
 @code {
-    private LANCommanderSettings Settings;
+    Settings Settings = SettingService.GetSettings();
 
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
-
-    private void Save()
+    void Save()
     {
         try
         {

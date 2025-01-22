@@ -1,11 +1,9 @@
 ﻿@page "/Settings/Beacon"
 @using LANCommander.Server.Models;
-@layout SettingsLayout
-@inject SettingService SettingService
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
-@attribute [Authorize(Roles = "Administrator")]
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Beacon" />
 
@@ -33,14 +31,9 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings = SettingService.GetSettings();
 
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
-
-    private void Save()
+    void Save()
     {
         try
         {

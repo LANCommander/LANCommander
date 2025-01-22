@@ -1,8 +1,7 @@
 ﻿@page "/Issues/{id:guid}"
 @page "/Issues/Add"
-@attribute [Authorize(Roles = "Administrator")]
-@inject IssueService IssueService
-@inject GameService GameService
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -21,18 +20,14 @@
                 }
             </PageHeaderTitle>
             <PageHeaderExtra>
-                <Space Direction="DirectionVHType.Horizontal">
+                <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                     @if (Id != Guid.Empty)
                     {
-                        <SpaceItem>
-                            <Button OnClick="Resolve" Disabled="@(Issue?.ResolvedOn != null)">Resolve</Button>
-                        </SpaceItem>
+                        <Button OnClick="Resolve" Disabled="@(Issue?.ResolvedOn != null)">Resolve</Button>
                     }
 
-                    <SpaceItem>
-                        <Button Type="@ButtonType.Primary" OnClick="Save" Disabled="@(Issue?.ResolvedOn != null)">Save</Button>
-                    </SpaceItem>
-                </Space>
+                    <Button Type="@ButtonType.Primary" OnClick="Save" Disabled="@(Issue?.ResolvedOn != null)">Save</Button>
+                </Flex>
             </PageHeaderExtra>
         </PageHeader>
 
@@ -95,31 +90,46 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id == Guid.Empty)
-            Issue = new Issue();
-        else
-            Issue = await IssueService.Get(Id);
+        using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+        {
+            if (Id == Guid.Empty)
+                Issue = new Issue();
+            else
+                Issue = await issueService
+                    .Include(
+                        i => i.Game,
+                        i => i.CreatedBy,
+                        i => i.UpdatedBy,
+                        i => i.ResolvedBy
+                    ).GetAsync(Id);
+        }
 
-        Games = await GameService.Get();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService.Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon)).GetAsync();
+        }
     }
 
     private async Task Save()
     {
         try
         {
-            if (Issue.Id != Guid.Empty)
+            using (var issueService = DatabaseServiceFactory.Create<IssueService>())
             {
-                Issue = await IssueService.Update(Issue);
+                if (Issue.Id != Guid.Empty)
+                {
+                    Issue = await issueService.UpdateAsync(Issue);
 
-                await MessageService.Success("Game updated!");
-            }
-            else
-            {
-                Issue = await IssueService.Add(Issue);
+                    await MessageService.Success("Game updated!");
+                }
+                else
+                {
+                    Issue = await issueService.AddAsync(Issue);
 
-                NavigationManager.LocationChanged += NotifyIssueAdded;
+                    NavigationManager.LocationChanged += NotifyIssueAdded;
 
-                NavigationManager.NavigateTo($"/Issues/{Issue.Id}");
+                    NavigationManager.NavigateTo($"/Issues/{Issue.Id}");
+                }
             }
         }
         catch (Exception ex)
@@ -133,7 +143,10 @@
     {
         try
         {
-            await IssueService.ResolveAsync(Issue.Id);
+            using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+            {
+                await issueService.ResolveAsync(Issue.Id);
+            }
 
             MessageService.Success("Issue resolved!");
         }

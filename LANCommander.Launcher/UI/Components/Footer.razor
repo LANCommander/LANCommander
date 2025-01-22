@@ -1,13 +1,30 @@
 ﻿@using LANCommander.Launcher.Models
 @using System.Diagnostics
-@inject DownloadService DownloadService
 @inject SDK.Client Client
+@inject InstallService InstallService
 @inject GameService GameService
+@inject NavigationManager NavigationManager
 
-<footer>
-    <LibraryItemFilter />
+<Flex Justify="FlexJustify.SpaceBetween" Class="footer">
+    @if (NavigationManager.Uri.Contains("/Depot"))
+    {
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">Library</Button>
+    }
+    else
+    {
+        <ConnectionStateView>
+            <Online>
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
+            </Online>
+            <Offline>
+                <Tooltip Title="You are currently offline" Placement="Placement.TopLeft">
+                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
+                </Tooltip>
+            </Offline>
+        </ConnectionStateView>
+    }
 
-    @if (DownloadService.Queue.Any(qi => qi.State))
+    @if (InstallService.Queue.Any(qi => qi.State))
     {
         <div class="downloader" @onclick="() => ShowDownloadQueue()">
             <CurrentDownloadItem ShowIcon="true" />
@@ -17,18 +34,24 @@
     {
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
     }
-</footer>
+
+    <Tooltip Title="Coming soon!" Placement="Placement.TopRight">
+        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Team" Disabled>Friends</Button>
+    </Tooltip>
+</Flex>
 
 <DownloadQueue @ref="DownloadQueue" />
 
 @code {
+    [CascadingParameter] public bool Connected { get; set; }
+    
     bool DownloadQueueVisible = false;
 
     DownloadQueue DownloadQueue;
 
     protected override async Task OnInitializedAsync()
     {
-        DownloadService.OnQueueChanged += async () =>
+        InstallService.OnQueueChanged += async () =>
         {
             await InvokeAsync(StateHasChanged);
         };

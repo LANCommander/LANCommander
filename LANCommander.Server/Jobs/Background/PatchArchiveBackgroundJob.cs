@@ -13,10 +13,10 @@ namespace LANCommander.Server.Jobs.Background
 
         public async Task Execute(Guid originalArchiveId, Guid alteredArchiveId)
         {
-            var originalArchive = await ArchiveService.Get(originalArchiveId);
-            var alteredArchive = await ArchiveService.Get(alteredArchiveId);
+            var originalArchive = await ArchiveService.GetAsync(originalArchiveId);
+            var alteredArchive = await ArchiveService.GetAsync(alteredArchiveId);
 
-            await ArchiveService.PatchArchive(originalArchive, alteredArchive);
+            await ArchiveService.PatchArchiveAsync(originalArchive, alteredArchive);
         }
     }
 }

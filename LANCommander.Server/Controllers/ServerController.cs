@@ -21,9 +21,14 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpGet("/Server/{id:guid}/Export/Full")]
-        public async Task ExportFull(Guid id)
+        public async Task ExportFullAsync(Guid id)
         {
-            var server = await ServerService.Get(id);
+            var server = await ServerService
+                .Include(s => s.Actions)
+                .Include(s => s.HttpPaths)
+                .Include(s => s.Scripts)
+                .Include(s => s.ServerConsoles)
+                .GetAsync(id);
 
             if (server == null)
             {
@@ -92,9 +97,11 @@ namespace LANCommander.Server.Controllers
         }
 
         [HttpGet("/Server/{id:guid}/{*path}")]
-        public async Task<IActionResult> Web(Guid id, string path)
+        public async Task<IActionResult> WebAsync(Guid id, string path)
         {
-            var server = await ServerService.Get(id);
+            var server = await ServerService
+                .Include(s => s.HttpPaths)
+                .GetAsync(id);
 
             if (server == null)
                 return NotFound();

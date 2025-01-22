@@ -1,0 +1,79 @@
+@page "/Profile/Library"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IMessageService MessageService
+@inject ILogger<Library> Logger
+@attribute [Authorize]
+
+<DataTable
+    @ref="Table"
+    TItem="Game"
+    Query="g => g.Libraries.Any(l => l.UserId == User.Id)"
+    Searchable
+    SearchProperty="g => g.Title">
+    <Columns>
+        <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
+
+        <DataColumn TData="string" Title="Icon" Include="Media">
+            <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
+        </DataColumn>
+        
+        <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        <BoundDataColumn Property="g => g.PlaySessions.Count(ps => ps.UserId == User.Id)" Title="Play Sessions" Include="PlaySessions" Sortable />
+        <BoundDataColumn Property="g => g.GameSaves.Count(gs => gs.UserId == User.Id)" Title="Saves" Include="GameSaves" Sortable />
+
+        <DataActions>
+            <Popconfirm OnConfirm="() => RemoveFromLibrary(context)" Title="Are you sure you want to remove this game from your library?">
+                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+            </Popconfirm>
+        </DataActions>
+    </Columns>
+</DataTable>
+
+@code {
+    DataTable<Game> Table;
+    User User;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        {
+            if (authState.User.Identity.IsAuthenticated)
+                User = await userService
+                    .GetAsync(authState.User.Identity.Name);
+        }
+    }
+
+    async Task RemoveFromLibrary(Game game)
+    {
+        try
+        {
+            using (var libraryService = DatabaseServiceFactory.Create<LibraryService>())
+            {
+                await libraryService.RemoveFromLibraryAsync(User.Id, game.Id);
+            }
+
+            MessageService.Success($"Removed {game.Title} from your library!");
+
+            Table.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not remove from your library!");
+            Logger.LogError(ex, "Could not remove from library");
+        }
+    }
+    
+    string GetIcon(Game game)
+    {
+        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+
+        if (media != null)
+            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        else
+            return "/favicon.ico";
+    }
+}

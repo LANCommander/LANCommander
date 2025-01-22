@@ -21,8 +21,8 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [AllowAnonymous]
-        [HttpGet(nameof(Download))]
-        public async Task<IActionResult> Download()
+        [HttpGet("Download")]
+        public async Task<IActionResult> DownloadAsync()
         {
             var version = UpdateService.GetCurrentVersion();
             var settings = SettingService.GetSettings();
@@ -31,7 +31,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
             {
-                var release = await UpdateService.GetRelease(version);
+                var release = await UpdateService.GetReleaseAsync(version);
 
                 if (release == null)
                     return NotFound();
@@ -47,8 +47,8 @@ namespace LANCommander.Server.Controllers.Api
             return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);
         }
 
-        [HttpGet(nameof(CheckForUpdate))]
-        public async Task<IActionResult> CheckForUpdate()
+        [HttpGet("CheckForUpdate")]
+        public async Task<IActionResult> CheckForUpdateAsync()
         {
             var response = new CheckForUpdateResponse();
             var launcherVersionString = Request.Headers["X-API-Version"];
@@ -61,7 +61,7 @@ namespace LANCommander.Server.Controllers.Api
                 {
                     response.UpdateAvailable = true;
                     response.Version = currentVersion.ToString();
-                    response.DownloadUrl = Url.Action(nameof(Download));
+                    response.DownloadUrl = Url.Action(nameof(DownloadAsync));
                 }
             }
 

@@ -1,0 +1,52 @@
+﻿<Flex Vertical Gap="@("16")">
+    <Table DataSource="ClaimMappings" Size="TableSize.Small" HidePagination>
+        <PropertyColumn Property="cm => cm.Name">
+            <Input @bind-Value="context.Name" OnBlur="Update" />
+        </PropertyColumn>
+        <PropertyColumn Property="cm => cm.Value">
+            <Input @bind-Value="context.Value" OnBlur="Update" />
+        </PropertyColumn>
+        <ActionColumn>
+            <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="() => Remove(context)" />
+        </ActionColumn>
+    </Table>
+
+    <Flex Justify="FlexJustify.End">
+        <Button Type="ButtonType.Primary" OnClick="Add">Add Claim Mapping</Button>
+    </Flex>
+</Flex>
+
+@code {
+    [Parameter] public IEnumerable<ClaimMapping> Values { get; set; }
+    [Parameter] public EventCallback<IEnumerable<ClaimMapping>> ValuesChanged { get; set; }
+
+    List<ClaimMapping> ClaimMappings = new();
+
+    protected override void OnParametersSet()
+    {
+        if (Values != null)
+            ClaimMappings = Values.Select(v => new ClaimMapping { Name = v.Name, Value = v.Value}).ToList();
+    }
+
+    async Task Add()
+    {
+        ClaimMappings.Add(new ClaimMapping());
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(ClaimMappings);
+    }
+
+    async Task Remove(ClaimMapping claimMapping)
+    {
+        ClaimMappings.Remove(claimMapping);
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(ClaimMappings);
+    }
+
+    async Task Update()
+    {
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(ClaimMappings);
+    }
+}

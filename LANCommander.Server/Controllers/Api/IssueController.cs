@@ -14,26 +14,26 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly GameService GameService;
         private readonly IssueService IssueService;
-        private readonly UserManager<User> UserManager;
+        private readonly UserService UserService;
 
         public IssueController(
             ILogger<IssueController> logger,
             GameService gameService,
             IssueService issueService,
-            UserManager<User> userManager) : base(logger)
+            UserService userService) : base(logger)
         {
             GameService = gameService;
             IssueService = issueService;
-            UserManager = userManager;
+            UserService = userService;
         }
 
         [HttpPost("Open")]
-        public async Task<bool> Open(SDK.Models.Issue issueRequest)
+        public async Task<bool> OpenAsync(SDK.Models.Issue issueRequest)
         {
             try
             {
-                var game = await GameService.Get(issueRequest.GameId);
-                var user = await UserManager.FindByNameAsync(User.Identity.Name);
+                var game = await GameService.GetAsync(issueRequest.GameId);
+                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 if (game != null)
                 {
@@ -43,7 +43,7 @@ namespace LANCommander.Server.Controllers.Api
                         Description = issueRequest.Description
                     };
 
-                    issue = await IssueService.Add(issue);
+                    issue = await IssueService.AddAsync(issue);
 
                     return true;
                 }

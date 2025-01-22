@@ -1,9 +1,5 @@
 ﻿@page "/Settings/Logs"
-@layout SettingsLayout
-@using LANCommander.Server.Extensions
-@using LANCommander.Server.Models
 @using Serilog
-@inject SettingService SettingService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -16,7 +12,7 @@
         </FormItem>
 
         <FormItem Label="Archive Every">
-            <Select @bind-Value="@context.Logs.ArchiveEvery" TItem="RollingInterval" TItemValue="RollingInterval" DataSource="Enum.GetValues<RollingInterval>()">
+            <Select @bind-Value="@context.Logs.ArchiveEvery" TItem="LogInterval" TItemValue="LogInterval" DataSource="Enum.GetValues<LogInterval>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
                 <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
             </Select>
@@ -35,16 +31,11 @@
 </div>
 
 @code {
-    LANCommanderSettings Settings;
+    Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-    protected override async Task OnInitializedAsync()
-    {
-        Settings = SettingService.GetSettings();
-    }
-
-    private void Save()
+    void Save()
     {
         try
         {
@@ -58,7 +49,7 @@
         }
     }
 
-    private void OnPathSelected(string path)
+    void OnPathSelected(string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 

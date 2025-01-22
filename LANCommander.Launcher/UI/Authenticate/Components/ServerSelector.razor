@@ -1,0 +1,111 @@
+@using BeaconLib
+@using LANCommander.Launcher.Models
+@using LANCommander.SDK.Models
+@using ListItem = AntDesign.ListItem
+@inject NavigationManager NavigationManager
+@inject SDK.Client Client
+@inject AuthenticationService AuthenticationService
+
+<PageHeader>
+    <TitleTemplate>
+        Connect
+    </TitleTemplate>
+</PageHeader>
+
+<Form Model="Model">
+    <FormItem>
+        <Flex Gap="FlexGap.Small">
+            <Input @bind-Value="ServerAddress" Placeholder="Server Address"/>
+            <Button Type="ButtonType.Primary" OnClick="() => SelectServer(ServerAddress)">Connect</Button>
+        </Flex>
+    </FormItem>
+</Form>
+
+<Divider Text="Discovered" Orientation="DividerOrientation.Center" />
+
+<AntList DataSource="DiscoveredServers">
+    <ChildContent>
+        <ListItem OnClick="() => SelectServer(context.Address.ToString())">
+            <ListItemMeta Title="@context.Name" Description="@context.Address.ToString()"/>
+        </ListItem>
+    </ChildContent>
+
+    <LoadMore>
+        <Flex Justify="FlexJustify.Center" Class="load-more">
+            @if (BeaconActive)
+            {
+                <Button Type="ButtonType.Primary" Loading="true" Disabled>Scanning</Button>
+            }
+            else
+            {
+                <Button Type="ButtonType.Primary" OnClick="() => ActivateBeacon()">Rescan</Button>
+            }
+        </Flex>
+    </LoadMore>
+</AntList>
+
+@code {
+    [Parameter] public EventCallback<string> OnSelected { get; set; }
+
+    bool BeaconActive = false;
+    bool OfflineModeAvailable = false;
+
+    string ServerAddress = String.Empty;
+    
+    AuthRequest Model = new();
+    List<DiscoveredServer> DiscoveredServers = new();
+    Models.Settings Settings = SettingService.GetSettings();
+    Probe Probe;
+
+    protected override async Task OnInitializedAsync()
+    {
+        OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
+        
+        ActivateBeacon();
+    }
+
+    async Task SelectServer(string serverAddress)
+    {
+        Probe.Stop();
+        Probe.Dispose();
+
+        BeaconActive = false;
+
+        if (OnSelected.HasDelegate)
+            await OnSelected.InvokeAsync(serverAddress);
+
+        await InvokeAsync(StateHasChanged);
+    }
+    
+    async Task ActivateBeacon()
+    {
+        Probe = new Probe("LANCommander");
+        
+        Probe.BeaconsUpdated += (beacons) =>
+        {
+            foreach (var beacon in beacons)
+            {
+                if (!String.IsNullOrWhiteSpace(beacon.Data))
+                {
+                    var server = new DiscoveredServer(beacon.Data, beacon.Address);
+
+                    if (!DiscoveredServers.Any(s => s.Address.ToString() == server.Address.ToString()))
+                        DiscoveredServers.Add(server);
+                }
+            }
+        };
+        
+        BeaconActive = true;
+
+        Probe.Start();
+
+        await Task.Delay(10000);
+        
+        Probe.Stop();
+        Probe.Dispose();
+        
+        BeaconActive = false;
+
+        await InvokeAsync(StateHasChanged);
+    }
+}

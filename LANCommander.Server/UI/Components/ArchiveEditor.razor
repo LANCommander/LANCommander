@@ -11,12 +11,17 @@
 @inject IJSRuntime JS
 @inject ILogger<ArchiveEditor> Logger
 
-<Flex Vertical Gap="FlexGap.Large">
-    <DataTable
-        TItem="Archive"
-        HidePagination
-        Responsive
-        Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId)">
+<DataTable
+    @ref="Table"
+    TItem="Archive"
+    HidePagination
+    Responsive
+    Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId)">
+    <RightToolbar>
+        <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
+    </RightToolbar>
+    
+    <Columns>
         <BoundDataColumn Property="a => a.Version">
             <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)"/>
         </BoundDataColumn>
@@ -26,9 +31,9 @@
         <BoundDataColumn Property="a => a.UncompressedSize">
             @ByteSizeLib.ByteSize.FromBytes(context.UncompressedSize)
         </BoundDataColumn>
-        <BoundDataColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Include="CreatedBy" />
-        <BoundDataColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending" />
-        
+        <BoundDataColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Include="CreatedBy"/>
+        <BoundDataColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending"/>
+
         <DataActions>
             <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                 <Icon Type="@IconType.Outline.Download"/>
@@ -40,21 +45,16 @@
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
             </Popconfirm>
         </DataActions>
-    </DataTable>
+    </Columns>
+</DataTable>
 
-    <GridRow Justify="RowJustify.End">
-        <GridCol>
-            <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
-        </GridCol>
-    </GridRow>
-</Flex>
-
-<ArchiveUploader @ref="Uploader" GameId="GameId" RedistributableId="RedistributableId" />
+<ArchiveUploader @ref="Uploader" GameId="GameId" RedistributableId="RedistributableId" OnArchiveUploaded="ArchiveUploaded" />
 
 @code {
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid RedistributableId { get; set; }
 
+    DataTable<Archive> Table;
     ArchiveUploader Uploader;
 
     protected override void OnInitialized()
@@ -67,6 +67,11 @@
         string url = $"/Download/Game/{archive.Id}";
 
         await JS.InvokeAsync<object>("open", url, "_blank");
+    }
+
+    private async Task ArchiveUploaded(Guid archiveId)
+    {
+        Table.Reload();
     }
 
     private async Task UploadArchive()
@@ -115,7 +120,7 @@
                 await archiveService.DeleteAsync(archive);
             }
 
-            // await LoadData();
+            Table.Reload();
 
             MessageService.Success("Archive deleted!");
         }

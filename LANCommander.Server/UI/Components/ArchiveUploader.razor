@@ -40,7 +40,7 @@
         </FormItem>
 
         <FormItem>
-            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" @bind-Version="context.Version" @bind-Changelog="context.Changelog" @bind-StorageLocationId="context.StorageLocation.Id" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
+            <ChunkUploader @ref="ChunkUploader" Accept=".zip" @bind-File="File" @bind-Status="Status" @bind-StorageLocationId="@(context.StorageLocation.Id)" OnUploadCompleted="OnUploadCompleted" OnUploadError="OnUploadError">
                 <Text>
                     <p>Drag and Drop</p>
                     <p>or</p>
@@ -66,6 +66,7 @@
     IBrowserFile File;
     ChunkUploader ChunkUploader;
 
+    Guid StorageLocationId;
     StorageLocation StorageLocation;
     
     bool Visible = false;

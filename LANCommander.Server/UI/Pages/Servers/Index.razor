@@ -9,6 +9,7 @@
 <PageHeader Title="Servers" />
 
 <DataTable
+    @ref="Table"
     TItem="Server"
     Size="TableSize.Small"
     @bind-SelectedRows="SelectedServers"
@@ -58,6 +59,8 @@
 </DataTable>
 
 @code {
+    DataTable<Server> Table;
+    
     bool Loading = true;
 
     ImportUploadDialog ImportUploadDialog;
@@ -67,8 +70,6 @@
     {
         Loading = false;
     }
-
-
 
     async Task Delete(Server server)
     {
@@ -129,8 +130,17 @@
         {
             Title = "Import Server",
             DestroyOnClose = true,
-            // OnOk = (e) => Reload(),
-            // OnCancel = (e) => Reload(),
+            MaskClosable = false,
+            OnOk = (e) =>
+            {
+                Table.Reload();
+                return Task.CompletedTask;
+            },
+            OnCancel = (e) =>
+            {
+                Table.Reload();
+                return Task.CompletedTask;
+            },
             Footer = null
         };
 

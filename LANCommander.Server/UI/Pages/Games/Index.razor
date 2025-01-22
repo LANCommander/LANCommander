@@ -188,8 +188,17 @@
         {
             Title = "Import Game",
             DestroyOnClose = true,
-            OnOk = (e) => Reload(),
-            OnCancel = (e) => Reload(),
+            MaskClosable = false,
+            OnOk = (e) =>
+            {
+                Table.Reload();
+                return Task.CompletedTask;
+            },
+            OnCancel = (e) =>
+            {
+                Table.Reload();
+                return Task.CompletedTask;
+            },
             Footer = null,
         };
 

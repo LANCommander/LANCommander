@@ -25,6 +25,9 @@
                 .GetAsync(l => l.Type == Type);
 
             Value = StorageLocations.First();
+
+            if (ValueChanged.HasDelegate)
+                await ValueChanged.InvokeAsync(Value);
         }
     }
 }

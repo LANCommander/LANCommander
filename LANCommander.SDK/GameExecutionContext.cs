@@ -18,6 +18,8 @@ namespace LANCommander.SDK
         private readonly Client Client;
         private readonly ILogger Logger;
 
+        private Process Process;
+
         private Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
 
         public GameExecutionContext(Client client)
@@ -71,30 +73,30 @@ namespace LANCommander.SDK
             if (action == null)
                 action = manifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
 
-            var process = new Process();
+            Process = new Process();
 
-            process.StartInfo.Arguments = ExpandVariables(action.Arguments, installDirectory, skipSlashes: true);
-            process.StartInfo.FileName = ExpandVariables(action.Path, installDirectory);
-            process.StartInfo.WorkingDirectory = ExpandVariables(action.WorkingDirectory, installDirectory);
-            process.StartInfo.UseShellExecute = true;
+            Process.StartInfo.Arguments = ExpandVariables(action.Arguments, installDirectory, skipSlashes: true);
+            Process.StartInfo.FileName = ExpandVariables(action.Path, installDirectory);
+            Process.StartInfo.WorkingDirectory = ExpandVariables(action.WorkingDirectory, installDirectory);
+            Process.StartInfo.UseShellExecute = true;
 
             if (String.IsNullOrWhiteSpace(action.WorkingDirectory))
-                process.StartInfo.WorkingDirectory = installDirectory;
+                Process.StartInfo.WorkingDirectory = installDirectory;
 
             if (!String.IsNullOrWhiteSpace(args))
-                process.StartInfo.Arguments += " " + args;
+                Process.StartInfo.Arguments += " " + args;
 
             Logger?.LogTrace("Running game executable");
-            Logger?.LogTrace("Arguments: {Arguments}", process.StartInfo.Arguments);
-            Logger?.LogTrace("File Name: {FileName}", process.StartInfo.FileName);
-            Logger?.LogTrace("Working Directory: {WorkingDirectory}", process.StartInfo.WorkingDirectory);
+            Logger?.LogTrace("Arguments: {Arguments}", Process.StartInfo.Arguments);
+            Logger?.LogTrace("File Name: {FileName}", Process.StartInfo.FileName);
+            Logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
             Logger?.LogTrace("Manifest Path: {ManifestPath}", ManifestHelper.GetPath(installDirectory, gameId));
 
             bool exited = false;
 
-            process.Start();
+            Process.Start();
 
-            await process.WaitForAllExitAsync(cancellationToken);
+            await Process.WaitForAllExitAsync(cancellationToken);
         }
 
         public void Dispose()

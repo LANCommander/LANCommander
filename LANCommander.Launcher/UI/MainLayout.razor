@@ -43,25 +43,31 @@
             </Space>
         </HeaderExtraControlsLayout>
         <WindowContent>
-            <ErrorHandler>
-                <AuthenticatedView>
-                    <Authenticated>
-                        @Body
+            <ErrorHandler Title="Launcher Crashed">
+                <Body>
+                    <AuthenticatedView>
+                        <Authenticated>
+                            @Body
 
-                        @if (Settings.Debug.EnableScriptDebugging)
-                        {
-                            <PowerShellConsole/>
-                        }
+                            @if (Settings.Debug.EnableScriptDebugging)
+                            {
+                                <PowerShellConsole/>
+                            }
 
-                        <KeepAliveContainer />
-                    </Authenticated>
-                    <NotAuthenticated>
-                        <AuthenticationForm />
-                    </NotAuthenticated>
-                </AuthenticatedView>
+                            <KeepAliveContainer/>
+                        </Authenticated>
+                        <NotAuthenticated>
+                            <AuthenticationForm/>
+                        </NotAuthenticated>
+                    </AuthenticatedView>
 
-                <UpdateChecker />
-                <AntContainer />
+                    <UpdateChecker/>
+                    <AntContainer/>
+                </Body>
+                
+                <Extra>
+                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
+                </Extra>
             </ErrorHandler>
         </WindowContent>
     </CustomWindow>

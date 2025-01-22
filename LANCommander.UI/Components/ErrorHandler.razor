@@ -4,15 +4,19 @@
 
 <ErrorBoundary>
     <ChildContent>
-        @ChildContent
+        @Body
     </ChildContent>
     <ErrorContent>
         <Result Status="ResultStatus.Error"
-                Title="Launcher Crashed"
+                Title="@Title"
                 SubTitle="@RandomQuip"
                 Class="crash-error">
             <Extra>
-                <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
+                @if (Extra != null)
+                {
+                    @Extra
+                }
+                
                 <Button OnClick="() => CopyError(context)">Copy Error</Button>
             </Extra>
             <ChildContent>
@@ -26,7 +30,9 @@
 </ErrorBoundary>
 
 @code {
-    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment Body { get; set; }
+    [Parameter] public RenderFragment Extra { get; set; }
     
     string RandomQuip = "";
     

@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Authorization;
 @using System.Security.Claims;
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
 
 <Layout Class="layout">
     <Sider Width="200">
@@ -107,12 +108,17 @@
     </Sider>
 
     <Flex Vertical Justify="FlexJustify.SpaceBetween">
-        <ErrorHandler>
-            <Content Style="padding: 24px;">
-                <div class="site-layout-background">
-                    @Body
-                </div>
-            </Content>
+        <ErrorHandler Title="Unexpected Error">
+            <Body>
+                <Content Style="padding: 24px;">
+                    <div class="site-layout-background">
+                        @Body
+                    </div>
+                </Content>
+            </Body>
+            <Extra>
+                <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.Refresh())">Refresh</Button>
+            </Extra>
         </ErrorHandler>
 
         <Footer Style="text-align: center; padding-top: 0;">

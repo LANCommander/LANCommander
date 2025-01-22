@@ -35,11 +35,11 @@
 {
     <Divider Orientation="DividerOrientation.Center" Text="Or" Style="margin-bottom: 16px" />
 
-    <Flex Justify="FlexJustify.Center">
-        <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Middle">
+    <div class="authentication-provider-container">
+        <div class="authentication-provider-button-group">
             @foreach (var authenticationProvider in AuthenticationProviders)
             {
-                <SpaceItem>
+                <div class="authentication-provider-button">
                     <Button
                         Type="ButtonType.Primary"
                         OnClick="() => AuthenticationProviderDialog.Open(ServerAddress, authenticationProvider)"
@@ -51,10 +51,10 @@
                         }
                         Sign in using @authenticationProvider.Name
                     </Button>
-                </SpaceItem>
+                </div>
             }
-        </Space>
-    </Flex>
+        </div>
+    </div>
 }
 
 <AuthenticationProviderDialog @ref="AuthenticationProviderDialog" OnTokenReceived="UseToken" />

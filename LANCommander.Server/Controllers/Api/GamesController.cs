@@ -95,32 +95,43 @@ namespace LANCommander.Server.Controllers.Api
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
-            var game = await GameService
-                .Include(g => g.Actions)
-                .Include(g => g.Archives)
-                .Include(g => g.BaseGame)
-                .Include(g => g.Categories)
-                .Include(g => g.Collections)
-                .Include(g => g.DependentGames)
-                .Include(g => g.Developers)
-                .Include(g => g.Engine)
-                .Include(g => g.Genres)
-                .Include(g => g.Media)
-                .Include(g => g.MultiplayerModes)
-                .Include(g => g.Platforms)
-                .Include(g => g.PlaySessions.Where(ps => ps.UserId == user.Id))
-                .Include(g => g.Publishers)
-                .Include(g => g.Redistributables)
-                .Include(g => g.Tags)
-                .GetAsync(id);
+            var game = await Cache.GetOrSetAsync<SDK.Models.Game>($"Game/{id}", async _ =>
+            {
+                return await GameService
+                    .Query(q =>
+                    {
+                        return q.Include(g => g.Actions)
+                            .Include(g => g.Archives)
+                            .Include(g => g.BaseGame)
+                            .Include(g => g.Categories)
+                            .Include(g => g.Collections)
+                            .Include(g => g.DependentGames)
+                            .Include(g => g.Developers)
+                            .Include(g => g.Engine)
+                            .Include(g => g.Genres)
+                            .Include(g => g.Media)
+                            .Include(g => g.MultiplayerModes)
+                            .Include(g => g.Platforms)
+                            .Include(g => g.PlaySessions.Where(ps => ps.UserId == user.Id))
+                            .Include(g => g.Publishers)
+                            .Include(g => g.Redistributables)
+                            .Include(g => g.Tags)
+                            .Include(g => g.Servers)
+                            .ThenInclude(s => s.Actions);
+                    })
+                    .GetAsync<SDK.Models.Game>(id);
+            });
 
-            return Mapper.Map<SDK.Models.Game>(game);
+            return game;
         }
 
         [HttpGet("{id}/Manifest")]
         public async Task<SDK.GameManifest> GetManifest(Guid id)
         {
-            var manifest = await GameService.GetManifestAsync(id);
+            var manifest = await Cache.GetOrSetAsync($"Game/{id}/Manifest", async _ =>
+            {
+                return await GameService.GetManifestAsync(id);
+            });
 
             return manifest;
         }

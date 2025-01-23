@@ -77,6 +77,11 @@ namespace LANCommander.Server.Services
             return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
         }
 
+        public static string GetMediaPath(Media entity, StorageLocation storageLocation)
+        {
+            return Path.Combine(storageLocation.Path, entity.FileId.ToString());
+        }
+
         public async Task<string> GetThumbnailPathAsync(Guid id)
         {
             var entity = await GetAsync(id);

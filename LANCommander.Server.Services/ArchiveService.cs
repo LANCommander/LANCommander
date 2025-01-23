@@ -5,12 +5,14 @@ using LANCommander.Server.Models;
 using LANCommander.SDK;
 using System.IO.Compression;
 using System.Linq.Expressions;
+using LANCommander.Server.Services.Extensions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using SharpCompress.Common;
 
 namespace LANCommander.Server.Services
 {
@@ -25,6 +27,11 @@ namespace LANCommander.Server.Services
             StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
         {
             StorageLocationService = storageLocationService;
+        }
+
+        public string GetArchiveFileLocation(Archive archive, StorageLocation storageLocation)
+        {
+            return Path.Combine(storageLocation.Path, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(Archive archive)
@@ -76,6 +83,32 @@ namespace LANCommander.Server.Services
             FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
 
             await Cache.ExpireGameCacheAsync(archive.GameId);
+            
+            Repository.Context.ChangeTracker.Clear();
+
+            archive = await Query(q =>
+            {
+                return q.IgnoreAutoIncludes();
+            }).GetAsync(archive.Id);
+
+            await base.DeleteAsync(archive);
+        }
+
+        public async Task DeleteAsync(Archive archive, StorageLocation storageLocation = null)
+        {
+            if (storageLocation == null)
+                FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
+            else
+                FileHelpers.DeleteIfExists(GetArchiveFileLocation(archive, storageLocation));
+
+            await Cache.ExpireGameCacheAsync(archive.GameId);
+
+            Repository.Context.ChangeTracker.Clear();
+            
+            archive = await Query(q =>
+            {
+                return q.IgnoreAutoIncludes();
+            }).GetAsync(archive.Id);
 
             await base.DeleteAsync(archive);
         }

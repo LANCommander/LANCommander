@@ -302,7 +302,9 @@ namespace LANCommander.Server.Services
                 // Read manifest
                 GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                var exists = await ExistsAsync(manifest.Id);
+                game = await GetAsync(manifest.Id);
+
+                var exists = game != null;
                 
                 if (!exists)
                     game = new Game();
@@ -333,6 +335,9 @@ namespace LANCommander.Server.Services
                 game.Singleplayer = manifest.Singleplayer;
                 game.SortTitle = manifest.SortTitle;
                 game.Title = manifest.Title;
+                
+                if (!exists)
+                    game = await AddAsync(game);
 
                 #region Actions
                 game.Actions = new List<Data.Models.Action>();
@@ -556,6 +561,10 @@ namespace LANCommander.Server.Services
                 #endregion
 
                 #region Media
+
+                var mediaStorageLocation =
+                    await StorageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+                
                 if (game.Media == null)
                     game.Media = new List<Data.Models.Media>();
 
@@ -567,13 +576,15 @@ namespace LANCommander.Server.Services
                     {
                         media.SourceUrl = manifestMedia.SourceUrl;
                         media.FileId = manifestMedia.FileId;
-                        media.Type = (SDK.Enums.MediaType)(int)manifestMedia.Type;
+                        media.Type = manifestMedia.Type;
                         media.MimeType = manifestMedia.MimeType;
                         media.CreatedOn = manifestMedia.CreatedOn;
 
                         importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetMediaPath(media), true);
 
                         media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
+
+                        await MediaService.UpdateAsync(media);
                     }
                 }
 
@@ -582,17 +593,21 @@ namespace LANCommander.Server.Services
                     {
                         var media = new Media()
                         {
-                            Id = manifestMedia.Id,
-                            FileId = manifestMedia.FileId,
+                            FileId = Guid.NewGuid(),
                             MimeType = manifestMedia.MimeType,
                             SourceUrl = manifestMedia.SourceUrl,
-                            Type = (SDK.Enums.MediaType)(int)manifestMedia.Type,
+                            Type = manifestMedia.Type,
                             CreatedOn = manifestMedia.CreatedOn,
+                            StorageLocationId = mediaStorageLocation.Id,
                         };
 
-                        importZip.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetMediaPath(media), true);
+                        var mediaPath = MediaService.GetMediaPath(media, mediaStorageLocation);
 
-                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
+                        importZip.ExtractEntry($"Media/{manifestMedia.FileId}", mediaPath, true);
+
+                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(mediaPath);
+
+                        media = await MediaService.AddAsync(media);
 
                         game.Media.Add(media);
                     }
@@ -621,6 +636,8 @@ namespace LANCommander.Server.Services
 
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
                         archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
+
+                        await ArchiveService.UpdateAsync(archive);
                     }
                 }
 
@@ -629,12 +646,11 @@ namespace LANCommander.Server.Services
                     {
                         var archive = new Archive()
                         {
-                            Id = manifestArchive.Id,
-                            ObjectKey = manifestArchive.ObjectKey,
+                            ObjectKey = Guid.NewGuid().ToString(),
                             Changelog = manifestArchive.Changelog,
                             Version = manifestArchive.Version,
                             CreatedOn = manifestArchive.CreatedOn,
-                            StorageLocation = storageLocation,
+                            StorageLocationId = storageLocation.Id,
                         };
 
                         var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
@@ -646,17 +662,17 @@ namespace LANCommander.Server.Services
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
                         archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
 
+                        archive = await ArchiveService.AddAsync(archive);
+
                         game.Archives.Add(archive);
                     }
                 #endregion
-
-                if (exists)
-                    game = await UpdateAsync(game);
-                else
-                    game = await AddAsync(game);
+                
+                game = await UpdateAsync(game);
             }
+            
+            await ArchiveService.DeleteAsync(importArchive, storageLocation);
 
-            await ArchiveService.DeleteAsync(importArchive);
             await Cache.ExpireGameCacheAsync(game.Id);
 
             return game;

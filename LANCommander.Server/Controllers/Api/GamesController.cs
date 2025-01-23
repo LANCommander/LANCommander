@@ -53,7 +53,7 @@ namespace LANCommander.Server.Controllers.Api
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var userLibrary = await LibraryService.GetByUserIdAsync(user.Id);
 
-            var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
+            var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("Games", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");
 
                 var games = await GameService.GetAsync<SDK.Models.Game>();
@@ -95,7 +95,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
-            var game = await Cache.GetOrSetAsync<SDK.Models.Game>($"Game/{id}", async _ =>
+            var game = await Cache.GetOrSetAsync<SDK.Models.Game>($"Games/{id}", async _ =>
             {
                 return await GameService
                     .Query(q =>
@@ -128,7 +128,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}/Manifest")]
         public async Task<SDK.GameManifest> GetManifest(Guid id)
         {
-            var manifest = await Cache.GetOrSetAsync($"Game/{id}/Manifest", async _ =>
+            var manifest = await Cache.GetOrSetAsync($"Games/{id}/Manifest", async _ =>
             {
                 return await GameService.GetManifestAsync(id);
             });

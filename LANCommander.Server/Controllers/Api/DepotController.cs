@@ -66,7 +66,7 @@ namespace LANCommander.Server.Controllers.Api
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var library = await LibraryService.GetByUserIdAsync(user.Id);
 
-            var results = await Cache.GetOrSetAsync("DepotResults", async _ =>
+            var results = await Cache.GetOrSetAsync("Depot/Results", async _ =>
             {
                 var results = new SDK.Models.DepotResults();
 
@@ -92,7 +92,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Games/{id}")]
         public async Task<SDK.Models.DepotGame> GetGameAsync(Guid id)
         {
-            var game = await Cache.GetOrSetAsync($"DepotGames/{id}", async _ =>
+            var game = await Cache.GetOrSetAsync($"Depot/Games/{id}", async _ =>
             {
                 return await GameService
                     .Include(g => g.Actions)

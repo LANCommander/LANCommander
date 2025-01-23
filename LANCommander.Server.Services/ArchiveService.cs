@@ -52,30 +52,30 @@ namespace LANCommander.Server.Services
 
         public override async Task<Archive> AddAsync(Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await Cache.ExpireGameCacheAsync(entity.GameId);
 
             return await base.AddAsync(entity);
         }
 
         public override async Task<ExistingEntityResult<Archive>> AddMissingAsync(Expression<Func<Archive, bool>> predicate, Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await Cache.ExpireGameCacheAsync(entity.GameId);
 
             return await base.AddMissingAsync(predicate, entity);
         }
 
         public override async Task<Archive> UpdateAsync(Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await Cache.ExpireGameCacheAsync(entity.GameId);
 
             return await base.UpdateAsync(entity);
         }
-
+        
         public override async Task DeleteAsync(Archive archive)
         {
             FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
 
-            await Cache.ExpireAsync("MappedGames");
+            await Cache.ExpireGameCacheAsync(archive.GameId);
 
             await base.DeleteAsync(archive);
         }

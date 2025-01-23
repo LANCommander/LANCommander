@@ -17,33 +17,27 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class GamesController : BaseApiController
     {
-        private readonly IMapper Mapper;
         private readonly GameService GameService;
         private readonly LibraryService LibraryService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
         private readonly UserService UserService;
-        private readonly RoleService RoleService;
         private readonly IFusionCache Cache;
 
         public GamesController(
             ILogger<GamesController> logger,
-            IMapper mapper,
             IFusionCache cache,
             GameService gameService,
             LibraryService libraryService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
-            UserService userService,
-            RoleService roleService) : base(logger)
+            UserService userService) : base(logger)
         {
-            Mapper = mapper;
             GameService = gameService;
             LibraryService = libraryService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
             UserService = userService;
-            RoleService = roleService;
             Cache = cache;
         }
 

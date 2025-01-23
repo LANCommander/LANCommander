@@ -33,11 +33,13 @@
             Property="s => s.Game"
             DefaultSortOrder="@SortDirection.Ascending"
             Sortable
-            SorterCompare="@((a, b) => a == null ? -1 : b == null ? 1 : String.CompareOrdinal(!String.IsNullOrWhiteSpace(a.SortTitle) ? a.SortTitle : a.Title, !String.IsNullOrWhiteSpace(b.SortTitle) ? b.SortTitle : b.Title))"
             Include="Game.Media">
             <Flex Align="FlexAlign.Center" Gap="FlexGap.Middle">
-                <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
-                <span>@context.Game?.Title</span>
+                @if (context.Game != null)
+                {
+                    <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
+                    <span>@context.Game?.Title</span>                    
+                }
             </Flex>
         </BoundDataColumn>
         <BoundDataColumn Property="s => s.Name" Sortable />

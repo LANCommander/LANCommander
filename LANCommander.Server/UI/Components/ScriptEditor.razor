@@ -5,6 +5,7 @@
 
 <Flex Vertical Gap="FlexGap.Large">
     <DataTable
+        @ref="Table"
         TItem="Script"
         HidePagination
         Responsive
@@ -12,7 +13,9 @@
         <BoundDataColumn Property="s => s.Type">
             @context.Type.GetDisplayName()
         </BoundDataColumn>
-        <BoundDataColumn Property="s => s.CreatedBy.UserName" Include="CreatedBy" />
+        <BoundDataColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Include="CreatedBy">
+            @context.CreatedBy?.UserName
+        </BoundDataColumn>
         <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />
         <DataActions>
             <Button OnClick="() => Edit(context.Id)" Icon="@IconType.Outline.Edit" Type="ButtonType.Text"/>
@@ -41,6 +44,8 @@
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
 
+    DataTable<Script> Table;
+    
     ICollection<Script> Scripts { get; set; } = new List<Script>();
     
     async void Edit(Guid? scriptId = null)
@@ -68,7 +73,7 @@
 
         modalRef.OnOk = async (script) =>
         {
-            // await LoadData();
+            Table.Reload();
         };
     }
 

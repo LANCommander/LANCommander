@@ -2,41 +2,34 @@
 @using LANCommander.Server.Extensions;
 @inject NavigationManager NavigationManager
 
-<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
-    <SpaceItem>
-        <Table TItem="ServerHttpPath" DataSource="@Values" HidePagination="true" Responsive>
-            <PropertyColumn Property="p => p.LocalPath" Title="Local Path">
-                <FilePicker @bind-Value="context.LocalPath" AllowDirectories Title="Select Local Path" Root="@WorkingDirectory" />
-            </PropertyColumn>
-            <PropertyColumn Property="p => p.Path">
-                <Input Type="InputType.Text" @bind-Value="context.Path" />
-            </PropertyColumn>
-            <ActionColumn>
-                <Space Style="display: flex; justify-content: end">
-                    @if (context != null && context.Id != Guid.Empty)
-                    {
-                        <SpaceItem>
-                            <a class="ant-btn ant-btn-text ant-btn-icon-only" href="@NavigationManager.ToAbsoluteUri($"Server/{ServerId}/{context.Path.TrimStart('/')}")" target="_blank">
-                                <Icon Type="@IconType.Outline.Eye" />
-                            </a>
-                        </SpaceItem>
-                    }
+<Flex Vertical Gap="FlexGap.Large">
+    <Table TItem="ServerHttpPath" DataSource="@Values" HidePagination="true" Responsive>
+        <PropertyColumn Property="p => p.LocalPath" Title="Local Path">
+            <FilePicker @bind-Value="context.LocalPath" AllowDirectories Title="Select Local Path" Root="@WorkingDirectory" />
+        </PropertyColumn>
+        <PropertyColumn Property="p => p.Path">
+            <Input Type="InputType.Text" @bind-Value="context.Path" />
+        </PropertyColumn>
+        <ActionColumn>
+            <Space Style="display: flex; justify-content: end">
+                @if (context != null && context.Id != Guid.Empty)
+                {
                     <SpaceItem>
-                        <Button OnClick="() => Remove(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                        <a class="ant-btn ant-btn-text ant-btn-icon-only" href="@NavigationManager.ToAbsoluteUri($"Server/{ServerId}/{context.Path.TrimStart('/')}")" target="_blank">
+                            <Icon Type="@IconType.Outline.Eye" />
+                        </a>
                     </SpaceItem>
-                </Space>
-            </ActionColumn>
-        </Table>
-    </SpaceItem>
-
-    <SpaceItem>
-        <GridRow Justify="RowJustify.End">
-            <GridCol>
-                <Button OnClick="Add" Type="@ButtonType.Primary">Add Path</Button>
-            </GridCol>
-        </GridRow>
-    </SpaceItem>
-</Space>
+                }
+                <SpaceItem>
+                    <Button OnClick="() => Remove(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" />
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </Table>
+    <Flex Justify="FlexJustify.End">
+        <Button OnClick="Add" Type="@ButtonType.Primary">Add Path</Button>
+    </Flex>
+</Flex>
 
 @code {
     [Parameter] public ICollection<ServerHttpPath> Values { get; set; }

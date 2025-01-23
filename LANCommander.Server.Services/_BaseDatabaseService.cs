@@ -16,7 +16,10 @@ namespace LANCommander.Server.Services
         protected readonly IFusionCache Cache;
         protected Repository<T> Repository { get; set; }
 
-        public BaseDatabaseService(ILogger logger, IFusionCache cache, RepositoryFactory repositoryFactory) : base(logger)
+        public BaseDatabaseService(
+            ILogger logger,
+            IFusionCache cache,
+            RepositoryFactory repositoryFactory) : base(logger)
         {
             Cache = cache;
             Repository = repositoryFactory.Create<T>();

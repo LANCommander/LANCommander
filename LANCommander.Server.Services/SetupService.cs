@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Server.Services
 {
-    public class SetupService : BaseService
+    public class SetupService : BaseService, IDisposable
     {
         private readonly IServiceProvider ServiceProvider;
 
@@ -104,6 +104,11 @@ namespace LANCommander.Server.Services
 
                 return true;
             }
+        }
+
+        public void Dispose()
+        {
+            
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿@page "/FirstTimeSetup/Administrator"
+@using LANCommander.Server.Services.Exceptions
 @layout FirstTimeSetupLayout
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
@@ -49,17 +50,43 @@
         StateHasChanged();
         await Task.Yield();
 
+        if (Model.Password != Model.PasswordConfirm)
+        {
+            MessageService.Error("Passwords do not match");
+            Loading = false;
+            StateHasChanged();
+            await Task.Yield();
+
+            return;
+        }
+
         try
         {
             using (var roleService = DatabaseServiceFactory.Create<RoleService>())
             {
                 var role = await roleService.GetAsync(RoleService.AdministratorRoleName);
 
-                if (role == null)
-                    await roleService.AddAsync(new Role
+                try
+                {
+                    if (role == null)
+                        role = await roleService.AddAsync(new Role
+                        {
+                            Name = RoleService.AdministratorRoleName
+                        });
+                }
+                catch (AddRoleException ex)
+                {
+                    foreach (var error in ex.IdentityResult.Errors)
                     {
-                        Name = RoleService.AdministratorRoleName
-                    });
+                        MessageService.Error(error.Description);
+                    }
+
+                    Loading = false;
+                    StateHasChanged();
+                    await Task.Yield();
+
+                    return;
+                }
 
                 var administrators = await roleService.GetUsersAsync(RoleService.AdministratorRoleName);
 
@@ -75,23 +102,11 @@
                         user.ApprovedOn = DateTime.UtcNow;
                         user.UserName = Model.Username;
 
-                        var result = await userService.AddAsync(user);
-
-                        if (result == null)
+                        try
                         {
-                            /*foreach (var error in result.Errors)
-                            {
-                                MessageService.Error(error.Description);
-                            }*/
-
-                            Loading = false;
-                            StateHasChanged();
-
-                            return;
-                        }
-                        else
-                        {
-                            await userService.AddToRolesAsync(user.UserName, new string[] { RoleService.AdministratorRoleName });
+                            await userService.AddAsync(user);
+                            await userService.ChangePassword(user.UserName, Model.Password);
+                            await userService.AddToRolesAsync(user.UserName, [RoleService.AdministratorRoleName]);
 
                             Logger?.LogInformation("Administrator created a new account with password.");
 
@@ -100,6 +115,28 @@
                             Loading = false;
 
                             NavigationManager.NavigateTo("/");
+                        }
+                        catch (UserRegistrationException ex)
+                        {
+                            foreach (var error in ex.IdentityResult.Errors)
+                            {
+                                MessageService.Error(error.Description);
+                            }
+
+                            Loading = false;
+                            StateHasChanged();
+                            await Task.Yield();
+                        }
+                        catch (AddRoleException ex)
+                        {
+                            foreach (var error in ex.IdentityResult.Errors)
+                            {
+                                MessageService.Error(error.Description);
+                            }
+
+                            Loading = false;
+                            StateHasChanged();
+                            await Task.Yield();
                         }
                     }
                 }

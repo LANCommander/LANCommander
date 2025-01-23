@@ -16,6 +16,7 @@ using System;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using LANCommander.Server.Services.Exceptions;
 
 namespace LANCommander.Server.Services
 {
@@ -119,11 +120,11 @@ namespace LANCommander.Server.Services
             try
             {
                 var result = await IdentityContext.UserManager.CreateAsync(user);
-
+                
                 if (result.Succeeded)
                     return await IdentityContext.UserManager.FindByNameAsync(user.UserName);
                 else
-                    return null;
+                    throw new UserRegistrationException(result, "Could not create user");
             }
             finally
             {
@@ -149,7 +150,10 @@ namespace LANCommander.Server.Services
             {
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
+                var result = await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
+
+                if (!result.Succeeded)
+                    throw new AddRoleException(result, "Could not add roles");
             }
             finally
             {

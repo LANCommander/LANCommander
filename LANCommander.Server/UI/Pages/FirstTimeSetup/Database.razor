@@ -83,10 +83,7 @@
 
         try
         {
-            /*using (var setupService = DatabaseServiceFactory.Create<SetupService>())
-            {
-                setupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
-            }*/
+            SetupService.ValidateConnectionString(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
 
             valid = true;
         }
@@ -117,10 +114,10 @@
             {
                 await InvokeAsync(async () =>
                 {
-                    /*using (var setupService = DatabaseServiceFactory.Create<SetupService>())
+                    using (var setupService = DatabaseServiceFactory.Create<SetupService>())
                     {
                         await setupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
-                    }*/
+                    }
 
                     SettingService.SaveSettings(Settings);
 

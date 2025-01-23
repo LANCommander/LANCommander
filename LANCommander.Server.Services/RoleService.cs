@@ -5,6 +5,7 @@ using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Data;
+using LANCommander.Server.Services.Exceptions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -17,6 +18,7 @@ namespace LANCommander.Server.Services
         private readonly IMapper Mapper;
 
         private readonly CollectionService CollectionService;
+        private readonly RoleManager<Role> RoleManager;
 
         public RoleService(
             ILogger<RoleService> logger,
@@ -24,11 +26,23 @@ namespace LANCommander.Server.Services
             IFusionCache cache,
             RepositoryFactory repositoryFactory,
             IdentityContextFactory identityContextFactory,
-            CollectionService collectionService) : base(logger, cache, repositoryFactory)
+            CollectionService collectionService,
+            RoleManager<Role> roleManager) : base(logger, cache, repositoryFactory)
         {
             IdentityContext = identityContextFactory.Create();
             Mapper = mapper;
             CollectionService = collectionService;
+            RoleManager = roleManager;
+        }
+
+        public async Task<Role> AddAsync(Role role)
+        {
+            var result = await RoleManager.CreateAsync(role);
+
+            if (result.Succeeded)
+                return await RoleManager.FindByNameAsync(role.Name);
+            
+            throw new AddRoleException(result, "Could not create role");
         }
 
         public async Task<Role> GetAsync(string roleName)

@@ -73,6 +73,11 @@
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))">
 	    <DefineConstants>MACOS</DefineConstants>
     </PropertyGroup>
+    <ItemGroup>
+      <Page Include="Templates\AuthenticationProviders\OAuth2\Discord.yml">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Page>
+    </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AntDesign.Charts" Version="0.5.6" />
@@ -246,6 +251,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="Snippets\Variables\Server Address.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\AuthenticationProviders\OAuth2\Facebook.yml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\AuthenticationProviders\OAuth2\Google.yml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\AuthenticationProviders\OAuth2\Microsoft.yml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

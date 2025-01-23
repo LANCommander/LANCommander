@@ -1,5 +1,6 @@
 ﻿const path = require('path');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
     entry: ['./Main.ts', './Styles/ui.scss'], // Adjust the path if your index.js is located elsewhere
@@ -46,6 +47,14 @@ module.exports = {
     plugins: [
         new MiniCssExtractPlugin({
             filename: "ui.css"
+        }),
+        new CopyWebpackPlugin({
+            patterns: [
+                {
+                    from: path.resolve(__dirname, 'node_modules/bootstrap-icons/bootstrap-icons.svg'),
+                    to: path.resolve(__dirname, 'wwwroot')
+                }
+            ]
         }),
     ],
     mode: 'production', // Use 'production' for minified output

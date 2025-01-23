@@ -1,0 +1,47 @@
+@page "/Servers/{id:guid}/Actions"
+@using System.Runtime.InteropServices
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Servers.Components
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<General> Logger
+
+<ServerEditView Id="Id" Title="Actions">
+    <TitleExtraTemplate>
+        @if (context != null && context.Id != Guid.Empty)
+        {
+            <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
+                <ServerControl ServerId="context.Id" />
+
+                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
+                    <Overlay>
+                        <Menu>
+                            <MenuItem>
+                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button>Export</Button>
+                    </ChildContent>
+                </Dropdown>
+            </Flex>
+        }
+    </TitleExtraTemplate>
+    
+    <ChildContent>
+        <ActionEditor
+            @ref="ActionEditor"
+            ServerId="context.Id"
+            ArchiveId="context.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" />
+        
+        <Button Type="@ButtonType.Primary" OnClick="() => ActionEditor.Save()" Icon="@IconType.Fill.Save">Save</Button>
+    </ChildContent>
+</ServerEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    ActionEditor ActionEditor;
+}

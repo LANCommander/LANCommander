@@ -2,7 +2,7 @@
 @using LANCommander.Server.Data.Models
 @using LANCommander.Server.Extensions;
 
-<Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Large" Style="width: 100%">
+<Flex Vertical Gap="FlexGap.Large">
     @if (Value == null || Value.Count == 0)
     {
         <Empty />
@@ -10,85 +10,79 @@
 
     @foreach (var console in Value)
     {
-        <SpaceItem>
-            @if (console.Type == ServerConsoleType.RCON)
-            {
-                <Card Size="CardSize.Small" Title="@console.Name">
-                    <Extra>
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
-                    </Extra>
-                    <Body>
-                        <Form Layout="@FormLayout.Vertical" Model="@console">
-                            <GridRow Gutter="16">
-                                <GridCol Span="8">
-                                    <FormItem Label="Type">
-                                        <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
-                                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                                        </Select>
-                                    </FormItem>
-                                    <FormItem Label="Name">
-                                        <Input @bind-Value="context.Name" BindOnInput />
-                                    </FormItem>
-                                </GridCol>
+        @if (console.Type == ServerConsoleType.RCON)
+        {
+            <Card Size="CardSize.Small" Title="@console.Name">
+                <Extra>
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
+                </Extra>
+                <Body>
+                    <Form Layout="@FormLayout.Vertical" Model="@console">
+                        <GridRow Gutter="16">
+                            <GridCol Span="8">
+                                <FormItem Label="Type">
+                                    <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
+                                        <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                                        <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                                    </Select>
+                                </FormItem>
+                                <FormItem Label="Name">
+                                    <Input @bind-Value="context.Name" BindOnInput />
+                                </FormItem>
+                            </GridCol>
 
-                                <GridCol Span="16">
-                                    <FormItem Label="Server">
-                                        <InputGroup Compact>
-                                            <Input @bind-Value="context.Host" Placeholder="Host" />
-                                            <Input @bind-Value="context.Port" Placeholder="Port" Style="width: 25%" />
-                                        </InputGroup>
-                                    </FormItem>
-                                    <FormItem Label="Password">
-                                        <InputPassword @bind-Value="context.Password" Placeholder="Password" />
-                                    </FormItem>
-                                </GridCol>
-                            </GridRow>
-                        </Form>
-                    </Body>
-                </Card>
-            }
-            else if (console.Type == ServerConsoleType.LogFile)
-            {
-                <Card Size="CardSize.Small" Title="@console.Name">
-                    <Extra>
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
-                    </Extra>
-                    <Body>
-                        <Form Layout="@FormLayout.Vertical" Model="@console">
-                            <GridRow Gutter="16">
-                                <GridCol Span="8">
-                                    <FormItem Label="Type">
-                                        <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
-                                            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                                            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                                        </Select>
-                                    </FormItem>
-                                    <FormItem Label="Name">
-                                        <Input Type="InputType.Text" @bind-Value="context.Name" />
-                                    </FormItem>
-                                </GridCol>
-                                <GridCol Span="16">
-                                    <FormItem Label="Path">
-                                        <Input Type="InputType.Text" @bind-Value="context.Path" />
-                                    </FormItem>
-                                </GridCol>
-                            </GridRow>
-                        </Form>
-                    </Body>
-                </Card>
-            }
-        </SpaceItem>
+                            <GridCol Span="16">
+                                <FormItem Label="Server">
+                                    <InputGroup Compact>
+                                        <Input @bind-Value="context.Host" Placeholder="Host" />
+                                        <Input @bind-Value="context.Port" Placeholder="Port" Style="width: 25%" />
+                                    </InputGroup>
+                                </FormItem>
+                                <FormItem Label="Password">
+                                    <InputPassword @bind-Value="context.Password" Placeholder="Password" />
+                                </FormItem>
+                            </GridCol>
+                        </GridRow>
+                    </Form>
+                </Body>
+            </Card>
+        }
+        else if (console.Type == ServerConsoleType.LogFile)
+        {
+            <Card Size="CardSize.Small" Title="@console.Name">
+                <Extra>
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
+                </Extra>
+                <Body>
+                    <Form Layout="@FormLayout.Vertical" Model="@console">
+                        <GridRow Gutter="16">
+                            <GridCol Span="8">
+                                <FormItem Label="Type">
+                                    <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
+                                        <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+                                        <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+                                    </Select>
+                                </FormItem>
+                                <FormItem Label="Name">
+                                    <Input Type="InputType.Text" @bind-Value="context.Name" />
+                                </FormItem>
+                            </GridCol>
+                            <GridCol Span="16">
+                                <FormItem Label="Path">
+                                    <Input Type="InputType.Text" @bind-Value="context.Path" />
+                                </FormItem>
+                            </GridCol>
+                        </GridRow>
+                    </Form>
+                </Body>
+            </Card>
+        }
     }
-
-    <SpaceItem>
-        <GridRow Justify="RowJustify.End">
-            <GridCol>
-                <Button OnClick="Add" Type="@ButtonType.Primary">Add Console</Button>
-            </GridCol>
-        </GridRow>
-    </SpaceItem>
-</Space>
+    
+    <Flex Justify="FlexJustify.End">
+        <Button OnClick="Add" Type="@ButtonType.Primary">Add Console</Button>
+    </Flex>
+</Flex>
 
 @code {
     [Parameter] public ICollection<ServerConsole> Value { get; set; }

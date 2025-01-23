@@ -1,0 +1,176 @@
+@page "/Seervers/Add"
+@page "/Servers/{id:guid}"
+@page "/Servers/{id:guid}/General"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using System.Runtime.InteropServices
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Servers.Components
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<General> Logger
+
+<ServerEditView Id="Id">
+    <TitleTemplate>
+        @if (context.Id == Guid.Empty)
+        {
+            <Text>Add New Server</Text>
+        }
+        else
+        {
+            <Text>General</Text>
+        }
+    </TitleTemplate>
+    <TitleExtraTemplate>
+        @if (context != null && context.Id != Guid.Empty)
+        {
+            <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
+                <ServerControl ServerId="context.Id" />
+
+                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
+                    <Overlay>
+                        <Menu>
+                            <MenuItem>
+                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button>Export</Button>
+                    </ChildContent>
+                </Dropdown>
+            </Flex>
+        }
+    </TitleExtraTemplate>
+    
+    <ChildContent>
+        <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
+            <FormItem Label="Name">
+                <Input @bind-Value="@context.Name" />
+            </FormItem>
+            <FormItem Label="Game">
+                <Select TItem="Game"
+                        TItemValue="Guid?"
+                        DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                        @bind-Value="@context.GameId"
+                        LabelName="Title"
+                        ValueName="Id"
+                        Placeholder="Select a Game"
+                        DefaultActiveFirstOption="false"
+                        EnableSearch>
+                    <ItemTemplate Context="game">
+                        @game.Title
+                    </ItemTemplate>
+                </Select>
+            </FormItem>
+            <FormItem Label="Executable Path">
+                <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="(path) => context.WorkingDirectory = Path.GetDirectoryName(path)" />
+            </FormItem>
+            <FormItem Label="Arguments">
+                <Input @bind-Value="@context.Arguments" />
+            </FormItem>
+            <FormItem Label="Working Directory">
+                <FilePicker Root="@RootPath" Title="Choose Working Directory" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.WorkingDirectory" />
+            </FormItem>
+            <FormItem Label="Host">
+                <Input @bind-Value="@context.Host" />
+            </FormItem>
+            <FormItem Label="Port" HasFeedback="@PortInUse" Help="@(PortInUse ? "Another server may already be bound to this port" : "")" ValidateStatus="@(PortInUse ? FormValidateStatus.Warning : FormValidateStatus.Default)">
+                <ServerPortInput @bind-Value="@context.Port" @bind-PortInUse="PortInUse" ServerId="context.Id" />
+            </FormItem>
+            <FormItem>
+                <LabelTemplate>
+                    Use Shell Execute
+                    <Tooltip Title="This option specifies whether you would like to run the server using the shell. Some servers may require this as they will have a UI or won't output logs to stdout">
+                        <Icon Type="@IconType.Outline.QuestionCircle" Theme="@IconThemeType.Outline" />
+                    </Tooltip>
+                </LabelTemplate>
+                <ChildContent>
+                    <Switch @bind-Checked="context.UseShellExecute" />
+                </ChildContent>
+            </FormItem>
+            <FormItem Label="Termination Method">
+                <Select @bind-Value="context.ProcessTerminationMethod" TItem="ProcessTerminationMethod" TItemValue="ProcessTerminationMethod" DataSource="AllowedProcessTerminationMethods" />
+            </FormItem>
+            <FormItem>
+                <Button Type="@ButtonType.Primary" OnClick="() => Save(context)" Icon="@IconType.Fill.Save">Save</Button>
+            </FormItem>
+        </Form>
+    </ChildContent>
+</ServerEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    
+    IEnumerable<Game> Games = new List<Game>();
+
+    Guid GameId;
+    
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+    bool PortInUse = false;
+    
+    IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods
+    {
+        get
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return new ProcessTerminationMethod[]
+                {
+                    ProcessTerminationMethod.SIGHUP,
+                    ProcessTerminationMethod.SIGINT,
+                    ProcessTerminationMethod.SIGKILL,
+                    ProcessTerminationMethod.SIGTERM
+                };
+            else
+                return new ProcessTerminationMethod[]
+                {
+                    ProcessTerminationMethod.Close,
+                    ProcessTerminationMethod.Kill
+                };
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService.Include(g => g.Media).GetAsync();
+        }
+    }
+    
+    async Task Save(Server server)
+    {
+        try
+        {
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            {
+                if (server.Id != Guid.Empty)
+                {
+                    server = await serverService.UpdateAsync(server);
+
+                    await MessageService.Success("Server updated!");
+                }
+                else
+                {
+                    server = await serverService.AddAsync(server);
+
+                    NavigationManager.LocationChanged += NotifyServerAdded;
+
+                    NavigationManager.NavigateTo($"/Servers/{server.Id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save!");
+            Logger.LogError(ex, "Could not save!");
+        }
+    }
+
+    void NotifyServerAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyServerAdded;
+
+        MessageService.Success("Server added!");
+    }
+}

@@ -1,0 +1,30 @@
+@inject DatabaseServiceFactory DatabaseServiceFactory
+
+<AntDesign.InputNumber Value="Value" ValueChanged="(val) => ValueChanged.InvokeAsync(val)" TValue="int" OnChange="OnPortNumberChanged" Min="0" Max="65535"/>
+
+@code {
+    [Parameter] public Guid ServerId { get; set; }
+    [Parameter] public int Value { get; set; }
+    [Parameter] public EventCallback<int> ValueChanged { get; set; }
+    [Parameter] public bool PortInUse { get; set; }
+    [Parameter] public EventCallback<bool> PortInUseChanged { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await OnPortNumberChanged(Value);
+    }
+
+    async Task OnPortNumberChanged(int value)
+    {
+        if (value > 0)
+        {
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            {
+                PortInUse = await serverService.ExistsAsync(s => s.Port == value && s.Id != ServerId);
+
+                if (PortInUseChanged.HasDelegate)
+                    await PortInUseChanged.InvokeAsync(PortInUse);
+            }
+        }
+    }
+}

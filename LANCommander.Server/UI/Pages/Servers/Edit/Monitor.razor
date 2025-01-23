@@ -1,0 +1,71 @@
+@page "/Servers/{id:guid}/Monitor/{logId}"
+@using System.Runtime.InteropServices
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Servers.Components
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<General> Logger
+
+<ServerEditView Id="Id" Title="Monitor">
+    <TitleExtraTemplate>
+        @if (context != null && context.Id != Guid.Empty)
+        {
+            <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
+                <ServerControl ServerId="context.Id" />
+
+                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
+                    <Overlay>
+                        <Menu>
+                            <MenuItem>
+                                <a href="/Server/@(context.Id)/Export/Full" target="_blank">Full</a>
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button>Export</Button>
+                    </ChildContent>
+                </Dropdown>
+            </Flex>
+        }
+    </TitleExtraTemplate>
+    
+    <ChildContent>
+        @if (LogId == "Console") {
+            <Console ServerId="@context.Id" />
+        }
+        else if (LogId != null && LogId != Guid.Empty.ToString())
+        {
+            <Console ServerId="@context.Id" ServerConsoleId="@Guid.Parse(LogId)" />
+        }
+        else
+        {
+            <ServerConsoleEditor @bind-Value="context.ServerConsoles" ServerId="Id" />
+
+            <Button Type="@ButtonType.Primary" OnClick="() => Save(context)" Icon="@IconType.Fill.Save">Save</Button>
+        }
+    </ChildContent>
+</ServerEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string LogId { get; set; }
+    
+    async Task Save(Server server)
+    {
+        try
+        {
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            {
+                server = await serverService.UpdateAsync(server);
+
+                await MessageService.Success("Consoles updated!");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save!");
+            Logger.LogError(ex, "Could not save!");
+        }
+    }
+}

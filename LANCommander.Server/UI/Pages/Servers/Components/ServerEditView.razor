@@ -1,0 +1,87 @@
+@using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
+
+<Layout Class="panel-layout" Style="padding: 24px 0;">
+    <Sider Width="200">
+        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+            <MenuItem RouterLink="@($"/Servers/{Id}/General")">General</MenuItem>
+            
+            @if (Id != Guid.Empty)
+            {
+                <MenuItem RouterLink="@($"/Servers/{Id}/Actions")">Actions</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Id}/Autostart")">Autostart</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Id}/HTTP")">HTTP</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Id}/Consoles")">Consoles</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Id}/Monitor")" Disabled="Server.ServerConsoles.Any()">Monitor</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Id}/Scripts")">Scripts</MenuItem>
+            }
+        </Menu>
+    </Sider>
+    
+    <Content>
+        <CascadingValue Value="Server">
+            <PageHeader>
+                <PageHeaderTitle>
+                    @if (TitleTemplate != null)
+                    {
+                        @TitleTemplate(Server)
+                    }
+                    else
+                    {
+                        <Text>@Title</Text>
+                    }
+                </PageHeaderTitle>
+                
+                <PageHeaderExtra>
+                    @TitleExtraTemplate?.Invoke(Server)
+                </PageHeaderExtra>
+            </PageHeader>
+        </CascadingValue>
+        
+        <div class="panel-layout-content">
+            @ChildContent?.Invoke(Server)
+        </div>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment<Server>? TitleTemplate { get; set; }
+    [Parameter] public RenderFragment<Server>? TitleExtraTemplate { get; set; }
+    [Parameter] public RenderFragment<Server>? ChildContent { get; set; }
+
+    Server Server { get; set; } = new();
+    Guid _id;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_id != Id)
+        {
+            _id = Id;
+
+            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            {
+                if (_id != Guid.Empty)
+                    Server = await serverService
+                        .Query(query =>
+                        {
+                            return query
+                                .Include(s => s.Actions)
+                                .Include(s => s.Game)
+                                .ThenInclude(g => g.Archives)
+                                .Include(s => s.HttpPaths)
+                                .Include(s => s.Scripts)
+                                .Include(s => s.ServerConsoles);
+                        })
+                        .GetAsync(_id);
+                else
+                    Server = new Server();
+            }
+            
+            if (Server == null)
+                NavigationManager.NavigateTo("/Servers");
+        }
+    }
+}

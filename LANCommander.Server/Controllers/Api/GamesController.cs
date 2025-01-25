@@ -54,15 +54,16 @@ namespace LANCommander.Server.Controllers.Api
             var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("Games", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");
 
-                var games = await GameService.GetAsync<SDK.Models.Game>();
+                var games = await GameService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Game>();
 
                 return games;
             }, TimeSpan.MaxValue);
 
             foreach (var mappedGame in mappedGames)
             {
-                mappedGame.PlaySessions = mappedGame.PlaySessions.Where(ps => ps.UserId == user.Id);
-
                 if (userLibrary.Games != null)
                     mappedGame.InLibrary = userLibrary.Games.Any(g => g.Id == mappedGame.Id);
             }
@@ -98,7 +99,8 @@ namespace LANCommander.Server.Controllers.Api
                 return await GameService
                     .Query(q =>
                     {
-                        return q.Include(g => g.Actions)
+                        return q.AsNoTracking()
+                            .Include(g => g.Actions)
                             .Include(g => g.Archives)
                             .Include(g => g.BaseGame)
                             .Include(g => g.Categories)
@@ -110,15 +112,12 @@ namespace LANCommander.Server.Controllers.Api
                             .Include(g => g.Media)
                             .Include(g => g.MultiplayerModes)
                             .Include(g => g.Platforms)
-                            .Include(g => g.PlaySessions.Where(ps => ps.UserId == user.Id))
                             .Include(g => g.Publishers)
                             .Include(g => g.Redistributables)
-                            .Include(g => g.Tags)
-                            .Include(g => g.Servers)
-                            .ThenInclude(s => s.Actions);
+                            .Include(g => g.Tags);
                     })
                     .GetAsync<SDK.Models.Game>(id);
-            });
+            }, TimeSpan.MaxValue);
 
             return game;
         }

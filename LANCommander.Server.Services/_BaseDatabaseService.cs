@@ -25,6 +25,13 @@ namespace LANCommander.Server.Services
             Repository = repositoryFactory.Create<T>();
         }
 
+        public IBaseDatabaseService<T> AsNoTracking()
+        {
+            Repository.AsNoTracking();
+
+            return this;
+        }
+
         public IBaseDatabaseService<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier)
         {
             Repository.Query(modifier);

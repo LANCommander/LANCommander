@@ -100,22 +100,25 @@ namespace LANCommander.Server.Services
 
         public async Task<GameManifest> GetManifestAsync(Guid id)
         {
-            var game = await Include(g => g.Actions)
-                .Include(g => g.Archives)
-                .Include(g => g.BaseGame)
-                .Include(g => g.Categories)
-                .Include(g => g.Collections)
-                .Include(g => g.DependentGames)
-                .Include(g => g.Developers)
-                .Include(g => g.Engine)
-                .Include(g => g.Genres)
-                .Include(g => g.Media)
-                .Include(g => g.MultiplayerModes)
-                .Include(g => g.Platforms)
-                .Include(g => g.Publishers)
-                .Include(g => g.Redistributables)
-                .Include(g => g.Tags)
-                .GetAsync(id);
+            var game = await Query(q =>
+            {
+                return q.AsNoTracking()
+                    .Include(g => g.Actions)
+                    .Include(g => g.Archives)
+                    .Include(g => g.BaseGame)
+                    .Include(g => g.Categories)
+                    .Include(g => g.Collections)
+                    .Include(g => g.DependentGames)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Media)
+                    .Include(g => g.MultiplayerModes)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Redistributables)
+                    .Include(g => g.Tags);
+            }).GetAsync(id);
 
             return GetManifest(game);
         }

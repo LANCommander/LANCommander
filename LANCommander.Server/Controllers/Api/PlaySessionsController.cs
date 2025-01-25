@@ -28,7 +28,7 @@ namespace LANCommander.Server.Controllers.Api
             Mapper = mapper;
             PlaySessionService = playSessionService;
             GameService = gameService;
-            UserService = UserService;
+            UserService = userService;
         }
 
         [HttpPost("Start/{id}")]
@@ -74,7 +74,10 @@ namespace LANCommander.Server.Controllers.Api
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id);
+            var sessions = await PlaySessionService.Query(q =>
+            {
+                return q.AsNoTracking();
+            }).GetAsync(ps => ps.UserId == user.Id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }
@@ -87,7 +90,10 @@ namespace LANCommander.Server.Controllers.Api
             if (user == null)
                 return Unauthorized();
 
-            var sessions = await PlaySessionService.GetAsync(ps => ps.UserId == user.Id && ps.GameId == id);
+            var sessions = await PlaySessionService.Query(q =>
+            {
+                return q.AsNoTracking();
+            }).GetAsync(ps => ps.UserId == user.Id && ps.GameId == id);
 
             return Ok(Mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
         }

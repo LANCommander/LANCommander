@@ -70,13 +70,40 @@ namespace LANCommander.Server.Controllers.Api
             {
                 var results = new SDK.Models.DepotResults();
 
-                results.Games = await GameService.GetAsync<DepotGame>();
-                results.Collections = await CollectionService.GetAsync<SDK.Models.Collection>();
-                results.Companies = await CompanyService.GetAsync<SDK.Models.Company>();
-                results.Engines = await EngineService.GetAsync<SDK.Models.Engine>();
-                results.Genres = await GenreService.GetAsync<SDK.Models.Genre>();
-                results.Platforms = await PlatformService.GetAsync<SDK.Models.Platform>();
-                results.Tags = await TagService.GetAsync<SDK.Models.Tag>();
+                results.Games = await GameService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<DepotGame>();
+                
+                results.Collections = await CollectionService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Collection>();
+                
+                results.Companies = await CompanyService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Company>();
+                
+                results.Engines = await EngineService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Engine>();
+                
+                results.Genres = await GenreService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Genre>();
+                
+                results.Platforms = await PlatformService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Platform>();
+                
+                results.Tags = await TagService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Tag>();
 
                 return results;
             }, TimeSpan.MaxValue);
@@ -94,29 +121,35 @@ namespace LANCommander.Server.Controllers.Api
         {
             var game = await Cache.GetOrSetAsync($"Depot/Games/{id}", async _ =>
             {
-                return await GameService
-                    .Include(g => g.Actions)
-                    .Include(g => g.Archives)
-                    .Include(g => g.BaseGame)
-                    .Include(g => g.Categories)
-                    .Include(g => g.Collections)
-                    .Include(g => g.DependentGames)
-                    .Include(g => g.Developers)
-                    .Include(g => g.Engine)
-                    .Include(g => g.Genres)
-                    .Include(g => g.Media)
-                    .Include(g => g.MultiplayerModes)
-                    .Include(g => g.Platforms)
-                    .Include(g => g.Publishers)
-                    .Include(g => g.Redistributables)
-                    .Include(g => g.SavePaths)
-                    .Include(g => g.Scripts)
-                    .Include(g => g.Tags)
+                return await GameService.Query(q =>
+                    {
+                        return q.AsNoTracking()
+                            .Include(g => g.Actions)
+                            .Include(g => g.Archives)
+                            .Include(g => g.BaseGame)
+                            .Include(g => g.Categories)
+                            .Include(g => g.Collections)
+                            .Include(g => g.DependentGames)
+                            .Include(g => g.Developers)
+                            .Include(g => g.Engine)
+                            .Include(g => g.Genres)
+                            .Include(g => g.Media)
+                            .Include(g => g.MultiplayerModes)
+                            .Include(g => g.Platforms)
+                            .Include(g => g.Publishers)
+                            .Include(g => g.Redistributables)
+                            .Include(g => g.SavePaths)
+                            .Include(g => g.Scripts)
+                            .Include(g => g.Tags);
+                    })
                     .GetAsync(id);
             });
 
             var user = await UserService.GetAsync(User?.Identity?.Name);
-            var library = await LibraryService.GetByUserIdAsync(user.Id);
+            var library = await LibraryService
+                .AsNoTracking()
+                .Include(l => l.Games)
+                .FirstOrDefaultAsync(l => l.UserId == user.Id);
 
             var result = Mapper.Map<SDK.Models.DepotGame>(game);
 

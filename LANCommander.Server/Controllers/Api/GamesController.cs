@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
@@ -23,10 +24,12 @@ namespace LANCommander.Server.Controllers.Api
         private readonly ArchiveService ArchiveService;
         private readonly UserService UserService;
         private readonly IFusionCache Cache;
+        private readonly IMapper Mapper;
 
         public GamesController(
             ILogger<GamesController> logger,
             IFusionCache cache,
+            IMapper mapper,
             GameService gameService,
             LibraryService libraryService,
             StorageLocationService storageLocationService,
@@ -39,6 +42,7 @@ namespace LANCommander.Server.Controllers.Api
             ArchiveService = archiveService;
             UserService = userService;
             Cache = cache;
+            Mapper = mapper;
         }
 
         [HttpGet]
@@ -128,6 +132,34 @@ namespace LANCommander.Server.Controllers.Api
             });
 
             return manifest;
+        }
+
+        [HttpGet("{id}/Actions")]
+        public async Task<IEnumerable<SDK.Models.Action>> GetActions(Guid id)
+        {
+            var actions = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Action>>($"Games/{id}/Actions", async _ =>
+            {
+                var game = await GameService
+                    .Query(q =>
+                    {
+                        return q.Include(g => g.Actions)
+                            .Include(g => g.DependentGames)
+                            .ThenInclude(dg => dg.Actions)
+                            .Include(g => g.Servers)
+                            .ThenInclude(s => s.Actions);
+                    })
+                    .GetAsync(id);
+
+                var actions = new List<Data.Models.Action>();
+                
+                actions.AddRange(game.Actions);
+                actions.AddRange(game.Servers.SelectMany(s => s.Actions));
+                actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).SelectMany(dg => dg.Actions));
+                
+                return Mapper.Map<IEnumerable<SDK.Models.Action>>(actions);
+            });
+            
+            return actions;
         }
 
         [AllowAnonymous]

@@ -46,26 +46,6 @@
     protected override async Task OnInitializedAsync()
     {
         User = await UserService.GetCurrentUser();
-
-        try
-        {
-            ProfileService.OnProfileDownloaded += async (sender, e) =>
-            {
-                await OnProfileDownloaded(sender, e);
-            };
-        }
-        catch { }
-    }
-
-    async Task OnProfileDownloaded(object? sender, EventArgs e)
-    {
-        try
-        {
-            User = await UserService.GetCurrentUser();
-
-            await InvokeAsync(StateHasChanged);
-        }
-        catch { }
     }
 
     async Task ChangeAlias()

@@ -163,10 +163,7 @@ namespace LANCommander.Server
             Log.Debug("Starting web server on port {Port}", settings.Port);
             builder.WebHost.ConfigureKestrel(options =>
             {
-                options.Listen(IPAddress.Any, settings.Port, listenOptions =>
-                {
-                    listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
-                });
+                options.Listen(IPAddress.Any, settings.Port);
                 
                 // Configure as HTTP only
                 if (settings.UseSSL)

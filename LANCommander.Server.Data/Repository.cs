@@ -422,7 +422,7 @@ namespace LANCommander.Server.Data
         {
             Context.ChangeTracker.TrackGraph(entity, node =>
             {
-                var id = (node.Entry.Entity as IBaseModel).Id;
+                var id = entity.Id;
                 var entityType = node.Entry.Metadata;
                 
                 var existingEntry = node.Entry.Context.ChangeTracker.Entries()
@@ -431,23 +431,11 @@ namespace LANCommander.Server.Data
 
                 if (existingEntry == null)
                 {
-                    
                     if (id == Guid.Empty)
                         node.Entry.State = EntityState.Added;
+                    
+                    SafeAttachChildren(node.Entry.Entity as IBaseModel);
                 }
-                
-                foreach (var property in Context.Entry(entity).CurrentValues.Properties)
-                {
-                    if (!property.IsPrimaryKey())
-                    {
-                        Context.Entry(node.Entry.Entity).Property(property.Name).CurrentValue =
-                            Context.Entry(entity).Property(property.Name).CurrentValue;
-                        Context.Entry(node.Entry.Entity).Property(property.Name).IsModified =
-                            true;
-                    }
-                }
-                
-                SafeAttachChildren(node.Entry.Entity as IBaseModel);
                 
                 //else
                 //    Logger.LogDebug($"Discarding duplicate {entityType.DisplayName()} entity with ID {id}");
@@ -472,7 +460,7 @@ namespace LANCommander.Server.Data
                 if (!property.IsPrimaryKey())
                 {
                     Context.Entry(existing).Property(property.Name).CurrentValue =
-                        Context.Entry(entity).Property(property.Name).CurrentValue;
+                        entry.Property(property.Name).CurrentValue;
                     Context.Entry(existing).Property(property.Name).IsModified =
                         true;
                 }
@@ -521,33 +509,42 @@ namespace LANCommander.Server.Data
                                     {
                                         if ((item as IBaseModel).Id == (newItem as IBaseModel).Id && !existsInNew)
                                         {
-                                            Context.Entry(item).State = EntityState.Detached;
+                                            foreach (var property in Context.Entry(newItem).CurrentValues.Properties)
+                                            {
+                                                if (!property.IsPrimaryKey())
+                                                {
+                                                    Context.Entry(item).Property(property.Name).CurrentValue =
+                                                        Context.Entry(newItem).Property(property.Name).CurrentValue;
+                                                    Context.Entry(item).Property(property.Name).IsModified =
+                                                        true;
+                                                }
+                                            }
+                                            
+                                            Context.Entry(newItem).State = EntityState.Detached;
                                             existsInNew = true;
+                                            
+                                            updatedList.Add(item);
                                         }
                                     }
-                                    
-                                    if (existsInNew)
-                                        updatedList.Add(item);
                                 }
-
-                                foreach (var item in navigation.CurrentValue as IEnumerable)
+                                
+                                // May not have iterated over any existing items in the collection, rerun through and
+                                // check against updated list
+                                foreach (var newItem in navigation.CurrentValue as IEnumerable)
                                 {
-                                    var existsInExisting = false;
+                                    var alreadyAdded = false;
 
-                                    foreach (var existingItem in existingCollection)
+                                    foreach (var updatedListItem in updatedList)
                                     {
-                                        if ((existingItem as IBaseModel).Id == (item as IBaseModel).Id && !existsInExisting)
+                                        if ((newItem as IBaseModel).Id == (updatedListItem as IBaseModel).Id &&
+                                            !alreadyAdded)
                                         {
-                                            existsInExisting = true;
-                                        }
-                                        else if (existsInExisting)
-                                        {
-                                            updatedList.Remove(existingItem);
+                                            alreadyAdded = true;
                                         }
                                     }
                                     
-                                    if (!existsInExisting)
-                                        updatedList.Add(item);
+                                    if (!alreadyAdded)
+                                        updatedList.Add(newItem);
                                 }
 
                                 Context.Entry(existing).Collection(navigation.Metadata.Name).CurrentValue = updatedList;

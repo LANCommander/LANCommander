@@ -105,8 +105,8 @@ namespace LANCommander.Server.Controllers.Api
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "An error occurred while trying to log in {UserName}", model.UserName);
-
-                return Unauthorized();
+                
+                return Unauthorized(ex.Message);
             }
         }
 

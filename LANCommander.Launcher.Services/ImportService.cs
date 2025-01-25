@@ -249,7 +249,7 @@ namespace LANCommander.Launcher.Services
                         })
                         .ImportAsync();
 
-                    await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
+                    /*await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
                         .SetTarget(localGame.PlaySessions)
                         .UseSource(game.PlaySessions)
                         .Include(p => p.Game)
@@ -261,7 +261,7 @@ namespace LANCommander.Launcher.Services
                             t.UserId = s.UserId;
                         })
                         .AsNoRemove()
-                        .ImportAsync();
+                        .ImportAsync();*/
                     
                     var importedMedia = await DatabaseContext.BulkImport<Media, SDK.Models.Media>()
                         .SetTarget(localGame.Media)
@@ -319,6 +319,22 @@ namespace LANCommander.Launcher.Services
                     }
 
                     #endregion
+
+                    var playSessions = await Client.PlaySessions.GetAsync(localGame.Id);
+                    
+                    await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
+                        .SetTarget(localGame.PlaySessions)
+                        .UseSource(playSessions)
+                        .Include(p => p.Game)
+                        .Assign((t, s) =>
+                        {
+                            t.Game = localGame;
+                            t.Start = s.Start;
+                            t.End = s.End;
+                            t.UserId = s.UserId;
+                        })
+                        .AsNoRemove()
+                        .ImportAsync();
                     
                     localGame = await GameService.UpdateAsync(localGame);
 

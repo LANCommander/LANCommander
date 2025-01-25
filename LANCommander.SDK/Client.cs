@@ -44,6 +44,7 @@ namespace LANCommander.SDK
         public readonly IssueService Issues;
         public readonly LobbyService Lobbies;
         public readonly ServerService Servers;
+        public readonly PlaySessionService PlaySessions;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -75,6 +76,7 @@ namespace LANCommander.SDK
             Issues = new IssueService(this);
             Lobbies = new LobbyService(this);
             Servers = new ServerService(this);
+            PlaySessions = new PlaySessionService(this);
 
             BaseCmdlet.Client = this;
 
@@ -99,6 +101,7 @@ namespace LANCommander.SDK
             Issues = new IssueService(this);
             Lobbies = new LobbyService(this, logger);
             Servers = new ServerService(this, logger);
+            PlaySessions = new PlaySessionService(this, logger);
 
             BaseCmdlet.Client = this;
 

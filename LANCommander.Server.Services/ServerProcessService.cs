@@ -167,7 +167,14 @@ namespace LANCommander.Server.Services
             {
                 var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
 
-                server = await serverService.GetAsync(serverId);
+                server = await serverService
+                    .Query(q =>
+                    {
+                        return q
+                            .Include(s => s.Scripts)
+                            .Include(s => s.Game)
+                            .Include(s => s.ServerConsoles);
+                    }).GetAsync(serverId);
 
                 // Don't start the server if it's already started
                 if (GetStatus(server) != ServerProcessStatus.Stopped)
@@ -263,7 +270,14 @@ namespace LANCommander.Server.Services
             {
                 var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
 
-                var server = await serverService.GetAsync(serverId);
+                var server = await serverService
+                    .Query(q =>
+                    {
+                        return q
+                            .Include(s => s.Scripts)
+                            .Include(s => s.Game)
+                            .Include(s => s.ServerConsoles);
+                    }).GetAsync(serverId);
 
                 Logger?.LogInformation("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 

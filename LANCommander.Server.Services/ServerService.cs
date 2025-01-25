@@ -32,6 +32,13 @@ namespace LANCommander.Server.Services
             StorageLocationService = storageLocationService;
         }
 
+        public override async Task<Data.Models.Server> UpdateAsync(Data.Models.Server entity)
+        {
+            await Cache.ExpireGameCacheAsync(entity.GameId);
+
+            return await base.UpdateAsync(entity);
+        }
+
         public async Task<Data.Models.Server> ImportAsync(Guid objectKey)
         {
             var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());

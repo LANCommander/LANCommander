@@ -545,7 +545,7 @@ namespace LANCommander.SDK
                 {
                     Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
 
-                    throw response.ErrorException;
+                    throw new Exception(response.Content);
                 }
 
                 switch (response.StatusCode)

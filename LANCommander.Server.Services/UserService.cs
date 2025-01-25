@@ -211,6 +211,10 @@ namespace LANCommander.Server.Services
 
                 return await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
             }
+            catch (Exception ex)
+            {
+                throw;
+            }
             finally
             {
             }

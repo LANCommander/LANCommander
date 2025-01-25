@@ -14,17 +14,24 @@ namespace LANCommander.Launcher.Data.Interceptors
             if (context is null)
                 return await base.SavingChangesAsync(eventData, result, cancellationToken);
 
-            context.ChangeTracker.DetectChanges();
-
-            var entries = context.ChangeTracker.Entries<BaseModel>();
-
-            foreach (var entry in entries)
+            try
             {
-                if (entry.State == EntityState.Added)
-                    entry.Entity.CreatedOn = DateTime.UtcNow;
+                context.ChangeTracker.DetectChanges();
 
-                if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
-                    entry.Entity.UpdatedOn = DateTime.UtcNow;
+                var entries = context.ChangeTracker.Entries<BaseModel>();
+
+                foreach (var entry in entries)
+                {
+                    if (entry.State == EntityState.Added)
+                        entry.Entity.CreatedOn = DateTime.UtcNow;
+
+                    if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
+                        entry.Entity.UpdatedOn = DateTime.UtcNow;
+                }
+            }
+            catch (Exception ex)
+            {
+                
             }
 
             return await base.SavingChangesAsync(eventData, result, cancellationToken);

@@ -16,6 +16,7 @@ using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
+using System.Net;
 using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
@@ -156,7 +157,11 @@ namespace LANCommander.Server
             builder.WebHost.ConfigureKestrel(options =>
             {
                 // Configure as HTTP only
-                options.ListenAnyIP(settings.Port);
+                options.Listen(IPAddress.Any, settings.Port, listenOptions =>
+                {
+                    if (settings.UseSSL)
+                        listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
+                });
             });
 
             builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>

@@ -40,6 +40,20 @@
         <FormItem Label="Client Secret">
             <InputPassword @bind-Value="context.IGDBClientSecret" />
         </FormItem>
+        
+        <Divider Text="SSL" />
+        
+        <FormItem Label="Use SSL">
+            <Switch @bind-Checked="context.UseSSL" />
+        </FormItem>
+        
+        <FormItem Label="Certificate Path">
+            <FilePicker Root="@RootPath" @bind-Value="context.CertificatePath" />
+        </FormItem>
+        
+        <FormItem Label="Certificate Password">
+            <InputPassword @bind-Value="context.CertificatePassword" />
+        </FormItem>
 
         <FormItem>
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
@@ -50,6 +64,8 @@
 
 @code {
     Settings Settings = SettingService.GetSettings();
+    
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     void Save()
     {

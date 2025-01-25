@@ -21,7 +21,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        AuthenticationService.OnLogin += async (sender, args) =>
+        {
+            await Validate();
+        };
+        
+        await Validate();
+    }
+
+    public async Task Validate()
+    {
         ConnectionState.IsConnected = await AuthenticationService.ValidateConnectionAsync();
         ConnectionState.OfflineModeEnabled = AuthenticationService.OfflineModeEnabled();
+
+        await InvokeAsync(StateHasChanged);
     }
 }

@@ -28,6 +28,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;
 using Scalar.AspNetCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Serilog.Filters;
 
 namespace LANCommander.Server
 {
@@ -36,6 +37,9 @@ namespace LANCommander.Server
         static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
+                .Filter.ByExcluding(
+                    Matching.WithProperty<string>("RequestPath", v =>
+                        "/api/Ping".Equals(v, StringComparison.OrdinalIgnoreCase)))
                 .WriteTo.Console()
                 .CreateBootstrapLogger();
 
@@ -90,6 +94,9 @@ namespace LANCommander.Server
 
             builder.Services.AddSerilogHub<LoggingHub>();
             builder.Services.AddSerilog((serviceProvider, config) => config
+                .Filter.ByExcluding(
+                    Matching.WithProperty<string>("RequestPath", v =>
+                        "/api/Ping".Equals(v, StringComparison.OrdinalIgnoreCase)))
                 .WriteTo.Console()
                 .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery)
 #if DEBUG

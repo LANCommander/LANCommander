@@ -31,7 +31,8 @@
         {
             var latestArchive = await archiveService.SortBy(a => a.CreatedOn).FirstOrDefaultAsync(a => a.GameId == Id);
 
-            ArchiveId = latestArchive.Id;
+            if (latestArchive != null)
+                ArchiveId = latestArchive.Id;
         }
     }
 }

@@ -132,24 +132,32 @@ namespace LANCommander.SDK.Services
         public async Task<IEnumerable<Models.Action>> GetActionsAsync(string installDirectory, Guid id)
         {
             var actions = new List<Models.Action>();
+
+            try
+            {
+                if (Client.IsConnected())
+                    actions.AddRange(await Client.GetRequestAsync<IEnumerable<Models.Action>>($"/api/Games/{id}/Actions"));
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not get actions from server");
+            }
+            
             var manifests = await GetManifestsAsync(installDirectory, id);
 
-            foreach (var manifest in manifests.Where(m => m != null && m.Actions != null))
+            if (!actions.Any())
             {
-                actions.AddRange(manifest.Actions.OrderBy(a => a.SortOrder).ToList());
-            }
-
-            if (Client.IsConnected())
-            {
-                var remoteGame = await Client.Games.GetAsync(id);
-
-                if (remoteGame != null && remoteGame.Servers != null)
-                    actions.AddRange(remoteGame.Servers.Where(s => s.Actions != null).SelectMany(s => s.Actions));
+                actions = manifests
+                    .Where(m => m != null && m.Actions != null)
+                    .SelectMany(m => m.Actions)
+                    .OrderByDescending(a => a.IsPrimaryAction)
+                    .ThenBy(a => a.SortOrder)
+                    .ToList();
             }
 
             if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
             {
-                var primaryAction = actions.First();
+                var primaryAction = actions.Where(a => a.IsPrimaryAction).First();
 
                 try
                 {

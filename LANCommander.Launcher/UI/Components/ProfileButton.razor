@@ -47,17 +47,25 @@
     {
         User = await UserService.GetCurrentUser();
 
-        ProfileService.OnProfileDownloaded += async (sender, e) =>
+        try
         {
-            await OnProfileDownloaded(sender, e);
-        };
+            ProfileService.OnProfileDownloaded += async (sender, e) =>
+            {
+                await OnProfileDownloaded(sender, e);
+            };
+        }
+        catch { }
     }
 
     async Task OnProfileDownloaded(object? sender, EventArgs e)
     {
-        User = await UserService.GetCurrentUser();
-        
-        StateHasChanged();
+        try
+        {
+            User = await UserService.GetCurrentUser();
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch { }
     }
 
     async Task ChangeAlias()

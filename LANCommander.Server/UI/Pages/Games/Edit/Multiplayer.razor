@@ -1,10 +1,39 @@
 ﻿@page "/Games/{id:guid}/Multiplayer"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject MessageService MessageService
+@inject ILogger<Multiplayer> Logger
 
 <GameEditView Id="Id" Title="Multiplayer">
-    <MultiplayerModeEditor @bind-Value="context.MultiplayerModes" />
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+    
+    <ChildContent>
+        <MultiplayerModeEditor @bind-Value="context.MultiplayerModes"/>
+    </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
+    
+    private async Task Save(Game game)
+    {
+        try
+        {
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                game = await gameService.UpdateAsync(game);
+            }
+
+            await MessageService.Success("Game updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save game!");
+            Logger.LogError(ex, "Could not save game!");
+        }
+    }
 }

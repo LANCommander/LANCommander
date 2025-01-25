@@ -1,8 +1,19 @@
 ﻿@page "/Games/{id:guid}/SavePaths"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject MessageService MessageService
+@inject ILogger<Multiplayer> Logger
 
 <GameEditView Id="Id" Title="Save Paths">
-    <SavePathEditor @bind-Value="context.SavePaths" GameId="context.Id" ArchiveId="@GetLatestArchiveId(context)" />
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+    
+    <ChildContent>
+        <SavePathEditor @bind-Value="context.SavePaths" GameId="context.Id" ArchiveId="@GetLatestArchiveId(context)"/>
+    </ChildContent>
 </GameEditView>
 
 @code {
@@ -14,5 +25,23 @@
             return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Id ?? Guid.Empty;
         else
             return Guid.Empty;
+    }
+    
+    private async Task Save(Game game)
+    {
+        try
+        {
+            using (var gameService = DatabaseServiceFactory.Create<GameService>())
+            {
+                game = await gameService.UpdateAsync(game);
+            }
+
+            await MessageService.Success("Game updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save game!");
+            Logger.LogError(ex, "Could not save game!");
+        }
     }
 }

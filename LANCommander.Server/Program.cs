@@ -163,12 +163,19 @@ namespace LANCommander.Server
             Log.Debug("Starting web server on port {Port}", settings.Port);
             builder.WebHost.ConfigureKestrel(options =>
             {
-                // Configure as HTTP only
                 options.Listen(IPAddress.Any, settings.Port, listenOptions =>
                 {
-                    if (settings.UseSSL)
-                        listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
+                    listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
                 });
+                
+                // Configure as HTTP only
+                if (settings.UseSSL)
+                {
+                    options.Listen(IPAddress.Any, settings.SSLPort, listenOptions =>
+                    {
+                        listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
+                    });
+                }
             });
 
             builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>

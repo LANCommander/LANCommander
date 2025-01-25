@@ -23,6 +23,10 @@
             <InputPassword @bind-Value="context.DatabaseConnectionString" />
         </FormItem>
 
+        <FormItem Label="Port">
+            <InputNumber @bind-Value="context.Port" />
+        </FormItem>
+
         <FormItem Label="Theme">
             <Select @bind-Value="context.Theme" TItem="LANCommanderTheme" TItemValue="LANCommanderTheme" DataSource="Enum.GetValues<LANCommanderTheme>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
@@ -47,12 +51,16 @@
             <Switch @bind-Checked="context.UseSSL" />
         </FormItem>
         
+        <FormItem Label="SSL Port">
+            <InputNumber @bind-Value="context.SSLPort" Disabled="!context.UseSSL" />
+        </FormItem>
+        
         <FormItem Label="Certificate Path">
-            <FilePicker Root="@RootPath" @bind-Value="context.CertificatePath" />
+            <FilePicker Root="@RootPath" @bind-Value="context.CertificatePath" Disabled="!context.UseSSL" />
         </FormItem>
         
         <FormItem Label="Certificate Password">
-            <InputPassword @bind-Value="context.CertificatePassword" />
+            <InputPassword @bind-Value="context.CertificatePassword" Disabled="!context.UseSSL" />
         </FormItem>
 
         <FormItem>

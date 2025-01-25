@@ -135,7 +135,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}/Actions")]
-        public async Task<IEnumerable<SDK.Models.Action>> GetActions(Guid id)
+        public async Task<IEnumerable<SDK.Models.Action>> GetActionsAsync(Guid id)
         {
             var actions = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Action>>($"Games/{id}/Actions", async _ =>
             {
@@ -160,6 +160,19 @@ namespace LANCommander.Server.Controllers.Api
             });
             
             return actions;
+        }
+
+        [HttpGet("{id}/CheckForUpdate")]
+        public async Task<bool> CheckForUpdateAsync(Guid id, string version)
+        {
+            var gameArchives = await ArchiveService.GetAsync(a => a.GameId == id);
+
+            var latestArchive = gameArchives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+            if (latestArchive?.Version != version)
+                return true;
+            else
+                return false;
         }
 
         [AllowAnonymous]

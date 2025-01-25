@@ -115,15 +115,17 @@ namespace LANCommander.Launcher.Services
                     var localGame = await GameService.GetAsync(game.Id);
 
                     if (localGame == null)
-                        localGame = new Game();
+                        localGame = new Game()
+                        {
+                            Id = game.Id,
+                        };
                     else
                         existing = true;
-
-                    localGame.Id = game.Id;
+                    
                     localGame.Title = game.Title;
-                    localGame.SortTitle = game.SortTitle;
-                    localGame.Description = game.Description;
-                    localGame.Notes = game.Notes;
+                    localGame.SortTitle = String.IsNullOrWhiteSpace(game.SortTitle) ? String.Empty : game.SortTitle;
+                    localGame.Description = String.IsNullOrWhiteSpace(game.Description) ? String.Empty : game.Description;
+                    localGame.Notes = String.IsNullOrWhiteSpace(game.Notes) ? String.Empty : game.Notes;
                     localGame.ReleasedOn = game.ReleasedOn;
                     localGame.Type = (Data.Enums.GameType)(int)game.Type;
                     localGame.Singleplayer = game.Singleplayer;
@@ -321,20 +323,23 @@ namespace LANCommander.Launcher.Services
                     #endregion
 
                     var playSessions = await Client.PlaySessions.GetAsync(localGame.Id);
-                    
-                    await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
-                        .SetTarget(localGame.PlaySessions)
-                        .UseSource(playSessions)
-                        .Include(p => p.Game)
-                        .Assign((t, s) =>
-                        {
-                            t.Game = localGame;
-                            t.Start = s.Start;
-                            t.End = s.End;
-                            t.UserId = s.UserId;
-                        })
-                        .AsNoRemove()
-                        .ImportAsync();
+
+                    if (playSessions != null)
+                    {
+                        await DatabaseContext.BulkImport<PlaySession, SDK.Models.PlaySession>()
+                            .SetTarget(localGame.PlaySessions)
+                            .UseSource(playSessions)
+                            .Include(p => p.Game)
+                            .Assign((t, s) =>
+                            {
+                                t.Game = localGame;
+                                t.Start = s.Start;
+                                t.End = s.End;
+                                t.UserId = s.UserId;
+                            })
+                            .AsNoRemove()
+                            .ImportAsync();
+                    }
                     
                     localGame = await GameService.UpdateAsync(localGame);
 
@@ -382,11 +387,14 @@ namespace LANCommander.Launcher.Services
                             Total = games.Count()
                         });
 
-                    var importedGame = await ImportGameAsync(remoteGame);
-                    
-                    library.Games.Add(importedGame);
-                    
-                    await LibraryService.UpdateAsync(library);
+                    if (game != null && remoteGame != null)
+                    {
+                        var importedGame = await ImportGameAsync(remoteGame);
+                        
+                        library.Games.Add(importedGame);
+                        
+                        await LibraryService.UpdateAsync(library);
+                    }
                 }
                 catch (Exception ex)
                 {

@@ -12,6 +12,7 @@ using AutoMapper.QueryableExtensions;
 using AutoMapper;
 using LANCommander.Server.Data.Enums;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using SharpCompress.Common;
 
 namespace LANCommander.Server.Data
 {
@@ -430,22 +431,30 @@ namespace LANCommander.Server.Data
 
                 if (existingEntry == null)
                 {
-                    //Logger.LogDebug($"Tracking {entityType.DisplayName()} entity with ID {id}");
                     
                     if (id == Guid.Empty)
                         node.Entry.State = EntityState.Added;
-                    //else
-                    //    node.Entry.State = EntityState.Modified;
                 }
                 
-                SafeAttachChildren(node.Entry.Entity as IBaseModel/*, entity*/);
+                foreach (var property in Context.Entry(entity).CurrentValues.Properties)
+                {
+                    if (!property.IsPrimaryKey())
+                    {
+                        Context.Entry(node.Entry.Entity).Property(property.Name).CurrentValue =
+                            Context.Entry(entity).Property(property.Name).CurrentValue;
+                        Context.Entry(node.Entry.Entity).Property(property.Name).IsModified =
+                            true;
+                    }
+                }
+                
+                SafeAttachChildren(node.Entry.Entity as IBaseModel);
                 
                 //else
                 //    Logger.LogDebug($"Discarding duplicate {entityType.DisplayName()} entity with ID {id}");
             });
         }
 
-        private void SafeAttachChildren<TEntity>(TEntity entity/*, TEntity parent*/)
+        private void SafeAttachChildren<TEntity>(TEntity entity)
             where TEntity : class, IBaseModel
         {
             // This is possibly the worst way of handling this. This should be refactored in the future.
@@ -453,6 +462,21 @@ namespace LANCommander.Server.Data
             // populated from existing data without introducing duplicates in the change tracker.
             
             var entry = Context.Entry(entity);
+            entry.State = EntityState.Detached;
+            
+            // Get the actual state of the entity from the database
+            var existing = Context.Find(entity.GetType(), entity.Id);
+            
+            foreach (var property in Context.Entry(entity).CurrentValues.Properties)
+            {
+                if (!property.IsPrimaryKey())
+                {
+                    Context.Entry(existing).Property(property.Name).CurrentValue =
+                        Context.Entry(entity).Property(property.Name).CurrentValue;
+                    Context.Entry(existing).Property(property.Name).IsModified =
+                        true;
+                }
+            }
 
             foreach (var navigation in entry.Navigations)
             {
@@ -473,9 +497,6 @@ namespace LANCommander.Server.Data
 
                         if (typeof(IEnumerable<IBaseModel>).IsAssignableFrom(collectionType))
                         {
-                            // Get the actual state of the entity from the database
-                            var existing = Context.Find(entity.GetType(), entity.Id);
-
                             if (existing != null)
                             {
                                 // Load the navigation collection by property name
@@ -498,8 +519,9 @@ namespace LANCommander.Server.Data
 
                                     foreach (var newItem in navigation.CurrentValue as IEnumerable)
                                     {
-                                        if ((item as IBaseModel).Id == (newItem as IBaseModel).Id)
+                                        if ((item as IBaseModel).Id == (newItem as IBaseModel).Id && !existsInNew)
                                         {
+                                            Context.Entry(item).State = EntityState.Detached;
                                             existsInNew = true;
                                         }
                                     }
@@ -514,9 +536,13 @@ namespace LANCommander.Server.Data
 
                                     foreach (var existingItem in existingCollection)
                                     {
-                                        if ((existingItem as IBaseModel).Id == (item as IBaseModel).Id)
+                                        if ((existingItem as IBaseModel).Id == (item as IBaseModel).Id && !existsInExisting)
                                         {
                                             existsInExisting = true;
+                                        }
+                                        else if (existsInExisting)
+                                        {
+                                            updatedList.Remove(existingItem);
                                         }
                                     }
                                     

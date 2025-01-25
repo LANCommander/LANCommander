@@ -1,14 +1,17 @@
-﻿using LANCommander.SDK.Extensions;
+﻿using System.Collections;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
+using System.Linq;
 using System.Threading;
 using AutoMapper.QueryableExtensions;
 using AutoMapper;
 using LANCommander.Server.Data.Enums;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace LANCommander.Server.Data
 {
@@ -365,9 +368,8 @@ namespace LANCommander.Server.Data
                 entity.UpdatedById = currentUserId;
                 entity.UpdatedOn = DateTime.UtcNow;
 
-                DbSet.Attach(entity);
-                Context.Entry(entity).State = EntityState.Modified;
-
+                SafeAttach(entity);
+                
                 return entity;
             }
             catch (Exception ex)
@@ -411,6 +413,131 @@ namespace LANCommander.Server.Data
             finally
             {
                 Reset();
+            }
+        }
+
+        protected void SafeAttach<TEntity>(TEntity entity)
+            where TEntity : IBaseModel
+        {
+            Context.ChangeTracker.TrackGraph(entity, node =>
+            {
+                var id = (node.Entry.Entity as IBaseModel).Id;
+                var entityType = node.Entry.Metadata;
+                
+                var existingEntry = node.Entry.Context.ChangeTracker.Entries()
+                    .Where(e => e.Entity is IBaseModel)
+                    .FirstOrDefault(e => (e.Entity as IBaseModel).Id == id);
+
+                if (existingEntry == null)
+                {
+                    //Logger.LogDebug($"Tracking {entityType.DisplayName()} entity with ID {id}");
+                    
+                    if (id == Guid.Empty)
+                        node.Entry.State = EntityState.Added;
+                    //else
+                    //    node.Entry.State = EntityState.Modified;
+                }
+                
+                SafeAttachChildren(node.Entry.Entity as IBaseModel/*, entity*/);
+                
+                //else
+                //    Logger.LogDebug($"Discarding duplicate {entityType.DisplayName()} entity with ID {id}");
+            });
+        }
+
+        private void SafeAttachChildren<TEntity>(TEntity entity/*, TEntity parent*/)
+            where TEntity : class, IBaseModel
+        {
+            // This is possibly the worst way of handling this. This should be refactored in the future.
+            // Really all this does is make sure that any navigation collections are set correctly and
+            // populated from existing data without introducing duplicates in the change tracker.
+            
+            var entry = Context.Entry(entity);
+
+            foreach (var navigation in entry.Navigations)
+            {
+                if (navigation.CurrentValue is not null)
+                {
+                    if (navigation.CurrentValue is IBaseModel navigationEntity)
+                    {
+                        // Not needed? Seems like _:1 relationships work fine.
+                        
+                        /*if (navigationEntity.Id != Guid.Empty)
+                            SafeAttach(navigationEntity);
+                        else if (navigationEntity.Id == entity.Id)
+                            continue; // Probably already attached because it was passed into this method*/
+                    }
+                    else if (navigation is CollectionEntry && navigation.CurrentValue != null)
+                    {
+                        var collectionType = navigation.CurrentValue.GetType();
+
+                        if (typeof(IEnumerable<IBaseModel>).IsAssignableFrom(collectionType))
+                        {
+                            // Get the actual state of the entity from the database
+                            var existing = Context.Find(entity.GetType(), entity.Id);
+
+                            if (existing != null)
+                            {
+                                // Load the navigation collection by property name
+                                Context.Entry(existing).Collection(navigation.Metadata.Name).Load();
+                                
+                                var existingCollection = Context.Entry(existing)
+                                    .Collection(navigation.Metadata.Name)
+                                    .CurrentValue;
+
+                                // The real jank. Make the most generic List possible without knowing what type is used
+                                // for the collection's generic type.
+                                var genericListType = typeof(List<>).MakeGenericType(collectionType.GetGenericArguments()[0]);
+                                
+                                IList updatedList = Activator.CreateInstance(genericListType) as IList;
+
+                                // We have no access to LINQ sexiness here. Manually iterate through the collection.
+                                foreach (var item in existingCollection)
+                                {
+                                    var existsInNew = false;
+
+                                    foreach (var newItem in navigation.CurrentValue as IEnumerable)
+                                    {
+                                        if ((item as IBaseModel).Id == (newItem as IBaseModel).Id)
+                                        {
+                                            existsInNew = true;
+                                        }
+                                    }
+                                    
+                                    if (existsInNew)
+                                        updatedList.Add(item);
+                                }
+
+                                foreach (var item in navigation.CurrentValue as IEnumerable)
+                                {
+                                    var existsInExisting = false;
+
+                                    foreach (var existingItem in existingCollection)
+                                    {
+                                        if ((existingItem as IBaseModel).Id == (item as IBaseModel).Id)
+                                        {
+                                            existsInExisting = true;
+                                        }
+                                    }
+                                    
+                                    if (!existsInExisting)
+                                        updatedList.Add(item);
+                                }
+
+                                Context.Entry(existing).Collection(navigation.Metadata.Name).CurrentValue = updatedList;
+                                Context.Entry(existing).Collection(navigation.Metadata.Name).IsModified = true;
+                            }
+                            
+                            // Not sure if this is needed, introduces recursion pretty badly
+                            
+                            /*foreach (var item in navigation.CurrentValue as List<IBaseModel>)
+                            {
+                                if (item.Id != Guid.Empty && item.Id != entity.Id)
+                                    SafeAttach(item);
+                            }*/
+                        }
+                    }
+                }
             }
         }
 

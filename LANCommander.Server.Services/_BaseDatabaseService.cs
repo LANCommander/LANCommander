@@ -60,10 +60,7 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<ICollection<T>> GetAsync()
         {
-            return await Cache.GetOrSetAsync($"{typeof(T).FullName}:Get", async _ =>
-            {
-                return await GetAsync(x => true);
-            }, TimeSpan.MaxValue);
+            return await GetAsync(x => true);
         }
 
         public virtual async Task<ICollection<U>> GetAsync<U>()
@@ -83,17 +80,15 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
         {
-            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
             var results = await Repository.GetAsync(predicate);
-            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
+            
             return results;
         }
 
         public virtual async Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate)
         {
-            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
             var results = await Repository.GetAsync<U>(predicate);
-            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
+            
             return results;
         }
 
@@ -191,8 +186,6 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> UpdateAsync(T entity)
         {
-            await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
-
             entity = await Repository.UpdateAsync(entity);
 
             await Repository.SaveChangesAsync();

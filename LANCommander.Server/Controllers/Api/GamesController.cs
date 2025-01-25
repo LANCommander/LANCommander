@@ -97,25 +97,21 @@ namespace LANCommander.Server.Controllers.Api
             var game = await Cache.GetOrSetAsync<SDK.Models.Game>($"Games/{id}", async _ =>
             {
                 return await GameService
-                    .Query(q =>
-                    {
-                        return q.AsNoTracking()
-                            .Include(g => g.Actions)
-                            .Include(g => g.Archives)
-                            .Include(g => g.BaseGame)
-                            .Include(g => g.Categories)
-                            .Include(g => g.Collections)
-                            .Include(g => g.DependentGames)
-                            .Include(g => g.Developers)
-                            .Include(g => g.Engine)
-                            .Include(g => g.Genres)
-                            .Include(g => g.Media)
-                            .Include(g => g.MultiplayerModes)
-                            .Include(g => g.Platforms)
-                            .Include(g => g.Publishers)
-                            .Include(g => g.Redistributables)
-                            .Include(g => g.Tags);
-                    })
+                    .Include(g => g.Actions)
+                    .Include(g => g.Archives)
+                    .Include(g => g.BaseGame)
+                    .Include(g => g.Categories)
+                    .Include(g => g.Collections)
+                    .Include(g => g.DependentGames)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Media)
+                    .Include(g => g.MultiplayerModes)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Redistributables)
+                    .Include(g => g.Tags)
                     .GetAsync<SDK.Models.Game>(id);
             }, TimeSpan.MaxValue);
 
@@ -145,7 +141,8 @@ namespace LANCommander.Server.Controllers.Api
                             .Include(g => g.DependentGames)
                             .ThenInclude(dg => dg.Actions)
                             .Include(g => g.Servers)
-                            .ThenInclude(s => s.Actions);
+                            .ThenInclude(s => s.Actions)
+                            .AsSplitQuery();
                     })
                     .GetAsync(id);
 

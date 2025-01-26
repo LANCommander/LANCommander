@@ -136,6 +136,7 @@ namespace LANCommander.Launcher.Services
             {
                 var games = await Context
                     .Games
+                    .AsSplitQuery()
                     .Where(g => g.Libraries.Any(l => l.UserId == AuthenticationService.GetUserId()))
                     .Include(g => g.Media)
                     .Include(g => g.Platforms)
@@ -184,6 +185,7 @@ namespace LANCommander.Launcher.Services
         public async Task<ListItem> GetItemAsync(Guid key)
         {
             var game = await Context.Games
+                .AsSplitQuery()
                 .Include(g => g.Collections)
                 .Include(g => g.Developers)
                 .Include(g => g.Genres)

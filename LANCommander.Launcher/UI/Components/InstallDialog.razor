@@ -20,7 +20,7 @@
     {
         <Divider Text="Addons" />
 
-        <CheckboxButtonGroup @bind-Selected="SelectedAddonIds" DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
+        <CheckboxButtonGroup @bind-Selected="SelectedAddons" DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
     }
 
     @if (Settings.Games.InstallDirectories.Length > 1)
@@ -64,7 +64,7 @@
     SDK.Models.Game RemoteGame;
     Data.Models.Game Game;
 
-    Guid[] SelectedAddonIds = new Guid[] { };
+    IEnumerable<SDK.Models.Game> SelectedAddons = new List<SDK.Models.Game>();
 
     enum InstallOperation
     {
@@ -96,7 +96,7 @@
     {
         var game = Options.DataItem as Game;
 
-        InstallService.Add(game, SelectedDirectory, SelectedAddonIds);
+        InstallService.Add(game, SelectedDirectory, SelectedAddons.Select(a => a.Id).ToArray());
 
         await CloseFeedbackAsync();
     }
@@ -106,7 +106,7 @@
         if (!Game.Installed)
             return InstallOperation.Install;
 
-        if (Game.DependentGames.Any(g => !g.Installed && SelectedAddonIds.Contains(g.Id)))
+        if (Game.DependentGames.Any(g => !g.Installed && SelectedAddons.Any(a => a.Id == g.Id)))
             return InstallOperation.Modify;
 
         if (!Game.InstallDirectory.StartsWith(SelectedDirectory))
@@ -123,7 +123,7 @@
         {
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
 
-            size += Addons.Where(a => SelectedAddonIds.Contains(a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
+            size += Addons.Where(a => SelectedAddons.Any(sa => sa.Id == a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
         }
 
         return size;
@@ -137,7 +137,7 @@
         {
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
 
-            size += Addons.Where(a => SelectedAddonIds.Contains(a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
+            size += Addons.Where(a => SelectedAddons.Any(sa => sa.Id == a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
         }
 
         return size;

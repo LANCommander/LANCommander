@@ -477,7 +477,14 @@ namespace LANCommander.SDK.Services
             {
                 foreach (var dependentGame in manifest.DependentGames)
                 {
-                    await UninstallAsync(installDirectory, dependentGame);
+                    try
+                    {
+                        await UninstallAsync(installDirectory, dependentGame);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogWarning("Could not uninstall dependent game with ID {GameId}. Assuming it's already uninstalled or never installed...", gameId);
+                    }
                 }
             }
             #endregion

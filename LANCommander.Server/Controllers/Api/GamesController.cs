@@ -158,6 +158,19 @@ namespace LANCommander.Server.Controllers.Api
             return actions;
         }
 
+        [HttpGet("{id}/Addons")]
+        public async Task<IEnumerable<SDK.Models.Game>> GetAddonsAsync(Guid id)
+        {
+            var addons = await Cache.GetOrSetAsync($"Games/{id}/Addons", async _ =>
+            {
+                return await GameService
+                    .Include(g => g.Archives)
+                    .GetAsync<SDK.Models.Game>(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
+            });
+
+            return addons;
+        }
+
         [HttpGet("{id}/CheckForUpdate")]
         public async Task<bool> CheckForUpdateAsync(Guid id, string version)
         {

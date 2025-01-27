@@ -20,7 +20,7 @@
     {
         <Divider Text="Addons" />
 
-        <CheckboxButtonGroup DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
+        <CheckboxButtonGroup @bind-Selected="SelectedAddonIds" DataSource="Addons" KeySelector="a => a.Id" LabelSelector="a => a.Title" Direction="SpaceDirection.Vertical" />
     }
 
     @if (Settings.Games.InstallDirectories.Length > 1)
@@ -84,21 +84,7 @@
         if (String.IsNullOrWhiteSpace(SelectedDirectory))
             SelectedDirectory = Settings.Games.InstallDirectories.First();
 
-        RemoteGame = await Client.Games.GetAsync(Options.Key);
-
-        if (RemoteGame.DependentGames != null)
-        {
-            var dependentGames = new List<SDK.Models.Game>();
-
-            foreach (var dependentGame in RemoteGame.DependentGames)
-            {
-                dependentGames.Add(await Client.Games.GetAsync(dependentGame));
-            }
-
-            Addons = dependentGames.Where(g => g.Type.IsIn(SDK.Enums.GameType.Expansion, SDK.Enums.GameType.Mod)).OrderByTitle(g => g.Title ?? g.SortTitle).ToList();
-        }
-        else
-            Addons = new List<SDK.Models.Game>();
+        Addons = (await Client.Games.GetAddonsAsync(Options.Key)).OrderByTitle(g => g.SortTitle ?? g.Title).ToList();
     }
 
     async Task Close()
@@ -127,18 +113,6 @@
             return InstallOperation.Move;
 
         return InstallOperation.None;
-    }
-
-    void OnAddonsSelectedChange(string[] selectedIds)
-    {
-        try
-        {
-            SelectedAddonIds = selectedIds.Select(id => Guid.Parse(id)).ToArray();
-        }
-        catch (Exception ex)
-        {
-            SelectedAddonIds = new Guid[] { };
-        }
     }
 
     long GetDownloadSize()

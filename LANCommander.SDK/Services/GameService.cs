@@ -188,6 +188,11 @@ namespace LANCommander.SDK.Services
             return actions;
         }
 
+        public async Task<IEnumerable<Game>> GetAddonsAsync(Guid id)
+        {
+            return await Client.GetRequestAsync<IEnumerable<Game>>($"/api/Games/{id}/Addons");
+        }
+
         public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
         {
             return await Client.GetRequestAsync<bool>($"/api/Games/{id}/CheckForUpdate?version={currentVersion}");

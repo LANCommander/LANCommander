@@ -1,9 +1,12 @@
-﻿@using AntDesign.TableModels
+﻿@using System.Collections.Specialized
+@using AntDesign.TableModels
 @using LANCommander.Server.Data
 @using LANCommander.Server.Models
 @using System.IO.Compression
 @using System.Linq.Expressions
+@using System.Text
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.WebUtilities
 @using System.Web
 @namespace LANCommander.Server.UI.Components
 @attribute [CascadingTypeParameter(nameof(TItem))]
@@ -87,7 +90,10 @@
                 
                 using (var context = DatabaseContextFactory.CreateDbContext())
                 {
-                    var queryable = context.Set<TItem>().ExecuteTableQuery(queryModel);
+                    var queryable = context
+                        .Set<TItem>()
+                        .AsSplitQuery()
+                        .ExecuteTableQuery(queryModel);
 
                     foreach (var include in Includes)
                     {
@@ -218,10 +224,19 @@
     async Task SearchChanged()
     {
         var uri = NavigationManager.ToAbsoluteUri(Url);
-        
-        NavigationManager.NavigateTo($"{uri.AbsolutePath}?Page={PageIndex}&Size={PageSize}{(Search != "" ? "&Search=" + Search : "")}");
 
-        Reload();
+        Dictionary<string, string> parameters = new();
+        
+        if (PageIndex > 1)
+            parameters.Add("PageIndex", PageIndex.ToString());
+        
+        if (PageSize > 1)
+            parameters.Add("PageSize", PageSize.ToString());
+        
+        if (!String.IsNullOrWhiteSpace(Search))
+            parameters.Add("Search", Search);
+        
+        NavigationManager.NavigateTo(QueryHelpers.AddQueryString(uri.AbsolutePath, parameters));
     }
 
     public async Task OpenDrawer()

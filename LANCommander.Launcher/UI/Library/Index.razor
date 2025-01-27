@@ -78,7 +78,11 @@
                                     }
                                     else if (SelectedItem.State == ListItemState.Installing)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">Installing</Button>
+                                    }
+                                    else if (SelectedItem.State == ListItemState.Uninstalling)
+                                    {
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">Uninstalling</Button>
                                     }
                                 </SpaceItem>
 
@@ -185,6 +189,7 @@
         InstallService.OnQueueChanged += OnQueueChanged;
         InstallService.OnInstallFail += OnInstallFail;
         InstallService.OnInstallComplete += OnInstallComplete;
+        GameService.OnUninstall += OnUninstall;
         GameService.OnUninstallComplete += OnUninstallComplete;
         
         await LoadData();
@@ -329,14 +334,25 @@
         }
     }
 
+    async Task OnUninstall(Data.Models.Game game)
+    {
+        if (SelectedItem.Key == game.Id)
+        {
+            SelectedItem.State = ListItemState.Uninstalling;
+
+            await Task.Yield();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     async Task OnUninstallComplete(Data.Models.Game game)
     {
         await LoadData();
 
-        if (SelectedItem.DataItem is Game selectedGame)
+        if (SelectedItem.Key == game.Id)
         {
-            if (selectedGame.Id == game.Id)
-                await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
+            SelectedItem.State = ListItemState.NotInstalled;
+            await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == SelectedGame.Id));
         }
     }
 

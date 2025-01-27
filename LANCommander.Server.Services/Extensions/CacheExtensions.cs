@@ -14,6 +14,7 @@ public static class CacheExtensions
             await cache.ExpireAsync($"Games/{gameId}");
             await cache.ExpireAsync($"Games/{gameId}/Manifest");
             await cache.ExpireAsync($"Games/{gameId}/Actions");
+            await cache.ExpireAsync($"Games/{gameId}/Addons");
         }
     }
 }

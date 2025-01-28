@@ -240,7 +240,7 @@ namespace LANCommander.Server.Data
             try {
                 //using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 //{
-                    var entity = await Query(x => x.Id == id).FirstAsync();
+                    var entity = await Query(x => x.Id == id).FirstOrDefaultAsync();
 
                 ///    op.Complete();
 
@@ -259,7 +259,7 @@ namespace LANCommander.Server.Data
             {
                 //using (var op = Logger.BeginOperation("Finding entity with ID {EntityId}", id))
                 //{
-                    var entity = await Query(x => x.Id == id).ProjectTo<U>(Mapper.ConfigurationProvider).FirstAsync();
+                    var entity = await Query(x => x.Id == id).ProjectTo<U>(Mapper.ConfigurationProvider).FirstOrDefaultAsync();
 
                 //    op.Complete();
 

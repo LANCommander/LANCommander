@@ -15,6 +15,9 @@ namespace LANCommander.Server.UI.Components
         [Parameter]
         public string Include { get; set; } = default!;
 
+        [Parameter]
+        public bool Hide { get; set; }
+
         [CascadingParameter]
         public Dictionary<int, bool> ColumnVisibility { get; set; } = default!;
 
@@ -58,6 +61,9 @@ namespace LANCommander.Server.UI.Components
 
         protected override void OnParametersSet()
         {
+            if (!ColumnVisibility.ContainsKey(ColIndex))
+                ColumnVisibility.Add(ColIndex, !Hide);
+            
             ClassMapper.If("column-hidden", () => ColumnVisibility.ContainsKey(ColIndex) && !ColumnVisibility[ColIndex]);
 
             StateHasChanged();

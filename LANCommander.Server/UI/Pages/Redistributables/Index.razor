@@ -24,7 +24,7 @@
         <BoundDataColumn Property="r => r.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
         <BoundDataColumn Property="r => r.UpdatedBy != null ? r.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions>
-            <a href="@($"/Redistibutables/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+            <a href="@($"/Redistributables/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
             
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this redistributable?">
                 <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger/>

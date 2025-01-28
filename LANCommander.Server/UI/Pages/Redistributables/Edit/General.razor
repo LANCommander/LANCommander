@@ -1,0 +1,133 @@
+﻿@page "/Redistributables/{id:guid}"
+@page "/Redistributables/{id:guid}/General"
+@page "/Redistributables/Add"
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Redistributables.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ILogger<General> Logger
+
+<RedistributableEditView Id="Id">
+    <TitleTemplate>
+        @if (Id == Guid.Empty)
+        {
+            <Text>Add New Redistributable</Text>
+        }
+        else
+        {
+            <Text>General</Text>
+        }
+    </TitleTemplate>
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            @if (context != null && context.Id != Guid.Empty)
+            {
+                <Dropdown Trigger="@(new[] { Trigger.Click })">
+                    <Overlay>
+                        <Menu>
+                            <MenuItem>
+                                <a href="/Redistributables/@(context.Id)/Export/Full" target="_blank">Full</a>
+                            </MenuItem>
+                            <MenuItem>
+                                <a href="/Redistributables/@(context.Id)/Export/Metadata" target="_blank">Metadata</a>
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button>Export</Button>
+                    </ChildContent>
+                </Dropdown>
+            }
+
+            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+    <ChildContent Context="redistributable">
+        <Form Model="redistributable" Layout="@FormLayout.Vertical">
+            <FormItem Label="Name">
+                <Input @bind-Value="@context.Name" />
+            </FormItem>
+
+            <FormItem Label="Notes">
+                <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+            </FormItem>
+
+            <FormItem Label="Description">
+                <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+            </FormItem>
+
+            <FormItem Label="Games">
+                <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Games" TitleSelector="r => r.Title" @bind-Values="Redistributable.Games" />
+            </FormItem>
+        </Form>
+    </ChildContent>
+</RedistributableEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Redistributable Redistributable = new();
+
+    ICollection<Game> Games;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != Guid.Empty)
+        {
+            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+            {
+                Redistributable = await redistributableService
+                    .Include(r => r.Archives)
+                    .Include(r => r.Games)
+                    .Include(r => r.Scripts)
+                    .GetAsync(Id);
+            }            
+        }
+
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            Games = await gameService
+                .Include(g => g.Media)
+                .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+                .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
+        }
+    }
+
+    async Task Save(Redistributable redistributable)
+    {
+        try
+        {
+            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+            {
+                if (Redistributable.Id != Guid.Empty)
+                {
+                    Redistributable = await redistributableService.UpdateAsync(redistributable);
+
+                    await MessageService.Success("Redistributable updated!");
+                }
+                else
+                {
+                    Redistributable = await redistributableService.AddAsync(redistributable);
+
+                    NavigationManager.LocationChanged += NotifyRedistributableAdded;
+
+                    NavigationManager.NavigateTo($"/Redistributables/{redistributable.Id}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save!");
+            Logger.LogError(ex, "Could not save!");
+        }
+    }
+
+    void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyRedistributableAdded;
+
+        MessageService.Success("Redistributable added!");
+    }
+}

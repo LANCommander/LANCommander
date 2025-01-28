@@ -1,0 +1,78 @@
+﻿@using Microsoft.EntityFrameworkCore
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject NavigationManager NavigationManager
+
+<Layout Class="panel-layout" Style="padding: 24px 0;">
+    <Sider Width="200">
+        <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
+            <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/General")">General</MenuItem>
+
+            @if (Redistributable?.Id != Guid.Empty)
+            {
+                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Archives")">Archives</MenuItem>
+                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
+            }
+        </Menu>
+    </Sider>
+
+    <Content>
+        <CascadingValue Value="Redistributable">
+            <PageHeader>
+                <PageHeaderTitle>
+                    @if (TitleTemplate != null)
+                    {
+                        @TitleTemplate(Redistributable)
+                    }
+                    else {
+                        <Text>@Title</Text>
+                    }
+                </PageHeaderTitle>
+
+                <PageHeaderExtra>
+                    @TitleExtraTemplate?.Invoke(Redistributable)
+                </PageHeaderExtra>
+            </PageHeader>
+        </CascadingValue>
+
+        <div class="panel-layout-content">
+            @ChildContent?.Invoke(Redistributable)
+        </div>
+    </Content>
+</Layout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Title { get; set; }
+    [Parameter] public RenderFragment<Redistributable>? TitleTemplate { get; set; }
+    [Parameter] public RenderFragment<Redistributable>? TitleExtraTemplate { get; set; }
+    [Parameter] public RenderFragment<Redistributable>? ChildContent { get; set; }
+
+    Redistributable Redistributable { get; set; } = new();
+    Guid _id;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_id != Id)
+        {
+            _id = Id;
+            
+            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
+            {
+                if (_id != Guid.Empty)
+                    Redistributable = await redistributableService
+                        .Query(query =>
+                        {
+                            return query
+                                .Include(g => g.CreatedBy)
+                                .Include(g => g.UpdatedBy);
+                        })
+                        .GetAsync(_id);
+                else
+                    Redistributable = new();
+            }
+
+            if (Redistributable == null)
+                NavigationManager.NavigateTo("/Redistributables");
+        }
+    }
+}

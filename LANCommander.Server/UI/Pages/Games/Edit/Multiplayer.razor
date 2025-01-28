@@ -7,7 +7,7 @@
 <GameEditView Id="Id" Title="Multiplayer">
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+            <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
         </Flex>
     </TitleExtraTemplate>
     
@@ -21,7 +21,7 @@
 
     MultiplayerModeEditor MultiplayerModeEditor;
     
-    async Task Save(Game game)
+    async Task Save()
     {
         try
         {

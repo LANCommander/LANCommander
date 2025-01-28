@@ -7,19 +7,21 @@
 <GameEditView Id="Id" Title="Save Paths">
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+            <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
         </Flex>
     </TitleExtraTemplate>
     
     <ChildContent>
-        <SavePathEditor @bind-Value="context.SavePaths" GameId="context.Id" ArchiveId="@GetLatestArchiveId(context)"/>
+        <SavePathEditor @ref="SavePathEditor" GameId="@Id" ArchiveId="@GetLatestArchiveId(context)"/>
     </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    private Guid GetLatestArchiveId(Game game)
+    SavePathEditor SavePathEditor;
+
+    Guid GetLatestArchiveId(Game game)
     {
         if (game != null && game.Archives != null && game.Archives.Count > 0)
             return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Id ?? Guid.Empty;
@@ -27,21 +29,18 @@
             return Guid.Empty;
     }
     
-    private async Task Save(Game game)
+    async Task Save()
     {
         try
         {
-            using (var gameService = DatabaseServiceFactory.Create<GameService>())
-            {
-                game = await gameService.UpdateAsync(game);
-            }
+            await SavePathEditor.Save();
 
-            await MessageService.Success("Game updated!");
+            await MessageService.Success("Save paths updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save game!");
-            Logger.LogError(ex, "Could not save game!");
+            MessageService.Error("Could not update save paths!");
+            Logger.LogError(ex, "Could not update save paths!");
         }
     }
 }

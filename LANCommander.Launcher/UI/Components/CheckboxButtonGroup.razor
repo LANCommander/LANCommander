@@ -1,38 +1,32 @@
 ﻿@typeparam TItem
 
-<Space Direction="@Direction" Class="checkbox-button-group">
-    @foreach (var item in DataSource)
+<Flex Vertical Class="checkbox-button-group" Gap="FlexGap.Small">
+    @foreach (var item in Items)
     {
-        <SpaceItem>
-            @foreach (var item in Items)
+        if (SelectedKeys.Contains(item.Key))
+        {
+            if (ButtonSelectedTemplate != null)
             {
-                if (SelectedKeys.Contains(item.Key))
-                {
-                    if (ButtonSelectedTemplate != null)
-                    {
-                        @ButtonSelectedTemplate?.Invoke(item.DataItem)
-                    }
-                    else
-                    {
-                        <Button OnClick="() => Deselect(item)" Block Icon="@IconType.Fill.CheckCircle">@item.Label</Button>
-                    }
-                }
-                else
-                {
-                    if (ButtonUnselectedTemplate != null)
-                    {
-                        @ButtonUnselectedTemplate?.Invoke(item.DataItem)
-                    }
-                    else
-                    {
-                        <Button OnClick="() => Select(item)" Block>@item.Label</Button>
-                    }
-                }
+                @ButtonSelectedTemplate?.Invoke(item.DataItem)
             }
-
-        </SpaceItem>
+            else
+            {
+                <Button OnClick="() => Deselect(item)" Block Icon="@IconType.Fill.CheckCircle">@item.Label</Button>
+            }
+        }
+        else
+        {
+            if (ButtonUnselectedTemplate != null)
+            {
+                @ButtonUnselectedTemplate?.Invoke(item.DataItem)
+            }
+            else
+            {
+                <Button OnClick="() => Select(item)" Block>@item.Label</Button>
+            }
+        }
     }
-</Space>
+</Flex>
 
 @code {
     [Parameter] public IEnumerable<TItem> DataSource { get; set; }

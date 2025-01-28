@@ -136,16 +136,15 @@ else
                 Maximizable = false,
                 DefaultMaximized = false,
                 Closable = true,
+                MaskClosable = true,
                 Footer = null,
                 Centered = true,
                 WrapClassName = "game-actions-dialog",
-                OnCancel = async (e) =>
-                {
-                    Client.Lobbies.ReleaseSteam();
-                },
                 AfterClose = async () =>
                 {
                     Client.Lobbies.ReleaseSteam();
+
+                    await ChangeState(PlayButtonState.Idle);
                 }
             };
 

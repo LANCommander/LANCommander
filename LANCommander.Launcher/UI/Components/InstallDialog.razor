@@ -77,13 +77,14 @@
     protected override async Task OnInitializedAsync()
     {
         Game = Options.DataItem as Game;
-
+        
         if (Game.Installed)
             SelectedDirectory = Settings.Games.InstallDirectories.FirstOrDefault(d => Game.InstallDirectory.StartsWith(d));
 
         if (String.IsNullOrWhiteSpace(SelectedDirectory))
             SelectedDirectory = Settings.Games.InstallDirectories.First();
 
+        RemoteGame = await Client.Games.GetAsync(Options.Key);
         Addons = (await Client.Games.GetAddonsAsync(Options.Key)).OrderByTitle(g => g.SortTitle ?? g.Title).ToList();
     }
 
@@ -123,7 +124,7 @@
         {
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().CompressedSize;
 
-            size += Addons.Where(a => SelectedAddons.Any(sa => sa.Id == a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
+            size += SelectedAddons.Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().CompressedSize);
         }
 
         return size;
@@ -137,7 +138,7 @@
         {
             size += RemoteGame.Archives.OrderByDescending(a => a.CreatedOn).First().UncompressedSize;
 
-            size += Addons.Where(a => SelectedAddons.Any(sa => sa.Id == a.Id)).Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
+            size += SelectedAddons.Sum(a => a.Archives.OrderByDescending(arc => arc.CreatedOn).First().UncompressedSize);
         }
 
         return size;

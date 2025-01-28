@@ -12,28 +12,27 @@
     </TitleExtraTemplate>
     
     <ChildContent>
-        <MultiplayerModeEditor @bind-Value="context.MultiplayerModes"/>
+        <MultiplayerModeEditor @ref="MultiplayerModeEditor" GameId="@Id"/>
     </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
+
+    MultiplayerModeEditor MultiplayerModeEditor;
     
-    private async Task Save(Game game)
+    async Task Save(Game game)
     {
         try
         {
-            using (var gameService = DatabaseServiceFactory.Create<GameService>())
-            {
-                game = await gameService.UpdateAsync(game);
-            }
+            await MultiplayerModeEditor.Save();
 
-            await MessageService.Success("Game updated!");
+            await MessageService.Success("Multiplayer modes updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save game!");
-            Logger.LogError(ex, "Could not save game!");
+            MessageService.Error("Could not save multiplayer modes!");
+            Logger.LogError(ex, "Could not save multiplayer modes!");
         }
     }
 }

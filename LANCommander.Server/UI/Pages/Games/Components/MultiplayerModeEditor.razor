@@ -1,9 +1,7 @@
-﻿@using LANCommander.Server.Data.Models
-@using LANCommander.Server.Extensions;
-@using LANCommander.SDK.Enums
+﻿@inject DatabaseServiceFactory DatabaseServiceFactory
 
 <Flex Vertical Gap="FlexGap.Large">
-    <Table TItem="MultiplayerMode" DataSource="@Value" HidePagination="true" Responsive>
+    <Table TItem="MultiplayerMode" DataSource="@MultiplayerModes" HidePagination="true" Responsive>
         <PropertyColumn Property="m => m.Type">
             <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
@@ -38,41 +36,41 @@
 </Flex>
 
 @code {
-    [Parameter] public ICollection<MultiplayerMode> Value { get; set; }
-    [Parameter] public EventCallback<ICollection<MultiplayerMode>> ValueChanged { get; set; }
-    [Parameter] public Game Game { get; set; }
+    [Parameter] public Guid GameId { get; set; }
+
+    ICollection<MultiplayerMode> MultiplayerModes = new List<MultiplayerMode>();
 
     protected override async Task OnInitializedAsync()
     {
-        if (Value == null)
-            Value = new List<MultiplayerMode>();
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            var game = await gameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
 
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
-
-        StateHasChanged();
+            MultiplayerModes = game.MultiplayerModes;
+        }
+    }
+    
+    async Task AddMode()
+    {
+        MultiplayerModes.Add(new MultiplayerMode());
     }
 
-    private async Task AddMode()
+    async Task RemoveMode(MultiplayerMode mode)
     {
-        if (Value == null)
-            Value = new List<MultiplayerMode>();
-
-        Value.Add(new MultiplayerMode());
-
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
-
-        StateHasChanged();
+        MultiplayerModes.Remove(mode);
     }
 
-    private async Task RemoveMode(MultiplayerMode mode)
+    public async Task Save()
     {
-        Value.Remove(mode);
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            var game = await gameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
 
-        if (ValueChanged.HasDelegate)
-            await ValueChanged.InvokeAsync(Value);
+            game.MultiplayerModes = MultiplayerModes;
 
-        StateHasChanged();
+            await gameService.UpdateAsync(game);
+            
+            game = await gameService.GetAsync(GameId);
+        }
     }
 }

@@ -78,20 +78,26 @@
             @if (context.Type != GameType.MainGame)
             {
                 <FormItem Label="Base Game">
-                    <Select TItem="Game"
-                            TItemValue="Guid?"
-                            DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
-                            @bind-Value="@context.BaseGameId"
-                            LabelName="Title"
-                            ValueName="Id"
-                            Placeholder="Select a Game"
-                            DefaultActiveFirstOption="false"
-                            EnableSearch>
-                        <ItemTemplate Context="baseGame">
-                            <Image Src="@GetIcon(baseGame)" Height="32" Width="32" Preview="false"></Image>
-                            @baseGame.Title
-                        </ItemTemplate>
-                    </Select>
+                    <Flex Gap="FlexGap.Small" Wrap="FlexWrap.NoWrap">
+                        <Select TItem="Game"
+                                TItemValue="Guid?"
+                                DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                                @bind-Value="@context.BaseGameId"
+                                LabelName="Title"
+                                ValueName="Id"
+                                Placeholder="Select a Game"
+                                DefaultActiveFirstOption="false"
+                                EnableSearch>
+                            <ItemTemplate Context="baseGame">
+                                <Image Src="@GetIcon(baseGame)" Height="32" Width="32" Preview="false"></Image>
+                                @baseGame.Title
+                            </ItemTemplate>
+                        </Select>
+                        
+                        <Button OnClick="@(() => NavigationManager.NavigateTo($"/Games/{context.BaseGameId}"))" Disabled="@(context.BaseGameId == null || context.BaseGameId == Guid.Empty)">
+                            Edit
+                        </Button>
+                    </Flex>
                 </FormItem>
             }
             <FormItem Label="Key Allocation Method">

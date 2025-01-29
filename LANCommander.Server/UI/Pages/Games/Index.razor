@@ -18,14 +18,16 @@
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Games" />
+<PageHeader Title="Games" Subtitle="@Total.ToString()" />
 
 <DataTable
     @ref="Table"
     TItem="Game"
     @bind-SelectedRows="Selected"
+    @bind-Total="Total"
     Size="@TableSize.Small"
     Responsive
+    ColumnPicker
     Searchable
     SearchProperty="g => g.Title">
     <RightToolbar>
@@ -118,12 +120,24 @@
             </Popconfirm>
         </DataActions>
     </Columns>
+
+    <PaginationTemplate>
+        <Pagination
+            Total="context.Total"
+            PageSize="context.PageSize"
+            Current="context.PageIndex"
+            DefaultPageSize="25"
+            PageSizeOptions="new [] { 25, 50, 100, 200 }"
+            ShowSizeChanger
+            OnChange="context.HandlePageChange" />
+    </PaginationTemplate>
 </DataTable>
 
 @code {
     bool Visibility = false;
 
     IEnumerable<Game> Selected;
+    int Total;
 
     DataTable<Game> Table;
     ImportUploadDialog ImportUploadDialog;

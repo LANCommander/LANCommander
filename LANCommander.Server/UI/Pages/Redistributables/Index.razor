@@ -7,12 +7,16 @@
 @inject DatabaseServiceFactory DatabaseServiceFactory
 @inject NavigationManager NavigationManager
 
-<PageHeader Title="Redistributables" />
+<PageHeader Title="Redistributables" Subtitle="@Total.ToString()" />
 
 <DataTable
     TItem="Redistributable"
     Size="TableSize.Small"
-    Responsive>
+    @bind-Total="Total"
+    Responsive
+    ColumnPicker
+    Searchable
+    SearchProperty="r => r.Name">
     <RightToolbar>
         <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Redistributable</Button>
     </RightToolbar>
@@ -31,12 +35,25 @@
             </Popconfirm>
         </DataActions>
     </Columns>
+
+    <PaginationTemplate>
+        <Pagination
+            Total="context.Total"
+            PageSize="context.PageSize"
+            Current="context.PageIndex"
+            DefaultPageSize="25"
+            PageSizeOptions="new [] { 25, 50, 100, 200 }"
+            ShowSizeChanger
+            OnChange="context.HandlePageChange" />
+    </PaginationTemplate>
 </DataTable>
 
 <ImportUploadDialog @ref="ImportUploadDialog" />
 
  @code {
     bool Loading = true;
+
+    int Total;
     
     ImportUploadDialog ImportUploadDialog;
 

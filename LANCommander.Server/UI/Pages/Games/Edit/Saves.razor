@@ -15,7 +15,7 @@
         <BoundDataColumn Property="g => g.User.UserName" Include="User" />
         <BoundDataColumn Property="g => g.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending" />
         <BoundDataColumn Property="g => g.Size">
-            @ByteSizeLib.ByteSize.FromBytes(save.Size)
+            <ByteSize Value="save.Size" />
         </BoundDataColumn>
         <DataActions>
             <a href="/Download/Save/@(save.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">

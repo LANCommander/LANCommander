@@ -15,7 +15,7 @@
             @String.Join(", ", context.Roles)
         </PropertyColumn>
         <PropertyColumn Property="u => u.SavesSize" Title="Saves">
-            @ByteSizeLib.ByteSize.FromBytes(context.SavesSize)
+            <ByteSize Value="context.SavesSize" />
         </PropertyColumn>
         <ActionColumn>
             <Space Style="display: flex; justify-content: end">

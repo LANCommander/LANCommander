@@ -21,7 +21,7 @@
     <Table TItem="OrphanedFile" DataSource="@Orphans" Loading="@Loading" PageSize="25" Responsive>
         <PropertyColumn Property="f => f.Path" />
         <PropertyColumn Property="f => f.Size" Sortable>
-            @ByteSizeLib.ByteSize.FromBytes(context.Size).ToString()
+            <ByteSize Value="context.Size" />
         </PropertyColumn>
         <PropertyColumn Property="f => f.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
         <ActionColumn Title="" Style="text-align: right">

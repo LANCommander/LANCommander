@@ -35,7 +35,7 @@ namespace LANCommander.SDK.Services
             }
             set { }
         }
-        public double TransferSpeed { get; set; }
+        public long TransferSpeed { get; set; }
         public long BytesDownloaded { get; set; }
         public long TotalBytes { get; set; }
         public TimeSpan TimeRemaining { get; set; }
@@ -763,7 +763,7 @@ namespace LANCommander.SDK.Services
 
                         GameInstallProgress.BytesDownloaded = pos;
                         GameInstallProgress.TotalBytes = len;
-                        GameInstallProgress.TransferSpeed = (double)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
+                        GameInstallProgress.TransferSpeed = (long)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
 
                         OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
 

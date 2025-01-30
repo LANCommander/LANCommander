@@ -7,7 +7,7 @@
 <Table DataSource="Saves" Size="TableSize.Small" PageIndex="@CurrentPage" PageSize="@PageSize" PaginationPosition="none">
     <PropertyColumn Property="s => s.CreatedOn" Title="Created On" />
     <PropertyColumn Property="s => s.Size">
-        @ByteSizeLib.ByteSize.FromBytes(context.Size)
+        <ByteSize Value="context.Size" />
     </PropertyColumn>
     <ActionColumn>
         <Flex Justify="FlexJustify.End">

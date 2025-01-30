@@ -129,7 +129,7 @@
                      @FileSource.GetEntryName(context)
                 </PropertyColumn>
                 <PropertyColumn Property="e => e.Size" Sortable Title="Size">
-                     @ByteSizeLib.ByteSize.FromBytes(context.Size)
+                    <ByteSize Value="context.Size" />
                 </PropertyColumn>
                 <PropertyColumn Property="e => e.ModifiedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Modified" />
              </Table>

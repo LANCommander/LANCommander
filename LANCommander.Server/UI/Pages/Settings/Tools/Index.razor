@@ -5,6 +5,7 @@
 @inject UpdateService UpdateService
 @inject IMessageService MessageService
 @inject IFusionCache FusionCache
+@inject ILogger<Index> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Tools" />
@@ -64,23 +65,31 @@
     async Task RecalculateFileSizes()
     {
         RecalculatingFileSizes = true;
-
+        
+        await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
         using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
         {
-            var archives = await archiveService.GetAsync();
+            var archives = await archiveService.AsNoTracking().GetAsync();
 
             foreach (var archive in archives)
             {
-                var path = await archiveService.GetArchiveFileLocationAsync(archive);
-
-                if (File.Exists(path))
+                try
                 {
-                    archive.CompressedSize = await archiveService.GetCompressedSizeAsync(archive);
-                    archive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(archive);
+                    var path = await archiveService.GetArchiveFileLocationAsync(archive);
 
-                    await archiveService.UpdateAsync(archive);
+                    if (File.Exists(path))
+                    {
+                        archive.CompressedSize = await archiveService.GetCompressedSizeAsync(archive);
+                        archive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(archive);
+
+                        await archiveService.UpdateAsync(archive);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Could not recalculate file size for archive {ArchiveId}", archive.Id);
                 }
             }
         }
@@ -88,11 +97,14 @@
         MessageService.Success("File sizes recalculated!");
 
         RecalculatingFileSizes = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task ClearCache()
     {
-        await FusionCache.ExpireAsync("MappedGames");
+        await FusionCache.ExpireAsync("Games");
 
         MessageService.Success("Cache cleared!");
     }

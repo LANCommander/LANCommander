@@ -39,7 +39,7 @@
         <BoundDataColumn Property="s => s.Game.Title" Sortable Title="Game" Include="Game" />
         <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Created On" DefaultSortOrder="SortDirection.Descending" />
         <BoundDataColumn Property="s => s.Size" Sortable Title="Size">
-            @ByteSizeLib.ByteSize.FromBytes(context.Size)
+            <ByteSize Value="context.Size" />
         </BoundDataColumn>
         <DataActions>
             <a href="/Download/Save/@(context.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">

@@ -8,7 +8,7 @@
 <div style="padding: 16px;">
     <Row Gutter="16">
         <Col Span="12">
-            <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;" />
+            <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" Style="text-align: center;"/>
         </Col>
         <Col Span="12">
             <Statistic Title="Space Required" Value="@ByteSizeLib.ByteSize.FromBytes(GetSpaceRequired()).ToString()" Style="text-align: center;"/>
@@ -35,7 +35,7 @@
                             @directory
                         </GridCol>
                         <GridCol>
-                            @ByteSizeLib.ByteSize.FromBytes(GetFreeSpace(directory))
+                            <ByteSize Value="GetFreeSpace(directory)" />
                         </GridCol>
                     </GridRow>
                 </Radio>

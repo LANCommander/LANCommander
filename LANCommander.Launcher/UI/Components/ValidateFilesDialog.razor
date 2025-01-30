@@ -17,13 +17,13 @@
     <Column TData="string" Title="Local Size">
         @if (context.LocalFileInfo?.Length > 0)
         {
-            @ByteSizeLib.ByteSize.FromBytes(context.LocalFileInfo.Length)
+            <ByteSize Value="context.LocalFileInfo.Length" />
         }
     </Column>
     <PropertyColumn Property="c => c.Length" Title="Original Size">
         @if (context.Length > 0)
         {
-            @ByteSizeLib.ByteSize.FromBytes(context.Length)
+            <ByteSize Value="context.Length" />
         }
     </PropertyColumn>
 </Table>

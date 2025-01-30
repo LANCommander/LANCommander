@@ -39,7 +39,7 @@
                             <Icon Type="@IconType.Outline.FileZip" />
                         </div>
                         <span target="_blank" rel="noopener noreferrer" class="ant-upload-list-item-name" title="@File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))">
-                            @File.Name (@ByteSizeLib.ByteSize.FromBytes(File.Size))
+                            @File.Name (<ByteSize Value="File.Size" />)
                         </span>
                         <span class="ant-upload-list-item-card-actions picture">
                             <Button Type="ButtonType.Text" Size="ButtonSize.Small" Icon="@IconType.Outline.Delete" OnClick="Clear" Disabled="@(CurrentProgressStatus != ProgressStatus.Normal)" />

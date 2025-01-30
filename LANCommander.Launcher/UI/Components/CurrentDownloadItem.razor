@@ -38,10 +38,10 @@
             </div>
             <div class="downloader-current-lower">
                 <div class="downloader-current-lower-data">
-                    @ByteSizeLib.ByteSize.FromBytes(Progress.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(Progress.TotalBytes).ToString()
+                    <ByteSize Value="Progress.BytesDownloaded" /> / <ByteSize Value="Progress.BytesDownloaded" />
                 </div>
                 <div class="downloader-current-lower-speed">
-                    @ByteSizeLib.ByteSize.FromBytes(Progress.TransferSpeed).ToString()/s
+                    <ByteSize Value="Progress.TransferSpeed" />/s
                 </div>
             </div>
         </div>

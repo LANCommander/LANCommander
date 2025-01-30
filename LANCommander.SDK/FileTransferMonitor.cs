@@ -43,7 +43,7 @@ public class FileTransferMonitor : IDisposable
     }
 
     public long GetBytesTransferred() => _lastBytesTransferred;
-    public double GetSpeed() => _smoothedTransferRate;
+    public long GetSpeed() => (long)_smoothedTransferRate;
 
     public TimeSpan GetTimeRemaining()
     {

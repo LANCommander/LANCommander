@@ -26,10 +26,10 @@
             <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)"/>
         </BoundDataColumn>
         <BoundDataColumn Property="a => a.CompressedSize">
-            @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
+            <ByteSize Value="context.CompressedSize" />
         </BoundDataColumn>
         <BoundDataColumn Property="a => a.UncompressedSize">
-            @ByteSizeLib.ByteSize.FromBytes(context.UncompressedSize)
+            <ByteSize Value="context.UncompressedSize" />
         </BoundDataColumn>
         <BoundDataColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Include="CreatedBy"/>
         <BoundDataColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending"/>

@@ -68,6 +68,7 @@ namespace LANCommander.SDK.PowerShell
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Update-UserCustomField", typeof(UpdateUserCustomFieldCmdlet), null));
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-HorizontalFov", typeof(GetHorizontalFovCmdlet), null));
             InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Get-VerticalFov", typeof(GetVerticalFovCmdlet), null));
+            InitialSessionState.Commands.Add(new SessionStateCmdletEntry("Out-PlayerAvatar", typeof(OutPlayerAvatarCmdlet), null));
 
             IgnoreWow64Redirection();
         }

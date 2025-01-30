@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Net;
 using LANCommander.SDK;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -132,31 +133,30 @@ namespace LANCommander.Server.Services
 
     public class ServerProcessService : BaseService
     {
-        public Dictionary<Guid, Process> Processes = new Dictionary<Guid, Process>();
-        public Dictionary<Guid, int> Threads { get; set; } = new Dictionary<Guid, int>();
-        public Dictionary<Guid, LogFileMonitor> LogFileMonitors { get; set; } = new Dictionary<Guid, LogFileMonitor>();
+        public Dictionary<Guid, CancellationTokenSource> Running { get; set; } = new();
+        public Dictionary<Guid, LogFileMonitor> LogFileMonitors { get; set; } = new();
 
-        private Dictionary<Guid, RCON> RconConnections { get; set; } = new Dictionary<Guid, RCON>();
+        private Dictionary<Guid, RCON> RconConnections { get; set; } = new();
 
         public delegate void OnLogHandler(object sender, ServerLogEventArgs e);
         public event OnLogHandler OnLog;
 
         public delegate void OnStatusUpdateHandler(object sender, ServerStatusUpdateEventArgs e);
         public event OnStatusUpdateHandler OnStatusUpdate;
-
-        private readonly IMapper Mapper;
+        
         private readonly IServiceProvider ServiceProvider;
         private readonly SDK.Client Client;
+        private readonly IMapper Mapper;
 
         public ServerProcessService(
             ILogger<ServerProcessService> logger,
-            IMapper mapper,
             IServiceProvider serviceProvider,
-            SDK.Client client) : base(logger)
+            SDK.Client client,
+            IMapper mapper) : base(logger)
         {
-            Mapper = mapper;
             ServiceProvider = serviceProvider;
             Client = client;
+            Mapper = mapper;
         }
 
         public async Task StartServerAsync(Guid serverId)
@@ -209,56 +209,43 @@ namespace LANCommander.Server.Services
                     }
                 }
 
-                var process = new Process();
-
-                process.StartInfo.FileName = server.Path;
-                process.StartInfo.WorkingDirectory = server.WorkingDirectory;
-                process.StartInfo.Arguments = server.Arguments;
-                process.StartInfo.UseShellExecute = server.UseShellExecute;
-                process.EnableRaisingEvents = true;
-
-                if (!process.StartInfo.UseShellExecute)
+                using (var executionContext = new ProcessExecutionContext(Client, Logger))
                 {
-                    process.StartInfo.RedirectStandardOutput = true;
-                    process.StartInfo.RedirectStandardError = true;
-
-                    process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+                    try
                     {
-                        Logger?.LogInformation("Game Server {ServerName} ({ServerId}) Info: {Message}", server.Name, server.Id, e.Data);
-                    });
+                        executionContext.AddVariable("ServerId", server.Id.ToString());
+                        executionContext.AddVariable("ServerName", server.Name);
+                        executionContext.AddVariable("ServerHost", server.Host);
+                        executionContext.AddVariable("ServerPort", server.Port.ToString());
 
-                    process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+                        if (server.Game != null)
+                        {
+                            executionContext.AddVariable("GameTitle", server.Game?.Title);
+                            executionContext.AddVariable("GameId", server.Game?.Id.ToString());   
+                        }
+                    
+                        foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
+                        {
+                            StartMonitoringLog(logFile, server);
+                        }
+                    
+                        OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Running));
+                        
+                        var cancellationTokenSource = new CancellationTokenSource();
+                        
+                        Running[server.Id] = cancellationTokenSource;
+
+                        await executionContext.ExecuteServerAsync(Mapper.Map<SDK.Models.Server>(server), cancellationTokenSource.Token);
+                        
+                        OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
+                    }
+                    catch (Exception ex)
                     {
-                        Logger?.LogError("Game Server {ServerName} ({ServerId}) Error: {Message}", server.Name, server.Id, e.Data);
-                    });
-                }
+                        OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
 
-                try
-                {
-                    process.Start();
-
-                    if (!process.StartInfo.UseShellExecute)
-                    {
-                        process.BeginErrorReadLine();
-                        process.BeginOutputReadLine();
+                        Logger?.LogError(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
                     }
 
-                    Processes[server.Id] = process;
-
-                    foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
-                    {
-                        StartMonitoringLog(logFile, server);
-                    }
-
-                    OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Running));
-
-                    await process.WaitForExitAsync();
-                }
-                catch (Exception ex)
-                {
-                    OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
-
-                    Logger?.LogError(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
                 }
             }
         }
@@ -283,47 +270,11 @@ namespace LANCommander.Server.Services
 
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
 
-                if (Processes.ContainsKey(server.Id))
+                if (Running.ContainsKey(server.Id))
                 {
-                    var process = Processes[server.Id];
+                    await Running[server.Id].CancelAsync();
 
-                    if (server.ProcessTerminationMethod == ProcessTerminationMethod.Close)
-                        process.CloseMainWindow();
-                    else if (server.ProcessTerminationMethod == ProcessTerminationMethod.Kill)
-                        process.Kill();
-                    else
-                    {
-                        int signal = 1;
-                        int pid = process.Id;
-
-                        process.Close();
-
-                        switch (server.ProcessTerminationMethod)
-                        {
-                            case ProcessTerminationMethod.SIGHUP:
-                                signal = 1;
-                                break;
-                            case ProcessTerminationMethod.SIGINT:
-                                signal = 2;
-                                break;
-                            case ProcessTerminationMethod.SIGKILL:
-                                signal = 9;
-                                break;
-                            case ProcessTerminationMethod.SIGTERM:
-                                signal = 15;
-                                break;
-                        }
-
-                        using (var terminator = new Process())
-                        {
-                            terminator.StartInfo.FileName = "kill";
-                            terminator.StartInfo.Arguments = $"-{signal} {pid}";
-                            terminator.Start();
-                            await terminator.WaitForExitAsync();
-                        }
-                    }
-
-                    Processes.Remove(server.Id);
+                    Running.Remove(server.Id);
                 }
 
                 if (LogFileMonitors.ContainsKey(server.Id))
@@ -395,22 +346,14 @@ namespace LANCommander.Server.Services
 
         public ServerProcessStatus GetStatus(Data.Models.Server server)
         {
-            Process process = null;
-
             if (server == null)
                 return ServerProcessStatus.Stopped;
-
-            if (Processes.ContainsKey(server.Id))
-                process = Processes[server.Id];
-
-            if (process == null || process.HasExited)
-                return ServerProcessStatus.Stopped;
-
-            if (!process.HasExited)
+            
+            if (Running.ContainsKey(server.Id) && Running[server.Id].IsCancellationRequested)
+                return ServerProcessStatus.Stopping;
+            
+            if (Running.ContainsKey(server.Id) && !Running[server.Id].IsCancellationRequested)
                 return ServerProcessStatus.Running;
-
-            if (process.ExitCode != 0)
-                return ServerProcessStatus.Error;
 
             return ServerProcessStatus.Stopped;
         }

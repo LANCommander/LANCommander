@@ -904,7 +904,7 @@ namespace LANCommander.SDK.Services
         {
             var screen = DisplayHelper.GetScreen();
 
-            using (var context = new GameExecutionContext(Client, Logger))
+            using (var context = new ProcessExecutionContext(Client, Logger))
             {
                 context.AddVariable("ServerAddress", Client.GetServerAddress());
                 context.AddVariable("DisplayWidth", screen.Width.ToString());
@@ -974,7 +974,7 @@ namespace LANCommander.SDK.Services
                 try
                 {
                     var cancellationTokenSource = new CancellationTokenSource();
-                    var task = context.ExecuteAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
+                    var task = context.ExecuteGameActionAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
 
                     Running[gameId] = cancellationTokenSource;
 

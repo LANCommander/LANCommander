@@ -15,19 +15,21 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
 {
     public class InstallService : BaseService
     {
         private readonly GameService GameService;
-        private readonly SaveService SaveService;
-
-        private Settings Settings;
 
         private Stopwatch Stopwatch { get; set; }
 
         public ObservableCollection<IInstallQueueItem> Queue { get; set; }
+        
+        public delegate Task OnProgressHandler(GameInstallProgress progress);
+
+        public event OnProgressHandler OnProgress;
 
         public delegate Task OnQueueChangedHandler();
         public event OnQueueChangedHandler OnQueueChanged;
@@ -41,13 +43,10 @@ namespace LANCommander.Launcher.Services
         public InstallService(
             SDK.Client client,
             ILogger<InstallService> logger,
-            GameService gameService,
-            SaveService saveService) : base(client, logger)
+            GameService gameService) : base(client, logger)
         {
             GameService = gameService;
-            SaveService = saveService;
             Stopwatch = new Stopwatch();
-            Settings = SettingService.GetSettings();
 
             Queue = new ObservableCollection<IInstallQueueItem>();
 
@@ -58,17 +57,7 @@ namespace LANCommander.Launcher.Services
 
             Client.Games.OnGameInstallProgressUpdate += (e) =>
             {
-                var currentItem = Queue.FirstOrDefault(i => i.Id == e.Game.Id);
-
-                if (currentItem == null)
-                    return;
-
-                currentItem.Status = e.Status;
-                currentItem.BytesDownloaded = e.BytesDownloaded;
-                currentItem.TotalBytes = e.TotalBytes;
-                currentItem.TransferSpeed = e.TransferSpeed;
-
-                OnQueueChanged?.Invoke();
+                OnProgress?.Invoke(e);
             };
 
             // Client.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;

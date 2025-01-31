@@ -149,51 +149,51 @@ jobs:
 
     # Draft Release
     - name: Download Server Linux ARM64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Server-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server Linux x64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Server-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server macOS ARM64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Server-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server macOS x64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Server-macOS-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server Windows ARM64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Server-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Server Windows x64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Server-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Linux ARM64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Launcher-Linux-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Linux x64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Launcher-Linux-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher macOS x64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Launcher-macOS-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher macOS ARM64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Launcher-macOS-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Windows ARM64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Launcher-Windows-arm64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
     - name: Download Launcher Windows x64
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: LANCommander.Launcher-Windows-x64-v${{ steps.trim_tag_ref.outputs.replaced }}.zip
 

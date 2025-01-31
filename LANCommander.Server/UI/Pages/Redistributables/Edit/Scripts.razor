@@ -6,7 +6,7 @@
 @inject NavigationManager NavigationManager
 
 <RedistributableEditView Id="Id">
-    <ScriptEditor RedistributableId="Id" ArchiveId="@LatestArchiveId" AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall }" />
+    <ScriptEditor RedistributableId="Id" ArchiveId="@LatestArchiveId" AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall, ScriptType.NameChange, ScriptType.BeforeStart, ScriptType.AfterStop }" />
 </RedistributableEditView>
 
 @code {

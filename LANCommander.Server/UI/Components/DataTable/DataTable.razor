@@ -17,7 +17,7 @@
 @inject DrawerService DrawerService
 
 <CascadingValue Value="this">
-    <Flex Justify="FlexJustify.SpaceBetween" Style="padding: 12px;">
+    <Flex Justify="FlexJustify.SpaceBetween" Style="padding: 12px 0;">
         <Flex Gap="FlexGap.Small">
             @if (Searchable)
             {
@@ -34,7 +34,7 @@
 
         @if (RightToolbar != null)
         {
-            <Flex Gap="FlexGap.Small">
+            <Flex Gap="FlexGap.Small" Style="flex-grow: 1" Justify="FlexJustify.End">
                 @RightToolbar
             </Flex>
         }

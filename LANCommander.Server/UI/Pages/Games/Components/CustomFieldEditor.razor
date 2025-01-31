@@ -67,6 +67,8 @@
                 game.CustomFields = CustomFields;
 
                 await gameService.UpdateAsync(game);
+
+                MessageService.Success("Custom fields updated!");
             }
             catch (Exception ex)
             {

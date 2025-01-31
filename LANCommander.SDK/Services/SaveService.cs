@@ -93,7 +93,7 @@ namespace LANCommander.SDK.Services
 
         public async Task DownloadAsync(string installDirectory, Guid gameId, Guid? saveId = null)
         {
-            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
             string tempFile = string.Empty;
             string tempLocation = string.Empty;
@@ -150,7 +150,7 @@ namespace LANCommander.SDK.Services
                     if (!success)
                         throw new ExtractionException("Could not extract the save archive. Is the file locked?");
 
-                    manifest = ManifestHelper.Read(tempLocation);
+                    manifest = await ManifestHelper.ReadAsync<GameManifest>(tempLocation);
 
                     #region Move files
                     var tempLocationFilePath = "Files";
@@ -239,7 +239,7 @@ namespace LANCommander.SDK.Services
 
         public async Task UploadAsync(string installDirectory, Guid gameId)
         {
-            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
             if (manifest.SavePaths != null && manifest.SavePaths.Count() > 0)
             {

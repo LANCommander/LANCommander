@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace LANCommander.SDK
 {
-    public class GameManifest
+    public class GameManifest : IKeyedModel
     {
         public Guid Id { get; set; }
         public string Title { get; set; }
@@ -32,6 +32,7 @@ namespace LANCommander.SDK
         public IEnumerable<Media> Media { get; set; }
         public IEnumerable<Archive> Archives { get; set; }
         public IEnumerable<Guid> DependentGames { get; set; }
+        public IEnumerable<Redistributable> Redistributables { get; set; }
         public IEnumerable<GameCustomField> CustomFields { get; set; }
 
         public GameManifest() { }

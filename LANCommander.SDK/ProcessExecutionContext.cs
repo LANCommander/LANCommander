@@ -148,7 +148,7 @@ namespace LANCommander.SDK
 
         public async Task ExecuteGameActionAsync(string installDirectory, Guid gameId, Models.Action action, string args = "", CancellationToken cancellationToken = default)
         {
-            var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
             if (action == null)
                 action = manifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);

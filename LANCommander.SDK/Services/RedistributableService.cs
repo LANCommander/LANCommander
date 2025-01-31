@@ -56,7 +56,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var installed = await Client.Scripts.RunDetectInstallScriptAsync(redistributable, game);
+                var installed = await Client.Scripts.RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
 
                 Logger?.LogTrace("Redistributable install detection returned {Result}", installed);
 
@@ -64,6 +64,13 @@ namespace LANCommander.SDK.Services
                 {
                     Logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
 
+                    Logger?.LogTrace("Saving scripts");
+                    
+                    foreach (var script in redistributable.Scripts)
+                    {
+                        await ScriptHelper.SaveScriptAsync(game, redistributable, script.Type);
+                    }
+                    
                     if (redistributable.Archives.Count() > 0)
                     {
                         Logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
@@ -77,7 +84,7 @@ namespace LANCommander.SDK.Services
                             Logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
                             Logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
-                            await Client.Scripts.RunInstallScriptAsync(redistributable, game);
+                            await RunPostInstallScripts(game, redistributable);
                         }
                         else
                         {
@@ -88,7 +95,7 @@ namespace LANCommander.SDK.Services
                     {
                         Logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
 
-                        await Client.Scripts.RunInstallScriptAsync(redistributable, game);
+                        await RunPostInstallScripts(game, redistributable);
                     }
                 }
             }
@@ -100,6 +107,26 @@ namespace LANCommander.SDK.Services
             {
                 if (Directory.Exists(extractTempPath))
                     Directory.Delete(extractTempPath, true);
+            }
+        }
+        
+        private async Task RunPostInstallScripts(Game game, Redistributable redistributable)
+        {
+            if (game.Scripts != null && game.Scripts.Any())
+            {
+                //GameInstallProgress.Status = GameInstallStatus.RunningScripts;
+
+                // OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+
+                try
+                {
+                    await Client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
+                    await Client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, redistributable.Id, await Client.Profile.GetAliasAsync());
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Scripts failed to execute for redistributable {RedistributableName} ({GameId})", redistributable.Name, redistributable.Id);
+                }
             }
         }
 

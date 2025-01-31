@@ -17,7 +17,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
         protected override void ProcessRecord()
         {
-            WriteObject(ManifestHelper.Read(Path, Id));
+            WriteObject(ManifestHelper.Read<GameManifest>(Path, Id));
         }
     }
 }

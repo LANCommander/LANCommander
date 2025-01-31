@@ -1,6 +1,7 @@
 ﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
 @using System.Diagnostics
+@using LANCommander.SDK
 @using LANCommander.SDK.Helpers
 @inject GameService GameService
 @inject UserService UserService
@@ -122,7 +123,7 @@ else
 
             if (Game.Installed)
             {
-                var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(Game.InstallDirectory, Game.Id);
 
                 if (manifest != null)
                     GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
@@ -205,7 +206,7 @@ else
 
     async Task Uninstall()
     {
-        var manifest = ManifestHelper.Read(Game.InstallDirectory, Game.Id);
+        var manifest = await ManifestHelper.ReadAsync<GameManifest>(Game.InstallDirectory, Game.Id);
 
         var message = $"Would you like to uninstall {Game.Title}?";
 

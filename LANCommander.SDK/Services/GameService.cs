@@ -103,7 +103,7 @@ namespace LANCommander.SDK.Services
         public async Task<IEnumerable<GameManifest>> GetManifestsAsync(string installDirectory, Guid id)
         {
             var manifests = new List<GameManifest>();
-            var mainManifest = await ManifestHelper.ReadAsync(installDirectory, id);
+            var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, id);
 
             if (mainManifest == null)
                 return manifests;
@@ -116,7 +116,7 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        var dependentGameManifest = await ManifestHelper.ReadAsync(installDirectory, dependentGameId);
+                        var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
 
                         if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
                             manifests.Add(dependentGameManifest);
@@ -332,7 +332,7 @@ namespace LANCommander.SDK.Services
             try
             {
                 if (ManifestHelper.Exists(destination, game.Id))
-                    manifest = ManifestHelper.Read(destination, game.Id);
+                    manifest = await ManifestHelper.ReadAsync<GameManifest>(destination, game.Id);
             }
             catch (Exception ex)
             {
@@ -357,13 +357,13 @@ namespace LANCommander.SDK.Services
             game.InstallDirectory = result.Directory;
 
             // Game is extracted, get metadata
-            var writeManifestSuccess = RetryHelper.RetryOnException(maxAttempts, TimeSpan.FromSeconds(1), false, () =>
+            var writeManifestSuccess = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromSeconds(1), false, async () =>
             {
                 Logger?.LogTrace("Attempting to get game manifest");
 
                 manifest = GetManifest(game.Id);
 
-                ManifestHelper.Write(manifest, game.InstallDirectory);
+                await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
 
                 return true;
             });
@@ -526,7 +526,7 @@ namespace LANCommander.SDK.Services
 
         public async Task UninstallAsync(string installDirectory, Guid gameId)
         {
-            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
             #region Uninstall Dependent Games
             if (manifest.DependentGames != null)
@@ -911,15 +911,10 @@ namespace LANCommander.SDK.Services
             Reader?.Cancel();
         }
 
-        public async Task<GameManifest> ReadManifestAsync(string installDirectory, Guid gameId)
-        {
-            return await ReadManifestAsync(installDirectory, gameId);
-        }
-
         public async Task<IEnumerable<GameManifest>> ReadManifestsAsync(string installDirectory, Guid gameId)
         {
             var manifests = new List<GameManifest>();
-            var mainManifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
             if (mainManifest == null)
                 return manifests;
@@ -932,7 +927,7 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        var dependentGameManifest = await ManifestHelper.ReadAsync(installDirectory, dependentGameId);
+                        var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
 
                         if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
                             manifests.Add(dependentGameManifest);
@@ -975,13 +970,22 @@ namespace LANCommander.SDK.Services
                     var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
 
                     #region Check Game's Player Name
-
                     if (Client.IsConnected())
                     {
                         var alias = await Client.Profile.GetAliasAsync();
-                        
+
                         if (currentGamePlayerAlias != alias)
+                        {
                             await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, alias);
+
+                            if (manifest.Redistributables != null)
+                            {
+                                foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                                {
+                                    await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                }
+                            }
+                        }
                     }
                     #endregion
 
@@ -1014,6 +1018,14 @@ namespace LANCommander.SDK.Services
 
                     #region Run Before Start Script
                     await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, manifest.Id);
+                    
+                    if (manifest.Redistributables != null)
+                    {
+                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        {
+                            await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                        }
+                    }
                     #endregion
                 }
                 #endregion
@@ -1047,7 +1059,17 @@ namespace LANCommander.SDK.Services
                     });
                     #endregion
 
+                    #region Run After Stop Script
                     await Client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId);
+                    
+                    if (manifest.Redistributables != null)
+                    {
+                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        {
+                            await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                        }
+                    }
+                    #endregion
                 }
             }
         }
@@ -1111,7 +1133,7 @@ namespace LANCommander.SDK.Services
         /// <returns>List of file conflicts</returns>
         public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
         {
-            var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/Contents/{gameId}/{manifest.Version}");
 
             var conflictedEntries = new List<ArchiveValidationConflict>();
@@ -1174,7 +1196,7 @@ namespace LANCommander.SDK.Services
 
         public async Task DownloadFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
         {
-            var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/ByVersion/{manifest.Version}");
 
             await Task.Run(() =>

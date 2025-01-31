@@ -43,17 +43,18 @@ namespace LANCommander.SDK.Services
         }
 
         #region Redistributables
-        public async Task<bool> RunDetectInstallScriptAsync(Redistributable redistributable, Game game)
+        public async Task<bool> RunDetectInstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
         {
             bool result = default;
             
-            var gameManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+            var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+            
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.NameChange);
 
             try
             {
-                var detectionScript = redistributable.Scripts.FirstOrDefault(s => s.Type == Enums.ScriptType.DetectInstall);
-
-                if (detectionScript != null)
+                if (File.Exists(path))
                 {
                     using (var op = Logger.BeginOperation("Executing install detection script"))
                     {
@@ -62,10 +63,10 @@ namespace LANCommander.SDK.Services
                         if (Debug)
                             script.OnDebugStart = OnDebugStart;
 
-                        script.AddVariable("InstallDirectory", game.InstallDirectory);
+                        script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
+                        script.AddVariable("RedistributableManifest", redistributableManifest);
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                        script.AddVariable("Redistributable", redistributable);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         
                         if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
@@ -76,25 +77,27 @@ namespace LANCommander.SDK.Services
                             }
                         }
                         
-                        var extractionPath = GameService.GetMetadataDirectoryPath(game.InstallDirectory, redistributable.Id);
+                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Extraction");
 
                         script.UseWorkingDirectory(extractionPath);
-                        script.UseInline(detectionScript.Contents);
 
                         try
                         {
-                            op
-                                .Enrich("InstallDirectory", game.InstallDirectory)
-                                .Enrich("ManifestPath", ManifestHelper.GetPath(game.InstallDirectory, game.Id))
+                            op.Enrich("InstallDirectory", installDirectory)
+                                .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                                .Enrich("RedistributableManifestPath", ManifestHelper.GetPath(installDirectory, redistributableId))
+                                .Enrich("ScriptPath", path)
                                 .Enrich("GameTitle", gameManifest.Title)
                                 .Enrich("GameId", gameManifest.Id)
-                                .Enrich("RedistributableId", redistributable.Id)
-                                .Enrich("RedistributableName", redistributable.Name);
+                                .Enrich("RedistributableName", redistributableManifest.Name)
+                                .Enrich("RedistributableId", redistributableManifest.Id);
                         }
                         catch (Exception ex)
                         {
                             Logger?.LogError(ex, "Could not enrich logs");
                         }
+                        
+                        script.UseFile(path);
 
                         try
                         {
@@ -130,17 +133,18 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunInstallScriptAsync(Redistributable redistributable, Game game)
+        public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
         {
             int result = default;
 
-            var gameManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
+            var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
 
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.BeforeStart);
+            
             try
             {
-                var installScript = redistributable.Scripts.FirstOrDefault(s => s.Type == Enums.ScriptType.Install);
-
-                if (installScript != null)
+                if (Path.Exists(path))
                 {
                     using (var op = Logger.BeginOperation("Executing install detection script"))
                     {
@@ -149,10 +153,10 @@ namespace LANCommander.SDK.Services
                         if (Debug)
                             script.OnDebugStart = OnDebugStart;
 
-                        script.AddVariable("InstallDirectory", game.InstallDirectory);
+                        script.AddVariable("InstallDirectory", installDirectory);
                         script.AddVariable("GameManifest", gameManifest);
+                        script.AddVariable("RedistributableManifest", redistributableManifest);
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
-                        script.AddVariable("Redistributable", redistributable);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         
                         if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
@@ -163,20 +167,22 @@ namespace LANCommander.SDK.Services
                             }
                         }
                         
-                        var extractionPath = GameService.GetMetadataDirectoryPath(game.InstallDirectory, redistributable.Id);
+                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Extract");
 
                         script.UseWorkingDirectory(extractionPath);
-                        script.UseInline(installScript.Contents);
+                        script.UseFile(path);
 
                         try
                         {
                             op
-                                .Enrich("InstallDirectory", game.InstallDirectory)
-                                .Enrich("ManifestPath", ManifestHelper.GetPath(game.InstallDirectory, game.Id))
+                                .Enrich("InstallDirectory", installDirectory)
+                                .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                                .Enrich("RedistributableManifestPath", ManifestHelper.GetPath(installDirectory, redistributableId))
+                                .Enrich("ScriptPath", path)
                                 .Enrich("GameTitle", gameManifest.Title)
                                 .Enrich("GameId", gameManifest.Id)
-                                .Enrich("RedistributableId", redistributable.Id)
-                                .Enrich("RedistributableName", redistributable.Name);
+                                .Enrich("RedistributableName", redistributableManifest.Name)
+                                .Enrich("RedistributableId", redistributableManifest.Id);
                         }
                         catch (Exception ex)
                         {
@@ -216,15 +222,309 @@ namespace LANCommander.SDK.Services
 
             return result;
         }
+        
+        public async Task<int> RunBeforeStartScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+        {
+            int result = default;
+
+            try
+            {
+                var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+                
+                var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.BeforeStart);
+
+                using (var op = Logger.BeginOperation("Executing before start script"))
+                {
+                    if (File.Exists(path))
+                    {
+                        var script = new PowerShellScript(Enums.ScriptType.BeforeStart);
+                        var playerAlias = await GameService.GetPlayerAliasAsync(installDirectory, gameId);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", gameManifest);
+                        script.AddVariable("RedistributableManifest", redistributableManifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.AddVariable("PlayerAlias", playerAlias);
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        script.UseFile(path);
+
+                        try
+                        {
+                            op
+                                .Enrich("InstallDirectory", installDirectory)
+                                .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                                .Enrich("RedistributableManifestPath", ManifestHelper.GetPath(installDirectory, redistributableId))
+                                .Enrich("ScriptPath", path)
+                                .Enrich("PlayerAlias", playerAlias)
+                                .Enrich("GameTitle", gameManifest.Title)
+                                .Enrich("GameId", gameManifest.Id)
+                                .Enrich("RedistributableName", redistributableManifest.Name)
+                                .Enrich("RedistributableId", redistributableManifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            result = await script.ExecuteAsync<int>();
+                    }
+                    else
+                    {
+                        Logger?.LogTrace("No before start script found");
+                    }
+
+                    op.Complete();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Before Start script");
+            }
+
+            return result;
+        }
+
+        public async Task<int> RunAfterStopScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)
+        {
+            int result = default;
+
+            try
+            {
+                var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+                
+                var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.AfterStop);
+
+                using (var op = Logger.BeginOperation("Executing after stop script"))
+                {
+                    if (File.Exists(path))
+                    {
+                        var script = new PowerShellScript(Enums.ScriptType.AfterStop);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", gameManifest);
+                        script.AddVariable("RedistributableManifest", redistributableManifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        script.UseFile(path);
+
+                        try
+                        {
+                            op
+                                .Enrich("InstallDirectory", installDirectory)
+                                .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                                .Enrich("RedistributableManifestPath",
+                                    ManifestHelper.GetPath(installDirectory, redistributableId))
+                                .Enrich("ScriptPath", path)
+                                .Enrich("GameTitle", gameManifest.Title)
+                                .Enrich("GameId", gameManifest.Id)
+                                .Enrich("RedistributableName", redistributableManifest.Name)
+                                .Enrich("RedistributableId", redistributableManifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            result = await script.ExecuteAsync<int>();
+                    }
+                    else
+                    {
+                        Logger?.LogTrace("No after stop script found");
+                    }
+
+                    op.Complete();
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ran into an unexpected error when attempting to run an After Stop script");
+            }
+
+            return result;
+        }
+
+        public async Task<int> RunNameChangeScriptAsync(string installDirectory, Guid gameId, Guid redistributableId, string newName)
+        {
+            int result = default;
+
+            try
+            {
+                var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+                var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
+                
+                var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.NameChange);
+
+                using (var op = Logger.BeginOperation("Executing name change script"))
+                {
+                    if (File.Exists(path))
+                    {
+                        var oldName = await GameService.GetPlayerAliasAsync(installDirectory, gameId);
+
+                        if (oldName == newName)
+                            oldName = string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(oldName))
+                            Logger?.LogTrace("Old Name: {OldName}", oldName);
+
+                        Logger?.LogTrace("New Name: {NewName}", newName);
+
+                        var script = new PowerShellScript(Enums.ScriptType.NameChange);
+
+                        if (Debug)
+                            script.OnDebugStart = OnDebugStart;
+
+                        script.AddVariable("InstallDirectory", installDirectory);
+                        script.AddVariable("GameManifest", gameManifest);
+                        script.AddVariable("RedistributableManifest", redistributableManifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
+                        script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        script.AddVariable("OldPlayerAlias", oldName);
+                        script.AddVariable("NewPlayerAlias", newName);
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+
+                        try
+                        {
+                            op.Enrich("InstallDirectory", installDirectory)
+                              .Enrich("GameManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
+                              .Enrich("RedistributableManifestPath", ManifestHelper.GetPath(installDirectory, redistributableId))
+                              .Enrich("ScriptPath", path)
+                              .Enrich("OldPlayerAlias", oldName)
+                              .Enrich("NewPlayerAlias", newName)
+                              .Enrich("GameTitle", gameManifest.Title)
+                              .Enrich("GameId", gameManifest.Id)
+                              .Enrich("RedistributableName", redistributableManifest.Name)
+                              .Enrich("RedistributableId", redistributableManifest.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not enrich logs");
+                        }
+
+                        script.UseFile(path);
+
+                        try
+                        {
+                            if (Debug)
+                            {
+                                script.EnableDebug();
+                                script.OnDebugBreak = OnDebugBreak;
+                                script.OnOutput = OnOutput;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger?.LogError(ex, "Could not debug script");
+                        }
+
+                        bool handled = false;
+
+                        if (ExternalScriptRunner != null)
+                            handled = await ExternalScriptRunner.Invoke(script);
+
+                        if (!handled)
+                            result = await script.ExecuteAsync<int>();
+                    }
+                    else
+                    {
+                        Logger?.LogTrace("No name change script found");
+                    }
+
+                    op.Complete();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ran into an unexpected error when attempting to run a Name Change script");
+            }
+
+            return result;
+        }
+
         #endregion
 
+        #region Games
         public async Task<int> RunInstallScriptAsync(string installDirectory, Guid gameId)
         {
             int result = default;
 
             try
             {
-                var manifest = ManifestHelper.Read(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Install);
 
                 using (var op = Logger.BeginOperation("Executing install script"))
@@ -308,7 +608,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var manifest = ManifestHelper.Read(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.Uninstall);
 
                 using (var op = Logger.BeginOperation("Executing uninstall script"))
@@ -392,7 +692,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var manifest = ManifestHelper.Read(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.BeforeStart);
 
                 using (var op = Logger.BeginOperation("Executing before start script"))
@@ -479,7 +779,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                var manifest = ManifestHelper.Read(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.AfterStop);
 
                 using (var op = Logger.BeginOperation("Executing after stop script"))
@@ -566,7 +866,7 @@ namespace LANCommander.SDK.Services
             try
             {
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.NameChange);
-                var manifest = ManifestHelper.Read(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
                 using (var op = Logger.BeginOperation("Executing name change script"))
                 {
@@ -666,7 +966,7 @@ namespace LANCommander.SDK.Services
             try
             {
                 var path = ScriptHelper.GetScriptFilePath(installDirectory, gameId, Enums.ScriptType.KeyChange);
-                var manifest = ManifestHelper.Read(installDirectory, gameId);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
                 using (var op = Logger.BeginOperation("Executing key change script"))
                 {
@@ -748,5 +1048,6 @@ namespace LANCommander.SDK.Services
 
             return result;
         }
+        #endregion
     }
 }

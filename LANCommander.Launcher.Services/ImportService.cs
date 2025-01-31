@@ -310,7 +310,7 @@ namespace LANCommander.Launcher.Services
 
                             if (File.Exists(manifestLocation))
                             {
-                                var manifest = ManifestHelper.Read(gameDirectory, game.Id);
+                                var manifest = await ManifestHelper.ReadAsync<SDK.GameManifest>(gameDirectory, game.Id);
 
                                 localGame.Installed = true;
                                 localGame.InstalledOn = DateTime.Now;

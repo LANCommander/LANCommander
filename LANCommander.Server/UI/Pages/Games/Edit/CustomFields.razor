@@ -1,7 +1,7 @@
 ﻿@page "/Games/{id:guid}/CustomFields"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<GameEditView Id="Id" Title="Multiplayer">
+<GameEditView Id="Id" Title="Custom Fields">
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
             <Button Type="ButtonType.Primary" OnClick="CustomFieldEditor.Save">Save</Button>

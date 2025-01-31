@@ -60,7 +60,6 @@
             {
                 Game = await gameService
                     .Include(g => g.Actions)
-                    .Include(g => g.Archives)
                     .GetAsync(GameId);
 
                 Actions = Game.Actions;

@@ -16,6 +16,7 @@
                 <MenuItem RouterLink="@($"/Games/{Id}/SavePaths")">Save Paths</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Id}/Keys")">Keys</MenuItem>
                 <MenuItem RouterLink="@($"/Games/{Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/CustomFields")">Custom Fields</MenuItem>
 
                 if (Game.DependentGames != null && Game.DependentGames.Any(g => g.Type == GameType.Expansion))
                 {

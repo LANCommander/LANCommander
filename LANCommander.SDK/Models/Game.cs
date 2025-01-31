@@ -33,6 +33,7 @@ namespace LANCommander.SDK.Models
         public virtual IEnumerable<Server> Servers { get; set; }
         public virtual IEnumerable<PlaySession> PlaySessions { get; set; }
         public virtual IEnumerable<Guid> DependentGames { get; set; }
+        public virtual IEnumerable<GameCustomField> CustomFields { get; set; }
 
         public bool IsAddon
         {

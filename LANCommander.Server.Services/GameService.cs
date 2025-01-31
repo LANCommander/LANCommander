@@ -102,12 +102,15 @@ namespace LANCommander.Server.Services
         {
             var game = await Query(q =>
             {
-                return q.AsNoTracking()
+                return q
+                    .AsNoTracking()
+                    .AsSplitQuery()
                     .Include(g => g.Actions)
                     .Include(g => g.Archives)
                     .Include(g => g.BaseGame)
                     .Include(g => g.Categories)
                     .Include(g => g.Collections)
+                    .Include(g => g.CustomFields)
                     .Include(g => g.DependentGames)
                     .Include(g => g.Developers)
                     .Include(g => g.Engine)
@@ -226,6 +229,11 @@ namespace LANCommander.Server.Services
             if (game.DependentGames != null && game.DependentGames.Count > 0)
             {
                 manifest.DependentGames = game.DependentGames.Select(g => g.Id);
+            }
+
+            if (game.CustomFields != null && game.CustomFields.Count > 0)
+            {
+                manifest.CustomFields = game.CustomFields.Select(cf => new SDK.Models.GameCustomField(cf.Name, cf.Value)).ToArray();
             }
 
             return manifest;

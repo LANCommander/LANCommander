@@ -196,6 +196,15 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("GameManifest", manifest);
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+
+                        if (manifest.CustomFields != null && manifest.CustomFields.Any())
+                        {
+                            foreach (var customField in manifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
                         script.UseFile(path);
 
                         try
@@ -271,6 +280,15 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("GameManifest", manifest);
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        
+                        if (manifest.CustomFields != null && manifest.CustomFields.Any())
+                        {
+                            foreach (var customField in manifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
                         script.UseFile(path);
 
                         try
@@ -348,14 +366,16 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.AddVariable("PlayerAlias", playerAlias);
+                        
+                        if (manifest.CustomFields != null && manifest.CustomFields.Any())
+                        {
+                            foreach (var customField in manifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
                         script.UseFile(path);
-
-                        op.Enrich("InstallDirectory", installDirectory)
-                          .Enrich("ManifestPath", ManifestHelper.GetPath(installDirectory, gameId))
-                          .Enrich("ScriptPath", path)
-                          .Enrich("PlayerAlias", playerAlias)
-                          .Enrich("GameTitle", manifest.Title)
-                          .Enrich("GameId", manifest.Id);
 
                         try
                         {
@@ -432,6 +452,15 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
+                        
+                        if (manifest.CustomFields != null && manifest.CustomFields.Any())
+                        {
+                            foreach (var customField in manifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
                         script.UseFile(path);
 
                         try
@@ -520,6 +549,14 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.AddVariable("OldPlayerAlias", oldName);
                         script.AddVariable("NewPlayerAlias", newName);
+                        
+                        if (manifest.CustomFields != null && manifest.CustomFields.Any())
+                        {
+                            foreach (var customField in manifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
 
                         try
                         {
@@ -603,6 +640,15 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.AddVariable("AllocatedKey", key);
+                        
+                        if (manifest.CustomFields != null && manifest.CustomFields.Any())
+                        {
+                            foreach (var customField in manifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
                         script.UseFile(path);
 
                         try

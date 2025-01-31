@@ -1,0 +1,78 @@
+﻿@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject IMessageService MessageService
+@inject ILogger<CustomFieldEditor> Logger
+
+<Flex Vertical Gap="FlexGap.Large">
+    <Table TItem="GameCustomField" DataSource="@CustomFields" HidePagination="true" Responsive>
+        <PropertyColumn Property="p => p.Name">
+            <Input @bind-Value="context.Name" />
+        </PropertyColumn>
+        <PropertyColumn Property="p => p.Value">
+            <Input @bind-Value="context.Value" />
+        </PropertyColumn>
+        <ActionColumn>
+            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+                <Popconfirm OnConfirm="() => Remove(context)" Title="Are you sure you want to delete this custom field?">
+                    <Button Type="ButtonType.Text" Danger Icon="@IconType.Outline.Close"/>
+                </Popconfirm>
+            </Flex>
+        </ActionColumn>
+    </Table>
+
+    <GridRow Justify="RowJustify.End">
+        <GridCol>
+            <Button OnClick="Add" Type="@ButtonType.Primary">Add Field</Button>
+        </GridCol>
+    </GridRow>
+</Flex>
+
+@code {
+    [Parameter] public Guid GameId { get; set; }
+    [Parameter] public string GameTitle { get; set; }
+
+    public ICollection<GameCustomField> CustomFields { get; set; } = new List<GameCustomField>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            var game = await gameService
+                .Include(g => g.CustomFields)
+                .GetAsync(GameId);
+
+            CustomFields = game.CustomFields;
+        }
+    }
+
+    async Task Add()
+    {
+        CustomFields.Add(new GameCustomField());
+    }
+
+    async Task Remove(GameCustomField customField)
+    {
+        CustomFields.Remove(customField);
+    }
+
+    public async Task Save()
+    {
+        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        {
+            try
+            {
+                var game = await gameService
+                    .Include(g => g.CustomFields)
+                    .GetAsync(GameId);
+
+                game.CustomFields = CustomFields;
+
+                await gameService.UpdateAsync(game);
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("Could not save custom fields!");
+                Logger?.LogError(ex, "Could not save custom fields!");
+            }
+        }
+    }
+}

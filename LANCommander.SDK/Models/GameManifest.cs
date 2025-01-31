@@ -32,6 +32,7 @@ namespace LANCommander.SDK
         public IEnumerable<Media> Media { get; set; }
         public IEnumerable<Archive> Archives { get; set; }
         public IEnumerable<Guid> DependentGames { get; set; }
+        public IEnumerable<GameCustomField> CustomFields { get; set; }
 
         public GameManifest() { }
     }

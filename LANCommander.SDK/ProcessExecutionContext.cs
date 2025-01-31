@@ -152,6 +152,14 @@ namespace LANCommander.SDK
 
             if (action == null)
                 action = manifest.Actions.FirstOrDefault(a => a.IsPrimaryAction);
+            
+            if (manifest.CustomFields != null && manifest.CustomFields.Any())
+            {
+                foreach (var customField in manifest.CustomFields)
+                {
+                    AddVariable(customField.Name, customField.Value);
+                }
+            }
 
             Process = new Process();
 

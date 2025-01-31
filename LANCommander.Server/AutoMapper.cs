@@ -27,6 +27,7 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Script, SDK.Models.Script>();
             CreateMap<Data.Models.Tag, SDK.Models.Tag>();
             CreateMap<Data.Models.User, SDK.Models.User>();
+            CreateMap<Data.Models.GameCustomField, SDK.Models.GameCustomField>();
 
             CreateMap<Services.Models.Settings, SDK.Models.Settings>()
                 .ForMember(dest =>

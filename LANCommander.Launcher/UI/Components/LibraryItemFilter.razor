@@ -1,5 +1,4 @@
-﻿@implements IDisposable
-@using LANCommander.Launcher.Data.Models
+﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models.Enums
 @using LANCommander.Launcher.Models
 @using System.Collections.ObjectModel
@@ -12,7 +11,7 @@
 <Flex>
     <Input @bind-Value="LibraryService.Filter.SelectedOptions.Title" TValue="string" AllowClear BindOnInput DebounceMilliseconds="100" OnChange="ApplyFilter" />
 
-    <Popover @ref="@Popover" Trigger="@(new AntDesign.Trigger[] { AntDesign.Trigger.Click})" OverlayClassName="library-filter" Placement="@Placement.TopLeft">
+    <Popover @ref="@Popover" Trigger="@(new [] { Trigger.Click})" OverlayClassName="library-filter" Placement="@Placement.TopLeft">
         <ChildContent>
             <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Filter" />
         </ChildContent>
@@ -89,8 +88,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LibraryService.Filter.UpdateFilter();
-        //LibraryService.Filter.Populate();
-        // LibraryService.OnPreLibraryItemsFiltered += PopulateFilter;
 
     }
 
@@ -103,10 +100,5 @@
     {
         await LibraryService.Filter.UpdateFilter();
         await Popover.Close();
-    }
-
-    public void Dispose()
-    {
-        //LibraryService.OnPreLibraryItemsFiltered -= PopulateFilter;
     }
 }

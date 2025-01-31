@@ -277,25 +277,25 @@
 
             switch (queueItem.Status)
             {
-                case SDK.Enums.GameInstallStatus.Downloading:
-                case SDK.Enums.GameInstallStatus.InstallingRedistributables:
-                case SDK.Enums.GameInstallStatus.InstallingMods:
-                case SDK.Enums.GameInstallStatus.InstallingExpansions:
-                case SDK.Enums.GameInstallStatus.RunningScripts:
-                case SDK.Enums.GameInstallStatus.DownloadingSaves:
+                case SDK.Enums.InstallStatus.Downloading:
+                case SDK.Enums.InstallStatus.InstallingRedistributables:
+                case SDK.Enums.InstallStatus.InstallingMods:
+                case SDK.Enums.InstallStatus.InstallingExpansions:
+                case SDK.Enums.InstallStatus.RunningScripts:
+                case SDK.Enums.InstallStatus.DownloadingSaves:
                     SelectedItem.State = ListItemState.Installing;
                     break;
 
-                case SDK.Enums.GameInstallStatus.Queued:
+                case SDK.Enums.InstallStatus.Queued:
                     SelectedItem.State = ListItemState.Queued;
                     break;
 
-                case SDK.Enums.GameInstallStatus.Failed:
-                case SDK.Enums.GameInstallStatus.Canceled:
+                case SDK.Enums.InstallStatus.Failed:
+                case SDK.Enums.InstallStatus.Canceled:
                     SelectedItem.State = ListItemState.NotInstalled;
                     break;
 
-                case SDK.Enums.GameInstallStatus.Complete:
+                case SDK.Enums.InstallStatus.Complete:
                     SelectedItem.State = ListItemState.Installed;
                     break;
             }

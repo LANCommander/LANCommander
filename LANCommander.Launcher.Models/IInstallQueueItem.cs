@@ -20,7 +20,7 @@ namespace LANCommander.Launcher.Models
         DateTime? CompletedOn { get; set; }
         bool IsUpdate { get; set; }
         bool State { get; }
-        GameInstallStatus Status { get; set; }
+        InstallStatus Status { get; set; }
         float Progress { get; set; }
         double TransferSpeed { get; set; }
         long BytesDownloaded { get; set; }

@@ -17,7 +17,7 @@
         <div class="downloader-current-info">
             <div class="downloader-current-upper">
                 <div class="downloader-current-upper-status">
-                    @if (Progress.Status == SDK.Enums.GameInstallStatus.Downloading && Progress.Progress > 0)
+                    @if (Progress.Status == SDK.Enums.InstallStatus.Downloading && Progress.Progress > 0)
                     {
                         <Text>@Progress.Status.GetDisplayName(): @Progress.Progress.ToString("0%")</Text>
                     }
@@ -53,7 +53,7 @@
 
     IInstallQueueItem CurrentQueueItem = null;
 
-    GameInstallProgress Progress = new();
+    InstallProgress Progress = new();
 
     protected override async Task OnInitializedAsync()
     {

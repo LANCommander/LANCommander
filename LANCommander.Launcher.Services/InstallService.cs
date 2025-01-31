@@ -27,7 +27,7 @@ namespace LANCommander.Launcher.Services
 
         public ObservableCollection<IInstallQueueItem> Queue { get; set; }
         
-        public delegate Task OnProgressHandler(GameInstallProgress progress);
+        public delegate Task OnProgressHandler(InstallProgress progress);
 
         public event OnProgressHandler OnProgress;
 
@@ -55,7 +55,7 @@ namespace LANCommander.Launcher.Services
                 OnQueueChanged?.Invoke();
             };
 
-            Client.Games.OnGameInstallProgressUpdate += (e) =>
+            Client.Games.OnInstallProgressUpdate += (e) =>
             {
                 OnProgress?.Invoke(e);
             };
@@ -93,7 +93,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                var gameCompletedQueueItems = Queue.Where(i => i.Status == GameInstallStatus.Complete && i.Id == game.Id).ToList();
+                var gameCompletedQueueItems = Queue.Where(i => i.Status == InstallStatus.Complete && i.Id == game.Id).ToList();
 
                 foreach (var queueItem in gameCompletedQueueItems)
                 {
@@ -107,7 +107,7 @@ namespace LANCommander.Launcher.Services
 
             }
 
-            if (!Queue.Any(i => i.Id == game.Id && i.Status == GameInstallStatus.Queued))
+            if (!Queue.Any(i => i.Id == game.Id && i.Status == InstallStatus.Queued))
             {
                 var queueItem = new InstallQueueGame(gameInfo);
 
@@ -122,7 +122,7 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogTrace("Download queue is empty, starting the game download immediately");
 
-                    queueItem.Status = GameInstallStatus.Starting;
+                    queueItem.Status = InstallStatus.Starting;
 
                     Queue.Add(queueItem);
 
@@ -162,7 +162,7 @@ namespace LANCommander.Launcher.Services
 
         public async Task Next()
         {
-            var currentItem = Queue.FirstOrDefault(i => i.Status.ValueIsIn(GameInstallStatus.Queued, GameInstallStatus.Starting));
+            var currentItem = Queue.FirstOrDefault(i => i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting));
 
             if (currentItem == null)
                 return;
@@ -187,7 +187,7 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogError("Game info could not be retrieved from the server");
 
-                    currentItem.Status = GameInstallStatus.Failed;
+                    currentItem.Status = InstallStatus.Failed;
                     OnQueueChanged?.Invoke();
                     return;
                 }
@@ -219,7 +219,7 @@ namespace LANCommander.Launcher.Services
             {
                 string installDirectory;
 
-                currentItem.Status = GameInstallStatus.Downloading;
+                currentItem.Status = InstallStatus.Downloading;
                 OnQueueChanged?.Invoke();
 
                 try
@@ -281,7 +281,7 @@ namespace LANCommander.Launcher.Services
                 if (currentItem is InstallQueueGame)
                 {
                     currentItem.CompletedOn = DateTime.Now;
-                    currentItem.Status = GameInstallStatus.Complete;
+                    currentItem.Status = InstallStatus.Complete;
                     currentItem.Progress = 1;
                     currentItem.BytesDownloaded = currentItem.TotalBytes;
 
@@ -321,7 +321,7 @@ namespace LANCommander.Launcher.Services
 
                 await GameService.UpdateAsync(localGame);
 
-                currentItem.Status = GameInstallStatus.Complete;
+                currentItem.Status = InstallStatus.Complete;
 
                 OnQueueChanged?.Invoke();
                 OnInstallComplete?.Invoke(localGame);

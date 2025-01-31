@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LANCommander.SDK.Enums
 {
-    public enum GameInstallStatus
+    public enum InstallStatus
     {
         Queued,
         Starting,

@@ -8,6 +8,7 @@ using SharpCompress.Common;
 using SharpCompress.Readers;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -25,6 +26,11 @@ namespace LANCommander.SDK.Services
 
         public delegate void OnArchiveExtractionProgressHandler(long position, long length);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
+        
+        public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
+        public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
+        
+        private InstallProgress _installProgress;
 
         public RedistributableService(Client client)
         {
@@ -53,6 +59,16 @@ namespace LANCommander.SDK.Services
         public async Task InstallAsync(Redistributable redistributable, Game game)
         {
             string extractTempPath = null;
+            
+            _installProgress = new InstallProgress();
+            
+            _installProgress.Status = InstallStatus.Downloading;
+            _installProgress.Progress = 0;
+            _installProgress.TransferSpeed = 0;
+            _installProgress.TotalBytes = 1;
+            _installProgress.BytesDownloaded = 0;
+            
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             try
             {
@@ -132,6 +148,8 @@ namespace LANCommander.SDK.Services
 
         private ExtractionResult DownloadAndExtract(Redistributable redistributable, Game game)
         {
+            var stopwatch = Stopwatch.StartNew();
+            
             if (redistributable == null)
             {
                 Logger?.LogTrace("Redistributable failed to download! No redistributable was specified");
@@ -149,8 +167,20 @@ namespace LANCommander.SDK.Services
                 using (var redistributableStream = Stream(redistributable.Id))
                 using (var reader = ReaderFactory.Open(redistributableStream))
                 {
+                    long lastPosition = 0;
+                    
                     redistributableStream.OnProgress += (pos, len) =>
                     {
+                        var bytesThisInterval = pos - lastPosition;
+
+                        _installProgress.BytesDownloaded = pos;
+                        _installProgress.TotalBytes = len;
+                        _installProgress.TransferSpeed = (long)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
+
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+
+                        lastPosition = pos;
+                        
                         OnArchiveExtractionProgress?.Invoke(pos, len);
                     };
 

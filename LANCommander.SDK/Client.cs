@@ -59,6 +59,9 @@ namespace LANCommander.SDK
         }
 
         public EventHandler<Exception> OnError;
+        
+        public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
+        public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
 
         public Client(string baseUrl, string defaultInstallDirectory)
         {

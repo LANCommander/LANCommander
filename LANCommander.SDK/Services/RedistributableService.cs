@@ -46,17 +46,17 @@ namespace LANCommander.SDK.Services
         {
             foreach (var redistributable in game.Redistributables)
             {
-                await InstallAsync(redistributable);
+                await InstallAsync(redistributable, game);
             }
         }
 
-        public async Task InstallAsync(Redistributable redistributable)
+        public async Task InstallAsync(Redistributable redistributable, Game game)
         {
             string extractTempPath = null;
 
             try
             {
-                var installed = await Client.Scripts.RunDetectInstallScriptAsync(redistributable);
+                var installed = await Client.Scripts.RunDetectInstallScriptAsync(redistributable, game);
 
                 Logger?.LogTrace("Redistributable install detection returned {Result}", installed);
 
@@ -68,7 +68,7 @@ namespace LANCommander.SDK.Services
                     {
                         Logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
 
-                        var extractionResult = DownloadAndExtract(redistributable);
+                        var extractionResult = DownloadAndExtract(redistributable, game);
 
                         if (extractionResult.Success)
                         {
@@ -77,7 +77,7 @@ namespace LANCommander.SDK.Services
                             Logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
                             Logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
-                            await Client.Scripts.RunInstallScriptAsync(redistributable);
+                            await Client.Scripts.RunInstallScriptAsync(redistributable, game);
                         }
                         else
                         {
@@ -88,7 +88,7 @@ namespace LANCommander.SDK.Services
                     {
                         Logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
 
-                        await Client.Scripts.RunInstallScriptAsync(redistributable);
+                        await Client.Scripts.RunInstallScriptAsync(redistributable, game);
                     }
                 }
             }
@@ -103,7 +103,7 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        private ExtractionResult DownloadAndExtract(Redistributable redistributable)
+        private ExtractionResult DownloadAndExtract(Redistributable redistributable, Game game)
         {
             if (redistributable == null)
             {
@@ -111,7 +111,7 @@ namespace LANCommander.SDK.Services
                 throw new ArgumentNullException("No redistributable was specified");
             }
 
-            var destination = Path.Combine(Path.GetTempPath(), redistributable.Name.SanitizeFilename());
+            var destination = GameService.GetMetadataDirectoryPath(game.InstallDirectory, redistributable.Id);
 
             Logger?.LogTrace("Downloading and extracting {Redistributable} to path {Destination}", redistributable.Name, destination);
 

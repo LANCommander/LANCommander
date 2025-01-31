@@ -43,9 +43,11 @@ namespace LANCommander.SDK.Services
         }
 
         #region Redistributables
-        public async Task<bool> RunDetectInstallScriptAsync(Redistributable redistributable)
+        public async Task<bool> RunDetectInstallScriptAsync(Redistributable redistributable, Game game)
         {
             bool result = default;
+            
+            var gameManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
 
             try
             {
@@ -60,14 +62,34 @@ namespace LANCommander.SDK.Services
                         if (Debug)
                             script.OnDebugStart = OnDebugStart;
 
+                        script.AddVariable("InstallDirectory", game.InstallDirectory);
+                        script.AddVariable("GameManifest", gameManifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("Redistributable", redistributable);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        var extractionPath = GameService.GetMetadataDirectoryPath(game.InstallDirectory, redistributable.Id);
+
+                        script.UseWorkingDirectory(extractionPath);
                         script.UseInline(detectionScript.Contents);
 
                         try
                         {
-                            op.Enrich("RedistributableId", redistributable.Id)
-                              .Enrich("RedistributableName", redistributable.Name);
+                            op
+                                .Enrich("InstallDirectory", game.InstallDirectory)
+                                .Enrich("ManifestPath", ManifestHelper.GetPath(game.InstallDirectory, game.Id))
+                                .Enrich("GameTitle", gameManifest.Title)
+                                .Enrich("GameId", gameManifest.Id)
+                                .Enrich("RedistributableId", redistributable.Id)
+                                .Enrich("RedistributableName", redistributable.Name);
                         }
                         catch (Exception ex)
                         {
@@ -108,9 +130,11 @@ namespace LANCommander.SDK.Services
             return result;
         }
 
-        public async Task<int> RunInstallScriptAsync(Redistributable redistributable)
+        public async Task<int> RunInstallScriptAsync(Redistributable redistributable, Game game)
         {
             int result = default;
+
+            var gameManifest = ManifestHelper.Read(game.InstallDirectory, game.Id);
 
             try
             {
@@ -125,14 +149,34 @@ namespace LANCommander.SDK.Services
                         if (Debug)
                             script.OnDebugStart = OnDebugStart;
 
+                        script.AddVariable("InstallDirectory", game.InstallDirectory);
+                        script.AddVariable("GameManifest", gameManifest);
+                        script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("Redistributable", redistributable);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        var extractionPath = GameService.GetMetadataDirectoryPath(game.InstallDirectory, redistributable.Id);
+
+                        script.UseWorkingDirectory(extractionPath);
                         script.UseInline(installScript.Contents);
 
                         try
                         {
-                            op.Enrich("RedistributableId", redistributable.Id)
-                              .Enrich("RedistributableName", redistributable.Name);
+                            op
+                                .Enrich("InstallDirectory", game.InstallDirectory)
+                                .Enrich("ManifestPath", ManifestHelper.GetPath(game.InstallDirectory, game.Id))
+                                .Enrich("GameTitle", gameManifest.Title)
+                                .Enrich("GameId", gameManifest.Id)
+                                .Enrich("RedistributableId", redistributable.Id)
+                                .Enrich("RedistributableName", redistributable.Name);
                         }
                         catch (Exception ex)
                         {

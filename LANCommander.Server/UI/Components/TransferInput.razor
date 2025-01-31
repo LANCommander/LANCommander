@@ -1,10 +1,11 @@
 ﻿@typeparam TItem where TItem : BaseModel
 
-<Transfer DataSource="TransferItems" TargetKeys="TargetKeys" OnChange="OnChange" Titles="new string[] { LeftTitle, RightTitle }" />
+<Transfer Style="@Style" DataSource="TransferItems" TargetKeys="TargetKeys" OnChange="OnChange" Titles="new string[] { LeftTitle, RightTitle }" />
 
 @code {
     [Parameter] public string LeftTitle { get; set; } = "";
     [Parameter] public string RightTitle { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "";
     [Parameter] public Func<TItem, string> TitleSelector { get; set; }
     [Parameter] public IEnumerable<TItem> DataSource { get; set; }
     [Parameter] public ICollection<TItem> Values { get; set; } = new List<TItem>();

@@ -141,6 +141,12 @@ namespace LANCommander.Launcher.Models
                             .FirstOrDefault()?.End ?? DateTime.MinValue,
                         SelectedOptions.SortDirection);
                     break;
+                
+                case Enums.SortBy.MostPlayed:
+                    items = items.OrderBy(i =>
+                        (i.DataItem as Game)?.PlaySessions?.Sum(
+                            ps => ps.End.Value.Subtract(ps.Start.Value).TotalSeconds), SelectedOptions.SortDirection);
+                    break;
             }
 
             switch (SelectedOptions.GroupBy)

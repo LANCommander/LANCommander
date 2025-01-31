@@ -15,6 +15,8 @@ namespace LANCommander.Launcher.Models.Enums
         [Display(Name = "Date Released")]
         DateReleased,
         [Display(Name = "Recent Activity")]
-        RecentActivity
+        RecentActivity,
+        [Display(Name = "Most Played")]
+        MostPlayed
     }
 }

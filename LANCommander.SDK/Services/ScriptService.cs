@@ -572,7 +572,7 @@ namespace LANCommander.SDK.Services
                 {
                     if (File.Exists(path))
                     {
-                        var oldName = GameService.GetPlayerAlias(installDirectory, gameId);
+                        var oldName = await GameService.GetPlayerAliasAsync(installDirectory, gameId);
 
                         if (oldName == newName)
                             oldName = string.Empty;

@@ -11,45 +11,38 @@ using Company = LANCommander.Server.Data.Models.Company;
 
 namespace LANCommander.Server.Services
 {
-    public class IGDBService : BaseService, IDisposable
+    public class IGDBService(
+        ILogger<IGDBService> logger,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        CompanyService companyService,
+        EngineService engineService,
+        GameService gameService,
+        GenreService genreService,
+        TagService tagService) : BaseService(logger), IDisposable
     {
         private const string DefaultFields = "*";
         private IGDBClient Client;
-        private readonly DatabaseContext DatabaseContext;
-        private readonly GameService GameService;
-        private readonly EngineService EngineService;
-        private readonly CompanyService CompanyService;
-        private readonly GenreService GenreService;
-        private readonly TagService TagService;
+        
+        private readonly GameService gameService;
+        private readonly EngineService engineService;
+        private readonly CompanyService companyService;
+        private readonly GenreService genreService;
+        private readonly TagService tagService;
 
         public bool Authenticated = false;
 
         private string ClientId { get; set; }
         private string ClientSecret { get; set; }
 
-        public IGDBService(
-            ILogger<IGDBService> logger,
-            DatabaseContext databaseContext,
-            GameService gameService,
-            EngineService engineService,
-            CompanyService companyService,
-            GenreService genreService,
-            TagService tagService) : base(logger)
+        public override void Initialize()
         {
-            DatabaseContext = databaseContext;
-            GameService = gameService;
-            EngineService = engineService;
-            CompanyService = companyService;
-            GenreService = genreService;
-            TagService = tagService;
-            
             Authenticate();
         }
 
         public void Authenticate()
         {
-            ClientId = Settings.IGDBClientId;
-            ClientSecret = Settings.IGDBClientSecret;
+            ClientId = _settings.IGDBClientId;
+            ClientSecret = _settings.IGDBClientSecret;
 
             try
             {
@@ -132,13 +125,13 @@ namespace LANCommander.Server.Services
                 game.Singleplayer = result.IGDBMetadata.GameModes.Values.Any(gm => gm.Name == "Single player");
             
             if (game.Id == Guid.Empty)
-                game = await GameService.AddAsync(game);
+                game = await gameService.AddAsync(game);
             else
-                game = await GameService.UpdateAsync(game);
+                game = await gameService.UpdateAsync(game);
             
             if (result.IGDBMetadata.ParentGame != null && result.IGDBMetadata.ParentGame.Id.HasValue)
             {
-                var baseGame = await GameService.FirstOrDefaultAsync(g => g.IGDBId == result.IGDBMetadata.ParentGame.Id);
+                var baseGame = await gameService.FirstOrDefaultAsync(g => g.IGDBId == result.IGDBMetadata.ParentGame.Id);
 
                 if (baseGame != null)
                     game.BaseGame = baseGame;
@@ -149,7 +142,7 @@ namespace LANCommander.Server.Services
             {
                 var engineMetadata = result.IGDBMetadata.GameEngines.Values.FirstOrDefault();
 
-                var engine = await EngineService.AddMissingAsync(e => e.Name == engineMetadata.Name,
+                var engine = await engineService.AddMissingAsync(e => e.Name == engineMetadata.Name,
                     new Data.Models.Engine { Name = engineMetadata.Name });
 
                 game.Engine = engine.Value;
@@ -165,22 +158,14 @@ namespace LANCommander.Server.Services
 
                 foreach (var company in companies)
                 {
-                    var companyEntity = await DatabaseContext
-                        .Companies
-                        .FirstOrDefaultAsync(c => c.Name == company);
+                    var companyEntity = await companyService.FirstOrDefaultAsync(c => c.Name == company);
 
                     if (companyEntity == null)
                     {
-                        var entityResult = await DatabaseContext
-                            .Companies
-                            .AddAsync(new Company()
-                            {
-                                Name = company,
-                            });
-                        
-                        companyEntity = entityResult.Entity;
-                        
-                        await DatabaseContext.SaveChangesAsync();
+                        await companyService.AddAsync(new Company()
+                        {
+                            Name = company,
+                        });
                     }
                     
                     if (developers.Contains(company) && !game.Developers.Any(p => p.Id == companyEntity.Id))
@@ -199,7 +184,7 @@ namespace LANCommander.Server.Services
 
                 foreach (var genre in genres)
                 {
-                    var genreEntity = await GenreService.AddMissingAsync(g => g.Name == genre,
+                    var genreEntity = await genreService.AddMissingAsync(g => g.Name == genre,
                         new Data.Models.Genre { Name = genre });
                     
                     if (!game.Genres.Any(g => g.Id == genreEntity.Value.Id))
@@ -215,7 +200,7 @@ namespace LANCommander.Server.Services
                 
                 foreach (var tag in tags)
                 {
-                    var tagEntity = await TagService.AddMissingAsync(t => t.Name == tag, new Data.Models.Tag { Name = tag });
+                    var tagEntity = await tagService.AddMissingAsync(t => t.Name == tag, new Data.Models.Tag { Name = tag });
 
                     if (game.Tags.Any(t => t.Id == tagEntity.Value.Id))
                         game.Tags.Add(tagEntity.Value);
@@ -223,7 +208,7 @@ namespace LANCommander.Server.Services
             }
             #endregion
 
-            return await GameService.UpdateAsync(game);
+            return await gameService.UpdateAsync(game);
         }
 
         public void Dispose()

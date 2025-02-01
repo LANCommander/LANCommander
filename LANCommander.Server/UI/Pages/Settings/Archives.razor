@@ -1,7 +1,5 @@
 ﻿@page "/Settings/Archives"
-@using LANCommander.Server.Models;
-@using Microsoft.EntityFrameworkCore
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<Archives> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -63,11 +61,8 @@
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
-
-        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-        {
-            StorageLocations = await storageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
-        }
+        
+        StorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
     }
 
     async Task Save()
@@ -80,14 +75,11 @@
             {
                 if (!StorageLocations.Any(l => l.Default))
                     storageLocation.Default = true;
-
-                using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-                {
-                    if (storageLocation.Id != Guid.Empty)
-                        await storageLocationService.UpdateAsync(storageLocation);
-                    else
-                        await storageLocationService.AddAsync(storageLocation);
-                }
+                
+                if (storageLocation.Id != Guid.Empty)
+                    await StorageLocationService.UpdateAsync(storageLocation);
+                else
+                    await StorageLocationService.AddAsync(storageLocation);
             }
 
             MessageService.Success("Settings saved!");

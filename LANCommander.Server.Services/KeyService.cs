@@ -1,18 +1,24 @@
-﻿using LANCommander.SDK.Enums;
+﻿using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class KeyService : BaseDatabaseService<Key>
+    public sealed class KeyService(
+        ILogger<KeyService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Key>(logger, cache, mapper, contextFactory)
     {
-        public KeyService(
-            ILogger<KeyService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
-
+        public override Task<Key> UpdateAsync(Key entity)
+        {
+            throw new NotImplementedException();
+        }
+        
         public async Task<Key> AllocateAsync(Key key, User user)
         {
             key.ClaimedByUser = user;

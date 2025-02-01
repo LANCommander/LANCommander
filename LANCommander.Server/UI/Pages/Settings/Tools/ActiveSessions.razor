@@ -1,8 +1,5 @@
 ﻿@page "/Settings/Tools/ActiveSessions"
-@using LANCommander.Server.Models;
-@using LANCommander.Server.UI.Pages.Games.Components;
-@using Microsoft.EntityFrameworkCore
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject PlaySessionService PlaySessionService
 @inject IMessageService MessageService
 @inject ILogger<ActiveSessions> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -47,11 +44,8 @@
     async Task LoadData()
     {
         Loading = true;
-
-        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
-        {
-            PlaySessions = await playSessionService.GetAsync(ps => !ps.End.HasValue);
-        }
+        
+        PlaySessions = await PlaySessionService.GetAsync(ps => !ps.End.HasValue);
 
         Loading = false;
     }
@@ -60,10 +54,7 @@
     {
         try
         {
-            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
-            {
-                await playSessionService.DeleteAsync(playSession);
-            }
+            await PlaySessionService.DeleteAsync(playSession);
 
             await LoadData();
 

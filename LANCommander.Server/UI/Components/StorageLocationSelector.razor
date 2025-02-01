@@ -1,5 +1,5 @@
 @using LANCommander.SDK.Enums
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject StorageLocationService StorageLocationService
 
 <Select
     DataSource="StorageLocations"
@@ -17,10 +17,8 @@
     
     protected override async Task OnInitializedAsync()
     {
-        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-        {
-            StorageLocations = await storageLocationService
-                .DisableTracking()
+            StorageLocations = await StorageLocationService
+                .AsNoTracking()
                 .SortBy(l => l.Path)
                 .GetAsync(l => l.Type == Type);
 
@@ -28,6 +26,5 @@
 
             if (ValueChanged.HasDelegate)
                 await ValueChanged.InvokeAsync(Value);
-        }
     }
 }

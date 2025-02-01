@@ -1,4 +1,4 @@
-﻿@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@inject GameService GameService
 
 <Flex Vertical Gap="FlexGap.Large">
     <Table TItem="SavePath" DataSource="@SavePaths" HidePagination="true" Responsive>
@@ -44,12 +44,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            var game = await gameService.GetAsync(GameId);
+        var game = await GameService.GetAsync(GameId);
 
-            SavePaths = game.SavePaths;
-        }
+        SavePaths = game.SavePaths;
     }
 
     async Task AddPath()
@@ -68,13 +65,10 @@
 
     public async Task Save()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            var game = await gameService.GetAsync(GameId);
+        var game = await GameService.GetAsync(GameId);
 
-            game.SavePaths = SavePaths;
+        game.SavePaths = SavePaths;
 
-            await gameService.UpdateAsync(game);
-        }
+        await GameService.UpdateAsync(game);
     }
 }

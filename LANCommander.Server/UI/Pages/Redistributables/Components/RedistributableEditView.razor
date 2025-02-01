@@ -1,6 +1,5 @@
-﻿@using Microsoft.EntityFrameworkCore
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
+﻿@inject NavigationManager NavigationManager
+@inject RedistributableService RedistributableService
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">
@@ -55,24 +54,26 @@
         if (_id != Id)
         {
             _id = Id;
-            
-            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
-            {
-                if (_id != Guid.Empty)
-                    Redistributable = await redistributableService
-                        .Query(query =>
-                        {
-                            return query
-                                .Include(g => g.CreatedBy)
-                                .Include(g => g.UpdatedBy);
-                        })
-                        .GetAsync(_id);
-                else
-                    Redistributable = new();
-            }
+
+            if (_id != Guid.Empty)
+                Redistributable = await RedistributableService
+                    .Include(r => r.Games)
+                    .Include(r => r.CreatedBy)
+                    .Include(r => r.UpdatedBy)
+                    .GetAsync(_id);
+            else
+                Redistributable = new();
 
             if (Redistributable == null)
                 NavigationManager.NavigateTo("/Redistributables");
         }
+    }
+
+    public async Task Save()
+    {
+        if (_id != Guid.Empty)
+            await RedistributableService.UpdateAsync(Redistributable);
+        else
+            await RedistributableService.AddAsync(Redistributable);
     }
 }

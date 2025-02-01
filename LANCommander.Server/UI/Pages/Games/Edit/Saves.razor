@@ -2,7 +2,7 @@
 @using SortDirection = AntDesign.SortDirection
 @inherits OwningComponentBase
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject GameSaveService GameSaveService
 @inject IMessageService MessageService
 @inject ILogger<Saves> Logger
 
@@ -36,10 +36,7 @@
     {
         try
         {
-            using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
-            {
-                await gameSaveService.DeleteAsync(gameSave);
-            }
+            await GameSaveService.DeleteAsync(gameSave);
         }
         catch (Exception ex)
         {

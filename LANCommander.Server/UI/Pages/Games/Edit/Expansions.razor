@@ -1,6 +1,6 @@
 ﻿@page "/Games/{id:guid}/Expansions"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject GameService GameService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Expansions> Logger
@@ -34,10 +34,7 @@
     {
         try
         {
-            using (var gameService = DatabaseServiceFactory.Create<GameService>())
-            {
-                await gameService.DeleteAsync(game);
-            }
+            await GameService.DeleteAsync(game);
         }
         catch (Exception ex)
         {

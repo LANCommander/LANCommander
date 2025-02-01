@@ -1,5 +1,5 @@
 @using Microsoft.EntityFrameworkCore
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ServerService ServerService
 @inject NavigationManager NavigationManager
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
@@ -60,25 +60,22 @@
         if (_id != Id)
         {
             _id = Id;
-
-            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-            {
-                if (_id != Guid.Empty)
-                    Server = await serverService
-                        .Query(query =>
-                        {
-                            return query
-                                .Include(s => s.Actions)
-                                .Include(s => s.Game)
-                                .ThenInclude(g => g.Archives)
-                                .Include(s => s.HttpPaths)
-                                .Include(s => s.Scripts)
-                                .Include(s => s.ServerConsoles);
-                        })
-                        .GetAsync(_id);
-                else
-                    Server = new Server();
-            }
+            
+            if (_id != Guid.Empty)
+                Server = await ServerService
+                    .Query(query =>
+                    {
+                        return query
+                            .Include(s => s.Actions)
+                            .Include(s => s.Game)
+                            .ThenInclude(g => g.Archives)
+                            .Include(s => s.HttpPaths)
+                            .Include(s => s.Scripts)
+                            .Include(s => s.ServerConsoles);
+                    })
+                    .GetAsync(_id);
+            else
+                Server = new Server();
             
             if (Server == null)
                 NavigationManager.NavigateTo("/Servers");

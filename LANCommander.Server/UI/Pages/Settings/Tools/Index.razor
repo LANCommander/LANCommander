@@ -1,7 +1,7 @@
 ﻿@page "/Settings/Tools"
-@using LANCommander.Server.Models;
 @using ZiggyCreatures.Caching.Fusion
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ArchiveService ArchiveService
+@inject PageService PageService
 @inject UpdateService UpdateService
 @inject IMessageService MessageService
 @inject IFusionCache FusionCache
@@ -68,29 +68,26 @@
         
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
+        
+        var archives = await ArchiveService.AsNoTracking().GetAsync();
 
-        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        foreach (var archive in archives)
         {
-            var archives = await archiveService.AsNoTracking().GetAsync();
-
-            foreach (var archive in archives)
+            try
             {
-                try
-                {
-                    var path = await archiveService.GetArchiveFileLocationAsync(archive);
+                var path = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
-                    if (File.Exists(path))
-                    {
-                        archive.CompressedSize = await archiveService.GetCompressedSizeAsync(archive);
-                        archive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(archive);
-
-                        await archiveService.UpdateAsync(archive);
-                    }
-                }
-                catch (Exception ex)
+                if (File.Exists(path))
                 {
-                    Logger?.LogError(ex, "Could not recalculate file size for archive {ArchiveId}", archive.Id);
+                    archive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(archive);
+                    archive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(archive);
+
+                    await ArchiveService.UpdateAsync(archive);
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not recalculate file size for archive {ArchiveId}", archive.Id);
             }
         }
 
@@ -140,10 +137,7 @@
 
         try
         {
-            using (var pageService = DatabaseServiceFactory.Create<PageService>())
-            {
-                await pageService.FixRoutesAsync();
-            }
+            await PageService.FixRoutesAsync();
 
             MessageService.Success("Routes fixed!");
         }

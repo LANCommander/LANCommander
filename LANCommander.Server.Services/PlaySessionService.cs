@@ -1,7 +1,6 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
-using LANCommander.Helpers;
-using LANCommander.Server.Models;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
@@ -9,20 +8,17 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class PlaySessionService : BaseDatabaseService<PlaySession>
+    public sealed class PlaySessionService(
+        ILogger<PlaySessionService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        ServerProcessService serverProcessService,
+        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, cache, mapper, contextFactory)
     {
-        private ServerService ServerService { get; set; }
-        private ServerProcessService ServerProcessService;
-
-        public PlaySessionService(
-            ILogger<PlaySessionService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            ServerService serverService,
-            ServerProcessService serverProcessService) : base(logger, cache, repositoryFactory)
+        public override Task<PlaySession> UpdateAsync(PlaySession entity)
         {
-            ServerService = serverService;
-            ServerProcessService = serverProcessService;
+            throw new NotImplementedException();
         }
 
         public async Task StartSessionAsync(Guid gameId, Guid userId)
@@ -41,11 +37,11 @@ namespace LANCommander.Server.Services
 
             await AddAsync(session);
 
-            var servers = await ServerService.GetAsync(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+            var servers = await serverService.GetAsync(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
 
             foreach (var server in servers)
             {
-                ServerProcessService.StartServerAsync(server.Id);
+                serverProcessService.StartServerAsync(server.Id);
             }
         }
 
@@ -64,11 +60,11 @@ namespace LANCommander.Server.Services
 
             if (!activeSessions)
             {
-                var servers = await ServerService.GetAsync(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+                var servers = await serverService.GetAsync(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
 
                 foreach (var server in servers)
                 {
-                    ServerProcessService.StopServerAsync(server.Id);
+                    serverProcessService.StopServerAsync(server.Id);
                 }
             }
         }

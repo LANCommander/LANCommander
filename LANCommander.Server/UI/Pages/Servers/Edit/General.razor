@@ -5,7 +5,8 @@
 @using System.Runtime.InteropServices
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ServerService ServerService
+@inject GameService GameService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
@@ -132,32 +133,26 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            Games = await gameService.Include(g => g.Media).GetAsync();
-        }
+        Games = await GameService.Include(g => g.Media).GetAsync();
     }
     
     async Task Save(Server server)
     {
         try
         {
-            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
+            if (server.Id != Guid.Empty)
             {
-                if (server.Id != Guid.Empty)
-                {
-                    server = await serverService.UpdateAsync(server);
+                server = await ServerService.UpdateAsync(server);
 
-                    await MessageService.Success("Server updated!");
-                }
-                else
-                {
-                    server = await serverService.AddAsync(server);
+                await MessageService.Success("Server updated!");
+            }
+            else
+            {
+                server = await ServerService.AddAsync(server);
 
-                    NavigationManager.LocationChanged += NotifyServerAdded;
+                NavigationManager.LocationChanged += NotifyServerAdded;
 
-                    NavigationManager.NavigateTo($"/Servers/{server.Id}");
-                }
+                NavigationManager.NavigateTo($"/Servers/{server.Id}");
             }
         }
         catch (Exception ex)

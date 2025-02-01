@@ -1,4 +1,4 @@
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ServerService ServerService
 
 <AntDesign.InputNumber Value="Value" ValueChanged="(val) => ValueChanged.InvokeAsync(val)" TValue="int" OnChange="OnPortNumberChanged" Min="0" Max="65535"/>
 
@@ -18,13 +18,10 @@
     {
         if (value > 0)
         {
-            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-            {
-                PortInUse = await serverService.ExistsAsync(s => s.Port == value && s.Id != ServerId);
+            PortInUse = await ServerService.ExistsAsync(s => s.Port == value && s.Id != ServerId);
 
-                if (PortInUseChanged.HasDelegate)
-                    await PortInUseChanged.InvokeAsync(PortInUse);
-            }
+            if (PortInUseChanged.HasDelegate)
+                await PortInUseChanged.InvokeAsync(PortInUse);
         }
     }
 }

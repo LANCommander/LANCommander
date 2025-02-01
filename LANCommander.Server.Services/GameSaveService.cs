@@ -1,26 +1,32 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Server.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class GameSaveService : BaseDatabaseService<GameSave>
+    public sealed class GameSaveService(
+        ILogger<GameSaveService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameSave>(logger, cache, mapper, contextFactory)
     {
-        public GameSaveService(
-            ILogger<GameSaveService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
-
+        public override Task<GameSave> UpdateAsync(GameSave entity)
+        {
+            throw new NotImplementedException();
+        }
+        
         public override async Task DeleteAsync(GameSave entity)
         {
             FileHelpers.DeleteIfExists(await GetSavePathAsync(entity.Id));
 
             await base.DeleteAsync(entity);
         }
-
+        
         public async Task<string> GetSavePathAsync(Guid gameId, Guid userId)
         {
             var save = await SortBy(gs => gs.CreatedOn, Data.Enums.SortDirection.Descending).FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == userId);

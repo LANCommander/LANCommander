@@ -1,4 +1,4 @@
-﻿@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@inject GameService GameService
 @inject IMessageService MessageService
 @inject ILogger<CustomFieldEditor> Logger
 
@@ -34,14 +34,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            var game = await gameService
-                .Include(g => g.CustomFields)
-                .GetAsync(GameId);
+        var game = await GameService
+            .Include(g => g.CustomFields)
+            .GetAsync(GameId);
 
-            CustomFields = game.CustomFields;
-        }
+        CustomFields = game.CustomFields;
     }
 
     async Task Add()
@@ -56,25 +53,22 @@
 
     public async Task Save()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        try
         {
-            try
-            {
-                var game = await gameService
-                    .Include(g => g.CustomFields)
-                    .GetAsync(GameId);
+            var game = await GameService
+                .Include(g => g.CustomFields)
+                .GetAsync(GameId);
 
-                game.CustomFields = CustomFields;
+            game.CustomFields = CustomFields;
 
-                await gameService.UpdateAsync(game);
+            await GameService.UpdateAsync(game);
 
-                MessageService.Success("Custom fields updated!");
-            }
-            catch (Exception ex)
-            {
-                MessageService.Error("Could not save custom fields!");
-                Logger?.LogError(ex, "Could not save custom fields!");
-            }
+            MessageService.Success("Custom fields updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save custom fields!");
+            Logger?.LogError(ex, "Could not save custom fields!");
         }
     }
 }

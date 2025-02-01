@@ -1,10 +1,6 @@
 ﻿@page "/Metadata/Tags"
-@using Microsoft.EntityFrameworkCore;
-@using LANCommander.Server.Data
-@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
+@inject TagService TagService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -48,7 +44,7 @@
  @code {
     bool Loading = true;
 
-    bool EditTagVisible = false;
+    bool EditTagVisible;
     Data.Models.Tag TagContext = new();
 
     protected override async Task OnInitializedAsync()
@@ -60,20 +56,17 @@
     {
         try
         {
-            using (var tagService = DatabaseServiceFactory.Create<TagService>())
+            if (TagContext.Id == Guid.Empty)
             {
-                if (TagContext.Id == Guid.Empty)
-                {
-                    await tagService.AddMissingAsync(x => x.Name == TagContext.Name, TagContext);
+                await TagService.AddMissingAsync(x => x.Name == TagContext.Name, TagContext);
 
-                    MessageService.Success($"{TagContext.Name} was added!");
-                }
-                else
-                {
-                    await tagService.UpdateAsync(TagContext);
+                MessageService.Success($"{TagContext.Name} was added!");
+            }
+            else
+            {
+                await TagService.UpdateAsync(TagContext);
 
-                    MessageService.Success($"{TagContext.Name} was updated!");
-                }
+                MessageService.Success($"{TagContext.Name} was updated!");
             }
         }
         catch (Exception ex)
@@ -109,12 +102,15 @@
     async Task Delete(Data.Models.Tag Tag)
     {
         Loading = true;
-
-        using (var tagService = DatabaseServiceFactory.Create<TagService>())
-        {
-            await tagService.DeleteAsync(Tag);
-        }
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
+        await TagService.DeleteAsync(Tag);
 
         Loading = false;
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
 }

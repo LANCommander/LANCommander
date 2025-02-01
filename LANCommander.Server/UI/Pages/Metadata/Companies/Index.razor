@@ -1,9 +1,6 @@
 ﻿@page "/Metadata/Companies"
-@using LANCommander.Server.Data
-@using Microsoft.EntityFrameworkCore;
-@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject CompanyService CompanyService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -53,23 +50,18 @@
     {
         try
         {
-            using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
+            if (CompanyContext.Id == Guid.Empty)
             {
-                if (CompanyContext.Id == Guid.Empty)
-                {
-                    await companyService.AddMissingAsync(x => x.Name == CompanyContext.Name, CompanyContext);
+                await CompanyService.AddMissingAsync(x => x.Name == CompanyContext.Name, CompanyContext);
 
-                    MessageService.Success($"{CompanyContext.Name} was added!");
-                }
-                else
-                {
-                    await companyService.UpdateAsync(CompanyContext);
-
-                    MessageService.Success($"{CompanyContext.Name} was updated!");
-                }
+                MessageService.Success($"{CompanyContext.Name} was added!");
             }
+            else
+            {
+                await CompanyService.UpdateAsync(CompanyContext);
 
-            // await LoadData();
+                MessageService.Success($"{CompanyContext.Name} was updated!");
+            }
         }
         catch (Exception ex)
         {
@@ -103,9 +95,6 @@
 
     async Task Delete(Company Company)
     {
-        using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
-        {
-            await companyService.DeleteAsync(Company);
-        }
+        await CompanyService.DeleteAsync(Company);
     }
 }

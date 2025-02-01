@@ -6,15 +6,8 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using System;
-using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using LANCommander.Server.Services.Exceptions;
 
@@ -110,7 +103,7 @@ namespace LANCommander.Server.Services
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Could not get user collections");
+                _logger.LogError(ex, "Could not get user collections");
                 return new List<Collection>();
             }
         }
@@ -434,7 +427,7 @@ namespace LANCommander.Server.Services
             throw new NotImplementedException();
         }
 
-        public IBaseDatabaseService<User> DisableTracking()
+        public IBaseDatabaseService<User> AsNoTracking()
         {
             throw new NotImplementedException();
         }

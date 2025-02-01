@@ -1,8 +1,6 @@
 ﻿@page "/Games/{id:guid}/Actions"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject IMessageService MessageService
-@inject ILogger<Actions> Logger
+@inject ArchiveService ArchiveService
 
 <GameEditView Id="Id" Title="Actions">
     <TitleExtraTemplate>
@@ -27,12 +25,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-        {
-            var latestArchive = await archiveService.AsNoTracking().SortBy(a => a.CreatedOn).FirstOrDefaultAsync(a => a.GameId == Id);
+        var latestArchive = await ArchiveService.GetLatestArchive(a => a.GameId == Id);
 
-            if (latestArchive != null)
-                ArchiveId = latestArchive.Id;
-        }
+        if (latestArchive != null)
+            ArchiveId = latestArchive.Id;
     }
 }

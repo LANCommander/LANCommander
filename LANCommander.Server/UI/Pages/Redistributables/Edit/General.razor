@@ -3,13 +3,14 @@
 @page "/Redistributables/Add"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Redistributables.Components
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<General> Logger
+@inject GameService GameService
 
-<RedistributableEditView Id="Id">
+<RedistributableEditView @ref="EditView" Id="Id">
     <TitleTemplate>
         @if (Id == Guid.Empty)
         {
@@ -41,7 +42,7 @@
                 </Dropdown>
             }
 
-            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
+            <Button Type="ButtonType.Primary" OnClick="EditView.Save">Save</Button>
         </Flex>
     </TitleExtraTemplate>
     <ChildContent Context="redistributable">
@@ -59,7 +60,7 @@
             </FormItem>
 
             <FormItem Label="Games">
-                <TransferInput Style="height: 350px" LeftTitle="Available" RightTitle="Selected" DataSource="Games" TitleSelector="r => r.Title" @bind-Values="Redistributable.Games" />
+                <TransferInput Style="height: 350px" LeftTitle="Available" RightTitle="Selected" DataSource="Games" TitleSelector="r => r.Title" @bind-Values="context.Games" />
             </FormItem>
         </Form>
     </ChildContent>
@@ -67,67 +68,16 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-
-    Redistributable Redistributable = new();
-
+    
     ICollection<Game> Games;
+    RedistributableEditView EditView;
 
     protected override async Task OnInitializedAsync()
     {
-        if (Id != Guid.Empty)
-        {
-            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
-            {
-                Redistributable = await redistributableService
-                    .Include(r => r.Archives)
-                    .Include(r => r.Games)
-                    .Include(r => r.Scripts)
-                    .GetAsync(Id);
-            }            
-        }
-
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            Games = await gameService
-                .Include(g => g.Media)
-                .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
-                .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
-        }
-    }
-
-    async Task Save(Redistributable redistributable)
-    {
-        try
-        {
-            using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
-            {
-                if (Redistributable.Id != Guid.Empty)
-                {
-                    Redistributable = await redistributableService.UpdateAsync(redistributable);
-
-                    await MessageService.Success("Redistributable updated!");
-                }
-                else
-                {
-                    Redistributable = await redistributableService.AddAsync(redistributable);
-
-                    NavigationManager.LocationChanged += NotifyRedistributableAdded;
-
-                    NavigationManager.NavigateTo($"/Redistributables/{redistributable.Id}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not save!");
-            Logger.LogError(ex, "Could not save!");
-        }
-    }
-
-    void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
-    {
-        NavigationManager.LocationChanged -= NotifyRedistributableAdded;
-
-        MessageService.Success("Redistributable added!");
+        Games = await GameService
+            .AsNoTracking()
+            .Include(g => g.Media)
+            .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+            .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
     }
 }

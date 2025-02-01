@@ -1,9 +1,4 @@
-﻿@using System.Net;
-@using System.Diagnostics;
-@using Hangfire;
-@using LANCommander.Server.Jobs.Background;
-@using Microsoft.EntityFrameworkCore;
-@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@inject RedistributableService RedistributableService
 @inject NavigationManager Navigator
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -73,19 +68,16 @@
         {
             try
             {
-                using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
-                {
-                    var redistributable = await redistributableService.ImportAsync(objectKey);
+                var redistributable = await RedistributableService.ImportAsync(objectKey);
 
-                    Visible = false;
+                Visible = false;
 
-                    await InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
 
-                    if (OnRedistributableImported.HasDelegate)
-                        await OnRedistributableImported.InvokeAsync(redistributable.Id);
+                if (OnRedistributableImported.HasDelegate)
+                    await OnRedistributableImported.InvokeAsync(redistributable.Id);
 
-                    MessageService.Success($"{redistributable.Name} successfully imported!");
-                }
+                MessageService.Success($"{redistributable.Name} successfully imported!");
             }
             catch (Exception ex)
             {

@@ -1,8 +1,7 @@
 ﻿@page "/Settings/Roles/{id:guid}"
-@using LANCommander.Server.Models;
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject RoleService RoleService
+@inject CollectionService CollectionService
 @inject IMessageService MessageService
-@inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -37,28 +36,19 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
-        {
-            Role = await roleService.DisableTracking().Include(r => r.Collections).GetAsync(Id);
+        Role = await RoleService.AsNoTracking().Include(r => r.Collections).GetAsync(Id);
 
-            SelectedCollections = Role.Collections;
-        }
-
-        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-        {
-            Collections = await collectionService.GetAsync();
-        }
+        SelectedCollections = Role.Collections;
+        
+        Collections = await CollectionService.GetAsync();
     }
 
     async Task Save()
     {
         try
         {
-            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
-            {
-                await roleService.UpdateAsync(Role);
-                await roleService.AssignCollections(Id, SelectedCollections.Select(c => c.Id));
-            }
+            await RoleService.UpdateAsync(Role);
+            await RoleService.AssignCollections(Id, SelectedCollections.Select(c => c.Id));
 
             MessageService.Success("Role updated!");
         }

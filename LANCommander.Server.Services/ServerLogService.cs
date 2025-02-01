@@ -5,17 +5,23 @@ using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class ServerConsoleService : BaseDatabaseService<ServerConsole>
+    public sealed class ServerConsoleService(
+        ILogger<ServerConsoleService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerConsole>(logger, cache, mapper, contextFactory)
     {
-        public ServerConsoleService(
-            ILogger<ServerConsoleService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
-
+        public override Task<ServerConsole> UpdateAsync(ServerConsole entity)
+        {
+            throw new NotImplementedException();
+        }
+        
         public async Task<string[]> ReadLogAsync(Guid logId)
         {
             var log = await GetAsync(logId);

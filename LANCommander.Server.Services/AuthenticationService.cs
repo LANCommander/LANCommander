@@ -1,16 +1,8 @@
-﻿using JetBrains.Annotations;
-using LANCommander.Server.Models;
-using LANCommander.Server.Services.Models;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
+﻿using Microsoft.Extensions.Logging;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using LANCommander.SDK.Models;
 using Microsoft.IdentityModel.Tokens;
 using YamlDotNet.Serialization.NamingConventions;
@@ -18,20 +10,11 @@ using YamlDotNet.Serialization;
 
 namespace LANCommander.Server.Services
 {
-    public class AuthenticationService : BaseService
+    public class AuthenticationService(ILogger<AuthenticationService> logger, UserService userService) : BaseService(logger)
     {
-        private readonly UserService UserService;
-        
-        public AuthenticationService(
-            UserService userService,
-            ILogger<AuthenticationService> logger) : base(logger)
-        {
-            UserService = userService;
-        }
-
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
-            if (!String.IsNullOrWhiteSpace(userName) && await UserService.CheckPassword(userName, password))
+            if (!String.IsNullOrWhiteSpace(userName) && await userService.CheckPassword(userName, password))
             {
                 return await LoginAsync(userName);
             }
@@ -41,17 +24,17 @@ namespace LANCommander.Server.Services
 
         public async Task<AuthToken> LoginAsync(string userName)
         {
-            var user = await UserService.GetAsync(userName);
+            var user = await userService.GetAsync(userName);
             
             if (user == null)
                 throw new Exception("Invalid username or password");
                 
-            Logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
+            _logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
-            if (Settings.Authentication.RequireApproval && !user.Approved && !await UserService.IsInRoleAsync(user.UserName, RoleService.AdministratorRoleName))
+            if (_settings.Authentication.RequireApproval && !user.Approved && !await userService.IsInRoleAsync(user.UserName, RoleService.AdministratorRoleName))
                 throw new Exception("Account must be approved by an administrator");
                 
-            var userRoles = await UserService.GetRolesAsync(user.UserName);
+            var userRoles = await userService.GetRolesAsync(user.UserName);
 
             var authClaims = new List<Claim>
             {
@@ -65,15 +48,15 @@ namespace LANCommander.Server.Services
                 authClaims.Add(new Claim(ClaimTypes.Role, userRole.Name));
             }
                 
-            Logger?.LogDebug("Generating authentication token for user {UserName}", user.UserName);
+            _logger?.LogDebug("Generating authentication token for user {UserName}", user.UserName);
                 
             var token = GetToken(authClaims);
             var refreshToken = GenerateRefreshToken();
                 
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(Settings.Authentication.TokenLifetime);
+            user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(_settings.Authentication.TokenLifetime);
                 
-            await UserService.UpdateAsync(user);
+            await userService.UpdateAsync(user);
 
             return new AuthToken
             {
@@ -87,7 +70,7 @@ namespace LANCommander.Server.Services
         {
             if (token == null)
             {
-                Logger?.LogDebug("Refresh token is null");
+                _logger?.LogDebug("Refresh token is null");
                 
                 throw new Exception("Invalid refresh token");
             }
@@ -96,16 +79,16 @@ namespace LANCommander.Server.Services
 
             if (principal == null)
             {
-                Logger?.LogDebug("Invalid access token or refresh token");
+                _logger?.LogDebug("Invalid access token or refresh token");
                 throw new Exception("Invalid access token or refresh token");
             }
             
-            var user = await UserService.GetAsync(principal.Identity.Name);
+            var user = await userService.GetAsync(principal.Identity.Name);
 
             if (user == null || user.RefreshToken != token.RefreshToken ||
                 user.RefreshTokenExpiration <= DateTime.UtcNow)
             {
-                Logger?.LogDebug("Refresh token expired");
+                _logger?.LogDebug("Refresh token expired");
                 throw new Exception("Invalid refresh token");
             }
             
@@ -114,9 +97,9 @@ namespace LANCommander.Server.Services
             
             user.RefreshToken = newRefreshToken;
             
-            await UserService.UpdateAsync(user);
+            await userService.UpdateAsync(user);
             
-            Logger?.LogDebug("Refresh token updated for user {UserName}", user.UserName);
+            _logger?.LogDebug("Refresh token updated for user {UserName}", user.UserName);
 
             return new AuthToken
             {
@@ -133,7 +116,7 @@ namespace LANCommander.Server.Services
                 ValidateAudience = false,
                 ValidateIssuer = false,
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.Authentication.TokenSecret)),
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Authentication.TokenSecret)),
                 ValidateLifetime = false
             };
 
@@ -159,10 +142,10 @@ namespace LANCommander.Server.Services
         
         private JwtSecurityToken GetToken(List<Claim> authClaims)
         {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Settings.Authentication.TokenSecret));
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Authentication.TokenSecret));
 
             var token = new JwtSecurityToken(
-                expires: DateTime.UtcNow.AddDays(Settings.Authentication.TokenLifetime),
+                expires: DateTime.UtcNow.AddDays(_settings.Authentication.TokenLifetime),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
             );

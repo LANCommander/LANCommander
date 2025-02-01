@@ -1,10 +1,8 @@
 ﻿@page "/Settings/Users/{username}"
 @using Microsoft.AspNetCore.Components.Authorization;
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject UserService UserService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
 @inject ILogger<Index> Logger
 @attribute [Authorize]
 
@@ -89,10 +87,7 @@
 
         if (authState.User.Identity.IsAuthenticated)
         {
-            using (var userService = DatabaseServiceFactory.Create<UserService>())
-            {
-                User = await userService.GetAsync(Username);
-            }
+            User = await UserService.GetAsync(Username);
 
             if (User.CustomFields == null)
                 User.CustomFields = new List<UserCustomField>();
@@ -119,10 +114,7 @@
         {
             if (Form.IsModified || FieldsModified)
             {
-                using (var userService = DatabaseServiceFactory.Create<UserService>())
-                {
-                    await userService.UpdateAsync(User);
-                }
+                await UserService.UpdateAsync(User);
 
                 MessageService.Success("User updated!");
             }

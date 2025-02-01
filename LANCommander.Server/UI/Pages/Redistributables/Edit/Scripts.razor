@@ -2,7 +2,7 @@
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Redistributables.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject RedistributableService RedistributableService
 @inject NavigationManager NavigationManager
 
 <RedistributableEditView Id="Id">
@@ -28,14 +28,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
-        {
-            if (Id == Guid.Empty)
-                NavigationManager.NavigateTo($"/Redistributables", true);
-            else
-                Redistributable = await redistributableService
-                    .Include(r => r.Archives)
-                    .GetAsync(Id);
-        }
+        if (Id == Guid.Empty)
+            NavigationManager.NavigateTo($"/Redistributables", true);
+        else
+            Redistributable = await RedistributableService
+                .Include(r => r.Archives)
+                .Include(r => r.Scripts)
+                .GetAsync(Id);
     }
 }

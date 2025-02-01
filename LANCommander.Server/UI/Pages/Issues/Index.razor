@@ -1,9 +1,6 @@
 ﻿@page "/Issues"
-@using LANCommander.Server.Data
-@using Microsoft.EntityFrameworkCore;
-@using SortDirection = LANCommander.Server.Data.Enums.SortDirection
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject IssueService IssueService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -48,8 +45,6 @@
 </DataTable>
 
  @code {
-    IssueService IssueService;
-
     DataTable<Issue> Table;
 
     void Add()
@@ -59,21 +54,18 @@
 
     async Task Delete(Issue issue)
     {
-        using (var issueService = DatabaseServiceFactory.Create<IssueService>())
+        try
         {
-            try
-            {
-                await issueService.DeleteAsync(issue);
+            await IssueService.DeleteAsync(issue);
 
-                MessageService.Success("Issue was successfully deleted!");
-                
-                Table.ReloadData();
-            }
-            catch (Exception ex)
-            {
-                MessageService.Error("Could not delete issue!");
-                Logger.LogError(ex, "Could not delete issue!");
-            }
+            MessageService.Success("Issue was successfully deleted!");
+            
+            Table.ReloadData();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete issue!");
+            Logger.LogError(ex, "Could not delete issue!");
         }
     }
 }

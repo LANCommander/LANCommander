@@ -3,7 +3,7 @@
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ArchiveService archiveService
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ModalService ModalService
@@ -97,10 +97,7 @@
     {
         try
         {
-            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-            {
-                await archiveService.UpdateAsync(archive);
-            }
+            await archiveService.UpdateAsync(archive);
 
             MessageService.Success("Archive updated!");
         }
@@ -115,10 +112,7 @@
     {
         try
         {
-            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-            {
-                await archiveService.DeleteAsync(archive);
-            }
+            await archiveService.DeleteAsync(archive);
 
             Table.Reload();
 

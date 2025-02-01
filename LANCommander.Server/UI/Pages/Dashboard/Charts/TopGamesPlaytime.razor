@@ -1,6 +1,5 @@
 ﻿@using AntDesign.Charts
-@using ByteSizeLib
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject PlaySessionService PlaySessionService
 
 <Spin Spinning="Loading">
     <div class="dashboard-chart">
@@ -42,15 +41,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
-        {
-            PlaySessions = await playSessionService
-                .DisableTracking()
-                .Include(ps => ps.Game)
-                .Include(ps => ps.CreatedBy)
-                .Include(ps => ps.User)
-                .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty);
-        }
+        PlaySessions = await PlaySessionService
+            .AsNoTracking()
+            .Include(ps => ps.Game)
+            .Include(ps => ps.CreatedBy)
+            .Include(ps => ps.User)
+            .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty);
 
         Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
 

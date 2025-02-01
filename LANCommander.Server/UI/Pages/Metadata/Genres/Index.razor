@@ -1,9 +1,6 @@
 ﻿@page "/Metadata/Genres"
-@using Microsoft.EntityFrameworkCore;
-@using LANCommander.Server.Data
-@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject GenreService GenreService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -59,20 +56,17 @@
     {
         try
         {
-            using (var genreService = DatabaseServiceFactory.Create<GenreService>())
+            if (GenreContext.Id == Guid.Empty)
             {
-                if (GenreContext.Id == Guid.Empty)
-                {
-                    await genreService.AddMissingAsync(x => x.Name == GenreContext.Name, GenreContext);
+                await GenreService.AddMissingAsync(x => x.Name == GenreContext.Name, GenreContext);
 
-                    MessageService.Success($"{GenreContext.Name} was added!");
-                }
-                else
-                {
-                    await genreService.UpdateAsync(GenreContext);
+                MessageService.Success($"{GenreContext.Name} was added!");
+            }
+            else
+            {
+                await GenreService.UpdateAsync(GenreContext);
 
-                    MessageService.Success($"{GenreContext.Name} was updated!");
-                }
+                MessageService.Success($"{GenreContext.Name} was updated!");
             }
         }
         catch (Exception ex)
@@ -108,11 +102,8 @@
     async Task Delete(Genre Genre)
     {
         Loading = true;
-
-        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
-        {
-            await genreService.DeleteAsync(Genre);
-        }
+        
+        await GenreService.DeleteAsync(Genre);
 
         Loading = false;
     }

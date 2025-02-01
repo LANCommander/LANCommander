@@ -1,5 +1,5 @@
 ﻿@using LANCommander.SDK.Enums
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ScriptService ScriptService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 
@@ -79,11 +79,8 @@
 
     async void Delete(Script script = null)
     {
-        using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
-        {
-            if (script != null)
-                await scriptService.DeleteAsync(script);
-        }
+        if (script != null)
+            await ScriptService.DeleteAsync(script);
 
         await MessageService.Success("Script deleted!");
     }

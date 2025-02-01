@@ -1,4 +1,4 @@
-﻿@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@inject GameService GameService
 
 <Flex Vertical Gap="FlexGap.Large">
     <Table TItem="MultiplayerMode" DataSource="@MultiplayerModes" HidePagination="true" Responsive>
@@ -42,12 +42,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            var game = await gameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
+        var game = await GameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
 
-            MultiplayerModes = game.MultiplayerModes;
-        }
+        MultiplayerModes = game.MultiplayerModes;
     }
     
     async Task AddMode()
@@ -62,15 +59,12 @@
 
     public async Task Save()
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        {
-            var game = await gameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
+        var game = await GameService.Include(g => g.MultiplayerModes).GetAsync(GameId);
 
-            game.MultiplayerModes = MultiplayerModes;
+        game.MultiplayerModes = MultiplayerModes;
 
-            await gameService.UpdateAsync(game);
-            
-            game = await gameService.GetAsync(GameId);
-        }
+        await GameService.UpdateAsync(game);
+        
+        game = await GameService.GetAsync(GameId);
     }
 }

@@ -1,7 +1,5 @@
 ﻿@page "/Settings/Media"
-@using LANCommander.Server.Models;
-@using Microsoft.EntityFrameworkCore
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<Media> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -41,10 +39,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-        {
-            StorageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
-        }
+        StorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
     }
 
     void Save()

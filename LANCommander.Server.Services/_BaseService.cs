@@ -5,13 +5,18 @@ namespace LANCommander.Server.Services
 {
     public abstract class BaseService
     {
-        protected readonly ILogger Logger;
-        protected readonly Settings Settings;
+        protected readonly ILogger _logger;
+        protected readonly Settings _settings = SettingService.GetSettings();
 
-        protected BaseService(ILogger logger)
+        public BaseService(ILogger logger)
         {
-            Logger = logger;
-            Settings = SettingService.GetSettings();
+            _logger = logger;
+            
+            Initialize();
+        }
+
+        public virtual void Initialize()
+        {
         }
     }
 }

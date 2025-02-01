@@ -1,7 +1,7 @@
 ﻿@page "/Games/{id:guid}/PlaySessions"
 @using SortDirection = AntDesign.SortDirection
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject PlaySessionService PlaySessionService
 @inject IMessageService MessageService
 @inject ILogger<PlaySessions> Logger
 
@@ -39,10 +39,7 @@
     {
         try
         {
-            using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
-            {
-                await playSessionService.DeleteAsync(session);
-            }
+            await PlaySessionService.DeleteAsync(session);
         }
         catch (Exception ex)
         {

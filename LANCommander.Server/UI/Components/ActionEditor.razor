@@ -1,5 +1,6 @@
 ﻿@using System.Collections.ObjectModel
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject GameService GameService
+@inject ServerService ServerService
 @inject ModalService ModalService
 @inject MessageService MessageService
 @inject ILogger<ActionEditor> Logger
@@ -56,26 +57,20 @@
     {
         if (GameId != Guid.Empty)
         {
-            using (var gameService = DatabaseServiceFactory.Create<GameService>())
-            {
-                Game = await gameService
-                    .Include(g => g.Actions)
-                    .GetAsync(GameId);
+            Game = await GameService
+                .Include(g => g.Actions)
+                .GetAsync(GameId);
 
-                Actions = Game.Actions;
-            }
+            Actions = Game.Actions;
         }
         
         if (ServerId != Guid.Empty)
         {
-            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-            {
-                Server = await serverService
-                    .Include(s => s.Actions)
-                    .GetAsync(ServerId);
+            Server = await ServerService
+                .Include(s => s.Actions)
+                .GetAsync(ServerId);
 
-                Actions = Server.Actions;
-            }
+            Actions = Server.Actions;
         }
 
         if (SortedActions.Count != Actions.Count)
@@ -154,18 +149,12 @@
         {
             if (GameId != Guid.Empty)
             {
-                using (var gameService = DatabaseServiceFactory.Create<GameService>())
-                {
-                    await gameService.UpdateAsync(Game);
-                }
+                await GameService.UpdateAsync(Game);
             }
 
             if (ServerId != Guid.Empty)
             {
-                using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-                {
-                    await serverService.UpdateAsync(Server);
-                }
+                await ServerService.UpdateAsync(Server);
             }
 
             MessageService.Success("Actions updated!");

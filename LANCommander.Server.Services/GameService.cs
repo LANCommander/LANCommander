@@ -18,7 +18,18 @@ using SharpCompress.Common;
 
 namespace LANCommander.Server.Services
 {
-    public class GameService : BaseDatabaseService<Game>
+    public class GameService(
+        ILogger<GameService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        ArchiveService archiveService,
+        MediaService mediaService,
+        EngineService engineService,
+        TagService tagService,
+        CompanyService companyService,
+        GenreService genreService,
+        StorageLocationService storageLocationService) : BaseDatabaseService<Game>(logger, cache, mapper, contextFactory)
     {
         private readonly IMapper Mapper;
         private readonly ArchiveService ArchiveService;
@@ -29,51 +40,28 @@ namespace LANCommander.Server.Services
         private readonly GenreService GenreService;
         private readonly StorageLocationService StorageLocationService;
 
-        public GameService(
-            ILogger<GameService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            IMapper mapper,
-            ArchiveService archiveService,
-            MediaService mediaService,
-            EngineService engineService,
-            TagService tagService,
-            CompanyService companyService,
-            GenreService genreService,
-            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
-        {
-            Mapper = mapper;
-            ArchiveService = archiveService;
-            MediaService = mediaService;
-            EngineService = engineService;
-            TagService = tagService;
-            CompanyService = companyService;
-            GenreService = genreService;
-            StorageLocationService = storageLocationService;
-        }
-
         public override async Task<Game> AddAsync(Game entity)
         {
-            await Cache.ExpireGameCacheAsync(entity.Id);
+            await cache.ExpireGameCacheAsync(entity.Id);
 
             return await base.AddAsync(entity);
         }
 
         public override async Task<ExistingEntityResult<Game>> AddMissingAsync(Expression<Func<Game, bool>> predicate, Game entity)
         {
-            await Cache.ExpireGameCacheAsync(entity.Id);
+            await cache.ExpireGameCacheAsync(entity.Id);
 
             return await base.AddMissingAsync(predicate, entity);
         }
 
         public override async Task<Game> UpdateAsync(Game entity)
         {
-            await Cache.ExpireGameCacheAsync(entity.Id);
+            await cache.ExpireGameCacheAsync(entity.Id);
 
             foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
                 entity.Media.Remove(media);
 
-            return await base.UpdateAsync(entity);
+            throw new NotImplementedException();
         }
 
         public override async Task DeleteAsync(Game game)
@@ -95,7 +83,7 @@ namespace LANCommander.Server.Services
 
             await base.DeleteAsync(game);
 
-            await Cache.ExpireGameCacheAsync(game.Id);
+            await cache.ExpireGameCacheAsync(game.Id);
         }
 
         public async Task<GameManifest> GetManifestAsync(Guid id)
@@ -684,7 +672,7 @@ namespace LANCommander.Server.Services
             
             await ArchiveService.DeleteAsync(importArchive, storageLocation);
 
-            await Cache.ExpireGameCacheAsync(game.Id);
+            await cache.ExpireGameCacheAsync(game.Id);
 
             return game;
         }

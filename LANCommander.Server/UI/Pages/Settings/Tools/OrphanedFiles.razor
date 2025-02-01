@@ -1,8 +1,9 @@
 ﻿@page "/Settings/Tools/OrphanedFiles"
 @using LANCommander.Helpers;
-@using LANCommander.Server.Models;
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ArchiveService ArchiveService
+@inject StorageLocationService StorageLocationService
+@inject MediaService MediaService
 
 <PageHeader>
     <PageHeaderTitle>Orphaned Files</PageHeaderTitle>
@@ -52,50 +53,45 @@
         Loading = true;
 
         Orphans = new List<OrphanedFile>();
+        
+        var storageLocations = await StorageLocationService.GetAsync();
+        var archives = await ArchiveService.GetAsync();
+        var archiveFiles = await Task.WhenAll(archives.Select(a => ArchiveService.GetArchiveFileLocationAsync(a)));
 
-        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
         {
-            var storageLocations = await storageLocationService.GetAsync();
-            var archives = await archiveService.GetAsync();
-            var archiveFiles = await Task.WhenAll(archives.Select(a => archiveService.GetArchiveFileLocationAsync(a)));
+            var localArchiveFiles = Directory.GetFiles(storageLocation.Path);
 
-            foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Archive))
+            foreach (var file in localArchiveFiles.Where(f => !archiveFiles.Contains(f)))
             {
-                var localArchiveFiles = Directory.GetFiles(storageLocation.Path);
+                var fileInfo = new FileInfo(file);
 
-                foreach (var file in localArchiveFiles.Where(f => !archiveFiles.Contains(f)))
+                Orphans.Add(new OrphanedFile
                 {
-                    var fileInfo = new FileInfo(file);
-
-                    Orphans.Add(new OrphanedFile
-                    {
-                        Path = file,
-                        Size = fileInfo.Length,
-                        CreatedOn = fileInfo.CreationTime
-                    });
-                }
+                    Path = file,
+                    Size = fileInfo.Length,
+                    CreatedOn = fileInfo.CreationTime
+                });
             }
+        }
 
-            var media = await mediaService.GetAsync();
-            var mediaFiles = media.Select(m => MediaService.GetMediaPath(m));
+        var media = await MediaService.GetAsync();
+        var mediaFiles = media.Select(m => MediaService.GetMediaPath(m));
 
-            foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
+        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
+        {
+            var localMediaFiles = Directory.GetFiles(storageLocation.Path);
+
+            foreach (var file in localMediaFiles.Where(f => !mediaFiles.Contains(f)))
             {
-                var localMediaFiles = Directory.GetFiles(storageLocation.Path);
+                var fileInfo = new FileInfo(file);
 
-                foreach (var file in localMediaFiles.Where(f => !mediaFiles.Contains(f)))
+                Orphans.Add(new OrphanedFile
                 {
-                    var fileInfo = new FileInfo(file);
-
-                    Orphans.Add(new OrphanedFile
-                    {
-                        Path = file,
-                        Size = fileInfo.Length,
-                        CreatedOn = fileInfo.CreationTime
-                    });
-                }
+                    Path = file,
+                    Size = fileInfo.Length,
+                    CreatedOn = fileInfo.CreationTime
+                });
             }
         }
 

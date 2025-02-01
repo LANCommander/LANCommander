@@ -2,10 +2,17 @@
 @page "/Games/{id:guid}"
 @page "/Games/Add"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject CollectionService CollectionService
+@inject CompanyService CompanyService
+@inject EngineService EngineService
+@inject GameService GameService
+@inject GenreService GenreService
+@inject IGDBService IgdbService
+@inject PlatformService PlatformService
+@inject RedistributableService RedistributableService
+@inject TagService TagService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
-@inject ModalService ModalService
 @inject ILogger<General> Logger
 
 <GameEditView Id="Id">
@@ -167,24 +174,14 @@
 
     private async Task LoadData()
     {
-        using (var engineService = DatabaseServiceFactory.Create<EngineService>())
-        using (var companyService = DatabaseServiceFactory.Create<CompanyService>())
-        using (var genreService = DatabaseServiceFactory.Create<GenreService>())
-        using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
-        using (var tagService = DatabaseServiceFactory.Create<TagService>())
-        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
-        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
-        {
-            Engines = await engineService.GetAsync();
-            Companies = await companyService.GetAsync();
-            Genres = await genreService.GetAsync();
-            Platforms = await platformService.GetAsync();
-            Tags = await tagService.GetAsync();
-            Collections = await collectionService.GetAsync();
-            Games = await gameService.GetAsync(g => g.Type == GameType.MainGame);
-            Redistributables = await redistributableService.GetAsync();
-        }
+        Engines = await EngineService.GetAsync();
+        Companies = await CompanyService.GetAsync();
+        Genres = await GenreService.GetAsync();
+        Platforms = await PlatformService.GetAsync();
+        Tags = await TagService.GetAsync();
+        Collections = await CollectionService.GetAsync();
+        Games = await GameService.GetAsync(g => g.Type == GameType.MainGame);
+        Redistributables = await RedistributableService.GetAsync();
 
         RedistributableTargetItems = Redistributables.Select(r => new TransferItem
         {
@@ -202,19 +199,13 @@
         {
             if (game.Id != Guid.Empty)
             {
-                using (var gameService = DatabaseServiceFactory.Create<GameService>())
-                {
-                    game = await gameService.UpdateAsync(game);
-                }
+                game = await GameService.UpdateAsync(game);
 
                 await MessageService.Success("Game updated!");
             }
             else
             {
-                using (var gameService = DatabaseServiceFactory.Create<GameService>())
-                {
-                    game = await gameService.AddAsync(game);
-                }
+                game = await GameService.AddAsync(game);
 
                 NavigationManager.LocationChanged += NotifyGameAdded;
 
@@ -239,12 +230,9 @@
     {
         try
         {
-            using (var igdbService = DatabaseServiceFactory.Create<IGDBService>())
-            {
-                game = await igdbService.ImportGameAsync(result, game);
+            game = await IgdbService.ImportGameAsync(result, game);
 
-                NavigationManager.NavigateTo($"/Games/{game.Id}");
-            }
+            NavigationManager.NavigateTo($"/Games/{game.Id}");
         }
         catch (Exception ex)
         {
@@ -269,10 +257,7 @@
 
         try
         {
-            using (var gameService = DatabaseServiceFactory.Create<GameService>())
-            {
-                await gameService.DeleteAsync(game);
-            }
+            await GameService.DeleteAsync(game);
         }
         catch (Exception ex)
         {

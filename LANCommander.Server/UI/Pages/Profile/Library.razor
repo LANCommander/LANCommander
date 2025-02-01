@@ -1,6 +1,7 @@
 @page "/Profile/Library"
 @using Microsoft.AspNetCore.Components.Authorization
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject LibraryService LibraryService
+@inject UserService UserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IMessageService MessageService
 @inject ILogger<Library> Logger
@@ -38,23 +39,17 @@
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        using (var userService = DatabaseServiceFactory.Create<UserService>())
-        {
-            if (authState.User.Identity.IsAuthenticated)
-                User = await userService
-                    .GetAsync(authState.User.Identity.Name);
-        }
+        
+        if (authState.User.Identity.IsAuthenticated)
+            User = await UserService
+                .GetAsync(authState.User.Identity.Name);
     }
 
     async Task RemoveFromLibrary(Game game)
     {
         try
         {
-            using (var libraryService = DatabaseServiceFactory.Create<LibraryService>())
-            {
-                await libraryService.RemoveFromLibraryAsync(User.Id, game.Id);
-            }
+            await LibraryService.RemoveFromLibraryAsync(User.Id, game.Id);
 
             MessageService.Success($"Removed {game.Title} from your library!");
 

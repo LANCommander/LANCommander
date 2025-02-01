@@ -1,7 +1,7 @@
 ﻿@page "/Servers"
 @using LANCommander.Server.UI.Pages.Servers.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
@@ -94,10 +94,13 @@
     {
         Loading = true;
 
-        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-        {
-            await serverService.DeleteAsync(server);
-        }
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+        
+        await ServerService.DeleteAsync(server);
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
 
         Loading = false;
     }

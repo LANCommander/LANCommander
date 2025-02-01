@@ -6,18 +6,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.RegularExpressions;
+using AutoMapper;
 using YamlDotNet.Core.Tokens;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class PageService : BaseDatabaseService<Page>
+    public sealed class PageService(
+        ILogger<PageService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Page>(logger, cache, mapper, contextFactory)
     {
-        public PageService(
-            ILogger<PageService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
-
         public override async Task<Page> AddAsync(Page entity)
         {
             if (entity.Parent != null && entity.Parent.Parent != null && entity.Parent.Parent.Id == entity.Id)
@@ -56,7 +56,7 @@ namespace LANCommander.Server.Services
             entity.Slug = $"{entity.Slug}-{i}";
             entity.Route = RenderRoute(entity);
 
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireAsync("MappedGames");
 
             return await base.AddAsync(entity);
         }
@@ -73,9 +73,9 @@ namespace LANCommander.Server.Services
 
             entity.Route = RenderRoute(entity);
 
-            await Cache.ExpireAsync($"Page|{entity.Route}");
+            await cache.ExpireAsync($"Page|{entity.Route}");
 
-            return await base.UpdateAsync(entity);
+            return entity;
         }
 
         public async Task ChangeParentAsync(Guid childId, Guid parentId)

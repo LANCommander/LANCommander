@@ -2,18 +2,23 @@
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
-using System.Security.Cryptography.X509Certificates;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class ScriptService : BaseDatabaseService<Script>
+    public sealed class ScriptService(
+        ILogger<ScriptService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, cache, mapper, contextFactory)
     {
-        public ScriptService(
-            ILogger<ScriptService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
-
+        public override Task<Script> UpdateAsync(Script entity)
+        {
+            throw new NotImplementedException();
+        }
+        
         public static IEnumerable<Snippet> GetSnippets()
         {
             var files = Directory.GetFiles(@"Snippets", "*.ps1", SearchOption.AllDirectories);

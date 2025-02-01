@@ -1,7 +1,8 @@
 ﻿@using LANCommander.Server.Models
 @using Microsoft.EntityFrameworkCore
-@inject DatabaseServiceFactory DatabaseServiceFactory
 @inherits FeedbackComponent<Guid, Guid>
+@inject RoleService RoleService
+@inject UserService UserService
 @inject IMessageService MessageService
 @inject ILogger<ManageRolesDialog> Logger
 
@@ -36,16 +37,12 @@
 
     private async Task LoadData()
     {
-        using (var userService = DatabaseServiceFactory.Create<UserService>())
-        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
-        {
-            User = await userService.GetAsync(Options);
-            Roles = await roleService.GetAsync();
+        User = await UserService.GetAsync(Options);
+        Roles = await RoleService.GetAsync();
 
-            var currentRoles = await userService.GetRolesAsync(User.UserName);
+        var currentRoles = await UserService.GetRolesAsync(User.UserName);
 
-            SelectedRoles = Roles.Where(r => currentRoles.Any(cr => r.Name == cr.Name)).ToList();
-        }
+        SelectedRoles = Roles.Where(r => currentRoles.Any(cr => r.Name == cr.Name)).ToList();
     }
 
     async Task OnChange(TransferChangeArgs e)
@@ -55,35 +52,31 @@
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        using (var userService = DatabaseServiceFactory.Create<UserService>())
-        using (var roleService = DatabaseServiceFactory.Create<RoleService>())
+        var currentAdmins = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
+
+        try
         {
-            var currentAdmins = await roleService.GetUsersAsync(RoleService.AdministratorRoleName);
+            var currentRoles = await UserService.GetRolesAsync(User.UserName);
 
-            try
+            await UserService.AddToRolesAsync(User.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
+
+            foreach (var role in currentRoles)
             {
-                var currentRoles = await userService.GetRolesAsync(User.UserName);
-
-                await userService.AddToRolesAsync(User.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
-
-                foreach (var role in currentRoles)
+                if (!SelectedRoles.Any(r => r.Name == role.Name))
                 {
-                    if (!SelectedRoles.Any(r => r.Name == role.Name))
-                    {
-                        if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Any())
-                            MessageService.Warning("Cannot demote the only administrator!");
-                        else
-                            await userService.RemoveFromRole(User.UserName, role.Name);
-                    }
+                    if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Any())
+                        MessageService.Warning("Cannot demote the only administrator!");
+                    else
+                        await UserService.RemoveFromRole(User.UserName, role.Name);
                 }
+            }
 
-                MessageService.Success("Updated user roles!");
-            }
-            catch (Exception ex)
-            {
-                MessageService.Error("Could not update user roles!");
-                Logger.LogError(ex, "Could not update user roles!");
-            }
+            MessageService.Success("Updated user roles!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not update user roles!");
+            Logger.LogError(ex, "Could not update user roles!");
         }
 
         await base.OkCancelRefWithResult!.OnOk(User.Id);

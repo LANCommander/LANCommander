@@ -1,6 +1,4 @@
-﻿@using LANCommander.Server.Models
-@using System.IO.Compression
-@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@inject ArchiveService ArchiveService
 @inject ModalService ModalService
 
 @if (ArchiveId != Guid.Empty)
@@ -33,11 +31,8 @@ else if (!String.IsNullOrWhiteSpace(Root))
 
     protected override async Task OnInitializedAsync()
     {
-        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-        {
-            if (ArchiveId != Guid.Empty)
-                ArchiveExists = await archiveService.ExistsAsync(ArchiveId);
-        }
+        if (ArchiveId != Guid.Empty)
+            ArchiveExists = await ArchiveService.ExistsAsync(ArchiveId);
     }
 
     private async void BrowseForFile()

@@ -1,49 +1,38 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.SDK.Helpers;
-using System.Diagnostics;
 using System.IO.Compression;
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
-using LANCommander.Server.Services.Models;
+using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class ServerService : BaseDatabaseService<Data.Models.Server>
+    public sealed class ServerService(
+        ILogger<ServerService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        ArchiveService archiveService,
+        GameService gameService,
+        StorageLocationService storageLocationService) : BaseDatabaseService<Data.Models.Server>(logger, cache, mapper, contextFactory)
     {
-        private readonly GameService GameService;
-        private readonly ArchiveService ArchiveService;
-        private readonly StorageLocationService StorageLocationService;
-
-        private readonly Settings Settings = SettingService.GetSettings();
-
-        public ServerService(
-            ILogger<ServerService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            GameService gameService,
-            ArchiveService archiveService,
-            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
-        {
-            GameService = gameService;
-            ArchiveService = archiveService;
-            StorageLocationService = storageLocationService;
-        }
-
         public override async Task<Data.Models.Server> UpdateAsync(Data.Models.Server entity)
         {
-            await Cache.ExpireGameCacheAsync(entity.GameId);
+            await cache.ExpireGameCacheAsync(entity.GameId);
 
-            return await base.UpdateAsync(entity);
+            throw new NotImplementedException();
+////////////////////////////
         }
 
         public async Task<Data.Models.Server> ImportAsync(Guid objectKey)
         {
-            var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
-            var storageLocation = await StorageLocationService.GetAsync(importArchive.StorageLocationId);
+            var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
+            var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+            var storageLocation = await storageLocationService.GetAsync(importArchive.StorageLocationId);
 
             Data.Models.Server server;
 
@@ -72,7 +61,7 @@ namespace LANCommander.Server.Services
                 server.Autostart = manifest.Autostart;
                 server.AutostartMethod = (ServerAutostartMethod)(int)manifest.AutostartMethod;
                 server.AutostartDelay = manifest.AutostartDelay;
-                server.WorkingDirectory = Path.Combine(Settings.Servers.StoragePath, server.Name.SanitizeFilename());
+                server.WorkingDirectory = Path.Combine(_settings.Servers.StoragePath, server.Name.SanitizeFilename());
                 server.Path = manifest.Path.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
                 server.Arguments = manifest.Arguments.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
                 server.UseShellExecute = manifest.UseShellExecute;
@@ -85,7 +74,7 @@ namespace LANCommander.Server.Services
 
                 if (manifest.Game != null)
                 {
-                    var game = await GameService.GetAsync(manifest.Game.Id);
+                    var game = await gameService.GetAsync(manifest.Game.Id);
 
                     server.Game = game;
                 }

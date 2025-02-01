@@ -1,14 +1,8 @@
-﻿@using System.Net;
-@using System.Diagnostics;
-@using Hangfire;
-@using LANCommander.SDK.Enums
-@using LANCommander.Server.Jobs.Background;
-@using Microsoft.EntityFrameworkCore;
+﻿@using LANCommander.SDK.Enums
 @inherits FeedbackComponent<ImportDialogOptions>
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationService
+@inject StorageLocationService StorageLocationService
+@inject ServerService ServerService
 @inject IMessageService MessageService
-@inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
 
 <ChunkUploader
@@ -47,10 +41,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-        {
-            StorageLocation = await storageLocationService.FirstAsync(l => l.Default && l.Type == StorageLocationType.Archive);
-        }
+        StorageLocation = await StorageLocationService.FirstAsync(l => l.Default && l.Type == StorageLocationType.Archive);
     }
 
     async Task Start()
@@ -75,16 +66,13 @@
         {
             try
             {
-                using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-                {
-                    var server = await serverService.ImportAsync(objectKey);
+                var server = await ServerService.ImportAsync(objectKey);
 
-                    await InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
 
-                    MessageService.Success($"{server.Name} successfully imported!");
+                MessageService.Success($"{server.Name} successfully imported!");
 
-                    await CloseFeedbackAsync();
-                }
+                await CloseFeedbackAsync();
             }
             catch (Exception ex)
             {

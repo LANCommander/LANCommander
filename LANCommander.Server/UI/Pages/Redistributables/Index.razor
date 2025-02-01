@@ -1,10 +1,7 @@
 ﻿@page "/Redistributables"
-@using Microsoft.EntityFrameworkCore;
 @using LANCommander.Server.UI.Pages.Redistributables.Components
-@using LANCommander.Server.Data
-@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject RedistributableService RedistributableService
 @inject NavigationManager NavigationManager
 
 <PageHeader Title="Redistributables" Subtitle="@Total.ToString()" />
@@ -70,12 +67,15 @@
     async Task Delete(Redistributable redistributable)
     {
         Loading = true;
-
-        using (var redistributableService = DatabaseServiceFactory.Create<RedistributableService>())
-        {
-            await redistributableService.DeleteAsync(redistributable);
-        }
-
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
+        await RedistributableService.DeleteAsync(redistributable);
+        
         Loading = false;
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
 }

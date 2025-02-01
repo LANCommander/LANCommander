@@ -1,8 +1,7 @@
 ﻿@page "/Metadata/Collections/{id:guid}"
 @page "/Metadata/Collections/Add"
-@using LANCommander.Server.Extensions
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject CollectionService CollectionService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<Edit> Logger
@@ -77,37 +76,31 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-        {
-            if (Id == Guid.Empty)
-                Collection = new Collection();
-            else
-                Collection = await collectionService
-                    .Include(c => c.Games)
-                    .GetAsync(Id);
-        }
+        if (Id == Guid.Empty)
+            Collection = new Collection();
+        else
+            Collection = await CollectionService
+                .Include(c => c.Games)
+                .GetAsync(Id);
     }
 
     private async Task Save()
     {
         try
         {
-            using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+            if (Collection.Id != Guid.Empty)
             {
-                if (Collection.Id != Guid.Empty)
-                {
-                    Collection = await collectionService.UpdateAsync(Collection);
+                Collection = await CollectionService.UpdateAsync(Collection);
 
-                    await MessageService.Success("Collection updated!");
-                }
-                else
-                {
-                    Collection = await collectionService.AddAsync(Collection);
+                await MessageService.Success("Collection updated!");
+            }
+            else
+            {
+                Collection = await CollectionService.AddAsync(Collection);
 
-                    NavigationManager.LocationChanged += NotifyCollectionAdded;
+                NavigationManager.LocationChanged += NotifyCollectionAdded;
 
-                    NavigationManager.NavigateTo($"/Collections/{Collection.Id}");
-                }
+                NavigationManager.NavigateTo($"/Collections/{Collection.Id}");
             }
         }
         catch (Exception ex)
@@ -129,11 +122,8 @@
         try
         {
             Collection.Games.Remove(game);
-
-            using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-            {
-                await collectionService.UpdateAsync(Collection);
-            }
+            
+            await CollectionService.UpdateAsync(Collection);
         }
         catch (Exception ex)
         {

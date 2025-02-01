@@ -1,9 +1,6 @@
 @page "/Servers/{id:guid}/Consoles"
-@using System.Runtime.InteropServices
-@using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
+@inject ServerService ServerService
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
 
@@ -44,12 +41,9 @@
     {
         try
         {
-            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-            {
-                server = await serverService.UpdateAsync(server);
+            server = await ServerService.UpdateAsync(server);
 
-                await MessageService.Success("Consoles updated!");
-            }
+            await MessageService.Success("Consoles updated!");
         }
         catch (Exception ex)
         {

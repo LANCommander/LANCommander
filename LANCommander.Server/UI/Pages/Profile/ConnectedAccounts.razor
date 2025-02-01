@@ -1,6 +1,6 @@
 @page "/Profile/ConnectedAccounts"
 @using Microsoft.AspNetCore.Components.Authorization
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject UserService UserService
 @inject UserCustomFieldService UserCustomFieldService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -54,13 +54,10 @@
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        using (var userService = DatabaseServiceFactory.Create<UserService>())
+        
+        if (authState.User.Identity.IsAuthenticated)
         {
-            if (authState.User.Identity.IsAuthenticated)
-            {
-                User = await userService.GetAsync(authState.User.Identity.Name);
-            }
+            User = await UserService.GetAsync(authState.User.Identity.Name);
         }
 
         await LoadData();
@@ -68,15 +65,12 @@
 
     async Task LoadData()
     {
-        using (var userCustomFieldService = DatabaseServiceFactory.Create<UserCustomFieldService>())
+        foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
         {
-            foreach (var authenticationProvider in Settings.Authentication.AuthenticationProviders)
-            {
-                var customField = await userCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.UserId == User.Id);
-                
-                if (customField != null)
-                    CustomFields.Add(customField);
-            }
+            var customField = await UserCustomFieldService.FirstOrDefaultAsync(cf => cf.Name == authenticationProvider.GetCustomFieldName() && cf.UserId == User.Id);
+            
+            if (customField != null)
+                CustomFields.Add(customField);
         }
 
         await InvokeAsync(StateHasChanged);
@@ -84,10 +78,7 @@
 
     async Task Unlink(UserCustomField customField)
     {
-        using (var userCustomFieldService = DatabaseServiceFactory.Create<UserCustomFieldService>())
-        {
-            userCustomFieldService.DeleteAsync(customField.UserId.Value, customField.Name);
-        }
+        await UserCustomFieldService.DeleteAsync(customField.UserId.Value, customField.Name);
 
         await LoadData();
     }

@@ -6,41 +6,40 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using LANCommander.Server.Services.Exceptions;
+using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class RoleService : BaseDatabaseService<Role>
+    public sealed class RoleService(
+        ILogger<RoleService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        CollectionService collectionService,
+        IdentityContextFactory identityContextFactory,
+        RoleManager<Role> roleManager) : BaseDatabaseService<Role>(logger, cache, mapper, contextFactory)
     {
         public const string AdministratorRoleName = "Administrator";
 
-        private readonly IdentityContext IdentityContext;
-        private readonly IMapper Mapper;
+        private IdentityContext _identityContext;
 
-        private readonly CollectionService CollectionService;
-        private readonly RoleManager<Role> RoleManager;
-
-        public RoleService(
-            ILogger<RoleService> logger,
-            IMapper mapper,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            IdentityContextFactory identityContextFactory,
-            CollectionService collectionService,
-            RoleManager<Role> roleManager) : base(logger, cache, repositoryFactory)
+        public override void Initialize()
         {
-            IdentityContext = identityContextFactory.Create();
-            Mapper = mapper;
-            CollectionService = collectionService;
-            RoleManager = roleManager;
+            _identityContext = identityContextFactory.Create();
+        }
+
+        public override Task<Role> UpdateAsync(Role entity)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<Role> AddAsync(Role role)
         {
-            var result = await RoleManager.CreateAsync(role);
+            var result = await roleManager.CreateAsync(role);
 
             if (result.Succeeded)
-                return await RoleManager.FindByNameAsync(role.Name);
+                return await roleManager.FindByNameAsync(role.Name);
             
             throw new AddRoleException(result, "Could not create role");
         }
@@ -54,7 +53,7 @@ namespace LANCommander.Server.Services
         {
             var role = await FirstOrDefaultAsync(r => r.Name == roleName);
 
-            return Mapper.Map<T>(role);
+            return mapper.Map<T>(role);
         }
 
         public async Task<Role> AssignCollections(Guid roleId, IEnumerable<Guid> collectionIds)
@@ -66,7 +65,7 @@ namespace LANCommander.Server.Services
 
             foreach (var collectionId in collectionIds.Where(id => !role.Collections.Any(c => c.Id == id)))
             {
-                var collection = await CollectionService.GetAsync(collectionId);
+                var collection = await collectionService.GetAsync(collectionId);
 
                 role.Collections.Add(collection);
             }
@@ -83,7 +82,7 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<User>> GetUsersAsync(string roleName)
         {
-            return await IdentityContext.UserManager.GetUsersInRoleAsync(roleName);
+            return await _identityContext.UserManager.GetUsersInRoleAsync(roleName);
         }
     }
 }

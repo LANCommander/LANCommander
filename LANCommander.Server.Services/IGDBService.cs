@@ -3,22 +3,13 @@ using IGDB.Models;
 using Microsoft.Extensions.Logging;
 using System.Text;
 using LANCommander.SDK.Enums;
-using LANCommander.Server.Data;
-using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Models;
-using Microsoft.EntityFrameworkCore;
 using Company = LANCommander.Server.Data.Models.Company;
 
 namespace LANCommander.Server.Services
 {
     public class IGDBService(
-        ILogger<IGDBService> logger,
-        IDbContextFactory<DatabaseContext> contextFactory,
-        CompanyService companyService,
-        EngineService engineService,
-        GameService gameService,
-        GenreService genreService,
-        TagService tagService) : BaseService(logger), IDisposable
+        ILogger<IGDBService> logger) : BaseService(logger), IDisposable
     {
         private const string DefaultFields = "*";
         private IGDBClient Client;

@@ -24,8 +24,15 @@ namespace LANCommander.Server.Services
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
 
-            throw new NotImplementedException();
-////////////////////////////
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(s => s.Actions);
+                await context.UpdateRelationshipAsync(s => s.Game);
+                await context.UpdateRelationshipAsync(s => s.HttpPaths);
+                await context.UpdateRelationshipAsync(s => s.Pages);
+                await context.UpdateRelationshipAsync(s => s.Scripts);
+                await context.UpdateRelationshipAsync(s => s.ServerConsoles);
+            });
         }
 
         public async Task<Data.Models.Server> ImportAsync(Guid objectKey)

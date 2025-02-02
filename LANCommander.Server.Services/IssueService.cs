@@ -13,9 +13,13 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Issue>(logger, cache, mapper, contextFactory)
     {
-        public override Task<Issue> UpdateAsync(Issue entity)
+        public override async Task<Issue> UpdateAsync(Issue entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(i => i.Game);
+                await context.UpdateRelationshipAsync(i => i.ResolvedBy);
+            });
         }
         
         public async Task ResolveAsync(Guid issueId)

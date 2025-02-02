@@ -14,9 +14,14 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, cache, mapper, contextFactory)
     {
-        public override Task<Script> UpdateAsync(Script entity)
+        public async override Task<Script> UpdateAsync(Script entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(s => s.Game);
+                await context.UpdateRelationshipAsync(s => s.Redistributable);
+                await context.UpdateRelationshipAsync(s => s.Server);
+            });
         }
         
         public static IEnumerable<Snippet> GetSnippets()

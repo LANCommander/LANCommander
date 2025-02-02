@@ -29,9 +29,13 @@ namespace LANCommander.Server.Services
             _identityContext = identityContextFactory.Create();
         }
 
-        public override Task<Role> UpdateAsync(Role entity)
+        public override async Task<Role> UpdateAsync(Role entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(r => r.Collections);
+                await context.UpdateRelationshipAsync(r => r.Users);
+            });
         }
 
         public async Task<Role> AddAsync(Role role)

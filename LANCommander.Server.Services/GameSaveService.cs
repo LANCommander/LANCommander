@@ -15,9 +15,14 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameSave>(logger, cache, mapper, contextFactory)
     {
-        public override Task<GameSave> UpdateAsync(GameSave entity)
+        public override async Task<GameSave> UpdateAsync(GameSave entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(gs => gs.Game);
+                await context.UpdateRelationshipAsync(gs => gs.StorageLocation);
+                await context.UpdateRelationshipAsync(gs => gs.User);
+            });
         }
         
         public override async Task DeleteAsync(GameSave entity)

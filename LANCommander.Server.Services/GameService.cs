@@ -60,8 +60,32 @@ namespace LANCommander.Server.Services
 
             foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
                 entity.Media.Remove(media);
+            
+            var update = await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(g => g.Actions);
+                await context.UpdateRelationshipAsync(g => g.Archives);
+                await context.UpdateRelationshipAsync(g => g.BaseGame);
+                await context.UpdateRelationshipAsync(g => g.Categories);
+                await context.UpdateRelationshipAsync(g => g.Collections);
+                await context.UpdateRelationshipAsync(g => g.CustomFields);
+                await context.UpdateRelationshipAsync(g => g.Developers);
+                await context.UpdateRelationshipAsync(g => g.Engine);
+                await context.UpdateRelationshipAsync(g => g.Genres);
+                await context.UpdateRelationshipAsync(g => g.Keys);
+                await context.UpdateRelationshipAsync(g => g.Libraries);
+                await context.UpdateRelationshipAsync(g => g.Media);
+                await context.UpdateRelationshipAsync(g => g.MultiplayerModes);
+                await context.UpdateRelationshipAsync(g => g.Pages);
+                await context.UpdateRelationshipAsync(g => g.Platforms);
+                await context.UpdateRelationshipAsync(g => g.Publishers);
+                await context.UpdateRelationshipAsync(g => g.Redistributables);
+                await context.UpdateRelationshipAsync(g => g.SavePaths);
+                await context.UpdateRelationshipAsync(g => g.Scripts);
+                await context.UpdateRelationshipAsync(g => g.Tags);
+            });
 
-            throw new NotImplementedException();
+            return update;
         }
 
         public override async Task DeleteAsync(Game game)

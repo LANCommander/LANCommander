@@ -18,9 +18,15 @@ namespace LANCommander.Server.Services
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService) : BaseDatabaseService<Redistributable>(logger, cache, mapper, contextFactory)
     {
-        public override Task<Redistributable> UpdateAsync(Redistributable entity)
+        public override async Task<Redistributable> UpdateAsync(Redistributable entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(r => r.Archives);
+                await context.UpdateRelationshipAsync(r => r.Games);
+                await context.UpdateRelationshipAsync(r => r.Pages);
+                await context.UpdateRelationshipAsync(r => r.Scripts);
+            });
         }
 
         public async Task<Redistributable> ImportAsync(Guid objectKey)

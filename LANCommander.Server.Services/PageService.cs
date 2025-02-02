@@ -75,7 +75,14 @@ namespace LANCommander.Server.Services
 
             await cache.ExpireAsync($"Page|{entity.Route}");
 
-            return entity;
+            return await base.UpdateAsync(entity, async context =>
+            {
+                context.UpdateRelationshipAsync(p => p.Children);
+                context.UpdateRelationshipAsync(p => p.Games);
+                context.UpdateRelationshipAsync(p => p.Parent);
+                context.UpdateRelationshipAsync(p => p.Redistributables);
+                context.UpdateRelationshipAsync(p => p.Servers);
+            });
         }
 
         public async Task ChangeParentAsync(Guid childId, Guid parentId)

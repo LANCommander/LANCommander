@@ -76,7 +76,12 @@ namespace LANCommander.Server.Services
 
         public override async Task<Archive> UpdateAsync(Archive updatedArchive)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(updatedArchive, async context =>
+            {
+                await context.UpdateRelationshipAsync(a => a.Game);
+                await context.UpdateRelationshipAsync(a => a.Redistributable);
+                await context.UpdateRelationshipAsync(a => a.StorageLocation);
+            });
         }
         
         public override async Task DeleteAsync(Archive archive)

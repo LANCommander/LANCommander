@@ -13,9 +13,14 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<StorageLocation>(logger, cache, mapper, contextFactory)
     {
-        public override Task<StorageLocation> UpdateAsync(StorageLocation entity)
+        public override async Task<StorageLocation> UpdateAsync(StorageLocation entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(sl => sl.Archives);
+                await context.UpdateRelationshipAsync(sl => sl.GameSaves);
+                await context.UpdateRelationshipAsync(sl => sl.Media);
+            });
         }
     }
 }

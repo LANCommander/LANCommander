@@ -13,9 +13,12 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Platform>(logger, cache, mapper, contextFactory)
     {
-        public override Task<Platform> UpdateAsync(Platform entity)
+        public override async Task<Platform> UpdateAsync(Platform entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(p => p.Games);
+            });
         }
     }
 }

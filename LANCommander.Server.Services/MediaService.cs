@@ -23,9 +23,14 @@ namespace LANCommander.Server.Services
         IDbContextFactory<DatabaseContext> contextFactory,
         StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, cache, mapper, contextFactory)
     {
-        public override Task<Media> UpdateAsync(Media entity)
+        public override async Task<Media> UpdateAsync(Media entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, context =>
+            {
+                context.UpdateRelationshipAsync(m => m.Game);
+                context.UpdateRelationshipAsync(m => m.Parent);
+                context.UpdateRelationshipAsync(m => m.StorageLocation);
+            });
         }
         
         private Dictionary<MediaType, Size> ThumbnailSizes = new Dictionary<MediaType, Size>

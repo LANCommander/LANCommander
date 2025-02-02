@@ -1,10 +1,8 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using AutoMapper;
@@ -234,8 +232,29 @@ namespace LANCommander.Server.Services
                 };
             }
         }
-
+        
         public abstract Task<T> UpdateAsync(T entity);
+
+        protected async Task<T> UpdateAsync(T entity, Action<UpdateEntityContext<T>> additionalMapping = null)
+        {
+            using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            var existingEntity = await context.Set<T>().AsNoTracking().FirstOrDefaultAsync(e => e.Id == entity.Id);
+            
+            //context.Entry(existingEntity).CurrentValues.SetValues(entity);
+            context.Entry(existingEntity).CurrentValues.SetValues(entity);
+
+            if (additionalMapping != null)
+            {
+                var updateContext = new UpdateEntityContext<T>(context, existingEntity, entity);
+                
+                additionalMapping?.Invoke(updateContext);
+            }
+
+            await context.SaveChangesAsync();
+            
+            return entity;
+        }
 
         public virtual async Task DeleteAsync(T entity)
         {

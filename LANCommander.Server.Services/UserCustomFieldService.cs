@@ -15,7 +15,10 @@ namespace LANCommander.Server.Services
     {
         public override async Task<UserCustomField> UpdateAsync(UserCustomField entity)
         {
-            throw new NotImplementedException();
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(ucf => ucf.User);
+            });
         }
 
         public async Task<UserCustomField> GetAsync(Guid userId, string name)

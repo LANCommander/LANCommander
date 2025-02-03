@@ -1,0 +1,11 @@
+.file-picker-dialog .ant-modal-body {
+    padding: 0;
+}
+
+.file-picker-dialog .file-manager {
+    height: calc(100vh - 55px - 53px);
+}
+
+.file-manager-selector-hidden .ant-radio-wrapper {
+    display: none;
+}

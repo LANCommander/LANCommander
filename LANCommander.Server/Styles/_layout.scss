@@ -1,10 +1,20 @@
-﻿.ant-layout-has-sider > .ant-flex {
+﻿.layout {
+    min-height: 100vh;
+}
+
+.ant-header {
+    display: flex;
+}
+
+.ant-layout-has-sider > .ant-flex {
     flex-grow: 1;
 }
 
-.site-layout-background {
+.ant-layout-content {
     background: #141414;
     padding-bottom: 24px;
+    display: flex;
+    flex-direction: column;
 
     & > .ant-table-wrapper {
         .ant-table-pagination {

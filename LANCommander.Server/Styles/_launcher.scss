@@ -1,0 +1,18 @@
+.launcher-download {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.launcher-download img {
+    max-width: 500px;
+    width: 75vw;
+}
+
+.launcher-download h1 {
+    font-size: 32px;
+    margin-bottom: 0;
+}

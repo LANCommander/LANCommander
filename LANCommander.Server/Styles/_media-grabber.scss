@@ -1,0 +1,12 @@
+.media-grabber-group {
+    margin-top: 18px;
+}
+
+.media-grabber-group + .media-grabber-group {
+    padding-top: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.85);
+}
+
+[data-theme="Dark"] .media-grabber-group + .media-grabber-group {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}

@@ -1,18 +1,26 @@
 ﻿@typeparam TItem where TItem : BaseModel
 
-<Transfer Style="@Style" DataSource="TransferItems" TargetKeys="TargetKeys" OnChange="OnChange" Titles="new string[] { LeftTitle, RightTitle }" />
+<Transfer
+    Style="@Style"
+    DataSource="TransferItems"
+    TargetKeys="TargetKeys"
+    OnChange="OnChange"
+    Titles="new[] { LeftTitle, RightTitle }"
+    ShowSearch="@Searchable"
+    />
 
 @code {
     [Parameter] public string LeftTitle { get; set; } = "";
     [Parameter] public string RightTitle { get; set; } = "";
     [Parameter] public string Style { get; set; } = "";
+    [Parameter] public bool Searchable { get; set; }
     [Parameter] public Func<TItem, string> TitleSelector { get; set; }
     [Parameter] public IEnumerable<TItem> DataSource { get; set; }
     [Parameter] public ICollection<TItem> Values { get; set; } = new List<TItem>();
     [Parameter] public EventCallback<ICollection<TItem>> ValuesChanged { get; set; }
 
     IEnumerable<TransferItem> TransferItems { get; set; } = new List<TransferItem>();
-    List<string> TargetKeys { get; set; } = new List<string>();
+    List<string> TargetKeys { get; set; } = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

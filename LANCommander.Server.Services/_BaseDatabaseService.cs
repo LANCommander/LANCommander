@@ -94,8 +94,13 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
+
+                var queryable = context.Set<T>().AsQueryable();
                 
-                return await context.Set<T>().Where(predicate).ToListAsync();
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.Where(predicate).ToListAsync();
             }
             finally
             {
@@ -108,8 +113,13 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
-
-                return await context.Set<T>().Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).ToListAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).ToListAsync();
             }
             finally
             {
@@ -122,8 +132,13 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
-
-                return await context.Set<T>().Where(predicate).FirstAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.FirstAsync(predicate);
             }
             finally
             {
@@ -136,8 +151,13 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
 
-                return await context.Set<T>().Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstAsync();
+                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstAsync();
             }
             finally
             {
@@ -150,8 +170,13 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
 
-                return await context.Set<T>().Where(predicate).FirstOrDefaultAsync();
+                return await queryable.FirstOrDefaultAsync(predicate);
             }
             finally
             {
@@ -164,8 +189,13 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
 
-                return await context.Set<T>().Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstOrDefaultAsync();
+                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstOrDefaultAsync();
             }
             finally
             {

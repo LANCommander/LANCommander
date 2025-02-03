@@ -23,40 +23,69 @@ public class UpdateEntityContext<TEntity>
         where TRelatedEntity : class, IBaseModel
     {
         var compiledExpression = navigationPropertyPath.Compile();
-    
+
+        // Get the updated entity from the new entity
         var updatedEntity = compiledExpression.Invoke(_updatedEntity);
 
         if (updatedEntity != null)
         {
             var existingEntityEntry = _context.Entry(_entity);
-            
             var navigation = existingEntityEntry.Reference(navigationPropertyPath);
-            
-            await navigation.LoadAsync();
-            
-            existingEntityEntry.Reference(navigationPropertyPath).CurrentValue = updatedEntity;
+
+            // Ensure the existing entity is loaded if needed
+            if (!navigation.IsLoaded)
+            {
+                await navigation.LoadAsync();
+            }
+
+            // Check if an instance of updatedEntity is already being tracked
+            var trackedEntity = _context.Set<TRelatedEntity>().Local
+                .FirstOrDefault(e => e.Id == updatedEntity.Id);
+
+            if (trackedEntity != null)
+            {
+                // Use the already tracked instance to avoid duplicate tracking
+                navigation.CurrentValue = trackedEntity;
+            }
+            else
+            {
+                // Attach the updated entity and set it correctly
+                _context.Attach(updatedEntity);
+                navigation.CurrentValue = updatedEntity;
+            }
 
             _context.Entry(_entity).State = EntityState.Modified;
         }
     }
     
-    public async Task UpdateRelationshipAsync<TRelatedEntity>(Expression<Func<TEntity, ICollection<TRelatedEntity>>> navigationPropertyPath)
+    public async Task UpdateRelationshipAsync<TRelatedEntity>(Expression<Func<TEntity, IEnumerable<TRelatedEntity>>> navigationPropertyPath)
         where TRelatedEntity : class, IBaseModel
     {
         var compiledExpression = navigationPropertyPath.Compile();
+        
+        await _context.Entry(_entity).Collection(navigationPropertyPath).LoadAsync();
             
         var updatedCollection = compiledExpression.Invoke(_updatedEntity);
 
         if (updatedCollection is IEnumerable<TRelatedEntity> updatedEntities)
         {
+            
             var existingCollection = compiledExpression(_entity);
 
             if (existingCollection is ICollection<TRelatedEntity> existingEntities)
             {
-                existingEntities.Clear();
-                    
-                foreach (var item in updatedEntities)
-                    existingEntities.Add(item);
+                // Loop through updated entities, find any that don't exist in existing relationship and add them
+                foreach (var updatedEntity in updatedEntities)
+                {
+                    if (!existingEntities.Any(e => e.Id == updatedEntity.Id))
+                        existingEntities.Add(updatedEntity);
+                }
+
+                foreach (var existingEntity in existingEntities)
+                {
+                    if (!updatedEntities.Any(e => e.Id == existingEntity.Id))
+                        existingEntities.Remove(existingEntity);
+                }
                     
                 _context.Entry(_entity).State = EntityState.Modified;
             }

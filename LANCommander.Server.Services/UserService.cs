@@ -19,13 +19,9 @@ namespace LANCommander.Server.Services
         private readonly CollectionService CollectionService;
         private readonly IMapper Mapper;
 
-        public RepositoryFactory repositoryFactory { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
         public UserService(
             ILogger<UserService> logger,
             IMapper mapper,
-            RepositoryFactory repositoryFactory,
-            RoleService roleService,
             CollectionService collectionService,
             IdentityContextFactory identityContextFactory) : base(logger)
         {

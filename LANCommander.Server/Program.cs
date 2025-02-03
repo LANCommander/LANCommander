@@ -326,8 +326,6 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
-            builder.Services.AddSingleton<RepositoryFactory>();
-            builder.Services.AddScoped(typeof(Repository<>));
             builder.Services.AddScoped<DatabaseServiceFactory>();
             builder.Services.AddScoped<IdentityContextFactory>();
             builder.Services.AddScoped<SettingService>();

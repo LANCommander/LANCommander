@@ -80,7 +80,7 @@
 
         foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
         {
-            var localMediaFiles = Directory.GetFiles(storageLocation.Path);
+            var localMediaFiles = Directory.GetFiles(storageLocation.Path).Where(f => !f.EndsWith(".Thumb"));
 
             foreach (var file in localMediaFiles.Where(f => !mediaFiles.Contains(f)))
             {

@@ -55,7 +55,9 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}/Download")]
         public async Task<IActionResult> DownloadAsync(Guid id)
         {
-            var redistributable = await RedistributableService.GetAsync(id);
+            var redistributable = await RedistributableService
+                .Include(r => r.Archives)
+                .GetAsync(id);
 
             if (redistributable == null)
                 return NotFound();

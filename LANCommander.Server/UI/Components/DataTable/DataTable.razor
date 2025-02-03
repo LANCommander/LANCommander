@@ -69,7 +69,7 @@
     [Parameter] public Expression<Func<TItem, string>> SearchProperty { get; set; }
     [Parameter] public Expression<Func<TItem, bool>> Query { get; set; }
 
-    string Search { get; set; }
+    string Search { get; set; } = "";
     string Url;
     bool DrawerOpen = false;
 
@@ -233,9 +233,8 @@
         var uri = NavigationManager.ToAbsoluteUri(Url);
 
         Dictionary<string, string> parameters = new();
-        
-        if (PageIndex > 1)
-            parameters.Add("PageIndex", PageIndex.ToString());
+
+        PageIndex = 1;
         
         if (PageSize > 1)
             parameters.Add("PageSize", PageSize.ToString());

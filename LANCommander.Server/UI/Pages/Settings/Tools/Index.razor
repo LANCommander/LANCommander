@@ -102,6 +102,7 @@
     async Task ClearCache()
     {
         await FusionCache.ExpireAsync("Games");
+        await FusionCache.ExpireAsync("Depot/Results");
 
         MessageService.Success("Cache cleared!");
     }
@@ -109,7 +110,8 @@
     async Task DownloadClients()
     {
         DownloadingClients = true;
-
+        
+        await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
         var currentVersion = UpdateService.GetCurrentVersion();
@@ -127,12 +129,16 @@
         }
 
         DownloadingClients = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task FixPageRoutes()
     {
         FixingPageRoutes = true;
 
+        await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
         try
@@ -147,5 +153,8 @@
         }
 
         FixingPageRoutes = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
     }
 }

@@ -138,7 +138,14 @@
                 <TagsInput Entities="Collections" @bind-Values="context.Collections" OptionLabelSelector="c => c.Name" TItem="Collection" />
             </FormItem>
             <FormItem Label="Redistributables">
-                <TransferInput LeftTitle="Available" RightTitle="Selected" DataSource="Redistributables" TitleSelector="r => r.Name" @bind-Values="context.Redistributables" />
+                <TransferInput
+                    Style="height: 350px"
+                    Searchable
+                    LeftTitle="Available"
+                    RightTitle="Selected"
+                    DataSource="Redistributables"
+                    TitleSelector="r => r.Name"
+                    @bind-Values="context.Redistributables" />
             </FormItem>
         </Form>
     </ChildContent>
@@ -147,9 +154,8 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    bool Loaded = false;
+    bool Loaded;
     bool Success;
-    string[] Errors = { };
 
     IEnumerable<Engine> Engines = new List<Engine>();
     IEnumerable<Company> Companies = new List<Company>();
@@ -158,13 +164,9 @@
     IEnumerable<Data.Models.Tag> Tags = new List<Data.Models.Tag>();
     IEnumerable<Collection> Collections = new List<Collection>();
     IEnumerable<Redistributable> Redistributables = new List<Redistributable>();
-    IEnumerable<TransferItem> RedistributableTargetItems = new List<TransferItem>();
-    IEnumerable<string> TargetRedistributables = new List<string>();
     IEnumerable<Game> Games = new List<Game>();
 
     private GameMetadataLookup? GameMetadataLookup;
-
-    private Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -181,14 +183,7 @@
         Tags = await TagService.GetAsync();
         Collections = await CollectionService.GetAsync();
         Games = await GameService.GetAsync(g => g.Type == GameType.MainGame);
-        Redistributables = await RedistributableService.GetAsync();
-
-        RedistributableTargetItems = Redistributables.Select(r => new TransferItem
-        {
-            Title = r.Name,
-            Description = r.Description,
-            Key = r.Id.ToString()
-        });
+        Redistributables = (await RedistributableService.GetAsync()).OrderByTitle(r => r.Name);
 
         Loaded = true;
     }

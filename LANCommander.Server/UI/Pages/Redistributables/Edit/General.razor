@@ -4,6 +4,7 @@
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Redistributables.Components
 @using Microsoft.EntityFrameworkCore
+@using SortDirection = LANCommander.SDK.Enums.SortDirection
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -60,7 +61,14 @@
             </FormItem>
 
             <FormItem Label="Games">
-                <TransferInput Style="height: 350px" LeftTitle="Available" RightTitle="Selected" DataSource="Games" TitleSelector="r => r.Title" @bind-Values="context.Games" />
+                <TransferInput
+                    Style="height: 350px"
+                    Searchable
+                    LeftTitle="Available"
+                    RightTitle="Selected"
+                    DataSource="Games"
+                    TitleSelector="r => r.Title"
+                    @bind-Values="context.Games" />
             </FormItem>
         </Form>
     </ChildContent>
@@ -79,5 +87,7 @@
             .Include(g => g.Media)
             .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
             .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
+
+        Games = Games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
     }
 }

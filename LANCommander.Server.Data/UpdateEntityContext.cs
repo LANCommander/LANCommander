@@ -58,30 +58,44 @@ public class UpdateEntityContext<TEntity>
         }
     }
     
-    public async Task UpdateRelationshipAsync<TRelatedEntity>(Expression<Func<TEntity, IEnumerable<TRelatedEntity>>> navigationPropertyPath)
+    public async Task UpdateRelationshipAsync<TRelatedEntity>(
+        Expression<Func<TEntity, IEnumerable<TRelatedEntity>>> navigationPropertyPath)
         where TRelatedEntity : class, IBaseModel
     {
         var compiledExpression = navigationPropertyPath.Compile();
-        
-        await _context.Entry(_entity).Collection(navigationPropertyPath).LoadAsync();
-            
+
+        // Explicitly load the existing collection
+        var navigation = _context.Entry(_entity).Collection(navigationPropertyPath);
+        if (!navigation.IsLoaded)
+        {
+            await navigation.LoadAsync();
+        }
+
+        // Get the updated collection from the new entity
         var updatedCollection = compiledExpression.Invoke(_updatedEntity);
 
         if (updatedCollection is IEnumerable<TRelatedEntity> updatedEntities)
         {
-            
             var existingCollection = compiledExpression(_entity);
 
             if (existingCollection is ICollection<TRelatedEntity> existingEntities)
             {
-                // Loop through updated entities, find any that don't exist in existing relationship and add them
-                foreach (var updatedEntity in updatedEntities)
+                // Get the list of tracked entities from the context
+                var trackedEntities = _context.Set<TRelatedEntity>().Local;
+
+                // Replace entities with tracked instances to avoid duplicate tracking
+                var updatedTrackedEntities = updatedEntities
+                    .Select(e => trackedEntities.FirstOrDefault(t => t.Id == e.Id) ?? e)
+                    .ToList();
+                
+                // Add new entities that are missing
+                foreach (var updatedEntity in updatedTrackedEntities)
                 {
                     if (!existingEntities.Any(e => e.Id == updatedEntity.Id))
                         existingEntities.Add(updatedEntity);
                 }
 
-                foreach (var existingEntity in existingEntities)
+                foreach (var existingEntity in updatedTrackedEntities)
                 {
                     if (!updatedEntities.Any(e => e.Id == existingEntity.Id))
                         existingEntities.Remove(existingEntity);
@@ -91,4 +105,5 @@ public class UpdateEntityContext<TEntity>
             }
         }
     }
+
 }

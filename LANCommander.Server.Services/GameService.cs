@@ -31,15 +31,6 @@ namespace LANCommander.Server.Services
         GenreService genreService,
         StorageLocationService storageLocationService) : BaseDatabaseService<Game>(logger, cache, mapper, contextFactory)
     {
-        private readonly IMapper Mapper;
-        private readonly ArchiveService ArchiveService;
-        private readonly MediaService MediaService;
-        private readonly EngineService EngineService;
-        private readonly TagService TagService;
-        private readonly CompanyService CompanyService;
-        private readonly GenreService GenreService;
-        private readonly StorageLocationService StorageLocationService;
-
         public override async Task<Game> AddAsync(Game entity)
         {
             await cache.ExpireGameCacheAsync(entity.Id);
@@ -97,12 +88,12 @@ namespace LANCommander.Server.Services
 
             foreach (var archive in game.Archives.ToList())
             {
-                await ArchiveService.DeleteAsync(archive);
+                await archiveService.DeleteAsync(archive);
             }
 
             foreach (var media in game.Media.ToList())
             {
-                await MediaService.DeleteAsync(media);
+                await mediaService.DeleteAsync(media);
             }
 
             await base.DeleteAsync(game);
@@ -177,7 +168,7 @@ namespace LANCommander.Server.Services
                 manifest.Version = game.Archives.OrderByDescending(a => a.CreatedOn).First().Version;
 
             if (game.Media != null && game.Media.Count > 0)
-                manifest.Media = Mapper.Map<IEnumerable<SDK.Models.Media>>(game.Media);
+                manifest.Media = mapper.Map<IEnumerable<SDK.Models.Media>>(game.Media);
 
             if (game.Actions != null && game.Actions.Count > 0)
             {
@@ -305,7 +296,7 @@ namespace LANCommander.Server.Services
         {
             Guid objectKey = Guid.NewGuid();
 
-            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+            var importArchivePath = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
             File.Copy(path, importArchivePath, true);
 
@@ -314,9 +305,9 @@ namespace LANCommander.Server.Services
 
         public async Task<Game> ImportAsync(Guid objectKey)
         {
-            var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
-            var storageLocation = await StorageLocationService.GetAsync(importArchive.StorageLocationId);
+            var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
+            var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+            var storageLocation = await storageLocationService.GetAsync(importArchive.StorageLocationId);
 
             Game game;
 
@@ -383,7 +374,7 @@ namespace LANCommander.Server.Services
                 #region Engine
                 if (game.Engine != null)
                 {
-                    var engine = await EngineService.AddMissingAsync(e => e.Name == manifest.Engine, new Engine { Name = manifest.Engine });
+                    var engine = await engineService.AddMissingAsync(e => e.Name == manifest.Engine, new Engine { Name = manifest.Engine });
 
                     game.Engine = engine.Value;
                 }
@@ -396,7 +387,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Tags != null)
                     foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
                     {
-                        game.Tags.Add((await TagService.AddMissingAsync(t => t.Name == tag, new Tag()
+                        game.Tags.Add((await tagService.AddMissingAsync(t => t.Name == tag, new Tag()
                         {
                             Name = tag
                         })).Value);
@@ -413,7 +404,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Genre != null)
                     foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
                     {
-                        game.Genres.Add((await GenreService.AddMissingAsync(g => g.Name == genre, new Genre()
+                        game.Genres.Add((await genreService.AddMissingAsync(g => g.Name == genre, new Genre()
                         {
                             Name = genre
                         })).Value);
@@ -430,7 +421,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Developers != null)
                     foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
                     {
-                        game.Developers.Add((await CompanyService.AddMissingAsync(c => c.Name == developer, new Company()
+                        game.Developers.Add((await companyService.AddMissingAsync(c => c.Name == developer, new Company()
                         {
                             Name = developer
                         })).Value);
@@ -447,7 +438,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Publishers != null)
                     foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
                     {
-                        game.Publishers.Add((await CompanyService.AddMissingAsync(c => c.Name == publisher, new Company()
+                        game.Publishers.Add((await companyService.AddMissingAsync(c => c.Name == publisher, new Company()
                         {
                             Name = publisher
                         })).Value);
@@ -586,7 +577,7 @@ namespace LANCommander.Server.Services
                 #region Media
 
                 var mediaStorageLocation =
-                    await StorageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+                    await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
                 
                 if (game.Media == null)
                     game.Media = new List<Data.Models.Media>();
@@ -607,7 +598,7 @@ namespace LANCommander.Server.Services
 
                         media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
 
-                        await MediaService.UpdateAsync(media);
+                        await mediaService.UpdateAsync(media);
                     }
                 }
 
@@ -630,7 +621,7 @@ namespace LANCommander.Server.Services
 
                         media.Crc32 = SDK.Services.MediaService.CalculateChecksum(mediaPath);
 
-                        media = await MediaService.AddAsync(media);
+                        media = await mediaService.AddAsync(media);
 
                         game.Media.Add(media);
                     }
@@ -651,7 +642,7 @@ namespace LANCommander.Server.Services
                         archive.Version = manifestArchive.Version;
                         archive.CreatedOn = manifestArchive.CreatedOn;
 
-                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
+                        var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
                         
@@ -660,7 +651,7 @@ namespace LANCommander.Server.Services
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
                         archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
 
-                        await ArchiveService.UpdateAsync(archive);
+                        await archiveService.UpdateAsync(archive);
                     }
                 }
 
@@ -676,7 +667,7 @@ namespace LANCommander.Server.Services
                             StorageLocationId = storageLocation.Id,
                         };
 
-                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
+                        var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{manifestArchive.ObjectKey}", extractionLocation, true);
 
@@ -685,7 +676,7 @@ namespace LANCommander.Server.Services
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
                         archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
 
-                        archive = await ArchiveService.AddAsync(archive);
+                        archive = await archiveService.AddAsync(archive);
 
                         game.Archives.Add(archive);
                     }
@@ -694,7 +685,7 @@ namespace LANCommander.Server.Services
                 game = await UpdateAsync(game);
             }
             
-            await ArchiveService.DeleteAsync(importArchive, storageLocation);
+            await archiveService.DeleteAsync(importArchive, storageLocation);
 
             await cache.ExpireGameCacheAsync(game.Id);
 

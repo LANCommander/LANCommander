@@ -99,6 +99,8 @@
         {
             await archiveService.UpdateAsync(archive);
 
+            Table.Reload();
+
             MessageService.Success("Archive updated!");
         }
         catch (Exception ex)

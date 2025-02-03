@@ -265,25 +265,25 @@ namespace LANCommander.Server.Services
         
         public abstract Task<T> UpdateAsync(T entity);
 
-        protected async Task<T> UpdateAsync(T entity, Action<UpdateEntityContext<T>> additionalMapping = null)
+        protected async Task<T> UpdateAsync(T updatedEntity, Action<UpdateEntityContext<T>> additionalMapping = null)
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
             
-            var existingEntity = await context.Set<T>().AsNoTracking().FirstOrDefaultAsync(e => e.Id == entity.Id);
+            var existingEntity = await context.Set<T>().AsNoTracking().FirstOrDefaultAsync(e => e.Id == updatedEntity.Id);
             
             //context.Entry(existingEntity).CurrentValues.SetValues(entity);
-            context.Entry(existingEntity).CurrentValues.SetValues(entity);
+            context.Entry(existingEntity).CurrentValues.SetValues(updatedEntity);
 
             if (additionalMapping != null)
             {
-                var updateContext = new UpdateEntityContext<T>(context, existingEntity, entity);
+                var updateContext = new UpdateEntityContext<T>(context, existingEntity, updatedEntity);
                 
                 additionalMapping?.Invoke(updateContext);
             }
 
             await context.SaveChangesAsync();
             
-            return entity;
+            return updatedEntity;
         }
 
         public virtual async Task DeleteAsync(T entity)

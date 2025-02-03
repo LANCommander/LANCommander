@@ -25,9 +25,9 @@ public class UpdateEntityContext<TEntity>
         var compiledExpression = navigationPropertyPath.Compile();
 
         // Get the updated entity from the new entity
-        var updatedEntity = compiledExpression.Invoke(_updatedEntity);
+        var relatedEntity = compiledExpression.Invoke(_updatedEntity);
 
-        if (updatedEntity != null)
+        if (relatedEntity != null)
         {
             var existingEntityEntry = _context.Entry(_entity);
             var navigation = existingEntityEntry.Reference(navigationPropertyPath);
@@ -38,20 +38,31 @@ public class UpdateEntityContext<TEntity>
                 await navigation.LoadAsync();
             }
 
-            // Check if an instance of updatedEntity is already being tracked
-            var trackedEntity = _context.Set<TRelatedEntity>().Local
-                .FirstOrDefault(e => e.Id == updatedEntity.Id);
+            // Check if the related entity is already being tracked
+            var trackedRelatedEntity = _context.Set<TRelatedEntity>().Local
+                .FirstOrDefault(e => e.Id == relatedEntity.Id);
 
-            if (trackedEntity != null)
+            if (trackedRelatedEntity != null)
             {
                 // Use the already tracked instance to avoid duplicate tracking
-                navigation.CurrentValue = trackedEntity;
+                navigation.CurrentValue = trackedRelatedEntity;
             }
             else
             {
-                // Attach the updated entity and set it correctly
-                _context.Attach(updatedEntity);
-                navigation.CurrentValue = updatedEntity;
+                // Fetch the related entity from the database (ensuring EF Core tracks it)
+                var existingRelatedEntity = await _context.Set<TRelatedEntity>()
+                    .FirstOrDefaultAsync(e => e.Id == relatedEntity.Id);
+
+                if (existingRelatedEntity != null)
+                {
+                    navigation.CurrentValue = existingRelatedEntity; // Use the tracked instance
+                }
+                else
+                {
+                    // If the entity is truly new and not in the DB, attach it
+                    _context.Attach(relatedEntity);
+                    navigation.CurrentValue = relatedEntity;
+                }
             }
 
             _context.Entry(_entity).State = EntityState.Modified;

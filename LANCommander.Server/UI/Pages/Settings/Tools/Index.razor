@@ -1,8 +1,12 @@
 ﻿@page "/Settings/Tools"
+@using Hangfire
+@using LANCommander.Helpers
+@using LANCommander.Server.Jobs.Background
 @using ZiggyCreatures.Caching.Fusion
 @inject ArchiveService ArchiveService
 @inject PageService PageService
 @inject UpdateService UpdateService
+@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject IFusionCache FusionCache
 @inject ILogger<Index> Logger
@@ -54,6 +58,12 @@
     <h3>Regenerate Page Routes</h3>
     <p>Fix any page routes that seem to be out of date or corrupt.</p>
     <Button Type="ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
+    
+    <Divider />
+    
+    <h3>Regenerate Thumbnails</h3>
+    <p>Clear out the existing thumbnail cache and generate replacements.</p>
+    <Button Type="ButtonType.Primary" OnClick="RegenerateThumbnails" Loading="RegeneratingThumbnails">Regenerate</Button>
 </div>
 
 
@@ -61,6 +71,7 @@
     bool RecalculatingFileSizes = false;
     bool DownloadingClients = false;
     bool FixingPageRoutes = false;
+    bool RegeneratingThumbnails = false;
 
     async Task RecalculateFileSizes()
     {
@@ -156,5 +167,32 @@
         
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
+    }
+
+    async Task RegenerateThumbnails()
+    {
+        RegeneratingThumbnails = true;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+        
+        var storageLocations = await StorageLocationService.GetAsync();
+
+        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
+        {
+            var thumbnailFiles = Directory.GetFiles(storageLocation.Path).Where(f => f.EndsWith(".Thumb"));
+
+            foreach (var thumbnailFile in thumbnailFiles)
+                FileHelpers.DeleteIfExists(thumbnailFile);
+        }
+        
+        BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
+        
+        RegeneratingThumbnails = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+
+        MessageService.Success("Cache has been cleared and is being regenerated in the background");
     }
 }

@@ -9,16 +9,15 @@ using Company = LANCommander.Server.Data.Models.Company;
 namespace LANCommander.Server.Services
 {
     public class IGDBService(
-        ILogger<IGDBService> logger) : BaseService(logger), IDisposable
+        ILogger<IGDBService> logger,
+        GameService gameService,
+        EngineService engineService,
+        CompanyService companyService,
+        GenreService genreService,
+        TagService tagService) : BaseService(logger), IDisposable
     {
         private const string DefaultFields = "*";
         private IGDBClient Client;
-        
-        private readonly GameService gameService;
-        private readonly EngineService engineService;
-        private readonly CompanyService companyService;
-        private readonly GenreService genreService;
-        private readonly TagService tagService;
 
         public bool Authenticated = false;
 

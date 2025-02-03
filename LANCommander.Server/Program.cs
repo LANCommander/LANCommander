@@ -17,6 +17,7 @@ using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
 using System.Net;
+using LANCommander.Server.Data.Interceptors;
 using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Scalar.AspNetCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Serilog.Filters;
@@ -185,6 +187,9 @@ namespace LANCommander.Server
 
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
 
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddSingleton<AuditingInterceptor>();
+            
             builder.Services.AddDbContextFactory<DatabaseContext>();
             builder.Services.AddDbContext<DatabaseContext>();
 

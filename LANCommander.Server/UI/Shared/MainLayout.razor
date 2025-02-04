@@ -107,13 +107,11 @@
         </Flex>
     </Sider>
 
-    <Flex Vertical Justify="FlexJustify.SpaceBetween">
+    <Flex Vertical Justify="FlexJustify.SpaceBetween" Gap="FlexGap.Large" Class="layout-wrapper" >
         <ErrorHandler Title="Unexpected Error">
             <Body>
-                <Content Style="padding: 24px;">
-                    <div class="site-layout-background">
-                        @Body
-                    </div>
+                <Content>
+                    @Body
                 </Content>
             </Body>
             <Extra>
@@ -121,7 +119,7 @@
             </Extra>
         </ErrorHandler>
 
-        <Footer Style="text-align: center; padding-top: 0;">
+        <Footer>
             LANCommander v@(UpdateService.GetCurrentVersion().ToString())
         </Footer>
     </Flex>

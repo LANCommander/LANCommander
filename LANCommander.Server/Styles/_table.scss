@@ -9,3 +9,11 @@
 .ant-table-row-level-1 {
     background: #0a0a0a;
 }
+
+.ant-table + .ant-pagination {
+    padding: 12px;
+}
+
+.table-toolbar {
+    padding: 12px;
+}

@@ -2,6 +2,10 @@
     min-height: 100vh;
 }
 
+.layout-wrapper {
+    padding: 24px;
+}
+
 .ant-header {
     display: flex;
 }
@@ -12,9 +16,9 @@
 
 .ant-layout-content {
     background: #141414;
-    padding-bottom: 24px;
     display: flex;
     flex-direction: column;
+    flex: unset;
 
     & > .ant-table-wrapper {
         .ant-table-pagination {
@@ -22,4 +26,8 @@
             margin-bottom: 0;
         }
     }
+}
+
+.ant-layout-footer {
+    text-align: center;
 }

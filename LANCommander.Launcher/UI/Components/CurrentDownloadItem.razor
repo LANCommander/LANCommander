@@ -1,9 +1,9 @@
 ﻿@using LANCommander.Launcher.Models
 @using LANCommander.SDK.Services
+@using RedistributableService = LANCommander.Launcher.Services.RedistributableService
 @using GameService = LANCommander.Launcher.Services.GameService
 @inject InstallService InstallService
 @inject SDK.Client Client
-@inject GameService GameService
 
 @if (CurrentQueueItem != null)
 {
@@ -19,7 +19,7 @@
                 <div class="downloader-current-upper-status">
                     @if (Progress.Status == SDK.Enums.InstallStatus.Downloading && Progress.Progress > 0)
                     {
-                        <Text>@Progress.Status.GetDisplayName(): @Progress.Progress.ToString("0%")</Text>
+                        <Text>@Progress.Status.GetDisplayName() @Progress.Title: @Progress.Progress.ToString("0%")</Text>
                     }
                     else
                     {
@@ -29,7 +29,7 @@
                 @if (Progress.TransferSpeed > 0)
                 {
                     <div class="downloader-current-upper-time-remaining">
-                        @Progress.TimeRemaining
+                        @Progress.TimeRemaining.ToString(@"hh\:mm\:ss")
                     </div>
                 }
             </div>

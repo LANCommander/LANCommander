@@ -60,6 +60,11 @@ namespace LANCommander.Launcher.Services
                 OnProgress?.Invoke(e);
             };
 
+            Client.Redistributables.OnInstallProgressUpdate += (e) =>
+            {
+                OnProgress?.Invoke(e);
+            };
+
             // Client.Games.OnArchiveExtractionProgress += Games_OnArchiveExtractionProgress;
             // Client.Games.OnArchiveEntryExtractionProgress += Games_OnArchiveEntryExtractionProgress;
         }

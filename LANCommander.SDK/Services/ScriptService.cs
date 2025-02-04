@@ -50,7 +50,7 @@ namespace LANCommander.SDK.Services
             var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
             
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.NameChange);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.DetectInstall);
 
             try
             {
@@ -68,18 +68,6 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("RedistributableManifest", redistributableManifest);
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-                        
-                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                        {
-                            foreach (var customField in gameManifest.CustomFields)
-                            {
-                                script.AddVariable(customField.Name, customField.Value);
-                            }
-                        }
-                        
-                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Extraction");
-
-                        script.UseWorkingDirectory(extractionPath);
 
                         try
                         {
@@ -97,6 +85,15 @@ namespace LANCommander.SDK.Services
                             Logger?.LogError(ex, "Could not enrich logs");
                         }
                         
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+
+                        script.UseWorkingDirectory(Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId)));
                         script.UseFile(path);
 
                         try
@@ -140,7 +137,7 @@ namespace LANCommander.SDK.Services
             var gameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             var redistributableManifest = await ManifestHelper.ReadAsync<Redistributable>(installDirectory, redistributableId);
 
-            var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.BeforeStart);
+            var path = ScriptHelper.GetScriptFilePath(installDirectory, redistributableId, Enums.ScriptType.Install);
             
             try
             {
@@ -158,19 +155,6 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("RedistributableManifest", redistributableManifest);
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
-                        
-                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                        {
-                            foreach (var customField in gameManifest.CustomFields)
-                            {
-                                script.AddVariable(customField.Name, customField.Value);
-                            }
-                        }
-                        
-                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Extract");
-
-                        script.UseWorkingDirectory(extractionPath);
-                        script.UseFile(path);
 
                         try
                         {
@@ -188,6 +172,19 @@ namespace LANCommander.SDK.Services
                         {
                             Logger?.LogError(ex, "Could not enrich logs");
                         }
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Files");
+
+                        script.UseWorkingDirectory(extractionPath);
+                        script.UseFile(path);
 
                         try
                         {
@@ -250,16 +247,6 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.AddVariable("PlayerAlias", playerAlias);
-                        
-                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                        {
-                            foreach (var customField in gameManifest.CustomFields)
-                            {
-                                script.AddVariable(customField.Name, customField.Value);
-                            }
-                        }
-                        
-                        script.UseFile(path);
 
                         try
                         {
@@ -278,6 +265,19 @@ namespace LANCommander.SDK.Services
                         {
                             Logger?.LogError(ex, "Could not enrich logs");
                         }
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Files");
+
+                        script.UseWorkingDirectory(extractionPath);
+                        script.UseFile(path);
 
                         try
                         {
@@ -343,16 +343,6 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("DefaultInstallDirectory", Client.DefaultInstallDirectory);
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.AddVariable("PlayerAlias", GameService.GetPlayerAlias(installDirectory, gameId));
-                        
-                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                        {
-                            foreach (var customField in gameManifest.CustomFields)
-                            {
-                                script.AddVariable(customField.Name, customField.Value);
-                            }
-                        }
-                        
-                        script.UseFile(path);
 
                         try
                         {
@@ -371,6 +361,19 @@ namespace LANCommander.SDK.Services
                         {
                             Logger?.LogError(ex, "Could not enrich logs");
                         }
+                        
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Files");
+
+                        script.UseWorkingDirectory(extractionPath);
+                        script.UseFile(path);
 
                         try
                         {
@@ -448,14 +451,6 @@ namespace LANCommander.SDK.Services
                         script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
                         script.AddVariable("OldPlayerAlias", oldName);
                         script.AddVariable("NewPlayerAlias", newName);
-                        
-                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
-                        {
-                            foreach (var customField in gameManifest.CustomFields)
-                            {
-                                script.AddVariable(customField.Name, customField.Value);
-                            }
-                        }
 
                         try
                         {
@@ -475,6 +470,17 @@ namespace LANCommander.SDK.Services
                             Logger?.LogError(ex, "Could not enrich logs");
                         }
 
+                        if (gameManifest.CustomFields != null && gameManifest.CustomFields.Any())
+                        {
+                            foreach (var customField in gameManifest.CustomFields)
+                            {
+                                script.AddVariable(customField.Name, customField.Value);
+                            }
+                        }
+                        
+                        var extractionPath = Path.Combine(GameService.GetMetadataDirectoryPath(installDirectory, redistributableId), "Files");
+
+                        script.UseWorkingDirectory(extractionPath);
                         script.UseFile(path);
 
                         try

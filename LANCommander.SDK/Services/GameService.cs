@@ -21,6 +21,7 @@ namespace LANCommander.SDK.Services
     public class InstallProgress
     {
         public Game Game { get; set; }
+        public string Title { get; set; }
         public Guid IconId { get; set; }
         public InstallStatus Status { get; set; }
         public float Progress
@@ -305,10 +306,11 @@ namespace LANCommander.SDK.Services
             var destination = await GetInstallDirectory(game, installDirectory);
 
             _installProgress.Game = game;
+            _installProgress.Title = game.Title;
             _installProgress.Status = InstallStatus.Downloading;
             _installProgress.Progress = 0;
             _installProgress.TransferSpeed = 0;
-            _installProgress.TotalBytes = 1;
+            _installProgress.TotalBytes = 0;
             _installProgress.BytesDownloaded = 0;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -383,8 +385,6 @@ namespace LANCommander.SDK.Services
             if (game.Redistributables != null && game.Redistributables.Any())
             {
                 Logger?.LogTrace("Installing redistributables");
-                
-                Client.Redistributables.OnInstallProgressUpdate += progress => OnInstallProgressUpdate?.Invoke(progress); 
 
                 await Client.Redistributables.InstallAsync(game);
             }
@@ -725,8 +725,6 @@ namespace LANCommander.SDK.Services
 
         private ExtractionResult DownloadAndExtract(Game game, string destination)
         {
-            var stopwatch = Stopwatch.StartNew();
-
             if (game == null)
             {
                 Logger?.LogTrace("Game failed to download, no game was specified");
@@ -750,25 +748,23 @@ namespace LANCommander.SDK.Services
                 TransferStream = Stream(game.Id);
                 Reader = ReaderFactory.Open(TransferStream);
 
-                long lastPosition = 0;
-                
-                TransferStream.OnProgress += (pos, len) =>
+                using (var monitor = new FileTransferMonitor(TransferStream.Length))
                 {
-                    if (stopwatch.ElapsedMilliseconds > 500)
+                    TransferStream.OnProgress += (pos, len) =>
                     {
-                        var bytesThisInterval = pos - lastPosition;
+                        if (monitor.CanUpdate())
+                        {
+                            monitor.Update(pos);
 
-                        _installProgress.BytesDownloaded = pos;
-                        _installProgress.TotalBytes = len;
-                        _installProgress.TransferSpeed = (long)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
-
-                        OnInstallProgressUpdate?.Invoke(_installProgress);
-
-                        lastPosition = pos;
-
-                        stopwatch.Restart();
-                    }
-                };
+                            _installProgress.BytesDownloaded = monitor.GetBytesTransferred();
+                            _installProgress.TotalBytes = len;
+                            _installProgress.TransferSpeed = monitor.GetSpeed();
+                            _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+                            
+                            OnInstallProgressUpdate?.Invoke(_installProgress);
+                        }
+                    };
+                }
 
                 Reader.EntryExtractionProgress += (sender, e) =>
                 {

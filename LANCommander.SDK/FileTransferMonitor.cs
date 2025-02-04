@@ -22,7 +22,7 @@ public class FileTransferMonitor : IDisposable
 
     public bool CanUpdate()
     {
-        return _stopwatch.Elapsed.TotalSeconds < RateLimit;
+        return _stopwatch.Elapsed.TotalSeconds > RateLimit;
     }
 
     public void Update(long bytesTransferred)
@@ -49,15 +49,21 @@ public class FileTransferMonitor : IDisposable
     {
         if (_smoothedTransferRate <= 0)
             return TimeSpan.Zero;
+
+        double secondsRemaining;
         
         var remainingBytes = _totalBytes - _lastBytesTransferred;
-        var secondsRemaining = remainingBytes / _smoothedTransferRate;
+
+        if (_smoothedTransferRate > 0)
+            secondsRemaining = remainingBytes / _smoothedTransferRate;
+        else
+            secondsRemaining = 0;
         
         return TimeSpan.FromSeconds(secondsRemaining);
     }
     
     public void Dispose()
     {
-        _stopwatch.Stop();
+        //_stopwatch.Stop();
     }
 }

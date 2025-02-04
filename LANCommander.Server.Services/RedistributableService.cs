@@ -20,6 +20,14 @@ namespace LANCommander.Server.Services
     {
         public override async Task<Redistributable> UpdateAsync(Redistributable entity)
         {
+            if (entity.Games != null && entity.Games.Any())
+            {
+                foreach (var game in entity.Games)
+                {
+                    await cache.ExpireGameCacheAsync(game?.Id);
+                }
+            }
+            
             return await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(r => r.Archives);

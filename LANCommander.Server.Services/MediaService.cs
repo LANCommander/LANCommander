@@ -11,6 +11,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
+using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -25,6 +26,8 @@ namespace LANCommander.Server.Services
     {
         public override async Task<Media> UpdateAsync(Media entity)
         {
+            await cache.ExpireGameCacheAsync(entity.GameId);
+            
             return await base.UpdateAsync(entity, context =>
             {
                 context.UpdateRelationshipAsync(m => m.Game);
@@ -43,11 +46,13 @@ namespace LANCommander.Server.Services
             { MediaType.Avatar, new Size(128, 128) }
         };
 
-        public override Task DeleteAsync(Media entity)
+        public override async Task DeleteAsync(Media entity)
         {
             DeleteLocalMediaFile(entity);
+            
+            await cache.ExpireGameCacheAsync(entity.GameId);
 
-            return base.DeleteAsync(entity);
+            await base.DeleteAsync(entity);
         }
 
         public static bool FileExists(Media entity)
@@ -127,6 +132,8 @@ namespace LANCommander.Server.Services
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
 
             await GenerateThumbnailAsync(media);
+            
+            await cache.ExpireGameCacheAsync(media.GameId);
 
             return media;
         }

@@ -3,6 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
+using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -14,14 +15,30 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, cache, mapper, contextFactory)
     {
-        public async override Task<Script> UpdateAsync(Script entity)
+        public override async Task<Script> AddAsync(Script script)
         {
-            return await base.UpdateAsync(entity, async context =>
+            await cache.ExpireGameCacheAsync(script?.Id);
+            
+            return await base.AddAsync(script);
+        }
+        
+        public override async Task<Script> UpdateAsync(Script script)
+        {
+            await cache.ExpireGameCacheAsync(script?.Id);
+            
+            return await base.UpdateAsync(script, async context =>
             {
                 await context.UpdateRelationshipAsync(s => s.Game);
                 await context.UpdateRelationshipAsync(s => s.Redistributable);
                 await context.UpdateRelationshipAsync(s => s.Server);
             });
+        }
+
+        public override async Task DeleteAsync(Script script)
+        {
+            await cache.ExpireGameCacheAsync(script.GameId);
+            
+            await base.DeleteAsync(script);
         }
         
         public static IEnumerable<Snippet> GetSnippets()

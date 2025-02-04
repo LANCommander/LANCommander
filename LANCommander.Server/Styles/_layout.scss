@@ -28,6 +28,10 @@
     }
 }
 
+.panel-layout > .ant-layout-content {
+    flex: auto;
+}
+
 .ant-layout-footer {
     text-align: center;
 }

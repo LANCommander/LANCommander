@@ -8,56 +8,54 @@
 
 <PageHeader Title="Users" />
 
-<div style="padding: 0 24px;">
-    <Table TItem="UserViewModel" DataSource="@UserList" Loading="@(Loading)" Responsive>
-        <PropertyColumn Property="u => u.UserName" Title="Username" />
-        <PropertyColumn Property="u => u.Roles">
-            @String.Join(", ", context.Roles)
-        </PropertyColumn>
-        <PropertyColumn Property="u => u.SavesSize" Title="Saves">
-            <ByteSize Value="context.SavesSize" />
-        </PropertyColumn>
-        <ActionColumn>
-            <Space Style="display: flex; justify-content: end">
-                @if (Settings.Authentication.RequireApproval && !context.Approved)
+<Table TItem="UserViewModel" DataSource="@UserList" Loading="@(Loading)" Responsive>
+    <PropertyColumn Property="u => u.UserName" Title="Username" />
+    <PropertyColumn Property="u => u.Roles">
+        @String.Join(", ", context.Roles)
+    </PropertyColumn>
+    <PropertyColumn Property="u => u.SavesSize" Title="Saves">
+        <ByteSize Value="context.SavesSize" />
+    </PropertyColumn>
+    <ActionColumn>
+        <Space Style="display: flex; justify-content: end">
+            @if (Settings.Authentication.RequireApproval && !context.Approved)
+            {
+                <SpaceItem>
+                    <Button OnClick="() => ApproveUser(context)" Type="@ButtonType.Primary">Approve</Button>
+                </SpaceItem>
+            }
+
+            <SpaceItem>
+                <Button OnClick="() => ManageRoles(context)" Type="@ButtonType.Primary">Roles</Button>
+            </SpaceItem>
+
+            <SpaceItem>
+                <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))" />
+            </SpaceItem>
+
+            <SpaceItem>
+                <Tooltip Title="Change Password">
+                    <Button Icon="@IconType.Outline.Lock" Type="@ButtonType.Text" OnClick="() => ChangePassword(context)" />
+                </Tooltip>
+            </SpaceItem>
+
+            <SpaceItem>
+                @if (!context.Roles.Any(r => r == RoleService.AdministratorRoleName))
                 {
-                    <SpaceItem>
-                        <Button OnClick="() => ApproveUser(context)" Type="@ButtonType.Primary">Approve</Button>
-                    </SpaceItem>
+                    <Popconfirm OnConfirm="() => DeleteUser(context)" Title="Are you sure you want to delete this user?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                    </Popconfirm>
                 }
-
-                <SpaceItem>
-                    <Button OnClick="() => ManageRoles(context)" Type="@ButtonType.Primary">Roles</Button>
-                </SpaceItem>
-
-                <SpaceItem>
-                    <Button Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))" />
-                </SpaceItem>
-
-                <SpaceItem>
-                    <Tooltip Title="Change Password">
-                        <Button Icon="@IconType.Outline.Lock" Type="@ButtonType.Text" OnClick="() => ChangePassword(context)" />
+                else
+                {
+                    <Tooltip Title="Admins cannot be deleted. They must be demoted first.">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
                     </Tooltip>
-                </SpaceItem>
-
-                <SpaceItem>
-                    @if (!context.Roles.Any(r => r == RoleService.AdministratorRoleName))
-                    {
-                        <Popconfirm OnConfirm="() => DeleteUser(context)" Title="Are you sure you want to delete this user?">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                        </Popconfirm>
-                    }
-                    else
-                    {
-                        <Tooltip Title="Admins cannot be deleted. They must be demoted first.">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
-                        </Tooltip>
-                    }
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
-</div>
+                }
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
 
 @code {
     ICollection<UserViewModel> UserList { get; set; } = new List<UserViewModel>();

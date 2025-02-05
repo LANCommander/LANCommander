@@ -6,34 +6,34 @@
 
 <PageHeader Title="Missing Archives" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <p>
         These archives are missing their backing file in the "Upload" directory of your server. This may result in broken downloads for clients. To fix, either upload a new file or delete the offending archive.
     </p>
+</PageContent>
 
-    <Table TItem="Archive" DataSource="@Archives" Loading="@Loading" Responsive>
-        <PropertyColumn Property="a => a.Version" Sortable />
-        <PropertyColumn Property="a => a.Game.Title" Title="Game" />
-        <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
-        <PropertyColumn Property="a => a.CreatedBy" Sortable>
-            @context.CreatedBy?.UserName
-        </PropertyColumn>
-        <ActionColumn Title="" Style="text-align: right">
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <Button OnClick="() => Upload(context)" Icon="@IconType.Outline.Upload" Type="@ButtonType.Text" />
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this archive?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
+<Table TItem="Archive" DataSource="@Archives" Loading="@Loading" Responsive>
+    <PropertyColumn Property="a => a.Version" Sortable />
+    <PropertyColumn Property="a => a.Game.Title" Title="Game" />
+    <PropertyColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+    <PropertyColumn Property="a => a.CreatedBy" Sortable>
+        @context.CreatedBy?.UserName
+    </PropertyColumn>
+    <ActionColumn Title="" Style="text-align: right">
+        <Space Direction="SpaceDirection.Horizontal">
+            <SpaceItem>
+                <Button OnClick="() => Upload(context)" Icon="@IconType.Outline.Upload" Type="@ButtonType.Text" />
+            </SpaceItem>
+            <SpaceItem>
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this archive?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
 
-    <ArchiveUploader @ref="Uploader" OnArchiveUploaded="LoadData" />
-</div>
+<ArchiveUploader @ref="Uploader" OnArchiveUploaded="LoadData" />
 
 
  @code {

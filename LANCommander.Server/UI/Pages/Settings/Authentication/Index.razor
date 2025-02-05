@@ -1,6 +1,5 @@
 ﻿@page "/Settings/Authentication"
 @using CaseConverter
-@using LANCommander.Server.Models;
 @using LANCommander.Server.UI.Pages.Settings.Authentication.Components
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -12,7 +11,7 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Require Account Approval">
             <Switch @bind-Checked="context.Authentication.RequireApproval" />
@@ -42,13 +41,13 @@
         <FormItem Label="Minimum Length">
             <AntDesign.InputNumber @bind-Value="context.Authentication.PasswordRequiredLength" Min="1" />
         </FormItem>
-        
+
         <Divider Text="Security" />
-        
+
         <FormItem Label="Minimum Same Site Cookie Policy">
             <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Authentication.MinimumSameSitePolicy" />
         </FormItem>
-        
+
         <FormItem Label="Cookie Secure Policy">
             <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Authentication.CookieSecurePolicy" />
         </FormItem>
@@ -57,7 +56,7 @@
     <Divider Text="External Providers" />
 
     <ExternalProviderEditor @bind-Values="Settings.Authentication.AuthenticationProviders" />
-</div>
+</PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();

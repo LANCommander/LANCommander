@@ -12,7 +12,7 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" OnFinish="Save" ValidateOnChange="true">
         <FormItem Label="Avatar">
             <AvatarUploader UserId="User.Id" />
@@ -62,16 +62,12 @@
                 </FormItem>
             }
 
-            <GridRow Justify="RowJustify.End">
-                <GridCol>
-                    <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
-                </GridCol>
-            </GridRow>
+            <Flex Justify="FlexJustify.End">
+                <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
+            </Flex>
         }
-
-
     </Form>
-</div>
+</PageContent>
 
 @code {
     [Parameter] public string Username { get; set; }

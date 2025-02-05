@@ -32,6 +32,19 @@
     flex: auto;
 }
 
+.ant-page-content {
+    padding-left: 24px;
+    padding-right: 24px;
+    
+    & > .ant-flex:last-child {
+        padding-bottom: 24px;
+    }
+    
+    & > .ant-btn:last-child {
+        margin-bottom: 24px;
+    }
+}
+
 .ant-layout-footer {
     text-align: center;
 }

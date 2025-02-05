@@ -17,7 +17,7 @@
      </PageHeaderExtra>
  </PageHeader>
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Restrict Games by Collection">
             <Switch @bind-Checked="context.Roles.RestrictGamesByCollection" />
@@ -35,34 +35,34 @@
                 EnableSearch />
         </FormItem>
     </Form>
+</PageContent>
 
-    <Table TItem="RoleViewModel" DataSource="@RolesDetails" Loading="@(Loading)" Responsive>
-        <PropertyColumn Property="r => r.Name" Title="Name" />
-        <PropertyColumn Property="r => r.Collections" Title="Collections" />
-        <PropertyColumn Property="r => r.Users" Title="Users" />
-        <ActionColumn>
-            <Space Style="display: flex; justify-content: end">
-                <SpaceItem>
-                    <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
-                </SpaceItem>
-                <SpaceItem>
-                    @if (context.Name != RoleService.AdministratorRoleName)
-                    {
-                        <Popconfirm OnConfirm="() => DeleteRole(context)" Title="Are you sure you want to delete this role?">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                         </Popconfirm>
-                    }
-                    else
-                    {
-                        <Tooltip Title="The administrator role cannot be deleted.">
-                            <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
-                         </Tooltip>
-                    }
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
-</div>
+<Table TItem="RoleViewModel" DataSource="@RolesDetails" Loading="@(Loading)" Responsive>
+    <PropertyColumn Property="r => r.Name" Title="Name" />
+    <PropertyColumn Property="r => r.Collections" Title="Collections" />
+    <PropertyColumn Property="r => r.Users" Title="Users" />
+    <ActionColumn>
+        <Space Style="display: flex; justify-content: end">
+            <SpaceItem>
+                <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
+            </SpaceItem>
+            <SpaceItem>
+                @if (context.Name != RoleService.AdministratorRoleName)
+                {
+                    <Popconfirm OnConfirm="() => DeleteRole(context)" Title="Are you sure you want to delete this role?">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                     </Popconfirm>
+                }
+                else
+                {
+                    <Tooltip Title="The administrator role cannot be deleted.">
+                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
+                     </Tooltip>
+                }
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
 
 <Modal Title="Add a Role" @bind-Visible="AddRoleDialogVisible" OnOk="AddRole" OnCancel="() => AddRoleDialogVisible = false">
     <Form Model="NewRole">

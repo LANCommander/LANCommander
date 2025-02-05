@@ -6,7 +6,7 @@
 
 <PageHeader Title="Archives" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable Patching">
             <Switch @bind-Checked="context.Archives.EnablePatching" />
@@ -39,7 +39,7 @@
                         </Space>
                     </ActionColumn>
                 </Table>
-                
+
                 <Flex Justify="FlexJustify.End">
                     <Button OnClick="AddStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
                 </Flex>
@@ -50,7 +50,7 @@
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </FormItem>
     </Form>
-</div>
+</PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();

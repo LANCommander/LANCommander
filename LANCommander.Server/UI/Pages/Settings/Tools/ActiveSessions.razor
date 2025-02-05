@@ -6,30 +6,30 @@
 
 <PageHeader Title="Active Sessions" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <p>
         These play sessions are considered active because they never ended. This may cause servers set to autostart with "Player Activity" to not stop when a player has quit a game.
     </p>
+</PageContent>
 
-    <Table TItem="PlaySession" DataSource="@PlaySessions" Loading="@Loading" Responsive>
-        <PropertyColumn Property="ps => ps.Game.Title" Title="Game" />
-        <PropertyColumn Property="ps => ps.Start" />
-        <PropertyColumn Property="ps => ps.End" />
-        <PropertyColumn Property="ps => ps.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable DefaultSortOrder="@SortDirection.Descending" />
-        <PropertyColumn Property="ps => ps.CreatedBy" Sortable>
-            @context.CreatedBy?.UserName
-        </PropertyColumn>
-        <ActionColumn Title="" Style="text-align: right">
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this session?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
-</div>
+<Table TItem="PlaySession" DataSource="@PlaySessions" Loading="@Loading" Responsive>
+    <PropertyColumn Property="ps => ps.Game.Title" Title="Game" />
+    <PropertyColumn Property="ps => ps.Start" />
+    <PropertyColumn Property="ps => ps.End" />
+    <PropertyColumn Property="ps => ps.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable DefaultSortOrder="@SortDirection.Descending" />
+    <PropertyColumn Property="ps => ps.CreatedBy" Sortable>
+        @context.CreatedBy?.UserName
+    </PropertyColumn>
+    <ActionColumn Title="" Style="text-align: right">
+        <Space Direction="SpaceDirection.Horizontal">
+            <SpaceItem>
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this session?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
+            </SpaceItem>
+        </Space>
+    </ActionColumn>
+</Table>
 
 
  @code {

@@ -15,7 +15,7 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="@Role" Layout="@FormLayout.Vertical">
         <FormItem Label="Name">
             <Input @bind-Value="Role.Name" />
@@ -24,7 +24,7 @@
             <TransferInput LeftTitle="Available" RightTitle="Allowed" DataSource="Collections" TitleSelector="c => c.Name" @bind-Values="SelectedCollections" />
         </FormItem>
     </Form>
-</div>
+</PageContent>
 
 @code {
     [Parameter] public Guid Id { get; set; }

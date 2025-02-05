@@ -1,5 +1,4 @@
 ﻿@page "/Settings/IPXRelay"
-@using LANCommander.Server.Models
 @inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<IPXRelay> Logger
@@ -7,7 +6,7 @@
 
 <PageHeader Title="IPX Relay" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable">
             <Switch @bind-Checked="context.IPXRelay.Enabled" />
@@ -15,7 +14,7 @@
 
         <FormItem Label="Host">
             <Text Type="@TextElementType.Secondary">Use this to customize the host that is broadcasted to clients.</Text>
-                <Input @bind-Value="context.IPXRelay.Host" />
+            <Input @bind-Value="context.IPXRelay.Host" />
         </FormItem>
 
         <FormItem Label="Port">
@@ -30,7 +29,7 @@
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </FormItem>
     </Form>
-</div>
+</PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();

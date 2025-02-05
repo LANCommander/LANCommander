@@ -14,7 +14,7 @@
 
 <PageHeader Title="Tools" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <h3>Recalculate File Sizes</h3>
     <p>
         Some file sizes are cached in the database. Click the button below to scan through all files and recalculate their size.
@@ -58,14 +58,13 @@
     <h3>Regenerate Page Routes</h3>
     <p>Fix any page routes that seem to be out of date or corrupt.</p>
     <Button Type="ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
-    
+
     <Divider />
-    
+
     <h3>Regenerate Thumbnails</h3>
     <p>Clear out the existing thumbnail cache and generate replacements.</p>
     <Button Type="ButtonType.Primary" OnClick="RegenerateThumbnails" Loading="RegeneratingThumbnails">Regenerate</Button>
-</div>
-
+</PageContent>
 
 @code {
     bool RecalculatingFileSizes = false;

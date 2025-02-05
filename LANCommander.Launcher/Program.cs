@@ -76,7 +76,6 @@ namespace LANCommander.Launcher
 
             app.MainWindow
                 .SetTitle("LANCommander")
-                .SetUseOsDefaultLocation(true)
                 .SetChromeless(true)
                 .RegisterCustomSchemeHandler("media", (object sender, string scheme, string url, out string contentType) =>
                 {
@@ -134,13 +133,16 @@ namespace LANCommander.Launcher
                 app.MainWindow.SetMaximized(true);
             else
             {
-                if (settings.Window.X == 0 && settings.Window.Y == 0)
-                    app.MainWindow.SetUseOsDefaultLocation(true);
-                else
-                    app.MainWindow.SetLocation(new System.Drawing.Point(settings.Window.X, settings.Window.Y));
-
                 if (settings.Window.Width != 0 && settings.Window.Height != 0)
+                {
                     app.MainWindow.SetSize(settings.Window.Width, settings.Window.Height);
+                    app.MainWindow.SetLocation(new System.Drawing.Point(settings.Window.X, settings.Window.Y));
+                }
+                else
+                {
+                    app.MainWindow.SetSize(1024, 768);
+                    app.MainWindow.Center();
+                }
             }
             #endregion
 

@@ -1,0 +1,9 @@
+﻿@page "/Settings/Scripts"
+@using LANCommander.SDK.Enums
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Scripts" />
+
+<div style="padding: 0 24px;">
+    <ScriptEditor AllowedTypes="new [] { ScriptType.UserLogin, ScriptType.UserRegistration }" />
+</div>

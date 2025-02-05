@@ -3,20 +3,52 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
+using LANCommander.Server.Services.Exceptions;
 using Microsoft.IdentityModel.Tokens;
-using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
+using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention;
 
 namespace LANCommander.Server.Services
 {
-    public class AuthenticationService(ILogger<AuthenticationService> logger, UserService userService) : BaseService(logger)
+    public class AuthenticationService(
+        ILogger<AuthenticationService> logger,
+        IMapper mapper,
+        UserService userService,
+        RoleService roleService,
+        ScriptService scriptService) : BaseService(logger)
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
             if (!String.IsNullOrWhiteSpace(userName) && await userService.CheckPassword(userName, password))
             {
-                return await LoginAsync(userName);
+                var token = await LoginAsync(userName);
+
+                try
+                {
+                    var user = await userService.GetAsync<User>(userName);
+                    var scripts = await scriptService.GetAsync<SDK.Models.Script>(s => s.Type == ScriptType.UserLogin);
+
+                    if (scripts.Any())
+                    {
+                        var client = new SDK.Client(_settings.Beacon.Address, "", logger);
+
+                        client.UseToken(token);
+
+                        foreach (var script in scripts)
+                        {
+                            await client.Scripts.RunUserLoginScript(script, user);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogError(ex, "Could not execute user login script");
+                }
+
+                return token;
             }
             else
                 throw new Exception("Invalid username or password");
@@ -107,6 +139,76 @@ namespace LANCommander.Server.Services
                 RefreshToken = newRefreshToken,
                 Expiration = newAccessToken.ValidTo
             };
+        }
+
+        public async Task<AuthToken> RegisterAsync(string userName, string password, string passwordConfirmation)
+        {
+            if (password != passwordConfirmation)
+                throw new UserRegistrationException("Passwords don't match");
+            
+            var user = await userService.GetAsync(userName);
+
+            if (user != null)
+            {
+                _logger?.LogDebug("Cannot register user with username {UserName}, already exists", userName);
+
+                throw new UserRegistrationException("Username is unavailable");
+            }
+
+            user = new Data.Models.User();
+            user.UserName = userName;
+
+            user = await userService.AddAsync(user);
+
+            if (user != null)
+            {
+                await userService.ChangePassword(user.UserName, password);
+
+                try
+                {
+                    if (_settings.Roles.DefaultRoleId == Guid.Empty)
+                    {
+                        var defaultRole = await roleService.GetAsync(_settings.Roles.DefaultRoleId);
+
+                        if (defaultRole != null)
+                            await userService.AddToRoleAsync(user.UserName, defaultRole.Name);
+                    }
+
+                    var token = await LoginAsync(user.UserName, password);
+
+                    logger?.LogDebug("Successfully registered user {UserName}", user.UserName);
+                    
+                    try
+                    {
+                        var scripts = await scriptService.GetAsync<SDK.Models.Script>(s => s.Type == ScriptType.UserLogin);
+
+                        if (scripts.Any())
+                        {
+                            var client = new SDK.Client(_settings.Beacon.Address, "", logger);
+
+                            client.UseToken(token);
+
+                            foreach (var script in scripts)
+                            {
+                                await client.Scripts.RunUserRegistrationScript(script, mapper.Map<SDK.Models.User>(user));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogError(ex, "Could not execute user login script");
+                    }
+
+                    return token;
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogError(ex, "Could not register user {UserName}", user.UserName);
+                    throw new UserRegistrationException("An unknown error occurred while registering");
+                }
+            }
+            else
+                throw new UserRegistrationException("Unknown Error");
         }
         
         private ClaimsPrincipal? GetPrincipalFromExpiredToken(string? token)

@@ -9,7 +9,7 @@
         TItem="Script"
         HidePagination
         Responsive
-        Query="s => (s.GameId != Guid.Empty && s.GameId == GameId) || (s.RedistributableId != Guid.Empty && s.RedistributableId == RedistributableId) || (s.ServerId != Guid.Empty && s.ServerId == ServerId)">
+        Query="s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty">
         <BoundDataColumn Property="s => s.Type">
             @context.Type.GetDisplayName()
         </BoundDataColumn>
@@ -63,10 +63,6 @@
         {
             ScriptId = scriptId ?? default,
             AllowedTypes = AllowedTypes,
-            ArchiveId = ArchiveId,
-            GameId = GameId,
-            RedistributableId = RedistributableId,
-            ServerId = ServerId
         };
 
         var modalRef = await ModalService.CreateModalAsync<ScriptEditorDialog, ScriptEditorOptions, Script>(modalOptions, options);

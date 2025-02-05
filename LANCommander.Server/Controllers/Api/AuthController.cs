@@ -17,13 +17,6 @@ using User = LANCommander.Server.Data.Models.User;
 
 namespace LANCommander.Server.Controllers.Api
 {
-    public class TokenModel
-    {
-        public string AccessToken { get; set; }
-        public string RefreshToken { get; set; }
-        public DateTime Expiration { get; set; }
-    }
-
     public class LoginModel
     {
         public string UserName { get; set; }
@@ -147,64 +140,17 @@ namespace LANCommander.Server.Controllers.Api
         [HttpPost("Register")]
         public async Task<IActionResult> RegisterAsync([FromBody] RegisterModel model)
         {
-            if (model.Password != model.PasswordConfirmation)
-                return Unauthorized(new
-                {
-                    Message = "Passwords don't match."
-                });
-            
-            var user = await UserService.GetAsync(model.UserName);
-
-            if (user != null)
+            try
             {
-                Logger?.LogDebug("Cannot register user with username {UserName}, already exists", model.UserName);
+                var token = await AuthenticationService.RegisterAsync(model.UserName, model.Password,
+                    model.PasswordConfirmation);
 
-                return Unauthorized(new
-                {
-                    Message = "Username is unavailable"
-                });
+                return Ok(token);
             }
-
-            user = new User();
-
-            user.UserName = model.UserName;
-
-            user = await UserService.AddAsync(user);
-
-            if (user != null)
+            catch (Exception ex)
             {
-                await UserService.ChangePassword(user.UserName, model.Password);
-
-                try
-                {
-                    if (Settings.Roles.DefaultRoleId != Guid.Empty)
-                    {
-                        var defaultRole = await RoleService.GetAsync(Settings.Roles.DefaultRoleId);
-
-                        if (defaultRole != null)
-                            await UserService.AddToRoleAsync(user.UserName, defaultRole.Name);
-                    }
-
-                    var token = await AuthenticationService.LoginAsync(user.UserName, model.Password);
-
-                    Logger?.LogDebug("Successfully registered user {UserName}", user.UserName);
-
-                    return Ok(token);
-                }
-                catch (Exception ex)
-                {
-                    Logger?.LogError(ex, "Could not register user {UserName}", user.UserName);
-                    return BadRequest(new
-                    {
-                        Message = "An unknown error occurred"
-                    });
-                }
+                return Unauthorized(ex.Message);
             }
-
-            return Unauthorized(new
-            {
-                //Message = "Error:\n" + String.Join('\n', result.Errors.Select(e => e.Description))
-            });
         }
 
         [HttpGet("AuthenticationProviders")]

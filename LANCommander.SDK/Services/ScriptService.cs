@@ -3,16 +3,10 @@ using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
-using Steamworks.Data;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management.Automation;
-using System.Text;
 using System.Threading.Tasks;
-using YamlDotNet.Serialization;
 
 namespace LANCommander.SDK.Services
 {
@@ -41,6 +35,78 @@ namespace LANCommander.SDK.Services
             Client = client;
             Logger = logger;
         }
+        
+        #region Authentication Scripts
+        public async Task RunUserLoginScript(Script loginScript, User user)
+        {
+            try
+            {
+                using (var op = Logger.BeginOperation("Executing user login script"))
+                {
+                    var script = new PowerShellScript(Enums.ScriptType.UserLogin);
+
+                    script.AddVariable("User", user);
+                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+
+                    script.UseInline(loginScript.Contents);
+
+                    try
+                    {
+                        op
+                            .Enrich("UserId", user.Id)
+                            .Enrich("Username", user.UserName)
+                            .Enrich("ScriptId", loginScript.Id)
+                            .Enrich("ScriptName", loginScript.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Could not enrich logs");
+                    }
+
+                    await script.ExecuteAsync<int>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not execute user login script");
+            }
+        }
+        
+        public async Task RunUserRegistrationScript(Script registrationScript, User user)
+        {
+            try
+            {
+                using (var op = Logger.BeginOperation("Executing user registration script"))
+                {
+                    var script = new PowerShellScript(Enums.ScriptType.UserRegistration);
+
+                    script.AddVariable("User", user);
+                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
+
+                    script.UseInline(registrationScript.Contents);
+
+                    try
+                    {
+                        op
+                            .Enrich("UserId", user.Id)
+                            .Enrich("Username", user.UserName)
+                            .Enrich("ScriptId", registrationScript.Id)
+                            .Enrich("ScriptName", registrationScript.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Could not enrich logs");
+                    }
+
+                    await script.ExecuteAsync<int>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not execute user registration script");
+            }
+        }
+        #endregion
 
         #region Redistributables
         public async Task<bool> RunDetectInstallScriptAsync(string installDirectory, Guid gameId, Guid redistributableId)

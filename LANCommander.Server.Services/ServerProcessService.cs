@@ -190,7 +190,7 @@ namespace LANCommander.Server.Services
                     {
                         var script = new PowerShellScript(SDK.Enums.ScriptType.BeforeStart);
 
-                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+                        script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
 
                         script.UseWorkingDirectory(server.WorkingDirectory);
                         script.UseInline(serverScript.Contents);
@@ -289,7 +289,7 @@ namespace LANCommander.Server.Services
                     {
                         var script = new PowerShellScript(SDK.Enums.ScriptType.AfterStop);
 
-                        // script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
+                        script.AddVariable("Server", Mapper.Map<SDK.Models.Server>(server));
 
                         script.UseWorkingDirectory(server.WorkingDirectory);
                         script.UseInline(serverScript.Contents);

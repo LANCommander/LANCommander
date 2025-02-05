@@ -3,6 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
+using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -17,14 +18,44 @@ namespace LANCommander.Server.Services
     {
         public override async Task<Script> AddAsync(Script script)
         {
-            await cache.ExpireGameCacheAsync(script?.Id);
+            using var context = await contextFactory.CreateDbContextAsync();
+            
+            await cache.ExpireGameCacheAsync(script?.GameId);
+
+            if (script.RedistributableId?.IsNullOrEmpty() ?? false)
+            {
+                var games = await context
+                    .Games
+                    .Include(g => g.Redistributables)
+                    .Where(g => g.Redistributables.Any(r => r.Id == script.RedistributableId))
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                foreach (var game in games)
+                    await cache.ExpireGameCacheAsync(game.Id);
+            }
             
             return await base.AddAsync(script);
         }
         
         public override async Task<Script> UpdateAsync(Script script)
         {
-            await cache.ExpireGameCacheAsync(script?.Id);
+            using var context = await contextFactory.CreateDbContextAsync();
+            
+            await cache.ExpireGameCacheAsync(script?.GameId);
+
+            if (script.RedistributableId?.IsNullOrEmpty() ?? false)
+            {
+                var games = await context
+                    .Games
+                    .Include(g => g.Redistributables)
+                    .Where(g => g.Redistributables.Any(r => r.Id == script.RedistributableId))
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                foreach (var game in games)
+                    await cache.ExpireGameCacheAsync(game.Id);
+            }
             
             return await base.UpdateAsync(script, async context =>
             {
@@ -36,7 +67,22 @@ namespace LANCommander.Server.Services
 
         public override async Task DeleteAsync(Script script)
         {
-            await cache.ExpireGameCacheAsync(script.GameId);
+            using var context = await contextFactory.CreateDbContextAsync();
+            
+            await cache.ExpireGameCacheAsync(script?.GameId);
+
+            if (script.RedistributableId?.IsNullOrEmpty() ?? false)
+            {
+                var games = await context
+                    .Games
+                    .Include(g => g.Redistributables)
+                    .Where(g => g.Redistributables.Any(r => r.Id == script.RedistributableId))
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                foreach (var game in games)
+                    await cache.ExpireGameCacheAsync(game.Id);
+            }
             
             await base.DeleteAsync(script);
         }

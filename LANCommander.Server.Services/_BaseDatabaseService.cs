@@ -269,7 +269,7 @@ namespace LANCommander.Server.Services
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
             
-            var existingEntity = await context.Set<T>().AsNoTracking().FirstOrDefaultAsync(e => e.Id == updatedEntity.Id);
+            var existingEntity = await context.Set<T>().FirstOrDefaultAsync(e => e.Id == updatedEntity.Id);
             
             //context.Entry(existingEntity).CurrentValues.SetValues(entity);
             context.Entry(existingEntity).CurrentValues.SetValues(updatedEntity);

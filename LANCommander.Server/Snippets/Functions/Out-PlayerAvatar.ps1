@@ -1,0 +1,1 @@
+﻿Out-PlayerAvatar | Out-File "$InstallDirectory\avatar.png"

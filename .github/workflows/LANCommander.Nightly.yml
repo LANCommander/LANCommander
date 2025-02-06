@@ -17,7 +17,7 @@ jobs:
   #    skip the rest of the workflow.
   # --------------------------------------------------------------------------
   prep:
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     outputs:
       version_tag: ${{ steps.set_version.outputs.VERSION_TAG }}
       changed: ${{ steps.check_diff.outputs.changed }}
@@ -87,7 +87,7 @@ jobs:
   build_server_linux_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Server Linux ARM64
         uses: ./.github/workflows/LANCommander.Server.yml
@@ -100,7 +100,7 @@ jobs:
   build_server_linux_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Server Linux x64
         uses: ./.github/workflows/LANCommander.Server.yml
@@ -113,7 +113,7 @@ jobs:
   build_server_osx_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Server macOS ARM64
         uses: ./.github/workflows/LANCommander.Server.yml
@@ -126,7 +126,7 @@ jobs:
   build_server_osx_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Server macOS x64
         uses: ./.github/workflows/LANCommander.Server.yml
@@ -139,7 +139,7 @@ jobs:
   build_server_win_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Server Windows ARM64
         uses: ./.github/workflows/LANCommander.Server.yml
@@ -152,7 +152,7 @@ jobs:
   build_server_win_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Server Windows x64
         uses: ./.github/workflows/LANCommander.Server.yml
@@ -165,7 +165,7 @@ jobs:
   build_launcher_linux_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Launcher Linux ARM64
         uses: ./.github/workflows/LANCommander.Launcher.yml
@@ -178,7 +178,7 @@ jobs:
   build_launcher_linux_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Launcher Linux x64
         uses: ./.github/workflows/LANCommander.Launcher.yml
@@ -191,7 +191,7 @@ jobs:
   build_launcher_osx_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Launcher macOS ARM64
         uses: ./.github/workflows/LANCommander.Launcher.yml
@@ -204,7 +204,7 @@ jobs:
   build_launcher_osx_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Launcher macOS x64
         uses: ./.github/workflows/LANCommander.Launcher.yml
@@ -217,7 +217,7 @@ jobs:
   build_launcher_win_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Launcher Windows ARM64
         uses: ./.github/workflows/LANCommander.Launcher.yml
@@ -230,7 +230,7 @@ jobs:
   build_launcher_win_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       - name: Build Launcher Windows x64
         uses: ./.github/workflows/LANCommander.Launcher.yml
@@ -258,7 +258,7 @@ jobs:
       - build_launcher_win_arm64
       - build_launcher_win_x64
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, my-label]
+    runs-on: [self-hosted, server]
     steps:
       # 3a) Download all artifacts from the build jobs
       - name: Download .NET build artifacts

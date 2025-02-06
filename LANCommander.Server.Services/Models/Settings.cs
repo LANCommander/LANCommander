@@ -1,6 +1,7 @@
 ﻿using LANCommander.Server.Data.Enums;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.Services.Models
 {
@@ -25,6 +26,15 @@ namespace LANCommander.Server.Services.Models
         OAuth2,
         OpenIdConnect,
         Saml
+    }
+
+    public enum LoggingProviderType
+    {
+        File,
+        Console,
+        SignalR,
+        Seq,
+        ElasticSearch,
     }
 
     public class Settings
@@ -163,10 +173,24 @@ namespace LANCommander.Server.Services.Models
         public bool HostUpdates { get; set; } = true;
     }
 
+    public class LoggingProvider
+    {
+        public LogLevel MinimumLevel { get; set; } = LogLevel.Information;
+        public bool Enabled { get; set; } = true;
+        public LoggingProviderType Type { get; set; } = LoggingProviderType.Console;
+        public string ConnectionString { get; set; } = "";
+    }
+
     public class LogSettings
     {
         public string StoragePath { get; set; } = "Logs";
         public LogInterval ArchiveEvery { get; set; } = LogInterval.Day;
         public int MaxArchiveFiles { get; set; } = 10;
+        public bool IgnorePings { get; set; } = true;
+        public IEnumerable<LoggingProvider> Providers { get; set; } = [
+            new() { MinimumLevel = LogLevel.Information, Type = LoggingProviderType.Console },
+            new() { MinimumLevel = LogLevel.Information, Type = LoggingProviderType.File, ConnectionString = "Logs" },
+            new() { MinimumLevel = LogLevel.Information, Type = LoggingProviderType.SignalR },
+        ];
     }
 }

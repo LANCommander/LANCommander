@@ -86,6 +86,7 @@
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
+    <PackageReference Include="Elastic.Serilog.Sinks" Version="8.12.3" />
     <PackageReference Include="Hangfire.AspNetCore" Version="1.8.17" />
     <PackageReference Include="Hangfire.Core" Version="1.8.17" />
     <PackageReference Include="Hangfire.InMemory" Version="1.0.0" />

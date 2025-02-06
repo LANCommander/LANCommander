@@ -1,11 +1,10 @@
 ﻿@page "/Profile"
 @page "/Profile/General"
 @using Microsoft.AspNetCore.Components.Authorization
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject UserService UserService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
 @inject ILogger<Index> Logger
 @attribute [Authorize]
 
@@ -36,18 +35,15 @@
 </div>
 
 @code {
-    User User = new User();
+    User User = new();
     Form<User> Form;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        using (var userService = DatabaseServiceFactory.Create<UserService>())
-        {
-            if (authState.User.Identity.IsAuthenticated)
-                User = await userService.GetAsync(authState.User.Identity.Name);
-        }
+        
+        if (authState.User.Identity.IsAuthenticated)
+            User = await UserService.GetAsync(authState.User.Identity.Name);
     }
 
     private async Task Save()
@@ -56,10 +52,7 @@
         {
             if (Form.IsModified)
             {
-                using (var userService = DatabaseServiceFactory.Create<UserService>())
-                {
-                    await userService.UpdateAsync(User);
-                }
+                await UserService.UpdateAsync(User);
 
                 MessageService.Success("Profile updated!");
 

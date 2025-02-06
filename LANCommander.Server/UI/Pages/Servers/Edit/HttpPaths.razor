@@ -1,9 +1,6 @@
 @page "/Servers/{id:guid}/HTTP"
-@using System.Runtime.InteropServices
-@using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
+@inject ServerService ServerService
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
 
@@ -45,12 +42,9 @@
     {
         try
         {
-            using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-            {
-                server = await serverService.UpdateAsync(server);
+            server = await ServerService.UpdateAsync(server);
 
-                await MessageService.Success("HTTP paths updated!");
-            }
+            await MessageService.Success("HTTP paths updated!");
         }
         catch (Exception ex)
         {

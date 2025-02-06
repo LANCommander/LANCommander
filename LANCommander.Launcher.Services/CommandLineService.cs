@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK;
 
 namespace LANCommander.Launcher.Services
 {
@@ -147,7 +148,7 @@ namespace LANCommander.Launcher.Services
             try
             {
                 var game = await GameService.GetAsync(options.GameId);
-                var manifest = await ManifestHelper.ReadAsync(game.InstallDirectory, game.Id);
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(game.InstallDirectory, game.Id);
                 var action = manifest.Actions.FirstOrDefault(a => a.Id == options.ActionId);
 
                 if (action == null)

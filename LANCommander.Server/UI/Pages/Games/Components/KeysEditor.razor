@@ -1,5 +1,4 @@
-﻿@using LANCommander.SDK.Enums
-@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@inject KeyService KeyService
 @inject IMessageService MessageService
 
 @if (Keys != null)
@@ -91,11 +90,8 @@
     {
         if (Keys == null)
             Keys = new List<Key>();
-
-        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
-        {
-            Keys = await keyService.GetAsync(k => k.GameId == GameId);
-        }
+        
+        Keys = await KeyService.GetAsync(k => k.GameId == GameId);
 
         AllocatedKeys = Keys.Count(k => k.IsAllocated());
     }
@@ -107,10 +103,7 @@
 
     async Task Release(Key key)
     {
-        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
-        {
-            key = await keyService.ReleaseAsync(key);
-        }
+        await KeyService.ReleaseAsync(key);
 
         await MessageService.Success("Key was unallocated!");
     }
@@ -122,19 +115,16 @@
 
         var keysDeleted = Keys.Where(k => !keys.Contains(k.Value)).ToList();
         var keysAdded = keys.Where(k => !Keys.Any(gk => gk.Value == k)).ToList();
+        
+        foreach (var key in keysDeleted)
+            KeyService.DeleteAsync(key);
 
-        using (var keyService = DatabaseServiceFactory.Create<KeyService>())
-        {
-            foreach (var key in keysDeleted)
-                keyService.DeleteAsync(key);
-
-            foreach (var key in keysAdded)
-                await keyService.AddAsync(new Key()
-                {
-                    GameId = GameId,
-                    Value = key
-                });
-        }
+        foreach (var key in keysAdded)
+            await KeyService.AddAsync(new Key()
+            {
+                GameId = GameId,
+                Value = key
+            });
 
         EditModalVisible = false;
 

@@ -5,26 +5,36 @@ using LANCommander.Server.Models;
 using LANCommander.SDK;
 using System.IO.Compression;
 using System.Linq.Expressions;
+using AutoMapper;
+using LANCommander.Server.Services.Extensions;
 using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using SharpCompress.Common;
+using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention;
 
 namespace LANCommander.Server.Services
 {
-    public class ArchiveService : BaseDatabaseService<Archive>
+    public sealed class ArchiveService(
+        ILogger<ArchiveService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> dbContextFactory,
+        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, cache, mapper, dbContextFactory)
     {
-        private readonly StorageLocationService StorageLocationService;
-
-        public ArchiveService(
-            ILogger<ArchiveService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
+        public async Task<Archive> GetLatestArchive(Expression<Func<Archive, bool>> predicate)
         {
-            StorageLocationService = storageLocationService;
+            return await Query(q =>
+            {
+                return q.OrderByDescending(a => a.CreatedOn);
+            }).FirstOrDefaultAsync(predicate);
+        }
+        
+        public string GetArchiveFileLocation(Archive archive, StorageLocation storageLocation)
+        {
+            return Path.Combine(storageLocation.Path, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(Archive archive)
@@ -35,7 +45,7 @@ namespace LANCommander.Server.Services
                 storageLocationPath = archive.StorageLocation.Path;
             else
             {
-                var storageLocation = await StorageLocationService.GetAsync(archive.StorageLocationId);
+                var storageLocation = await storageLocationService.GetAsync(archive.StorageLocationId);
                 
                 storageLocationPath = storageLocation.Path;
             }
@@ -52,30 +62,47 @@ namespace LANCommander.Server.Services
 
         public override async Task<Archive> AddAsync(Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireGameCacheAsync(entity.GameId);
 
             return await base.AddAsync(entity);
         }
 
         public override async Task<ExistingEntityResult<Archive>> AddMissingAsync(Expression<Func<Archive, bool>> predicate, Archive entity)
         {
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireGameCacheAsync(entity.GameId);
 
             return await base.AddMissingAsync(predicate, entity);
         }
 
-        public override async Task<Archive> UpdateAsync(Archive entity)
+        public override async Task<Archive> UpdateAsync(Archive updatedArchive)
         {
-            await Cache.ExpireAsync("MappedGames");
-
-            return await base.UpdateAsync(entity);
+            await cache.ExpireGameCacheAsync(updatedArchive.GameId);
+            
+            return await base.UpdateAsync(updatedArchive, async context =>
+            {
+                await context.UpdateRelationshipAsync(a => a.Game);
+                await context.UpdateRelationshipAsync(a => a.Redistributable);
+                await context.UpdateRelationshipAsync(a => a.StorageLocation);
+            });
         }
-
+        
         public override async Task DeleteAsync(Archive archive)
         {
             FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
 
-            await Cache.ExpireAsync("MappedGames");
+            await cache.ExpireGameCacheAsync(archive.GameId);
+
+            await base.DeleteAsync(archive);
+        }
+
+        public async Task DeleteAsync(Archive archive, StorageLocation storageLocation = null)
+        {
+            if (storageLocation == null)
+                FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
+            else
+                FileHelpers.DeleteIfExists(GetArchiveFileLocation(archive, storageLocation));
+
+            await cache.ExpireGameCacheAsync(archive.GameId);
 
             await base.DeleteAsync(archive);
         }
@@ -223,7 +250,7 @@ namespace LANCommander.Server.Services
                     {
                         await alteredStream.CopyToAsync(updatedStream);
 
-                        Logger?.LogInformation("Added {EntryFullName} to base archive {ArchiveId} and new patch archive", entry.FullName, originalArchive.Id.ToString());
+                        _logger?.LogInformation("Added {EntryFullName} to base archive {ArchiveId} and new patch archive", entry.FullName, originalArchive.Id.ToString());
                     }
 
                     // Copy the contents of the entry from the altered archive to the patch archive
@@ -232,13 +259,13 @@ namespace LANCommander.Server.Services
                     {
                         await alteredStream.CopyToAsync(patchStream);
 
-                        Logger?.LogInformation("Updated {EntryFullName} in base archive {ArchiveId} and added to new patch archive", entry.FullName, originalArchive.Id.ToString());
+                        _logger?.LogInformation("Updated {EntryFullName} in base archive {ArchiveId} and added to new patch archive", entry.FullName, originalArchive.Id.ToString());
                     }
                 }
 
                 i++;
 
-                Logger?.LogInformation("Finished processing entry {EntryIndex}/{TotalEntries} for original archive {ArchiveId}", i.ToString(), originalZip.Entries.Count.ToString(), originalArchive.Id.ToString());
+                _logger?.LogInformation("Finished processing entry {EntryIndex}/{TotalEntries} for original archive {ArchiveId}", i.ToString(), originalZip.Entries.Count.ToString(), originalArchive.Id.ToString());
             }
 
             originalZip.Dispose();
@@ -257,7 +284,7 @@ namespace LANCommander.Server.Services
             await UpdateAsync(alteredArchive);
             await UpdateAsync(originalArchive);
 
-            Logger?.LogInformation("Finished merging original archive {ArchiveId} and rebuilt patch archive {PatchArchivePath}", originalArchive.Id.ToString(), alteredZipPath);
+            _logger?.LogInformation("Finished merging original archive {ArchiveId} and rebuilt patch archive {PatchArchivePath}", originalArchive.Id.ToString(), alteredZipPath);
         }
     }
 }

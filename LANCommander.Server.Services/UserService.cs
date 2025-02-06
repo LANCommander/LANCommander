@@ -6,16 +6,10 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using System;
-using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
+using LANCommander.Server.Services.Exceptions;
 
 namespace LANCommander.Server.Services
 {
@@ -25,13 +19,9 @@ namespace LANCommander.Server.Services
         private readonly CollectionService CollectionService;
         private readonly IMapper Mapper;
 
-        public RepositoryFactory repositoryFactory { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
         public UserService(
             ILogger<UserService> logger,
             IMapper mapper,
-            RepositoryFactory repositoryFactory,
-            RoleService roleService,
             CollectionService collectionService,
             IdentityContextFactory identityContextFactory) : base(logger)
         {
@@ -109,7 +99,7 @@ namespace LANCommander.Server.Services
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Could not get user collections");
+                _logger.LogError(ex, "Could not get user collections");
                 return new List<Collection>();
             }
         }
@@ -119,11 +109,11 @@ namespace LANCommander.Server.Services
             try
             {
                 var result = await IdentityContext.UserManager.CreateAsync(user);
-
+                
                 if (result.Succeeded)
                     return await IdentityContext.UserManager.FindByNameAsync(user.UserName);
                 else
-                    return null;
+                    throw new UserRegistrationException(result, "Could not create user");
             }
             finally
             {
@@ -149,7 +139,10 @@ namespace LANCommander.Server.Services
             {
                 var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
-                await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
+                var result = await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
+
+                if (!result.Succeeded)
+                    throw new AddRoleException(result, "Could not add roles");
             }
             finally
             {
@@ -206,6 +199,10 @@ namespace LANCommander.Server.Services
                 var token = await IdentityContext.UserManager.GeneratePasswordResetTokenAsync(user);
 
                 return await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
             finally
             {
@@ -426,7 +423,7 @@ namespace LANCommander.Server.Services
             throw new NotImplementedException();
         }
 
-        public IBaseDatabaseService<User> DisableTracking()
+        public IBaseDatabaseService<User> AsNoTracking()
         {
             throw new NotImplementedException();
         }

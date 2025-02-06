@@ -11,9 +11,9 @@ namespace LANCommander.Server.Hubs
         {
             ServerProcessService = serverProcessService;
 
-            foreach (var process in ServerProcessService.Processes.Values)
+            foreach (var process in ServerProcessService.Running.Values)
             {
-                process.OutputDataReceived += Process_OutputDataReceived;
+                //process.OutputDataReceived += Process_OutputDataReceived;
             }
         }
 

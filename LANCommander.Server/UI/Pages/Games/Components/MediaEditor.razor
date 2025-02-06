@@ -1,6 +1,5 @@
-﻿@using LANCommander.SDK.Enums
-@using System.Net.Mime
-@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@using System.Net.Mime
+@inject MediaService MediaService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
@@ -111,10 +110,7 @@
         {
             if (media.Id != Guid.Empty)
             {
-                using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
-                {
-                    await mediaService.UpdateAsync(media);
-                }
+                await MediaService.UpdateAsync(media);
 
                 MessageService.Success($"{media.Type} updated!");
             }
@@ -135,23 +131,20 @@
         {
             var types = Enum.GetValues<MediaType>();
             var nextType = types.FirstOrDefault(t => !Values.Any(v => v.Type == t) && AllowedMediaTypes.Contains(t));
-
-            using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+            
+            var defaultStorageLocation = await MediaService.GetDefaultStorageLocationAsync();
+            
+            var media = new Media
             {
-                var defaultStorageLocation = await mediaService.GetDefaultStorageLocationAsync();
-                
-                var media = new Media
-                {
-                    GameId = GameId,
-                    Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType,
-                    StorageLocationId = defaultStorageLocation.Id,
-                    Crc32 = String.Empty
-                };
+                GameId = GameId,
+                Type = nextType == MediaType.Icon && Values.Any(v => v.Type == MediaType.Icon) ? MediaType.Manual : nextType,
+                StorageLocationId = defaultStorageLocation.Id,
+                Crc32 = String.Empty
+            };
 
-                await mediaService.AddAsync(media);
+            await MediaService.AddAsync(media);
 
-                Values.Add(await mediaService.GetAsync(media.Id));
-            }
+            Values.Add(await MediaService.GetAsync(media.Id));
         }
         catch (Exception ex)
         {
@@ -185,29 +178,26 @@
 
             media.SourceUrl = result.SourceUrl;
             media.MimeType = result.MimeType; 
-
-            using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+            
+            if (media.Id == Guid.Empty)
             {
-                if (media.Id == Guid.Empty)
-                {
-                    media = await mediaService.DownloadMediaAsync(result.SourceUrl, media);
+                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
 
-                    await mediaService.AddAsync(media);
-                }
-                else
-                {
-                    mediaService.DeleteLocalMediaFile(media);
-
-                    media = await mediaService.DownloadMediaAsync(result.SourceUrl, media);
-
-                    await mediaService.UpdateAsync(media);
-                }
-
-                Values = await mediaService.GetAsync(m => m.GameId == media.GameId);
-
-                if (ValuesChanged.HasDelegate)
-                    await ValuesChanged.InvokeAsync(Values);
+                await MediaService.AddAsync(media);
             }
+            else
+            {
+                MediaService.DeleteLocalMediaFile(media);
+
+                media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
+
+                await MediaService.UpdateAsync(media);
+            }
+
+            Values = await MediaService.GetAsync(m => m.GameId == media.GameId);
+
+            if (ValuesChanged.HasDelegate)
+                await ValuesChanged.InvokeAsync(Values);
         };
     }
 
@@ -228,38 +218,32 @@
 
         media.SourceUrl = "";
         media.MimeType = e.File.ContentType;
-
-        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
+        
+        if (media.Id == Guid.Empty)
         {
-            if (media.Id == Guid.Empty)
-            {
-                media = await mediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
+            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
 
-                await mediaService.AddAsync(media);
-            }
-            else
-            {
-                mediaService.DeleteLocalMediaFile(media);
-                media = await mediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
-                await mediaService.UpdateAsync(media);
-            }
-
-            Values = await mediaService.GetAsync(m => m.GameId == media.GameId);
-
-            if (ValuesChanged.HasDelegate)
-                await ValuesChanged.InvokeAsync(Values);
+            await MediaService.AddAsync(media);
         }
+        else
+        {
+            MediaService.DeleteLocalMediaFile(media);
+            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
+            await MediaService.UpdateAsync(media);
+        }
+
+        Values = await MediaService.GetAsync(m => m.GameId == media.GameId);
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Values);
     }
 
     private async Task RemoveMedia(Media media)
     {
         Values.Remove(media);
-
-        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
-        {
-            if (media.Id != Guid.Empty)
-                await mediaService.DeleteAsync(media);
-        }
+        
+        if (media.Id != Guid.Empty)
+            await MediaService.DeleteAsync(media);
     }
 
     private async Task OpenManual(Media media)

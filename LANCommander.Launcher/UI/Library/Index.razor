@@ -78,7 +78,11 @@
                                     }
                                     else if (SelectedItem.State == ListItemState.Installing)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Loading" Disabled="true">Installing</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">Installing</Button>
+                                    }
+                                    else if (SelectedItem.State == ListItemState.Uninstalling)
+                                    {
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading Disabled="true">Uninstalling</Button>
                                     }
                                 </SpaceItem>
 
@@ -185,6 +189,7 @@
         InstallService.OnQueueChanged += OnQueueChanged;
         InstallService.OnInstallFail += OnInstallFail;
         InstallService.OnInstallComplete += OnInstallComplete;
+        GameService.OnUninstall += OnUninstall;
         GameService.OnUninstallComplete += OnUninstallComplete;
         
         await LoadData();
@@ -230,7 +235,9 @@
     {
         var game = item.DataItem as Game;
 
-        if (Settings.Games.InstallDirectories.Length > 1 || game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
+        var addons = await Client.Games.GetAddonsAsync(game.Id);
+
+        if (Settings.Games.InstallDirectories.Length > 1 || addons.Any())
         {
             var modalOptions = new ModalOptions()
             {
@@ -270,25 +277,25 @@
 
             switch (queueItem.Status)
             {
-                case SDK.Enums.GameInstallStatus.Downloading:
-                case SDK.Enums.GameInstallStatus.InstallingRedistributables:
-                case SDK.Enums.GameInstallStatus.InstallingMods:
-                case SDK.Enums.GameInstallStatus.InstallingExpansions:
-                case SDK.Enums.GameInstallStatus.RunningScripts:
-                case SDK.Enums.GameInstallStatus.DownloadingSaves:
+                case SDK.Enums.InstallStatus.Downloading:
+                case SDK.Enums.InstallStatus.InstallingRedistributables:
+                case SDK.Enums.InstallStatus.InstallingMods:
+                case SDK.Enums.InstallStatus.InstallingExpansions:
+                case SDK.Enums.InstallStatus.RunningScripts:
+                case SDK.Enums.InstallStatus.DownloadingSaves:
                     SelectedItem.State = ListItemState.Installing;
                     break;
 
-                case SDK.Enums.GameInstallStatus.Queued:
+                case SDK.Enums.InstallStatus.Queued:
                     SelectedItem.State = ListItemState.Queued;
                     break;
 
-                case SDK.Enums.GameInstallStatus.Failed:
-                case SDK.Enums.GameInstallStatus.Canceled:
+                case SDK.Enums.InstallStatus.Failed:
+                case SDK.Enums.InstallStatus.Canceled:
                     SelectedItem.State = ListItemState.NotInstalled;
                     break;
 
-                case SDK.Enums.GameInstallStatus.Complete:
+                case SDK.Enums.InstallStatus.Complete:
                     SelectedItem.State = ListItemState.Installed;
                     break;
             }
@@ -329,14 +336,25 @@
         }
     }
 
+    async Task OnUninstall(Data.Models.Game game)
+    {
+        if (SelectedItem.Key == game.Id)
+        {
+            SelectedItem.State = ListItemState.Uninstalling;
+
+            await Task.Yield();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
     async Task OnUninstallComplete(Data.Models.Game game)
     {
         await LoadData();
 
-        if (SelectedItem.DataItem is Game selectedGame)
+        if (SelectedItem.Key == game.Id)
         {
-            if (selectedGame.Id == game.Id)
-                await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == selectedGame.Id));
+            SelectedItem.State = ListItemState.NotInstalled;
+            await OnLibraryItemSelected(LibraryService.Items.FirstOrDefault(i => i.Key == SelectedGame.Id));
         }
     }
 

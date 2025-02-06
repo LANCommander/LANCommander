@@ -1,11 +1,10 @@
 ﻿@page "/Settings/Logs"
-@using Serilog
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
 <PageHeader Title="Logs" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Logs.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
@@ -26,9 +25,9 @@
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </FormItem>
     </Form>
+</PageContent>
 
-    <LANCommander.Server.UI.Pages.Settings.Logs.Components.LogViewer />
-</div>
+<LANCommander.Server.UI.Pages.Settings.Logs.Components.LogViewer />
 
 @code {
     Settings Settings = SettingService.GetSettings();

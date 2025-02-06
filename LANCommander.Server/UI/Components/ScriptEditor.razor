@@ -1,5 +1,7 @@
-﻿@using LANCommander.SDK.Enums
-@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@using System.Linq.Expressions
+@using LANCommander.SDK.Extensions
+@using LANCommander.SDK.Enums
+@inject ScriptService ScriptService
 @inject ModalService ModalService
 @inject IMessageService MessageService
 
@@ -9,7 +11,7 @@
         TItem="Script"
         HidePagination
         Responsive
-        Query="s => (s.GameId != Guid.Empty && s.GameId == GameId) || (s.RedistributableId != Guid.Empty && s.RedistributableId == RedistributableId) || (s.ServerId != Guid.Empty && s.ServerId == ServerId)">
+        Query="GetQueryExpression()">
         <BoundDataColumn Property="s => s.Type">
             @context.Type.GetDisplayName()
         </BoundDataColumn>
@@ -44,10 +46,24 @@
     [Parameter] public Guid ArchiveId { get; set; }
     [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
 
+    Expression<Func<Script, bool>> Query = s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty;
+
     DataTable<Script> Table;
     
     ICollection<Script> Scripts { get; set; } = new List<Script>();
-    
+
+    Expression<Func<Script, bool>> GetQueryExpression()
+    {
+        if (!GameId.IsNullOrEmpty())
+            return s => s.GameId == GameId;
+        else if (!RedistributableId.IsNullOrEmpty())
+            return s => s.RedistributableId == RedistributableId;
+        else if (!ServerId.IsNullOrEmpty())
+            return s => s.ServerId == ServerId;
+        else
+            return s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty;
+    }
+
     async void Edit(Guid? scriptId = null)
     {
         var modalOptions = new ModalOptions()
@@ -63,10 +79,6 @@
         {
             ScriptId = scriptId ?? default,
             AllowedTypes = AllowedTypes,
-            ArchiveId = ArchiveId,
-            GameId = GameId,
-            RedistributableId = RedistributableId,
-            ServerId = ServerId
         };
 
         var modalRef = await ModalService.CreateModalAsync<ScriptEditorDialog, ScriptEditorOptions, Script>(modalOptions, options);
@@ -79,11 +91,8 @@
 
     async void Delete(Script script = null)
     {
-        using (var scriptService = DatabaseServiceFactory.Create<ScriptService>())
-        {
-            if (script != null)
-                await scriptService.DeleteAsync(script);
-        }
+        if (script != null)
+            await ScriptService.DeleteAsync(script);
 
         await MessageService.Success("Script deleted!");
     }

@@ -10,7 +10,7 @@
 
 <PageHeader Title="General" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Database Provider">
             <Select @bind-Value="context.DatabaseProvider" TItem="DatabaseProvider" TItemValue="DatabaseProvider" DataSource="Enum.GetValues<DatabaseProvider>()">
@@ -21,6 +21,10 @@
 
         <FormItem Label="Database Connection String">
             <InputPassword @bind-Value="context.DatabaseConnectionString" />
+        </FormItem>
+
+        <FormItem Label="Port">
+            <AntDesign.InputNumber @bind-Value="context.Port" />
         </FormItem>
 
         <FormItem Label="Theme">
@@ -41,15 +45,34 @@
             <InputPassword @bind-Value="context.IGDBClientSecret" />
         </FormItem>
 
+        <Divider Text="SSL" />
+
+        <FormItem Label="Use SSL">
+            <Switch @bind-Checked="context.UseSSL" />
+        </FormItem>
+
+        <FormItem Label="SSL Port">
+            <AntDesign.InputNumber @bind-Value="context.SSLPort" Disabled="!context.UseSSL" />
+        </FormItem>
+
+        <FormItem Label="Certificate Path">
+            <FilePicker Root="@RootPath" @bind-Value="context.CertificatePath" Disabled="!context.UseSSL" />
+        </FormItem>
+
+        <FormItem Label="Certificate Password">
+            <InputPassword @bind-Value="context.CertificatePassword" Disabled="!context.UseSSL" />
+        </FormItem>
+
         <FormItem>
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </FormItem>
     </Form>
-</div>
-
+</PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();
+    
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     void Save()
     {

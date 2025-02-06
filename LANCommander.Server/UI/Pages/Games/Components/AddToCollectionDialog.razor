@@ -1,7 +1,8 @@
 ﻿@using LANCommander.Server.Models
 @using Microsoft.EntityFrameworkCore
 @inherits FeedbackComponent<AddToCollectionOptions, IEnumerable<Collection>>
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject CollectionService CollectionService
+@inject GameService GameService
 @inject IMessageService MessageService
 @inject ILogger<AddToCollectionDialog> Logger
 
@@ -31,10 +32,7 @@
 
     async Task LoadData()
     {
-        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-        {
-            Collections = await collectionService.SortBy(c => c.Name).GetAsync();
-        }
+        Collections = await CollectionService.SortBy(c => c.Name).GetAsync();
     }
 
     RenderFragment DropdownRender(RenderFragment originNode)
@@ -65,13 +63,10 @@
         {
             if (!String.IsNullOrWhiteSpace(NewCollectionName))
             {
-                using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+                await CollectionService.AddAsync(new Collection()
                 {
-                    await collectionService.AddAsync(new Collection()
-                    {
-                        Name = NewCollectionName
-                    });
-                }
+                    Name = NewCollectionName
+                });
 
                 await LoadData();
 
@@ -88,45 +83,39 @@
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
         ICollection<Collection> collections;
+        
+        collections = await CollectionService.GetAsync(c => SelectedCollections.Contains(c.Id));
 
-        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
+        try
         {
-            collections = await collectionService.GetAsync(c => SelectedCollections.Contains(c.Id));
-
-            try
+            foreach (var collection in collections)
             {
-                using (var gameService = DatabaseServiceFactory.Create<GameService>())
+                if (collection.Games == null)
+                    collection.Games = new List<Game>();
+
+                foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
                 {
-                    foreach (var collection in collections)
-                    {
-                        if (collection.Games == null)
-                            collection.Games = new List<Game>();
+                    var game = await GameService.GetAsync(gameId);
 
-                        foreach (var gameId in Options.GameIds.Where(gid => !collection.Games.Any(g => g.Id == gid)))
-                        {
-                            var game = await gameService.GetAsync(gameId);
-
-                            collection.Games.Add(game);
-                        }
-
-                        await collectionService.UpdateAsync(collection);
-                    }
+                    collection.Games.Add(game);
                 }
 
-                if (collections.Count > 1)
-                    MessageService.Success("Added to collections!");
-                else
-                    MessageService.Success("Added to collection!");
+                await CollectionService.UpdateAsync(collection);
             }
-            catch (Exception ex)
-            {
-                if (collections.Count > 1)
-                    MessageService.Error("Could not add to collections!");
-                else
-                    MessageService.Error("Could not add to collection!");
 
-                Logger.LogError(ex, "Could not add to collection(s)!");
-            }
+            if (collections.Count > 1)
+                MessageService.Success("Added to collections!");
+            else
+                MessageService.Success("Added to collection!");
+        }
+        catch (Exception ex)
+        {
+            if (collections.Count > 1)
+                MessageService.Error("Could not add to collections!");
+            else
+                MessageService.Error("Could not add to collection!");
+
+            Logger.LogError(ex, "Could not add to collection(s)!");
         }
 
         await base.OkCancelRefWithResult!.OnOk(collections);

@@ -23,6 +23,9 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnUninstallCompleteHandler(Game game);
         public event OnUninstallCompleteHandler OnUninstallComplete;
 
+        public delegate Task OnUninstallHandler(Game game);
+        public event OnUninstallHandler OnUninstall;
+
         public GameService(
             DatabaseContext dbContext,
             SDK.Client client,
@@ -45,6 +48,8 @@ namespace LANCommander.Launcher.Services
             {
                 try
                 {
+                    OnUninstall?.Invoke(game);
+                    
                     await Client.Games.UninstallAsync(game.InstallDirectory, game.Id);
 
                     game.InstallDirectory = null;

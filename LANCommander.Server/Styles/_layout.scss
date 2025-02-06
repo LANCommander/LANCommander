@@ -1,10 +1,24 @@
-﻿.ant-layout-has-sider > .ant-flex {
+﻿.layout {
+    min-height: 100vh;
+}
+
+.layout-wrapper {
+    padding: 24px;
+}
+
+.ant-header {
+    display: flex;
+}
+
+.ant-layout-has-sider > .ant-flex {
     flex-grow: 1;
 }
 
-.site-layout-background {
+.ant-layout-content {
     background: #141414;
-    padding-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    flex: unset;
 
     & > .ant-table-wrapper {
         .ant-table-pagination {
@@ -12,4 +26,25 @@
             margin-bottom: 0;
         }
     }
+}
+
+.panel-layout > .ant-layout-content {
+    flex: auto;
+}
+
+.ant-page-content {
+    padding-left: 24px;
+    padding-right: 24px;
+    
+    & > .ant-flex:last-child {
+        padding-bottom: 24px;
+    }
+    
+    & > .ant-btn:last-child {
+        margin-bottom: 24px;
+    }
+}
+
+.ant-layout-footer {
+    text-align: center;
 }

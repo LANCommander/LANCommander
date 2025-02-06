@@ -1,9 +1,8 @@
 ﻿@page "/Profile/Saves"
-@using LANCommander.Server.Models;
 @using Microsoft.AspNetCore.Components.Authorization;
 @using Microsoft.EntityFrameworkCore;
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject IMessageService MessageService
+@inject UserService UserService
+@inject GameSaveService GameSaveService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
 @attribute [Authorize]
@@ -39,7 +38,7 @@
         <BoundDataColumn Property="s => s.Game.Title" Sortable Title="Game" Include="Game" />
         <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable Title="Created On" DefaultSortOrder="SortDirection.Descending" />
         <BoundDataColumn Property="s => s.Size" Sortable Title="Size">
-            @ByteSizeLib.ByteSize.FromBytes(context.Size)
+            <ByteSize Value="context.Size" />
         </BoundDataColumn>
         <DataActions>
             <a href="/Download/Save/@(context.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
@@ -71,26 +70,20 @@
         Loading = true;
 
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        using (var userService = DatabaseServiceFactory.Create<UserService>())
-        {
-            if (authState.User.Identity.IsAuthenticated)
-                User = await userService
-                    .GetAsync(authState.User.Identity.Name);
-        }
-
-        using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
-        {
-            GameSaves = (await gameSaveService
-                .Query(q =>
-                {
-                    return q
-                        .Include(gs => gs.Game)
-                        .ThenInclude(g => g.Media);
-                })
-                .SortBy(gs => gs.Game.Title)
-                .GetAsync(gs => gs.UserId == User.Id)).OrderByDescending(gs => gs.UpdatedOn).ToList();
-        }
+        
+        if (authState.User.Identity.IsAuthenticated)
+            User = await UserService
+                .GetAsync(authState.User.Identity.Name);
+        
+        GameSaves = (await GameSaveService
+            .Query(q =>
+            {
+                return q
+                    .Include(gs => gs.Game)
+                    .ThenInclude(g => g.Media);
+            })
+            .SortBy(gs => gs.Game.Title)
+            .GetAsync(gs => gs.UserId == User.Id)).OrderByDescending(gs => gs.UpdatedOn).ToList();
 
         if (GameSaves != null && GameSaves.Count > 0)
             Games = GameSaves.Where(gs => gs.Game != null).Select(gs => gs.Game).DistinctBy(g => g.Id).ToList();
@@ -108,11 +101,8 @@
         GameSaves = new List<GameSave>();
 
         Loading = true;
-
-        using (var gameSaveService = DatabaseServiceFactory.Create<GameSaveService>())
-        {
-            await gameSaveService.DeleteAsync(gameSave);
-        }
+        
+        await GameSaveService.DeleteAsync(gameSave);
 
         await LoadData();
 

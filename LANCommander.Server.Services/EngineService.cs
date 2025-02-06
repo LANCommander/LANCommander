@@ -1,15 +1,24 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class EngineService : BaseDatabaseService<Engine>
+    public sealed class EngineService(
+        ILogger<EngineService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Engine>(logger, cache, mapper, contextFactory)
     {
-        public EngineService(
-            ILogger<EngineService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+        public override async Task<Engine> UpdateAsync(Engine entity)
+        {
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(e => e.Games);
+            });
+        }
     }
 }

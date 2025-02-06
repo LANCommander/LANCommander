@@ -1,6 +1,8 @@
 ﻿@page "/FirstTimeSetup/Administrator"
+@using LANCommander.Server.Services.Exceptions
 @layout FirstTimeSetupLayout
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject RoleService RoleService
+@inject UserService UserService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Administrator> Logger
@@ -34,9 +36,9 @@
 @code {
     [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
 
-    FirstTimeSetupModel Model = new FirstTimeSetupModel();
+    FirstTimeSetupModel Model = new();
 
-    bool Loading = false;
+    bool Loading;
 
     protected override async Task OnInitializedAsync()
     {
@@ -49,59 +51,89 @@
         StateHasChanged();
         await Task.Yield();
 
+        if (Model.Password != Model.PasswordConfirm)
+        {
+            MessageService.Error("Passwords do not match");
+            Loading = false;
+            StateHasChanged();
+            await Task.Yield();
+
+            return;
+        }
+
         try
         {
-            using (var roleService = DatabaseServiceFactory.Create<RoleService>())
-            {
-                var role = await roleService.GetAsync(RoleService.AdministratorRoleName);
+            var role = await RoleService.GetAsync(RoleService.AdministratorRoleName);
 
+            try
+            {
                 if (role == null)
-                    await roleService.AddAsync(new Role
+                    role = await RoleService.AddAsync(new Role
                     {
                         Name = RoleService.AdministratorRoleName
                     });
-
-                var administrators = await roleService.GetUsersAsync(RoleService.AdministratorRoleName);
-
-                if (administrators != null && administrators.Any())
-                    NavigationManager.NavigateTo("/");
-                else
+            }
+            catch (AddRoleException ex)
+            {
+                foreach (var error in ex.IdentityResult.Errors)
                 {
-                    using (var userService = DatabaseServiceFactory.Create<UserService>())
+                    MessageService.Error(error.Description);
+                }
+
+                Loading = false;
+                StateHasChanged();
+                await Task.Yield();
+
+                return;
+            }
+
+            var administrators = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
+
+            if (administrators != null && administrators.Any())
+                NavigationManager.NavigateTo("/");
+            else
+            {
+                var user = Activator.CreateInstance<User>();
+
+                user.Approved = true;
+                user.ApprovedOn = DateTime.UtcNow;
+                user.UserName = Model.Username;
+
+                try
+                {
+                    await UserService.AddAsync(user);
+                    await UserService.ChangePassword(user.UserName, Model.Password);
+                    await UserService.AddToRolesAsync(user.UserName, [RoleService.AdministratorRoleName]);
+
+                    Logger?.LogInformation("Administrator created a new account with password.");
+
+                    await MessageService.Success("Setup completed! Redirecting...", 3);
+
+                    Loading = false;
+
+                    NavigationManager.NavigateTo("/");
+                }
+                catch (UserRegistrationException ex)
+                {
+                    foreach (var error in ex.IdentityResult.Errors)
                     {
-                        var user = Activator.CreateInstance<User>();
-
-                        user.Approved = true;
-                        user.ApprovedOn = DateTime.UtcNow;
-                        user.UserName = Model.Username;
-
-                        var result = await userService.AddAsync(user);
-
-                        if (result == null)
-                        {
-                            /*foreach (var error in result.Errors)
-                            {
-                                MessageService.Error(error.Description);
-                            }*/
-
-                            Loading = false;
-                            StateHasChanged();
-
-                            return;
-                        }
-                        else
-                        {
-                            await userService.AddToRolesAsync(user.UserName, new string[] { RoleService.AdministratorRoleName });
-
-                            Logger?.LogInformation("Administrator created a new account with password.");
-
-                            await MessageService.Success("Setup completed! Redirecting...", 3);
-
-                            Loading = false;
-
-                            NavigationManager.NavigateTo("/");
-                        }
+                        MessageService.Error(error.Description);
                     }
+
+                    Loading = false;
+                    StateHasChanged();
+                    await Task.Yield();
+                }
+                catch (AddRoleException ex)
+                {
+                    foreach (var error in ex.IdentityResult.Errors)
+                    {
+                        MessageService.Error(error.Description);
+                    }
+
+                    Loading = false;
+                    StateHasChanged();
+                    await Task.Yield();
                 }
             }
         }

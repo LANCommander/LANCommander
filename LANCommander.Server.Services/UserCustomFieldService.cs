@@ -1,21 +1,29 @@
-﻿using LANCommander.Server.Data;
+﻿using AutoMapper;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class UserCustomFieldService : BaseDatabaseService<UserCustomField>
+    public sealed class UserCustomFieldService(
+        ILogger<UserCustomFieldService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<UserCustomField>(logger, cache, mapper, contextFactory)
     {
-
-        public UserCustomFieldService(
-            ILogger<UserCustomFieldService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory) : base(logger, cache, repositoryFactory) { }
+        public override async Task<UserCustomField> UpdateAsync(UserCustomField entity)
+        {
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(ucf => ucf.User);
+            });
+        }
 
         public async Task<UserCustomField> GetAsync(Guid userId, string name)
         {
-            return await Repository.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == name);
+            return await FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == name);
         }
 
         public async Task UpdateAsync(Guid userId, string name, string value)
@@ -26,28 +34,24 @@ namespace LANCommander.Server.Services
             if (value.Length > 1024)
                 throw new ArgumentException("Field value must be 1024 characters or less");
 
-            var existing = await Repository.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == name);
+            var existing = await GetAsync(userId, name);
 
             if (existing.Value == value)
                 return;
 
             if (existing == null)
             {
-                await Repository.AddAsync(new UserCustomField
+                await AddAsync(new UserCustomField
                 {
                     Name = name,
                     Value = value
                 });
-
-                await Repository.SaveChangesAsync();
             }
             else if (!String.IsNullOrWhiteSpace(value))
             {
                 existing.Value = value;
 
-                await Repository.UpdateAsync(existing);
-
-                await Repository.SaveChangesAsync();
+                await UpdateAsync(existing);
             }
             else
             {
@@ -57,11 +61,9 @@ namespace LANCommander.Server.Services
 
         public async Task DeleteAsync(Guid userId, string name)
         {
-            var existing = await Repository.FirstOrDefaultAsync(cf => cf.UserId == userId && cf.Name == name);
+            var existing = await GetAsync(userId, name);
 
-            Repository.Delete(existing);
-
-            await Repository.SaveChangesAsync();
+            await DeleteAsync(existing);
         }
     }
 }

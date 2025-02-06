@@ -1,0 +1,11 @@
+﻿@page "/Redistributables/{id:guid}/Archives"
+@using LANCommander.Server.UI.Pages.Redistributables.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<RedistributableEditView Id="Id" Title="Archives">
+    <ArchiveEditor RedistributableId="Id" />
+</RedistributableEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

@@ -3,7 +3,7 @@
 @using Hangfire;
 @using LANCommander.Server.Jobs.Background;
 @using Microsoft.EntityFrameworkCore;
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ArchiveService archiveService
 @inject HttpClient HttpClient
 @inject NavigationManager Navigator
 @inject ModalService ModalService
@@ -26,10 +26,10 @@
             <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)"/>
         </BoundDataColumn>
         <BoundDataColumn Property="a => a.CompressedSize">
-            @ByteSizeLib.ByteSize.FromBytes(context.CompressedSize)
+            <ByteSize Value="context.CompressedSize" />
         </BoundDataColumn>
         <BoundDataColumn Property="a => a.UncompressedSize">
-            @ByteSizeLib.ByteSize.FromBytes(context.UncompressedSize)
+            <ByteSize Value="context.UncompressedSize" />
         </BoundDataColumn>
         <BoundDataColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Include="CreatedBy"/>
         <BoundDataColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending"/>
@@ -97,10 +97,9 @@
     {
         try
         {
-            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-            {
-                await archiveService.UpdateAsync(archive);
-            }
+            await archiveService.UpdateAsync(archive);
+
+            Table.Reload();
 
             MessageService.Success("Archive updated!");
         }
@@ -115,10 +114,7 @@
     {
         try
         {
-            using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
-            {
-                await archiveService.DeleteAsync(archive);
-            }
+            await archiveService.DeleteAsync(archive);
 
             Table.Reload();
 

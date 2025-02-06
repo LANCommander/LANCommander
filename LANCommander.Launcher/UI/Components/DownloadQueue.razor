@@ -24,7 +24,7 @@
     }
 
     <h2>Up Next</h2>
-    @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State && qi.Status == SDK.Enums.GameInstallStatus.Queued))
+    @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State && qi.Status == SDK.Enums.InstallStatus.Queued))
     {
         <div class="queue-item">
             <MediaImage Id="@queueItem.CoverId" Class="queue-item-cover" />
@@ -39,12 +39,12 @@
         </div>
     }
 
-    @if (!InstallService.Queue.Any(qi => qi.Status == SDK.Enums.GameInstallStatus.Queued))
+    @if (!InstallService.Queue.Any(qi => qi.Status == SDK.Enums.InstallStatus.Queued))
     {
         <Empty Simple Description="@("The queue is empty")" />
     }
 
-    @if (InstallService.Queue.Any(qi => !qi.State && qi.Status != SDK.Enums.GameInstallStatus.Queued && qi.Status != SDK.Enums.GameInstallStatus.Failed && qi.Status != SDK.Enums.GameInstallStatus.Canceled))
+    @if (InstallService.Queue.Any(qi => !qi.State && qi.Status != SDK.Enums.InstallStatus.Queued && qi.Status != SDK.Enums.InstallStatus.Failed && qi.Status != SDK.Enums.InstallStatus.Canceled))
     {
         <h2>Completed</h2>
         @foreach (var queueItem in InstallService.Queue.Where(qi => !qi.State))
@@ -54,7 +54,7 @@
                 <div class="queue-item-info">
                     <div>
                         <h3>@queueItem.Title</h3>
-                        <span>@ByteSizeLib.ByteSize.FromBytes(queueItem.TotalBytes)</span>
+                        <span><ByteSize Value="queueItem.TotalBytes" /></span>
                     </div>
                 </div>
                 <div class="queue-item-actions">

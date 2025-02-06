@@ -1,8 +1,9 @@
 ﻿@using LANCommander.Launcher.Models
-@using System.Diagnostics
+@using LANCommander.SDK.Services
+@using RedistributableService = LANCommander.Launcher.Services.RedistributableService
+@using GameService = LANCommander.Launcher.Services.GameService
 @inject InstallService InstallService
 @inject SDK.Client Client
-@inject GameService GameService
 
 @if (CurrentQueueItem != null)
 {
@@ -10,37 +11,37 @@
         @if (ShowIcon)
         {
             <div class="downloader-current-icon">
-                <MediaImage Id="@CurrentQueueItem.IconId" />
+                <MediaImage Id="@Progress.IconId" />
             </div>
         }
         <div class="downloader-current-info">
             <div class="downloader-current-upper">
                 <div class="downloader-current-upper-status">
-                    @if (CurrentQueueItem.Status == SDK.Enums.GameInstallStatus.Downloading && CurrentQueueItem.Progress > 0)
+                    @if (Progress.Status == SDK.Enums.InstallStatus.Downloading && Progress.Progress > 0)
                     {
-                        <Text>@CurrentQueueItem.Status.GetDisplayName(): @CurrentQueueItem.Progress.ToString("0%")</Text>
+                        <Text>@Progress.Status.GetDisplayName() @Progress.Title: @Progress.Progress.ToString("0%")</Text>
                     }
                     else
                     {
-                        <Text>@CurrentQueueItem.Status.GetDisplayName()</Text>
+                        <Text>@Progress.Status.GetDisplayName()</Text>
                     }
                 </div>
-                @if (CurrentQueueItem.TransferSpeed > 0)
+                @if (Progress.TransferSpeed > 0)
                 {
                     <div class="downloader-current-upper-time-remaining">
-                        @TimeSpan.FromSeconds((CurrentQueueItem.TotalBytes - CurrentQueueItem.BytesDownloaded) / CurrentQueueItem.TransferSpeed).ToShortTime()
+                        @Progress.TimeRemaining.ToString(@"hh\:mm\:ss")
                     </div>
                 }
             </div>
             <div class="downloader-current-progress">
-                <Progress Percent="(CurrentQueueItem.Progress * 100)" />
+                <Progress Percent="(Progress.Progress * 100)" />
             </div>
             <div class="downloader-current-lower">
                 <div class="downloader-current-lower-data">
-                    @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.BytesDownloaded).ToString() / @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TotalBytes).ToString()
+                    <ByteSize Value="Progress.BytesDownloaded" /> / <ByteSize Value="Progress.TotalBytes" />
                 </div>
                 <div class="downloader-current-lower-speed">
-                    @ByteSizeLib.ByteSize.FromBytes(CurrentQueueItem.TransferSpeed).ToString()/s
+                    <ByteSize Value="Progress.TransferSpeed" />/s
                 </div>
             </div>
         </div>
@@ -52,13 +53,19 @@
 
     IInstallQueueItem CurrentQueueItem = null;
 
-    Stopwatch Stopwatch = new Stopwatch();
+    InstallProgress Progress = new();
 
     protected override async Task OnInitializedAsync()
     {
-        InstallService.OnInstallComplete += async (game) =>
+        InstallService.OnProgress += async (progress) =>
         {
-            Stopwatch.Stop();
+            Progress = progress;
+
+            if (Progress.Progress < 0)
+                Progress.Progress = 0;
+
+            await InvokeAsync(StateHasChanged);
+            await Task.Yield();
         };
 
         InstallService.OnQueueChanged += async () =>

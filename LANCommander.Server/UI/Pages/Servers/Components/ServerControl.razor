@@ -1,4 +1,4 @@
-﻿@inject DatabaseServiceFactory DatabaseServiceFactory
+﻿@inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
 @inject INotificationService NotificationService
@@ -54,10 +54,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-        {
-            Server = await serverService.GetAsync(ServerId);
-        }
+        Server = await ServerService.GetAsync(ServerId);
 
         ServerProcessService.OnStatusUpdate += OnStatusUpdate;
     }

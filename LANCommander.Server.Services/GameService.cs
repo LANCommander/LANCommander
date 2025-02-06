@@ -18,62 +18,65 @@ using SharpCompress.Common;
 
 namespace LANCommander.Server.Services
 {
-    public class GameService : BaseDatabaseService<Game>
+    public class GameService(
+        ILogger<GameService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        ArchiveService archiveService,
+        MediaService mediaService,
+        EngineService engineService,
+        TagService tagService,
+        CompanyService companyService,
+        GenreService genreService,
+        StorageLocationService storageLocationService) : BaseDatabaseService<Game>(logger, cache, mapper, contextFactory)
     {
-        private readonly IMapper Mapper;
-        private readonly ArchiveService ArchiveService;
-        private readonly MediaService MediaService;
-        private readonly EngineService EngineService;
-        private readonly TagService TagService;
-        private readonly CompanyService CompanyService;
-        private readonly GenreService GenreService;
-        private readonly StorageLocationService StorageLocationService;
-
-        public GameService(
-            ILogger<GameService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            IMapper mapper,
-            ArchiveService archiveService,
-            MediaService mediaService,
-            EngineService engineService,
-            TagService tagService,
-            CompanyService companyService,
-            GenreService genreService,
-            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
-        {
-            Mapper = mapper;
-            ArchiveService = archiveService;
-            MediaService = mediaService;
-            EngineService = engineService;
-            TagService = tagService;
-            CompanyService = companyService;
-            GenreService = genreService;
-            StorageLocationService = storageLocationService;
-        }
-
         public override async Task<Game> AddAsync(Game entity)
         {
-            await ExpireCacheAsync(entity.Id);
+            await cache.ExpireGameCacheAsync(entity.Id);
 
             return await base.AddAsync(entity);
         }
 
         public override async Task<ExistingEntityResult<Game>> AddMissingAsync(Expression<Func<Game, bool>> predicate, Game entity)
         {
-            await ExpireCacheAsync(entity.Id);
+            await cache.ExpireGameCacheAsync(entity.Id);
 
             return await base.AddMissingAsync(predicate, entity);
         }
 
         public override async Task<Game> UpdateAsync(Game entity)
         {
-            await ExpireCacheAsync(entity.Id);
+            await cache.ExpireGameCacheAsync(entity.Id);
 
             foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
                 entity.Media.Remove(media);
+            
+            var update = await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(g => g.Actions);
+                await context.UpdateRelationshipAsync(g => g.Archives);
+                await context.UpdateRelationshipAsync(g => g.BaseGame);
+                await context.UpdateRelationshipAsync(g => g.Categories);
+                await context.UpdateRelationshipAsync(g => g.Collections);
+                await context.UpdateRelationshipAsync(g => g.CustomFields);
+                await context.UpdateRelationshipAsync(g => g.Developers);
+                await context.UpdateRelationshipAsync(g => g.Engine);
+                await context.UpdateRelationshipAsync(g => g.Genres);
+                await context.UpdateRelationshipAsync(g => g.Keys);
+                await context.UpdateRelationshipAsync(g => g.Libraries);
+                await context.UpdateRelationshipAsync(g => g.Media);
+                await context.UpdateRelationshipAsync(g => g.MultiplayerModes);
+                await context.UpdateRelationshipAsync(g => g.Pages);
+                await context.UpdateRelationshipAsync(g => g.Platforms);
+                await context.UpdateRelationshipAsync(g => g.Publishers);
+                await context.UpdateRelationshipAsync(g => g.Redistributables);
+                await context.UpdateRelationshipAsync(g => g.SavePaths);
+                await context.UpdateRelationshipAsync(g => g.Scripts);
+                await context.UpdateRelationshipAsync(g => g.Tags);
+            });
 
-            return await base.UpdateAsync(entity);
+            return update;
         }
 
         public override async Task DeleteAsync(Game game)
@@ -85,37 +88,43 @@ namespace LANCommander.Server.Services
 
             foreach (var archive in game.Archives.ToList())
             {
-                await ArchiveService.DeleteAsync(archive);
+                await archiveService.DeleteAsync(archive);
             }
 
             foreach (var media in game.Media.ToList())
             {
-                await MediaService.DeleteAsync(media);
+                await mediaService.DeleteAsync(media);
             }
 
             await base.DeleteAsync(game);
 
-            await ExpireCacheAsync(game.Id);
+            await cache.ExpireGameCacheAsync(game.Id);
         }
 
         public async Task<GameManifest> GetManifestAsync(Guid id)
         {
-            var game = await Include(g => g.Actions)
-                .Include(g => g.Archives)
-                .Include(g => g.BaseGame)
-                .Include(g => g.Categories)
-                .Include(g => g.Collections)
-                .Include(g => g.DependentGames)
-                .Include(g => g.Developers)
-                .Include(g => g.Engine)
-                .Include(g => g.Genres)
-                .Include(g => g.Media)
-                .Include(g => g.MultiplayerModes)
-                .Include(g => g.Platforms)
-                .Include(g => g.Publishers)
-                .Include(g => g.Redistributables)
-                .Include(g => g.Tags)
-                .GetAsync(id);
+            var game = await Query(q =>
+            {
+                return q
+                    .AsNoTracking()
+                    .AsSplitQuery()
+                    .Include(g => g.Actions)
+                    .Include(g => g.Archives)
+                    .Include(g => g.BaseGame)
+                    .Include(g => g.Categories)
+                    .Include(g => g.Collections)
+                    .Include(g => g.CustomFields)
+                    .Include(g => g.DependentGames)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Media)
+                    .Include(g => g.MultiplayerModes)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Redistributables)
+                    .Include(g => g.Tags);
+            }).GetAsync(id);
 
             return GetManifest(game);
         }
@@ -159,7 +168,7 @@ namespace LANCommander.Server.Services
                 manifest.Version = game.Archives.OrderByDescending(a => a.CreatedOn).First().Version;
 
             if (game.Media != null && game.Media.Count > 0)
-                manifest.Media = Mapper.Map<IEnumerable<SDK.Models.Media>>(game.Media);
+                manifest.Media = mapper.Map<IEnumerable<SDK.Models.Media>>(game.Media);
 
             if (game.Actions != null && game.Actions.Count > 0)
             {
@@ -225,6 +234,11 @@ namespace LANCommander.Server.Services
                 manifest.DependentGames = game.DependentGames.Select(g => g.Id);
             }
 
+            if (game.CustomFields != null && game.CustomFields.Count > 0)
+            {
+                manifest.CustomFields = game.CustomFields.Select(cf => new SDK.Models.GameCustomField(cf.Name, cf.Value)).ToArray();
+            }
+
             return manifest;
         }
 
@@ -282,7 +296,7 @@ namespace LANCommander.Server.Services
         {
             Guid objectKey = Guid.NewGuid();
 
-            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+            var importArchivePath = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
             File.Copy(path, importArchivePath, true);
 
@@ -291,9 +305,9 @@ namespace LANCommander.Server.Services
 
         public async Task<Game> ImportAsync(Guid objectKey)
         {
-            var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
-            var storageLocation = await StorageLocationService.GetAsync(importArchive.StorageLocationId);
+            var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
+            var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+            var storageLocation = await storageLocationService.GetAsync(importArchive.StorageLocationId);
 
             Game game;
 
@@ -302,7 +316,9 @@ namespace LANCommander.Server.Services
                 // Read manifest
                 GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-                var exists = await ExistsAsync(manifest.Id);
+                game = await GetAsync(manifest.Id);
+
+                var exists = game != null;
                 
                 if (!exists)
                     game = new Game();
@@ -333,6 +349,9 @@ namespace LANCommander.Server.Services
                 game.Singleplayer = manifest.Singleplayer;
                 game.SortTitle = manifest.SortTitle;
                 game.Title = manifest.Title;
+                
+                if (!exists)
+                    game = await AddAsync(game);
 
                 #region Actions
                 game.Actions = new List<Data.Models.Action>();
@@ -355,7 +374,7 @@ namespace LANCommander.Server.Services
                 #region Engine
                 if (game.Engine != null)
                 {
-                    var engine = await EngineService.AddMissingAsync(e => e.Name == manifest.Engine, new Engine { Name = manifest.Engine });
+                    var engine = await engineService.AddMissingAsync(e => e.Name == manifest.Engine, new Engine { Name = manifest.Engine });
 
                     game.Engine = engine.Value;
                 }
@@ -368,7 +387,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Tags != null)
                     foreach (var tag in manifest.Tags.Where(mt => !game.Tags.Any(t => t.Name == mt)))
                     {
-                        game.Tags.Add((await TagService.AddMissingAsync(t => t.Name == tag, new Tag()
+                        game.Tags.Add((await tagService.AddMissingAsync(t => t.Name == tag, new Tag()
                         {
                             Name = tag
                         })).Value);
@@ -385,7 +404,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Genre != null)
                     foreach (var genre in manifest.Genre.Where(mg => !game.Genres.Any(g => g.Name == mg)))
                     {
-                        game.Genres.Add((await GenreService.AddMissingAsync(g => g.Name == genre, new Genre()
+                        game.Genres.Add((await genreService.AddMissingAsync(g => g.Name == genre, new Genre()
                         {
                             Name = genre
                         })).Value);
@@ -402,7 +421,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Developers != null)
                     foreach (var developer in manifest.Developers.Where(md => !game.Developers.Any(c => c.Name == md)))
                     {
-                        game.Developers.Add((await CompanyService.AddMissingAsync(c => c.Name == developer, new Company()
+                        game.Developers.Add((await companyService.AddMissingAsync(c => c.Name == developer, new Company()
                         {
                             Name = developer
                         })).Value);
@@ -419,7 +438,7 @@ namespace LANCommander.Server.Services
                 if (manifest.Publishers != null)
                     foreach (var publisher in manifest.Publishers.Where(mp => !game.Publishers.Any(c => c.Name == mp)))
                     {
-                        game.Publishers.Add((await CompanyService.AddMissingAsync(c => c.Name == publisher, new Company()
+                        game.Publishers.Add((await companyService.AddMissingAsync(c => c.Name == publisher, new Company()
                         {
                             Name = publisher
                         })).Value);
@@ -556,6 +575,10 @@ namespace LANCommander.Server.Services
                 #endregion
 
                 #region Media
+
+                var mediaStorageLocation =
+                    await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+                
                 if (game.Media == null)
                     game.Media = new List<Data.Models.Media>();
 
@@ -567,13 +590,15 @@ namespace LANCommander.Server.Services
                     {
                         media.SourceUrl = manifestMedia.SourceUrl;
                         media.FileId = manifestMedia.FileId;
-                        media.Type = (SDK.Enums.MediaType)(int)manifestMedia.Type;
+                        media.Type = manifestMedia.Type;
                         media.MimeType = manifestMedia.MimeType;
                         media.CreatedOn = manifestMedia.CreatedOn;
 
                         importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetMediaPath(media), true);
 
                         media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
+
+                        await mediaService.UpdateAsync(media);
                     }
                 }
 
@@ -582,17 +607,21 @@ namespace LANCommander.Server.Services
                     {
                         var media = new Media()
                         {
-                            Id = manifestMedia.Id,
-                            FileId = manifestMedia.FileId,
+                            FileId = Guid.NewGuid(),
                             MimeType = manifestMedia.MimeType,
                             SourceUrl = manifestMedia.SourceUrl,
-                            Type = (SDK.Enums.MediaType)(int)manifestMedia.Type,
+                            Type = manifestMedia.Type,
                             CreatedOn = manifestMedia.CreatedOn,
+                            StorageLocationId = mediaStorageLocation.Id,
                         };
 
-                        importZip.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetMediaPath(media), true);
+                        var mediaPath = MediaService.GetMediaPath(media, mediaStorageLocation);
 
-                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
+                        importZip.ExtractEntry($"Media/{manifestMedia.FileId}", mediaPath, true);
+
+                        media.Crc32 = SDK.Services.MediaService.CalculateChecksum(mediaPath);
+
+                        media = await mediaService.AddAsync(media);
 
                         game.Media.Add(media);
                     }
@@ -613,7 +642,7 @@ namespace LANCommander.Server.Services
                         archive.Version = manifestArchive.Version;
                         archive.CreatedOn = manifestArchive.CreatedOn;
 
-                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
+                        var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
                         
@@ -621,6 +650,8 @@ namespace LANCommander.Server.Services
 
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
                         archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
+
+                        await archiveService.UpdateAsync(archive);
                     }
                 }
 
@@ -629,15 +660,14 @@ namespace LANCommander.Server.Services
                     {
                         var archive = new Archive()
                         {
-                            Id = manifestArchive.Id,
-                            ObjectKey = manifestArchive.ObjectKey,
+                            ObjectKey = Guid.NewGuid().ToString(),
                             Changelog = manifestArchive.Changelog,
                             Version = manifestArchive.Version,
                             CreatedOn = manifestArchive.CreatedOn,
-                            StorageLocation = storageLocation,
+                            StorageLocationId = storageLocation.Id,
                         };
 
-                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
+                        var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{manifestArchive.ObjectKey}", extractionLocation, true);
 
@@ -646,26 +676,20 @@ namespace LANCommander.Server.Services
                         archive.CompressedSize = new FileInfo(extractionLocation).Length;
                         archive.UncompressedSize = archiveFile.Entries.Sum(e => e.Length);
 
+                        archive = await archiveService.AddAsync(archive);
+
                         game.Archives.Add(archive);
                     }
                 #endregion
-
-                if (exists)
-                    game = await UpdateAsync(game);
-                else
-                    game = await AddAsync(game);
+                
+                game = await UpdateAsync(game);
             }
+            
+            await archiveService.DeleteAsync(importArchive, storageLocation);
 
-            await ArchiveService.DeleteAsync(importArchive);
+            await cache.ExpireGameCacheAsync(game.Id);
 
             return game;
-        }
-
-        private async Task ExpireCacheAsync(Guid gameId)
-        {
-            await Cache.ExpireAsync("MappedGames");
-            await Cache.ExpireAsync("DepotGames");
-            await Cache.ExpireAsync($"DepotGames:{gameId}");
         }
     }
 }

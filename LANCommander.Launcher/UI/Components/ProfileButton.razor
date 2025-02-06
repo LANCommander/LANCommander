@@ -27,12 +27,12 @@
 
     <ChildContent>
         <Button Type="ButtonType.Primary" Class="appbar-profile-button">
-            @if (User != null && User.Avatar != null)
+            @if (AvatarId != Guid.Empty)
             {
-                <MediaImage Id="@User.Avatar.Id" />
+                <MediaImage Id="AvatarId" />
             }
 
-            <span>@User?.Alias</span>
+            <span>@Alias</span>
         </Button>
     </ChildContent>
 </Dropdown>
@@ -42,10 +42,15 @@
     Models.Settings Settings = null;
 
     User User;
+    Guid AvatarId = Guid.Empty;
+    string Alias = "Player";
 
     protected override async Task OnInitializedAsync()
     {
         User = await UserService.GetCurrentUser();
+
+        AvatarId = User?.Avatar?.Id ?? Guid.Empty;
+        Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? "Player" : User.Alias;
     }
 
     async Task ChangeAlias()
@@ -64,6 +69,7 @@
         modalRef.OnOk = async (newName) =>
         {
             await ProfileService.ChangeAlias(newName);
+            await ProfileService.DownloadProfileInfoAsync();
 
             Settings = SettingService.GetSettings();
 

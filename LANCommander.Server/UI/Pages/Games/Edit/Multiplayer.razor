@@ -1,10 +1,38 @@
 ﻿@page "/Games/{id:guid}/Multiplayer"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject MessageService MessageService
+@inject ILogger<Multiplayer> Logger
 
 <GameEditView Id="Id" Title="Multiplayer">
-    <MultiplayerModeEditor @bind-Value="context.MultiplayerModes" />
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+    
+    <ChildContent>
+        <MultiplayerModeEditor @ref="MultiplayerModeEditor" GameId="@Id"/>
+    </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
+
+    MultiplayerModeEditor MultiplayerModeEditor;
+    
+    async Task Save()
+    {
+        try
+        {
+            await MultiplayerModeEditor.Save();
+
+            await MessageService.Success("Multiplayer modes updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not save multiplayer modes!");
+            Logger.LogError(ex, "Could not save multiplayer modes!");
+        }
+    }
 }

@@ -6,6 +6,7 @@ using System.Text;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using System.Threading.Tasks;
+using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
 
 namespace LANCommander.SDK.Helpers
@@ -16,28 +17,29 @@ namespace LANCommander.SDK.Helpers
 
         public const string ManifestFilename = "Manifest.yml";
 
-        public static bool Exists(string installDirectory, Guid gameId)
+        public static bool Exists(string installDirectory, Guid id)
         {
-            var path = GetPath(installDirectory, gameId);
+            var path = GetPath(installDirectory, id);
 
             return File.Exists(path);
         }
 
-        public static GameManifest Read(string installDirectory)
+        public static T Read<T>(string installDirectory)
         {
             var source = Path.Combine(installDirectory, ManifestFilename);
             var yaml = File.ReadAllText(source);
 
             Logger?.LogTrace("Deserializing manifest");
 
-            var manifest = Deserialize<GameManifest>(yaml);
+            var manifest = Deserialize<T>(yaml);
 
             return manifest;
         }
 
-        public static GameManifest Read(string installDirectory, Guid gameId)
+        public static T Read<T>(string installDirectory, Guid id)
+            where T : class
         {
-            var source = GetPath(installDirectory, gameId);
+            var source = GetPath(installDirectory, id);
 
             if (File.Exists(source))
             {
@@ -45,7 +47,7 @@ namespace LANCommander.SDK.Helpers
 
                 Logger?.LogTrace("Deserializing manifest");
 
-                var manifest = Deserialize<GameManifest>(yaml);
+                var manifest = Deserialize<T>(yaml);
 
                 return manifest;
             }
@@ -53,21 +55,22 @@ namespace LANCommander.SDK.Helpers
             return null;
         }
 
-        public static async Task<GameManifest> ReadAsync(string installDirectory)
+        public static async Task<T> ReadAsync<T>(string installDirectory)
         {
             var source = Path.Combine(installDirectory, ManifestFilename);
             var yaml = await File.ReadAllTextAsync(source);
 
             Logger?.LogTrace("Deserializing manifest from path {ManifestPath}", source);
 
-            var manifest = Deserialize<GameManifest>(yaml);
+            var manifest = Deserialize<T>(yaml);
 
             return manifest;
         }
 
-        public static async Task<GameManifest> ReadAsync(string installDirectory, Guid gameId)
+        public static async Task<T> ReadAsync<T>(string installDirectory, Guid id)
+            where T : class
         {
-            var source = GetPath(installDirectory, gameId);
+            var source = GetPath(installDirectory, id);
 
             if (File.Exists(source))
             {
@@ -75,15 +78,16 @@ namespace LANCommander.SDK.Helpers
 
                 Logger?.LogTrace("Deserializing manifest from {ManifestPath}", source);
 
-                var manifest = Deserialize<GameManifest>(yaml);
+                var manifest = Deserialize<T>(yaml);
 
                 return manifest;
             }
 
             return null;
         }
-
-        public static string Write(GameManifest manifest, string installDirectory)
+        
+        public static string Write<T>(T manifest, string installDirectory)
+            where T : IKeyedModel
         {
             var destination = GetPath(installDirectory, manifest.Id);
 
@@ -97,6 +101,25 @@ namespace LANCommander.SDK.Helpers
             Logger?.LogTrace("Writing manifest file");
 
             File.WriteAllText(destination, yaml);
+
+            return destination;
+        }
+
+        public static async Task<string> WriteAsync<T>(T manifest, string installDirectory)
+            where T : IKeyedModel
+        {
+            var destination = GetPath(installDirectory, manifest.Id);
+
+            if (!Directory.Exists(Path.GetDirectoryName(destination)))
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+
+            Logger?.LogTrace("Attempting to write manifest to path {Destination}", destination);
+
+            var yaml = Serialize(manifest);
+
+            Logger?.LogTrace("Writing manifest file");
+
+            await File.WriteAllTextAsync(destination, yaml);
 
             return destination;
         }
@@ -124,9 +147,9 @@ namespace LANCommander.SDK.Helpers
             return yaml;
         }
 
-        public static string GetPath(string installDirectory, Guid gameId)
+        public static string GetPath(string installDirectory, Guid id)
         {
-            return GameService.GetMetadataFilePath(installDirectory, gameId, ManifestFilename);
+            return GameService.GetMetadataFilePath(installDirectory, id, ManifestFilename);
         }
     }
 }

@@ -1,11 +1,10 @@
 ﻿@page "/Pages/Edit"
 @page "/Pages/Edit/{id:guid}"
 @using LANCommander.Server.UI.Pages.Pages.Components
-@using Microsoft.EntityFrameworkCore
 @using PSC.Blazor.Components.MarkdownEditor
-@using System.Text.RegularExpressions
 @using PSC.Blazor.Components.MarkdownEditor.Models
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject MediaService MediaService
+@inject PageService PageService
 @inject ConfirmService ConfirmService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
@@ -135,10 +134,7 @@
     {
         if (Id != Guid.Empty)
         {
-            using (var pageService = DatabaseServiceFactory.Create<PageService>())
-            {
-                SelectedPage = await pageService.FirstOrDefaultAsync(p => p.Id == Id);
-            }
+            SelectedPage = await PageService.FirstOrDefaultAsync(p => p.Id == Id);
 
             if (SelectedPage == null)
                 NavigationManager.NavigateTo("/Pages/Edit");
@@ -152,10 +148,7 @@
 
     async Task LoadData()
     {
-        using (var pageService = DatabaseServiceFactory.Create<PageService>())
-        {
-            Pages = await pageService.SortBy(p => p.SortOrder).GetAsync(p => p.ParentId == null);
-        }
+        Pages = await PageService.SortBy(p => p.SortOrder).GetAsync(p => p.ParentId == null);
 
         await InvokeAsync(StateHasChanged);
     }
@@ -163,38 +156,35 @@
     async Task OnDrop(TreeEventArgs<Page> e)
     {
         List<Guid> childOrder = new List<Guid>();
-
-        using (var pageService = DatabaseServiceFactory.Create<PageService>())
+        
+        // DropBelow is true if a tree node is supposed to be placed beneath a sibling
+        if (e.DropBelow)
         {
-            // DropBelow is true if a tree node is supposed to be placed beneath a sibling
-            if (e.DropBelow)
-            {
-                var parentId = e.TargetNode.DataItem.Parent?.Id ?? Guid.Empty;
-                var parentNode = Tree.GetNode(parentId.ToString());
-                var sibling = e.TargetNode;
+            var parentId = e.TargetNode.DataItem.Parent?.Id ?? Guid.Empty;
+            var parentNode = Tree.GetNode(parentId.ToString());
+            var sibling = e.TargetNode;
 
-                if (parentId == Guid.Empty)
-                    childOrder = (await pageService.GetAsync(p => p.Parent == null)).Select(p => p.Id).ToList();
-                else
-                    childOrder = parentNode.DataItem.Children.Select(c => c.Id).ToList();
-
-                childOrder.Remove(e.Node.DataItem.Id);
-
-                var targetPosition = childOrder.FindIndex(c => c == e.TargetNode.DataItem.Id);
-
-                childOrder.Insert(targetPosition + 1, e.Node.DataItem.Id);
-
-                await pageService.UpdateOrderAsync(parentId, childOrder);
-            }
+            if (parentId == Guid.Empty)
+                childOrder = (await PageService.GetAsync(p => p.Parent == null)).Select(p => p.Id).ToList();
             else
-            {
-                childOrder = e.TargetNode.DataItem.Children.Select(c => c.Id).ToList();
+                childOrder = parentNode.DataItem.Children.Select(c => c.Id).ToList();
 
-                childOrder.Remove(e.Node.DataItem.Id);
-                childOrder.Insert(0, e.Node.DataItem.Id);
+            childOrder.Remove(e.Node.DataItem.Id);
 
-                await pageService.UpdateOrderAsync(e.TargetNode.DataItem.Id, childOrder);
-            }
+            var targetPosition = childOrder.FindIndex(c => c == e.TargetNode.DataItem.Id);
+
+            childOrder.Insert(targetPosition + 1, e.Node.DataItem.Id);
+
+            await PageService.UpdateOrderAsync(parentId, childOrder);
+        }
+        else
+        {
+            childOrder = e.TargetNode.DataItem.Children.Select(c => c.Id).ToList();
+
+            childOrder.Remove(e.Node.DataItem.Id);
+            childOrder.Insert(0, e.Node.DataItem.Id);
+
+            await PageService.UpdateOrderAsync(e.TargetNode.DataItem.Id, childOrder);
         }
 
         await LoadData();
@@ -209,18 +199,15 @@
             newPage.Title = "New Page";
             newPage.Slug = "new-page";
             newPage.Contents = "";
+            
+            newPage = await PageService.AddAsync(newPage);
 
-            using (var pageService = DatabaseServiceFactory.Create<PageService>())
-            {
-                newPage = await pageService.AddAsync(newPage);
+            if (SelectedPage != null && SelectedPage.Parent != null)
+                newPage.Parent = SelectedPage.Parent;
+            else
+                newPage.Parent = SelectedPage;
 
-                if (SelectedPage != null && SelectedPage.Parent != null)
-                    newPage.Parent = SelectedPage.Parent;
-                else
-                    newPage.Parent = SelectedPage;
-
-                await pageService.UpdateAsync(newPage);
-            }
+            await PageService.UpdateAsync(newPage);
 
             await LoadData();
 
@@ -240,13 +227,10 @@
             if (SelectedPage != null)
             {
                 var parentId = SelectedPage.Parent?.Id ?? Guid.Empty;
+                
+                var page = await PageService.GetAsync(SelectedPage.Id);
 
-                using (var pageService = DatabaseServiceFactory.Create<PageService>())
-                {
-                    var page = await pageService.GetAsync(SelectedPage.Id);
-
-                    await pageService.DeleteAsync(page);
-                }
+                await PageService.DeleteAsync(page);
 
                 if (parentId != Guid.Empty)
                     NavigationManager.NavigateTo($"/Pages/Edit/{parentId}");
@@ -269,18 +253,15 @@
     {
         try
         {
-            using (var pageService = DatabaseServiceFactory.Create<PageService>())
+            if (SelectedPage.Id != Guid.Empty)
             {
-                if (SelectedPage.Id != Guid.Empty)
-                {
-                    await pageService.UpdateAsync(SelectedPage);
-                    MessageService.Success("Page updated!");
-                }
-                else
-                {
-                    await pageService.AddAsync(SelectedPage);
-                    MessageService.Success("Page added!");
-                }
+                await PageService.UpdateAsync(SelectedPage);
+                MessageService.Success("Page updated!");
+            }
+            else
+            {
+                await PageService.AddAsync(SelectedPage);
+                MessageService.Success("Page added!");
             }
 
             await LoadData();
@@ -361,13 +342,10 @@
             MimeType = entry.Type,
             Crc32 = ""
         };
-
-        using (var mediaService = DatabaseServiceFactory.Create<MediaService>())
-        {
-            media = await mediaService.AddAsync(media);
-            media = await mediaService.UploadMediaAsync(stream, media);
-            media = await mediaService.UpdateAsync(media);
-        }
+        
+        media = await MediaService.AddAsync(media);
+        media = await MediaService.UploadMediaAsync(stream, media);
+        media = await MediaService.UpdateAsync(media);
 
         entry.UploadUrl = $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
 

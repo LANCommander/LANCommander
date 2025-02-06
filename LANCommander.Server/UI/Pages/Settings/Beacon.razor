@@ -1,13 +1,11 @@
 ﻿@page "/Settings/Beacon"
-@using LANCommander.Server.Models;
-@inject IPXRelayService IPXRelayService
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Beacon" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable">
             <Text Type="@TextElementType.Secondary">Enabling the beacon will allow clients on the same network to auto-discover the LANCommander address.</Text>
@@ -28,7 +26,7 @@
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </FormItem>
     </Form>
-</div>
+</PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();

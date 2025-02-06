@@ -3,9 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
 using LANCommander.SDK.Helpers;
 using System.IO.Compression;
-using System.Security.Cryptography.X509Certificates;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
@@ -13,23 +11,36 @@ using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class RedistributableService : BaseDatabaseService<Redistributable>
+    public sealed class RedistributableService(
+        ILogger<SDK.Services.RedistributableService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        ArchiveService archiveService) : BaseDatabaseService<Redistributable>(logger, cache, mapper, contextFactory)
     {
-        private readonly ArchiveService ArchiveService;
-
-        public RedistributableService(
-            ILogger<RedistributableService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            ArchiveService archiveService) : base(logger, cache, repositoryFactory)
+        public override async Task<Redistributable> UpdateAsync(Redistributable entity)
         {
-            ArchiveService = archiveService;
+            if (entity.Games != null && entity.Games.Any())
+            {
+                foreach (var game in entity.Games)
+                {
+                    await cache.ExpireGameCacheAsync(game?.Id);
+                }
+            }
+            
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(r => r.Archives);
+                await context.UpdateRelationshipAsync(r => r.Games);
+                await context.UpdateRelationshipAsync(r => r.Pages);
+                await context.UpdateRelationshipAsync(r => r.Scripts);
+            });
         }
 
         public async Task<Redistributable> ImportAsync(Guid objectKey)
         {
-            var importArchive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-            var importArchivePath = await ArchiveService.GetArchiveFileLocationAsync(importArchive);
+            var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
+            var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
 
             using (var importZip = ZipFile.OpenRead(importArchivePath))
             {
@@ -101,7 +112,7 @@ namespace LANCommander.Server.Services
                         archive.CreatedOn = manifestArchive.CreatedOn;
                         archive.StorageLocation = importArchive.StorageLocation;
 
-                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
+                        var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
 
@@ -122,7 +133,7 @@ namespace LANCommander.Server.Services
                             StorageLocation = importArchive.StorageLocation,
                         };
 
-                        var extractionLocation = await ArchiveService.GetArchiveFileLocationAsync(archive);
+                        var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
 
                         importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
 
@@ -137,7 +148,7 @@ namespace LANCommander.Server.Services
                 else
                     redistributable = await AddAsync(redistributable);
 
-                await ArchiveService.DeleteAsync(importArchive);
+                await archiveService.DeleteAsync(importArchive);
 
                 return redistributable;
             }

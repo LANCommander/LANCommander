@@ -5,38 +5,38 @@ using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.Services
 {
-    public class BeaconService : BaseService, IHostedService, IDisposable
+    public class BeaconService(ILogger<BeaconService> logger) : BaseService(logger), IHostedService, IDisposable
     {
-        private Beacon Beacon;
+        private Beacon _beacon;
 
-        public BeaconService(ILogger<BeaconService> logger) : base(logger)
+        public override void Initialize()
         {
-            Beacon = new Beacon("LANCommander", Convert.ToUInt16(Settings.Port));
+            _beacon = new Beacon("LANCommander", Convert.ToUInt16(_settings.Port));
         }
 
         public void Dispose()
         {
-            Beacon?.Dispose();
+            _beacon?.Dispose();
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
             string[] dataParts = new string[]
             {
-                Settings.Beacon?.Address,
-                Settings.Beacon?.Name,
+                _settings.Beacon?.Address,
+                _settings.Beacon?.Name,
                 UpdateService.GetCurrentVersion().ToString(),
             };
 
-            Beacon.BeaconData = String.Join('|', dataParts);
-            Beacon.Start();
+            _beacon.BeaconData = String.Join('|', dataParts);
+            _beacon.Start();
 
             return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            Beacon.Stop();
+            _beacon.Stop();
             return Task.CompletedTask;
         }
     }

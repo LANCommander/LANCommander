@@ -1,19 +1,23 @@
 ﻿@page "/Servers"
 @using LANCommander.Server.UI.Pages.Servers.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 
-<PageHeader Title="Servers" />
+<PageHeader Title="Servers" Subtitle="@Total.ToString()" />
 
 <DataTable
     @ref="Table"
     TItem="Server"
     Size="TableSize.Small"
     @bind-SelectedRows="SelectedServers"
-    Responsive>
+    @bind-Total="Total"
+    Responsive
+    ColumnPicker
+    Searchable
+    SearchProperty="s => s.Name">
     <RightToolbar>
         @if (SelectedServers != null && SelectedServers.Count() > 0)
         {
@@ -58,12 +62,25 @@
             </Popconfirm>
         </DataActions>
     </Columns>
+
+    <PaginationTemplate>
+        <Pagination
+            Total="context.Total"
+            PageSize="context.PageSize"
+            Current="context.PageIndex"
+            DefaultPageSize="25"
+            PageSizeOptions="new [] { 25, 50, 100, 200 }"
+            ShowSizeChanger
+            OnChange="context.HandlePageChange" />
+    </PaginationTemplate>
 </DataTable>
 
 @code {
     DataTable<Server> Table;
     
     bool Loading = true;
+
+    int Total;
 
     ImportUploadDialog ImportUploadDialog;
     IEnumerable<Server> SelectedServers;
@@ -77,10 +94,13 @@
     {
         Loading = true;
 
-        using (var serverService = DatabaseServiceFactory.Create<ServerService>())
-        {
-            await serverService.DeleteAsync(server);
-        }
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+        
+        await ServerService.DeleteAsync(server);
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
 
         Loading = false;
     }

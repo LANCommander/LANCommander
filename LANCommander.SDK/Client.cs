@@ -44,6 +44,7 @@ namespace LANCommander.SDK
         public readonly IssueService Issues;
         public readonly LobbyService Lobbies;
         public readonly ServerService Servers;
+        public readonly PlaySessionService PlaySessions;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -58,6 +59,9 @@ namespace LANCommander.SDK
         }
 
         public EventHandler<Exception> OnError;
+        
+        public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
+        public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
 
         public Client(string baseUrl, string defaultInstallDirectory)
         {
@@ -75,6 +79,7 @@ namespace LANCommander.SDK
             Issues = new IssueService(this);
             Lobbies = new LobbyService(this);
             Servers = new ServerService(this);
+            PlaySessions = new PlaySessionService(this);
 
             BaseCmdlet.Client = this;
 
@@ -99,6 +104,7 @@ namespace LANCommander.SDK
             Issues = new IssueService(this);
             Lobbies = new LobbyService(this, logger);
             Servers = new ServerService(this, logger);
+            PlaySessions = new PlaySessionService(this, logger);
 
             BaseCmdlet.Client = this;
 
@@ -542,7 +548,7 @@ namespace LANCommander.SDK
                 {
                     Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
 
-                    throw response.ErrorException;
+                    throw new Exception(response.Content);
                 }
 
                 switch (response.StatusCode)

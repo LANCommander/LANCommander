@@ -21,12 +21,12 @@ namespace LANCommander.Server.Services
                 Stop();
 
             if (Relay == null)
-                Relay = new IPXRelay(Settings.IPXRelay.Port);
+                Relay = new IPXRelay(_settings.IPXRelay.Port);
 
-            if (!Settings.IPXRelay.Logging)
+            if (!_settings.IPXRelay.Logging)
                 Relay.DisableLogging();
 
-            if (Settings.IPXRelay.Enabled)
+            if (_settings.IPXRelay.Enabled)
                 Relay.StartAsync();
         }
 

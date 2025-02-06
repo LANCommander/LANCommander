@@ -1,14 +1,9 @@
 ﻿using AutoMapper;
-using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Runtime.Intrinsics.X86;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -73,7 +68,10 @@ namespace LANCommander.Server.Controllers.Api
             if (user == null)
                 return Unauthorized();
 
-            var latestSave = await GameSaveService.FirstOrDefaultAsync(gs => gs.UserId == user.Id && gs.GameId == gameId, gs => gs.CreatedOn);
+            var latestSave = await GameSaveService.Query(q =>
+            {
+                return q.OrderByDescending(s => s.CreatedOn);
+            }).FirstOrDefaultAsync(gs => gs.UserId == user.Id && gs.GameId == gameId);
 
             // Should probably return 404 if no latest save exists
             // Not sure if this will affect launcher stability
@@ -89,8 +87,10 @@ namespace LANCommander.Server.Controllers.Api
             if (user == null)
                 return NotFound();
 
-            var save = await GameSaveService
-                .FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == user.Id, gs => gs.CreatedOn);
+            var save = await GameSaveService.Query(q =>
+            {
+                return q.OrderByDescending(s => s.CreatedOn);
+            }).FirstOrDefaultAsync(gs => gs.UserId == user.Id && gs.GameId == gameId);
 
             if (save == null)
                 return NotFound();

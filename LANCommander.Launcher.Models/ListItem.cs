@@ -15,7 +15,8 @@ namespace LANCommander.Launcher.Models
         Installed,
         Queued,
         Installing,
-        UpdateAvailable
+        UpdateAvailable,
+        Uninstalling,
     }
 
     public enum ListItemType

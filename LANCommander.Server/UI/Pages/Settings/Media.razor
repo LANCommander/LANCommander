@@ -1,14 +1,12 @@
 ﻿@page "/Settings/Media"
-@using LANCommander.Server.Models;
-@using Microsoft.EntityFrameworkCore
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<Media> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Media" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@StorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
@@ -30,7 +28,7 @@
             <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
         </FormItem>
     </Form>
-</div>
+</PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();
@@ -41,10 +39,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        using (var storageLocationService = DatabaseServiceFactory.Create<StorageLocationService>())
-        {
-            StorageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
-        }
+        StorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
     }
 
     void Save()

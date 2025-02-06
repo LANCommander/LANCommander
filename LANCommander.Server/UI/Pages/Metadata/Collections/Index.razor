@@ -1,10 +1,7 @@
 ﻿@page "/Metadata/Collections"
 @using LANCommander.Server.Data
-@using Microsoft.EntityFrameworkCore;
-@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
+@inject CollectionService CollectionService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -53,25 +50,8 @@
 
     string Url;
 
-    bool AddCollectionVisible = false;
+    bool AddCollectionVisible;
     Collection CollectionContext = new();
-
-    async Task<PaginatedResults<Collection>> LoadData(int pageIndex, int pageSize, string search)
-    {
-        var fuzzySearch = search.ToLower().Trim();
-
-        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-        {
-            return await collectionService
-                .Include(c => c.Games)
-                .Include(c => c.CreatedBy)
-                .Include(c => c.UpdatedBy)
-                .SortBy(c => c.Name)
-                .PaginateAsync(c => c.Name.ToLower().Contains(fuzzySearch),
-                    pageIndex,
-                    pageSize);
-        }
-    }
 
     async Task OpenAdd()
     {
@@ -93,14 +73,9 @@
     {
         try
         {
-            using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-            {
-                await collectionService.AddMissingAsync(x => x.Name == CollectionContext.Name, CollectionContext);
-            }
+            await CollectionService.AddMissingAsync(x => x.Name == CollectionContext.Name, CollectionContext);
 
             MessageService.Success($"{CollectionContext.Name} was added!");
-
-            // await LoadData();
 
             await CloseAdd();
         }
@@ -114,12 +89,7 @@
     async Task Delete(Collection Collection)
     {
         Collections = new List<Collection>();
-
-        using (var collectionService = DatabaseServiceFactory.Create<CollectionService>())
-        {
-            await collectionService.DeleteAsync(Collection);
-        }
-
-        // await LoadData();
+        
+        await CollectionService.DeleteAsync(Collection);
     }
 }

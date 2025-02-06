@@ -1,14 +1,6 @@
-﻿@using System.Net;
-@using System.Diagnostics;
-@using Hangfire;
-@using LANCommander.Server.Jobs.Background;
-@using Microsoft.EntityFrameworkCore;
-@inherits FeedbackComponent<ImportDialogOptions>
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
-@inject ModalService ModalService
+﻿@inherits FeedbackComponent<ImportDialogOptions>
+@inject GameService GameService
 @inject IMessageService MessageService
-@inject IJSRuntime JS
 @inject ILogger<ImportUploadDialog> Logger
 
 <Flex Vertical Gap="FlexGap.Small">
@@ -78,16 +70,13 @@
         {
             try
             {
-                using (var gameService = DatabaseServiceFactory.Create<GameService>())
-                {
-                    var game = await gameService.ImportAsync(objectKey);
+                var game = await GameService.ImportAsync(objectKey);
 
-                    await InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
 
-                    MessageService.Success($"{game.Title} successfully imported!");
+                MessageService.Success($"{game.Title} successfully imported!");
 
-                    await CloseFeedbackAsync();
-                }
+                await CloseFeedbackAsync();
             }
             catch (Exception ex)
             {
@@ -121,16 +110,13 @@
     {
         try
         {
-            using (var gameService = DatabaseServiceFactory.Create<GameService>())
-            {
-                var game = await gameService.ImportLocalFileAsync(path);
+            var game = await GameService.ImportLocalFileAsync(path);
 
-                await InvokeAsync(StateHasChanged);
-                
-                MessageService.Success($"{game.Title} successfully imported!");
+            await InvokeAsync(StateHasChanged);
+            
+            MessageService.Success($"{game.Title} successfully imported!");
 
-                await CloseFeedbackAsync();
-            }
+            await CloseFeedbackAsync();
         }
         catch (Exception ex)
         {

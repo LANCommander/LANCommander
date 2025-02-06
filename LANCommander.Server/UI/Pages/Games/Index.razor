@@ -1,31 +1,22 @@
 ﻿@page "/Games"
-@using AntDesign.TableModels;
-@using LANCommander.SDK.Enums
-@using LANCommander.Server.Data
-@using LANCommander.Server.Extensions;
-@using System.ComponentModel.DataAnnotations;
-@using LANCommander.Server.Models
-@using LANCommander.Server.Services.Factories
-@using LANCommander.Server.UI.Pages.Games.Components
-@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-@using Microsoft.EntityFrameworkCore;
 @using SortDirection = AntDesign.SortDirection
-@using System.Web
 @attribute [Authorize]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject GameService GameService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Games" />
+<PageHeader Title="Games" Subtitle="@Total.ToString()" />
 
 <DataTable
     @ref="Table"
     TItem="Game"
     @bind-SelectedRows="Selected"
+    @bind-Total="Total"
     Size="@TableSize.Small"
     Responsive
+    ColumnPicker
     Searchable
     SearchProperty="g => g.Title">
     <RightToolbar>
@@ -45,7 +36,7 @@
 
         <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
     
-        <BoundDataColumn Property="g => g.MultiplayerModes.Count > 0" Include="MultiplayerModes" Sortable>
+        <BoundDataColumn Property="g => g.MultiplayerModes.Count > 0" Include="MultiplayerModes" Sortable Title="Multiplayer">
             <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
         </BoundDataColumn>
 
@@ -60,7 +51,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Developers" Include="Developers">
+        <DataColumn TData="string[]" Title="Developers" Include="Developers" Hide>
             @if (context.Developers != null)
                 foreach (var dev in context.Developers)
                 {
@@ -68,7 +59,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Publishers" Include="Publishers">
+        <DataColumn TData="string[]" Title="Publishers" Include="Publishers" Hide>
             @if (context.Publishers != null)
                 foreach (var pub in context.Publishers)
                 {
@@ -76,7 +67,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Genres" Include="Genres">
+        <DataColumn TData="string[]" Title="Genres" Include="Genres" Hide>
             @if (context.Genres != null)
                 foreach (var genre in context.Genres)
                 {
@@ -84,7 +75,7 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="string[]" Title="Platforms" Include="Platforms">
+        <DataColumn TData="string[]" Title="Platforms" Include="Platforms" Hide>
             @if (context.Platforms != null)
                 foreach (var platform in context.Platforms)
                 {
@@ -92,13 +83,24 @@
                 }
         </DataColumn>
 
-        <DataColumn TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes" Include="MultiplayerModes">
+        <DataColumn TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes" Include="MultiplayerModes" Hide>
             @if (context.MultiplayerModes != null)
                 foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
                 {
                     <Tag>@mode.GetDisplayName()</Tag>
                 }
         </DataColumn>
+
+        <BoundDataColumn Property="g => g.CreatedOn" Title="Created On" Sortable />
+        <BoundDataColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable />
+        
+        <BoundDataColumn Property="g => g.CreatedBy" Sortable Title="Created By" Include="CreatedBy">
+            @context.CreatedBy?.UserName
+        </BoundDataColumn>
+
+        <BoundDataColumn Property="g => g.UpdatedBy" Title="Updated By" Sortable Include="UpdatedBy">
+            @context.UpdatedBy?.UserName
+        </BoundDataColumn>
 
         <DataActions>
             <a href="@($"/Games/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
@@ -107,12 +109,24 @@
             </Popconfirm>
         </DataActions>
     </Columns>
+
+    <PaginationTemplate>
+        <Pagination
+            Total="context.Total"
+            PageSize="context.PageSize"
+            Current="context.PageIndex"
+            DefaultPageSize="25"
+            PageSizeOptions="new [] { 25, 50, 100, 200 }"
+            ShowSizeChanger
+            OnChange="context.HandlePageChange" />
+    </PaginationTemplate>
 </DataTable>
 
 @code {
     bool Visibility = false;
 
     IEnumerable<Game> Selected;
+    int Total;
 
     DataTable<Game> Table;
     ImportUploadDialog ImportUploadDialog;
@@ -134,19 +148,16 @@
 
     async Task Delete(Game game)
     {
-        using (var gameService = DatabaseServiceFactory.Create<GameService>())
+        try
         {
-            try
-            {
-                await gameService.DeleteAsync(game);
+            await GameService.DeleteAsync(game);
 
-                MessageService.Success($"{game.Title} was successfully deleted!");
-            }
-            catch (Exception ex)
-            {
-                MessageService.Error("Could not delete the game!");
-                Logger.LogError(ex, "Could not delete the game!");
-            }
+            MessageService.Success($"{game.Title} was successfully deleted!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete the game!");
+            Logger.LogError(ex, "Could not delete the game!");
         }
 
         await Reload();

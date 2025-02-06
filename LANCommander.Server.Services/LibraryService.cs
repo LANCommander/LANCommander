@@ -1,39 +1,36 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class LibraryService : BaseDatabaseService<Library>
+    public sealed class LibraryService(
+        ILogger<LibraryService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        GameService gameService,
+        UserService userService) : BaseDatabaseService<Library>(logger, cache, mapper, contextFactory)
     {
-        private readonly UserService UserService;
-        private readonly GameService GameService;
-
-        public LibraryService(
-            ILogger<LibraryService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            UserService userService,
-            GameService gameService) : base(logger, cache, repositoryFactory)
+        public override async Task<Library> UpdateAsync(Library entity)
         {
-            UserService = userService;
-            GameService = gameService;
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(l => l.Games);
+                await context.UpdateRelationshipAsync(l => l.User);
+            });
         }
-
+        
         public async Task<Library> GetByUserIdAsync(Guid userId)
         {
             var library = await Include(l => l.Games).FirstOrDefaultAsync(l => l.User.Id == userId);
 
             if (library == null)
             {
-                var user = await UserService.GetAsync(userId);
+                var user = await userService.GetAsync(userId);
 
                 if (user == null)
                     throw new Exception("User not found with ID " + userId.ToString());
@@ -46,14 +43,14 @@ namespace LANCommander.Server.Services
 
         public async Task AddToLibraryAsync(Guid userId, Guid gameId)
         {
-            var game = await GameService.GetAsync(gameId);
+            var game = await gameService.GetAsync(gameId);
 
             var library = await GetByUserIdAsync(userId);
 
             library.Games.Add(game);
 
             await UpdateAsync(library);
-            await Cache.ExpireAsync($"LibraryGames:{userId}");
+            await cache.ExpireAsync($"LibraryGames:{userId}");
 
             if (game.BaseGame != null && !library.Games.Any(g => g.Id == game.BaseGame.Id) && game.BaseGame.Id != game.Id)
                 await AddToLibraryAsync(userId, game.BaseGame.Id);
@@ -78,7 +75,7 @@ namespace LANCommander.Server.Services
 
             await UpdateAsync(library);
 
-            await Cache.ExpireAsync($"LibraryGames:{userId}");
+            await cache.ExpireAsync($"LibraryGames:{userId}");
         }
     }
 }

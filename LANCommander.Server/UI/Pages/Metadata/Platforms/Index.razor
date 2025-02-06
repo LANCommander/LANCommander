@@ -1,9 +1,6 @@
 ﻿@page "/Metadata/Platforms"
-@using Microsoft.EntityFrameworkCore;
-@using LANCommander.Server.Data
-@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject PlatformService PlatformService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -61,20 +58,17 @@
     {
         try
         {
-            using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
+            if (PlatformContext.Id == Guid.Empty)
             {
-                if (PlatformContext.Id == Guid.Empty)
-                {
-                    await platformService.AddMissingAsync(x => x.Name == PlatformContext.Name, PlatformContext);
+                await PlatformService.AddMissingAsync(x => x.Name == PlatformContext.Name, PlatformContext);
 
-                    MessageService.Success($"{PlatformContext.Name} was added!");
-                }
-                else
-                {
-                    await platformService.UpdateAsync(PlatformContext);
+                MessageService.Success($"{PlatformContext.Name} was added!");
+            }
+            else
+            {
+                await PlatformService.UpdateAsync(PlatformContext);
 
-                    MessageService.Success($"{PlatformContext.Name} was updated!");
-                }
+                MessageService.Success($"{PlatformContext.Name} was updated!");
             }
         }
         catch (Exception ex)
@@ -113,11 +107,12 @@
 
         Loading = true;
 
-        using (var platformService = DatabaseServiceFactory.Create<PlatformService>())
-        {
-            await platformService.DeleteAsync(Platform);
-        }
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
+        await PlatformService.DeleteAsync(Platform);
 
-        Loading = false;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
     }
 }

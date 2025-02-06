@@ -1,9 +1,6 @@
 ﻿@page "/Metadata/Engines"
-@using Microsoft.EntityFrameworkCore;
-@using LANCommander.Server.Data
-@using System.Web
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject EngineService EngineService
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
@@ -61,20 +58,17 @@
     {
         try
         {
-            using (var engineService = DatabaseServiceFactory.Create<EngineService>())
+            if (EngineContext.Id == Guid.Empty)
             {
-                if (EngineContext.Id == Guid.Empty)
-                {
-                    await engineService.AddMissingAsync(x => x.Name == EngineContext.Name, EngineContext);
+                await EngineService.AddMissingAsync(x => x.Name == EngineContext.Name, EngineContext);
 
-                    MessageService.Success($"{EngineContext.Name} was added!");
-                }
-                else
-                {
-                    await engineService.UpdateAsync(EngineContext);
+                MessageService.Success($"{EngineContext.Name} was added!");
+            }
+            else
+            {
+                await EngineService.UpdateAsync(EngineContext);
 
-                    MessageService.Success($"{EngineContext.Name} was updated!");
-                }
+                MessageService.Success($"{EngineContext.Name} was updated!");
             }
         }
         catch (Exception ex)
@@ -112,11 +106,8 @@
         Engines = new List<Engine>();
 
         Loading = true;
-
-        using (var engineService = DatabaseServiceFactory.Create<EngineService>())
-        {
-            await engineService.DeleteAsync(Engine);
-        }
+        
+        await EngineService.DeleteAsync(Engine);
 
         Loading = false;
     }

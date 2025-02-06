@@ -35,10 +35,10 @@
     </FormItem>
 
     <FormItem>
-        <StandaloneCodeEditor @ref="Editor" Id="@("editor-" + Id.ToString())" ConstructionOptions="EditorConstructionOptions" OnDidInit="InitEditor" />
+        <MonacoCodeEditor @ref="Editor" @bind-Value="context.Contents" Id="@($"editor-{Id}")" ConstructionOptions="EditorConstructionOptions" OnSave="OnSave" />
     </FormItem>
 
-    <FormItem Label="Name" Required Rules=@(new FormValidationRule[]{ new FormValidationRule{ Required = true } })>
+    <FormItem Label="Name" Required Rules=@(new[] { new FormValidationRule { Required = true } })>
         <Input @bind-Value="@context.Name" />
     </FormItem>
 
@@ -61,7 +61,7 @@
 <RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
 
 @code {
-    [Parameter] public Script Script { get; set; }
+    [Parameter] public Script Script { get; set; } = new();
     [Parameter] public EventCallback<Script> ScriptChanged { get; set; }
     [Parameter] public IEnumerable<ScriptType> AllowedTypes { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
@@ -69,7 +69,7 @@
 
     Guid Id = Guid.NewGuid();
     Form<Script> Form;
-    StandaloneCodeEditor? Editor;
+    MonacoCodeEditor? Editor;
     RegToPowerShell RegToPowerShell;
     IEnumerable<Snippet> Snippets { get; set; }
 
@@ -87,18 +87,6 @@
     protected override void OnInitialized()
     {
         Snippets = ScriptService.GetSnippets();
-    }
-
-    async Task InitEditor()
-    {
-        if (Editor != null)
-        {
-            await Editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async (editor) =>
-            {
-                if (OnSave.HasDelegate)
-                    await OnSave.InvokeAsync();
-            }, null);
-        }
     }
 
     async void BrowseForPath()

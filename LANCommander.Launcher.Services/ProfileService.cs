@@ -19,6 +19,8 @@ namespace LANCommander.Launcher.Services
 
         private Settings Settings;
 
+        public event EventHandler OnProfileDownloaded;
+
         public ProfileService(
             SDK.Client client,
             ILogger<ProfileService> logger,
@@ -81,6 +83,8 @@ namespace LANCommander.Launcher.Services
                     localUser.Value.Avatar = media;
                     
                     await UserService.UpdateAsync(localUser.Value);
+                    
+                    OnProfileDownloaded?.Invoke(this, EventArgs.Empty);
                 }
             }
             catch (Exception ex)

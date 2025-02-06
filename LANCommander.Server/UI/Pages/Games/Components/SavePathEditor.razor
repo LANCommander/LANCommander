@@ -1,8 +1,7 @@
-﻿@using LANCommander.SDK.Enums
-@using LANCommander.Server.Extensions;
+﻿@inject GameService GameService
 
 <Flex Vertical Gap="FlexGap.Large">
-    <Table TItem="SavePath" DataSource="@Value" HidePagination="true" Responsive>
+    <Table TItem="SavePath" DataSource="@SavePaths" HidePagination="true" Responsive>
         <PropertyColumn Property="p => p.Type">
             <Select @bind-Value="context.Type" TItem="SavePathType" TItemValue="SavePathType" DataSource="Enum.GetValues<SavePathType>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
@@ -38,32 +37,38 @@
 </Flex>
 
 @code {
-    [Parameter] public ICollection<SavePath> Value { get; set; } = new List<SavePath>();
-    [Parameter] public EventCallback<ICollection<SavePath>> ValueChanged { get; set; }
-
     [Parameter] public Guid GameId { get; set; }
     [Parameter] public Guid ArchiveId { get; set; }
 
+    ICollection<SavePath> SavePaths = new List<SavePath>();
+
     protected override async Task OnInitializedAsync()
     {
-        if (Value == null)
-            Value = new List<SavePath>();
+        var game = await GameService.GetAsync(GameId);
+
+        SavePaths = game.SavePaths;
     }
 
-    private async Task AddPath()
+    async Task AddPath()
     {
-        if (Value == null)
-            Value = new List<SavePath>();
-
-        Value.Add(new SavePath()
+        SavePaths.Add(new SavePath()
         {
             GameId = GameId,
             WorkingDirectory = "{InstallDir}"
         });
     }
 
-    private async Task RemovePath(SavePath path)
+    async Task RemovePath(SavePath path)
     {
-        Value.Remove(path);
+        SavePaths.Remove(path);
+    }
+
+    public async Task Save()
+    {
+        var game = await GameService.GetAsync(GameId);
+
+        game.SavePaths = SavePaths;
+
+        await GameService.UpdateAsync(game);
     }
 }

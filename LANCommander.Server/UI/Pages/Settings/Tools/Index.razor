@@ -1,15 +1,20 @@
 ﻿@page "/Settings/Tools"
-@using LANCommander.Server.Models;
+@using Hangfire
+@using LANCommander.Helpers
+@using LANCommander.Server.Jobs.Background
 @using ZiggyCreatures.Caching.Fusion
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject ArchiveService ArchiveService
+@inject PageService PageService
 @inject UpdateService UpdateService
+@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject IFusionCache FusionCache
+@inject ILogger<Index> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Tools" />
 
-<div style="padding: 0 24px;">
+<PageContent>
     <h3>Recalculate File Sizes</h3>
     <p>
         Some file sizes are cached in the database. Click the button below to scan through all files and recalculate their size.
@@ -53,46 +58,61 @@
     <h3>Regenerate Page Routes</h3>
     <p>Fix any page routes that seem to be out of date or corrupt.</p>
     <Button Type="ButtonType.Primary" OnClick="FixPageRoutes" Loading="FixingPageRoutes">Fix Routes</Button>
-</div>
 
+    <Divider />
+
+    <h3>Regenerate Thumbnails</h3>
+    <p>Clear out the existing thumbnail cache and generate replacements.</p>
+    <Button Type="ButtonType.Primary" OnClick="RegenerateThumbnails" Loading="RegeneratingThumbnails">Regenerate</Button>
+</PageContent>
 
 @code {
     bool RecalculatingFileSizes = false;
     bool DownloadingClients = false;
     bool FixingPageRoutes = false;
+    bool RegeneratingThumbnails = false;
 
     async Task RecalculateFileSizes()
     {
         RecalculatingFileSizes = true;
-
+        
+        await Task.Yield();
         await InvokeAsync(StateHasChanged);
+        
+        var archives = await ArchiveService.AsNoTracking().GetAsync();
 
-        using (var archiveService = DatabaseServiceFactory.Create<ArchiveService>())
+        foreach (var archive in archives)
         {
-            var archives = await archiveService.GetAsync();
-
-            foreach (var archive in archives)
+            try
             {
-                var path = await archiveService.GetArchiveFileLocationAsync(archive);
+                var path = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
                 if (File.Exists(path))
                 {
-                    archive.CompressedSize = await archiveService.GetCompressedSizeAsync(archive);
-                    archive.UncompressedSize = await archiveService.GetUncompressedSizeAsync(archive);
+                    archive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(archive);
+                    archive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(archive);
 
-                    await archiveService.UpdateAsync(archive);
+                    await ArchiveService.UpdateAsync(archive);
                 }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not recalculate file size for archive {ArchiveId}", archive.Id);
             }
         }
 
         MessageService.Success("File sizes recalculated!");
 
         RecalculatingFileSizes = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task ClearCache()
     {
-        await FusionCache.ExpireAsync("MappedGames");
+        await FusionCache.ExpireAsync("Games");
+        await FusionCache.ExpireAsync("Depot/Results");
 
         MessageService.Success("Cache cleared!");
     }
@@ -100,7 +120,8 @@
     async Task DownloadClients()
     {
         DownloadingClients = true;
-
+        
+        await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
         var currentVersion = UpdateService.GetCurrentVersion();
@@ -118,20 +139,21 @@
         }
 
         DownloadingClients = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task FixPageRoutes()
     {
         FixingPageRoutes = true;
 
+        await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
         try
         {
-            using (var pageService = DatabaseServiceFactory.Create<PageService>())
-            {
-                await pageService.FixRoutesAsync();
-            }
+            await PageService.FixRoutesAsync();
 
             MessageService.Success("Routes fixed!");
         }
@@ -141,5 +163,35 @@
         }
 
         FixingPageRoutes = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task RegenerateThumbnails()
+    {
+        RegeneratingThumbnails = true;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+        
+        var storageLocations = await StorageLocationService.GetAsync();
+
+        foreach (var storageLocation in storageLocations.Where(l => l.Type == SDK.Enums.StorageLocationType.Media))
+        {
+            var thumbnailFiles = Directory.GetFiles(storageLocation.Path).Where(f => f.EndsWith(".Thumb"));
+
+            foreach (var thumbnailFile in thumbnailFiles)
+                FileHelpers.DeleteIfExists(thumbnailFile);
+        }
+        
+        BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
+        
+        RegeneratingThumbnails = false;
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+
+        MessageService.Success("Cache has been cleared and is being regenerated in the background");
     }
 }

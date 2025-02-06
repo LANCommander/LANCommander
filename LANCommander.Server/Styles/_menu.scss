@@ -1,3 +1,41 @@
 .ant-menu-title-content > .anticon + span {
     margin-left: 6px;
 }
+
+.menu-drawer {
+    margin-top: 63px;
+}
+
+.menu-drawer .ant-drawer-content {
+    background: #001529;
+}
+
+.menu-drawer .ant-drawer-header-no-title {
+    display: none;
+}
+
+.menu-drawer .ant-drawer-body {
+    padding: 0;
+}
+
+.menu-drawer .ant-drawer-wrapper,
+.menu-drawer .ant-drawer-content {
+    height: auto;
+}
+
+.menu-drawer .ant-drawer-content-wrapper {
+    height: auto !important;
+}
+
+.ant-menu-left {
+    flex-grow: 1;
+}
+
+.ant-menu-right .ant-menu-title-content {
+    display: inline-block;
+    font-size: 24px;
+}
+
+.ant-menu-right .ant-menu-title-content .anticon {
+    font-size: 24px;
+}

@@ -1,10 +1,8 @@
 ﻿@page "/Settings/Users/{username}"
 @using Microsoft.AspNetCore.Components.Authorization;
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject UserService UserService
 @inject IMessageService MessageService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject NavigationManager NavigationManager
-@inject IJSRuntime JSRuntime
 @inject ILogger<Index> Logger
 @attribute [Authorize]
 
@@ -14,7 +12,7 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<div style="padding: 0 24px;">
+<PageContent>
     <Form @ref="Form" Model="User" Layout="@FormLayout.Vertical" OnFinish="Save" ValidateOnChange="true">
         <FormItem Label="Avatar">
             <AvatarUploader UserId="User.Id" />
@@ -64,16 +62,12 @@
                 </FormItem>
             }
 
-            <GridRow Justify="RowJustify.End">
-                <GridCol>
-                    <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
-                </GridCol>
-            </GridRow>
+            <Flex Justify="FlexJustify.End">
+                <Button Type="@ButtonType.Primary" OnClick="AddField">Add Field</Button>
+            </Flex>
         }
-
-
     </Form>
-</div>
+</PageContent>
 
 @code {
     [Parameter] public string Username { get; set; }
@@ -89,10 +83,7 @@
 
         if (authState.User.Identity.IsAuthenticated)
         {
-            using (var userService = DatabaseServiceFactory.Create<UserService>())
-            {
-                User = await userService.GetAsync(Username);
-            }
+            User = await UserService.GetAsync(Username);
 
             if (User.CustomFields == null)
                 User.CustomFields = new List<UserCustomField>();
@@ -119,10 +110,7 @@
         {
             if (Form.IsModified || FieldsModified)
             {
-                using (var userService = DatabaseServiceFactory.Create<UserService>())
-                {
-                    await userService.UpdateAsync(User);
-                }
+                await UserService.UpdateAsync(User);
 
                 MessageService.Success("User updated!");
             }

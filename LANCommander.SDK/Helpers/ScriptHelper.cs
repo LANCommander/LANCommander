@@ -57,6 +57,26 @@ namespace LANCommander.SDK.Helpers
             }
         }
 
+        public static async Task SaveScriptAsync(Game game, Redistributable redistributable, ScriptType type)
+        {
+            var scriptContents = GetScriptContents(redistributable, type);
+
+            if (!String.IsNullOrWhiteSpace(scriptContents))
+            {
+                var fileName = GetScriptFilePath(game.InstallDirectory, redistributable.Id, type);
+
+                if (!Directory.Exists(Path.GetDirectoryName(fileName)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileName));
+                
+                if (File.Exists(fileName))
+                    File.Delete(fileName);
+                
+                Logger?.LogTrace("Writing {ScriptType} script to {Destination}", type, fileName);
+
+                await File.WriteAllTextAsync(fileName, scriptContents);
+            }
+        }
+
         public static string GetScriptContents(Game game, ScriptType type)
         {
             var script = game.Scripts.FirstOrDefault(s => s.Type == type);
@@ -70,16 +90,29 @@ namespace LANCommander.SDK.Helpers
             return script.Contents;
         }
 
-        public static string GetScriptFilePath(string installDirectory, Guid gameId, ScriptType type)
+        public static string GetScriptContents(Redistributable redistributable, ScriptType type)
         {
-            return GetScriptFilePath(installDirectory, gameId.ToString(), type);
+            var script = redistributable.Scripts.FirstOrDefault(s => s.Type == type);
+
+            if (script == null)
+                return String.Empty;
+            
+            if (script.RequiresAdmin)
+                script.Contents = "# Requires Admin" + "\r\n\r\n" + script.Contents;
+
+            return script.Contents;
         }
 
-        public static string GetScriptFilePath(string installDirectory, string gameId, ScriptType type)
+        public static string GetScriptFilePath(string installDirectory, Guid id, ScriptType type)
+        {
+            return GetScriptFilePath(installDirectory, id.ToString(), type);
+        }
+
+        public static string GetScriptFilePath(string installDirectory, string id, ScriptType type)
         {
             var filename = GetScriptFileName(type);
 
-            return Path.Combine(installDirectory, ".lancommander", gameId, filename);
+            return Path.Combine(installDirectory, ".lancommander", id, filename);
         }
 
         public static string GetScriptFileName(ScriptType type)

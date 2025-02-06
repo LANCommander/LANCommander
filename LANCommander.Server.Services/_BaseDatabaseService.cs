@@ -1,66 +1,77 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
+using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public abstract class BaseDatabaseService<T> : BaseService, IBaseDatabaseService<T> where T : class, IBaseModel
+    public abstract class BaseDatabaseService<T>(
+        ILogger logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> dbContextFactory) : BaseService(logger), IBaseDatabaseService<T> where T : class, IBaseModel
     {
-        protected readonly IFusionCache Cache;
-        protected Repository<T> Repository { get; set; }
+        protected readonly List<Func<IQueryable<T>, IQueryable<T>>> _modifiers = new();
 
-        public BaseDatabaseService(ILogger logger, IFusionCache cache, RepositoryFactory repositoryFactory) : base(logger)
+        public IBaseDatabaseService<T> AsNoTracking()
         {
-            Cache = cache;
-            Repository = repositoryFactory.Create<T>();
+            return Query((queryable) =>
+            {
+                return queryable.AsNoTracking();
+            });
+
+            return this;
         }
 
         public IBaseDatabaseService<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier)
         {
-            Repository.Query(modifier);
+            _modifiers.Add(modifier);
 
             return this;
         }
 
         public IBaseDatabaseService<T> Include(params Expression<Func<T, object>>[] expressions)
         {
-            Repository.Include(expressions);
+            return Query((queryable) =>
+            {
+                foreach (var expression in expressions)
+                {
+                    queryable = queryable.Include(expression);
+                }
+
+                return queryable;
+            });
 
             return this;
         }
 
         public IBaseDatabaseService<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending)
         {
-            Repository.SortBy(expression, direction);
-
-            return this;
-        }
-
-        public IBaseDatabaseService<T> DisableTracking()
-        {
-            Repository.AsNoTracking();
-
-            return this;
-        }
-
-        public async Task<PaginatedResults<T>> PaginateAsync(Expression<Func<T, bool>> expression, int pageNumber, int pageSize)
-        {
-            return await Repository.PaginateAsync(expression, pageNumber, pageSize);
+            switch (direction)
+            {
+                case SortDirection.Descending:
+                    return Query((queryable) =>
+                    {
+                        return queryable.OrderByDescending(expression);
+                    });
+                case SortDirection.Ascending:
+                default:
+                    return Query((queryable) =>
+                    {
+                        return queryable.OrderBy(expression);
+                    });
+            }
         }
 
         public virtual async Task<ICollection<T>> GetAsync()
         {
-            return await Cache.GetOrSetAsync($"{typeof(T).FullName}:Get", async _ =>
-            {
-                return await GetAsync(x => true);
-            }, TimeSpan.MaxValue);
+            return await GetAsync(x => true);
         }
 
         public virtual async Task<ICollection<U>> GetAsync<U>()
@@ -70,68 +81,126 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> GetAsync(Guid id)
         {
-            return await Repository.FindAsync(id);
+            return await FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public virtual async Task<U> GetAsync<U>(Guid id)
         {
-            return await Repository.FindAsync<U>(id);
+            return await FirstOrDefaultAsync<U>(x => x.Id == id);
         }
 
         public virtual async Task<ICollection<T>> GetAsync(Expression<Func<T, bool>> predicate)
         {
-            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
-            var results = await Repository.GetAsync(predicate);
-            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
-            return results;
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.Where(predicate).ToListAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public virtual async Task<ICollection<U>> GetAsync<U>(Expression<Func<T, bool>> predicate)
         {
-            Logger?.LogDebug("Getting data from context ID {ContextId}", Repository.Context.ContextId);
-            var results = await Repository.GetAsync<U>(predicate);
-            Logger?.LogDebug("Done getting data from context ID {ContextId}", Repository.Context.ContextId);
-            return results;
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).ToListAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public virtual async Task<T> FirstAsync(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.FirstAsync(predicate);
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.FirstAsync(predicate);
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public virtual async Task<U> FirstAsync<U>(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.FirstAsync<U>(predicate);
-        }
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
 
-        public virtual async Task<T> FirstAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
-        {
-            return await Repository.FirstAsync<TKey>(predicate, orderKeySelector);
-        }
-
-        public virtual async Task<U> FirstAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
-        {
-            return await Repository.FirstAsync<U, TKey>(predicate, orderKeySelector);
+                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public virtual async Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.FirstOrDefaultAsync(predicate);
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+
+                return await queryable.FirstOrDefaultAsync(predicate);
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public virtual async Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate)
         {
-            return await Repository.FirstOrDefaultAsync<U>(predicate);
-        }
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                var queryable = context.Set<T>().AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
 
-        public virtual async Task<T> FirstOrDefaultAsync<TKey>(Expression<Func<T, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
-        {
-            return await Repository.FirstOrDefaultAsync<TKey>(predicate, orderKeySelector);
-        }
-
-        public virtual async Task<U> FirstOrDefaultAsync<U, TKey>(Expression<Func<T, bool>> predicate, Expression<Func<U, TKey>> orderKeySelector)
-        {
-            return await Repository.FirstOrDefaultAsync<U, TKey>(predicate, orderKeySelector);
+                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstOrDefaultAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public virtual async Task<bool> ExistsAsync(Guid id)
@@ -146,10 +215,20 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<T> AddAsync(T entity)
         {
-            entity = await Repository.AddAsync(entity);
-            await Repository.SaveChangesAsync();
+            try
+            {
+                using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                context.Set<T>().Add(entity);
+                
+                await context.SaveChangesAsync();
 
-            return entity;
+                return entity;
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         /// <summary>
@@ -160,15 +239,13 @@ namespace LANCommander.Server.Services
         /// <returns>Newly created or existing entity</returns>
         public virtual async Task<ExistingEntityResult<T>> AddMissingAsync(Expression<Func<T, bool>> predicate, T entity)
         {
-            var existing = await Repository.FirstOrDefaultAsync(predicate);
+            var existing = await FirstOrDefaultAsync(predicate);
 
             if (existing == null)
             {
-                await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
+                await cache.ExpireAsync($"{typeof(T).FullName}:Get");
 
-                entity = await Repository.AddAsync(entity);
-
-                await Repository.SaveChangesAsync();
+                entity = await AddAsync(entity);
 
                 return new ExistingEntityResult<T>
                 {
@@ -185,33 +262,51 @@ namespace LANCommander.Server.Services
                 };
             }
         }
+        
+        public abstract Task<T> UpdateAsync(T entity);
 
-        public virtual async Task<T> UpdateAsync(T entity)
+        protected async Task<T> UpdateAsync(T updatedEntity, Action<UpdateEntityContext<T>> additionalMapping = null)
         {
-            await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
+            using var context = await dbContextFactory.CreateDbContextAsync();
+            
+            var existingEntity = await context.Set<T>().FirstOrDefaultAsync(e => e.Id == updatedEntity.Id);
+            
+            //context.Entry(existingEntity).CurrentValues.SetValues(entity);
+            context.Entry(existingEntity).CurrentValues.SetValues(updatedEntity);
 
-            entity = await Repository.UpdateAsync(entity);
+            if (additionalMapping != null)
+            {
+                var updateContext = new UpdateEntityContext<T>(context, existingEntity, updatedEntity);
+                
+                additionalMapping?.Invoke(updateContext);
+            }
 
-            await Repository.SaveChangesAsync();
-
-            return entity;
+            await context.SaveChangesAsync();
+            
+            return updatedEntity;
         }
 
         public virtual async Task DeleteAsync(T entity)
         {
-            await Cache.ExpireAsync($"{typeof(T).FullName}:Get");
-
-            Repository.Delete(entity);
-            await Repository.SaveChangesAsync();
+            try
+            {
+                await cache.ExpireAsync($"{typeof(T).FullName}:Get");
+                
+                using var context = await dbContextFactory.CreateDbContextAsync();
+                
+                context.Set<T>().Remove(entity);
+                
+                await context.SaveChangesAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
-        public void Dispose()
+        protected void Reset()
         {
-            /*if (Repository != null)
-            {
-                Repository.Dispose();
-                Repository = null;
-            }*/
+            _modifiers.Clear();
         }
     }
 }

@@ -24,15 +24,15 @@ namespace LANCommander.Launcher.Models
             {
                 switch (Status)
                 {
-                    case GameInstallStatus.Starting:
-                    case GameInstallStatus.Moving:
-                    case GameInstallStatus.Downloading:
-                    case GameInstallStatus.InstallingRedistributables:
-                    case GameInstallStatus.InstallingMods:
-                    case GameInstallStatus.InstallingExpansions:
-                    case GameInstallStatus.InstallingAddons:
-                    case GameInstallStatus.RunningScripts:
-                    case GameInstallStatus.DownloadingSaves:
+                    case InstallStatus.Starting:
+                    case InstallStatus.Moving:
+                    case InstallStatus.Downloading:
+                    case InstallStatus.InstallingRedistributables:
+                    case InstallStatus.InstallingMods:
+                    case InstallStatus.InstallingExpansions:
+                    case InstallStatus.InstallingAddons:
+                    case InstallStatus.RunningScripts:
+                    case InstallStatus.DownloadingSaves:
                         return true;
 
                     default:
@@ -40,7 +40,7 @@ namespace LANCommander.Launcher.Models
                 }
             }
         }
-        public GameInstallStatus Status { get; set; }
+        public InstallStatus Status { get; set; }
         public SDK.Models.Game Game { get; set; }
         public float Progress {
             get
@@ -60,7 +60,7 @@ namespace LANCommander.Launcher.Models
             Title = game.Title;
             Version = game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version;
             QueuedOn = DateTime.Now;
-            Status = GameInstallStatus.Queued;
+            Status = InstallStatus.Queued;
 
             var cover = game.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Cover);
 

@@ -1,6 +1,5 @@
 ﻿@using AntDesign.Charts
-@using ByteSizeLib
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject PlaySessionService PlaySessionService
 
 <Spin Spinning="Loading">
     <div class="dashboard-chart">
@@ -48,34 +47,31 @@
         Config.Theme = Settings.Theme == LANCommanderTheme.Dark ? "dark" : "light";
 
         Dictionary<string, TimeSpan> playtimes = new Dictionary<string, TimeSpan>();
+        
+        var sessions = await PlaySessionService
+            .AsNoTracking()
+            .Include(ps => ps.Game)
+            .Include(ps => ps.CreatedBy)
+            .Include(ps => ps.User)
+            .GetAsync();
 
-        using (var playSessionService = DatabaseServiceFactory.Create<PlaySessionService>())
+        foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.UserId))
         {
-            var sessions = await playSessionService
-                .DisableTracking()
-                .Include(ps => ps.Game)
-                .Include(ps => ps.CreatedBy)
-                .Include(ps => ps.User)
-                .GetAsync();
+            var total = new TimeSpan();
 
-            foreach (var gameSessions in sessions.Where(s => s.GameId.HasValue && s.GameId.Value != Guid.Empty).GroupBy(s => s.UserId))
+            foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
             {
-                var total = new TimeSpan();
-
-                foreach (var session in gameSessions.Where(gs => gs.Start != null && gs.End != null))
-                {
-                    total = total.Add(session.End.Value.Subtract(session.Start.Value));
-                }
-
-                playtimes[gameSessions.First().User.UserName] = total;
+                total = total.Add(session.End.Value.Subtract(session.Start.Value));
             }
 
-            Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
-            {
-                Player = pt.Key,
-                Playtime = (int)pt.Value.TotalSeconds
-            }).ToArray();
+            playtimes[gameSessions.First().User.UserName] = total;
         }
+
+        Data = playtimes.OrderByDescending(pt => pt.Value).Take(10).Select(pt => new
+        {
+            Player = pt.Key,
+            Playtime = (int)pt.Value.TotalSeconds
+        }).ToArray();
 
         Loading = false;
 

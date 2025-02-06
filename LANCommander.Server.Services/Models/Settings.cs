@@ -35,7 +35,11 @@ namespace LANCommander.Server.Services.Models
         public string IGDBClientId { get; set; } = "";
         public string IGDBClientSecret { get; set; } = "";
         public LANCommanderTheme Theme { get; set; } = LANCommanderTheme.Dark;
-
+        public bool UseSSL { get; set; } = false;
+        public string CertificatePath { get; set; } = "";
+        public string CertificatePassword { get; set; } = "";
+        public int SSLPort { get; set; } = 31337;
+        
         public BeaconSettings Beacon { get; set; } = new BeaconSettings();
         public AuthenticationSettings Authentication { get; set; } = new AuthenticationSettings();
         public RoleSettings Roles { get; set; } = new RoleSettings();

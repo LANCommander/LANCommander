@@ -9,23 +9,21 @@ using SharpCompress.Common;
 using SharpCompress.Readers;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Management.Automation.Remoting;
-using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using YamlDotNet.Serialization;
 
 namespace LANCommander.SDK.Services
 {
-    public class GameInstallProgress
+    public class InstallProgress
     {
         public Game Game { get; set; }
-        public GameInstallStatus Status { get; set; }
+        public string Title { get; set; }
+        public Guid IconId { get; set; }
+        public InstallStatus Status { get; set; }
         public float Progress
         {
             get
@@ -34,9 +32,10 @@ namespace LANCommander.SDK.Services
             }
             set { }
         }
-        public double TransferSpeed { get; set; }
+        public long TransferSpeed { get; set; }
         public long BytesDownloaded { get; set; }
         public long TotalBytes { get; set; }
+        public TimeSpan TimeRemaining { get; set; }
     }
 
     public class GameService
@@ -51,8 +50,8 @@ namespace LANCommander.SDK.Services
         public delegate void OnArchiveExtractionProgressHandler(long position, long length, Game game);
         public event OnArchiveExtractionProgressHandler OnArchiveExtractionProgress;
 
-        public delegate void OnGameInstallProgressUpdateHandler(GameInstallProgress e);
-        public event OnGameInstallProgressUpdateHandler OnGameInstallProgressUpdate;
+        public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
+        public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
 
         public const string PlayerAliasFilename = "PlayerAlias";
         public const string KeyFilename = "Key";
@@ -60,10 +59,9 @@ namespace LANCommander.SDK.Services
         private TrackableStream TransferStream;
         private IReader Reader;
 
-        private GameInstallProgress GameInstallProgress = new GameInstallProgress();
+        private InstallProgress _installProgress = new();
 
-        private Dictionary<Guid, CancellationTokenSource> Running = new Dictionary<Guid, CancellationTokenSource>();
-        private Dictionary<Guid, IEnumerable<Process>> RunningProcesses = new Dictionary<Guid, IEnumerable<Process>>();
+        private Dictionary<Guid, CancellationTokenSource> Running = new();
 
         public GameService(Client client, string defaultInstallDirectory)
         {
@@ -101,7 +99,7 @@ namespace LANCommander.SDK.Services
         public async Task<IEnumerable<GameManifest>> GetManifestsAsync(string installDirectory, Guid id)
         {
             var manifests = new List<GameManifest>();
-            var mainManifest = await ManifestHelper.ReadAsync(installDirectory, id);
+            var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, id);
 
             if (mainManifest == null)
                 return manifests;
@@ -114,7 +112,7 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        var dependentGameManifest = await ManifestHelper.ReadAsync(installDirectory, dependentGameId);
+                        var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
 
                         if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
                             manifests.Add(dependentGameManifest);
@@ -132,24 +130,32 @@ namespace LANCommander.SDK.Services
         public async Task<IEnumerable<Models.Action>> GetActionsAsync(string installDirectory, Guid id)
         {
             var actions = new List<Models.Action>();
+
+            try
+            {
+                if (Client.IsConnected())
+                    actions.AddRange(await Client.GetRequestAsync<IEnumerable<Models.Action>>($"/api/Games/{id}/Actions"));
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not get actions from server");
+            }
+            
             var manifests = await GetManifestsAsync(installDirectory, id);
 
-            foreach (var manifest in manifests.Where(m => m != null && m.Actions != null))
+            if (!actions.Any())
             {
-                actions.AddRange(manifest.Actions.OrderBy(a => a.SortOrder).ToList());
-            }
-
-            if (Client.IsConnected())
-            {
-                var remoteGame = await Client.Games.GetAsync(id);
-
-                if (remoteGame != null && remoteGame.Servers != null)
-                    actions.AddRange(remoteGame.Servers.Where(s => s.Actions != null).SelectMany(s => s.Actions));
+                actions = manifests
+                    .Where(m => m != null && m.Actions != null)
+                    .SelectMany(m => m.Actions)
+                    .OrderByDescending(a => a.IsPrimaryAction)
+                    .ThenBy(a => a.SortOrder)
+                    .ToList();
             }
 
             if (manifests.Any(m => m.OnlineMultiplayer != null && m.OnlineMultiplayer.NetworkProtocol == NetworkProtocol.Lobby || m.LanMultiplayer != null && m.LanMultiplayer.NetworkProtocol == NetworkProtocol.Lobby))
             {
-                var primaryAction = actions.First();
+                var primaryAction = actions.Where(a => a.IsPrimaryAction).First();
 
                 try
                 {
@@ -178,6 +184,16 @@ namespace LANCommander.SDK.Services
             }
 
             return actions;
+        }
+
+        public async Task<IEnumerable<Game>> GetAddonsAsync(Guid id)
+        {
+            return await Client.GetRequestAsync<IEnumerable<Game>>($"/api/Games/{id}/Addons");
+        }
+
+        public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
+        {
+            return await Client.GetRequestAsync<bool>($"/api/Games/{id}/CheckForUpdate?version={currentVersion}");
         }
 
         private TrackableStream Stream(Guid id)
@@ -289,14 +305,15 @@ namespace LANCommander.SDK.Services
             var game = Get(gameId);
             var destination = await GetInstallDirectory(game, installDirectory);
 
-            GameInstallProgress.Game = game;
-            GameInstallProgress.Status = GameInstallStatus.Downloading;
-            GameInstallProgress.Progress = 0;
-            GameInstallProgress.TransferSpeed = 0;
-            GameInstallProgress.TotalBytes = 1;
-            GameInstallProgress.BytesDownloaded = 0;
+            _installProgress.Game = game;
+            _installProgress.Title = game.Title;
+            _installProgress.Status = InstallStatus.Downloading;
+            _installProgress.Progress = 0;
+            _installProgress.TransferSpeed = 0;
+            _installProgress.TotalBytes = 0;
+            _installProgress.BytesDownloaded = 0;
 
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             // Handle Standalone Mods
             if (game.Type == GameType.StandaloneMod && game.BaseGameId != Guid.Empty)
@@ -312,7 +329,7 @@ namespace LANCommander.SDK.Services
             try
             {
                 if (ManifestHelper.Exists(destination, game.Id))
-                    manifest = ManifestHelper.Read(destination, game.Id);
+                    manifest = await ManifestHelper.ReadAsync<GameManifest>(destination, game.Id);
             }
             catch (Exception ex)
             {
@@ -337,13 +354,13 @@ namespace LANCommander.SDK.Services
             game.InstallDirectory = result.Directory;
 
             // Game is extracted, get metadata
-            var writeManifestSuccess = RetryHelper.RetryOnException(maxAttempts, TimeSpan.FromSeconds(1), false, () =>
+            var writeManifestSuccess = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromSeconds(1), false, async () =>
             {
                 Logger?.LogTrace("Attempting to get game manifest");
 
                 manifest = GetManifest(game.Id);
 
-                ManifestHelper.Write(manifest, game.InstallDirectory);
+                await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
 
                 return true;
             });
@@ -358,11 +375,11 @@ namespace LANCommander.SDK.Services
                 await ScriptHelper.SaveScriptAsync(game, script.Type);
             }
 
-            GameInstallProgress.Progress = 1;
-            GameInstallProgress.BytesDownloaded = GameInstallProgress.TotalBytes;
-            GameInstallProgress.Status = GameInstallStatus.InstallingRedistributables;
+            _installProgress.Progress = 1;
+            _installProgress.BytesDownloaded = _installProgress.TotalBytes;
+            _installProgress.Status = InstallStatus.InstallingRedistributables;
 
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             #region Install Redistributables
             if (game.Redistributables != null && game.Redistributables.Any())
@@ -376,9 +393,9 @@ namespace LANCommander.SDK.Services
             #region Download Latest Save
             Logger?.LogTrace("Attempting to download the latest save");
 
-            GameInstallProgress.Status = GameInstallStatus.DownloadingSaves;
+            _installProgress.Status = InstallStatus.DownloadingSaves;
 
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             await Client.Saves.DownloadAsync(game.InstallDirectory, game.Id);
             #endregion
@@ -388,11 +405,11 @@ namespace LANCommander.SDK.Services
             if (addonIds != null)
                 await InstallAddonsAsync(installDirectory, game, addonIds);
 
-            GameInstallProgress.Status = GameInstallStatus.Complete;
-            GameInstallProgress.Progress = 1;
-            GameInstallProgress.BytesDownloaded = GameInstallProgress.TotalBytes;
+            _installProgress.Status = InstallStatus.Complete;
+            _installProgress.Progress = 1;
+            _installProgress.BytesDownloaded = _installProgress.TotalBytes;
 
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             return game.InstallDirectory;
         }
@@ -408,26 +425,75 @@ namespace LANCommander.SDK.Services
         {
             if (addonIds != null)
             {
+                var addons = new List<Game>();
+                
                 foreach (var addonId in addonIds)
                 {
-                    await InstallAddonAsync(installDirectory, game, addonId);
+                    try
+                    {
+                        addons.Add(await Client.Games.GetAsync(addonId));
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Could not get information for addon with ID {AddonId}, skipping install", addonId);
+                    }
+                }
+
+                var expansions = addons.Where(a => a?.Type == GameType.Expansion).ToList();
+                
+
+                foreach (var expansion in expansions)
+                {
+                    try
+                    {
+                        _installProgress.Status = InstallStatus.Downloading;
+                        _installProgress.Game = expansion;
+                        _installProgress.Progress = 0;
+                        _installProgress.BytesDownloaded = 0;
+                        _installProgress.TotalBytes = 1;
+                        _installProgress.BytesDownloaded = 0;
+
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                        
+                        await InstallAddonAsync(installDirectory, expansion);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Could not install expansion with ID {AddonId}", expansion.Id);
+                    }
+                }
+                
+                var mods = addons.Where(a => a?.Type == GameType.Mod).ToList();
+
+                foreach (var mod in mods)
+                {
+                    try
+                    {
+                        _installProgress.Status = InstallStatus.Downloading;
+                        _installProgress.Game = mod;
+                        _installProgress.Progress = 0;
+                        _installProgress.BytesDownloaded = 0;
+                        _installProgress.TotalBytes = 1;
+                        _installProgress.BytesDownloaded = 0;
+
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
+                        
+                        await InstallAddonAsync(installDirectory, mod);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Could not install mod with ID {AddonId}", mod.Id);
+                    }
                 }
             }
         }
 
-        public async Task InstallAddonAsync(string installDirectory, Game game, Guid addonId)
+        public async Task InstallAddonAsync(string installDirectory, Game addon)
         {
-            var addon = await Client.Games.GetAsync(addonId);
-
             if (!addon.IsAddon)
                 return;
 
-            if (addon.Type == GameType.Expansion)
-                GameInstallProgress.Status = GameInstallStatus.InstallingExpansions;
-            else if (addon.Type == GameType.Mod)
-                GameInstallProgress.Status = GameInstallStatus.InstallingMods;
-
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             try
             {
@@ -437,8 +503,8 @@ namespace LANCommander.SDK.Services
             {
                 Logger?.LogDebug("Install canceled");
 
-                GameInstallProgress.Status = GameInstallStatus.Canceled;
-                OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+                _installProgress.Status = InstallStatus.Canceled;
+                OnInstallProgressUpdate?.Invoke(_installProgress);
 
                 throw;
             }
@@ -446,8 +512,8 @@ namespace LANCommander.SDK.Services
             {
                 Logger?.LogError(ex, "Failed to install addon {AddonTitle} ({AddonId})", addon.Title, addon.Id);
 
-                GameInstallProgress.Status = GameInstallStatus.Failed;
-                OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+                _installProgress.Status = InstallStatus.Failed;
+                OnInstallProgressUpdate?.Invoke(_installProgress);
 
                 throw;
             }
@@ -457,14 +523,21 @@ namespace LANCommander.SDK.Services
 
         public async Task UninstallAsync(string installDirectory, Guid gameId)
         {
-            var manifest = ManifestHelper.Read(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
             #region Uninstall Dependent Games
             if (manifest.DependentGames != null)
             {
                 foreach (var dependentGame in manifest.DependentGames)
                 {
-                    await UninstallAsync(installDirectory, dependentGame);
+                    try
+                    {
+                        await UninstallAsync(installDirectory, dependentGame);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogWarning("Could not uninstall dependent game with ID {GameId}. Assuming it's already uninstalled or never installed...", gameId);
+                    }
                 }
             }
             #endregion
@@ -534,9 +607,9 @@ namespace LANCommander.SDK.Services
         {
             var gameAndAddons = new List<Game>();
 
-            GameInstallProgress.Game = game;
-            GameInstallProgress.Status = GameInstallStatus.Moving;
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            _installProgress.Game = game;
+            _installProgress.Status = InstallStatus.Moving;
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             gameAndAddons.Add(game);
 
@@ -561,8 +634,6 @@ namespace LANCommander.SDK.Services
             var files = Directory.GetFiles(oldInstallDirectory, "*.*", SearchOption.AllDirectories);
             var fileInfos = files.Select(f => new FileInfo(f));
             var totalSize = fileInfos.Sum(fi => fi.Length);
-            long totalTransferred = 0;
-            var stopwatch = Stopwatch.StartNew();
 
             foreach (var directory in directories)
             {
@@ -574,36 +645,34 @@ namespace LANCommander.SDK.Services
                 using (FileStream sourceStream = File.Open(fileInfo.FullName, FileMode.Open))
                 using (FileStream destinationStream = File.Create(fileInfo.FullName.Replace(oldInstallDirectory, newInstallDirectory)))
                 {
-                    long lastPosition = 0;
+                    _installProgress.TotalBytes = totalSize;
 
-                    TransferStream = new TrackableStream(destinationStream, true, totalSize);
-                    TransferStream.OnProgress += (pos, len) =>
+                    using (var fileTransferMonitor = new FileTransferMonitor(totalSize))
                     {
-                        if (stopwatch.ElapsedMilliseconds > 500)
+                        TransferStream = new TrackableStream(destinationStream, true, totalSize);
+                        TransferStream.OnProgress += (pos, _) =>
                         {
-                            var bytesThisInterval = pos - lastPosition;
+                            if (fileTransferMonitor.CanUpdate())
+                            {
+                                fileTransferMonitor.Update(pos);
 
-                            GameInstallProgress.BytesDownloaded = totalTransferred + bytesThisInterval;
-                            GameInstallProgress.TotalBytes = totalSize;
-                            GameInstallProgress.TransferSpeed = (double)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
+                                _installProgress.TimeRemaining = fileTransferMonitor.GetTimeRemaining();
+                                _installProgress.BytesDownloaded = fileTransferMonitor.GetBytesTransferred();
+                                _installProgress.TransferSpeed = fileTransferMonitor.GetSpeed();
+                                
+                                OnInstallProgressUpdate?.Invoke(_installProgress);
+                            }
+                        };
 
-                            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
-
-                            lastPosition = pos;
-
-                            stopwatch.Restart();
-                        }
-                    };
-
-                    await sourceStream.CopyToAsync(TransferStream);
-
-                    totalTransferred += fileInfo.Length;
+                        await sourceStream.CopyToAsync(TransferStream);
+                    }
                 }
             }
 
-            GameInstallProgress.Progress = 1;
-            GameInstallProgress.Status = GameInstallStatus.RunningScripts;
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            _installProgress.BytesDownloaded = totalSize;
+            _installProgress.Progress = 1;
+            _installProgress.Status = InstallStatus.RunningScripts;
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             Directory.Delete(oldInstallDirectory, true);
 
@@ -616,8 +685,8 @@ namespace LANCommander.SDK.Services
                 }
             }
 
-            GameInstallProgress.Status = GameInstallStatus.Complete;
-            OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+            _installProgress.Status = InstallStatus.Complete;
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             return newInstallDirectory;
         }
@@ -635,9 +704,9 @@ namespace LANCommander.SDK.Services
         {
             if (game.Scripts != null && game.Scripts.Any())
             {
-                GameInstallProgress.Status = GameInstallStatus.RunningScripts;
+                _installProgress.Status = InstallStatus.RunningScripts;
 
-                OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
+                OnInstallProgressUpdate?.Invoke(_installProgress);
 
                 try
                 {
@@ -656,8 +725,6 @@ namespace LANCommander.SDK.Services
 
         private ExtractionResult DownloadAndExtract(Game game, string destination)
         {
-            var stopwatch = Stopwatch.StartNew();
-
             if (game == null)
             {
                 Logger?.LogTrace("Game failed to download, no game was specified");
@@ -681,25 +748,23 @@ namespace LANCommander.SDK.Services
                 TransferStream = Stream(game.Id);
                 Reader = ReaderFactory.Open(TransferStream);
 
-                long lastPosition = 0;
-
-                TransferStream.OnProgress += (pos, len) =>
+                using (var monitor = new FileTransferMonitor(TransferStream.Length))
                 {
-                    if (stopwatch.ElapsedMilliseconds > 500)
+                    TransferStream.OnProgress += (pos, len) =>
                     {
-                        var bytesThisInterval = pos - lastPosition;
+                        if (monitor.CanUpdate())
+                        {
+                            monitor.Update(pos);
 
-                        GameInstallProgress.BytesDownloaded = pos;
-                        GameInstallProgress.TotalBytes = len;
-                        GameInstallProgress.TransferSpeed = (double)(bytesThisInterval / (stopwatch.ElapsedMilliseconds / 1000d));
-
-                        OnGameInstallProgressUpdate?.Invoke(GameInstallProgress);
-
-                        lastPosition = pos;
-
-                        stopwatch.Restart();
-                    }
-                };
+                            _installProgress.BytesDownloaded = monitor.GetBytesTransferred();
+                            _installProgress.TotalBytes = len;
+                            _installProgress.TransferSpeed = monitor.GetSpeed();
+                            _installProgress.TimeRemaining = monitor.GetTimeRemaining();
+                            
+                            OnInstallProgressUpdate?.Invoke(_installProgress);
+                        }
+                    };
+                }
 
                 Reader.EntryExtractionProgress += (sender, e) =>
                 {
@@ -839,15 +904,10 @@ namespace LANCommander.SDK.Services
             Reader?.Cancel();
         }
 
-        public async Task<GameManifest> ReadManifestAsync(string installDirectory, Guid gameId)
-        {
-            return await ReadManifestAsync(installDirectory, gameId);
-        }
-
         public async Task<IEnumerable<GameManifest>> ReadManifestsAsync(string installDirectory, Guid gameId)
         {
             var manifests = new List<GameManifest>();
-            var mainManifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
             if (mainManifest == null)
                 return manifests;
@@ -860,7 +920,7 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        var dependentGameManifest = await ManifestHelper.ReadAsync(installDirectory, dependentGameId);
+                        var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
 
                         if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
                             manifests.Add(dependentGameManifest);
@@ -879,7 +939,7 @@ namespace LANCommander.SDK.Services
         {
             var screen = DisplayHelper.GetScreen();
 
-            using (var context = new GameExecutionContext(Client, Logger))
+            using (var context = new ProcessExecutionContext(Client, Logger))
             {
                 context.AddVariable("ServerAddress", Client.GetServerAddress());
                 context.AddVariable("DisplayWidth", screen.Width.ToString());
@@ -903,13 +963,22 @@ namespace LANCommander.SDK.Services
                     var currentGameKey = await GetCurrentKeyAsync(installDirectory, manifest.Id);
 
                     #region Check Game's Player Name
-
                     if (Client.IsConnected())
                     {
                         var alias = await Client.Profile.GetAliasAsync();
-                        
+
                         if (currentGamePlayerAlias != alias)
+                        {
                             await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, alias);
+
+                            if (manifest.Redistributables != null)
+                            {
+                                foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                                {
+                                    await Client.Scripts.RunNameChangeScriptAsync(installDirectory, gameId, redistributable.Id, alias);
+                                }
+                            }
+                        }
                     }
                     #endregion
 
@@ -942,6 +1011,14 @@ namespace LANCommander.SDK.Services
 
                     #region Run Before Start Script
                     await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, manifest.Id);
+                    
+                    if (manifest.Redistributables != null)
+                    {
+                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        {
+                            await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                        }
+                    }
                     #endregion
                 }
                 #endregion
@@ -949,7 +1026,7 @@ namespace LANCommander.SDK.Services
                 try
                 {
                     var cancellationTokenSource = new CancellationTokenSource();
-                    var task = context.ExecuteAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
+                    var task = context.ExecuteGameActionAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
 
                     Running[gameId] = cancellationTokenSource;
 
@@ -975,7 +1052,17 @@ namespace LANCommander.SDK.Services
                     });
                     #endregion
 
+                    #region Run After Stop Script
                     await Client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId);
+                    
+                    if (manifest.Redistributables != null)
+                    {
+                        foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
+                        {
+                            await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                        }
+                    }
+                    #endregion
                 }
             }
         }
@@ -1039,7 +1126,7 @@ namespace LANCommander.SDK.Services
         /// <returns>List of file conflicts</returns>
         public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
         {
-            var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/Contents/{gameId}/{manifest.Version}");
 
             var conflictedEntries = new List<ArchiveValidationConflict>();
@@ -1102,7 +1189,7 @@ namespace LANCommander.SDK.Services
 
         public async Task DownloadFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
         {
-            var manifest = await ManifestHelper.ReadAsync(installDirectory, gameId);
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/ByVersion/{manifest.Version}");
 
             await Task.Run(() =>

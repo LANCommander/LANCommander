@@ -1,18 +1,46 @@
 ﻿@page "/Games/{id:guid}/SavePaths"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject MessageService MessageService
+@inject ILogger<Multiplayer> Logger
 
 <GameEditView Id="Id" Title="Save Paths">
-    <SavePathEditor @bind-Value="context.SavePaths" GameId="context.Id" ArchiveId="@GetLatestArchiveId(context)" />
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            <Button Type="ButtonType.Primary" OnClick="Save">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+    
+    <ChildContent>
+        <SavePathEditor @ref="SavePathEditor" GameId="@Id" ArchiveId="@GetLatestArchiveId(context)"/>
+    </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    private Guid GetLatestArchiveId(Game game)
+    SavePathEditor SavePathEditor;
+
+    Guid GetLatestArchiveId(Game game)
     {
         if (game != null && game.Archives != null && game.Archives.Count > 0)
             return game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Id ?? Guid.Empty;
         else
             return Guid.Empty;
+    }
+    
+    async Task Save()
+    {
+        try
+        {
+            await SavePathEditor.Save();
+
+            await MessageService.Success("Save paths updated!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not update save paths!");
+            Logger.LogError(ex, "Could not update save paths!");
+        }
     }
 }

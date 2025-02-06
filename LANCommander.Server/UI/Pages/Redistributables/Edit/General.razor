@@ -1,0 +1,93 @@
+﻿@page "/Redistributables/{id:guid}"
+@page "/Redistributables/{id:guid}/General"
+@page "/Redistributables/Add"
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Redistributables.Components
+@using Microsoft.EntityFrameworkCore
+@using SortDirection = LANCommander.SDK.Enums.SortDirection
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ILogger<General> Logger
+@inject GameService GameService
+
+<RedistributableEditView @ref="EditView" Id="Id">
+    <TitleTemplate>
+        @if (Id == Guid.Empty)
+        {
+            <Text>Add New Redistributable</Text>
+        }
+        else
+        {
+            <Text>General</Text>
+        }
+    </TitleTemplate>
+    <TitleExtraTemplate>
+        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            @if (context != null && context.Id != Guid.Empty)
+            {
+                <Dropdown Trigger="@(new[] { Trigger.Click })">
+                    <Overlay>
+                        <Menu>
+                            <MenuItem>
+                                <a href="/Redistributables/@(context.Id)/Export/Full" target="_blank">Full</a>
+                            </MenuItem>
+                            <MenuItem>
+                                <a href="/Redistributables/@(context.Id)/Export/Metadata" target="_blank">Metadata</a>
+                            </MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button>Export</Button>
+                    </ChildContent>
+                </Dropdown>
+            }
+
+            <Button Type="ButtonType.Primary" OnClick="EditView.Save">Save</Button>
+        </Flex>
+    </TitleExtraTemplate>
+    <ChildContent Context="redistributable">
+        <Form Model="redistributable" Layout="@FormLayout.Vertical">
+            <FormItem Label="Name">
+                <Input @bind-Value="@context.Name" />
+            </FormItem>
+
+            <FormItem Label="Notes">
+                <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+            </FormItem>
+
+            <FormItem Label="Description">
+                <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+            </FormItem>
+
+            <FormItem Label="Games">
+                <TransferInput
+                    Style="height: 350px"
+                    Searchable
+                    LeftTitle="Available"
+                    RightTitle="Selected"
+                    DataSource="Games"
+                    TitleSelector="r => r.Title"
+                    @bind-Values="context.Games" />
+            </FormItem>
+        </Form>
+    </ChildContent>
+</RedistributableEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    
+    ICollection<Game> Games;
+    RedistributableEditView EditView;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Games = await GameService
+            .AsNoTracking()
+            .Include(g => g.Media)
+            .SortBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+            .GetAsync(g => g.Type == GameType.MainGame || g.Type == GameType.StandaloneExpansion || g.Type == GameType.StandaloneMod || g.BaseGame == null);
+
+        Games = Games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).ToList();
+    }
+}

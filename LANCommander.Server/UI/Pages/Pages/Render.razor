@@ -1,9 +1,9 @@
 ﻿@page "/Pages/{*route}"
+@using LANCommander.SDK.Extensions
 @using LANCommander.Server.UI.Pages.Pages.Components
 @using Markdig
-@using Microsoft.EntityFrameworkCore
 @using ZiggyCreatures.Caching.Fusion
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject PageService PageService
 @inject IFusionCache Cache
 @inject NavigationManager NavigationManager
 
@@ -37,26 +37,26 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        using (var pageService = DatabaseServiceFactory.Create<PageService>())
+        if (Route == null)
         {
-            if (Route == null)
+            var firstParent = await PageService.Query(q =>
             {
-                var firstParent = await pageService.FirstOrDefaultAsync(p => p.Parent == null, p => p.SortOrder);
+                return q.OrderBy(p => p.SortOrder);
+            }).FirstOrDefaultAsync(p => p.Parent == null);
 
-                if (firstParent == null)
-                    NavigationManager.NavigateTo("/");
-                else
-                    NavigationManager.NavigateTo($"/{firstParent.Route}");
-            }
+            if (firstParent == null)
+                NavigationManager.NavigateTo("/");
             else
-            {
-                var route = Route.TrimEnd('/').ToLower();
+                NavigationManager.NavigateTo($"/{firstParent.Route}");
+        }
+        else
+        {
+            var route = Route.TrimEnd('/').ToLower();
 
-                Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
-                {
-                    return await pageService.FirstOrDefaultAsync(p => p.Route == $"Pages/{route}");
-                });
-            }
+            Page = await Cache.GetOrSetAsync<Page>($"Page|{route}", async _ =>
+            {
+                return await PageService.FirstOrDefaultAsync(p => p.Route == $"Pages/{route}");
+            });
         }
     }
 }

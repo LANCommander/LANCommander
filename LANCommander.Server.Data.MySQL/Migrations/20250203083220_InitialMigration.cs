@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LANCommander.Server.Data.MySQL.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialSeed : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -223,6 +223,41 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Libraries",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Libraries", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Libraries_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Libraries_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Libraries_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -811,15 +846,51 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "GameDeveloper",
+                name: "GameCustomField",
                 columns: table => new
                 {
-                    DeveloperId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    GameId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Name = table.Column<string>(type: "varchar(64)", maxLength: 64, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Value = table.Column<string>(type: "varchar(1024)", maxLength: 1024, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    GameId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    CreatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    CreatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    UpdatedOn = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedById = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_GameDeveloper", x => new { x.DeveloperId, x.GameId });
+                    table.PrimaryKey("PK_GameCustomField", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_GameCustomField_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_GameCustomField_Users_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_GameCustomField_Users_UpdatedById",
+                        column: x => x.UpdatedById,
+                        principalTable: "Users",
+                        principalColumn: "Id");
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "GameDeveloper",
+                columns: table => new
+                {
+                    GameId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    DeveloperId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameDeveloper", x => new { x.GameId, x.DeveloperId });
                     table.ForeignKey(
                         name: "FK_GameDeveloper_Companies_DeveloperId",
                         column: x => x.DeveloperId,
@@ -1106,6 +1177,31 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "LibraryGame",
+                columns: table => new
+                {
+                    GameId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    LibraryId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_LibraryGame", x => new { x.GameId, x.LibraryId });
+                    table.ForeignKey(
+                        name: "FK_LibraryGame_Games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "Games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_LibraryGame_Libraries_LibraryId",
+                        column: x => x.LibraryId,
+                        principalTable: "Libraries",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Media",
                 columns: table => new
                 {
@@ -1149,7 +1245,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         column: x => x.StorageLocationId,
                         principalTable: "StorageLocations",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_Media_Users_CreatedById",
                         column: x => x.CreatedById,
@@ -1714,9 +1810,24 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 column: "UpdatedById");
 
             migrationBuilder.CreateIndex(
-                name: "IX_GameDeveloper_GameId",
-                table: "GameDeveloper",
+                name: "IX_GameCustomField_CreatedById",
+                table: "GameCustomField",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameCustomField_GameId",
+                table: "GameCustomField",
                 column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameCustomField_UpdatedById",
+                table: "GameCustomField",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameDeveloper_DeveloperId",
+                table: "GameDeveloper",
+                column: "DeveloperId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GameGenre_GenresId",
@@ -1837,6 +1948,27 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "IX_Keys_UpdatedById",
                 table: "Keys",
                 column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Libraries_CreatedById",
+                table: "Libraries",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Libraries_UpdatedById",
+                table: "Libraries",
+                column: "UpdatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Libraries_UserId",
+                table: "Libraries",
+                column: "UserId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LibraryGame_LibraryId",
+                table: "LibraryGame",
+                column: "LibraryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Media_CreatedById",
@@ -2163,6 +2295,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                 name: "CollectionGame");
 
             migrationBuilder.DropTable(
+                name: "GameCustomField");
+
+            migrationBuilder.DropTable(
                 name: "GameDeveloper");
 
             migrationBuilder.DropTable(
@@ -2188,6 +2323,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "Keys");
+
+            migrationBuilder.DropTable(
+                name: "LibraryGame");
 
             migrationBuilder.DropTable(
                 name: "Media");
@@ -2254,6 +2392,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
             migrationBuilder.DropTable(
                 name: "Tags");
+
+            migrationBuilder.DropTable(
+                name: "Libraries");
 
             migrationBuilder.DropTable(
                 name: "StorageLocations");

@@ -16,6 +16,8 @@ using Serilog.Sinks.AspNetCore.App.SignalR.Extensions;
 using LANCommander.Server.Logging;
 using LANCommander.Server.Data.Enums;
 using System.Diagnostics;
+using System.Net;
+using LANCommander.Server.Data.Interceptors;
 using LANCommander.Server.Services.Factories;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
@@ -25,8 +27,10 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Data.Sqlite;
 using Microsoft.OpenApi.Models;
 using Microsoft.CodeAnalysis.Options;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Scalar.AspNetCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Serilog.Filters;
 
 namespace LANCommander.Server
 {
@@ -35,6 +39,9 @@ namespace LANCommander.Server
         static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
+                .Filter.ByExcluding(
+                    Matching.WithProperty<string>("RequestPath", v =>
+                        "/api/Ping".Equals(v, StringComparison.OrdinalIgnoreCase)))
                 .WriteTo.Console()
                 .CreateBootstrapLogger();
 
@@ -89,6 +96,9 @@ namespace LANCommander.Server
 
             builder.Services.AddSerilogHub<LoggingHub>();
             builder.Services.AddSerilog((serviceProvider, config) => config
+                .Filter.ByExcluding(
+                    Matching.WithProperty<string>("RequestPath", v =>
+                        "/api/Ping".Equals(v, StringComparison.OrdinalIgnoreCase)))
                 .WriteTo.Console()
                 .WriteTo.File(Path.Combine(settings.Logs.StoragePath, "log-.txt"), rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery)
 #if DEBUG
@@ -155,8 +165,16 @@ namespace LANCommander.Server
             Log.Debug("Starting web server on port {Port}", settings.Port);
             builder.WebHost.ConfigureKestrel(options =>
             {
+                options.Listen(IPAddress.Any, settings.Port);
+                
                 // Configure as HTTP only
-                options.ListenAnyIP(settings.Port);
+                if (settings.UseSSL)
+                {
+                    options.Listen(IPAddress.Any, settings.SSLPort, listenOptions =>
+                    {
+                        listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
+                    });
+                }
             });
 
             builder.Services.AddCors(options => options.AddPolicy("CorsPolicy", builder =>
@@ -169,6 +187,9 @@ namespace LANCommander.Server
 
             Log.Debug("Initializing DatabaseContext with connection string {ConnectionString}", settings.DatabaseConnectionString);
 
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddSingleton<AuditingInterceptor>();
+            
             builder.Services.AddDbContextFactory<DatabaseContext>();
             builder.Services.AddDbContext<DatabaseContext>();
 
@@ -310,8 +331,6 @@ namespace LANCommander.Server
 
             Log.Debug("Registering Services");
             builder.Services.AddSingleton<SDK.Client>(new SDK.Client("", ""));
-            builder.Services.AddSingleton<RepositoryFactory>();
-            builder.Services.AddScoped(typeof(Repository<>));
             builder.Services.AddScoped<DatabaseServiceFactory>();
             builder.Services.AddScoped<IdentityContextFactory>();
             builder.Services.AddScoped<SettingService>();

@@ -3,6 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using Syncfusion.PdfToImageConverter;
 using System.Net.Mime;
+using AutoMapper;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 using SixLabors.ImageSharp;
@@ -10,14 +11,31 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
+using LANCommander.Server.Services.Extensions;
+using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace LANCommander.Server.Services
 {
-    public class MediaService : BaseDatabaseService<Media>
+    public sealed class MediaService(
+        ILogger<SDK.Services.MediaService> logger,
+        IFusionCache cache,
+        IMapper mapper,
+        IDbContextFactory<DatabaseContext> contextFactory,
+        StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, cache, mapper, contextFactory)
     {
-        private readonly StorageLocationService StorageLocationService;
-
+        public override async Task<Media> UpdateAsync(Media entity)
+        {
+            await cache.ExpireGameCacheAsync(entity.GameId);
+            
+            return await base.UpdateAsync(entity, context =>
+            {
+                context.UpdateRelationshipAsync(m => m.Game);
+                context.UpdateRelationshipAsync(m => m.Parent);
+                context.UpdateRelationshipAsync(m => m.StorageLocation);
+            });
+        }
+        
         private Dictionary<MediaType, Size> ThumbnailSizes = new Dictionary<MediaType, Size>
         {
             { MediaType.Cover, new Size(600, 900) },
@@ -28,20 +46,13 @@ namespace LANCommander.Server.Services
             { MediaType.Avatar, new Size(128, 128) }
         };
 
-        public MediaService(
-            ILogger<MediaService> logger,
-            IFusionCache cache,
-            RepositoryFactory repositoryFactory,
-            StorageLocationService storageLocationService) : base(logger, cache, repositoryFactory)
-        {
-            StorageLocationService = storageLocationService;
-        }
-
-        public override Task DeleteAsync(Media entity)
+        public override async Task DeleteAsync(Media entity)
         {
             DeleteLocalMediaFile(entity);
+            
+            await cache.ExpireGameCacheAsync(entity.GameId);
 
-            return base.DeleteAsync(entity);
+            await base.DeleteAsync(entity);
         }
 
         public static bool FileExists(Media entity)
@@ -77,6 +88,11 @@ namespace LANCommander.Server.Services
             return Path.Combine(entity.StorageLocation.Path, entity.FileId.ToString());
         }
 
+        public static string GetMediaPath(Media entity, StorageLocation storageLocation)
+        {
+            return Path.Combine(storageLocation.Path, entity.FileId.ToString());
+        }
+
         public async Task<string> GetThumbnailPathAsync(Guid id)
         {
             var entity = await GetAsync(id);
@@ -101,7 +117,7 @@ namespace LANCommander.Server.Services
         public async Task<Media> UploadMediaAsync(Stream stream, Media media)
         {
             var fileId = Guid.NewGuid();
-            var storageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+            var storageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
 
             media.FileId = fileId;
             media.StorageLocation = storageLocation;
@@ -116,6 +132,8 @@ namespace LANCommander.Server.Services
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
 
             await GenerateThumbnailAsync(media);
+            
+            await cache.ExpireGameCacheAsync(media.GameId);
 
             return media;
         }
@@ -179,7 +197,7 @@ namespace LANCommander.Server.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not generate thumbnail for media with ID {MediaId}", media.Id);
+                _logger?.LogError(ex, "Could not generate thumbnail for media with ID {MediaId}", media.Id);
             }
             finally
             {
@@ -234,7 +252,7 @@ namespace LANCommander.Server.Services
 
         public async Task<StorageLocation> GetDefaultStorageLocationAsync()
         {
-            var defaultStorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+            var defaultStorageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
             
             return defaultStorageLocation;
         }

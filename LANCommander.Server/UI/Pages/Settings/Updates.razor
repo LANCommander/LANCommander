@@ -13,48 +13,46 @@
     </PageHeaderExtra>
 </PageHeader>
 
-<div style="padding: 0 24px;">
-    @if (!Loading && !UpdateAvailable)
-    {
-        <Alert Type="@AlertType.Success" Message="You are on the latest version!" ShowIcon="true" />
-    }
-    else if (!Loading && UpdateAvailable)
-    {
-        <Alert Type="@AlertType.Info" Message="A newer version of LANCommander is available" ShowIcon="true" />
-    }
-    else
-    {
-        <Alert Type="@AlertType.Warning" Message="Loading release information..." ShowIcon="true" />
-    }
-
-    <Space Direction="SpaceDirection.Vertical" Style="width: 100%;">
+<PageContent>
+    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+        @if (!Loading && !UpdateAvailable)
+        {
+            <Alert Type="@AlertType.Success" Message="You are on the latest version!" ShowIcon="true" />
+        }
+        else if (!Loading && UpdateAvailable)
+        {
+            <Alert Type="@AlertType.Info" Message="A newer version of LANCommander is available" ShowIcon="true" />
+        }
+        else
+        {
+            <Alert Type="@AlertType.Warning" Message="Loading release information..." ShowIcon="true" />
+        }
+        
         @if (Releases != null && Releases.Count() > 0)
         {
             foreach (var release in Releases)
             {
-                <SpaceItem>
-                    <Card Title="@release.Name">
-                        <TitleTemplate>
-                            @release.Name <span style="font-size: 70%; margin-right: 6px;">@release.PublishedAt.GetValueOrDefault().ToString("MMMM d yyyy")</span>
+                <Card Title="@release.Name">
+                    <TitleTemplate>
+                        @release.Name <span style="font-size: 70%; margin-right: 6px;">@release.PublishedAt.GetValueOrDefault().ToString("MMMM d yyyy")</span>
 
-                            @if (Releases.First().Equals(release))
-                            {
-                                <Tag Color="@PresetColor.Gold.ToString()">Latest</Tag>
-                            }
+                        @if (Releases.First().Equals(release))
+                        {
+                            <Tag Color="@PresetColor.Gold.ToString()">Latest</Tag>
+                        }
 
-                            @if (release.TagName == $"v{CurrentVersion.ToString()}")
-                            {
-                                <Tag Color="@PresetColor.Blue.ToString()">Current</Tag>
-                            }
-                        </TitleTemplate>
-                        <Extra>
-                            <a href="@release.HtmlUrl" target="_blank">View Release</a>
-                        </Extra>
-                        <Body>
-                            @((MarkupString)Markdown.ToHtml(release.Body))
-                        </Body>
-                    </Card>
-                </SpaceItem>
+                        @if (release.TagName == $"v{CurrentVersion.ToString()}")
+                        {
+                            <Tag Color="@PresetColor.Blue.ToString()">Current</Tag>
+                        }
+                    </TitleTemplate>
+                    <Extra>
+                        <a href="@release.HtmlUrl" target="_blank">View Release</a>
+                    </Extra>
+                    <Body>
+                    @((MarkupString)Markdown.ToHtml(release.Body))
+                    </Body>
+                </Card>
             }
         }
         else
@@ -64,8 +62,8 @@
                 <Card Loading="true" Style="width: 100%;"></Card>
             }
         }
-    </Space>
-</div>
+    </Flex>
+</PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
@@ -17,34 +18,31 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class GamesController : BaseApiController
     {
-        private readonly IMapper Mapper;
         private readonly GameService GameService;
         private readonly LibraryService LibraryService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
         private readonly UserService UserService;
-        private readonly RoleService RoleService;
         private readonly IFusionCache Cache;
+        private readonly IMapper Mapper;
 
         public GamesController(
             ILogger<GamesController> logger,
-            IMapper mapper,
             IFusionCache cache,
+            IMapper mapper,
             GameService gameService,
             LibraryService libraryService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
-            UserService userService,
-            RoleService roleService) : base(logger)
+            UserService userService) : base(logger)
         {
-            Mapper = mapper;
             GameService = gameService;
             LibraryService = libraryService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
             UserService = userService;
-            RoleService = roleService;
             Cache = cache;
+            Mapper = mapper;
         }
 
         [HttpGet]
@@ -53,18 +51,19 @@ namespace LANCommander.Server.Controllers.Api
             var user = await UserService.GetAsync(User?.Identity?.Name);
             var userLibrary = await LibraryService.GetByUserIdAsync(user.Id);
 
-            var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("MappedGames", async _ => {
+            var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("Games", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");
 
-                var games = await GameService.GetAsync<SDK.Models.Game>();
+                var games = await GameService.Query(q =>
+                {
+                    return q.AsNoTracking();
+                }).GetAsync<SDK.Models.Game>();
 
                 return games;
             }, TimeSpan.MaxValue);
 
             foreach (var mappedGame in mappedGames)
             {
-                mappedGame.PlaySessions = mappedGame.PlaySessions.Where(ps => ps.UserId == user.Id);
-
                 if (userLibrary.Games != null)
                     mappedGame.InLibrary = userLibrary.Games.Any(g => g.Id == mappedGame.Id);
             }
@@ -95,34 +94,94 @@ namespace LANCommander.Server.Controllers.Api
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
 
-            var game = await GameService
-                .Include(g => g.Actions)
-                .Include(g => g.Archives)
-                .Include(g => g.BaseGame)
-                .Include(g => g.Categories)
-                .Include(g => g.Collections)
-                .Include(g => g.DependentGames)
-                .Include(g => g.Developers)
-                .Include(g => g.Engine)
-                .Include(g => g.Genres)
-                .Include(g => g.Media)
-                .Include(g => g.MultiplayerModes)
-                .Include(g => g.Platforms)
-                .Include(g => g.PlaySessions.Where(ps => ps.UserId == user.Id))
-                .Include(g => g.Publishers)
-                .Include(g => g.Redistributables)
-                .Include(g => g.Tags)
-                .GetAsync(id);
+            var game = await Cache.GetOrSetAsync<SDK.Models.Game>($"Games/{id}", async _ =>
+            {
+                return await GameService
+                    .Include(g => g.Actions)
+                    .Include(g => g.Archives)
+                    .Include(g => g.BaseGame)
+                    .Include(g => g.Categories)
+                    .Include(g => g.Collections)
+                    .Include(g => g.DependentGames)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Media)
+                    .Include(g => g.MultiplayerModes)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Redistributables)
+                    .Include(g => g.Tags)
+                    .GetAsync<SDK.Models.Game>(id);
+            }, TimeSpan.MaxValue);
 
-            return Mapper.Map<SDK.Models.Game>(game);
+            return game;
         }
 
         [HttpGet("{id}/Manifest")]
         public async Task<SDK.GameManifest> GetManifest(Guid id)
         {
-            var manifest = await GameService.GetManifestAsync(id);
+            var manifest = await Cache.GetOrSetAsync($"Games/{id}/Manifest", async _ =>
+            {
+                return await GameService.GetManifestAsync(id);
+            });
 
             return manifest;
+        }
+
+        [HttpGet("{id}/Actions")]
+        public async Task<IEnumerable<SDK.Models.Action>> GetActionsAsync(Guid id)
+        {
+            var actions = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Action>>($"Games/{id}/Actions", async _ =>
+            {
+                var game = await GameService
+                    .Query(q =>
+                    {
+                        return q.Include(g => g.Actions)
+                            .Include(g => g.DependentGames)
+                            .ThenInclude(dg => dg.Actions)
+                            .Include(g => g.Servers)
+                            .ThenInclude(s => s.Actions)
+                            .AsSplitQuery();
+                    })
+                    .GetAsync(id);
+
+                var actions = new List<Data.Models.Action>();
+                
+                actions.AddRange(game.Actions);
+                actions.AddRange(game.Servers.SelectMany(s => s.Actions));
+                actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).SelectMany(dg => dg.Actions));
+                
+                return Mapper.Map<IEnumerable<SDK.Models.Action>>(actions);
+            });
+            
+            return actions;
+        }
+
+        [HttpGet("{id}/Addons")]
+        public async Task<IEnumerable<SDK.Models.Game>> GetAddonsAsync(Guid id)
+        {
+            var addons = await Cache.GetOrSetAsync($"Games/{id}/Addons", async _ =>
+            {
+                return await GameService
+                    .Include(g => g.Archives)
+                    .GetAsync<SDK.Models.Game>(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
+            });
+
+            return addons;
+        }
+
+        [HttpGet("{id}/CheckForUpdate")]
+        public async Task<bool> CheckForUpdateAsync(Guid id, string version)
+        {
+            var gameArchives = await ArchiveService.GetAsync(a => a.GameId == id);
+
+            var latestArchive = gameArchives.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+
+            if (latestArchive?.Version != version)
+                return true;
+            else
+                return false;
         }
 
         [AllowAnonymous]

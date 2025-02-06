@@ -5,21 +5,18 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using LANCommander.Server.Data.Interceptors;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Data
 {
-    public class DatabaseContext : IdentityDbContext<User, Role, Guid>
+    public sealed class DatabaseContext(
+        DbContextOptions<DatabaseContext> options,
+        IServiceProvider serviceProvider) : IdentityDbContext<User, Role, Guid>(options)
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static string ConnectionString = "";
-
-        private readonly ILogger Logger;
-
-        public DatabaseContext(DbContextOptions<DatabaseContext> options, ILogger<DatabaseContext> logger)
-            : base(options)
-        {
-            Logger = logger;
-        }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -40,8 +37,9 @@ namespace LANCommander.Server.Data
                     optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
                     break;
             }
-
-            // optionsBuilder.UseLazyLoadingProxies();
+            
+            optionsBuilder.AddInterceptors(
+                serviceProvider.GetRequiredService<AuditingInterceptor>());
 
             base.OnConfiguring(optionsBuilder);
         }

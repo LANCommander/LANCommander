@@ -6,16 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Npgsql;
-using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LANCommander.Server.Services
 {
-    public class SetupService : BaseService
+    public class SetupService : BaseService, IDisposable
     {
         private readonly IServiceProvider ServiceProvider;
 
@@ -46,7 +40,7 @@ namespace LANCommander.Server.Services
 
                         if (File.Exists(dataSource))
                         {
-                            Logger.LogInformation("Migrations pending, database will be backed up to {BackupName}", backupName);
+                            _logger.LogInformation("Migrations pending, database will be backed up to {BackupName}", backupName);
                             File.Copy(dataSource, backupName);
                         }
                     }
@@ -104,6 +98,11 @@ namespace LANCommander.Server.Services
 
                 return true;
             }
+        }
+
+        public void Dispose()
+        {
+            
         }
     }
 }

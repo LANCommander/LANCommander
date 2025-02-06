@@ -1,0 +1,39 @@
+﻿@page "/Redistributables/{id:guid}/Scripts"
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.UI.Pages.Redistributables.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject RedistributableService RedistributableService
+@inject NavigationManager NavigationManager
+
+<RedistributableEditView Id="Id">
+    <ScriptEditor RedistributableId="Id" ArchiveId="@LatestArchiveId" AllowedTypes="new[] { ScriptType.Install, ScriptType.DetectInstall, ScriptType.NameChange, ScriptType.BeforeStart, ScriptType.AfterStop }" />
+</RedistributableEditView>
+
+@code {
+        [Parameter] public Guid Id { get; set; }
+        [Parameter] public string Panel { get; set; }
+
+        Redistributable Redistributable = new();
+
+        Guid LatestArchiveId
+        {
+            get
+            {
+                if (Redistributable != null && Redistributable.Archives != null && Redistributable.Archives.Count > 0)
+                    return Redistributable.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id;
+                else
+                    return Guid.Empty;
+            }
+        }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == Guid.Empty)
+            NavigationManager.NavigateTo($"/Redistributables", true);
+        else
+            Redistributable = await RedistributableService
+                .Include(r => r.Archives)
+                .Include(r => r.Scripts)
+                .GetAsync(Id);
+    }
+}

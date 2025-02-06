@@ -1,34 +1,28 @@
-﻿using LANCommander.Server.Models;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Octokit;
 using Semver;
-using System;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using AutoMapper;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
 {
-    public class UpdateService : BaseService
+    public sealed class UpdateService(
+        ILogger<UpdateService> logger,
+        IHostApplicationLifetime applicationLifetime,
+        ServerService serverService,
+        ServerProcessService serverProcessService) : BaseService(logger)
     {
-        private GitHubClient GitHub;
-        private IHostApplicationLifetime ApplicationLifetime;
-        private ServerService ServerService;
-        private ServerProcessService ServerProcessService;
+        private GitHubClient _gitHub;
 
-        public UpdateService(
-            ILogger<UpdateService> logger,
-            IHostApplicationLifetime applicationLifetime,
-            ServerProcessService serverProcessService,
-            ServerService serverService) : base(logger)
+        public override void Initialize()
         {
-            GitHub = new GitHubClient(new ProductHeaderValue("LANCommander"));
-            ApplicationLifetime = applicationLifetime;
-            ServerService = serverService;
-            ServerProcessService = serverProcessService;
+            _gitHub = new GitHubClient(new ProductHeaderValue("LANCommander"));
         }
 
         public static SemVersion GetCurrentVersion()
@@ -38,7 +32,7 @@ namespace LANCommander.Server.Services
 
         public async Task<SemVersion> GetLatestVersionAsync()
         {
-            var release = await GitHub.Repository.Release.GetLatest("LANCommander", "LANCommander");
+            var release = await _gitHub.Repository.Release.GetLatest("LANCommander", "LANCommander");
 
             SemVersion version = null;
 
@@ -58,7 +52,7 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<Release>> GetReleasesAsync(int count)
         {
-            return await GitHub.Repository.Release.GetAll("LANCommander", "LANCommander", new ApiOptions
+            return await _gitHub.Repository.Release.GetAll("LANCommander", "LANCommander", new ApiOptions
             {
                 PageSize = count,
                 PageCount = 1,
@@ -79,18 +73,18 @@ namespace LANCommander.Server.Services
             if (String.IsNullOrWhiteSpace(releaseFile))
                 throw new NotImplementedException("Your platform is not supported");
 
-            Logger?.LogInformation("Stopping all servers");
+            _logger?.LogInformation("Stopping all servers");
 
-            var servers = await ServerService.GetAsync();
+            var servers = await serverService.GetAsync();
 
             foreach (var server in servers)
             {
-                if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                    ServerProcessService.StopServerAsync(server.Id);
+                if (serverProcessService.GetStatus(server) == ServerProcessStatus.Running)
+                    serverProcessService.StopServerAsync(server.Id);
             }
 
-            Logger?.LogInformation("Servers stopped");
-            Logger?.LogInformation("Downloading release version {Version}", release.TagName);
+            _logger?.LogInformation("Servers stopped");
+            _logger?.LogInformation("Downloading release version {Version}", release.TagName);
 
             if (!String.IsNullOrWhiteSpace(releaseFile))
             {
@@ -99,7 +93,7 @@ namespace LANCommander.Server.Services
                 client.DownloadFileCompleted += ReleaseDownloaded;
                 client.QueryString.Add("Version", release.TagName);
 
-                await client.DownloadFileTaskAsync(new Uri(releaseFile), Path.Combine(Settings.Update.StoragePath, $"{release.TagName}.zip"));
+                await client.DownloadFileTaskAsync(new Uri(releaseFile), Path.Combine(_settings.Update.StoragePath, $"{release.TagName}.zip"));
             }
         }
 
@@ -107,11 +101,11 @@ namespace LANCommander.Server.Services
         {
             var releaseFiles = release.Assets.Where(a => a.Name.StartsWith("LANCommander.Launcher-")).Select(a => a.BrowserDownloadUrl);
 
-            Logger?.LogInformation("Downloading release version {Version}", release.TagName);
+            _logger?.LogInformation("Downloading release version {Version}", release.TagName);
 
             foreach (var releaseFile in releaseFiles)
             {
-                Logger?.LogInformation($"Downloading launcher from {releaseFile}");
+                _logger?.LogInformation($"Downloading launcher from {releaseFile}");
 
                 if (!String.IsNullOrWhiteSpace(releaseFile))
                 {
@@ -120,7 +114,7 @@ namespace LANCommander.Server.Services
                     var uri = new Uri(releaseFile);
 
                     client.QueryString.Add("Version", release.TagName);
-                    await client.DownloadFileTaskAsync(uri, Path.Combine(Settings.Update.StoragePath, $"{release.TagName}.zip"));
+                    await client.DownloadFileTaskAsync(uri, Path.Combine(_settings.Update.StoragePath, $"{release.TagName}.zip"));
                 }
             }
         }
@@ -155,11 +149,11 @@ namespace LANCommander.Server.Services
         private void ReleaseDownloaded(object? sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
             string version = ((WebClient)sender).QueryString["Version"];
-            string path = Path.Combine(Settings.Update.StoragePath, $"{version}.zip");
+            string path = Path.Combine(_settings.Update.StoragePath, $"{version}.zip");
 
-            Logger?.LogInformation("Update version {Version} has been downloaded", version);
+            _logger?.LogInformation("Update version {Version} has been downloaded", version);
 
-            Logger?.LogInformation("New autoupdater is being extracted");
+            _logger?.LogInformation("New autoupdater is being extracted");
 
             string processExecutable = String.Empty;
 
@@ -176,19 +170,19 @@ namespace LANCommander.Server.Services
                 }
             }
 
-            Logger?.LogInformation("Running auto updater application");
+            _logger?.LogInformation("Running auto updater application");
 
             var process = new ProcessStartInfo();
 
             process.FileName = processExecutable;
-            process.Arguments = $"-Version {version} -Path \"{Settings.Update.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
+            process.Arguments = $"-Version {version} -Path \"{_settings.Update.StoragePath}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
             process.UseShellExecute = true;
 
             Process.Start(process);
 
-            Logger?.LogInformation("Shutting down to get out of the way");
+            _logger?.LogInformation("Shutting down to get out of the way");
 
-            ApplicationLifetime.StopApplication();
+            applicationLifetime.StopApplication();
         }
     }
 }

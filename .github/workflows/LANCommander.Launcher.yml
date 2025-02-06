@@ -51,7 +51,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 9.0.x
     - name: Restore dependencies
       run: dotnet restore
 
@@ -76,37 +76,37 @@ jobs:
 
     - name: Bundle
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/
-        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
 
     - name: Remove Extra Files
       run: |
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/AntDesign/less
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/wwwroot/Identity/lib/bootstrap
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommander.ico
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/LANCommanderDark.ico
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package-lock.json
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/package.json
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/*.pdb
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/Libraries/locales
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/AntDesign/less
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/Identity/lib/bootstrap
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/LANCommander.ico
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/LANCommanderDark.ico
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/package-lock.json
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/package.json
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/*.pdb
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
+        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/Libraries/locales
 
     # Create ZIP file
     - name: Package Launcher Build
       uses: vimtor/action-zip@v1.2
       with:
-        files: LANCommander.Launcher/bin/Release/net8.0/${{ inputs.build_runtime }}/publish/
+        files: LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
         recursive: true
         dest: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         path: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
         name: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

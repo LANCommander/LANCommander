@@ -4,7 +4,7 @@
 
 <Space Style="display: flex">
     <SpaceItem Style="flex-grow: 1">
-        <Input TValue="string" Type="InputType.Text" @bind-Value="Value" OnInput="OnInput" BindOnInput="true" />
+        <Input TValue="string" Type="InputType.Text" @bind-Value="Value" OnInput="OnInput" BindOnInput="true" Disabled="@Disabled" />
     </SpaceItem>
     <SpaceItem>
         <FilePickerButton
@@ -16,6 +16,7 @@
             AllowDirectories="@AllowDirectories"
             Prefix="@Prefix"
             Root="@Root"
+            Disabled="@Disabled"
             EntrySelectable="@EntrySelectable"
             EntryVisible="@EntryVisible"
             OnSelected="OnFileSelected" />
@@ -32,6 +33,7 @@
     [Parameter] public bool AllowDirectories { get; set; } = false;
     [Parameter] public string Prefix { get; set; }
     [Parameter] public string Root { get; set; }
+    [Parameter] public bool Disabled { get; set; }
     [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 

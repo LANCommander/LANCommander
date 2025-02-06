@@ -1,0 +1,78 @@
+name: LANCommander Debug Build
+
+on:
+  push:
+    tags:
+      - 'v*-debug'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy_server_win-x64:
+    runs-on: self-hosted
+    env:
+      DOTNET_VERSION: '9.0.x'   # Define the .NET version here
+      PUBLISH_DIR: 'C:\LANCommander'  # Define the output directory
+      RUNTIME: 'win-x64'  # Define the runtime platform
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract Version from Tag
+        id: extract_version
+        run: |
+          $tag = "${{ github.ref }}".Replace("refs/tags/v", "")
+          $version = $tag -replace "-debug", ""
+          echo "version=$version" >> $env:GITHUB_ENV
+        shell: pwsh
+
+      - name: Generate Build Number and Timestamp
+        id: build_info
+        run: |
+          $buildNumber = "${{ github.run_number }}"
+          $timestamp = Get-Date -Format "yyyyMMddHHmm"
+          echo "build_number=$buildNumber" >> $env:GITHUB_ENV
+          echo "timestamp=$timestamp" >> $env:GITHUB_ENV
+        shell: pwsh
+
+      - name: Stop LANCommander Server Service
+        run: |
+          $serviceName = "LANCommander"
+          if (Get-Service -Name $serviceName -ErrorAction SilentlyContinue) {
+            Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 5
+          }
+        shell: pwsh
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish LANCommander.Server
+        run: |
+          dotnet publish LANCommander.Server/LANCommander.Server.csproj `
+            -c Release `
+            -r ${{ env.RUNTIME }} `
+            --self-contained false `
+            -p:Version=${{ env.version }} `
+            -p:FileVersion=${{ env.version }}.${{ env.build_number }} `
+            -p:InformationalVersion=${{ env.version }}+${{ env.timestamp }} `
+            -o "${{ env.PUBLISH_DIR }}"
+        shell: pwsh
+
+      - name: Start LANCommander Server Service
+        run: |
+          $serviceName = "LANCommander"
+          if (Get-Service -Name $serviceName -ErrorAction SilentlyContinue) {
+            Start-Service -Name $serviceName
+          }
+        shell: pwsh
+
+      - name: Verify build output
+        run: dir "${{ env.PUBLISH_DIR }}"

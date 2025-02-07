@@ -49,6 +49,13 @@ namespace LANCommander.Server
 
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddWindowsService(options =>
+            {
+                options.ServiceName = "LANCommander Server";
+            });
+
+            builder.Services.AddSystemd();
+
             ConfigurationManager configuration = builder.Configuration;
 
             #region Debug

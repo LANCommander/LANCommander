@@ -57,6 +57,7 @@ jobs:
 
       # UI
       - run: cd ./LANCommander.UI; npm install; npm run package
+      - run: cd ./LANCommander.Server; npm install
 
       - name: Restore dependencies
         run: dotnet restore

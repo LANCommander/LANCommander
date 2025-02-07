@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   deploy_server_win-x64:
-    runs-on: [self-hosted, lancommander]
+    runs-on: [self-hosted, LANCommander Server]
     env:
       DOTNET_VERSION: '9.0.x'   # Define the .NET version here
       PUBLISH_DIR: 'C:\LANCommander'  # Define the output directory

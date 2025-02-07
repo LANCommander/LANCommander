@@ -1,9 +1,9 @@
-name: Publish SDK NuGet Package
+name: Publish SDK Release NuGet Package
 
 on:
   push:
     tags:
-      - 'v*.*.*'  # Matches tags like v1.0.3
+      - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
     inputs:
       version:

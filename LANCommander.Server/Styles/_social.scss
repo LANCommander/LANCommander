@@ -1,12 +1,19 @@
 .social {
-    padding-top: 8px;
-    padding-bottom: 8px;
+    padding: 16px 8px;
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     
     a {
         color: #fff;
+        opacity: 0.65;
+        transition: opacity 0.2s ease;
+        
+        &:hover {
+            opacity: 1;
+        }
     }
     
     path {
-        fill: #fff;
+        fill: currentColor;
     }
 }

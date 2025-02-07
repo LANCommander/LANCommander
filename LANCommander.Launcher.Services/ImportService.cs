@@ -40,6 +40,9 @@ namespace LANCommander.Launcher.Services
         private readonly Settings Settings;
         private readonly DatabaseContext DatabaseContext;
 
+        private ImportProgress _importProgress = new();
+        public ImportProgress Progress => _importProgress;
+
         public delegate Task OnImportUpdatedHandler(ImportStatusUpdate update);
         public event OnImportUpdatedHandler OnImportUpdated;
         
@@ -369,9 +372,11 @@ namespace LANCommander.Launcher.Services
         {
             var library = await LibraryService.GetByUserAsync(AuthenticationService.GetUserId());
             
-            Logger?.LogInformation("Importing games");
+            Logger?.LogInformation("Starting library import");
 
-            int i = 1;
+            _importProgress.IsImporting = true;
+            _importProgress.Index = 1;
+            _importProgress.Total = games.Count();
 
             foreach (var game in games)
             {
@@ -379,13 +384,17 @@ namespace LANCommander.Launcher.Services
                 {
                     var remoteGame = await Client.Games.GetAsync(game.Id);
 
+                    _importProgress.CurrentItem = new ImportItem(game.Id, game.Name);
+                    
                     if (OnImportUpdated != null)
-                        await OnImportUpdated(new ImportStatusUpdate
+                    {
+                        await OnImportUpdated.Invoke(new ImportStatusUpdate 
                         {
-                            CurrentItem = new ImportItem(game.Id, game.Name),
-                            Index = i,
-                            Total = games.Count()
+                            Index = _importProgress.Index,
+                            Total = _importProgress.Total,
+                            CurrentItem = _importProgress.CurrentItem
                         });
+                    }
 
                     if (game != null && remoteGame != null)
                     {
@@ -402,9 +411,13 @@ namespace LANCommander.Launcher.Services
                 }
                 finally
                 {
-                    i++;
+                    _importProgress.Index++;
                 }
             }
+
+            _importProgress.IsImporting = false;
+            if (OnImportComplete != null)
+                await OnImportComplete.Invoke();
             
             Logger?.LogInformation("Importing games completed");
         }

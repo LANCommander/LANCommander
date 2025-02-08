@@ -1,10 +1,14 @@
-﻿using Serilog;
+﻿using System.Net;
+using LANCommander.Server.Services.Models;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.OpenApi.Models;
+using Serilog;
 
 namespace LANCommander.Server;
 
 public static class AspNetExtensions
 {
-    public static void AddRazor(this WebApplicationBuilder builder)
+    public static void AddRazor(this WebApplicationBuilder builder, Settings settings)
     {
         Log.Debug("Configuring MVC and Blazor");
         builder.Services
@@ -38,13 +42,10 @@ public static class AspNetExtensions
         builder.Services.AddRazorPages(static options => options.RootDirectory = "/UI/Pages");
 
         builder.Services
-            .AddServerSideBlazor()
-            .AddCircuitOptions(static option => option.DetailedErrors = true)
-            .AddHubOptions(static option =>
-            {
-                option.MaximumReceiveMessageSize = 1024 * 1024 * 11;
-                option.DisableImplicitFromServicesParameters = true;
-            });
+            .AddRazorComponents()
+            .AddInteractiveServerComponents();
+
+        builder.Services.AddCascadingAuthenticationState();
     }
 
     public static void AddSignalR(this WebApplicationBuilder builder)
@@ -74,6 +75,67 @@ public static class AspNetExtensions
         builder.Services.AddControllers().AddJsonOptions(static x =>
         {
             x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        });
+    }
+
+    public static void ConfigureKestrel(this WebApplicationBuilder builder)
+    {
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            var settings = options.ApplicationServices.GetRequiredService<Settings>();
+            
+            options.Limits.MaxRequestBodySize = long.MaxValue;
+            options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+            
+            options.Listen(IPAddress.Any, settings.Port);
+            
+            if (settings.UseSSL)
+            {
+                options.Listen(IPAddress.Any, settings.SSLPort, listenOptions =>
+                {
+                    listenOptions.UseHttps(settings.CertificatePath, settings.CertificatePassword);
+                });
+            }
+        });
+        
+        builder.Services.Configure<FormOptions>(options =>
+        {
+            options.MultipartBodyLengthLimit = long.MaxValue;
+        });
+        
+        builder.WebHost.UseStaticWebAssets();
+    }
+
+    public static void AddSwagger(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen(options =>
+        {
+            options.CustomSchemaIds(type => type.ToString());
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                In = ParameterLocation.Header,
+                Description = "Enter a valid access token",
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                BearerFormat = "JWT",
+                Scheme = "Bearer"
+            });
+
+            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    []
+                }
+            });
         });
     }
 }

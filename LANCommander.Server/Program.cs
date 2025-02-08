@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using LANCommander.Server.Data;
 using LANCommander.Server.Hubs;
 using LANCommander.Server.Services;
@@ -8,15 +9,25 @@ using Microsoft.AspNetCore.Http.Features;
 using LANCommander.SDK.Enums;
 using Serilog;
 using LANCommander.Server;
+using LANCommander.Server.Data.Enums;
+using LANCommander.Server.Jobs.Background;
 using LANCommander.Server.Models;
+using LANCommander.Server.Services.Models;
+using LANCommander.Server.UI;
+using Microsoft.AspNetCore.HttpOverrides;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (args.Contains("--debugger"))
+    WaitForDebugger();
+
+builder.AddAsService();
 builder.AddLogger();
 
 // Add services to the container.
 Log.Debug("Loading settings");
-LANCommanderSettings settings = SettingService.GetSettings(true);
+Settings settings = SettingService.GetSettings(true);
 builder.Services.AddSingleton(settings);
 Log.Debug("Validating settings");
 if (settings.Authentication.TokenSecret.Length < 16)
@@ -27,56 +38,31 @@ if (settings.Authentication.TokenSecret.Length < 16)
 }
 Log.Debug("Done validating settings");
 
-builder.AddRazor();
+ConfigureDatabaseProvider(settings, args);
+
+builder.AddRazor(settings);
 builder.AddSignalR();
 builder.AddCors();
 builder.AddControllers();
-
-builder.Services.AddAutoMapper(typeof(LANCommanderMappingProfile));
-
-builder.WebHost.ConfigureKestrel((ctx, options) =>
-{
-    var settings = options.ApplicationServices.GetRequiredService<LANCommanderSettings>();
-    var logger = options.ApplicationServices.GetRequiredService<ILogger<Program>>();
-    logger.LogDebug("Starting web server on port {Port}", settings.Port);
-    // Configure as HTTP only
-    options.ListenAnyIP(settings.Port);
-
-    options.Limits.MaxRequestBodySize = long.MaxValue;
-    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
-}).UseKestrel();
-
+builder.ConfigureKestrel();
 builder.AddIdentity(settings);
-
 builder.AddHangfire();
-
-builder.Services.AddFusionCache();
-
-Log.Debug("Registering Swashbuckle");
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-Log.Debug("Registering AntDesign Blazor");
-builder.Services.AddAntDesign();
-
-builder.Services.AddHttpClient();
-
-builder.WebHost.UseStaticWebAssets();
-
+builder.AddSwagger();
 builder.AddLANCommanderServices(settings);
 builder.AddDatabase();
-
-builder.Services.Configure<FormOptions>(options =>
-{
-    options.MultipartBodyLengthLimit = long.MaxValue;
-});
 
 Log.Debug("Building Application");
 var app = builder.Build();
 
 app.UseCors("CorsPolicy");
+app.UseHttpsRedirection();
 
 app.MapHub<GameServerHub>("/hubs/gameserver");
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseRobots();
 app.UseApiVersioning();
@@ -87,7 +73,7 @@ if (app.Environment.IsDevelopment())
     Log.Debug("App has been run in a development environment");
     app.UseMigrationsEndPoint();
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapScalarApiReference();
 }
 else
 {
@@ -101,6 +87,7 @@ app.UseHangfireDashboard();
 // app.UseHttpsRedirection();
 app.UseStaticFiles();
 
+app.UseCookiePolicy();
 app.UseRouting();
 
 app.UseAuthentication();
@@ -112,9 +99,14 @@ Log.Debug("Registering Endpoints");
 
 app.MapHub<LoggingHub>("/logging");
 
+app.UseAntiforgery();
+app.UseStaticFiles();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapBlazorHub();
     endpoints.MapFallbackToPage("/_Host");
     endpoints.MapControllers();
 });
@@ -125,19 +117,49 @@ await EnsureDatabase(app);
 
 await InitializeServerProcesses(app);
 
+BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
+
 app.Run();
+
+static void WaitForDebugger()
+{
+    var currentProcess = Process.GetCurrentProcess();
+
+    Console.WriteLine($"Waiting for debugger to attach... Process ID: {currentProcess.Id}");
+
+    while (!Debugger.IsAttached)
+    {
+        Thread.Sleep(100);
+    }
+
+    Console.WriteLine("Debugger attached.");
+}
+
+static void ConfigureDatabaseProvider(Settings settings, string[] args)
+{
+    var databaseProviderParameter = args.FirstOrDefault(arg => arg.StartsWith("--database-provider="))?.Split('=', 2).Last();
+    var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
+
+    if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
+        DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
+    else
+        DatabaseContext.Provider = settings.DatabaseProvider;
+
+    if (!String.IsNullOrWhiteSpace(connectionStringParameter))
+        DatabaseContext.ConnectionString = connectionStringParameter;
+    else
+        DatabaseContext.ConnectionString = settings.DatabaseConnectionString;
+}
 
 static void PrepareDirectories(WebApplication app)
 {
-    var settings = app.Services.GetRequiredService<LANCommanderSettings>();
+    var settings = app.Services.GetRequiredService<Settings>();
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     logger.LogDebug("Ensuring required directories exist");
 
     IEnumerable<string> directories = [
         settings.Logs.StoragePath,
-        settings.Archives.StoragePath,
         settings.UserSaves.StoragePath,
-        settings.Media.StoragePath,
         settings.Update.StoragePath,
         "Snippets",
         "Backups"
@@ -154,29 +176,34 @@ static void PrepareDirectories(WebApplication app)
 static async Task EnsureDatabase(WebApplication app)
 {
     // Migrate
-    using var scope = app.Services.CreateAsyncScope();
-    using var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    var settings = scope.ServiceProvider.GetRequiredService<LANCommanderSettings>();
-    logger.LogDebug("Migrating database if required");
-
-    if (!(await db.Database.GetPendingMigrationsAsync()).Any())
+    if (DatabaseContext.Provider != DatabaseProvider.Unknown)
     {
-        logger.LogDebug("No pending migrations are available. Skipping database migration.");
-        return;
+        using var scope = app.Services.CreateAsyncScope();
+        using var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        var settings = scope.ServiceProvider.GetRequiredService<Settings>();
+        logger.LogDebug("Migrating database if required");
+
+        if ((await db.Database.GetPendingMigrationsAsync()).Any())
+        {
+            if (DatabaseContext.Provider == DatabaseProvider.SQLite)
+            {
+                var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
+
+                var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss.bak")}");
+
+                if (File.Exists(dataSource))
+                {
+                    Log.Information("Migrations pending, database will be backed up to {BackupName}", backupName);
+                    File.Copy(dataSource, backupName);
+                }
+            }
+            
+            await db.Database.MigrateAsync();
+        }
+        else
+            logger.LogDebug("No pending migrations are available. Skipping database migration.");
     }
-
-    var dataSource = new SqliteConnectionStringBuilder(settings.DatabaseConnectionString).DataSource;
-
-    var backupName = Path.Combine("Backups", $"LANCommander.db.{DateTime.Now:dd-MM-yyyy-HH.mm.ss.bak}");
-
-    if (File.Exists(dataSource))
-    {
-        logger.LogInformation("Migrations pending, database will be backed up to {BackupName}", backupName);
-        File.Copy(dataSource, backupName);
-    }
-
-    await db.Database.MigrateAsync();
 }
 
 static async Task InitializeServerProcesses(WebApplication app)
@@ -188,7 +215,7 @@ static async Task InitializeServerProcesses(WebApplication app)
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     logger.LogDebug("Autostarting Servers");
 
-    foreach (var server in await serverService.Get(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart).ToListAsync())
+    foreach (var server in await serverService.GetAsync(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
     {
         try
         {

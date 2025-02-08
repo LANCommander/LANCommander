@@ -38,7 +38,7 @@
         User = await UserService.GetAsync(Options);
         Roles = await RoleService.GetAsync();
 
-        var currentRoles = await UserService.GetRolesAsync(User.UserName);
+        var currentRoles = await UserService.GetRolesAsync(User);
 
         SelectedRoles = Roles.Where(r => currentRoles.Any(cr => r.Name == cr.Name)).ToList();
     }
@@ -54,7 +54,7 @@
 
         try
         {
-            var currentRoles = await UserService.GetRolesAsync(User.UserName);
+            var currentRoles = await UserService.GetRolesAsync(User);
 
             await UserService.AddToRolesAsync(User.UserName, SelectedRoles.Select(r => r.Name).Where(r => !currentRoles.Any(cr => cr.Name == r)));
 

@@ -49,9 +49,19 @@ namespace LANCommander.Server.Services
         {
             var roles = await Cache.GetOrSetAsync($"User/{user.Id}/Roles", async _ =>
             {
-                var roleNames = await IdentityContext.UserManager.GetRolesAsync(user);
-                
-                return await IdentityContext.RoleManager.Roles.Where(r => roleNames.Contains(r.Name)).ToListAsync();
+                try
+                {
+                    user = await IdentityContext.UserManager.FindByIdAsync(user.Id.ToString());
+
+                    var roleNames = await IdentityContext.UserManager.GetRolesAsync(user);
+
+                    return await IdentityContext.RoleManager.Roles.Where(r => roleNames.Contains(r.Name)).ToListAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Could not get roles for user {Username}", user.UserName);
+                    return new List<Role>();
+                }
             });
 
             return roles;

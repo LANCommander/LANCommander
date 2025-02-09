@@ -2,6 +2,7 @@
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
 using AutoMapper;
+using LANCommander.Server.Services.Extensions;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -50,7 +51,7 @@ namespace LANCommander.Server.Services
             library.Games.Add(game);
 
             await UpdateAsync(library);
-            await cache.ExpireAsync($"LibraryGames:{userId}");
+            await cache.RemoveByTagAsync([$"Library/{userId}"]);
 
             if (game.BaseGame != null && !library.Games.Any(g => g.Id == game.BaseGame.Id) && game.BaseGame.Id != game.Id)
                 await AddToLibraryAsync(userId, game.BaseGame.Id);
@@ -75,7 +76,7 @@ namespace LANCommander.Server.Services
 
             await UpdateAsync(library);
 
-            await cache.ExpireAsync($"LibraryGames:{userId}");
+            await cache.RemoveByTagAsync([$"Library/{userId}"]);
         }
     }
 }

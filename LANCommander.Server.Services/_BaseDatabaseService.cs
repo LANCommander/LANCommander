@@ -243,7 +243,7 @@ namespace LANCommander.Server.Services
 
             if (existing == null)
             {
-                await cache.ExpireAsync($"{typeof(T).FullName}:Get");
+                await cache.ExpireAsync($"{typeof(T).FullName}");
 
                 entity = await AddAsync(entity);
 
@@ -290,7 +290,7 @@ namespace LANCommander.Server.Services
         {
             try
             {
-                await cache.ExpireAsync($"{typeof(T).FullName}:Get");
+                await cache.ExpireAsync($"{typeof(T).FullName}");
                 
                 using var context = await dbContextFactory.CreateDbContextAsync();
                 

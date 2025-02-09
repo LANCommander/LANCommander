@@ -60,7 +60,7 @@ namespace LANCommander.Server.Controllers.Api
                 }).GetAsync<SDK.Models.Game>();
 
                 return games;
-            }, TimeSpan.MaxValue);
+            }, TimeSpan.MaxValue, tags: ["Games"]);
 
             foreach (var mappedGame in mappedGames)
             {
@@ -113,7 +113,7 @@ namespace LANCommander.Server.Controllers.Api
                     .Include(g => g.Redistributables)
                     .Include(g => g.Tags)
                     .GetAsync<SDK.Models.Game>(id);
-            }, TimeSpan.MaxValue);
+            }, TimeSpan.MaxValue, tags: ["Games", $"Games/{id}"]);
 
             return game;
         }
@@ -124,7 +124,7 @@ namespace LANCommander.Server.Controllers.Api
             var manifest = await Cache.GetOrSetAsync($"Games/{id}/Manifest", async _ =>
             {
                 return await GameService.GetManifestAsync(id);
-            });
+            }, tags: ["Games", $"Games/{id}"]);
 
             return manifest;
         }
@@ -153,7 +153,7 @@ namespace LANCommander.Server.Controllers.Api
                 actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).SelectMany(dg => dg.Actions));
                 
                 return Mapper.Map<IEnumerable<SDK.Models.Action>>(actions);
-            });
+            }, tags: ["Games", $"Games/{id}"]);
             
             return actions;
         }
@@ -166,7 +166,7 @@ namespace LANCommander.Server.Controllers.Api
                 return await GameService
                     .Include(g => g.Archives)
                     .GetAsync<SDK.Models.Game>(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
-            });
+            }, tags: ["Games", $"Games/{id}"]);
 
             return addons;
         }

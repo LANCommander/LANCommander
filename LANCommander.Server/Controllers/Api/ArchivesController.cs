@@ -90,7 +90,7 @@ namespace LANCommander.Server.Controllers.Api
                 return NotFound();
             }
 
-            var entries = await Cache.GetOrSetAsync<IEnumerable<ArchiveEntry>>($"ArchiveContents:{archive.Id}", async _ =>
+            var entries = await Cache.GetOrSetAsync<IEnumerable<ArchiveEntry>>($"Archive/{archive.Id}/Contents", async _ =>
             {
                 var filename = await ArchiveService.GetArchiveFileLocationAsync(archive);
 
@@ -117,7 +117,7 @@ namespace LANCommander.Server.Controllers.Api
                 }
 
                 return entries;
-            }, TimeSpan.MaxValue);
+            }, TimeSpan.MaxValue, tags: "Archives", $"Archives/{id}");
 
             if (entries.Count() == 0)
                 return NotFound();

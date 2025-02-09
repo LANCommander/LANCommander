@@ -111,8 +111,9 @@
 
     async Task ClearCache()
     {
-        await FusionCache.ExpireAsync("Games");
-        await FusionCache.ExpireAsync("Depot/Results");
+        await FusionCache.RemoveByTagAsync("Games");
+        await FusionCache.RemoveByTagAsync("Depot");
+        await FusionCache.RemoveByTagAsync("Library");
 
         MessageService.Success("Cache cleared!");
     }

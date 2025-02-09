@@ -8,13 +8,7 @@ public static class CacheExtensions
     {
         if (gameId.HasValue)
         {
-            await cache.ExpireAsync($"/Depot/Results");
-            await cache.ExpireAsync($"Depot/Games/{gameId}");
-            await cache.ExpireAsync($"Games");
-            await cache.ExpireAsync($"Games/{gameId}");
-            await cache.ExpireAsync($"Games/{gameId}/Manifest");
-            await cache.ExpireAsync($"Games/{gameId}/Actions");
-            await cache.ExpireAsync($"Games/{gameId}/Addons");
+            await cache.RemoveByTagAsync([ $"Games/{gameId}", "Games", "Depot"]);
         }
     }
 }

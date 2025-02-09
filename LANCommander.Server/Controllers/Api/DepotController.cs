@@ -81,7 +81,7 @@ namespace LANCommander.Server.Controllers.Api
                 };
 
                 return results;
-            }, TimeSpan.MaxValue);
+            }, TimeSpan.MaxValue, tags: ["Depot"]);
 
             var collections = await UserService.GetCollectionsAsync(user);
 
@@ -129,7 +129,7 @@ namespace LANCommander.Server.Controllers.Api
                     .Include(g => g.Scripts)
                     .Include(g => g.Tags)
                     .GetAsync(id);
-            });
+            }, tags: ["Depot", "Depot/Games", "Games", $"Games/{id}"]);
 
             var library = await LibraryService
                 .AsNoTracking()

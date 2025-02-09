@@ -63,7 +63,7 @@ namespace LANCommander.Server.Services
                     _logger.LogError(ex, "Could not get roles for user {Username}", user.UserName);
                     return new List<Role>();
                 }
-            });
+            }, tags: ["User/Security", "User/Roles", $"User/{user.Id}"]);
 
             return roles;
         }

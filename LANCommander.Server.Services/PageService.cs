@@ -56,8 +56,6 @@ namespace LANCommander.Server.Services
             entity.Slug = $"{entity.Slug}-{i}";
             entity.Route = RenderRoute(entity);
 
-            await cache.ExpireAsync("MappedGames");
-
             return await base.AddAsync(entity);
         }
 
@@ -73,7 +71,7 @@ namespace LANCommander.Server.Services
 
             entity.Route = RenderRoute(entity);
 
-            await cache.ExpireAsync($"Page|{entity.Route}");
+            await cache.ExpireAsync($"Page/{entity.Route}");
 
             return await base.UpdateAsync(entity, async context =>
             {

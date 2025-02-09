@@ -57,7 +57,7 @@ namespace LANCommander.Server.Controllers.Api
                         .ToListAsync();
                     
                     return Mapper.Map<IEnumerable<SDK.Models.EntityReference>>(games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle));
-                }, TimeSpan.MaxValue);
+                }, TimeSpan.MaxValue, tags: ["Library"]);
             }
             catch (Exception ex)
             {

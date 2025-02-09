@@ -42,7 +42,7 @@
                                 <SpaceItem>
                                     @if (IsInstalled)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="@(() => NavigationManager.NavigateTo($"{SelectedGame.Id}"))">View in Library</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="ViewInLibrary">View in Library</Button>
                                     }
                                     else
                                     {
@@ -331,5 +331,11 @@
             return "Never";
         else
             return lastSession.End.Value.ToRelativeDate();
+    }
+
+    async Task ViewInLibrary()
+    {
+        await Hide();
+        NavigationManager.NavigateTo($"/{SelectedGame.Id}", false);
     }
 }

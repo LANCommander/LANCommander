@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<LoginForm> Logger
+@inject ImportManagerService ImportManagerService
 
 <PageHeader OnBack="OnBack">
     <TitleTemplate>
@@ -100,9 +101,11 @@
         {
             await AuthenticationService.Login(Client.GetServerAddress(), Model.UserName, Model.Password);
 
-            MainLayout.Import();
+            await ImportManagerService.RequestImport();
 
             NavigationManager.NavigateTo("/");
+            
+            MessageService.Success("Welcome back!");
         }
         catch (Exception ex)
         {
@@ -128,7 +131,7 @@
         {
             await AuthenticationService.Login(ServerAddress, token);
 
-            MainLayout.Import();
+            await ImportManagerService.RequestImport();
 
             NavigationManager.NavigateTo("/");
         }

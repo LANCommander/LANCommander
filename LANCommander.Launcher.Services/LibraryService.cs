@@ -214,8 +214,15 @@ namespace LANCommander.Launcher.Services
             await UpdateAsync(library);
             
             await Client.Library.AddToLibrary(id);
+            
+            var newItem = new ListItem(localGame);
+            
+            Items.Add(newItem);
 
             await LibraryChanged();
+            
+            if (OnItemsFiltered != null)
+                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
         }
 
         public async Task RemoveFromLibraryAsync(Guid id)
@@ -228,8 +235,16 @@ namespace LANCommander.Launcher.Services
             await UpdateAsync(library);
             
             await Client.Library.RemoveFromLibrary(id);
+            
+            var itemToRemove = Items.FirstOrDefault(i => i.Key == id);
+            
+            if (itemToRemove != null)
+                Items.Remove(itemToRemove);
 
             await LibraryChanged();
+            
+            if (OnItemsFiltered != null)
+                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
         }
 
         public async Task LibraryChanged()

@@ -70,7 +70,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (Settings.Roles.RestrictGamesByCollection && !User.IsInRole(RoleService.AdministratorRoleName))
             {
-                var roles = await UserService.GetRolesAsync(User?.Identity.Name);
+                var roles = await UserService.GetRolesAsync(user);
 
                 var accessibleCollectionIds = roles.SelectMany(r => r.Collections.Select(c => c.Id)).Distinct();
 

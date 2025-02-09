@@ -29,7 +29,6 @@ namespace LANCommander.Server.Controllers.Api
         private readonly TagService TagService;
         private readonly LibraryService LibraryService;
         private readonly UserService UserService;
-        private readonly DatabaseContext DatabaseContext;
 
         public DepotController(
             ILogger<DepotController> logger,
@@ -43,8 +42,7 @@ namespace LANCommander.Server.Controllers.Api
             PlatformService platformService,
             TagService tagService,
             LibraryService libraryService,
-            UserService userService,
-            DatabaseContext databaseContext) : base(logger)
+            UserService userService) : base(logger)
         {
             Mapper = mapper;
             Cache = cache;
@@ -57,7 +55,6 @@ namespace LANCommander.Server.Controllers.Api
             TagService = tagService;
             LibraryService = libraryService;
             UserService = userService;
-            DatabaseContext = databaseContext;
         }
 
         [HttpGet]
@@ -68,45 +65,28 @@ namespace LANCommander.Server.Controllers.Api
 
             var results = await Cache.GetOrSetAsync("Depot/Results", async _ =>
             {
-                var results = new SDK.Models.DepotResults();
-
-                results.Games = await GameService.Query(q =>
+                var results = new SDK.Models.DepotResults()
                 {
-                    return q.AsNoTracking();
-                }).GetAsync<DepotGame>();
-                
-                results.Collections = await CollectionService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                }).GetAsync<SDK.Models.Collection>();
-                
-                results.Companies = await CompanyService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                }).GetAsync<SDK.Models.Company>();
-                
-                results.Engines = await EngineService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                }).GetAsync<SDK.Models.Engine>();
-                
-                results.Genres = await GenreService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                }).GetAsync<SDK.Models.Genre>();
-                
-                results.Platforms = await PlatformService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                }).GetAsync<SDK.Models.Platform>();
-                
-                results.Tags = await TagService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                }).GetAsync<SDK.Models.Tag>();
+                    Games = await GameService.AsNoTracking().GetAsync<DepotGame>(),
+                    Collections = await CollectionService.AsNoTracking().GetAsync<SDK.Models.Collection>(),
+                    Companies = await CompanyService.AsNoTracking().GetAsync<SDK.Models.Company>(),
+                    Engines = await EngineService.AsNoTracking().GetAsync<SDK.Models.Engine>(),
+                    Genres = await GenreService.AsNoTracking().GetAsync<SDK.Models.Genre>(),
+                    Platforms = await PlatformService.AsNoTracking().GetAsync<SDK.Models.Platform>(),
+                    Tags = await TagService.AsNoTracking().GetAsync<SDK.Models.Tag>(),
+                };
 
                 return results;
             }, TimeSpan.MaxValue);
+
+            var collections = await UserService.GetCollectionsAsync(user);
+
+            results.Games = results
+                .Games
+                .Where(g =>
+                    g.Collections.Any(gc => 
+                        collections.Any(c => c.Id == gc.Id)))
+                .ToList();
 
             foreach (var game in results.Games)
             {
@@ -119,6 +99,8 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Games/{id}")]
         public async Task<SDK.Models.DepotGame> GetGameAsync(Guid id)
         {
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            
             var game = await Cache.GetOrSetAsync($"Depot/Games/{id}", async _ =>
             {
                 return await GameService.Query(q =>
@@ -145,7 +127,6 @@ namespace LANCommander.Server.Controllers.Api
                     .GetAsync(id);
             });
 
-            var user = await UserService.GetAsync(User?.Identity?.Name);
             var library = await LibraryService
                 .AsNoTracking()
                 .Include(l => l.Games)

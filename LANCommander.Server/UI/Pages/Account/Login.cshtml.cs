@@ -138,7 +138,7 @@ namespace LANCommander.Server.UI.Pages.Account
                 {
                     var user = await UserService.GetAsync(Model.Username);
 
-                    if (user != null && !user.Approved && !(await UserService.IsInRoleAsync(user.UserName, RoleService.AdministratorRoleName)))
+                    if (user != null && !user.Approved && !(await UserService.IsInRoleAsync(user, RoleService.AdministratorRoleName)))
                     {
                         ModelState.AddModelError(string.Empty, "Your account must be approved by an administrator.");
                         return Page();

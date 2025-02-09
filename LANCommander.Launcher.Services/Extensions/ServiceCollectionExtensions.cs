@@ -59,6 +59,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddSingleton<KeepAliveService>();
             #endregion
             
+            services.AddSingleton<ImportManagerService>();
             services.AddScoped<CollectionService>();
             services.AddScoped<CommandLineService>();
             services.AddScoped<CompanyService>();

@@ -1,0 +1,36 @@
+.import-progress {
+    width: 300px;
+
+    &-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    &-status {
+        position: relative;
+        white-space: nowrap;
+        overflow: hidden;
+        max-width: 100%;
+        font-size: 14px;
+
+        &::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            width: 32px;
+            background: linear-gradient(to right, rgba(31, 31, 31, 0), rgb(31, 31, 31, 1) 90%);
+            pointer-events: none;
+        }
+    }
+
+    &-progress-bar {
+        margin: 4px 0;
+    }
+
+    &-footer {
+        text-align: center;
+        font-size: 12px;
+    }
+} 

@@ -1,0 +1,37 @@
+@using LANCommander.Launcher.Models
+@inject ImportService ImportService
+
+<div class="import-progress">
+    <div class="import-progress-container">
+        <Flex Vertical>
+            <div class="import-progress-info">
+                <div class="import-progress-status">
+                    @if (Total > 0)
+                    {
+                        <Text>Importing: @(CurrentItem?.Name ?? "")</Text>
+                    }
+                    else
+                    {
+                        <Text>Starting import...</Text>
+                    }
+                </div>
+                <div class="import-progress-progress-bar">
+                    <Progress 
+                        Percent="@((double)(Index * 100) / Total)" 
+                        Status="ProgressStatus.Active"
+                        ShowInfo="false"
+                    />
+                </div>
+                <div class="import-progress-footer">
+                    @Index / @Total
+                </div>
+            </div>
+        </Flex>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Index { get; set; }
+    [Parameter] public int Total { get; set; }
+    [Parameter] public ImportItem CurrentItem { get; set; }
+} 

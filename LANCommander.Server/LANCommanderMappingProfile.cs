@@ -3,9 +3,9 @@ using LANCommander.SDK.Models;
 
 namespace LANCommander.Server
 {
-    public class AutoMapper : Profile
+    public class LANCommanderMappingProfile : Profile
     {
-        public AutoMapper()
+        public LANCommanderMappingProfile()
         {
             CreateMap<Data.Models.Action, SDK.Models.Action>();
             CreateMap<Data.Models.Archive, SDK.Models.Archive>();

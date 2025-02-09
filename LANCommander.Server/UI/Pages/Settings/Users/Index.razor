@@ -82,7 +82,7 @@
             if (Directory.Exists(savePath))
                 saveSize = new DirectoryInfo(savePath).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
 
-            var roles = await UserService.GetRolesAsync(user.UserName);
+            var roles = await UserService.GetRolesAsync(user);
 
             UserList.Add(new UserViewModel()
             {

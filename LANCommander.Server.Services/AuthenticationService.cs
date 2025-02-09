@@ -63,10 +63,10 @@ namespace LANCommander.Server.Services
                 
             _logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
-            if (_settings.Authentication.RequireApproval && !user.Approved && !await userService.IsInRoleAsync(user.UserName, RoleService.AdministratorRoleName))
+            if (_settings.Authentication.RequireApproval && !user.Approved && !await userService.IsInRoleAsync(user, RoleService.AdministratorRoleName))
                 throw new Exception("Account must be approved by an administrator");
                 
-            var userRoles = await userService.GetRolesAsync(user.UserName);
+            var userRoles = await userService.GetRolesAsync(user);
 
             var authClaims = new List<Claim>
             {

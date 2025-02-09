@@ -32,7 +32,7 @@ namespace LANCommander.Server.Data.Models
         public ICollection<ServerConsole>? ServerConsoles { get; set; }
         public ICollection<ServerHttpPath>? HttpPaths { get; set; }
         public ICollection<Script>? Scripts { get; set; }
-        public ICollection<Action>? Actions { get; set; } = new List<Action>();
+        public ICollection<Action>? Actions { get; set; }
         public ICollection<Page>? Pages { get; set; }
     }
 }

@@ -6,6 +6,6 @@ namespace LANCommander.Server.Data.Models
     {
         public string Name { get; set; }
         [JsonIgnore]
-        public ICollection<Game> Games { get; set; } = new List<Game>();
+        public ICollection<Game> Games { get; set; }
     }
 }

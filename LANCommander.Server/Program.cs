@@ -47,7 +47,7 @@ builder.AddControllers();
 builder.ConfigureKestrel();
 builder.AddIdentity(settings);
 builder.AddHangfire();
-builder.AddSwagger();
+builder.AddOpenApi();
 builder.AddLANCommanderServices(settings);
 builder.AddDatabase();
 
@@ -72,7 +72,7 @@ if (app.Environment.IsDevelopment())
 {
     Log.Debug("App has been run in a development environment");
     app.UseMigrationsEndPoint();
-    app.UseSwagger();
+    app.MapOpenApi();
     app.MapScalarApiReference();
 }
 else

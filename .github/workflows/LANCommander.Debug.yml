@@ -67,7 +67,7 @@ jobs:
           dotnet publish LANCommander.Server/LANCommander.Server.csproj `
             -c Release `
             -r ${{ env.RUNTIME }} `
-            --self-contained false `
+            --self-contained `
             -p:Version=${{ env.version }} `
             -p:FileVersion=${{ env.version }}.${{ env.build_number }} `
             -p:InformationalVersion=${{ env.version }}+${{ env.timestamp }} `

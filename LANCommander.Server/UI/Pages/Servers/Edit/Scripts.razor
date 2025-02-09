@@ -1,11 +1,6 @@
 @page "/Servers/{id:guid}/Scripts"
-@using System.Runtime.InteropServices
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<General> Logger
 
 <ServerEditView Id="Id" Title="Scripts">
     <TitleExtraTemplate>

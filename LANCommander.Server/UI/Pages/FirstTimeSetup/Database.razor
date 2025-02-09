@@ -1,13 +1,11 @@
 ﻿@page "/FirstTimeSetup"
 @page "/FirstTimeSetup/Database"
 @layout FirstTimeSetupLayout
-@using LANCommander.Server.Data
 @using LANCommander.Server.Data.Enums
 @using Microsoft.Data.Sqlite
-@using Microsoft.EntityFrameworkCore
 @using MySqlConnector
 @using Npgsql
-@inject DatabaseServiceFactory DatabaseServiceFactory
+@inject SetupService SetupService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -114,10 +112,7 @@
             {
                 await InvokeAsync(async () =>
                 {
-                    using (var setupService = DatabaseServiceFactory.Create<SetupService>())
-                    {
-                        await setupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
-                    }
+                    await SetupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
 
                     SettingService.SaveSettings(Settings);
 

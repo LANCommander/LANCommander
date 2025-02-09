@@ -1,6 +1,5 @@
 ﻿@page "/Games/{id:guid}/SavePaths"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject DatabaseServiceFactory DatabaseServiceFactory
 @inject MessageService MessageService
 @inject ILogger<Multiplayer> Logger
 

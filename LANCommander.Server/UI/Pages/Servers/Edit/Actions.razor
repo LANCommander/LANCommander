@@ -1,11 +1,5 @@
 @page "/Servers/{id:guid}/Actions"
-@using System.Runtime.InteropServices
-@using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
-@inject DatabaseServiceFactory DatabaseServiceFactory
-@inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<General> Logger
 
 <ServerEditView Id="Id" Title="Actions">
     <TitleExtraTemplate>
@@ -14,7 +8,7 @@
             <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
                 <ServerControl ServerId="context.Id" />
 
-                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })">
+                <Dropdown Trigger="@(new [] { Trigger.Click })">
                     <Overlay>
                         <Menu>
                             <MenuItem>

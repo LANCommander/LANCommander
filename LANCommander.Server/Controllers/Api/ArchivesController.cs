@@ -117,7 +117,7 @@ namespace LANCommander.Server.Controllers.Api
                 }
 
                 return entries;
-            }, TimeSpan.MaxValue, tags: "Archives", $"Archives/{id}");
+            }, TimeSpan.MaxValue, tags: ["Archives", $"Archives/{id}"]);
 
             if (entries.Count() == 0)
                 return NotFound();

@@ -61,6 +61,10 @@ namespace LANCommander.Server.Controllers.Api
         public async Task<SDK.Models.DepotResults> GetAsync()
         {
             var user = await UserService.GetAsync(User?.Identity?.Name);
+            
+            if (user == null)
+                return new SDK.Models.DepotResults();
+            
             var library = await LibraryService.GetByUserIdAsync(user.Id);
 
             var results = await Cache.GetOrSetAsync("Depot/Results", async _ =>

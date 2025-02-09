@@ -44,9 +44,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var game = await GameService.GetAsync(GameId);
+        var game = await GameService.Include(g => g.SavePaths).GetAsync(GameId);
 
-        SavePaths = game.SavePaths;
+        if (game.SavePaths != null)
+            SavePaths = game.SavePaths;
     }
 
     async Task AddPath()
@@ -65,7 +66,7 @@
 
     public async Task Save()
     {
-        var game = await GameService.GetAsync(GameId);
+        var game = await GameService.Include(g => g.SavePaths).GetAsync(GameId);
 
         game.SavePaths = SavePaths;
 

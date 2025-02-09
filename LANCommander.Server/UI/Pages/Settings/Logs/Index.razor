@@ -2,43 +2,97 @@
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
 
-<PageHeader Title="Logs" />
+<PageHeader Title="Logs">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
-        <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Logs.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
-        </FormItem>
+    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+        <Collapse>
+            @foreach (var provider in Providers)
+            {
+                <Panel Header="@provider.Name">
+                    <ExtraTemplate>
+                        <Flex Gap="FlexGap.Small">
+                            <Switch @bind-Checked="provider.Enabled" />
+                            <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => RemoveProvider(provider)"/>
+                        </Flex>
+                    </ExtraTemplate>
+                    <ChildContent>
+                        <Form Model="provider" Layout="FormLayout.Vertical">
+                            <FormItem Label="Name">
+                                <Input @bind-Value="provider.Name" BindOnInput/>
+                            </FormItem>
+                            <FormItem Label="Type">
+                                <EnumSelect TEnum="LoggingProviderType" @bind-Value="provider.Type"/>
+                            </FormItem>
+                            <FormItem Label="Minimum Level">
+                                <EnumSelect TEnum="LogLevel" @bind-Value="provider.MinimumLevel"/>
+                            </FormItem>
 
-        <FormItem Label="Archive Every">
-            <Select @bind-Value="@context.Logs.ArchiveEvery" TItem="LogInterval" TItemValue="LogInterval" DataSource="Enum.GetValues<LogInterval>()">
-                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-            </Select>
-        </FormItem>
+                            @if (provider.Type == LoggingProviderType.File)
+                            {
+                                <FormItem Label="Path">
+                                    <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@provider.ConnectionString" OkText="Select Path" Title="Choose Path" OnSelected="(p) => OnPathSelected(p, provider)"/>
+                                </FormItem>
+                                <FormItem Label="Archive Every">
+                                    <EnumSelect TEnum="LogInterval?" DefaultValue="LogInterval.Day" @bind-Value="provider.ArchiveEvery"/>
+                                </FormItem>
+                                <FormItem Label="Max Archive Files">
+                                    <AntDesign.InputNumber @bind-Value="provider.MaxArchiveFiles"/>
+                                </FormItem>
+                            }
 
-        <FormItem Label="Max Archive Files">
-            <AntDesign.InputNumber @bind-Value="context.Logs.MaxArchiveFiles" Min="0" DefaultValue="10" />
-        </FormItem>
+                            @if (provider.Type == LoggingProviderType.Seq || provider.Type == LoggingProviderType.ElasticSearch)
+                            {
+                                <FormItem Label="Connection String">
+                                    <Input @bind-Value="provider.ConnectionString"/>
+                                </FormItem>
+                            }
+                        </Form>
+                    </ChildContent>
+                </Panel>
+            }
+        </Collapse>
 
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
-    </Form>
+        <Flex Justify="FlexJustify.End">
+            <Button OnClick="AddProvider">Add Provider</Button>
+        </Flex>
+    </Flex>
 </PageContent>
-
-<LANCommander.Server.UI.Pages.Settings.Logs.Components.LogViewer />
+    
+@if (Providers.Any(p => p.Type == LoggingProviderType.SignalR && p.Enabled))
+{
+    <PageHeader Title="Log Viewer" />
+    <PageContent Style="padding-bottom: 24px;">
+        <div style="padding: 8px; background: #000">
+            <LANCommander.Server.UI.Pages.Settings.Logs.Components.LogViewer/>
+        </div>
+    </PageContent>
+}
 
 @code {
     Settings Settings = SettingService.GetSettings();
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
+    List<LoggingProvider> Providers = new();
+
+    protected override void OnInitialized()
+    {
+        Providers = Settings.Logs.Providers.ToList();
+    }
+
     void Save()
     {
         try
         {
+            Settings.Logs.Providers = Providers;
+            
             SettingService.SaveSettings(Settings);
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)
@@ -48,13 +102,28 @@
         }
     }
 
-    void OnPathSelected(string path)
+    void AddProvider()
+    {
+        Providers.Add(new LoggingProvider()
+        {
+            Type = LoggingProviderType.Console,
+            Enabled = true,
+            Name = "Console"
+        });
+    }
+
+    void RemoveProvider(LoggingProvider provider)
+    {
+        Providers.Remove(provider);
+    }
+
+    void OnPathSelected(string path, LoggingProvider context)
     {
         var appPath = Directory.GetCurrentDirectory();
 
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        Settings.Logs.StoragePath = path;
+        context.ConnectionString = path;
     }
 }

@@ -15,7 +15,7 @@ public static class IdentityExtensions
     public static void AddIdentity(this WebApplicationBuilder builder, Settings settings)
     {
         Log.Debug("Initializing Identity");
-        builder.Services.AddDefaultIdentity<User>((options) =>
+        builder.Services.AddIdentityCore<User>((options) =>
         {
             options.SignIn.RequireConfirmedAccount = false;
             options.SignIn.RequireConfirmedEmail = false;
@@ -34,9 +34,8 @@ public static class IdentityExtensions
         builder.Services
             .AddAuthentication(options =>
             {
-                /*options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;*/
+                options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
             })
             .AddJwtBearer(options =>
             {

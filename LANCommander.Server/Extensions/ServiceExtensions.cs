@@ -6,6 +6,7 @@ using Serilog;
 using Hangfire;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Interceptors;
+using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,7 @@ public static class ServiceExtensions
     {
         Log.Debug("Registering services");
         builder.Services.AddSingleton(new Client("", ""));
+        builder.Services.AddScoped<IdentityContextFactory>();
         builder.Services.AddScoped<SettingService>();
         builder.Services.AddScoped<ArchiveService>();
         builder.Services.AddScoped<StorageLocationService>();
@@ -43,6 +45,7 @@ public static class ServiceExtensions
         builder.Services.AddScoped<IssueService>();
         builder.Services.AddScoped<PageService>();
         builder.Services.AddScoped<UserService>();
+        builder.Services.AddScoped<RoleService>();
         builder.Services.AddScoped<UserCustomFieldService>();
         builder.Services.AddScoped<AuthenticationService>();
         builder.Services.AddScoped<SetupService>();

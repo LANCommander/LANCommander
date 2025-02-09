@@ -175,22 +175,37 @@ namespace LANCommander.Server.Services.Models
 
     public class LoggingProvider
     {
+        public string Name { get; set; }
         public LogLevel MinimumLevel { get; set; } = LogLevel.Information;
         public bool Enabled { get; set; } = true;
         public LoggingProviderType Type { get; set; } = LoggingProviderType.Console;
+        public LogInterval? ArchiveEvery { get; set; }
+        public int MaxArchiveFiles { get; set; } = 10;
         public string ConnectionString { get; set; } = "";
     }
 
     public class LogSettings
     {
-        public string StoragePath { get; set; } = "Logs";
-        public LogInterval ArchiveEvery { get; set; } = LogInterval.Day;
-        public int MaxArchiveFiles { get; set; } = 10;
         public bool IgnorePings { get; set; } = true;
         public IEnumerable<LoggingProvider> Providers { get; set; } = [
-            new() { MinimumLevel = LogLevel.Information, Type = LoggingProviderType.Console },
-            new() { MinimumLevel = LogLevel.Information, Type = LoggingProviderType.File, ConnectionString = "Logs" },
-            new() { MinimumLevel = LogLevel.Information, Type = LoggingProviderType.SignalR },
+            new()
+            {
+                Name = "Console",
+                MinimumLevel = LogLevel.Information, Type = LoggingProviderType.Console
+            },
+            new()
+            {
+                Name = "File",
+                MinimumLevel = LogLevel.Information,
+                Type = LoggingProviderType.File,
+                ConnectionString = "Logs"
+            },
+            new()
+            {
+                Name = "Server Console",
+                MinimumLevel = LogLevel.Information,
+                Type = LoggingProviderType.SignalR
+            },
         ];
     }
 }

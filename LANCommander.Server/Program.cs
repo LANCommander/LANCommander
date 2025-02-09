@@ -158,7 +158,6 @@ static void PrepareDirectories(WebApplication app)
     logger.LogDebug("Ensuring required directories exist");
 
     IEnumerable<string> directories = [
-        settings.Logs.StoragePath,
         settings.UserSaves.StoragePath,
         settings.Update.StoragePath,
         "Snippets",

@@ -55,8 +55,8 @@ public static class LoggerExtensions
                     
                     case LoggingProviderType.File:
                         config.WriteTo.File(
-                            Path.Combine(settings.Logs.StoragePath,"log-.txt"),
-                            rollingInterval: (RollingInterval)(int)settings.Logs.ArchiveEvery,
+                            Path.Combine(provider.ConnectionString,"log-.txt"),
+                            rollingInterval: (RollingInterval)(int)(provider.ArchiveEvery ?? LogInterval.Day),
                             restrictedToMinimumLevel: minimumLevel);
                         break;
                     

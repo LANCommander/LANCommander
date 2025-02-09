@@ -49,8 +49,9 @@ namespace LANCommander.Server.Services
         {
             await cache.ExpireGameCacheAsync(entity.Id);
 
-            foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
-                entity.Media.Remove(media);
+            if (entity.Media != null)
+                foreach (var media in entity.Media.Where(m => m.Id == Guid.Empty && String.IsNullOrWhiteSpace(m.Crc32)).ToList())
+                    entity.Media.Remove(media);
             
             var update = await base.UpdateAsync(entity, async context =>
             {
@@ -86,19 +87,16 @@ namespace LANCommander.Server.Services
                 g => g.Media)
                 .GetAsync(game.Id);
 
-            foreach (var archive in game.Archives.ToList())
-            {
-                await archiveService.DeleteAsync(archive);
-            }
+            if (game.Archives != null)
+                foreach (var archive in game.Archives.ToList())
+                    await archiveService.DeleteAsync(archive);
 
-            foreach (var media in game.Media.ToList())
-            {
-                await mediaService.DeleteAsync(media);
-            }
-
-            await base.DeleteAsync(game);
+            if (game.Media != null)
+                foreach (var media in game.Media.ToList())
+                    await mediaService.DeleteAsync(media);
 
             await cache.ExpireGameCacheAsync(game.Id);
+            await base.DeleteAsync(game);
         }
 
         public async Task<GameManifest> GetManifestAsync(Guid id)

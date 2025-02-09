@@ -31,6 +31,7 @@ namespace LANCommander.Server.Services
             IdentityContext = identityContextFactory.Create();
             CollectionService = collectionService;
             Mapper = mapper;
+            Cache = cache;
         }
 
         public async Task<User> GetAsync(string userName)

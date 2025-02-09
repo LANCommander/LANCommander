@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LANCommander.SDK.Services
@@ -182,6 +183,19 @@ namespace LANCommander.SDK.Services
                             handled = await ExternalScriptRunner.Invoke(script);
 
                         if (!handled)
+                        {
+                            using (var timeoutCancellationTokenSource = new CancellationTokenSource())
+                            {
+                                var task = script.ExecuteAsync<bool>();
+                                var completedTask = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), timeoutCancellationTokenSource.Token));
+                                if (completedTask == task) {
+                                    timeoutCancellationTokenSource.Cancel();
+                                    return await task;
+                                } else {
+                                    throw new TimeoutException("The operation has timed out.");
+                                }
+                            }
+                        }
                             result = await script.ExecuteAsync<bool>();
 
                         op.Complete();

@@ -1,5 +1,7 @@
-﻿@inject NavigationManager NavigationManager
-@inject RedistributableService RedistributableService
+﻿@inject RedistributableService RedistributableService
+@inject NavigationManager NavigationManager
+@inject MessageService MessageService
+@inject ILogger<RedistributableEditView> Logger
 
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">
@@ -71,9 +73,34 @@
 
     public async Task Save()
     {
-        if (_id != Guid.Empty)
-            await RedistributableService.UpdateAsync(Redistributable);
-        else
-            await RedistributableService.AddAsync(Redistributable);
+        try
+        {
+            if (_id != Guid.Empty)
+            {
+                await RedistributableService.UpdateAsync(Redistributable);
+
+                MessageService.Success("Redistributable updated!");
+            }
+            else
+            {
+                Redistributable = await RedistributableService.AddAsync(Redistributable);
+
+                NavigationManager.LocationChanged += NotifyRedistributableAdded;
+                NavigationManager.NavigateTo($"/Redistributables/{Redistributable.Id}");
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Redistributable could not be saved!");
+            MessageService.Error("Redistributable could not be saved!");
+        }
+    }
+    
+    private void NotifyRedistributableAdded(object? sender, LocationChangedEventArgs e)
+    {
+        NavigationManager.LocationChanged -= NotifyRedistributableAdded;
+
+        MessageService.Success("Redistributable added!");
     }
 }

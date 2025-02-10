@@ -62,19 +62,19 @@ jobs:
         id: check_diff
         shell: bash
         run: |
-          # We'll consider the last nightly tag for comparison.
-          # E.g. "1.2.3-nightly.20250126"
-          LAST_NIGHTLY_TAG="$(git tag --list --sort=-v:refname | grep -E 'nightly\.20[0-9]+' | head -n1)"
+          # Fetch the last nightly tag
+          LAST_NIGHTLY_TAG="$(git tag --list --sort=-v:refname | grep -E 'nightly\.20[0-9]+' | head -n1 || true)"
 
           if [ -z "$LAST_NIGHTLY_TAG" ]; then
-            # No prior nightly tag => we definitely have "changes"
             echo "No previous nightly tag found. Marking as changed."
             echo "::set-output name=changed::true"
             exit 0
           fi
 
           # Check for commits since that tag
-          COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline || true)
+          set +e  # Disable exit on error temporarily
+          COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline 2>/dev/null || true)
+          set -e  # Re-enable exit on error
 
           if [ -z "$COMMITS" ]; then
             echo "No commits since last nightly tag: $LAST_NIGHTLY_TAG"

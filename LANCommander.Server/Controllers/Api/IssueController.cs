@@ -33,17 +33,16 @@ namespace LANCommander.Server.Controllers.Api
             try
             {
                 var game = await GameService.GetAsync(issueRequest.GameId);
-                var user = await UserService.GetAsync(User?.Identity?.Name);
 
                 if (game != null)
                 {
                     var issue = new Issue()
                     {
-                        Game = game,
+                        GameId = game.Id,
                         Description = issueRequest.Description
                     };
 
-                    issue = await IssueService.AddAsync(issue);
+                    await IssueService.AddAsync(issue);
 
                     return true;
                 }

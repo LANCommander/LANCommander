@@ -253,7 +253,7 @@ jobs:
 
       # 3b) Re-upload them as a single artifact for convenience
       - name: Upload Combined Nightly Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "LANCommander-nightly-${{ needs.prep.outputs.version_tag }}"
           path: "./NightlyArtifacts"

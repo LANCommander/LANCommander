@@ -6,6 +6,10 @@ on:
     # Runs every day at 3AM CST
     # CST is UTC-6, so midnight CST = 09:00 UTC
     - cron: '0 9 * * *'
+    
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 permissions:
   contents: write

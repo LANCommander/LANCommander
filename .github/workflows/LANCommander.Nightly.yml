@@ -68,12 +68,14 @@ jobs:
 
           if [ -z "$LAST_NIGHTLY_TAG" ]; then
             # No prior nightly tag => we definitely have "changes"
+            echo "No previous nightly tag found. Marking as changed."
             echo "::set-output name=changed::true"
             exit 0
           fi
 
           # Check for commits since that tag
-          COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline)
+          COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline || true)
+
           if [ -z "$COMMITS" ]; then
             echo "No commits since last nightly tag: $LAST_NIGHTLY_TAG"
             echo "::set-output name=changed::false"

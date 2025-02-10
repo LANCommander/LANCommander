@@ -220,9 +220,11 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
+
+                var currentUser = await GetCurrentUserAsync(context);
                 
                 entity.CreatedOn = DateTime.UtcNow;
-                entity.CreatedBy = await GetCurrentUserAsync(context);
+                entity.CreatedById = currentUser.Id;
                 
                 context.Set<T>().Add(entity);
                 
@@ -273,6 +275,9 @@ namespace LANCommander.Server.Services
         protected async Task<T> UpdateAsync(T updatedEntity, Action<UpdateEntityContext<T>> additionalMapping = null)
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
+
+            if (updatedEntity.CreatedById != null && updatedEntity.CreatedBy == null)
+                updatedEntity.CreatedById = null;
             
             var existingEntity = await context.Set<T>().FirstOrDefaultAsync(e => e.Id == updatedEntity.Id);
             
@@ -285,8 +290,10 @@ namespace LANCommander.Server.Services
                 additionalMapping?.Invoke(updateContext);
             }
             
+            var currentUser = await GetCurrentUserAsync(context);
+            
             existingEntity.UpdatedOn = DateTime.UtcNow;
-            existingEntity.UpdatedBy = await GetCurrentUserAsync(context);
+            existingEntity.UpdatedById = currentUser.Id;
 
             await context.SaveChangesAsync();
             
@@ -323,7 +330,7 @@ namespace LANCommander.Server.Services
         }
         
         private static async Task<User?> GetUserAsync(string? username, DatabaseContext context) =>
-            await context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserName == username);
 
         protected void Reset()
         {

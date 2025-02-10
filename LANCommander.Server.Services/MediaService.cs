@@ -12,6 +12,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -21,8 +22,9 @@ namespace LANCommander.Server.Services
         ILogger<SDK.Services.MediaService> logger,
         IFusionCache cache,
         IMapper mapper,
+        IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, cache, mapper, contextFactory)
+        StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Media> UpdateAsync(Media entity)
         {

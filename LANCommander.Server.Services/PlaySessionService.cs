@@ -3,6 +3,7 @@ using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -12,9 +13,10 @@ namespace LANCommander.Server.Services
         ILogger<PlaySessionService> logger,
         IFusionCache cache,
         IMapper mapper,
+        IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ServerProcessService serverProcessService,
-        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, cache, mapper, contextFactory)
+        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<PlaySession> UpdateAsync(PlaySession entity)
         {

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Microsoft.AspNetCore.Http;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -15,6 +16,7 @@ namespace LANCommander.Server.Services
         ILogger logger,
         IFusionCache cache,
         IMapper mapper,
+        IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory) : BaseService(logger), IBaseDatabaseService<T> where T : class, IBaseModel
     {
         protected readonly List<Func<IQueryable<T>, IQueryable<T>>> _modifiers = new();
@@ -219,6 +221,9 @@ namespace LANCommander.Server.Services
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
                 
+                entity.CreatedOn = DateTime.UtcNow;
+                entity.CreatedBy = await GetCurrentUserAsync(context);
+                
                 context.Set<T>().Add(entity);
                 
                 await context.SaveChangesAsync();
@@ -271,7 +276,6 @@ namespace LANCommander.Server.Services
             
             var existingEntity = await context.Set<T>().FirstOrDefaultAsync(e => e.Id == updatedEntity.Id);
             
-            //context.Entry(existingEntity).CurrentValues.SetValues(entity);
             context.Entry(existingEntity).CurrentValues.SetValues(updatedEntity);
 
             if (additionalMapping != null)
@@ -280,6 +284,9 @@ namespace LANCommander.Server.Services
                 
                 additionalMapping?.Invoke(updateContext);
             }
+            
+            existingEntity.UpdatedOn = DateTime.UtcNow;
+            existingEntity.UpdatedBy = await GetCurrentUserAsync(context);
 
             await context.SaveChangesAsync();
             
@@ -303,6 +310,20 @@ namespace LANCommander.Server.Services
                 Reset();
             }
         }
+        
+        private async Task<User?> GetCurrentUserAsync(DatabaseContext context)
+        {
+            var httpContext = httpContextAccessor?.HttpContext;
+            if (httpContext != null && httpContext.User != null && httpContext.User.Identity != null && httpContext.User.Identity.IsAuthenticated)
+            {
+                return await GetUserAsync(httpContext.User.Identity?.Name, context);
+            }
+
+            return null;
+        }
+        
+        private static async Task<User?> GetUserAsync(string? username, DatabaseContext context) =>
+            await context.Users.FirstOrDefaultAsync(u => u.UserName == username);
 
         protected void Reset()
         {

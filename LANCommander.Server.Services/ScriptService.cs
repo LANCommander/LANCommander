@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using AutoMapper;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -14,7 +15,8 @@ namespace LANCommander.Server.Services
         ILogger<ScriptService> logger,
         IFusionCache cache,
         IMapper mapper,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, cache, mapper, contextFactory)
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Script> AddAsync(Script script)
         {

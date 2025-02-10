@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using LANCommander.Server.Services.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -15,10 +16,11 @@ namespace LANCommander.Server.Services
         ILogger<RoleService> logger,
         IFusionCache cache,
         IMapper mapper,
+        IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         CollectionService collectionService,
         IdentityContextFactory identityContextFactory,
-        RoleManager<Role> roleManager) : BaseDatabaseService<Role>(logger, cache, mapper, contextFactory)
+        RoleManager<Role> roleManager) : BaseDatabaseService<Role>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public const string AdministratorRoleName = "Administrator";
 

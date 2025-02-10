@@ -10,6 +10,7 @@ using LANCommander.Server.Services.Extensions;
 using YamlDotNet.Serialization;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using SharpCompress.Common;
@@ -21,8 +22,9 @@ namespace LANCommander.Server.Services
         ILogger<ArchiveService> logger,
         IFusionCache cache,
         IMapper mapper,
+        IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, cache, mapper, dbContextFactory)
+        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, cache, mapper, httpContextAccessor, dbContextFactory)
     {
         public async Task<Archive> GetLatestArchive(Expression<Func<Archive, bool>> predicate)
         {

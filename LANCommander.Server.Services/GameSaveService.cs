@@ -3,6 +3,7 @@ using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Server.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -13,7 +14,8 @@ namespace LANCommander.Server.Services
         ILogger<GameSaveService> logger,
         IFusionCache cache,
         IMapper mapper,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameSave>(logger, cache, mapper, contextFactory)
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameSave>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<GameSave> UpdateAsync(GameSave entity)
         {

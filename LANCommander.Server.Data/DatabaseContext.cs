@@ -12,8 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Data
 {
     public sealed class DatabaseContext(
-        DbContextOptions<DatabaseContext> options,
-        IServiceProvider serviceProvider) : IdentityDbContext<User, Role, Guid>(options)
+        DbContextOptions<DatabaseContext> options) : IdentityDbContext<User, Role, Guid>(options)
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static string ConnectionString = "";
@@ -37,9 +36,6 @@ namespace LANCommander.Server.Data
                     optionsBuilder.UseNpgsql(ConnectionString, options => options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL"));
                     break;
             }
-            
-            optionsBuilder.AddInterceptors(
-                serviceProvider.GetRequiredService<AuditingInterceptor>());
 
             base.OnConfiguring(optionsBuilder);
         }

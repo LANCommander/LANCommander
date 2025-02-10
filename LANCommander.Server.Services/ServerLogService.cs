@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net;
 using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -15,7 +16,8 @@ namespace LANCommander.Server.Services
         ILogger<ServerConsoleService> logger,
         IFusionCache cache,
         IMapper mapper,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerConsole>(logger, cache, mapper, contextFactory)
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<ServerConsole>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<ServerConsole> UpdateAsync(ServerConsole entity)
         {

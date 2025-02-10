@@ -13,6 +13,7 @@ using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using System.Data.SqlClient;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using SharpCompress.Common;
 
@@ -22,6 +23,7 @@ namespace LANCommander.Server.Services
         ILogger<GameService> logger,
         IFusionCache cache,
         IMapper mapper,
+        IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService,
         MediaService mediaService,
@@ -29,7 +31,7 @@ namespace LANCommander.Server.Services
         TagService tagService,
         CompanyService companyService,
         GenreService genreService,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Game>(logger, cache, mapper, contextFactory)
+        StorageLocationService storageLocationService) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
         {

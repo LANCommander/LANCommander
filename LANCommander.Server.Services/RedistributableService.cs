@@ -5,6 +5,7 @@ using LANCommander.SDK.Helpers;
 using System.IO.Compression;
 using AutoMapper;
 using LANCommander.SDK.Enums;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -15,8 +16,9 @@ namespace LANCommander.Server.Services
         ILogger<SDK.Services.RedistributableService> logger,
         IFusionCache cache,
         IMapper mapper,
+        IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        ArchiveService archiveService) : BaseDatabaseService<Redistributable>(logger, cache, mapper, contextFactory)
+        ArchiveService archiveService) : BaseDatabaseService<Redistributable>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Redistributable> UpdateAsync(Redistributable entity)
         {

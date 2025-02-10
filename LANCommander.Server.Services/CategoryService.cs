@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -11,7 +12,8 @@ namespace LANCommander.Server.Services
         ILogger<CategoryService> logger,
         IFusionCache cache,
         IMapper mapper,
-        IDbContextFactory<DatabaseContext> context) : BaseDatabaseService<Category>(logger, cache, mapper, context)
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<DatabaseContext> context) : BaseDatabaseService<Category>(logger, cache, mapper, httpContextAccessor, context)
     {
         public override async Task<Category> UpdateAsync(Category entity)
         {

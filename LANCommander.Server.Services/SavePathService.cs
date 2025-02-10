@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -11,7 +12,8 @@ namespace LANCommander.Server.Services
         ILogger<SavePathService> logger,
         IFusionCache cache,
         IMapper mapper,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<SavePath>(logger, cache, mapper, contextFactory)
+        IHttpContextAccessor httpContextAccessor,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<SavePath>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public async override Task<SavePath> UpdateAsync(SavePath entity)
         {

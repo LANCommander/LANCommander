@@ -33,6 +33,7 @@ namespace LANCommander.Server.Controllers
                 .Include(g => g.BaseGame)
                 .Include(g => g.Categories)
                 .Include(g => g.Collections)
+                .Include(g => g.CustomFields)
                 .Include(g => g.DependentGames)
                 .Include(g => g.Developers)
                 .Include(g => g.Engine)
@@ -42,6 +43,7 @@ namespace LANCommander.Server.Controllers
                 .Include(g => g.Platforms)
                 .Include(g => g.Publishers)
                 .Include(g => g.Redistributables)
+                .Include(g => g.Scripts)
                 .Include(g => g.Tags)
                 .GetAsync(id);
 
@@ -78,12 +80,16 @@ namespace LANCommander.Server.Controllers
                 foreach (var media in game.Media)
                 {
                     var mediaFilePath = await MediaService.GetMediaPathAsync(media.Id);
-                    var entry = export.CreateEntry($"Media/{media.FileId}", CompressionLevel.NoCompression);
 
-                    using (var entryStream = entry.Open())
-                    using (var fileStream = System.IO.File.OpenRead(mediaFilePath))
+                    if (System.IO.File.Exists(mediaFilePath))
                     {
-                        await fileStream.CopyToAsync(entryStream);
+                        var entry = export.CreateEntry($"Media/{media.FileId}", CompressionLevel.NoCompression);
+
+                        using (var entryStream = entry.Open())
+                        using (var fileStream = System.IO.File.OpenRead(mediaFilePath))
+                        {
+                            await fileStream.CopyToAsync(entryStream);
+                        }
                     }
                 }
 
@@ -91,12 +97,16 @@ namespace LANCommander.Server.Controllers
                 foreach (var archive in game.Archives)
                 {
                     var archiveFilePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
-                    var entry = export.CreateEntry($"Archives/{archive.ObjectKey}", CompressionLevel.NoCompression);
 
-                    using (var entryStream = entry.Open())
-                    using (var fileStream = System.IO.File.OpenRead(archiveFilePath))
+                    if (System.IO.File.Exists(archiveFilePath))
                     {
-                        await fileStream.CopyToAsync(entryStream);
+                        var entry = export.CreateEntry($"Archives/{archive.ObjectKey}", CompressionLevel.NoCompression);
+
+                        using (var entryStream = entry.Open())
+                        using (var fileStream = System.IO.File.OpenRead(archiveFilePath))
+                        {
+                            await fileStream.CopyToAsync(entryStream);
+                        }
                     }
                 }
 

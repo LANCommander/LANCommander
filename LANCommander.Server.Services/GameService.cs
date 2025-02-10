@@ -242,7 +242,30 @@ namespace LANCommander.Server.Services
 
         public async Task<GameManifest> ExportAsync(Guid id)
         {
-            var game = await GetAsync(id);
+            var game = await Query(q =>
+            {
+                return q
+                    .AsNoTracking()
+                    .AsSplitQuery()
+                    .Include(g => g.Actions)
+                    .Include(g => g.Archives)
+                    .Include(g => g.BaseGame)
+                    .Include(g => g.Categories)
+                    .Include(g => g.Collections)
+                    .Include(g => g.CustomFields)
+                    .Include(g => g.DependentGames)
+                    .Include(g => g.Developers)
+                    .Include(g => g.Engine)
+                    .Include(g => g.Genres)
+                    .Include(g => g.Media)
+                    .Include(g => g.MultiplayerModes)
+                    .Include(g => g.Platforms)
+                    .Include(g => g.Publishers)
+                    .Include(g => g.Redistributables)
+                    .Include(g => g.Scripts)
+                    .Include(g => g.Tags);
+            }).GetAsync(id);
+            
             var manifest = await GetManifestAsync(id);
 
             if (game.Media != null && game.Media.Count > 0)

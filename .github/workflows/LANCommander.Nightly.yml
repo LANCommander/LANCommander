@@ -91,158 +91,122 @@ jobs:
   build_server_linux_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Server Linux ARM64
-        uses: ./.github/workflows/LANCommander.Server.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: linux-arm64
-          build_arch: arm64
-          build_platform: Linux
+    uses: .github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
 
   build_server_linux_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Server Linux x64
-        uses: ./.github/workflows/LANCommander.Server.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: linux-x64
-          build_arch: x64
-          build_platform: Linux
+    uses: .github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
 
   build_server_osx_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Server macOS ARM64
-        uses: ./.github/workflows/LANCommander.Server.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: osx-arm64
-          build_arch: arm64
-          build_platform: macOS
+    uses: .github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
 
   build_server_osx_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Server macOS x64
-        uses: ./.github/workflows/LANCommander.Server.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: osx-x64
-          build_arch: x64
-          build_platform: macOS
+    uses: .github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
 
   build_server_win_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Server Windows ARM64
-        uses: ./.github/workflows/LANCommander.Server.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: win-arm64
-          build_arch: arm64
-          build_platform: Windows
+    uses: .github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
 
   build_server_win_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Server Windows x64
-        uses: ./.github/workflows/LANCommander.Server.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: win-x64
-          build_arch: x64
-          build_platform: Windows
+    uses: .github/workflows/LANCommander.Server.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
 
   build_launcher_linux_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Launcher Linux ARM64
-        uses: ./.github/workflows/LANCommander.Launcher.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: linux-arm64
-          build_arch: arm64
-          build_platform: Linux
+    uses: .github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
 
   build_launcher_linux_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Launcher Linux x64
-        uses: ./.github/workflows/LANCommander.Launcher.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: linux-x64
-          build_arch: x64
-          build_platform: Linux
+    uses: .github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
 
   build_launcher_osx_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Launcher macOS ARM64
-        uses: ./.github/workflows/LANCommander.Launcher.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: osx-arm64
-          build_arch: arm64
-          build_platform: macOS
+    uses: .github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
 
   build_launcher_osx_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Launcher macOS x64
-        uses: ./.github/workflows/LANCommander.Launcher.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: osx-x64
-          build_arch: x64
-          build_platform: macOS
+    uses: .github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
 
   build_launcher_win_arm64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Launcher Windows ARM64
-        uses: ./.github/workflows/LANCommander.Launcher.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: win-arm64
-          build_arch: arm64
-          build_platform: Windows
+    uses: .github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
 
   build_launcher_win_x64:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    runs-on: [self-hosted, Linux Server]
-    steps:
-      - name: Build Launcher Windows x64
-        uses: ./.github/workflows/LANCommander.Launcher.yml
-        with:
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: win-x64
-          build_arch: x64
-          build_platform: Windows
+    uses: .github/workflows/LANCommander.Launcher.yml
+    with:
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
 
   # --------------------------------------------------------------------------
   # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:nightly

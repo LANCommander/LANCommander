@@ -1,14 +1,11 @@
 ﻿using LANCommander.SDK;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services;
 using Serilog;
 using Hangfire;
 using LANCommander.Server.Data;
-using LANCommander.Server.Data.Interceptors;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server;
 
@@ -93,8 +90,6 @@ public static class ServiceExtensions
 
     public static void AddDatabase(this WebApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<AuditingInterceptor>();
-        
         builder.Services.AddDbContextFactory<DatabaseContext>();
         builder.Services.AddDbContext<DatabaseContext>();
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();

@@ -100,10 +100,15 @@
                                 @baseGame.Title
                             </ItemTemplate>
                         </Select>
-                        
-                        <Button OnClick="@(() => NavigationManager.NavigateTo($"/Games/{context.BaseGameId}"))" Disabled="@(context.BaseGameId == null || context.BaseGameId == Guid.Empty)">
-                            Edit
-                        </Button>
+
+                        @if (context.BaseGameId == null || context.BaseGameId == Guid.Empty)
+                        {
+                            <Button Type="ButtonType.Primary" Disabled>Edit</Button>
+                        }
+                        else
+                        {
+                            <a href="@($"/Games/{context.BaseGameId}")" class="ant-btn ant-btn-primary" target="_blank">Edit</a>
+                        }
                     </Flex>
                 </FormItem>
             }
@@ -176,13 +181,15 @@
 
     private async Task LoadData()
     {
-        Engines = await EngineService.GetAsync();
-        Companies = await CompanyService.GetAsync();
-        Genres = await GenreService.GetAsync();
-        Platforms = await PlatformService.GetAsync();
-        Tags = await TagService.GetAsync();
-        Collections = await CollectionService.GetAsync();
-        Games = await GameService.GetAsync(g => g.Type == GameType.MainGame);
+        Engines = await EngineService.SortBy(g => g.Name).GetAsync();
+        Companies = await CompanyService.SortBy(g => g.Name).GetAsync();
+        Genres = await GenreService.SortBy(g => g.Name).GetAsync();
+        Platforms = await PlatformService.SortBy(g => g.Name).GetAsync();
+        Tags = await TagService.SortBy(g => g.Name).GetAsync();
+        Collections = await CollectionService.SortBy(g => g.Name).GetAsync();
+        Games = (await GameService
+            .Include(g => g.Media.Where(m => m.Type == MediaType.Icon))
+            .GetAsync(g => g.Type == GameType.MainGame)).OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
         Redistributables = (await RedistributableService.GetAsync()).OrderByTitle(r => r.Name);
 
         Loaded = true;

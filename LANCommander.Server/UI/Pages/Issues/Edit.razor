@@ -43,9 +43,6 @@
             }
 
             <Form Model="@Issue" Layout="@FormLayout.Vertical">
-                <FormItem Label="Description">
-                    <TextArea @bind-Value="@context.Description" ShowCount MinRows="30" Disabled="context?.ResolvedOn != null" />
-                </FormItem>
                 <FormItem Label="Game">
                     <GridRow Wrap="false" Gutter="16">
                         <GridCol Flex=@("auto")>
@@ -77,6 +74,9 @@
                         </GridCol>
                     </GridRow>
                 </FormItem>
+                <FormItem Label="Description">
+                    <TextArea @bind-Value="@context.Description" ShowCount MinRows="30" Disabled="context?.ResolvedOn != null" />
+                </FormItem>
             </Form>
         </div>
     </Content>
@@ -90,6 +90,11 @@
     IEnumerable<Game> Games = new List<Game>();
 
     protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
     {
         if (Id == Guid.Empty)
             Issue = new Issue();
@@ -113,7 +118,7 @@
             {
                 Issue = await IssueService.UpdateAsync(Issue);
 
-                await MessageService.Success("Game updated!");
+                MessageService.Success("Issue updated!");
             }
             else
             {
@@ -136,8 +141,12 @@
         try
         {
             await IssueService.ResolveAsync(Issue.Id);
+
+            Issue = await IssueService.GetAsync(Issue.Id);
                 
             MessageService.Success("Issue resolved!");
+
+            await LoadData();
         }
         catch (Exception ex)
         {

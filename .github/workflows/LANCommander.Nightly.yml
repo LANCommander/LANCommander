@@ -232,6 +232,7 @@ jobs:
   # --------------------------------------------------------------------------
   finalize_nightly:
     needs: 
+      - prep
       - build_server_linux_arm64
       - build_server_linux_x64
       - build_server_osx_arm64

@@ -35,7 +35,7 @@ jobs:
           # Fetch all tags
           git fetch --tags
 
-          # Grab the last semver-ish tag (e.g., "v1.2.3" or "1.2.3").
+          # Grab the last semver-ish tag (e.g., "v1.2.3", "v1.2.3-debug", or "1.2.3-nightly")
           LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
 
           if [ -z "$LAST_SEMVER_TAG" ]; then
@@ -43,16 +43,18 @@ jobs:
             LAST_SEMVER_TAG="0.0.0"
           fi
 
-          # Strip leading 'v'
-          CLEAN_TAG="${LAST_SEMVER_TAG#v}"
+          # Remove prefix 'v' and any suffix like "-debug", "-nightly", etc.
+          CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
 
-          # Build a nightly version string, e.g. "1.2.3-nightly.20250127"
+          # Build a nightly version string, e.g., "1.2.3-nightly.20250127"
           DATE=$(date +'%Y%m%d')
           FINAL_VERSION="${CLEAN_TAG}-nightly.${DATE}"
 
           echo "Last semver tag: $LAST_SEMVER_TAG"
+          echo "Clean semver tag: $CLEAN_TAG"
           echo "Nightly version: $FINAL_VERSION"
 
+          # Set output variables for GitHub Actions
           echo "VERSION_TAG=$FINAL_VERSION" >> $GITHUB_ENV
           echo "::set-output name=VERSION_TAG::$FINAL_VERSION"
 

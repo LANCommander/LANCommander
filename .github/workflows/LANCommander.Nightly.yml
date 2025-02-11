@@ -6,6 +6,10 @@ on:
     # Runs every day at 3AM CST
     # CST is UTC-6, so midnight CST = 09:00 UTC
     - cron: '0 9 * * *'
+    
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 permissions:
   contents: write
@@ -228,6 +232,7 @@ jobs:
   # --------------------------------------------------------------------------
   finalize_nightly:
     needs: 
+      - prep
       - build_server_linux_arm64
       - build_server_linux_x64
       - build_server_osx_arm64
@@ -256,7 +261,7 @@ jobs:
 
       - name: Extract metadata for Docker
         id: meta
-        uses: docker-metadata-action@v5
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 

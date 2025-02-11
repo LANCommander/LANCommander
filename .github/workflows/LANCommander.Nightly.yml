@@ -33,7 +33,7 @@ jobs:
           # Ensure we get all tags so we can find the latest
           fetch-depth: 0
           
-      - name Lowercase Image Name
+      - name: Lowercase Image Name
         run: |
           echo "IMAGE_NAME=`echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'`" >>${GITHUB_ENV}
 

@@ -265,27 +265,17 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
-      - name: Download Server x64 Artifact
+      - name: Download Server x64 Artifacts
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-          path: ./artifacts/linux-x64.zip
+          path: ./Docker/build/linux-x64
 
-      - name: Download and extract artifact (Linux x64)
-        run: |
-          mkdir -p ./Docker/build/linux-x64
-          unzip ./artifacts/linux-x64.zip -d ./Docker/build/linux-x64
-
-      - name: Download Server arm64 Artifact
+      - name: Download Server arm64 Artifacts
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
-          path: ./Docker/build/linux-arm64.zip
-
-      - name: Download and extract artifact (Linux arm64)
-        run: |
-          mkdir -p ./Docker/build/linux-arm64
-          unzip ./artifacts/linux-arm64.zip -d ./Docker/build/linux-arm64
+          path: ./Docker/build/linux-arm64
 
       - name: Build and push Docker image
         id: push

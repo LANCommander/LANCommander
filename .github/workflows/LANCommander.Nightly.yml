@@ -277,6 +277,10 @@ jobs:
           name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: ./Docker/build/linux-arm64
 
+      - uses: docker/setup-buildx-action@v1
+        with:
+          use: linux/amd64,linux/arm64
+
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@v6

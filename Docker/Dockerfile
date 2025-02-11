@@ -10,7 +10,7 @@ LABEL maintainer="bashNinja, pathartl"
 
 # copy local files
 COPY root/ /
-COPY ./build/${TARGETARCH} /app/LANCommander
+COPY ./build/linux-x64 /app/LANCommander
 
 # install app
 RUN \

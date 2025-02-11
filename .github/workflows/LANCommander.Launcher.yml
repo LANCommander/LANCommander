@@ -101,16 +101,8 @@ jobs:
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/Libraries/locales
 
-    # Create ZIP file
-    - name: Package Launcher Build
-      uses: vimtor/action-zip@v1.2
-      with:
-        files: LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
-        recursive: true
-        dest: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
-
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        path: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        path: LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
         name: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

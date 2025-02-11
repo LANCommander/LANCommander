@@ -97,19 +97,8 @@ jobs:
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/Libraries/locales
 
-    - name: Verify Files After Deletion
-      run: ls -Recurse LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
-
-    # Create final ZIP file
-    - name: Package Build
-      uses: vimtor/action-zip@v1.2
-      with:
-        files: LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
-        recursive: true
-        dest: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
-
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        path: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        path: LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
         name: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

@@ -280,7 +280,7 @@ jobs:
       - name: Setup buildx
         uses: docker/setup-buildx-action@v1
         with:
-          use: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64
 
       - name: Build and push Docker image
         id: push

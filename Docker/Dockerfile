@@ -6,13 +6,11 @@ FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy
 ARG BUILD_DATE
 ARG VERSION
 LABEL build_version="LANCommander version:- ${VERSION} Build-date:- ${BUILD_DATE}, container based on github.com/LinuxServer/baseimage-ubuntu"
-LABEL maintainer="bashNinja"
+LABEL maintainer="bashNinja, pathartl"
 
 # copy local files
 COPY root/ /
-
-# grab app
-ADD "https://github.com/LANCommander/LANCommander/releases/download/${VERSION}/LANCommander.Server-Linux-x64-${VERSION}.zip" "/tmp"
+COPY ./build/${TARGETARCH} /app/LANCommander
 
 # install app
 RUN \
@@ -25,7 +23,6 @@ RUN \
       unzip \
       python3 && \
   echo "**** setup lancommander ****" && \
-    unzip "/tmp/LANCommander.Server-Linux-x64-${VERSION}.zip" -d /app/LANCommander && \
     chmod +x /app/LANCommander/LANCommander.Server && \
     ls -alh /app/LANCommander && \
   echo "**** setup symlinks ****" && \

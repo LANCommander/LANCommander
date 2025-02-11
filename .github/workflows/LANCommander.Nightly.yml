@@ -260,22 +260,47 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      - name: Download Server x64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-${{ needs.prep.outputs.version_tag }}.zip
+          path: ./artifacts/linux-x64.zip
+
+      - name: Download and extract artifact (Linux x64)
+        run: |
+          mkdir -p ./Docker/build/linux-x64
+          unzip ./artifacts/linux-arm64.zip -d ./Docker/build/linux-x64
+
+      - name: Download Server arm64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-arm64-${{ needs.prep.outputs.version_tag }}.zip
+          path: ./Docker/build/linux-arm64.zip
+
+      - name: Download and extract artifact (Linux arm64)
+        run: |
+          mkdir -p ./Docker/build/linux-arm64
+          unzip ./artifacts/linux-arm64.zip -d ./Docker/build/linux-arm64
+
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./Docker
+          file: ./Docker/Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             lancommander/lancommander:nightly
-            lancommander/lancommander:${{ needs.prep.outputs.version_semver }}
             lancommander/lancommander:${{ needs.prep.outputs.version_tag }}
           labels: |
-            org.opencontainers.image.title=LANCommander
-            org.opencontainers.image.description="LANCommander nightly build"
+            org.opencontainers.image.title=LANCommander Server
+            org.opencontainers.image.description="LANCommander Server Nightly Build"
             org.opencontainers.image.version=${{ needs.prep.outputs.version_semver }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.created_at }}
+          build-args: |
+            VERSION=${{ needs.prep.outputs.version_tag }}
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2

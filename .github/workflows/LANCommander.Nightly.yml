@@ -291,8 +291,8 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: |
-            lancommander/lancommander:nightly
-            lancommander/lancommander:${{ needs.prep.outputs.version_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:nightly
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}
           labels: |
             org.opencontainers.image.title=LANCommander Server
             org.opencontainers.image.description="LANCommander Server Nightly Build"

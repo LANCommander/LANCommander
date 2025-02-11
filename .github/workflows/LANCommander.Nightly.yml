@@ -32,6 +32,10 @@ jobs:
         with:
           # Ensure we get all tags so we can find the latest
           fetch-depth: 0
+          
+      - name Lowercase Image Name
+        run: |
+          echo "IMAGE_NAME=`echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]'`" >>${GITHUB_ENV}
 
       - name: Determine last semver and build nightly version
         id: set_version

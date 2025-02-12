@@ -9,7 +9,7 @@ on:
     
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: lancommander/lancommander
 
 permissions:
   contents: write
@@ -32,11 +32,6 @@ jobs:
         with:
           # Ensure we get all tags so we can find the latest
           fetch-depth: 0
-          
-      - name: Set lowercase IMAGE_NAME
-        run: |
-          IMAGE_NAME=$(echo "${{ github.repository }}" | awk '{print tolower($0)}')
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
       - name: Determine last semver and build nightly version
         id: set_version

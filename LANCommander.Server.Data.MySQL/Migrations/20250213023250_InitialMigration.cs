@@ -1245,7 +1245,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         column: x => x.StorageLocationId,
                         principalTable: "StorageLocations",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Media_Users_CreatedById",
                         column: x => x.CreatedById,

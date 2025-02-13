@@ -20,8 +20,8 @@
     <PackageReference Include="Crc32.NET" Version="1.2.0" />
     <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.5.0" />
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.0" />
+    <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.7" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.7" />
     <PackageReference Include="PeanutButter.INI" Version="3.0.339" />
     <PackageReference Include="RestSharp" Version="112.1.0" />
     <PackageReference Include="Semver" Version="3.0.0" />

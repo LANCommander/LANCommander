@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Server.Data.MySQL.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250203083220_InitialMigration")]
+    [Migration("20250213023250_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "9.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -806,8 +806,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("longtext");
 
-                    b.Property<Guid?>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasColumnType("char(36)");
 
                     b.Property<int>("MaxPlayers")
@@ -1263,8 +1262,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<int?>("Port")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("ServerId")
-                        .IsRequired()
+                    b.Property<Guid>("ServerId")
                         .HasColumnType("char(36)");
 
                     b.Property<Guid?>("ServerId1")
@@ -1524,8 +1522,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<DateTime>("UpdatedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid?>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Value")
@@ -2201,7 +2198,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
                         .WithMany("Media")
                         .HasForeignKey("StorageLocationId")
-                        .OnDelete(DeleteBehavior.SetNull)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("LANCommander.Server.Data.Models.Media", "Thumbnail")

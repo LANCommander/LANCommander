@@ -220,7 +220,7 @@ namespace LANCommander.Server.Data
                 .HasOne(m => m.StorageLocation)
                 .WithMany(l => l.Media)
                 .IsRequired(true)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Media>()
                 .Navigation(m => m.StorageLocation)

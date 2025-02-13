@@ -8,6 +8,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using AutoMapper;
+using LANCommander.Server.Services.Models;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -20,25 +21,65 @@ namespace LANCommander.Server.Services
     {
         private GitHubClient _gitHub;
 
+        private const string _owner = "LANCommander";
+        private const string _repository = "LANCommander";
+
         public override void Initialize()
         {
-            _gitHub = new GitHubClient(new ProductHeaderValue("LANCommander"));
+            _gitHub = new GitHubClient(new ProductHeaderValue(_repository));
         }
 
         public static SemVersion GetCurrentVersion()
         {
-            return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
+            var productVersion = FileVersionInfo.GetVersionInfo(Assembly.GetEntryAssembly().Location).ProductVersion;
+            
+            return SemVersion.Parse(productVersion);
         }
-
         public async Task<SemVersion> GetLatestVersionAsync()
         {
-            var release = await _gitHub.Repository.Release.GetLatest("LANCommander", "LANCommander");
+            string version = "";
+            
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Stable)
+            {
+                var release = await _gitHub.Repository.Release.GetLatest(_owner, _repository);
 
-            SemVersion version = null;
+                if (release.Prerelease)
+                {
+                    release = (await _gitHub.Repository.Release.GetAll(_owner, _repository))
+                        .Where(r => !r.Prerelease)
+                        .OrderByDescending(r => r.CreatedAt)
+                        .FirstOrDefault();
+                }
 
-            SemVersion.TryParse(release.TagName.TrimStart('v'), SemVersionStyles.Strict, out version);
+                version = release.TagName;
+            }
 
-            return version;
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Prerelease)
+            {
+                var release = await _gitHub.Repository.Release.GetLatest(_owner, _repository);
+                
+                version = release.TagName;
+            }
+            
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Nightly)
+            {
+                var workflow = await _gitHub.Actions.Workflows.Get(_owner, _repository, "LANCommander.Nightly.yml");
+                var runs = await _gitHub.Actions.Workflows.Runs.ListByWorkflow(_owner, _repository, workflow.Id);
+                
+                var latestRun = runs.WorkflowRuns
+                    .Where(r => r.Conclusion == WorkflowRunConclusion.Success)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .FirstOrDefault();
+                
+                var artifacts = await _gitHub.Actions.Artifacts.ListWorkflowArtifacts(_owner, _repository, latestRun.Id);
+
+                var versionArtifact = artifacts.Artifacts.FirstOrDefault(a => a.Name.StartsWith("version."));
+
+                if (versionArtifact != null)
+                    version = versionArtifact.Name.Substring(0, versionArtifact.Name.Length - "version.".Length);
+            }
+
+            return SemVersion.Parse(version, SemVersionStyles.AllowV);
         }
 
         public async Task<bool> UpdateAvailableAsync()
@@ -52,7 +93,7 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<Release>> GetReleasesAsync(int count)
         {
-            return await _gitHub.Repository.Release.GetAll("LANCommander", "LANCommander", new ApiOptions
+            return await _gitHub.Repository.Release.GetAll(_owner, _repository, new ApiOptions
             {
                 PageSize = count,
                 PageCount = 1,

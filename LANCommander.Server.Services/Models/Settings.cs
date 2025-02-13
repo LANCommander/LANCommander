@@ -37,6 +37,13 @@ namespace LANCommander.Server.Services.Models
         ElasticSearch,
     }
 
+    public enum ReleaseChannel
+    {
+        Stable,
+        Prerelease,
+        Nightly,
+    }
+
     public class Settings
     {
         public int Port { get; set; } = 1337;
@@ -165,6 +172,7 @@ namespace LANCommander.Server.Services.Models
     public class UpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
+        public ReleaseChannel ReleaseChannel { get; set; } = ReleaseChannel.Stable;
     }
 
     public class LauncherSettings

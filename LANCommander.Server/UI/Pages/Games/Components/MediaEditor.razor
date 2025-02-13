@@ -190,8 +190,6 @@
                 MediaService.DeleteLocalMediaFile(media);
 
                 media = await MediaService.DownloadMediaAsync(result.SourceUrl, media);
-
-                await MediaService.UpdateAsync(media);
             }
 
             Values = await MediaService.GetAsync(m => m.GameId == media.GameId);

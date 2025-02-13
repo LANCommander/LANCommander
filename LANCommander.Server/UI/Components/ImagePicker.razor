@@ -6,7 +6,7 @@
 
             <div class="image-picker-image" style="width: @(Size)px; max-height: @(Size)px">
                 <input type="radio" id="image-picker-image-@id" checked="@(Value == image.Key)" name="SelectedResult" @onchange="@(() => SelectionChanged(image.Key))" />
-                <label for="image-picker-image-@id"></label>
+                <label for="image-picker-image-@id" @ondblclick="@(() => Pick(image.Key))"></label>
                 <img src="@image.Value" />
             </div>
         }
@@ -17,6 +17,7 @@
     [Parameter] public double Size { get; set; }
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback<string> OnPicked { get; set; }
     [Parameter] public Dictionary<string, string> Images { get; set; }
 
     async Task SelectionChanged(string key)
@@ -25,5 +26,13 @@
 
         if (ValueChanged.HasDelegate)
             await ValueChanged.InvokeAsync(key);
+    }
+
+    async Task Pick(string key)
+    {
+        Value = key;
+
+        if (OnPicked.HasDelegate)
+            await OnPicked.InvokeAsync(key);
     }
 }

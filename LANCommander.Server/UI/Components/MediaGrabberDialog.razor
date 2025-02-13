@@ -20,7 +20,7 @@
         <div class="media-grabber-group">
             <h2>@group.First().Group</h2>
 
-            <ImagePicker Size="Size" Images="@group.DistinctBy(g => g.Id).ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" />
+            <ImagePicker Size="Size" Images="@group.DistinctBy(g => g.Id).ToDictionary(r => r.Id, r => r.ThumbnailUrl)" ValueChanged="OnImageSelected" OnPicked="OnImagePicked" />
         </div>
     }
 
@@ -79,8 +79,17 @@
         Media = Results.SelectMany(g => g).FirstOrDefault(r => r.Id == key);
     }
 
+    private async Task OnImagePicked(string key)
+    {
+        OnImageSelected(key);
+
+        await base.OkCancelRefWithResult!.OnOk(Media);
+        await CloseFeedbackAsync();
+    }
+
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
         await base.OkCancelRefWithResult!.OnOk(Media);
+        await CloseFeedbackAsync();
     }
 }

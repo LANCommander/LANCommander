@@ -10,6 +10,7 @@ using LANCommander.SDK.Enums;
 using Serilog;
 using LANCommander.Server;
 using LANCommander.Server.Data.Enums;
+using LANCommander.Server.Data.Models;
 using LANCommander.Server.Jobs.Background;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
@@ -199,6 +200,29 @@ static async Task EnsureDatabase(WebApplication app)
             }
             
             await db.Database.MigrateAsync();
+            
+            var storageLocationService = scope.ServiceProvider.GetRequiredService<StorageLocationService>();
+
+            await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Archive && l.Default, new StorageLocation
+            {
+                Path = "Uploads",
+                Type = StorageLocationType.Archive,
+                Default = true,
+            });
+            
+            await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Media && l.Default, new StorageLocation
+            {
+                Path = "Media",
+                Type = StorageLocationType.Media,
+                Default = true,
+            });
+            
+            await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Save && l.Default, new StorageLocation
+            {
+                Path = "Saves",
+                Type = StorageLocationType.Save,
+                Default = true,
+            });
         }
         else
             logger.LogDebug("No pending migrations are available. Skipping database migration.");

@@ -1,4 +1,5 @@
 ﻿@page "/Settings/Media"
+@using LANCommander.SDK.Enums
 @inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<Media> Logger
@@ -35,11 +36,23 @@
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-    StorageLocation StorageLocation;
+    StorageLocation StorageLocation = new();
 
     protected override async Task OnInitializedAsync()
     {
         StorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == SDK.Enums.StorageLocationType.Media);
+
+        if (StorageLocation == null)
+        {
+            StorageLocation = new StorageLocation
+            {
+                Default = true,
+                Path = "Media",
+                Type = StorageLocationType.Media
+            };
+
+            StorageLocation = await StorageLocationService.AddAsync(StorageLocation);
+        }
     }
 
     void Save()

@@ -1,4 +1,5 @@
 ﻿@page "/FirstTimeSetup/Paths"
+@using LANCommander.SDK.Enums
 @layout FirstTimeSetupLayout
 @inject StorageLocationService StorageLocationService
 @inject NavigationManager NavigationManager
@@ -16,7 +17,7 @@
 
     <FormItem>
         <Flex Vertical Gap="FlexGap.Middle">
-            <Table TItem="Data.Models.StorageLocation" DataSource="@ArchiveStorageLocations" HidePagination="true" Responsive Context="storageLocation" Size="TableSize.Small">
+            <Table TItem="StorageLocation" DataSource="@ArchiveStorageLocations" HidePagination="true" Responsive Context="storageLocation" Size="TableSize.Small">
                 <PropertyColumn Property="l => l.Path">
                     <FilePicker @bind-Value="storageLocation.Path" AllowDirectories="true" Title="Select Storage Location" Root="@RootPath" OnSelected="(path) => OnPathSelected(storageLocation, path)"/>
                 </PropertyColumn>
@@ -69,8 +70,20 @@
     [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
 
     ICollection<StorageLocation> ArchiveStorageLocations = new List<StorageLocation>();
-    StorageLocation MediaStorageLocation = new StorageLocation();
-    StorageLocation SavesStorageLocation = new StorageLocation();
+    
+    StorageLocation MediaStorageLocation = new()
+    {
+        Path = "Media",
+        Type = StorageLocationType.Media,
+        Default = true,
+    };
+    
+    StorageLocation SavesStorageLocation = new()
+    {
+        Path = "Saves",
+        Type = StorageLocationType.Save,
+        Default = true,
+    };
 
     bool Loading = false;
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -93,7 +106,7 @@
                 ArchiveStorageLocations.Add(new StorageLocation
                 {
                     Path = "Uploads",
-                    Type = SDK.Enums.StorageLocationType.Archive,
+                    Type = StorageLocationType.Archive,
                     Default = true,
                 });
         }
@@ -110,7 +123,8 @@
             SavesStorageLocation = new StorageLocation
             {
                 Path = "Saves",
-                Type = SDK.Enums.StorageLocationType.Save
+                Type = StorageLocationType.Save,
+                Default = true,
             };
         }
 
@@ -125,7 +139,8 @@
             MediaStorageLocation = new StorageLocation
             {
                 Path = "Media",
-                Type = SDK.Enums.StorageLocationType.Media
+                Type = StorageLocationType.Media,
+                Default = true,
             };
         }
     }

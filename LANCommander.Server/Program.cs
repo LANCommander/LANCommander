@@ -207,27 +207,30 @@ static async Task EnsureDatabase(WebApplication app)
 
 static async Task InitializeServerProcesses(WebApplication app)
 {
-    // Autostart any server processes
-    using var scope = app.Services.CreateScope();
-    var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
-    var serverProcessService = scope.ServiceProvider.GetRequiredService<ServerProcessService>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    logger.LogDebug("Autostarting Servers");
-
-    foreach (var server in await serverService.GetAsync(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
+    if (DatabaseContext.Provider != DatabaseProvider.Unknown)
     {
-        try
-        {
-            logger.LogDebug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
+        // Autostart any server processes
+        using var scope = app.Services.CreateScope();
+        var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+        var serverProcessService = scope.ServiceProvider.GetRequiredService<ServerProcessService>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogDebug("Autostarting Servers");
 
-            if (server.AutostartDelay > 0)
-                await Task.Delay(server.AutostartDelay);
-
-            await serverProcessService.StartServerAsync(server.Id);
-        }
-        catch (Exception ex)
+        foreach (var server in await serverService.GetAsync(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
         {
-            logger.LogError(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
+            try
+            {
+                logger.LogDebug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
+
+                if (server.AutostartDelay > 0)
+                    await Task.Delay(server.AutostartDelay);
+
+                await serverProcessService.StartServerAsync(server.Id);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
+            }
         }
     }
 }

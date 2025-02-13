@@ -311,3 +311,12 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+      - name: Save version to artifact
+        run: echo "${{ needs.prep.outputs.version_tag }}" > version.txt
+
+      - name: Upload version artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: version.${{ needs.prep.outputs.version_tag }}
+          path: version.txt

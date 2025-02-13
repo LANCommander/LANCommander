@@ -115,10 +115,10 @@ namespace LANCommander.Server.Services
                 {
                     foreach (var manifestConsole in manifest.ServerConsoles.Where(mc => !server.ServerConsoles.Any(c => c.Id != mc.Id)))
                     {
-                        server.ServerConsoles.Add(new ServerConsole()
+                        server.ServerConsoles.Add(new ServerConsole
                         {
                             Id = manifestConsole.Id,
-                            ServerId = server.Id,
+                            Server = server,
                             Name = manifestConsole.Name,
                             Type = (ServerConsoleType)(int)manifestConsole.Type,
                             Path = manifestConsole.Path,

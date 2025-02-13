@@ -308,14 +308,16 @@ namespace LANCommander.Server.Data
                 .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<Data.Models.Server>()
-                .HasMany<ServerConsole>()
+                .HasMany(s => s.ServerConsoles)
                 .WithOne(sl => sl.Server)
+                .HasForeignKey(sc => sc.ServerId)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Entity<Data.Models.Server>()
-                .HasMany<ServerHttpPath>()
+                .HasMany(s => s.HttpPaths)
                 .WithOne(s => s.Server)
+                .HasForeignKey(sc => sc.ServerId)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 

@@ -4,6 +4,9 @@
 
 <div class="depot-filter">
     <Form @ref="Form" Model="DepotService.Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical">
+        <FormItem>
+            <Slider @bind-Value="ColumnSize" Step="50" Min="100" Max="250" />
+        </FormItem>
         <FormItem Label="Title">
             <Input @bind-Value="@context.SelectedOptions.Title" />
         </FormItem>
@@ -65,8 +68,17 @@
     </Form>
 </div>
 
+<style>
+    .depot-list-items,
+    .depot-list-group-items {
+        grid-template-columns: repeat(auto-fill, minmax(@(ColumnSize)px, 1fr));
+    }
+</style>
+
 @code {
     [Parameter] public IEnumerable<Models.ListItem> Items { get; set; }
+
+    double ColumnSize = 150;
 
     Form<Models.DepotFilter> Form;
 

@@ -140,6 +140,25 @@
 
         ImportManagerService.OnImportRequested += Import;
         AuthenticationService.OnOfflineModeChanged += OnOfflineModeChanged;
+        
+        Settings = SettingService.GetSettings();
+
+        var token = new SDK.Models.AuthToken
+        {
+            AccessToken = Settings.Authentication.AccessToken,
+            RefreshToken = Settings.Authentication.RefreshToken
+        };
+        
+        if (await LANCommander.ValidateTokenAsync(token))
+        {
+            await AuthenticationService.Login();
+            await ProfileService.DownloadProfileInfoAsync();
+            
+            ConnectionState.IsConnected = true;
+            ConnectionState.OfflineModeEnabled = false;
+
+            await InvokeAsync(StateHasChanged);
+        }
     
         var randIndex = new Random().Next(0, CrashQuips.Length - 1);
         RandomQuip = CrashQuips[randIndex];
@@ -193,6 +212,7 @@
         if (await LANCommander.ValidateTokenAsync(token))
         {
             await AuthenticationService.Login();
+            await ProfileService.DownloadProfileInfoAsync();
 
             MessageService.Success("Back Online!");
             

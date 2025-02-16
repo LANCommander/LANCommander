@@ -47,11 +47,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        User = await UserService.GetCurrentUser();
+        ProfileService.OnProfileDownloaded += async (sender, args) =>
+        {
+            User = await UserService.GetCurrentUser();
 
-        AvatarId = User?.Avatar?.Id ?? Guid.Empty;
-        Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? "Player" : User.Alias;
+            AvatarId = User?.Avatar?.Id ?? Guid.Empty;
+            Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? "Player" : User.Alias;
+        };
+        
+        await ProfileService.DownloadProfileInfoAsync();
     }
+    
 
     async Task ChangeAlias()
     {

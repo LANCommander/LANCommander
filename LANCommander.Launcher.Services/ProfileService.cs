@@ -52,47 +52,62 @@ namespace LANCommander.Launcher.Services
         public async Task DownloadProfileInfoAsync()
         {
             var remoteProfile = await Client.Profile.GetAsync();
-            var localUser = await UserService.AddMissingAsync(u => u.Id == remoteProfile.Id, new User
-            {
-                Id = remoteProfile.Id,
-                UserName = remoteProfile.UserName,
-                Alias = remoteProfile.Alias,
-            });
+            
+            var localUser = await UserService
+                .GetAsync(remoteProfile.Id);
 
-            try
+            if (localUser == null)
             {
-                var tempAvatarPath = await Client.Profile.DownloadAvatar();
-
-                if (!String.IsNullOrWhiteSpace(tempAvatarPath))
+                localUser = new User()
                 {
-                    var media = new Media
-                    {
-                        FileId = Guid.NewGuid(),
-                        Type = SDK.Enums.MediaType.Avatar,
-                        MimeType = MediaTypeNames.Image.Png,
-                        Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
-                    };
-
-                    media = await MediaService.AddAsync(media);
-
-                    var localPath = MediaService.GetImagePath(media);
-
-                    if (File.Exists(tempAvatarPath))
-                        File.Move(tempAvatarPath, localPath);
-
-                    localUser.Value.Avatar = media;
-                    
-                    await UserService.UpdateAsync(localUser.Value);
-                    
-                    OnProfileDownloaded?.Invoke(this, EventArgs.Empty);
-                }
+                    Id = remoteProfile.Id,
+                    UserName = remoteProfile.UserName,
+                    Alias = remoteProfile.Alias,
+                };
+                
+                localUser = await UserService.AddAsync(localUser);
             }
-            catch (Exception ex)
+            else
             {
-                Logger?.LogError(ex, "Could not download avatar");
+                localUser.Alias = remoteProfile.Alias;
+                
+                await UserService.UpdateAsync(localUser);
+            }
+
+            if (localUser.Avatar == null)
+            {
+                try
+                {
+                    var tempAvatarPath = await Client.Profile.DownloadAvatar();
+
+                    if (!String.IsNullOrWhiteSpace(tempAvatarPath))
+                    {
+                        var media = new Media
+                        {
+                            FileId = Guid.NewGuid(),
+                            Type = SDK.Enums.MediaType.Avatar,
+                            MimeType = MediaTypeNames.Image.Png,
+                            Crc32 = SDK.Services.MediaService.CalculateChecksum(tempAvatarPath),
+                            UserId = remoteProfile.Id,
+                        };
+
+                        media = await MediaService.AddAsync(media);
+
+                        var localPath = MediaService.GetImagePath(media);
+
+                        if (File.Exists(tempAvatarPath))
+                            File.Move(tempAvatarPath, localPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Could not download avatar");
+                }
             }
 
             SettingService.SaveSettings(Settings);
+            
+            OnProfileDownloaded?.Invoke(this, EventArgs.Empty);
         }
 
         public bool IsAuthenticated()

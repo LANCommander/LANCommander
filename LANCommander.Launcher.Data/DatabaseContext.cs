@@ -64,6 +64,11 @@ namespace LANCommander.Launcher.Data
                     lg => lg.HasOne<Game>().WithMany().HasForeignKey("GameId").OnDelete(DeleteBehavior.Cascade),
                     lg => lg.HasOne<Library>().WithMany().HasForeignKey("LibraryId").OnDelete(DeleteBehavior.Cascade)
                 );
+            
+            builder.Entity<User>()
+                .HasOne(u => u.Avatar)
+                .WithOne(a => a.User)
+                .OnDelete(DeleteBehavior.Cascade);
 
             #region Game Relationships
             builder.Entity<Game>()

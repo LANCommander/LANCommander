@@ -17,6 +17,15 @@ namespace LANCommander.Launcher.Services
             AuthenticationService = authenticationService;
         }
 
+        public override async Task<User> GetAsync(Guid id)
+        {
+            return await Context
+                .Users
+                .AsQueryable()
+                .Include(u => u.Avatar)
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
+
         public async Task<User> GetCurrentUser()
         {
             return await Context

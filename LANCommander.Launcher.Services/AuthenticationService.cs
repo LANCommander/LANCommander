@@ -77,6 +77,8 @@ public class AuthenticationService : BaseService
             SetOfflineMode(false);
             
             SettingService.SaveSettings(Settings);
+
+            var user = await Client.Profile.GetAsync();
             
             OnLogin?.Invoke(this, EventArgs.Empty);
         }

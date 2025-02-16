@@ -1,10 +1,7 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
-using LANCommander.SDK.Helpers;
-using System.IO.Compression;
 using AutoMapper;
-using LANCommander.SDK.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
@@ -17,9 +14,7 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory,
-        ArchiveService archiveService,
-        ImportService importService) : BaseDatabaseService<Redistributable>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Redistributable>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Redistributable> UpdateAsync(Redistributable entity)
         {
@@ -38,11 +33,6 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(r => r.Pages);
                 await context.UpdateRelationshipAsync(r => r.Scripts);
             });
-        }
-
-        public async Task<Redistributable> ImportAsync(Guid objectKey)
-        {
-            return await importService.ImportRedistributableAsync(objectKey);
         }
     }
 }

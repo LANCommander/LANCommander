@@ -15,11 +15,28 @@ public class RedistributableImporter(
     {
         var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
         var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+        var manifest =
+            ManifestHelper.Deserialize<SDK.Models.Redistributable>(
+                await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-        var manifest = ManifestHelper.Deserialize<Redistributable>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+        var redistributable = await InitializeFromManifest(manifest);
 
+        redistributable = await UpdateScripts(redistributable, manifest, importZip);
+        redistributable = await UpdateArchives(redistributable, manifest, importZip, importArchive);
+
+        if (await redistributableService.ExistsAsync(redistributable.Id))
+            redistributable = await redistributableService.UpdateAsync(redistributable);
+        else
+            redistributable = await redistributableService.AddAsync(redistributable);
+
+        await archiveService.DeleteAsync(importArchive);
+
+        return redistributable;
+    }
+
+    private async Task<Redistributable> InitializeFromManifest(SDK.Models.Redistributable manifest)
+    {
         var redistributable = await redistributableService.GetAsync(manifest.Id);
-
         var exists = redistributable != null;
 
         if (!exists)
@@ -30,7 +47,11 @@ public class RedistributableImporter(
         redistributable.Description = manifest.Description;
         redistributable.Notes = manifest.Notes;
 
-        #region Scripts
+        return redistributable;
+    }
+
+    private async Task<Redistributable> UpdateScripts(Redistributable redistributable, SDK.Models.Redistributable manifest, ZipArchive importZip)
+    {
         if (redistributable.Scripts == null)
             redistributable.Scripts = new List<Script>();
 
@@ -66,9 +87,12 @@ public class RedistributableImporter(
                 });
             }
         }
-        #endregion
 
-        #region Archives
+        return redistributable;
+    }
+
+    private async Task<Redistributable> UpdateArchives(Redistributable redistributable, SDK.Models.Redistributable manifest, ZipArchive importZip, Archive importArchive)
+    {
         if (redistributable.Archives == null)
             redistributable.Archives = new List<Archive>();
 
@@ -113,14 +137,6 @@ public class RedistributableImporter(
 
                 redistributable.Archives.Add(archive);
             }
-        #endregion
-
-        if (exists)
-            redistributable = await redistributableService.UpdateAsync(redistributable);
-        else
-            redistributable = await redistributableService.AddAsync(redistributable);
-
-        await archiveService.DeleteAsync(importArchive);
 
         return redistributable;
     }

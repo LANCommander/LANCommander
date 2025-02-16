@@ -1,9 +1,5 @@
 ﻿using LANCommander.Server.Data;
-using LANCommander.Server.Data.Models;
-using LANCommander.SDK.Helpers;
-using System.IO.Compression;
 using AutoMapper;
-using LANCommander.SDK.Enums;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
@@ -17,11 +13,7 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory,
-        ArchiveService archiveService,
-        GameService gameService,
-        StorageLocationService storageLocationService,
-        ImportService importService) : BaseDatabaseService<Data.Models.Server>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Data.Models.Server>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Data.Models.Server> UpdateAsync(Data.Models.Server entity)
         {
@@ -36,11 +28,6 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(s => s.Scripts);
                 await context.UpdateRelationshipAsync(s => s.ServerConsoles);
             });
-        }
-
-        public async Task<Data.Models.Server> ImportAsync(Guid objectKey)
-        {
-            return await importService.ImportServerAsync(objectKey);
         }
     }
 }

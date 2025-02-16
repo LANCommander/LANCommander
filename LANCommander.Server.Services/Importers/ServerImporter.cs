@@ -20,9 +20,27 @@ public class ServerImporter(
         var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
         var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
         var storageLocation = await storageLocationService.GetAsync(importArchive.StorageLocationId);
-
         var manifest = ManifestHelper.Deserialize<SDK.Models.Server>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
+        var server = await InitializeServerFromManifest(manifest);
+
+        server = await UpdateGame(server, manifest);
+        server = await UpdateConsoles(server, manifest);
+        server = await UpdateHttpPaths(server, manifest);
+        server = await UpdateScripts(server, manifest, importZip);
+        server = await UpdateActions(server, manifest);
+        await ExtractFiles(server, importZip);
+
+        if (await serverService.ExistsAsync(server.Id))
+            server = await serverService.UpdateAsync(server);
+        else
+            server = await serverService.AddAsync(server);
+
+        return server;
+    }
+
+    private async Task<Data.Models.Server> InitializeServerFromManifest(SDK.Models.Server manifest)
+    {
         var exists = await serverService.ExistsAsync(manifest.Id);
 
         Data.Models.Server server;
@@ -54,16 +72,23 @@ public class ServerImporter(
         server.OnStartScriptPath = manifest.OnStartScriptPath;
         server.OnStopScriptPath = manifest.OnStopScriptPath;
         server.Port = manifest.Port;
-        
-        #region Game
+
+        return server;
+    }
+
+    private async Task<Data.Models.Server> UpdateGame(Data.Models.Server server, SDK.Models.Server manifest)
+    {
         if (manifest.Game != null)
         {
             var game = await gameService.GetAsync(manifest.Game.Id);
             server.Game = game;
         }
-        #endregion
 
-        #region Consoles
+        return server;
+    }
+
+    private async Task<Data.Models.Server> UpdateConsoles(Data.Models.Server server, SDK.Models.Server manifest)
+    {
         if (server.ServerConsoles == null)
             server.ServerConsoles = new List<ServerConsole>();
 
@@ -79,7 +104,6 @@ public class ServerImporter(
                 serverConsole.Path = manifestConsole.Path;
                 serverConsole.Host = manifestConsole.Host;
                 serverConsole.Port = manifestConsole.Port;
-                // serverConsole.Password = manifestConsole.Password;
             }
             else
                 server.ServerConsoles.Remove(serverConsole);
@@ -98,13 +122,15 @@ public class ServerImporter(
                     Path = manifestConsole.Path,
                     Host = manifestConsole.Host,
                     Port = manifestConsole.Port,
-                    // Password = manifestConsole.Password
                 });
             }
         }
-        #endregion
 
-        #region HTTP Paths
+        return server;
+    }
+
+    private async Task<Data.Models.Server> UpdateHttpPaths(Data.Models.Server server, SDK.Models.Server manifest)
+    {
         if (server.HttpPaths == null)
             server.HttpPaths = new List<ServerHttpPath>();
 
@@ -133,9 +159,12 @@ public class ServerImporter(
                 });
             }
         }
-        #endregion
 
-        #region Scripts
+        return server;
+    }
+
+    private async Task<Data.Models.Server> UpdateScripts(Data.Models.Server server, SDK.Models.Server manifest, ZipArchive importZip)
+    {
         if (server.Scripts == null)
             server.Scripts = new List<Script>();
 
@@ -171,9 +200,12 @@ public class ServerImporter(
                 });
             }
         }
-        #endregion
 
-        #region Actions
+        return server;
+    }
+
+    private async Task<Data.Models.Server> UpdateActions(Data.Models.Server server, SDK.Models.Server manifest)
+    {
         server.Actions = new List<Data.Models.Action>();
 
         if (manifest.Actions != null && manifest.Actions.Count() > 0)
@@ -189,9 +221,12 @@ public class ServerImporter(
                 SortOrder = manifestAction.SortOrder,
             };
         }
-        #endregion
 
-        #region Extract Files
+        return server;
+    }
+
+    private async Task ExtractFiles(Data.Models.Server server, ZipArchive importZip)
+    {
         foreach (var entry in importZip.Entries.Where(a => a.FullName.StartsWith("Files/")))
         {
             var destination = entry.FullName
@@ -209,13 +244,5 @@ public class ServerImporter(
             if (!entry.FullName.EndsWith('/'))
                 entry.ExtractToFile(destination, true);
         }
-        #endregion
-
-        if (exists)
-            server = await serverService.UpdateAsync(server);
-        else
-            server = await serverService.AddAsync(server);
-
-        return server;
     }
 } 

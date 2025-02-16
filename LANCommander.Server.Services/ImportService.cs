@@ -5,37 +5,29 @@ using System.IO.Compression;
 
 namespace LANCommander.Server.Services;
 
-public class ImportService(
-    ILogger<ImportService> logger,
-    GameImporter gameImporter,
-    ServerImporter serverImporter,
-    RedistributableImporter redistributableImporter,
+public class ImportService<T>(
+    ILogger<ImportService<T>> logger,
+    IImporter<T> importer,
     ArchiveService archiveService) : BaseService(logger)
+    where T : class, IBaseModel
 {
-    public async Task<Game> ImportGameAsync(Guid objectKey)
+    public async Task<T> ImportFromUploadArchiveAsync(Guid objectKey)
     {
         var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
         var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
-
+        
         using var importZip = ZipFile.OpenRead(importArchivePath);
-        return await gameImporter.ImportAsync(objectKey, importZip);
+        return await importer.ImportAsync(objectKey, importZip);
     }
 
-    public async Task<Data.Models.Server> ImportServerAsync(Guid objectKey)
+    public async Task<T> ImportFromLocalFileAsync(string localFilePath)
     {
-        var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+        Guid objectKey = Guid.NewGuid();
 
-        using var importZip = ZipFile.OpenRead(importArchivePath);
-        return await serverImporter.ImportAsync(objectKey, importZip);
-    }
+        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
-    public async Task<Redistributable> ImportRedistributableAsync(Guid objectKey)
-    {
-        var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
-
-        using var importZip = ZipFile.OpenRead(importArchivePath);
-        return await redistributableImporter.ImportAsync(objectKey, importZip);
+        File.Copy(localFilePath, importArchivePath, true);
+        
+        return await ImportFromUploadArchiveAsync(objectKey);
     }
 }

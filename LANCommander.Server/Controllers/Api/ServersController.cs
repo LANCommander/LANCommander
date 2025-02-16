@@ -16,15 +16,17 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly ServerService ServerService;
+        private readonly ImportService<Data.Models.Server> ImportService;
 
         public ServersController(
             ILogger<ServersController> logger, 
             IMapper mapper,
             ServerService serverService,
-            ArchiveService archiveService) : base(logger)
+            ImportService<Data.Models.Server> importService) : base(logger)
         {
             Mapper = mapper;
             ServerService = serverService;
+            ImportService = importService;
         }
 
         [HttpGet]
@@ -49,7 +51,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var game = await ServerService.ImportAsync(objectKey);
+                var server = await ImportService.ImportFromUploadArchiveAsync(objectKey);
 
                 return Ok();
             }

@@ -24,12 +24,35 @@ public class GameImporter(
         var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
         var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
         var storageLocation = await storageLocationService.GetAsync(importArchive.StorageLocationId);
+        
+        var manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
-        // Read manifest
-        GameManifest manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+        var game = await InitializeGameFromManifest(manifest);
+        
+        game = await UpdateActions(game, manifest);
+        game = await UpdateEngine(game, manifest);
+        game = await UpdateTags(game, manifest);
+        game = await UpdateGenres(game, manifest);
+        game = await UpdateDevelopers(game, manifest);
+        game = await UpdatePublishers(game, manifest);
+        game = await UpdateMultiplayerModes(game, manifest);
+        game = await UpdateSavePaths(game, manifest);
+        game = await UpdateKeys(game, manifest);
+        game = await UpdateScripts(game, manifest, importZip);
+        game = await UpdateMedia(game, manifest, importZip);
+        game = await UpdateArchives(game, manifest, importZip, storageLocation);
+        game = await UpdateCollections(game, manifest);
+        game = await UpdateDependentGames(game, manifest);
 
+        await archiveService.DeleteAsync(importArchive, storageLocation);
+
+        return game;
+    }
+
+    private async Task<Game> InitializeGameFromManifest(GameManifest manifest)
+    {
         var game = await gameService.GetAsync(manifest.Id);
-
+        
         var exists = game != null;
         
         if (!exists)
@@ -65,9 +88,13 @@ public class GameImporter(
         if (!exists)
             game = await gameService.AddAsync(game);
         else
-            game = await gameService.UpdateAsync(game);  // First update to save basic properties
+            game = await gameService.UpdateAsync(game);
 
-        #region Actions
+        return game;
+    }
+
+    private async Task<Game> UpdateActions(Game game, GameManifest manifest)
+    {
         if (game.Actions == null)
             game.Actions = new List<Data.Models.Action>();
 
@@ -90,10 +117,11 @@ public class GameImporter(
         }
 
         game.Actions = updatedActions;
-        game = await gameService.UpdateAsync(game);  // Update after Actions
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Engine
+    private async Task<Game> UpdateEngine(Game game, GameManifest manifest)
+    {
         if (!string.IsNullOrEmpty(manifest.Engine))
         {
             var engine = await engineService.AddMissingAsync(e => e.Name == manifest.Engine, new Engine 
@@ -106,10 +134,11 @@ public class GameImporter(
         {
             game.Engine = null;
         }
-        game = await gameService.UpdateAsync(game);  // Update after Engine
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Tags
+    private async Task<Game> UpdateTags(Game game, GameManifest manifest)
+    {
         if (game.Tags == null)
             game.Tags = new List<Data.Models.Tag>();
 
@@ -134,10 +163,11 @@ public class GameImporter(
         }
 
         game.Tags = updatedTags;
-        game = await gameService.UpdateAsync(game);  // Update after Tags
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Genres
+    private async Task<Game> UpdateGenres(Game game, GameManifest manifest)
+    {
         if (game.Genres == null)
             game.Genres = new List<Data.Models.Genre>();
 
@@ -162,10 +192,11 @@ public class GameImporter(
         }
 
         game.Genres = updatedGenres;
-        game = await gameService.UpdateAsync(game);  // Update after Genres
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Developers
+    private async Task<Game> UpdateDevelopers(Game game, GameManifest manifest)
+    {
         if (game.Developers == null)
             game.Developers = new List<Data.Models.Company>();
 
@@ -190,10 +221,11 @@ public class GameImporter(
         }
 
         game.Developers = updatedDevelopers;
-        game = await gameService.UpdateAsync(game);  // Update after Developers
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Publishers
+    private async Task<Game> UpdatePublishers(Game game, GameManifest manifest)
+    {
         if (game.Publishers == null)
             game.Publishers = new List<Data.Models.Company>();
 
@@ -218,10 +250,11 @@ public class GameImporter(
         }
 
         game.Publishers = updatedPublishers;
-        game = await gameService.UpdateAsync(game);  // Update after Publishers
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Multiplayer Modes
+    private async Task<Game> UpdateMultiplayerModes(Game game, GameManifest manifest)
+    {
         if (game.MultiplayerModes == null)
             game.MultiplayerModes = new List<Data.Models.MultiplayerMode>();
 
@@ -261,10 +294,11 @@ public class GameImporter(
             });
 
         game.MultiplayerModes = updatedMultiplayerModes;
-        game = await gameService.UpdateAsync(game);  // Update after MultiplayerModes
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Save Paths
+    private async Task<Game> UpdateSavePaths(Game game, GameManifest manifest)
+    {
         if (game.SavePaths == null)
             game.SavePaths = new List<SavePath>();
 
@@ -299,10 +333,11 @@ public class GameImporter(
         }
 
         game.SavePaths = updatedSavePaths;
-        game = await gameService.UpdateAsync(game);  // Update after SavePaths
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Keys
+    private async Task<Game> UpdateKeys(Game game, GameManifest manifest)
+    {
         if (game.Keys == null)
             game.Keys = new List<Data.Models.Key>();
 
@@ -321,16 +356,16 @@ public class GameImporter(
         }
 
         game.Keys = updatedKeys;
-        game = await gameService.UpdateAsync(game);  // Update after Keys
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Scripts
+    private async Task<Game> UpdateScripts(Game game, GameManifest manifest, ZipArchive importZip)
+    {
         if (game.Scripts == null)
             game.Scripts = new List<Data.Models.Script>();
 
         var updatedScripts = new List<Data.Models.Script>();
 
-        // Handle existing scripts
         foreach (var script in game.Scripts.ToList())
         {
             var manifestScript = manifest.Scripts?.FirstOrDefault(s => s.Id == script.Id);
@@ -342,12 +377,11 @@ public class GameImporter(
                 script.Name = manifestScript.Name;
                 script.RequiresAdmin = manifestScript.RequiresAdmin;
                 script.Type = (ScriptType)(int)manifestScript.Type;
-                script.GameId = game.Id;  // Set the GameId for existing scripts
+                script.GameId = game.Id;
                 updatedScripts.Add(script);
             }
         }
 
-        // Add new scripts
         if (manifest.Scripts != null)
         {
             foreach (var manifestScript in manifest.Scripts.Where(ms => !game.Scripts.Any(s => s.Id == ms.Id)))
@@ -355,7 +389,7 @@ public class GameImporter(
                 var newScript = new Script()
                 {
                     Id = manifestScript.Id,
-                    GameId = game.Id,  // Set the GameId for new scripts
+                    GameId = game.Id,
                     Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
                     Description = manifestScript.Description,
                     Name = manifestScript.Name,
@@ -367,14 +401,13 @@ public class GameImporter(
             }
         }
 
-        // Replace the entire scripts collection
         game.Scripts = updatedScripts;
-        game = await gameService.UpdateAsync(game);  // Update after Scripts
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Media
-        var mediaStorageLocation =
-            await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+    private async Task<Game> UpdateMedia(Game game, GameManifest manifest, ZipArchive importZip)
+    {
+        var mediaStorageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
         
         if (game.Media == null)
             game.Media = new List<Data.Models.Media>();
@@ -392,7 +425,7 @@ public class GameImporter(
                 media.Type = manifestMedia.Type;
                 media.MimeType = manifestMedia.MimeType;
                 media.CreatedOn = manifestMedia.CreatedOn;
-                media.GameId = game.Id;  // Set the GameId for existing media
+                media.GameId = game.Id;
 
                 importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetMediaPath(media), true);
                 media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
@@ -414,7 +447,7 @@ public class GameImporter(
                     Type = manifestMedia.Type,
                     CreatedOn = manifestMedia.CreatedOn,
                     StorageLocationId = mediaStorageLocation.Id,
-                    GameId = game.Id,  // Set the GameId for new media
+                    GameId = game.Id,
                 };
 
                 var mediaPath = MediaService.GetMediaPath(media, mediaStorageLocation);
@@ -427,10 +460,11 @@ public class GameImporter(
         }
 
         game.Media = updatedMedia;
-        game = await gameService.UpdateAsync(game);  // Update after Media
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Archives
+    private async Task<Game> UpdateArchives(Game game, GameManifest manifest, ZipArchive importZip, StorageLocation storageLocation)
+    {
         if (game.Archives == null)
             game.Archives = new List<Data.Models.Archive>();
 
@@ -491,10 +525,11 @@ public class GameImporter(
         }
 
         game.Archives = updatedArchives;
-        game = await gameService.UpdateAsync(game);  // Update after Archives
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Collections
+    private async Task<Game> UpdateCollections(Game game, GameManifest manifest)
+    {
         if (game.Collections == null)
             game.Collections = new List<Data.Models.Collection>();
 
@@ -519,10 +554,11 @@ public class GameImporter(
         }
 
         game.Collections = updatedCollections;
-        game = await gameService.UpdateAsync(game);  // Update after Collections
-        #endregion
+        return await gameService.UpdateAsync(game);
+    }
 
-        #region Dependent Games
+    private async Task<Game> UpdateDependentGames(Game game, GameManifest manifest)
+    {
         if (game.DependentGames == null)
             game.DependentGames = new List<Game>();
 
@@ -539,11 +575,6 @@ public class GameImporter(
         }
 
         game.DependentGames = updatedDependentGames;
-        game = await gameService.UpdateAsync(game);  // Update after DependentGames
-        #endregion
-
-        await archiveService.DeleteAsync(importArchive, storageLocation);
-
-        return game;
+        return await gameService.UpdateAsync(game);
     }
 } 

@@ -2,20 +2,14 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
-using LANCommander.Server.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
-using LANCommander.SDK.Helpers;
-using System.IO;
-using System.IO.Compression;
 using System.Linq.Expressions;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
-using System.Data.SqlClient;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using SharpCompress.Common;
 
 namespace LANCommander.Server.Services
 {
@@ -26,14 +20,7 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService,
-        MediaService mediaService,
-        EngineService engineService,
-        TagService tagService,
-        CompanyService companyService,
-        GenreService genreService,
-        StorageLocationService storageLocationService,
-        CollectionService collectionService,
-        ImportService importService) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        MediaService mediaService) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
         {
@@ -315,22 +302,6 @@ namespace LANCommander.Server.Services
                 manifest.Keys = game.Keys.Select(k => k.Value).ToList();
 
             return manifest;
-        }
-
-        public async Task<Game> ImportLocalFileAsync(string path)
-        {
-            Guid objectKey = Guid.NewGuid();
-
-            var importArchivePath = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
-
-            File.Copy(path, importArchivePath, true);
-
-            return await importService.ImportGameAsync(objectKey);
-        }
-
-        public async Task<Game> ImportAsync(Guid objectKey)
-        {
-            return await importService.ImportGameAsync(objectKey);
         }
     }
 }

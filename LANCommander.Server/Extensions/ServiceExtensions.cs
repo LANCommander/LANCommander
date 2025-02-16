@@ -47,12 +47,12 @@ public static class ServiceExtensions
         builder.Services.AddScoped<UserCustomFieldService>();
         builder.Services.AddScoped<AuthenticationService>();
         builder.Services.AddScoped<SetupService>();
-        builder.Services.AddScoped<ImportService>();
+        builder.Services.AddScoped(typeof(ImportService<>));
 
         // Register importers
-        builder.Services.AddScoped<GameImporter>();
-        builder.Services.AddScoped<ServerImporter>();
-        builder.Services.AddScoped<RedistributableImporter>();
+        builder.Services.AddScoped<IImporter<Data.Models.Game>, GameImporter>();
+        builder.Services.AddScoped<IImporter<Data.Models.Server>, ServerImporter>();
+        builder.Services.AddScoped<IImporter<Data.Models.Redistributable>, RedistributableImporter>();
 
         builder.Services.AddSingleton<ServerProcessService>();
         builder.Services.AddSingleton<IPXRelayService>();

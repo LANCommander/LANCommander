@@ -23,7 +23,6 @@ public class GameImporter(
     public async Task<Game> ImportAsync(Guid objectKey, ZipArchive importZip)
     {
         var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
         var storageLocation = await storageLocationService.GetAsync(importArchive.StorageLocationId);
         
         var manifest = ManifestHelper.Deserialize<GameManifest>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
@@ -44,8 +43,6 @@ public class GameImporter(
         game = await UpdateArchives(game, manifest, importZip, storageLocation);
         game = await UpdateCollections(game, manifest);
         game = await UpdateDependentGames(game, manifest);
-
-        await archiveService.DeleteAsync(importArchive, storageLocation);
 
         return game;
     }

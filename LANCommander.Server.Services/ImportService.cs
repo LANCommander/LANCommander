@@ -15,9 +15,17 @@ public class ImportService<T>(
     {
         var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
         var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+
+        T entity;
         
-        using var importZip = ZipFile.OpenRead(importArchivePath);
-        return await importer.ImportAsync(objectKey, importZip);
+        using (var importZip = ZipFile.OpenRead(importArchivePath))
+        {
+            entity = await importer.ImportAsync(objectKey, importZip);
+        }
+        
+        await archiveService.DeleteAsync(importArchive);
+
+        return entity;
     }
 
     public async Task<T> ImportFromLocalFileAsync(string localFilePath)

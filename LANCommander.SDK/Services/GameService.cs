@@ -24,6 +24,7 @@ namespace LANCommander.SDK.Services
         public string Title { get; set; }
         public Guid IconId { get; set; }
         public InstallStatus Status { get; set; }
+        public bool Indeterminate { get; set; }
         public float Progress
         {
             get
@@ -608,7 +609,9 @@ namespace LANCommander.SDK.Services
             var gameAndAddons = new List<Game>();
 
             _installProgress.Game = game;
-            _installProgress.Status = InstallStatus.Moving;
+            _installProgress.Status = InstallStatus.EnumeratingFiles;
+            _installProgress.Indeterminate = true;
+            _installProgress.Progress = 0;
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
             gameAndAddons.Add(game);
@@ -642,6 +645,11 @@ namespace LANCommander.SDK.Services
             var fileInfos = files.Select(f => new FileInfo(f));
             var totalSize = fileInfos.Sum(fi => fi.Length);
             long totalPos = 0;
+
+            _installProgress.Status = InstallStatus.Moving;
+            _installProgress.Indeterminate = false;
+            _installProgress.BytesDownloaded = totalPos;
+            _installProgress.TotalBytes = totalSize;
 
             foreach (var directory in directories)
             {

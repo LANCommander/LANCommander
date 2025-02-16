@@ -11,6 +11,8 @@ namespace LANCommander.SDK.Enums
     {
         Queued,
         Starting,
+        [Display(Name = "Enumerating Files")]
+        EnumeratingFiles,
         Moving,
         Downloading,
         [Display(Name = "Installing Redistributables")]

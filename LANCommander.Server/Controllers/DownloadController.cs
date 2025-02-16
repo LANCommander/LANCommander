@@ -26,29 +26,6 @@ namespace LANCommander.Server.Controllers
             UpdateService = updateService;
         }
 
-        [AllowAnonymous]
-        [HttpGet("/Launcher")]
-        public async Task<IActionResult> LauncherAsync()
-        {
-            var version = UpdateService.GetCurrentVersion();
-            var settings = SettingService.GetSettings();
-            var fileName = $"LANCommander.Launcher-Windows-x64-v{version}.zip";
-            var path = Path.Combine(settings.Launcher.StoragePath, fileName);
-
-            if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
-            {
-                var release = await UpdateService.GetReleaseAsync(version);
-                var asset = release.Assets.FirstOrDefault(a => a.Name == fileName);
-
-                if (asset != null)
-                    return Redirect(asset.BrowserDownloadUrl);
-                else
-                    return Redirect(release.HtmlUrl);
-            }
-
-            return File(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", fileName);
-        }
-
         [Authorize(Roles = RoleService.AdministratorRoleName)]
         [HttpGet("/Download/Archive/{id}")]
         public async Task<IActionResult> ArchiveAsync(Guid id)

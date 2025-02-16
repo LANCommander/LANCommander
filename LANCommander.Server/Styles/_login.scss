@@ -62,13 +62,13 @@
     padding-top: 48px;
     padding-bottom: 48px;
     
-    &::after {
+    &::before {
         content: '';
         position: absolute;
         left: 0;
         right: 0;
         bottom: 0;
         height: 256px;
-        background: linear-gradient(0deg, rgba(0, 0, 0, 0) 100%, rgba(0, 0, 0, .75) 0%);
+        background: linear-gradient(0deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
     }
 }

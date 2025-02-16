@@ -5,6 +5,7 @@ using Serilog;
 using Hangfire;
 using LANCommander.Server.Data;
 using LANCommander.Server.Services.Factories;
+using LANCommander.Server.Services.Importers;
 using LANCommander.Server.Services.Models;
 
 namespace LANCommander.Server;
@@ -46,6 +47,12 @@ public static class ServiceExtensions
         builder.Services.AddScoped<UserCustomFieldService>();
         builder.Services.AddScoped<AuthenticationService>();
         builder.Services.AddScoped<SetupService>();
+        builder.Services.AddScoped<ImportService>();
+
+        // Register importers
+        builder.Services.AddScoped<GameImporter>();
+        builder.Services.AddScoped<ServerImporter>();
+        builder.Services.AddScoped<RedistributableImporter>();
 
         builder.Services.AddSingleton<ServerProcessService>();
         builder.Services.AddSingleton<IPXRelayService>();

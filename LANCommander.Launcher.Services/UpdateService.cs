@@ -77,7 +77,9 @@ namespace LANCommander.Launcher.Services
 
         public static SemVersion GetCurrentVersion()
         {
-            return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
+            var productVersion = FileVersionInfo.GetVersionInfo(Assembly.GetEntryAssembly().Location).ProductVersion;
+            
+            return SemVersion.Parse(productVersion);
         }
     }
 }

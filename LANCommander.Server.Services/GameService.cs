@@ -656,7 +656,7 @@ namespace LANCommander.Server.Services
 
                 foreach (var archive in game.Archives)
                 {
-                    var manifestArchive = manifest.Archives.FirstOrDefault(a => a.Id == archive.Id);
+                    var manifestArchive = manifest.Archives?.FirstOrDefault(a => a.Id == archive.Id);
 
                     if (manifestArchive != null)
                     {

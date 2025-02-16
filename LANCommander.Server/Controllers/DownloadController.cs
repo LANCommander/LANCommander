@@ -50,7 +50,7 @@ namespace LANCommander.Server.Controllers
         }
 
         [Authorize(Roles = RoleService.AdministratorRoleName)]
-        [HttpGet("/Archive/{id}")]
+        [HttpGet("/Download/Archive/{id}")]
         public async Task<IActionResult> ArchiveAsync(Guid id)
         {
             var archive = await ArchiveService.GetAsync(id);
@@ -73,7 +73,7 @@ namespace LANCommander.Server.Controllers
             return File(new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", name);
         }
 
-        [HttpGet("/Save/{id}")]
+        [HttpGet("/Download/Save/{id}")]
         public async Task<IActionResult> SaveAsync(Guid id)
         {
             var save = await GameSaveService.GetAsync(id);

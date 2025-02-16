@@ -103,14 +103,14 @@ app.MapHub<LoggingHub>("/logging");
 
 app.UseStaticFiles();
 
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
-
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapFallbackToPage("/_Host");
     endpoints.MapControllers();
 });
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
 
 PrepareDirectories(app);
 

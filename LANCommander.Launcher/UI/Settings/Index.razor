@@ -9,44 +9,28 @@
 <div style="flex-grow: 1">
     <PageHeader Title="Settings" OnBack="@(() => { NavigationManager.NavigateTo("/"); })" Style="padding-top: 48px">
         <PageHeaderExtra>
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <Button OnClick="CheckForUpdates">Check for Updates</Button>
-                </SpaceItem>
-                <SpaceItem>
-                    <Button OnClick="Save" Type="ButtonType.Primary">Save</Button>
-                </SpaceItem>
-            </Space>
+            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+                <Button OnClick="CheckForUpdates">Check for Updates</Button>
+                <Button OnClick="Save" Type="ButtonType.Primary">Save</Button>
+            </Flex>
         </PageHeaderExtra>
     </PageHeader>
 
     <Form Model="Settings" Layout="@FormLayout.Vertical" Style="padding: 0 24px">
         <Divider Orientation="DividerOrientation.Left" Plain>Games</Divider>
         <FormItem Label="Storage Paths">
-            <Space Direction="SpaceDirection.Vertical" Size="SpaceSize.Middle" Style="width: 100%">
+            <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
                 @foreach (var installDirectory in InstallDirectories)
                 {
-                    <SpaceItem>
-                        <Space Style="width: 100%">
-                            <SpaceItem Style="flex-grow: 1">
-                                <Input @bind-Value="installDirectory.Path" />
-                            </SpaceItem>
-
-                            <SpaceItem>
-                                <Button OnClick="() => RemoveInstallDirectory(installDirectory)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" Disabled="InstallDirectories.Count == 1" />
-                            </SpaceItem>
-                        </Space>
-                    </SpaceItem>
+                    <Flex Gap="FlexGap.Small">
+                        <Input @bind-Value="installDirectory.Path"/>
+                        <Button OnClick="() => RemoveInstallDirectory(installDirectory)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" Disabled="InstallDirectories.Count == 1"/>
+                    </Flex>
                 }
-
-                <SpaceItem>
-                    <GridRow Justify="RowJustify.End">
-                        <GridCol>
-                            <Button OnClick="AddInstallDirectory" Type="ButtonType.Primary">Add Path</Button>
-                        </GridCol>
-                    </GridRow>
-                </SpaceItem>
-            </Space>
+                <Flex Justify="FlexJustify.End">
+                    <Button OnClick="AddInstallDirectory" Type="ButtonType.Primary">Add Path</Button>
+                </Flex>
+            </Flex>
         </FormItem>
 
         <Divider Orientation="DividerOrientation.Left" Plain>Media</Divider>
@@ -70,8 +54,9 @@
     </Form>
 </div>
 
-<footer style="background: none;">LANCommander Launcher v@(UpdateService.GetCurrentVersion().ToString())</footer>
-
+<Flex Justify="FlexJustify.Center" Style="padding: 12px;">
+    LANCommander Launcher v@(UpdateService.GetCurrentVersion().ToString())
+</Flex>
 
 @code {
     Settings Settings;

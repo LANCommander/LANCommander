@@ -9,9 +9,9 @@
 
 <PageHeader Title="Updates">
     <PageHeaderExtra>
-        <Flex Justify="FlexJustify.End" Gap="FlexGap.Small">
+        <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="FlexGap.Small">
             Release Channel:
-            <EnumSelect TEnum="ReleaseChannel" OnSelectedItemChanged="ReleaseChannelChanged" />
+            <EnumSelect TEnum="ReleaseChannel" OnSelectedItemChanged="ReleaseChannelChanged" @bind-Value="Settings.Update.ReleaseChannel" Disabled="Loading" />
             <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="@(!UpdateAvailable || Updating)" Loading="Updating">Update</Button>
         </Flex>
     </PageHeaderExtra>
@@ -106,13 +106,16 @@
 
     async Task ReleaseChannelChanged(ReleaseChannel releaseChannel)
     {
-        var settings = SettingService.GetSettings();
+        if (!Loading)
+        {
+            Settings = SettingService.GetSettings();
 
-        settings.Update.ReleaseChannel = releaseChannel;
+            Settings.Update.ReleaseChannel = releaseChannel;
         
-        SettingService.SaveSettings(settings);
+            SettingService.SaveSettings(Settings);
 
-        MessageService.Success($"Changed release channel to {releaseChannel}!");
+            MessageService.Success($"Changed release channel to {releaseChannel}!");
+        }
     }
 
     async Task Update()

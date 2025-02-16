@@ -166,7 +166,10 @@ namespace LANCommander.Server.Services
                     version = versionArtifact.Name.Substring(0, versionArtifact.Name.Length - "version.".Length);
             }
 
-            return SemVersion.Parse(version, SemVersionStyles.AllowV);
+            if (SemVersion.TryParse(version, SemVersionStyles.AllowV, out SemVersion semVersion))
+                return semVersion;
+            else
+                return GetCurrentVersion();
         }
 
         public async Task<bool> UpdateAvailableAsync()

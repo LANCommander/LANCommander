@@ -23,6 +23,7 @@
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
     <PackageReference Include="Syncfusion.PdfToImageConverter.Net" Version="28.2.4" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
     <PackageReference Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
   </ItemGroup>

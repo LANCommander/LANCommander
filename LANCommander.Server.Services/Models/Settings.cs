@@ -43,6 +43,19 @@ namespace LANCommander.Server.Services.Models
         Prerelease,
         Nightly,
     }
+    
+    public enum LauncherPlatform
+    {
+        Windows,
+        Linux,
+        macOS,
+    }
+
+    public enum LauncherArchitecture
+    {
+        x64,
+        arm64,
+    }
 
     public class Settings
     {
@@ -179,6 +192,9 @@ namespace LANCommander.Server.Services.Models
     {
         public string StoragePath { get; set; } = "Launcher";
         public bool HostUpdates { get; set; } = true;
+        public string VersionOverride { get; set; } = "";
+        public IEnumerable<LauncherArchitecture> Architectures { get; set; } = new[] { LauncherArchitecture.x64, LauncherArchitecture.arm64 };
+        public IEnumerable<LauncherPlatform> Platforms { get; set; } = new[] { LauncherPlatform.Windows };
     }
 
     public class LoggingProvider

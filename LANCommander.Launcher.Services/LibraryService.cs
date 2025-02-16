@@ -201,28 +201,35 @@ namespace LANCommander.Launcher.Services
             return new ListItem(game);
         }
 
+        public async Task AddToLibraryAsync(Game game)
+        {
+            var library = await GetByUserAsync(AuthenticationService.GetUserId());
+
+            if (!library.Games.Any(g => g.Id == game.Id))
+            {
+                library.Games.Add(game);
+
+                await UpdateAsync(library);
+            }
+
+            if (!Items.Any(i => i.Key == game.Id))
+            {
+                Items.Add(new ListItem(game));
+
+                await LibraryChanged();
+            
+                if (OnItemsFiltered != null)
+                    await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
+            }
+        }
+
         public async Task AddToLibraryAsync(Guid id)
         {
             var localGame = await GameService.GetAsync(id);
-            var library = await GetByUserAsync(AuthenticationService.GetUserId());
 
-            if (localGame != null)
-            {
-                library.Games.Add(localGame);                
-            }
+            await AddToLibraryAsync(localGame);
 
-            await UpdateAsync(library);
-            
             await Client.Library.AddToLibrary(id);
-            
-            var newItem = new ListItem(localGame);
-            
-            Items.Add(newItem);
-
-            await LibraryChanged();
-            
-            if (OnItemsFiltered != null)
-                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
         }
 
         public async Task RemoveFromLibraryAsync(Guid id)

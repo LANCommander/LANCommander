@@ -1,61 +1,49 @@
 ﻿@page "/Register"
 @using LANCommander.Server.Extensions
-@using LANCommander.Server.Models;
-@using LANCommander.Server.Services;
+@using LANCommander.Server.Models
+@using LANCommander.Server.Services
 @using LANCommander.Server.Services.Models
-@using Microsoft.AspNetCore.Mvc.TagHelpers
 @using LANCommander.Server.UI.Pages.Account
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model LANCommander.Server.UI.Pages.Account.RegisterModel
 @{ Layout = "/UI/Views/Shared/_LayoutBasic.cshtml"; }
-@{
-    ViewData["Title"] = "Register";
 
-    var errors = ModelState.Where(x => x.Value != null && x.Value.Errors != null && x.Value.Errors.Count > 0).SelectMany(kvp => kvp.Value.Errors.Select(e => e.ErrorMessage)).ToList();
+@{
+    ViewData["Title"] = "Log in";
     
     var providers = HttpContext.GetExternalProviders();
 }
 
-<div class="ant-row ant-row-middle ant-row-space-around" style="min-height: 100vh; margin-top: -24px;">
-    <div class="ant-col ant-col-xs-24 ant-col-md-10">
-
-        <div style="text-align: center; margin-bottom: 24px;">
-            @switch (SettingService.GetSettings().Theme)
-            {
-                case LANCommanderTheme.Light:
-                    <img src="~/static/logo.svg" />
-                    break;
-
-                case LANCommanderTheme.Dark:
-                    <img src="~/static/logo-dark.svg" />
-                    break;
-            }
-        </div>
-
-        <div class="ant-card ant-card-bordered">
-            <div class="ant-card-head">
-                <div class="ant-card-head-wrapper">
-                    @if (Model.AuthenticationProvider != null && User.Identity.IsAuthenticated)
-                    {
-                        <div class="ant-card-head-title">Set Username</div>
-                    }
-                    else
-                    {
-                        <div class="ant-card-head-title">Create New Account</div>
-                    }
-                </div>
-            </div>
-            <form id="registerForm" method="post" class="ant-card-body" autocomplete="off">
-                <input asp-for="Model.RegistrationType" type="hidden" />
-                <input asp-for="Model.Email" type="hidden" />
-                
-                @foreach (var error in errors)
+<div class="login-container">
+    <div class="login-container-background" style="background-image: url('@Model.ScreenshotUrl')"></div>
+    <div class="ant-row login-box">
+        <div class="ant-col ant-col-xs-24 ant-col-md-8 ant-col-lg-6 ant-col-md-push-4 ant-col-lg-push-6 login-form-pane">
+            <div class="login-box-logo">
+                @switch (SettingService.GetSettings().Theme)
                 {
-                    <div data-show="true" class="ant-alert ant-alert-error ant-alert-no-icon" style="margin-bottom: 12px">
-                        <div class="ant-alert-content">
-                            <div class="ant-alert-message">@error</div>
-                        </div>
-                    </div>
+                    case LANCommanderTheme.Light:
+                        <img src="~/static/logo.svg"/>
+                        break;
+
+                    case LANCommanderTheme.Dark:
+                        <img src="~/static/logo-dark.svg"/>
+                        break;
                 }
+            </div>
+
+            @foreach (var error in ModelState.SelectMany(x => x.Value.Errors))
+            {
+                <div data-show="true" class="ant-alert ant-alert-error ant-alert-no-icon" style="margin-bottom: 16px">
+                    <div class="ant-alert-content">
+                        <div class="ant-alert-message">@error.ErrorMessage</div>
+                    </div>
+                </div>
+            }
+
+            <form id="registerForm" method="post" autocomplete="off">
+                @Html.AntiForgeryToken()
+                <input asp-for="Model.RegistrationType" type="hidden"/>
+                <input asp-for="Model.Email" type="hidden"/>
 
                 <div class="ant-form ant-form-vertical">
                     <div class="ant-form-item">
@@ -116,46 +104,47 @@
                     }
 
                     <div class="ant-form-item" style="margin-bottom: 0;">
-                        <div class="ant-form-item-row ant-row">
-                            <button id="register-submit" type="submit" class="ant-btn ant-btn-primary ant-btn-block">Register</button>
+                        <div class="ant-flex ant-flex-gap-small ant-flex-wrap-nowrap">
+                            <button id="login-submit" type="submit" class="ant-btn ant-btn-primary">Register</button>
+                            <a href="~/Login" class="ant-btn ant-btn-default">Login</a>
                         </div>
                     </div>
                 </div>
             </form>
+
+            @if (Model.Model.RegistrationType == RegistrationType.Basic && providers != null && providers.Count() > 0)
+            {
+                <span class="ant-divider ant-divider-horizontal ant-divider-with-text ant-divider-with-text-center">
+                    <span class="ant-divider-inner-text">
+                    Or
+                    </span>
+                </span>
+
+                @foreach (var provider in providers)
+                {
+                    <form method="post" action="@Url.Action("RegisterByAuthenticationProvider", "Account")">
+                        <input type="hidden" name="Provider" value="@provider.Slug" />
+                        <input type="hidden" name="ReturnUrl" value="@Url.Page("Register")" />
+
+                        <button class="ant-btn ant-btn-primary ant-btn-block" type="submit" style="@(!String.IsNullOrWhiteSpace(provider.Color) ? $"background-color: {provider.Color}; border-color: {provider.Color}" : "")">
+                            @if (!String.IsNullOrWhiteSpace(provider.Icon))
+                            {
+                                <span class="anticon" role="img">
+                                    <svg focusable="false" width="1em" height="1em" fill="currentColor">
+                                        <use xlink:href="_content/LANCommander.UI/bootstrap-icons.svg#@provider.Icon"/>
+                                    </svg>
+                                </span>
+                            }
+
+                            <span>Register using @provider.Name</span>
+                        </button>
+                    </form>
+                }
+            }
         </div>
 
-        @if (Model.Model.RegistrationType == RegistrationType.Basic && providers != null && providers.Count() > 0)
-        {
-            <span class="ant-divider ant-divider-horizontal ant-divider-with-text ant-divider-with-text-center">
-                <span class="ant-divider-inner-text">
-                    Or
-                </span>
-            </span>
-
-            @foreach (var provider in providers)
-            {
-                <form method="post" action="@Url.Action("RegisterByAuthenticationProvider", "Account")">
-                    <input type="hidden" name="Provider" value="@provider.Slug" />
-                    <input type="hidden" name="ReturnUrl" value="@Url.Page("Register")" />
-
-                    <button class="ant-btn ant-btn-primary ant-btn-block" type="submit" style="@(!String.IsNullOrWhiteSpace(provider.Color) ? $"background-color: {provider.Color}; border-color: {provider.Color}" : "")">
-                        @if (!String.IsNullOrWhiteSpace(provider.Icon))
-                        {
-                            <span class="anticon" role="img">
-                                <svg focusable="false" width="1em" height="1em" fill="currentColor">
-                                    <use xlink:href="_content/LANCommander.UI/bootstrap-icons.svg#@provider.Icon"/>
-                                </svg>
-                            </span>
-                        }
-
-                        <span>Register using @provider.Name</span>
-                    </button>
-                </form>
-            }
-        }
-
-        <div style="text-align: center; margin-top: 16px;">
-            Already have an account? <a asp-page="/Login" asp-route-returnUrl="@Model.ReturnUrl" tabindex="-1">Login</a>
+        <div class="ant-col ant-col-xs-24 ant-col-md-8 ant-col-lg-6 ant-col-md-push-4 ant-col-lg-push-6 login-download-pane" style="background-image: url('@Model.ScreenshotUrl')">
+            @(await Html.RenderComponentAsync<LANCommander.Server.UI.Pages.Account.Components.LauncherDownloadButton>(RenderMode.Server))
         </div>
     </div>
 </div>

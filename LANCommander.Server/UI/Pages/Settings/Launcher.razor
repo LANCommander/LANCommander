@@ -1,9 +1,14 @@
 ﻿@page "/Settings/Launcher"
+@using LANCommander.Server.Jobs.Background
 @inject IMessageService MessageService
 @inject ILogger<Updates> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Launcher" />
+<PageHeader Title="Launcher">
+    <PageHeaderExtra>
+        <Button OnClick="DownloadLaunchers" Disabled="!Settings.Launcher.HostUpdates">Download Launchers</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
@@ -13,6 +18,22 @@
 
         <FormItem Label="Host Client Updates">
             <Switch @bind-Checked="context.Launcher.HostUpdates" />
+        </FormItem>
+        
+        <FormItem Label="Architectures">
+            <EnumSelect
+                TEnum="LauncherArchitecture"
+                Mode="SelectMode.Multiple"
+                Disabled="!context.Launcher.HostUpdates"
+                @bind-Values="context.Launcher.Architectures" />
+        </FormItem>
+        
+        <FormItem Label="Platforms">
+            <EnumSelect
+                TEnum="LauncherPlatform"
+                Mode="SelectMode.Multiple"
+                Disabled="!context.Launcher.HostUpdates"
+                @bind-Values="context.Launcher.Platforms" />
         </FormItem>
 
         <FormItem>
@@ -48,5 +69,12 @@
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
         Settings.Launcher.StoragePath = path;
+    }
+
+    async Task DownloadLaunchers()
+    {
+        Hangfire.BackgroundJob.Enqueue<DownloadLauncherArtifacts>(x => x.ExecuteAsync());
+
+        MessageService.Success("Launchers will be downloaded in the background!");
     }
 }

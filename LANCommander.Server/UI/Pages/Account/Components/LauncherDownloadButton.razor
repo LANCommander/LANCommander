@@ -1,16 +1,61 @@
+@using System.Collections
 @inject UpdateService UpdateService
+@inject NavigationManager NavigationManager
 
-<DropdownButton Type="@((ButtonType.Primary, ButtonType.Primary))">
-    <Overlay>
-        <Menu>
-            <MenuItem>Test</MenuItem>
-        </Menu>
-    </Overlay>
-    <ChildContent>
-        Download
-    </ChildContent>
-</DropdownButton>
+<div class="login-download-pane-container">
+    <Popover Trigger="new[] { Trigger.Hover }">
+        <ContentTemplate>
+            <Flex Vertical Gap="FlexGap.Small">
+                @foreach (var downloadLink in DownloadLinks)
+                {
+                    <Button
+                        Type="ButtonType.Text"
+                        Block
+                        Icon="@downloadLink.Icon"
+                        OnClick="() => NavigationManager.NavigateTo(downloadLink.Url)"
+                        Style="text-align: left">
+                        @downloadLink.Name
+                    </Button>
+                }
+            </Flex>
+        </ContentTemplate>
+        <ChildContent>
+            <Button Type="ButtonType.Primary" Size="ButtonSize.Large">
+                Download Launcher
+            </Button>
+        </ChildContent>
+    </Popover>
+</div>
 
 @code {
-    
+    class DownloadLink
+    {
+        public string Name { get; set; }
+        public string Url { get; set; }
+        public string Icon { get; set; }
+    }
+
+    IEnumerable<DownloadLink> DownloadLinks = new List<DownloadLink>();
+
+    readonly Hashtable _iconMap = new()
+    {
+        [LauncherPlatform.Windows] = IconType.Fill.Windows,
+        [LauncherPlatform.Linux] = IconType.Outline.Qq, // Not Linux, but QQ penguin
+        [LauncherPlatform.macOS] = IconType.Fill.Apple,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var artifacts = await UpdateService.GetLauncherArtifactsAsync();
+
+        DownloadLinks = artifacts
+            .OrderBy(a => a.Platform)
+            .ThenBy(a => a.Architecture)
+            .Select(a => new DownloadLink
+        {
+            Name = $"{a.Platform} ({a.Architecture})",
+            Icon = _iconMap[a.Platform].ToString(),
+            Url = a.Url
+        });
+    }
 }

@@ -71,6 +71,8 @@ namespace LANCommander.Server.UI.Pages.Account
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         public string ReturnUrl { get; set; }
+        
+        public string ScreenshotUrl { get; set; }
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
@@ -99,6 +101,10 @@ namespace LANCommander.Server.UI.Pages.Account
             {
                 Model.RegistrationType = RegistrationType.Basic;
             }
+            
+            var screenshots = Directory.GetFiles(Path.Combine("wwwroot", "static", "login"), "*.jpg");
+
+            ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null, string provider = null)

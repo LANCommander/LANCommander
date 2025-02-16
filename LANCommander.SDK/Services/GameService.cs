@@ -628,43 +628,54 @@ namespace LANCommander.SDK.Services
             }
 
             if (Directory.Exists(newInstallDirectory))
-                throw new ArgumentException("Destination directory already exists");
+            {
+                // Trigger notification eventually
+                _installProgress.Status = InstallStatus.Failed;
+                
+                OnInstallProgressUpdate?.Invoke(_installProgress);
+                
+                return newInstallDirectory;
+            }
 
             var directories = Directory.GetDirectories(oldInstallDirectory, "*", SearchOption.AllDirectories);
             var files = Directory.GetFiles(oldInstallDirectory, "*.*", SearchOption.AllDirectories);
             var fileInfos = files.Select(f => new FileInfo(f));
             var totalSize = fileInfos.Sum(fi => fi.Length);
+            long totalPos = 0;
 
             foreach (var directory in directories)
             {
                 Directory.CreateDirectory(directory.Replace(oldInstallDirectory, newInstallDirectory));
             }
 
-            foreach (var fileInfo in fileInfos)
+            using (var fileTransferMonitor = new FileTransferMonitor(totalSize))
             {
-                using (FileStream sourceStream = File.Open(fileInfo.FullName, FileMode.Open))
-                using (FileStream destinationStream = File.Create(fileInfo.FullName.Replace(oldInstallDirectory, newInstallDirectory)))
+                foreach (var fileInfo in fileInfos)
                 {
-                    _installProgress.TotalBytes = totalSize;
-
-                    using (var fileTransferMonitor = new FileTransferMonitor(totalSize))
+                    using (FileStream sourceStream = File.Open(fileInfo.FullName, FileMode.Open))
+                    using (FileStream destinationStream = File.Create(fileInfo.FullName.Replace(oldInstallDirectory, newInstallDirectory)))
                     {
-                        TransferStream = new TrackableStream(destinationStream, true, totalSize);
-                        TransferStream.OnProgress += (pos, _) =>
+                        _installProgress.TotalBytes = totalSize;
+                        
+                        var buffer = new byte[81920];
+                        int bytesRead;
+                        
+                        while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                         {
+                            await destinationStream.WriteAsync(buffer, 0, bytesRead);
+                            totalPos += bytesRead;
+                            
                             if (fileTransferMonitor.CanUpdate())
                             {
-                                fileTransferMonitor.Update(pos);
+                                fileTransferMonitor.Update(totalPos);
 
                                 _installProgress.TimeRemaining = fileTransferMonitor.GetTimeRemaining();
                                 _installProgress.BytesDownloaded = fileTransferMonitor.GetBytesTransferred();
                                 _installProgress.TransferSpeed = fileTransferMonitor.GetSpeed();
-                                
+                            
                                 OnInstallProgressUpdate?.Invoke(_installProgress);
                             }
-                        };
-
-                        await sourceStream.CopyToAsync(TransferStream);
+                        }
                     }
                 }
             }

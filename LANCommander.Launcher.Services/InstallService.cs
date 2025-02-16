@@ -318,6 +318,10 @@ namespace LANCommander.Launcher.Services
         {
             using (var operation = Logger.BeginOperation("Moving game {GameTitle} ({GameId}) to {Destination}", localGame.Title, localGame.Id, currentItem.InstallDirectory))
             {
+                currentItem.Status = InstallStatus.Moving;
+
+                OnQueueChanged?.Invoke();
+                
                 var newInstallDirectory = await Client.Games.GetInstallDirectory(remoteGame, currentItem.InstallDirectory);
 
                 newInstallDirectory = await Client.Games.MoveAsync(remoteGame, localGame.InstallDirectory, newInstallDirectory);

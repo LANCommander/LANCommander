@@ -17,6 +17,7 @@ public class GameImporter(
     GenreService genreService,
     StorageLocationService storageLocationService,
     CollectionService collectionService,
+    ScriptService scriptService,
     GameService gameService) : IImporter<Game>
 {
     public async Task<Game> ImportAsync(Guid objectKey, ZipArchive importZip)
@@ -397,6 +398,9 @@ public class GameImporter(
                     Type = (ScriptType)(int)manifestScript.Type,
                     CreatedOn = manifestScript.CreatedOn,
                 };
+                
+                newScript = await scriptService.AddAsync(newScript);
+                
                 updatedScripts.Add(newScript);
             }
         }

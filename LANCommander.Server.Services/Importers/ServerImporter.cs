@@ -11,15 +11,13 @@ namespace LANCommander.Server.Services.Importers;
 public class ServerImporter(
     ArchiveService archiveService,
     GameService gameService,
-    StorageLocationService storageLocationService,
+    ScriptService scriptService,
     ServerService serverService,
     Settings settings) : IImporter<Data.Models.Server>
 {
     public async Task<Data.Models.Server> ImportAsync(Guid objectKey, ZipArchive importZip)
     {
         var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
-        var storageLocation = await storageLocationService.GetAsync(importArchive.StorageLocationId);
         var manifest = ManifestHelper.Deserialize<SDK.Models.Server>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
 
         var server = await InitializeServerFromManifest(manifest);
@@ -188,7 +186,7 @@ public class ServerImporter(
         {
             foreach (var manifestScript in manifest.Scripts.Where(ms => !server.Scripts.Any(s => s.Id == ms.Id)))
             {
-                server.Scripts.Add(new Script()
+                var newScript = new Script
                 {
                     Id = manifestScript.Id,
                     Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
@@ -197,7 +195,11 @@ public class ServerImporter(
                     RequiresAdmin = manifestScript.RequiresAdmin,
                     Type = (ScriptType)(int)manifestScript.Type,
                     CreatedOn = manifestScript.CreatedOn,
-                });
+                };
+                
+                newScript = await scriptService.AddAsync(newScript);
+                
+                server.Scripts.Add(newScript);
             }
         }
 

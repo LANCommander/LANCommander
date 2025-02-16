@@ -9,6 +9,7 @@ namespace LANCommander.Server.Services.Importers;
 
 public class RedistributableImporter(
     ArchiveService archiveService,
+    ScriptService scriptService,
     RedistributableService redistributableService) : IImporter<Redistributable>
 {
     public async Task<Redistributable> ImportAsync(Guid objectKey, ZipArchive importZip)
@@ -75,7 +76,7 @@ public class RedistributableImporter(
         {
             foreach (var manifestScript in manifest.Scripts.Where(ms => !redistributable.Scripts.Any(s => s.Id == ms.Id)))
             {
-                redistributable.Scripts.Add(new Script()
+                var newScript = new Script
                 {
                     Id = manifestScript.Id,
                     Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
@@ -84,7 +85,11 @@ public class RedistributableImporter(
                     RequiresAdmin = manifestScript.RequiresAdmin,
                     Type = (ScriptType)(int)manifestScript.Type,
                     CreatedOn = manifestScript.CreatedOn,
-                });
+                };
+
+                newScript = await scriptService.AddAsync(newScript);
+                
+                redistributable.Scripts.Add(newScript);
             }
         }
 

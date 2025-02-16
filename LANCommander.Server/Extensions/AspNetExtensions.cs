@@ -46,6 +46,11 @@ public static class AspNetExtensions
             .AddInteractiveServerComponents();
 
         builder.Services.AddCascadingAuthenticationState();
+        builder.Services.AddAntiforgery(options =>
+        {
+            options.Cookie.SameSite = settings.Authentication.MinimumSameSitePolicy;
+            options.Cookie.SecurePolicy = settings.Authentication.CookieSecurePolicy;
+        });
     }
 
     public static void AddSignalR(this WebApplicationBuilder builder)

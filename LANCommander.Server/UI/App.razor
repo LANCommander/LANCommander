@@ -5,6 +5,8 @@
 @using Microsoft.AspNetCore.Components.Web
 @using System.Security.Claims
 @inject NavigationManager NavigationManager
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
 
 @{
     var settings = SettingService.GetSettings();
@@ -15,6 +17,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(HttpContextAccessor.HttpContext).RequestToken" />
     <base href="/" />
 
     @switch (SettingService.GetSettings().Theme)

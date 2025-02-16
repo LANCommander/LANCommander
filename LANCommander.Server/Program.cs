@@ -93,6 +93,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseAntiforgery();
 
 app.UseMvcWithDefaultRoute();
 
@@ -100,7 +101,6 @@ Log.Debug("Registering Endpoints");
 
 app.MapHub<LoggingHub>("/logging");
 
-app.UseAntiforgery();
 app.UseStaticFiles();
 
 app.MapRazorComponents<App>()

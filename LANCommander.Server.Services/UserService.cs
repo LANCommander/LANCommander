@@ -160,6 +160,11 @@ namespace LANCommander.Server.Services
 
         }
 
+        public IBaseDatabaseService<User> AsSplitQuery()
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ICollection<User>> GetAsync()
         {
             return await IdentityContext.UserManager.Users.ToListAsync();

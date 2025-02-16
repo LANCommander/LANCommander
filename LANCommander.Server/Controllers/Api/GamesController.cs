@@ -95,8 +95,6 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("{id}")]
         public async Task<SDK.Models.Game> GetAsync(Guid id)
         {
-            var user = await UserService.GetAsync(User?.Identity?.Name);
-
             var game = await Cache.GetOrSetAsync<SDK.Models.Game>($"Games/{id}", async _ =>
             {
                 return await GameService
@@ -115,6 +113,8 @@ namespace LANCommander.Server.Controllers.Api
                     .Include(g => g.Publishers)
                     .Include(g => g.Redistributables)
                     .Include(g => g.Tags)
+                    .AsNoTracking()
+                    .AsSplitQuery()
                     .GetAsync<SDK.Models.Game>(id);
             }, TimeSpan.MaxValue, tags: ["Games", $"Games/{id}"]);
 
@@ -144,9 +144,10 @@ namespace LANCommander.Server.Controllers.Api
                             .Include(g => g.DependentGames)
                             .ThenInclude(dg => dg.Actions)
                             .Include(g => g.Servers)
-                            .ThenInclude(s => s.Actions)
-                            .AsSplitQuery();
+                            .ThenInclude(s => s.Actions);
                     })
+                    .AsNoTracking()
+                    .AsSplitQuery()
                     .GetAsync(id);
 
                 var actions = new List<Data.Models.Action>();
@@ -168,6 +169,8 @@ namespace LANCommander.Server.Controllers.Api
             {
                 return await GameService
                     .Include(g => g.Archives)
+                    .AsSplitQuery()
+                    .AsNoTracking()
                     .GetAsync<SDK.Models.Game>(g => g.BaseGameId == id && (g.Type == GameType.Expansion || g.Type == GameType.Mod));
             }, tags: ["Games", $"Games/{id}"]);
 

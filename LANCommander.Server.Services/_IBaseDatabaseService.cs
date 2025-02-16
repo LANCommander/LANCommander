@@ -15,6 +15,7 @@ namespace LANCommander.Server.Services
         IBaseDatabaseService<T> Include(params Expression<Func<T, object>>[] expressions);
         IBaseDatabaseService<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending);
         IBaseDatabaseService<T> AsNoTracking();
+        IBaseDatabaseService<T> AsSplitQuery();
 
         Task<ICollection<T>> GetAsync();
         Task<ICollection<U>> GetAsync<U>();

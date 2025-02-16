@@ -53,6 +53,7 @@ namespace LANCommander.Server.Controllers.Api
                     
                     var games = await DatabaseContext.Games
                         .AsNoTracking()
+                        .AsSplitQuery()
                         .Where(g => libraryGameIds.Contains(g.Id))
                         .ToListAsync();
                     

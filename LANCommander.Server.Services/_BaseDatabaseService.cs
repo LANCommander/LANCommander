@@ -27,8 +27,14 @@ namespace LANCommander.Server.Services
             {
                 return queryable.AsNoTracking();
             });
+        }
 
-            return this;
+        public IBaseDatabaseService<T> AsSplitQuery()
+        {
+            return Query((queryable) =>
+            {
+                return queryable.AsSplitQuery();
+            });
         }
 
         public IBaseDatabaseService<T> Query(Func<IQueryable<T>, IQueryable<T>> modifier)

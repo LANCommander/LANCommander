@@ -57,7 +57,8 @@ public class GameImporter(
             game = new Game();
         else
         {
-            game = await gameService.Include(g => g.Actions)
+            game = await gameService
+                .Include(g => g.Actions)
                 .Include(g => g.Archives)
                 .Include(g => g.BaseGame)
                 .Include(g => g.Categories)
@@ -72,6 +73,7 @@ public class GameImporter(
                 .Include(g => g.Publishers)
                 .Include(g => g.Redistributables)
                 .Include(g => g.Tags)
+                .Include(g => g.Scripts)
                 .FirstOrDefaultAsync(g => g.Id == manifest.Id);
         }
 

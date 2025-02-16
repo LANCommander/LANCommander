@@ -1,4 +1,5 @@
 ﻿@inject RedistributableService RedistributableService
+@inject ImportService<Redistributable> ImportService
 @inject NavigationManager Navigator
 @inject IMessageService MessageService
 @inject IJSRuntime JS
@@ -68,7 +69,7 @@
         {
             try
             {
-                var redistributable = await RedistributableService.ImportAsync(objectKey);
+                var redistributable = await ImportService.ImportFromUploadArchiveAsync(objectKey);
 
                 Visible = false;
 

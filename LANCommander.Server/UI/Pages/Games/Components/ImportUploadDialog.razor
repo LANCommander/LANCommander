@@ -1,5 +1,6 @@
 ﻿@inherits FeedbackComponent<ImportDialogOptions>
 @inject GameService GameService
+@inject ImportService<Game> ImportService
 @inject IMessageService MessageService
 @inject ILogger<ImportUploadDialog> Logger
 
@@ -70,7 +71,7 @@
         {
             try
             {
-                var game = await GameService.ImportAsync(objectKey);
+                var game = await ImportService.ImportFromUploadArchiveAsync(objectKey);
 
                 await InvokeAsync(StateHasChanged);
 
@@ -110,7 +111,7 @@
     {
         try
         {
-            var game = await GameService.ImportLocalFileAsync(path);
+            var game = await ImportService.ImportFromLocalFileAsync(path);
 
             await InvokeAsync(StateHasChanged);
             

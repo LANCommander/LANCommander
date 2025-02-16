@@ -19,6 +19,7 @@ namespace LANCommander.Server.Controllers.Api
     public class GamesController : BaseApiController
     {
         private readonly GameService GameService;
+        private readonly ImportService<Game> ImportService;
         private readonly LibraryService LibraryService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
@@ -31,12 +32,14 @@ namespace LANCommander.Server.Controllers.Api
             IFusionCache cache,
             IMapper mapper,
             GameService gameService,
+            ImportService<Game> importService,
             LibraryService libraryService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
             UserService userService) : base(logger)
         {
             GameService = gameService;
+            ImportService = importService;
             LibraryService = libraryService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
@@ -229,7 +232,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var game = await GameService.ImportAsync(objectKey);
+                var game = await ImportService.ImportFromUploadArchiveAsync(objectKey);
 
                 return Ok();
             }

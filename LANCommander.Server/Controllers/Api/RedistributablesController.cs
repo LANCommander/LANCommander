@@ -16,6 +16,7 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
+        private readonly ImportService<Redistributable> ImportService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
 
@@ -23,11 +24,13 @@ namespace LANCommander.Server.Controllers.Api
             ILogger<RedistributablesController> logger, 
             IMapper mapper,
             RedistributableService redistributableService,
+            ImportService<Redistributable> importService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
+            ImportService = importService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
         }
@@ -81,7 +84,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var game = await RedistributableService.ImportAsync(objectKey);
+                var redistributable = await ImportService.ImportFromUploadArchiveAsync(objectKey);
 
                 return Ok();
             }

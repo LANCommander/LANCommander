@@ -2,6 +2,7 @@
 @inherits FeedbackComponent<ImportDialogOptions>
 @inject StorageLocationService StorageLocationService
 @inject ServerService ServerService
+@inject ImportService<Server> ImportService
 @inject IMessageService MessageService
 @inject ILogger<ImportUploadDialog> Logger
 
@@ -66,7 +67,7 @@
         {
             try
             {
-                var server = await ServerService.ImportAsync(objectKey);
+                var server = await ImportService.ImportFromUploadArchiveAsync(objectKey);
 
                 await InvokeAsync(StateHasChanged);
 

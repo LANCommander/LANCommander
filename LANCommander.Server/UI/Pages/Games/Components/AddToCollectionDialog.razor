@@ -84,7 +84,9 @@
     {
         ICollection<Collection> collections;
         
-        collections = await CollectionService.GetAsync(c => SelectedCollections.Contains(c.Id));
+        collections = await CollectionService
+            .Include(c => c.Games)
+            .GetAsync(c => SelectedCollections.Contains(c.Id));
 
         try
         {

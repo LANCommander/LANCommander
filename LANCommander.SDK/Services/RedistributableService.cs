@@ -68,7 +68,7 @@ namespace LANCommander.SDK.Services
             _installProgress.Progress = 0;
             _installProgress.TransferSpeed = 0;
             _installProgress.TotalBytes = 0;
-            _installProgress.BytesDownloaded = 0;
+            _installProgress.BytesTransferred = 0;
             
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
@@ -184,7 +184,7 @@ namespace LANCommander.SDK.Services
                         {
                             monitor.Update(pos);
 
-                            _installProgress.BytesDownloaded = monitor.GetBytesTransferred();
+                            _installProgress.BytesTransferred = monitor.GetBytesTransferred();
                             _installProgress.TotalBytes = len;
                             _installProgress.TransferSpeed = monitor.GetSpeed();
                             _installProgress.TimeRemaining = monitor.GetTimeRemaining();

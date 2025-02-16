@@ -29,12 +29,12 @@ namespace LANCommander.SDK.Services
         {
             get
             {
-                return BytesDownloaded / (float)TotalBytes;
+                return BytesTransferred / (float)TotalBytes;
             }
             set { }
         }
         public long TransferSpeed { get; set; }
-        public long BytesDownloaded { get; set; }
+        public long BytesTransferred { get; set; }
         public long TotalBytes { get; set; }
         public TimeSpan TimeRemaining { get; set; }
     }
@@ -312,7 +312,7 @@ namespace LANCommander.SDK.Services
             _installProgress.Progress = 0;
             _installProgress.TransferSpeed = 0;
             _installProgress.TotalBytes = 0;
-            _installProgress.BytesDownloaded = 0;
+            _installProgress.BytesTransferred = 0;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
@@ -377,7 +377,7 @@ namespace LANCommander.SDK.Services
             }
 
             _installProgress.Progress = 1;
-            _installProgress.BytesDownloaded = _installProgress.TotalBytes;
+            _installProgress.BytesTransferred = _installProgress.TotalBytes;
             _installProgress.Status = InstallStatus.InstallingRedistributables;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -408,7 +408,7 @@ namespace LANCommander.SDK.Services
 
             _installProgress.Status = InstallStatus.Complete;
             _installProgress.Progress = 1;
-            _installProgress.BytesDownloaded = _installProgress.TotalBytes;
+            _installProgress.BytesTransferred = _installProgress.TotalBytes;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
@@ -450,9 +450,9 @@ namespace LANCommander.SDK.Services
                         _installProgress.Status = InstallStatus.Downloading;
                         _installProgress.Game = expansion;
                         _installProgress.Progress = 0;
-                        _installProgress.BytesDownloaded = 0;
+                        _installProgress.BytesTransferred = 0;
                         _installProgress.TotalBytes = 1;
-                        _installProgress.BytesDownloaded = 0;
+                        _installProgress.BytesTransferred = 0;
 
                         OnInstallProgressUpdate?.Invoke(_installProgress);
                         
@@ -473,9 +473,9 @@ namespace LANCommander.SDK.Services
                         _installProgress.Status = InstallStatus.Downloading;
                         _installProgress.Game = mod;
                         _installProgress.Progress = 0;
-                        _installProgress.BytesDownloaded = 0;
+                        _installProgress.BytesTransferred = 0;
                         _installProgress.TotalBytes = 1;
-                        _installProgress.BytesDownloaded = 0;
+                        _installProgress.BytesTransferred = 0;
 
                         OnInstallProgressUpdate?.Invoke(_installProgress);
                         
@@ -648,7 +648,7 @@ namespace LANCommander.SDK.Services
 
             _installProgress.Status = InstallStatus.Moving;
             _installProgress.Indeterminate = false;
-            _installProgress.BytesDownloaded = totalPos;
+            _installProgress.BytesTransferred = totalPos;
             _installProgress.TotalBytes = totalSize;
 
             foreach (var directory in directories)
@@ -678,7 +678,7 @@ namespace LANCommander.SDK.Services
                                 fileTransferMonitor.Update(totalPos);
 
                                 _installProgress.TimeRemaining = fileTransferMonitor.GetTimeRemaining();
-                                _installProgress.BytesDownloaded = fileTransferMonitor.GetBytesTransferred();
+                                _installProgress.BytesTransferred = fileTransferMonitor.GetBytesTransferred();
                                 _installProgress.TransferSpeed = fileTransferMonitor.GetSpeed();
                             
                                 OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -688,7 +688,7 @@ namespace LANCommander.SDK.Services
                 }
             }
 
-            _installProgress.BytesDownloaded = totalSize;
+            _installProgress.BytesTransferred = totalSize;
             _installProgress.Progress = 1;
             _installProgress.Status = InstallStatus.RunningScripts;
             OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -775,7 +775,7 @@ namespace LANCommander.SDK.Services
                         {
                             monitor.Update(pos);
 
-                            _installProgress.BytesDownloaded = monitor.GetBytesTransferred();
+                            _installProgress.BytesTransferred = monitor.GetBytesTransferred();
                             _installProgress.TotalBytes = len;
                             _installProgress.TransferSpeed = monitor.GetSpeed();
                             _installProgress.TimeRemaining = monitor.GetTimeRemaining();

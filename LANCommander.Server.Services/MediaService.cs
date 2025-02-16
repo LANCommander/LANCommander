@@ -134,6 +134,11 @@ namespace LANCommander.Server.Services
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
 
             await GenerateThumbnailAsync(media);
+
+            if (media.Id != Guid.Empty)
+                media = await UpdateAsync(media);
+            else
+                media = await AddAsync(media);
             
             await cache.ExpireGameCacheAsync(media.GameId);
 

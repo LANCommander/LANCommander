@@ -9,7 +9,11 @@
 
 <PageHeader Title="Updates">
     <PageHeaderExtra>
-        <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="@(!UpdateAvailable || Updating)" Loading="Updating">Update</Button>
+        <Flex Justify="FlexJustify.End" Gap="FlexGap.Small">
+            Release Channel:
+            <EnumSelect TEnum="ReleaseChannel" OnSelectedItemChanged="ReleaseChannelChanged" />
+            <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="@(!UpdateAvailable || Updating)" Loading="Updating">Update</Button>
+        </Flex>
     </PageHeaderExtra>
 </PageHeader>
 
@@ -41,7 +45,7 @@
                             <Tag Color="@PresetColor.Gold.ToString()">Latest</Tag>
                         }
 
-                        @if (release.TagName == $"v{CurrentVersion.ToString()}")
+                        @if (release.TagName == $"v{CurrentVersion}")
                         {
                             <Tag Color="@PresetColor.Blue.ToString()">Current</Tag>
                         }
@@ -79,12 +83,36 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await CheckForUpdate();
+    }
+
+    async Task CheckForUpdate()
+    {
+        Loading = true;
+
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        
         CurrentVersion = UpdateService.GetCurrentVersion();
         UpdateAvailable = await UpdateService.UpdateAvailableAsync();
         LatestVersion = await UpdateService.GetLatestVersionAsync();
         Releases = await UpdateService.GetReleasesAsync(5);
 
         Loading = false;
+        
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+    }
+
+    async Task ReleaseChannelChanged(ReleaseChannel releaseChannel)
+    {
+        var settings = SettingService.GetSettings();
+
+        settings.Update.ReleaseChannel = releaseChannel;
+        
+        SettingService.SaveSettings(settings);
+
+        MessageService.Success($"Changed release channel to {releaseChannel}!");
     }
 
     async Task Update()

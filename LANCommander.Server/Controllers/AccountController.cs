@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using ZiggyCreatures.Caching.Fusion;
 using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
+using LoginModel = LANCommander.Server.Controllers.Api.LoginModel;
 
 namespace LANCommander.Server.Controllers;
 
@@ -38,6 +39,19 @@ public class AccountController : BaseController
         await SignInManager.SignOutAsync();
 
         return Redirect("/Login");
+    }
+
+    [HttpPost("/SignInWeb")]
+    public async Task<IActionResult> SignInWeb(LoginModel model)
+    {
+        var user = await UserService.GetAsync(model.UserName);
+
+        var result = await SignInManager.CheckPasswordSignInAsync(user, model.Password, false);
+
+        if (!result.Succeeded)
+            return Unauthorized(result);
+        else
+            return Ok();
     }
 
     [HttpGet("/SignInOAuth")]

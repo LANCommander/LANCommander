@@ -27,16 +27,9 @@
                 {
                     <MenuItem RouterLink="@($"/Games/{Id}/Mods")">Mods</MenuItem>
                 }
-
-                if (Game.PlaySessions != null && Game.PlaySessions.Any())
-                {
-                    <MenuItem RouterLink="@($"/Games/{Id}/PlaySessions")">Play Sessions</MenuItem>
-                }
-
-                if (Game.GameSaves != null && Game.GameSaves.Any())
-                {
-                    <MenuItem RouterLink="@($"/Games/{Id}/Saves")">Saves</MenuItem>
-                }
+                
+                <MenuItem RouterLink="@($"/Games/{Id}/PlaySessions")">Play Sessions</MenuItem>
+                <MenuItem RouterLink="@($"/Games/{Id}/Saves")">Saves</MenuItem>
             }
         </Menu>
     </Sider>

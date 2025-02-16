@@ -20,6 +20,7 @@ using LANCommander.Server.Extensions;
 using LANCommander.Server.Data;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
+using Microsoft.AspNetCore.Components;
 using ZiggyCreatures.Caching.Fusion;
 using User = LANCommander.Server.Data.Models.User;
 
@@ -74,6 +75,8 @@ namespace LANCommander.Server.UI.Pages.Account
         public string ErrorMessage { get; set; }
         
         public AuthToken Token { get; set; }
+        
+        public string ScreenshotUrl { get; set; }
 
         public async Task<IActionResult> OnGetAsync(string returnUrl = null, string code = null)
         {
@@ -108,6 +111,10 @@ namespace LANCommander.Server.UI.Pages.Account
                     Token = token;
                 }
             }
+            
+            var screenshots = Directory.GetFiles(Path.Combine("wwwroot", "static", "login"), "*.jpg");
+
+            ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
 
             return Page();
         }

@@ -8,6 +8,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using AutoMapper;
+using LANCommander.Server.Services.Models;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -20,25 +21,152 @@ namespace LANCommander.Server.Services
     {
         private GitHubClient _gitHub;
 
+        private const string _owner = "LANCommander";
+        private const string _repository = "LANCommander";
+        private const string _nightlyWorkflowFile = "LANCommander.Nightly.yml";
+
         public override void Initialize()
         {
-            _gitHub = new GitHubClient(new ProductHeaderValue("LANCommander"));
+            _gitHub = new GitHubClient(new ProductHeaderValue(_repository));
         }
 
         public static SemVersion GetCurrentVersion()
         {
-            return SemVersion.FromVersion(Assembly.GetExecutingAssembly().GetName().Version);
+            var productVersion = FileVersionInfo.GetVersionInfo(Assembly.GetEntryAssembly().Location).ProductVersion;
+            
+            return SemVersion.Parse(productVersion);
         }
 
+        public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
+        {
+            if (!_settings.Launcher.HostUpdates)
+                return await GetLauncherArtifactsFromGitHubAsync().ToListAsync();
+
+            return GetLauncherArtifactsFromLocalFiles();
+        }
+
+        public IEnumerable<LauncherArtifact> GetLauncherArtifactsFromLocalFiles()
+        {
+            var currentVersion = GetCurrentVersion();
+            var downloadedLaunchers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher.*v{currentVersion.WithoutMetadata()}.zip");
+            
+            foreach (var downloadedLauncher in downloadedLaunchers)
+                yield return GetArtifactFromName(downloadedLauncher);
+        }
+
+        public async IAsyncEnumerable<LauncherArtifact> GetLauncherArtifactsFromGitHubAsync()
+        {
+            var currentVersion = GetCurrentVersion();
+            
+            if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
+                currentVersion = SemVersion.Parse(_settings.Launcher.VersionOverride, SemVersionStyles.AllowV);
+            
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Stable ||
+                _settings.Update.ReleaseChannel == ReleaseChannel.Prerelease)
+            {
+                var release = await _gitHub.Repository.Release.Get(_owner, _repository, "v" + currentVersion);
+
+                var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
+                
+                foreach (var asset in assets)
+                    yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl);
+            }
+
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Nightly)
+            {
+                if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
+                    currentVersion = SemVersion.Parse(_settings.Launcher.VersionOverride);
+                
+                var workflowRunsResponse = await _gitHub.Actions.Workflows.Runs.ListByWorkflow(_owner, _repository, _nightlyWorkflowFile, new WorkflowRunsRequest
+                {
+                    HeadSha = currentVersion.Metadata
+                });
+
+                if (workflowRunsResponse.WorkflowRuns.Any())
+                {
+                    var run = workflowRunsResponse.WorkflowRuns.FirstOrDefault();
+                    var artifactsResponse = await _gitHub.Actions.Artifacts.ListWorkflowArtifacts(_owner, _repository, run.Id);
+
+                    foreach (var artifact in artifactsResponse.Artifacts)
+                        yield return GetArtifactFromName(artifact.Name, artifact.ArchiveDownloadUrl);
+                }
+            }
+        }
+
+        private LauncherArtifact GetArtifactFromName(string name, string url = "")
+        {
+            var platform = LauncherPlatform.Windows;
+            var architecture = LauncherArchitecture.x64;
+
+            if (name.Contains("Windows"))
+                platform = LauncherPlatform.Windows;
+            else if (name.Contains("Linux"))
+                platform = LauncherPlatform.Linux;
+            else if (name.Contains("macOS"))
+                platform = LauncherPlatform.macOS;
+            
+            if (name.Contains("x64"))
+                architecture = LauncherArchitecture.x64;
+            else if (name.Contains("arm64"))
+                architecture = LauncherArchitecture.arm64;
+
+            if (String.IsNullOrWhiteSpace(url))
+                url = $"/Launcher/{name}";
+
+            return new LauncherArtifact
+            {
+                Name = name,
+                Platform = platform,
+                Architecture = architecture,
+                Url = url,
+            };
+        }
+        
         public async Task<SemVersion> GetLatestVersionAsync()
         {
-            var release = await _gitHub.Repository.Release.GetLatest("LANCommander", "LANCommander");
+            string version = "";
+            
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Stable)
+            {
+                var release = await _gitHub.Repository.Release.GetLatest(_owner, _repository);
 
-            SemVersion version = null;
+                if (release.Prerelease)
+                {
+                    release = (await _gitHub.Repository.Release.GetAll(_owner, _repository))
+                        .Where(r => !r.Prerelease)
+                        .OrderByDescending(r => r.CreatedAt)
+                        .FirstOrDefault();
+                }
 
-            SemVersion.TryParse(release.TagName.TrimStart('v'), SemVersionStyles.Strict, out version);
+                version = release.TagName;
+            }
 
-            return version;
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Prerelease)
+            {
+                var release = await _gitHub.Repository.Release.GetLatest(_owner, _repository);
+                
+                version = release.TagName;
+            }
+            
+            if (_settings.Update.ReleaseChannel == ReleaseChannel.Nightly)
+            {
+                var workflow = await _gitHub.Actions.Workflows.Get(_owner, _repository, _nightlyWorkflowFile);
+                var runs = await _gitHub.Actions.Workflows.Runs.ListByWorkflow(_owner, _repository, workflow.Id);
+                
+                var latestRun = runs.WorkflowRuns
+                    .Where(r => r.Conclusion == WorkflowRunConclusion.Success)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .FirstOrDefault();
+                
+                var artifacts = await _gitHub.Actions.Artifacts.ListWorkflowArtifacts(_owner, _repository, latestRun.Id);
+
+                var versionArtifact = artifacts.Artifacts.FirstOrDefault(a => a.Name.StartsWith("version."));
+
+                if (versionArtifact != null)
+                    version = versionArtifact.Name.Substring(0, versionArtifact.Name.Length - "version.".Length);
+            }
+
+            return SemVersion.Parse(version, SemVersionStyles.AllowV);
         }
 
         public async Task<bool> UpdateAvailableAsync()
@@ -52,7 +180,7 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<Release>> GetReleasesAsync(int count)
         {
-            return await _gitHub.Repository.Release.GetAll("LANCommander", "LANCommander", new ApiOptions
+            return await _gitHub.Repository.Release.GetAll(_owner, _repository, new ApiOptions
             {
                 PageSize = count,
                 PageCount = 1,
@@ -184,5 +312,13 @@ namespace LANCommander.Server.Services
 
             applicationLifetime.StopApplication();
         }
+    }
+
+    public class LauncherArtifact
+    {
+        public string Name { get; set; }
+        public string Url { get; set; }
+        public LauncherPlatform Platform { get; set; }
+        public LauncherArchitecture Architecture { get; set; }
     }
 }

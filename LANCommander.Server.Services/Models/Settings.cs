@@ -37,6 +37,26 @@ namespace LANCommander.Server.Services.Models
         ElasticSearch,
     }
 
+    public enum ReleaseChannel
+    {
+        Stable,
+        Prerelease,
+        Nightly,
+    }
+    
+    public enum LauncherPlatform
+    {
+        Windows,
+        Linux,
+        macOS,
+    }
+
+    public enum LauncherArchitecture
+    {
+        x64,
+        arm64,
+    }
+
     public class Settings
     {
         public int Port { get; set; } = 1337;
@@ -165,12 +185,16 @@ namespace LANCommander.Server.Services.Models
     public class UpdateSettings
     {
         public string StoragePath { get; set; } = "Updates";
+        public ReleaseChannel ReleaseChannel { get; set; } = ReleaseChannel.Stable;
     }
 
     public class LauncherSettings
     {
         public string StoragePath { get; set; } = "Launcher";
         public bool HostUpdates { get; set; } = true;
+        public string VersionOverride { get; set; } = "";
+        public IEnumerable<LauncherArchitecture> Architectures { get; set; } = new[] { LauncherArchitecture.x64, LauncherArchitecture.arm64 };
+        public IEnumerable<LauncherPlatform> Platforms { get; set; } = new[] { LauncherPlatform.Windows };
     }
 
     public class LoggingProvider

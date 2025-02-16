@@ -399,10 +399,8 @@ namespace LANCommander.Launcher.Services
                     if (game != null && remoteGame != null)
                     {
                         var importedGame = await ImportGameAsync(remoteGame);
-                        
-                        library.Games.Add(importedGame);
-                        
-                        await LibraryService.UpdateAsync(library);
+
+                        await LibraryService.AddToLibraryAsync(importedGame);
                     }
                 }
                 catch (Exception ex)

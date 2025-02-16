@@ -1,0 +1,73 @@
+.login-box {
+    filter: drop-shadow(0px 0px 32px #000);
+    
+    &-logo {
+        margin-bottom: 48px;
+        text-align: center;
+        width: 100%;
+        
+        img {
+            max-width: 300px;
+            width: 80%;
+        }
+    }
+}
+
+.login-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-content: center;
+    
+    &-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-size: cover;
+        background-position: center;
+        filter: blur(20px) brightness(75%);
+        transform: scale(110%);
+    }
+}
+
+.login-form-pane {
+    background: rgba(0, 0, 0, .75);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    
+    form {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+.login-download-pane {
+    min-height: 50vh;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    justify-content: center;
+    align-items: end;
+    padding-top: 48px;
+    padding-bottom: 48px;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 256px;
+        background: linear-gradient(0deg, rgba(0, 0, 0, 0) 100%, rgba(0, 0, 0, .75) 0%);
+    }
+}

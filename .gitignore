@@ -367,3 +367,4 @@ LANCommander.Server/Settings.yml
 LANCommander.Server/LANCommander.db*
 package-lock.json
 LANCommander.Server/wwwroot/css/custom.css
+LANCommander.Server/wwwroot/css/app.css*

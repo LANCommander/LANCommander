@@ -104,7 +104,8 @@ namespace LANCommander.Server.UI.Pages.Account
             
             var screenshots = Directory.GetFiles(Path.Combine("wwwroot", "static", "login"), "*.jpg");
 
-            ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
+            if (screenshots.Any())
+                ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null, string provider = null)

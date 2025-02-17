@@ -1,8 +1,20 @@
 name: LANCommander DockerHub
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      version_tag:
+        required: true
+        type: string
+      version_semver:
+        required: true
+        type: string
+      platform:
+        required: true
+        type: string
+      arch:
+        required: true
+        type: string
 
 env:
   REGISTRY: docker.io
@@ -15,43 +27,28 @@ permissions:
   attestations: write
 
 jobs:
-  prep:
-    runs-on: ubuntu-latest
-    outputs:
-      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
-      version_semver: ${{ steps.trim_tag_ref.outputs.replaced }}
-    steps:
-      - uses: frabert/replace-string-action@v2
-        name: Trim Tag Ref
-        id: trim_tag_ref
-        with:
-          string: '${{ github.ref }}'
-          pattern: 'refs/tags/v'
-          replace-with: ''
-
-  build_server_linux_x64:
-    needs: prep
+  build_server:
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
-      version_semver: ${{ needs.prep.outputs.version_semver }}
-      version_tag: ${{ needs.prep.outputs.version_tag }}
-      build_runtime: linux-x64
-      build_arch: x64
+      version_semver: ${{ inputs.version_semver }}
+      version_tag: ${{ inputs.version_tag }}
+      build_runtime: ${{ inputs.platform }}-${{ inputs.arch }}
+      build_arch: ${{ inputs.arch }}
       build_platform: Linux
 
   push_to_registry:
-    needs: [prep, build_server_linux_x64]
+    needs: [build_server]
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Download Server x64 Artifacts
+      - name: Download Server Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-          path: ./Docker/build/linux-x64
+          name: LANCommander.Server-Linux-${{ inputs.arch }}-v${{ inputs.version_tag }}.zip
+          path: ./Docker/build/${{ inputs.platform }}-${{ inputs.arch }}
       
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -62,7 +59,7 @@ jobs:
       - name: Setup buildx
         uses: docker/setup-buildx-action@v1
         with:
-          platforms: linux/amd64
+          platforms: ${{ inputs.platform }}/${{ inputs.arch }}
 
       - name: Build and push Docker image
         id: push
@@ -71,22 +68,22 @@ jobs:
           context: ./Docker
           file: ./Docker/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: ${{ inputs.platform }}/${{ inputs.arch }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prep.outputs.version_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.version_tag }}-${{ inputs.arch }}
           labels: |
             org.opencontainers.image.title=LANCommander Server
             org.opencontainers.image.description="LANCommander Server Release Build"
-            org.opencontainers.image.version=${{ needs.prep.outputs.version_semver }}
+            org.opencontainers.image.version=${{ inputs.version_semver }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.created_at }}
+            org.opencontainers.image.architecture=${{ inputs.arch }}
           build-args: |
-            VERSION=${{ needs.prep.outputs.version_tag }}
+            VERSION=${{ inputs.version_tag }}
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ inputs.version_tag }}-${{ inputs.arch }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true

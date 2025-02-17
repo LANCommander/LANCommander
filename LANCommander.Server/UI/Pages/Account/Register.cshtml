@@ -41,7 +41,6 @@
             }
 
             <form id="registerForm" method="post" autocomplete="off">
-                @Html.AntiForgeryToken()
                 <input asp-for="Model.RegistrationType" type="hidden"/>
                 <input asp-for="Model.Email" type="hidden"/>
 

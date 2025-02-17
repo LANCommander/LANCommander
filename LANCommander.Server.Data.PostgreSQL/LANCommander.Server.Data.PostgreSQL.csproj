@@ -15,8 +15,4 @@
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Migrations\" />
-  </ItemGroup>
-
 </Project>

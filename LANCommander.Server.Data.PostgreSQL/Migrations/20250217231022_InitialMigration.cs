@@ -1146,7 +1146,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         column: x => x.StorageLocationId,
                         principalTable: "StorageLocations",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Media_Users_CreatedById",
                         column: x => x.CreatedById,
@@ -1488,14 +1488,13 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     Type = table.Column<int>(type: "integer", nullable: false),
-                    Path = table.Column<string>(type: "text", nullable: false),
-                    Host = table.Column<string>(type: "text", nullable: false),
+                    Path = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
+                    Host = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     Port = table.Column<int>(type: "integer", nullable: true),
-                    Password = table.Column<string>(type: "text", nullable: false),
+                    Password = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
                     ServerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ServerId1 = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -1510,11 +1509,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ServerConsoles_Servers_ServerId1",
-                        column: x => x.ServerId1,
-                        principalTable: "Servers",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ServerConsoles_Users_CreatedById",
                         column: x => x.CreatedById,
@@ -1534,10 +1528,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    LocalPath = table.Column<string>(type: "text", nullable: false),
-                    Path = table.Column<string>(type: "text", nullable: false),
+                    LocalPath = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
+                    Path = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
                     ServerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    ServerId1 = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedOn = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
@@ -1552,11 +1545,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         principalTable: "Servers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ServerHttpPath_Servers_ServerId1",
-                        column: x => x.ServerId1,
-                        principalTable: "Servers",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_ServerHttpPath_Users_CreatedById",
                         column: x => x.CreatedById,
@@ -2030,11 +2018,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 column: "ServerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServerConsoles_ServerId1",
-                table: "ServerConsoles",
-                column: "ServerId1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ServerConsoles_UpdatedById",
                 table: "ServerConsoles",
                 column: "UpdatedById");
@@ -2048,11 +2031,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                 name: "IX_ServerHttpPath_ServerId",
                 table: "ServerHttpPath",
                 column: "ServerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ServerHttpPath_ServerId1",
-                table: "ServerHttpPath",
-                column: "ServerId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServerHttpPath_UpdatedById",

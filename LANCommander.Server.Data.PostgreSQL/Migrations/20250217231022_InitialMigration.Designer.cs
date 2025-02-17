@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LANCommander.Server.Data.PostgreSQL.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250203083412_InitialMigration")]
+    [Migration("20250217231022_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "9.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -806,8 +806,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("MaxPlayers")
@@ -1246,28 +1245,28 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<string>("Host")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("Password")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("Path")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<int?>("Port")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("ServerId")
-                        .IsRequired()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ServerId1")
+                    b.Property<Guid>("ServerId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Type")
@@ -1284,8 +1283,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("ServerId");
-
-                    b.HasIndex("ServerId1");
 
                     b.HasIndex("UpdatedById");
 
@@ -1306,16 +1303,15 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<string>("LocalPath")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
 
                     b.Property<string>("Path")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<Guid>("ServerId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("ServerId1")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("UpdatedById")
@@ -1329,8 +1325,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("ServerId");
-
-                    b.HasIndex("ServerId1");
 
                     b.HasIndex("UpdatedById");
 
@@ -1524,8 +1518,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<DateTime>("UpdatedOn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Value")
@@ -2201,7 +2194,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
                         .WithMany("Media")
                         .HasForeignKey("StorageLocationId")
-                        .OnDelete(DeleteBehavior.SetNull)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("LANCommander.Server.Data.Models.Media", "Thumbnail")
@@ -2458,14 +2451,10 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Server.Data.Models.Server", "Server")
-                        .WithMany()
+                        .WithMany("ServerConsoles")
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("LANCommander.Server.Data.Models.Server", null)
-                        .WithMany("ServerConsoles")
-                        .HasForeignKey("ServerId1");
 
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
@@ -2487,14 +2476,10 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LANCommander.Server.Data.Models.Server", "Server")
-                        .WithMany()
+                        .WithMany("HttpPaths")
                         .HasForeignKey("ServerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("LANCommander.Server.Data.Models.Server", null)
-                        .WithMany("HttpPaths")
-                        .HasForeignKey("ServerId1");
 
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()

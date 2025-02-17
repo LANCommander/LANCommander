@@ -1,37 +1,92 @@
-name: Publish Docker Image
+name: LANCommander DockerHub
 
 on:
   release:
     types: [published]
-  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: lancommander/lancommander
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
 
 jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      version_semver: ${{ steps.trim_tag_ref.outputs.replaced }}
+    steps:
+      - uses: frabert/replace-string-action@v2
+        name: Trim Tag Ref
+        id: trim_tag_ref
+        with:
+          string: '${{ github.ref }}'
+          pattern: 'refs/tags/v'
+          replace-with: ''
+
+  build_server_linux_x64:
+    needs: prep
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
+
   push_to_registry:
+    needs: [prep, build_server_linux_x64]
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
+
+      - name: Download Server x64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: ./Docker/build/linux-x64
       
       - name: Login to Docker Hub
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+      - name: Setup buildx
+        uses: docker/setup-buildx-action@v1
         with:
-          images: lancommander/lancommander
+          platforms: linux/amd64
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
+        id: push
+        uses: docker/build-push-action@v6
         with:
           context: ./Docker
           file: ./Docker/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.prep.outputs.version_tag }}
+          labels: |
+            org.opencontainers.image.title=LANCommander Server
+            org.opencontainers.image.description="LANCommander Server Release Build"
+            org.opencontainers.image.version=${{ needs.prep.outputs.version_semver }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.created_at }}
           build-args: |
-            VERSION=${{github.ref_name}}
+            VERSION=${{ needs.prep.outputs.version_tag }}
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

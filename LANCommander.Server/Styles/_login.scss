@@ -62,6 +62,10 @@
     padding-top: 48px;
     padding-bottom: 48px;
     
+    .ant-btn {
+        box-shadow: 0px 1px 4px rgba(0, 0, 0, .5)
+    }
+    
     &::before {
         content: '';
         position: absolute;

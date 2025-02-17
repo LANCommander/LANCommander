@@ -57,13 +57,13 @@ jobs:
       - name: Download x64 Launcher
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}
           path: ./build/win-x64
 
       - name: Download ARM64 Launcher
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}
           path: ./build/win-arm64
 
       - name: Download Inno Setup

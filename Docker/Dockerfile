@@ -14,11 +14,11 @@ RUN case "$TARGETPLATFORM" in \
       "linux/arm64") export BUILD_ARCH="linux-arm64" ;; \
       *) echo "Unknown TARGETPLATFORM: $TARGETPLATFORM" && exit 1 ;; \
     esac && \
-    echo "Using BUILD_ARCH=$BUILD_ARCH"
+    echo "Using BUILD_ARCH=$BUILD_ARCH" && \
+    cp -r /build/$BUILD_ARCH /app/LANCommander
 
 # copy local files
 COPY root/ /
-COPY ./build/$BUILD_ARCH /app/LANCommander
 
 # install app
 RUN \

@@ -280,13 +280,6 @@ jobs:
           name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
           path: ./Docker/build/linux-arm64
 
-      - name: Prepare build artifacts
-        run: |
-          mkdir -p ./Docker/build/linux-x64
-          mkdir -p ./Docker/build/linux-arm64
-          mv ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}/* ./Docker/build/linux-x64/
-          mv ./LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}/* ./Docker/build/linux-arm64/
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Setup buildx

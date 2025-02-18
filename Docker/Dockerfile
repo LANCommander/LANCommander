@@ -9,14 +9,16 @@ ARG TARGETPLATFORM
 LABEL build_version="LANCommander version:- ${VERSION} Build-date:- ${BUILD_DATE}, container based on github.com/LinuxServer/baseimage-ubuntu"
 LABEL maintainer="bashNinja, pathartl"
 
+# Set architecture-specific build directory
+COPY --from=builder /build/linux-x64 /app/LANCommander/
+COPY --from=builder /build/linux-arm64 /app/LANCommander/
+
+# Remove unused architecture
 RUN case "$TARGETPLATFORM" in \
-      "linux/amd64") export BUILD_ARCH="linux-x64" ;; \
-      "linux/arm64") export BUILD_ARCH="linux-arm64" ;; \
+      "linux/amd64") rm -rf /app/LANCommander/linux-arm64 ;; \
+      "linux/arm64") rm -rf /app/LANCommander/linux-x64 ;; \
       *) echo "Unknown TARGETPLATFORM: $TARGETPLATFORM" && exit 1 ;; \
-    esac && \
-    echo "Using BUILD_ARCH=$BUILD_ARCH" && \
-    du -h ./build && \
-    cp -r ./build/$BUILD_ARCH /app/LANCommander
+    esac
 
 # copy local files
 COPY root/ /

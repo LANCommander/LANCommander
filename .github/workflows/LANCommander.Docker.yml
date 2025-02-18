@@ -1,20 +1,8 @@
 name: LANCommander DockerHub
 
 on:
-  workflow_call:
-    inputs:
-      version_tag:
-        required: true
-        type: string
-      version_semver:
-        required: true
-        type: string
-      platform:
-        required: true
-        type: string
-      arch:
-        required: true
-        type: string
+  release:
+    types: [published]
 
 env:
   REGISTRY: docker.io
@@ -27,39 +15,106 @@ permissions:
   attestations: write
 
 jobs:
-  build_server:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      version_semver: ${{ steps.set_version.outputs.VERSION_SEMVER }}
+      version_tag: ${{ steps.set_version.outputs.VERSION_TAG }}
+      changed: ${{ steps.check_diff.outputs.changed }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          # Ensure we get all tags so we can find the latest
+          fetch-depth: 0
+
+      - name: Determine last semver and build nightly version
+        id: set_version
+        shell: bash
+        run: |
+          # Fetch all tags
+          git fetch --tags
+
+          # Grab the last semver-ish tag (e.g., "v1.2.3", "v1.2.3-debug", or "1.2.3-nightly")
+          LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+
+          if [ -z "$LAST_SEMVER_TAG" ]; then
+            echo "No semver tag found; defaulting to 0.0.0"
+            LAST_SEMVER_TAG="0.0.0"
+          fi
+
+          # Remove prefix 'v' and any suffix like "-debug", "-nightly", etc.
+          CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
+
+          echo "Clean semver tag: $CLEAN_TAG"
+
+          # Set output variables for GitHub Actions
+          echo "VERSION_SEMVER=$CLEAN_TAG" >> $GITHUB_ENV
+          echo "VERSION_TAG=$CLEAN_TAG" >> $GITHUB_ENV
+          echo "::set-output name=VERSION_SEMVER::$CLEAN_TAG"
+          echo "::set-output name=VERSION_TAG::$CLEAN_TAG"
+
+  build_server_linux_arm64:
+    needs: prep
+    if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
-      version_semver: ${{ inputs.version_semver }}
-      version_tag: ${{ inputs.version_tag }}
-      build_runtime: ${{ inputs.platform }}-${{ inputs.arch }}
-      build_arch: ${{ inputs.arch }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
+
+  build_server_linux_x64:
+    needs: prep
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
       build_platform: Linux
 
   push_to_registry:
-    needs: [build_server]
+    needs: 
+      - prep
+      - build_server_linux_arm64
+      - build_server_linux_x64
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Download Server Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: LANCommander.Server-Linux-${{ inputs.arch }}-v${{ inputs.version_tag }}
-          path: ./Docker/build/${{ inputs.platform }}-${{ inputs.arch }}
-      
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Download Server x64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}
+          path: ./Docker/build/linux-x64
+
+      - name: Download Server arm64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
+          path: ./Docker/build/linux-arm64
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
       - name: Setup buildx
         uses: docker/setup-buildx-action@v1
-        with:
-          platforms: ${{ inputs.platform }}/${{ inputs.arch }}
 
       - name: Build and push Docker image
         id: push
@@ -68,22 +123,23 @@ jobs:
           context: ./Docker
           file: ./Docker/Dockerfile
           push: true
-          platforms: ${{ inputs.platform }}/${{ inputs.arch }}
+          platforms: linux/arm64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.version_tag }}-${{ inputs.arch }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}
           labels: |
             org.opencontainers.image.title=LANCommander Server
             org.opencontainers.image.description="LANCommander Server Release Build"
-            org.opencontainers.image.version=${{ inputs.version_semver }}
+            org.opencontainers.image.version=${{ needs.prep.outputs.version_semver }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.created_at }}
-            org.opencontainers.image.architecture=${{ inputs.arch }}
           build-args: |
-            VERSION=${{ inputs.version_tag }}
+            VERSION=${{ needs.prep.outputs.version_tag }}
+            BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ inputs.version_tag }}-${{ inputs.arch }}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true

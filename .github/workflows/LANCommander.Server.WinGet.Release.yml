@@ -79,12 +79,12 @@ jobs:
       - name: Create x64 Installer
         run: |
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' /DMyAppVersion="${{ needs.prep.outputs.version_tag }}" /DMyAppArchitecture="x64" /DMyAppBuildDir="build\win-x64" "installer.iss"
-        working-directory: ./Installer
+        working-directory: Installer
 
       - name: Create ARM64 Installer
         run: |
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' /DMyAppVersion="${{ needs.prep.outputs.version_tag }}" /DMyAppArchitecture="arm64" /DMyAppBuildDir="build\win-arm64" "installer.iss"
-        working-directory: ./Installer
+        working-directory: Installer
 
       - name: Generate SHA256 Hashes
         run: |
@@ -92,7 +92,7 @@ jobs:
           $arm64Hash = (Get-FileHash "Output\LANCommanderServer-${{ needs.prep.outputs.version_tag }}-arm64.exe" -Algorithm SHA256).Hash.ToLower()
           "X64_HASH=$x64Hash" | Out-File -FilePath $env:GITHUB_ENV -Append
           "ARM64_HASH=$arm64Hash" | Out-File -FilePath $env:GITHUB_ENV -Append
-        working-directory: ./Installer
+        working-directory: Installer
 
       - name: Upload Installers to Release
         uses: softprops/action-gh-release@v2

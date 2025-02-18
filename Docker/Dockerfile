@@ -5,12 +5,13 @@ FROM ghcr.io/linuxserver/baseimage-ubuntu:jammy
 # set version label
 ARG BUILD_DATE
 ARG VERSION
+ARG BUILD_ARCH
 LABEL build_version="LANCommander version:- ${VERSION} Build-date:- ${BUILD_DATE}, container based on github.com/LinuxServer/baseimage-ubuntu"
 LABEL maintainer="bashNinja, pathartl"
 
 # copy local files
 COPY root/ /
-COPY ./build/linux-x64 /app/LANCommander
+COPY ./build/${BUILD_ARCH} /app/LANCommander
 
 # install app
 RUN \

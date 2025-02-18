@@ -18,7 +18,7 @@ RUN case "$TARGETPLATFORM" in \
 
 # copy local files
 COPY root/ /
-COPY ./build/${BUILD_ARCH} /app/LANCommander
+COPY ./build/$BUILD_ARCH /app/LANCommander
 
 # install app
 RUN \
@@ -35,7 +35,7 @@ RUN \
     ln -s /config/Backups/ /app/LANCommander/Backups && \
     ln -s /config/Settings.yml /app/LANCommander/Settings.yml && \
     ln -s /config/LANCommander.db /app/LANCommander/LANCommander.db && \
-    ln -s /config/internal.log /app/LANCommander/internal.log && \
+    ln -s /config/internal.log /app/LANCommander/internal.log
 
 # ports and volumes
 EXPOSE 1337/tcp

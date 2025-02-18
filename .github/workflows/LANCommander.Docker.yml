@@ -1,6 +1,7 @@
-name: LANCommander DockerHub
+name: LANCommander Docker
 
 on:
+  workflow_dispatch:
   release:
     types: [published]
 

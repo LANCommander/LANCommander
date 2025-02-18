@@ -7,13 +7,7 @@ mkdir -p \
 
 # files needed by LANCommander
 if [[ ! -f /config/Settings.yml ]]; then
-    cp /defaults/Settings.yml /config/Settings.yml
-fi
-if [[ ! -f /config/LANCommander.db ]]; then
-    sqlite3 /config/LANCommander.db "VACUUM;"
-fi
-if [[ ! -f /config/internal.log ]]; then
-    touch /config/internal.log
+    touch /config/Settings.yml
 fi
 
 # permissions

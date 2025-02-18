@@ -19,41 +19,16 @@ jobs:
   prep:
     runs-on: ubuntu-latest
     outputs:
-      version_semver: ${{ steps.set_version.outputs.VERSION_SEMVER }}
-      version_tag: ${{ steps.set_version.outputs.VERSION_TAG }}
-      changed: ${{ steps.check_diff.outputs.changed }}
+      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
+      version_semver: ${{ steps.trim_tag_ref.outputs.replaced }}
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: frabert/replace-string-action@v2
+        name: Trim Tag Ref
+        id: trim_tag_ref
         with:
-          # Ensure we get all tags so we can find the latest
-          fetch-depth: 0
-
-      - name: Determine last semver and build nightly version
-        id: set_version
-        shell: bash
-        run: |
-          # Fetch all tags
-          git fetch --tags
-
-          # Grab the last semver-ish tag (e.g., "v1.2.3", "v1.2.3-debug", or "1.2.3-nightly")
-          LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
-
-          if [ -z "$LAST_SEMVER_TAG" ]; then
-            echo "No semver tag found; defaulting to 0.0.0"
-            LAST_SEMVER_TAG="0.0.0"
-          fi
-
-          # Remove prefix 'v' and any suffix like "-debug", "-nightly", etc.
-          CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
-
-          echo "Clean semver tag: $CLEAN_TAG"
-
-          # Set output variables for GitHub Actions
-          echo "VERSION_SEMVER=$CLEAN_TAG" >> $GITHUB_ENV
-          echo "VERSION_TAG=$CLEAN_TAG" >> $GITHUB_ENV
-          echo "::set-output name=VERSION_SEMVER::$CLEAN_TAG"
-          echo "::set-output name=VERSION_TAG::$CLEAN_TAG"
+          string: '${{ github.ref }}'
+          pattern: 'refs/tags/v'
+          replace-with: ''
 
   build_server_linux_arm64:
     needs: prep

@@ -316,7 +316,7 @@ jobs:
         run: echo "${{ needs.prep.outputs.version_tag }}" > version.txt
 
       - name: Upload version artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: version.${{ needs.prep.outputs.version_tag }}
           path: version.txt

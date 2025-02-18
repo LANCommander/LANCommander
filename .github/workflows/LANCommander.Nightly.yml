@@ -280,33 +280,10 @@ jobs:
           name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
           path: ./Docker/build/linux-arm64
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
       - name: Setup buildx
         uses: docker/setup-buildx-action@v1
-        with:
-          platforms: "linux/amd64,linux/arm64"
-
-      - name: Build and push Docker image
-        id: push-amd64
-        uses: docker/build-push-action@v6
-        with:
-          context: ./Docker
-          file: ./Docker/Dockerfile
-          push: true
-          platforms: linux/amd64
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:nightly
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}-amd64
-          labels: |
-            org.opencontainers.image.title=LANCommander Server
-            org.opencontainers.image.description="LANCommander Server Nightly Build"
-            org.opencontainers.image.version=${{ needs.prep.outputs.version_semver }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ github.event.created_at }}
-          build-args: |
-            VERSION=${{ needs.prep.outputs.version_tag }}
-            BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            BUILD_ARCH=linux-x64
 
       - name: Build and push Docker image
         id: push
@@ -315,11 +292,10 @@ jobs:
           context: ./Docker
           file: ./Docker/Dockerfile
           push: true
-          platforms: linux/arm64
+          platforms: linux/arm64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:nightly
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}-arm64
           labels: |
             org.opencontainers.image.title=LANCommander Server
             org.opencontainers.image.description="LANCommander Server Nightly Build"
@@ -329,7 +305,6 @@ jobs:
           build-args: |
             VERSION=${{ needs.prep.outputs.version_tag }}
             BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            BUILD_ARCH=linux-arm64
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2

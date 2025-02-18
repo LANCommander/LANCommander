@@ -15,7 +15,7 @@ RUN case "$TARGETPLATFORM" in \
       *) echo "Unknown TARGETPLATFORM: $TARGETPLATFORM" && exit 1 ;; \
     esac && \
     echo "Using BUILD_ARCH=$BUILD_ARCH" && \
-    cp -r /build/$BUILD_ARCH /app/LANCommander
+    cp -r ./build/$BUILD_ARCH /app/LANCommander
 
 # copy local files
 COPY root/ /

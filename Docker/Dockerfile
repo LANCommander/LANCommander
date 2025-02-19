@@ -10,8 +10,8 @@ LABEL build_version="LANCommander version:- ${VERSION} Build-date:- ${BUILD_DATE
 LABEL maintainer="bashNinja, pathartl"
 
 # Set architecture-specific build directory
-COPY /build/linux-x64 /app/LANCommander/
-COPY /build/linux-arm64 /app/LANCommander/
+COPY build/linux-x64 /app/LANCommander/
+COPY build/linux-arm64 /app/LANCommander/
 
 # Remove unused architecture
 RUN case "$TARGETPLATFORM" in \

@@ -1,0 +1,110 @@
+name: Publish to WinGet
+on:
+  release:
+    types: [published]
+
+jobs:
+  create-installers:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        app: ['Server', 'Launcher']
+        arch: ['x64', 'arm64']
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get version
+        id: get_version
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = $tag.TrimStart('v')
+          echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Download release artifact
+        shell: pwsh
+        run: |
+          $releaseAsset = "LANCommander.${{ matrix.app }}-Windows-${{ matrix.arch }}-v${{ env.VERSION }}"
+          gh release download ${{ github.ref_name }} -p $releaseAsset
+          Expand-Archive $releaseAsset -DestinationPath ".\extracted"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Install Inno Setup
+      - name: Install Inno Setup
+        run: |
+          curl -L -o innosetup.exe https://files.jrsoftware.org/is/6/innosetup-6.2.2.exe
+          .\innosetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+        shell: cmd
+
+      # Create Inno Setup script
+      - name: Create installer script
+        run: |
+          @"
+          #define MyAppName "LANCommander ${{ matrix.app }}"
+          #define MyAppVersion "${{ env.VERSION }}"
+          #define MyAppPublisher "LANCommander"
+          #define MyAppURL "https://github.com/${{ github.repository }}"
+          #define MyAppExeName "LANCommander.${{ matrix.app }}.exe"
+          #define Architecture "${{ matrix.arch }}"
+
+          [Setup]
+          AppId={{$(New-Guid)}}
+          AppName={#MyAppName}
+          AppVersion={#MyAppVersion}
+          AppPublisher={#MyAppPublisher}
+          AppPublisherURL={#MyAppURL}
+          AppSupportURL={#MyAppURL}
+          AppUpdatesURL={#MyAppURL}
+          DefaultDirName={autopf}\LANCommander\{#MyAppName}
+          DisableProgramGroupPage=yes
+          OutputBaseFilename=LANCommander.${{ matrix.app }}-{#MyAppVersion}-{#Architecture}-Setup
+          Compression=lzma
+          SolidCompression=yes
+          ArchitecturesAllowed=${{ matrix.arch == 'x64' && 'x64' || 'arm64' }}
+          ArchitecturesInstallIn64BitMode=${{ matrix.arch == 'x64' && 'x64' || 'arm64' }}
+
+          [Languages]
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+
+          [Files]
+          Source: "extracted\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+
+          [Icons]
+          Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+          "@ | Out-File -FilePath "installer.iss" -Encoding UTF8
+        shell: pwsh
+
+      # Build installer
+      - name: Build installer
+        run: |
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' installer.iss
+        shell: pwsh
+
+      # Upload installer to release
+      - name: Upload installer to release
+        run: |
+          gh release upload ${{ github.ref_name }} "Output/LANCommander.${{ matrix.app }}-${{ env.VERSION }}-${{ matrix.arch }}-Setup.exe"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-winget:
+    needs: create-installers
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        app: ['Server', 'Launcher']
+        arch: ['x64', 'arm64']
+    steps:
+      - name: Get version
+        shell: pwsh
+        run: |
+          $tag = '${{ github.ref_name }}'
+          $version = $tag.TrimStart('v')
+          echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Submit package to Windows Package Manager Community Repository
+        run: |
+          $installerUrl = "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/LANCommander.${{ matrix.app }}-${env:VERSION}-${{ matrix.arch }}-Setup.exe"
+          wingetcreate submit --token ${{ secrets.GITHUB_TOKEN }} --urls "$installerUrl" --version ${env:VERSION} LANCommander.LANCommander.${{ matrix.app }}.${{ matrix.arch }}
+        shell: pwsh

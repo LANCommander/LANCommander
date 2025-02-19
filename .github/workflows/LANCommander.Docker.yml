@@ -61,6 +61,11 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      - name: Create build directories
+        run: |
+          mkdir -p ./Docker/build/linux-x64
+          mkdir -p ./Docker/build/linux-arm64
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:

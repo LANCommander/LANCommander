@@ -90,6 +90,15 @@ jobs:
           name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
           path: ./Docker/build/linux-arm64
 
+      - name: Debug - List Build Directories
+        run: |
+          echo "Contents of ./Docker/build/linux-x64:"
+          ls -la ./Docker/build/linux-x64
+          echo "Contents of ./Docker/build/linux-arm64:"
+          ls -la ./Docker/build/linux-arm64
+          echo "Contents of ./Docker:"
+          ls -la ./Docker
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Setup buildx
@@ -115,6 +124,7 @@ jobs:
           build-args: |
             VERSION=${{ needs.prep.outputs.version_tag }}
             BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          no-cache: true
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2

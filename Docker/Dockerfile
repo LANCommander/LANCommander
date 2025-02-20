@@ -11,20 +11,22 @@ LABEL maintainer="bashNinja, pathartl"
 
 # Create app directory
 RUN mkdir -p /app/LANCommander
-RUN mkdir -p /build/linux-x64
-RUN mkdir -p /build/linux-arm64
+# RUN mkdir -p /build/linux-x64
+# RUN mkdir -p /build/linux-arm64
 
 # Set architecture-specific build directory
-COPY ./build/linux-x64/* /build/linux-x64
-COPY ./build/linux-arm64/* /build/linux-arm64
+# COPY ./build/linux-x64/* /build/linux-x64
+# COPY ./build/linux-arm64/* /build/linux-arm64
 
 # Remove unused architecture
-RUN case "$TARGETPLATFORM" in \
-      "linux/amd64") cp -r /build/linux-x64/* /app/LANCommander ;; \
-      "linux/arm64") cp -r /build/linux-arm64/* /app/LANCommander ;; \
-      *) echo "Unknown TARGETPLATFORM: $TARGETPLATFORM" && exit 1 ;; \
-    esac && \
-    rm -rf /build
+# RUN case "$TARGETPLATFORM" in \
+#       "linux/amd64") cp -r /build/linux-x64/* /app/LANCommander ;; \
+#       "linux/arm64") cp -r /build/linux-arm64/* /app/LANCommander ;; \
+#       *) echo "Unknown TARGETPLATFORM: $TARGETPLATFORM" && exit 1 ;; \
+#     esac && \
+#     rm -rf /build
+
+COPY ./build/linux-x64/* /app/LANCommander
 
 # copy local files
 COPY root/ /

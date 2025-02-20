@@ -31,6 +31,9 @@ COPY root/ /
 
 # install app
 RUN \
+  echo "**** install packages ****" && \
+    apt-get update && \
+    apt-get -y install libicu-dev && \
   echo "**** setup lancommander ****" && \
     chmod +x /app/LANCommander/LANCommander.Server && \
     ls -alh /app/LANCommander && \

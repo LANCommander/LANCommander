@@ -30,15 +30,15 @@ jobs:
           pattern: 'refs/tags/v'
           replace-with: ''
 
-  build_server_linux_arm64:
-    needs: prep
-    uses: ./.github/workflows/LANCommander.Server.yml
-    with:
-      version_semver: ${{ needs.prep.outputs.version_semver }}
-      version_tag: ${{ needs.prep.outputs.version_tag }}
-      build_runtime: linux-arm64
-      build_arch: arm64
-      build_platform: Linux
+  # build_server_linux_arm64:
+  #   needs: prep
+  #   uses: ./.github/workflows/LANCommander.Server.yml
+  #   with:
+  #     version_semver: ${{ needs.prep.outputs.version_semver }}
+  #     version_tag: ${{ needs.prep.outputs.version_tag }}
+  #     build_runtime: linux-arm64
+  #     build_arch: arm64
+  #     build_platform: Linux
 
   build_server_linux_x64:
     needs: prep
@@ -53,7 +53,7 @@ jobs:
   push_to_registry:
     needs: 
       - prep
-      - build_server_linux_arm64
+      # - build_server_linux_arm64
       - build_server_linux_x64
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
@@ -64,7 +64,8 @@ jobs:
       - name: Create build directories
         run: |
           mkdir -p ./Docker/build/linux-x64
-          mkdir -p ./Docker/build/linux-arm64
+
+        #mkdir -p ./Docker/build/linux-arm64
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -84,23 +85,21 @@ jobs:
           name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}
           path: ./Docker/build/linux-x64
 
-      - name: Download Server arm64 Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
-          path: ./Docker/build/linux-arm64
+      # - name: Download Server arm64 Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
+      #     path: ./Docker/build/linux-arm64
 
       - name: Debug - List Build Directories
         run: |
           echo "Contents of ./Docker/build/linux-x64:"
           ls -la ./Docker/build/linux-x64
-          echo "Contents of ./Docker/build/linux-arm64:"
-          ls -la ./Docker/build/linux-arm64
           echo "Contents of ./Docker:"
           ls -la ./Docker
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+      #- name: Set up QEMU
+      #  uses: docker/setup-qemu-action@v2
       - name: Setup buildx
         uses: docker/setup-buildx-action@v1
 
@@ -111,7 +110,8 @@ jobs:
           context: ./Docker
           file: ./Docker/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
+          #platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}

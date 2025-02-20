@@ -280,8 +280,8 @@ jobs:
           name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
           path: ./Docker/build/linux-arm64
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v2
       - name: Setup buildx
         uses: docker/setup-buildx-action@v1
 
@@ -292,7 +292,8 @@ jobs:
           context: ./Docker
           file: ./Docker/Dockerfile
           push: true
-          platforms: linux/arm64,linux/arm64
+          platforms: linux/amd64
+          #platforms: linux/arm64,linux/arm64
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:nightly
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ needs.prep.outputs.version_tag }}

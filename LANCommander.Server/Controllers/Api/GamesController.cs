@@ -57,10 +57,10 @@ namespace LANCommander.Server.Controllers.Api
             var mappedGames = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("Games", async _ => {
                 Logger?.LogDebug("Mapped games cache is empty, repopulating");
 
-                var games = await GameService.Query(q =>
-                {
-                    return q.AsNoTracking();
-                }).GetAsync<SDK.Models.Game>();
+                var games = await GameService
+                    .AsNoTracking()
+                    .AsSplitQuery()
+                    .GetAsync<SDK.Models.Game>();
 
                 return games;
             }, TimeSpan.MaxValue, tags: ["Games"]);

@@ -26,7 +26,7 @@ RUN mkdir -p /app/LANCommander
 #     esac && \
 #     rm -rf /build
 
-COPY ./build/linux-x64/* /app/LANCommander
+COPY ./build/linux-x64 /app/LANCommander
 
 # copy local files
 COPY root/ /

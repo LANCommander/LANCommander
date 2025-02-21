@@ -42,11 +42,11 @@
 
     async Task UpdateGroups()
     {
-        Groups = Items.SelectMany(i => i.Groups).Distinct().ToList();
+        Groups = Items.DistinctBy(i => i.Key).SelectMany(i => i.Groups).Distinct().ToList();
 
         var uncategorized = Items.Where(i => i.Groups == null || i.Groups.Length == 0).ToList();
 
-        if (Items.Any(i => i.Groups == null || i.Groups.Length == 0))
+        if (Items.DistinctBy(i => i.Key).Any(i => i.Groups == null || i.Groups.Length == 0))
             Groups.Add("Uncategorized");
 
         await InvokeAsync(StateHasChanged);

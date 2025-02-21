@@ -152,9 +152,9 @@ namespace LANCommander.Server.Controllers.Api
 
                 var actions = new List<Data.Models.Action>();
                 
-                actions.AddRange(game.Actions);
+                actions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
+                actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
                 actions.AddRange(game.Servers.SelectMany(s => s.Actions));
-                actions.AddRange(game.DependentGames.Where(dg => dg.Type == GameType.Expansion || dg.Type == GameType.Mod).SelectMany(dg => dg.Actions));
                 
                 return Mapper.Map<IEnumerable<SDK.Models.Action>>(actions);
             }, tags: ["Games", $"Games/{id}"]);

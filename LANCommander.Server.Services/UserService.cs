@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using LANCommander.Server.Services.Exceptions;
+using LANCommander.Server.Services.Extensions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -118,6 +119,8 @@ namespace LANCommander.Server.Services
             var user = await IdentityContext.UserManager.FindByNameAsync(userName);
 
             var result = await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
+
+            await Cache.RemoveByTagAsync(["User/Security", "User/Roles", $"User/{user.Id}", $"Library/{user.Id}"]);
 
             if (!result.Succeeded)
                 throw new AddRoleException(result, "Could not add roles");

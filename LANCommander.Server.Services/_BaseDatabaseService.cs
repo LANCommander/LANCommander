@@ -218,7 +218,7 @@ namespace LANCommander.Server.Services
 
         public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
         {
-            return (await GetAsync(predicate)) != null;
+            return (await GetAsync(predicate)).Any();
         }
 
         public virtual async Task<T> AddAsync(T entity)

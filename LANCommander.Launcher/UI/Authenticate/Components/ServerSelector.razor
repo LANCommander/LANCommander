@@ -12,11 +12,11 @@
     </TitleTemplate>
 </PageHeader>
 
-<Form Model="Model">
+<Form Model="Model" OnFinish="() => SelectServer(ServerAddress)">
     <FormItem>
         <Flex Gap="FlexGap.Small">
             <Input @bind-Value="ServerAddress" Placeholder="Server Address"/>
-            <Button Type="ButtonType.Primary" OnClick="() => SelectServer(ServerAddress)">Connect</Button>
+            <Button Type="ButtonType.Primary" HtmlType="submit">Connect</Button>
         </Flex>
     </FormItem>
 </Form>

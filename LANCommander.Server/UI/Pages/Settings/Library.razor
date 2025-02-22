@@ -1,0 +1,36 @@
+﻿@page "/Settings/Library"
+@inject IMessageService MessageService
+@inject ILogger<Servers> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Library" />
+
+<PageContent>
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Enable User Libraries">
+            <Switch @bind-Checked="Settings.Library.EnableUserLibraries" />
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    Settings Settings = SettingService.GetSettings();
+
+    void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

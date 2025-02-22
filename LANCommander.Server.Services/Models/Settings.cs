@@ -81,6 +81,7 @@ namespace LANCommander.Server.Services.Models
         public UpdateSettings Update { get; set; } = new UpdateSettings();
         public LauncherSettings Launcher { get; set; } = new LauncherSettings();
         public LogSettings Logs { get; set; } = new LogSettings();
+        public LibrarySettings Library { get; set; } = new LibrarySettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
         public DriveInfo[] GetDrives()
@@ -231,5 +232,10 @@ namespace LANCommander.Server.Services.Models
                 Type = LoggingProviderType.SignalR
             },
         ];
+    }
+
+    public class LibrarySettings
+    {
+        public bool EnableUserLibraries { get; set; } = true;
     }
 }

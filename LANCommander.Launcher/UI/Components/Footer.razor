@@ -5,29 +5,34 @@
 @inject GameService GameService
 @inject NavigationManager NavigationManager
 
-<Flex Justify="FlexJustify.SpaceBetween" Class="footer">
-    @if (NavigationManager.Uri.Contains("/Depot"))
-    {
-        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">Library</Button>
-    }
-    else
-    {
-        <ConnectionStateView>
-            <Online>
-                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
-            </Online>
-            <Offline>
-                <Tooltip Title="You are currently offline" Placement="Placement.TopLeft">
-                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
-                </Tooltip>
-            </Offline>
-        </ConnectionStateView>
-    }
+<Flex Justify="FlexJustify.Center" Align="FlexAlign.Center" Gap="FlexGap.Small" Class="footer">
+    <div style="flex: 1;">
+        @if (NavigationManager.Uri.Contains("/Depot"))
+        {
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">Library</Button>
+        }
+        else
+        {
+            if (Client.Settings.EnableUserLibraries)
+            {
+                <ConnectionStateView>
+                    <Online>
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
+                    </Online>
+                    <Offline>
+                        <Tooltip Title="You are currently offline" Placement="Placement.TopLeft">
+                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
+                        </Tooltip>
+                    </Offline>
+                </ConnectionStateView>
+            }
+        }
+    </div>
 
     @if (InstallService.Queue.Any(qi => qi.State))
     {
-        <div class="downloader" @onclick="() => ShowDownloadQueue()">
-            <CurrentDownloadItem ShowIcon="true" />
+        <div class="downloader" @onclick="() => ShowDownloadQueue()" style="flex-shrink: 0;">
+            <CurrentDownloadItem ShowIcon="true"/>
         </div>
     }
     else
@@ -35,9 +40,11 @@
         <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
     }
 
-    <Tooltip Title="Coming soon!" Placement="Placement.TopRight">
-        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Team" Disabled>Friends</Button>
-    </Tooltip>
+    <div style="flex: 1; text-align:  right;">
+        <Tooltip Title="Coming soon!" Placement="Placement.TopRight">
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Team" Disabled>Friends</Button>
+        </Tooltip>
+    </div>
 </Flex>
 
 <DownloadQueue @ref="DownloadQueue" />

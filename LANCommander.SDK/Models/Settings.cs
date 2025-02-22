@@ -8,5 +8,6 @@ namespace LANCommander.SDK.Models
     {
         public int IPXRelayPort { get; set; }
         public string IPXRelayHost { get; set; }
+        public bool EnableUserLibraries { get; set; }
     }
 }

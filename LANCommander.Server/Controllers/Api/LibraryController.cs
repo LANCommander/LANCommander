@@ -44,6 +44,22 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
+                if (!Settings.Library.EnableUserLibraries)
+                {
+                    var games = await Cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>("Games", async _ => {
+                        Logger?.LogDebug("Mapped games cache is empty, repopulating");
+
+                        var games = await GameService
+                            .AsNoTracking()
+                            .AsSplitQuery()
+                            .GetAsync<SDK.Models.Game>();
+
+                        return games;
+                    }, TimeSpan.MaxValue, tags: ["Games"]);
+                    
+                    return games.OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle).Select(g => Mapper.Map<SDK.Models.EntityReference>(g));
+                }
+                
                 var user = await UserService.GetAsync(User.Identity.Name);
                 
                 return await Cache.GetOrSetAsync($"Library/{user.Id}", async _ =>

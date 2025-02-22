@@ -49,7 +49,7 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnImportCompleteHandler();
         public event OnImportCompleteHandler OnImportComplete;
 
-        public delegate void OnImportFailedHandler(Exception ex);
+        public delegate Task OnImportFailedHandler(Exception ex);
         public event OnImportFailedHandler OnImportFailed;
 
         private IEnumerable<Collection> Collections;
@@ -364,8 +364,16 @@ namespace LANCommander.Launcher.Services
         public async Task ImportLibraryAsync()
         {
             var remoteLibrary = await Client.Library.GetAsync();
-            
-            await ImportLibraryAsync(remoteLibrary);
+
+            try
+            {
+                await ImportLibraryAsync(remoteLibrary);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not import library!");
+                OnImportFailed?.Invoke(ex);
+            }
         }
 
         public async Task ImportLibraryAsync(IEnumerable<SDK.Models.EntityReference> games)

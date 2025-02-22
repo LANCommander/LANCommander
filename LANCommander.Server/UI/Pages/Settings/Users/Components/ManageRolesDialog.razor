@@ -62,7 +62,7 @@
             {
                 if (!SelectedRoles.Any(r => r.Name == role.Name))
                 {
-                    if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Any())
+                    if (role.Name == RoleService.AdministratorRoleName && currentAdmins.Count() == 1)
                         MessageService.Warning("Cannot demote the only administrator!");
                     else
                         await UserService.RemoveFromRole(User.UserName, role.Name);

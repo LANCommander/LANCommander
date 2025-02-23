@@ -15,7 +15,7 @@
 <Form Model="Model" OnFinish="() => SelectServer(ServerAddress)">
     <FormItem>
         <Flex Gap="FlexGap.Small">
-            <Input @bind-Value="ServerAddress" Placeholder="Server Address"/>
+            <Input @bind-Value="ServerAddress" Placeholder="Server Address" AutoFocus />
             <Button Type="ButtonType.Primary" HtmlType="submit">Connect</Button>
         </Flex>
     </FormItem>

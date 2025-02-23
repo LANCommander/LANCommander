@@ -54,7 +54,11 @@
     <ChildContent>
         <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
             <FormItem Label="Title">
-                <GameMetadataLookup ButtonText="Lookup" @bind-Value="context.Title" OnResultSelected="(result) => OnGameLookupResultSelected(result, context)" />
+                <GameMetadataLookup
+                    ButtonText="Lookup"
+                    AutoFocus="context.Id == Guid.Empty"
+                    @bind-Value="context.Title"
+                    OnResultSelected="(result) => OnGameLookupResultSelected(result, context)" />
             </FormItem>
             <FormItem Label="Sort Title">
                 <Input @bind-Value="@context.SortTitle" />

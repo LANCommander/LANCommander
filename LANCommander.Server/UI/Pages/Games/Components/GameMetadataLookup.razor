@@ -42,7 +42,7 @@
 @if (IGDBService.Authenticated)
 {
     <Flex Gap="FlexGap.Small">
-        <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" />
+        <Input @bind-Value="Value" BindOnInput="true" OnkeyDown="SearchFieldOnKeyDown" OnChange="ValueChanged" AutoFocus="AutoFocus" />
 
         <Button OnClick="() => SearchForGame(Value)" Type="ButtonType.Primary" Disabled="@(String.IsNullOrWhiteSpace(Value))">@ButtonText</Button>
     </Flex>
@@ -61,6 +61,7 @@ else
 @code {
     [Parameter] public EventCallback<GameLookupResult> OnResultSelected { get; set; }
     [Parameter] public string ButtonText { get; set; }
+    [Parameter] public bool AutoFocus { get; set; }
     [Parameter] public string Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
 

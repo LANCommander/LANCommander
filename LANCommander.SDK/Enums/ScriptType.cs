@@ -21,6 +21,10 @@ namespace LANCommander.SDK.Enums
         BeforeStart,
         [Display(Name = "After Stop")]
         AfterStop,
+        [Display(Name = "Game Started")]
+        GameStarted,
+        [Display(Name = "Game Ended")]
+        GameStopped,
         [Display(Name = "User Registration")]
         UserRegistration,
         [Display(Name = "User Login")]

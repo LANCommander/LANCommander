@@ -24,6 +24,9 @@ namespace LANCommander.Server.Controllers.Api
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
         private readonly UserService UserService;
+        private readonly PlaySessionService PlaySessionService;
+        private readonly ServerService ServerService;
+        private readonly ServerProcessService ServerProcessService;
         private readonly IFusionCache Cache;
         private readonly IMapper Mapper;
 
@@ -36,7 +39,10 @@ namespace LANCommander.Server.Controllers.Api
             LibraryService libraryService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
-            UserService userService) : base(logger)
+            UserService userService,
+            PlaySessionService playSessionService,
+            ServerService serverService,
+            ServerProcessService serverProcessService) : base(logger)
         {
             GameService = gameService;
             ImportService = importService;
@@ -44,6 +50,9 @@ namespace LANCommander.Server.Controllers.Api
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
             UserService = userService;
+            PlaySessionService = playSessionService;
+            ServerService = serverService;
+            ServerProcessService = serverProcessService;
             Cache = cache;
             Mapper = mapper;
         }
@@ -175,6 +184,112 @@ namespace LANCommander.Server.Controllers.Api
             }, tags: ["Games", $"Games/{id}"]);
 
             return addons;
+        }
+
+        [HttpGet("{id}/Started")]
+        public async Task<IActionResult> StartedAsync(Guid id)
+        {
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var game = await GameService.GetAsync(id);
+
+            if (game == null || user == null)
+                return BadRequest();
+
+            #region Start recording play session
+            var activeSessions = await PlaySessionService
+                .Include(ps => ps.Game)
+                .GetAsync(ps => ps.UserId == user.Id && ps.End == null);
+
+            foreach (var activeSession in activeSessions)
+                await PlaySessionService.EndSessionAsync(game.Id, activeSession.UserId);
+
+            await PlaySessionService.StartSessionAsync(game.Id, user.Id);
+            #endregion
+
+            #region Autostart Servers
+            try
+            {
+                var servers = await ServerService.GetAsync(s =>
+                    s.GameId == game.Id && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+
+                foreach (var server in servers)
+                {
+                    ServerProcessService.StartServerAsync(server.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Servers could not be autostarted");
+            }
+            #endregion
+            
+            #region Run server scripts
+
+            try
+            {
+                var servers = await ServerService
+                    .GetAsync(s => s.GameId == game.Id);
+
+                foreach (var server in servers)
+                {
+                    await ServerService.RunGameStartedScriptsAsync(server.Id, user.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Server scripts could not run");
+            }
+            #endregion
+
+            return Ok();
+        }
+
+        [HttpGet("{id}/Stopped")]
+        public async Task<IActionResult> StoppedAsync(Guid id)
+        {
+            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var game = await GameService.GetAsync(id);
+
+            if (game == null || user == null)
+                return BadRequest();
+
+            await PlaySessionService.EndSessionAsync(game.Id, user.Id);
+
+            #region Autostart Servers
+            try
+            {
+                var servers = await ServerService.GetAsync(s =>
+                    s.GameId == game.Id && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
+
+                foreach (var server in servers)
+                {
+                    ServerProcessService.StartServerAsync(server.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Servers could not be autostarted");
+            }
+            #endregion
+            
+            #region Run server scripts
+            try
+            {
+                var servers = await ServerService
+                    .GetAsync(s => s.GameId == game.Id);
+
+                foreach (var server in servers)
+                {
+                    await ServerService.RunGameStoppedScriptsAsync(server.Id, user.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Server scripts could not run");
+            }
+            #endregion
+
+            return Ok();
         }
 
         [HttpGet("{id}/CheckForUpdate")]

@@ -51,13 +51,6 @@ namespace LANCommander.Server.Services
             };
 
             await AddAsync(session);
-
-            var servers = await serverService.GetAsync(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
-
-            foreach (var server in servers)
-            {
-                serverProcessService.StartServerAsync(server.Id);
-            }
         }
 
         public async Task EndSessionAsync(Guid gameId, Guid userId)
@@ -69,18 +62,6 @@ namespace LANCommander.Server.Services
                 existingSession.End = DateTime.UtcNow;
 
                 await UpdateAsync(existingSession);
-            }
-
-            var activeSessions = (await GetAsync(ps => ps.GameId == gameId && ps.End == null)).Any();
-
-            if (!activeSessions)
-            {
-                var servers = await serverService.GetAsync(s => s.GameId == gameId && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
-
-                foreach (var server in servers)
-                {
-                    serverProcessService.StopServerAsync(server.Id);
-                }
             }
         }
     }

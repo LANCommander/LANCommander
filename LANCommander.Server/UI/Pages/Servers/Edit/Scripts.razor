@@ -26,7 +26,7 @@
     </TitleExtraTemplate>
     
     <ChildContent>
-        <ScriptEditor ServerId="@context.Id" ArchiveId="@context.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop }" />
+        <ScriptEditor ServerId="@context.Id" ArchiveId="@context.Game.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault().Id" AllowedTypes="new[] { ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.GameStarted, ScriptType.GameStopped }" />
     </ChildContent>
 </ServerEditView>
 

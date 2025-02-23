@@ -33,6 +33,57 @@ namespace LANCommander.SDK.Helpers
                 }
             } while (true);
         }
+        
+        internal static void RetryOnException(int maxAttempts, TimeSpan delay, Action action)
+        {
+            int attempts = 0;
+
+            do
+            {
+                try
+                {
+                    Logger?.LogTrace($"Attempt #{attempts + 1}/{maxAttempts}...");
+
+                    attempts++;
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, $"Attempt failed!");
+
+                    if (attempts >= maxAttempts)
+                        return;
+
+                    Task.Delay(delay).Wait();
+                }
+            } while (true);
+        }
+
+        internal static async Task RetryOnExceptionAsync(int maxAttempts, TimeSpan delay, Func<Task> action)
+        {
+            int attempts = 0;
+
+            do
+            {
+                try
+                {
+                    Logger?.LogTrace($"Attempt #{attempts + 1}/{maxAttempts}...");
+
+                    attempts++;
+                    
+                    await action();
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, $"Attempt failed!");
+
+                    if (attempts >= maxAttempts)
+                        return;
+
+                    Task.Delay(delay).Wait();
+                }
+            } while (true);
+        }
 
         internal static async Task<T> RetryOnExceptionAsync<T>(int maxAttempts, TimeSpan delay, T @default, Func<Task<T>> action)
         {

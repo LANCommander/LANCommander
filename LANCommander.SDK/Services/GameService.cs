@@ -202,24 +202,37 @@ namespace LANCommander.SDK.Services
             return Client.StreamRequest($"/api/Games/{id}/Download");
         }
 
-        public async Task StartPlaySessionAsync(Guid id)
+        public async Task StartedAsync(Guid id)
         {
-            Logger?.LogTrace("Starting a game session...");
-
-            await Client.PostRequestAsync<object>($"/api/PlaySessions/Start/{id}");
-        }
-
-        public async Task EndPlaySessionAsync(Guid id)
-        {
-            Logger?.LogTrace("Ending a game session...");
+            Logger?.LogTrace("Signaling to the server that we started the game...");
 
             try
             {
-                await Client.PostRequestAsync<object>($"/api/PlaySessions/End/{id}");
+                await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromMilliseconds(500), async () =>
+                {
+                    await Client.PostRequestAsync<object>($"/api/Game/{id}/Started");
+                });
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Failed sending end session request to server");
+                Logger?.LogError(ex, "Failed sending start request to server");
+            }
+        }
+
+        public async Task StoppedAsync(Guid id)
+        {
+            Logger?.LogTrace("Signaling to the server that we stopped the game...");
+
+            try
+            {
+                await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromMilliseconds(500), async () =>
+                {
+                    await Client.PostRequestAsync<object>($"/api/Game/{id}/Stopped");
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Failed sending stop request to server");
             }
         }
 

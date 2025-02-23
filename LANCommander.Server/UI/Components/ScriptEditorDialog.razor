@@ -1,16 +1,84 @@
-﻿@inherits FeedbackComponent<ScriptEditorOptions, Script>
+﻿@using LANCommander.SDK.Enums
+@inherits FeedbackComponent<ScriptEditorOptions, Script>
 @inject ScriptService ScriptService
+@inject ModalService ModalService
 @inject IMessageService MessageService
 @inject ILogger<ScriptEditorDialog> Logger
 
-<ScriptTextEditor
-    @bind-Script="@Script"
-    ArchiveId="@Options.ArchiveId"
-    AllowedTypes="@Options.AllowedTypes"
-    OnSave="Save" />
+<Form @ref="@Form" Model="@Script" Layout="@FormLayout.Vertical">
+    <FormItem>
+        @foreach (var group in Snippets.Select(s => s.Group).Distinct())
+        {
+            <Dropdown>
+                <Overlay>
+                    <Menu>
+                        @foreach (var snippet in Snippets.Where(s => s.Group == group))
+                        {
+                            <MenuItem OnClick="() => InsertSnippet(snippet)">
+                                @snippet.Name
+                            </MenuItem>
+                        }
+                    </Menu>
+                </Overlay>
+
+                <ChildContent>
+                    <Button Type="@ButtonType.Primary">@group</Button>
+                </ChildContent>
+            </Dropdown>
+        }
+
+        @if (Options.ArchiveId != Guid.Empty)
+        {
+            <Button Icon="@IconType.Outline.FolderOpen" OnClick="BrowseForPath" Type="@ButtonType.Text">Browse</Button>
+        }
+
+        <Button Icon="@IconType.Outline.Build" OnClick="() => RegToPowerShell.Open()" Type="@ButtonType.Text">Import .reg</Button>
+    </FormItem>
+
+    <FormItem>
+        <MonacoCodeEditor @ref="Editor" @bind-Value="context.Contents" Id="@($"editor-{Id}")" ConstructionOptions="EditorConstructionOptions" OnSave="Save" />
+    </FormItem>
+
+    <FormItem Label="Name" Required Rules=@(new[] { new FormValidationRule { Required = true } })>
+        <Input @bind-Value="@context.Name" />
+    </FormItem>
+
+    <FormItem Label="Type">
+        <Select @bind-Value="context.Type" TItem="ScriptType" TItemValue="ScriptType" DataSource="Enum.GetValues<ScriptType>().Where(st => Options.AllowedTypes == null || Options.AllowedTypes.Contains(st))">
+            <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
+            <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
+        </Select>
+    </FormItem>
+
+    <FormItem>
+        <Checkbox @bind-Checked="context.RequiresAdmin">Requires Admin</Checkbox>
+    </FormItem>
+
+    <FormItem Label="Description">
+        <TextArea @bind-Value="context.Description" MaxLength=500 ShowCount />
+    </FormItem>
+</Form>
+
+<RegToPowerShell @ref="RegToPowerShell" OnParsed="(text) => InsertText(text)" />
 
 @code {
     Guid Id = Guid.NewGuid();
+    
+    Form<Script> Form;
+    MonacoCodeEditor? Editor;
+    RegToPowerShell RegToPowerShell;
+    IEnumerable<Snippet> Snippets { get; set; }
+    
+    StandaloneEditorConstructionOptions EditorConstructionOptions(StandaloneCodeEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+        {
+            AutomaticLayout = true,
+            Language = "powershell",
+            Value = Script.Contents,
+            Theme = "vs-dark",
+        };
+    }
 
     Script Script = new();
 
@@ -33,6 +101,8 @@
             {
                 ServerId = Options.ServerId
             };
+        
+        Snippets = ScriptService.GetSnippets();
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
@@ -49,14 +119,19 @@
     {
         try
         {
-            if (Script.Id == Guid.Empty)
-                Script = await ScriptService.AddAsync(Script);
-            else
-                Script = await ScriptService.UpdateAsync(Script);
+            if (Form.Validate())
+            {
+                if (Script.Id == Guid.Empty)
+                    Script = await ScriptService.AddAsync(Script);
+                else
+                    Script = await ScriptService.UpdateAsync(Script);
 
-            MessageService.Success("Script saved!");
+                MessageService.Success("Script saved!");
 
-            return true;
+                return true;
+            }
+            
+            return false;
         }
         catch (Exception ex)
         {
@@ -65,5 +140,59 @@
 
             return false;
         }
+    }
+    
+    async void BrowseForPath()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Choose Reference",
+            Maximizable = false,
+            DefaultMaximized = true,
+            Closable = true,
+            OkText = "Insert File Path"
+        };
+
+        var browserOptions = new FilePickerOptions()
+        {
+            ArchiveId = Options.ArchiveId,
+            Select = true,
+            Multiple = false
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(modalOptions, browserOptions);
+
+        modalRef.OnOk = (results) =>
+        {
+            var path = results.FirstOrDefault().Path;
+
+            InsertText($"$InstallDirectory\\{path.Replace('/', '\\')}");
+
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+    }
+
+    async Task InsertText(string text)
+    {
+        var line = await Editor.GetPosition();
+        var range = new BlazorMonaco.Range(line.LineNumber, 1, line.LineNumber, 1);
+
+        var currentSelections = await Editor.GetSelections();
+
+        await Editor.ExecuteEdits("ScriptEditor", new List<IdentifiedSingleEditOperation>()
+        {
+            new IdentifiedSingleEditOperation
+            {
+                Range = range,
+                Text = text,
+                ForceMoveMarkers = true
+            }
+        }, currentSelections);
+    }
+
+    async Task InsertSnippet(Snippet snippet)
+    {
+        await InsertText(snippet.Content);
     }
 }

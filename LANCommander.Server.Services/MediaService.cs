@@ -26,15 +26,27 @@ namespace LANCommander.Server.Services
         IDbContextFactory<DatabaseContext> contextFactory,
         StorageLocationService storageLocationService) : BaseDatabaseService<Media>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public override async Task<Media> AddAsync(Media entity)
+        {
+            await cache.ExpireGameCacheAsync(entity.GameId);
+            
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(m => m.Game);
+                await context.UpdateRelationshipAsync(m => m.Parent);
+                await context.UpdateRelationshipAsync(m => m.StorageLocation);
+            });
+        }
+
         public override async Task<Media> UpdateAsync(Media entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
             
-            return await base.UpdateAsync(entity, context =>
+            return await base.UpdateAsync(entity, async context =>
             {
-                context.UpdateRelationshipAsync(m => m.Game);
-                context.UpdateRelationshipAsync(m => m.Parent);
-                context.UpdateRelationshipAsync(m => m.StorageLocation);
+                await context.UpdateRelationshipAsync(m => m.Game);
+                await context.UpdateRelationshipAsync(m => m.Parent);
+                await context.UpdateRelationshipAsync(m => m.StorageLocation);
             });
         }
         

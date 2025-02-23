@@ -15,6 +15,14 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<SavePath>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public override async Task<SavePath> AddAsync(SavePath entity)
+        {
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(sp => sp.Game);
+            });
+        }
+
         public async override Task<SavePath> UpdateAsync(SavePath entity)
         {
             return await base.UpdateAsync(entity, async context =>

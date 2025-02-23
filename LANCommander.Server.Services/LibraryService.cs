@@ -18,6 +18,15 @@ namespace LANCommander.Server.Services
         GameService gameService,
         UserService userService) : BaseDatabaseService<Library>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public override async Task<Library> AddAsync(Library entity)
+        {
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(l => l.Games);
+                await context.UpdateRelationshipAsync(l => l.User);
+            });
+        }
+
         public override async Task<Library> UpdateAsync(Library entity)
         {
             return await base.UpdateAsync(entity, async context =>

@@ -15,6 +15,14 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<UserCustomField>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public override async Task<UserCustomField> AddAsync(UserCustomField entity)
+        {
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(ucf => ucf.User);
+            });
+        }
+
         public override async Task<UserCustomField> UpdateAsync(UserCustomField entity)
         {
             return await base.UpdateAsync(entity, async context =>

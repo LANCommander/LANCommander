@@ -221,22 +221,29 @@ namespace LANCommander.Server.Services
             return (await GetAsync(predicate)).Any();
         }
 
-        public virtual async Task<T> AddAsync(T entity)
+        public abstract Task<T> AddAsync(T entity);
+        
+        protected async Task<T> AddAsync(T addedEntity, Action<UpdateEntityContext<T>> additionalMapping = null)
         {
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
-
+                
                 var currentUser = await GetCurrentUserAsync(context);
                 
-                entity.CreatedOn = DateTime.UtcNow;
-                entity.CreatedById = currentUser.Id;
+                var newEntity = Activator.CreateInstance<T>();
                 
-                context.Set<T>().Add(entity);
+                context.Entry(newEntity).CurrentValues.SetValues(addedEntity);
+                
+                newEntity = (await context.AddAsync(newEntity)).Entity;
+                newEntity.CreatedOn = DateTime.UtcNow;
+                newEntity.CreatedById = currentUser.Id;
                 
                 await context.SaveChangesAsync();
-
-                return entity;
+                
+                addedEntity.Id = newEntity.Id;
+                
+                return await UpdateAsync(addedEntity, additionalMapping);
             }
             finally
             {

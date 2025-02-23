@@ -15,6 +15,16 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<StorageLocation>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public override async Task<StorageLocation> AddAsync(StorageLocation entity)
+        {
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(sl => sl.Archives);
+                await context.UpdateRelationshipAsync(sl => sl.GameSaves);
+                await context.UpdateRelationshipAsync(sl => sl.Media);
+            });
+        }
+
         public override async Task<StorageLocation> UpdateAsync(StorageLocation entity)
         {
             return await base.UpdateAsync(entity, async context =>

@@ -66,7 +66,12 @@ namespace LANCommander.Server.Services
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
 
-            return await base.AddAsync(entity);
+            return await base.UpdateAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(a => a.Game);
+                await context.UpdateRelationshipAsync(a => a.Redistributable);
+                await context.UpdateRelationshipAsync(a => a.StorageLocation);
+            });
         }
 
         public override async Task<ExistingEntityResult<Archive>> AddMissingAsync(Expression<Func<Archive, bool>> predicate, Archive entity)

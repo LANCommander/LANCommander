@@ -37,7 +37,12 @@ namespace LANCommander.Server.Services
                     await cache.ExpireGameCacheAsync(game.Id);
             }
             
-            return await base.AddAsync(script);
+            return await base.AddAsync(script, async context =>
+            {
+                await context.UpdateRelationshipAsync(s => s.Game);
+                await context.UpdateRelationshipAsync(s => s.Redistributable);
+                await context.UpdateRelationshipAsync(s => s.Server);
+            });
         }
         
         public override async Task<Script> UpdateAsync(Script script)

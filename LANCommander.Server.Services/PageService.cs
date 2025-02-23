@@ -58,7 +58,14 @@ namespace LANCommander.Server.Services
             entity.Slug = $"{entity.Slug}-{i}";
             entity.Route = RenderRoute(entity);
 
-            return await base.AddAsync(entity);
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(p => p.Children);
+                await context.UpdateRelationshipAsync(p => p.Games);
+                await context.UpdateRelationshipAsync(p => p.Parent);
+                await context.UpdateRelationshipAsync(p => p.Redistributables);
+                await context.UpdateRelationshipAsync(p => p.Servers);
+            });
         }
 
         public override async Task<Page> UpdateAsync(Page entity)
@@ -77,11 +84,11 @@ namespace LANCommander.Server.Services
 
             return await base.UpdateAsync(entity, async context =>
             {
-                context.UpdateRelationshipAsync(p => p.Children);
-                context.UpdateRelationshipAsync(p => p.Games);
-                context.UpdateRelationshipAsync(p => p.Parent);
-                context.UpdateRelationshipAsync(p => p.Redistributables);
-                context.UpdateRelationshipAsync(p => p.Servers);
+                await context.UpdateRelationshipAsync(p => p.Children);
+                await context.UpdateRelationshipAsync(p => p.Games);
+                await context.UpdateRelationshipAsync(p => p.Parent);
+                await context.UpdateRelationshipAsync(p => p.Redistributables);
+                await context.UpdateRelationshipAsync(p => p.Servers);
             });
         }
 

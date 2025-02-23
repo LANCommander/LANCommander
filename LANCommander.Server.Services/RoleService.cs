@@ -30,6 +30,16 @@ namespace LANCommander.Server.Services
         {
             _identityContext = identityContextFactory.Create();
         }
+        
+        public override async Task<Role> AddAsync(Role role)
+        {
+            var result = await roleManager.CreateAsync(role);
+
+            if (result.Succeeded)
+                return await roleManager.FindByNameAsync(role.Name);
+            
+            throw new AddRoleException(result, "Could not create role");
+        }
 
         public override async Task<Role> UpdateAsync(Role entity)
         {
@@ -38,16 +48,6 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(r => r.Collections);
                 await context.UpdateRelationshipAsync(r => r.Users);
             });
-        }
-
-        public async Task<Role> AddAsync(Role role)
-        {
-            var result = await roleManager.CreateAsync(role);
-
-            if (result.Succeeded)
-                return await roleManager.FindByNameAsync(role.Name);
-            
-            throw new AddRoleException(result, "Could not create role");
         }
 
         public async Task<Role> GetAsync(string roleName)

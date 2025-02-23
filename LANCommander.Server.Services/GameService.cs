@@ -24,9 +24,29 @@ namespace LANCommander.Server.Services
     {
         public override async Task<Game> AddAsync(Game entity)
         {
-            await cache.ExpireGameCacheAsync(entity.Id);
-
-            return await base.AddAsync(entity);
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(g => g.Actions);
+                await context.UpdateRelationshipAsync(g => g.Archives);
+                await context.UpdateRelationshipAsync(g => g.BaseGame);
+                await context.UpdateRelationshipAsync(g => g.Categories);
+                await context.UpdateRelationshipAsync(g => g.Collections);
+                await context.UpdateRelationshipAsync(g => g.CustomFields);
+                await context.UpdateRelationshipAsync(g => g.Developers);
+                await context.UpdateRelationshipAsync(g => g.Engine);
+                await context.UpdateRelationshipAsync(g => g.Genres);
+                await context.UpdateRelationshipAsync(g => g.Keys);
+                await context.UpdateRelationshipAsync(g => g.Libraries);
+                await context.UpdateRelationshipAsync(g => g.Media);
+                await context.UpdateRelationshipAsync(g => g.MultiplayerModes);
+                await context.UpdateRelationshipAsync(g => g.Pages);
+                await context.UpdateRelationshipAsync(g => g.Platforms);
+                await context.UpdateRelationshipAsync(g => g.Publishers);
+                await context.UpdateRelationshipAsync(g => g.Redistributables);
+                await context.UpdateRelationshipAsync(g => g.SavePaths);
+                await context.UpdateRelationshipAsync(g => g.Scripts);
+                await context.UpdateRelationshipAsync(g => g.Tags);
+            });
         }
 
         public override async Task<ExistingEntityResult<Game>> AddMissingAsync(Expression<Func<Game, bool>> predicate, Game entity)

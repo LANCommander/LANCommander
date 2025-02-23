@@ -16,6 +16,15 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Key>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public override async Task<Key> AddAsync(Key entity)
+        {
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(k => k.ClaimedByUser);
+                await context.UpdateRelationshipAsync(k => k.Game);
+            });
+        }
+
         public override async Task<Key> UpdateAsync(Key entity)
         {
             return await base.UpdateAsync(entity, async context =>

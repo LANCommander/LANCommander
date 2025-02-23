@@ -18,6 +18,15 @@ namespace LANCommander.Server.Services
         ServerProcessService serverProcessService,
         ServerService serverService) : BaseDatabaseService<PlaySession>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
+        public override async Task<PlaySession> AddAsync(PlaySession entity)
+        {
+            return await base.AddAsync(entity, async context =>
+            {
+                await context.UpdateRelationshipAsync(ps => ps.Game);
+                await context.UpdateRelationshipAsync(ps => ps.User);
+            });
+        }
+
         public override async Task<PlaySession> UpdateAsync(PlaySession entity)
         {
             return await base.UpdateAsync(entity, async context =>

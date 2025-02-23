@@ -47,7 +47,7 @@
     <ChildContent>
         <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
             <FormItem Label="Name">
-                <Input @bind-Value="@context.Name" />
+                <Input @bind-Value="@context.Name" AutoFocus="context.Id == Guid.Empty" />
             </FormItem>
             <FormItem Label="Game">
                 <Select TItem="Game"

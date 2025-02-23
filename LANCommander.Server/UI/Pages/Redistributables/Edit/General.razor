@@ -49,7 +49,7 @@
     <ChildContent Context="redistributable">
         <Form Model="redistributable" Layout="@FormLayout.Vertical">
             <FormItem Label="Name">
-                <Input @bind-Value="@context.Name" />
+                <Input @bind-Value="@context.Name" AutoFocus="redistributable.Id == Guid.Empty" />
             </FormItem>
 
             <FormItem Label="Notes">

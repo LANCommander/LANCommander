@@ -34,7 +34,7 @@
 <Modal Title="Add Collection" OnOk="Add" OnCancel="CloseAdd" @bind-Visible="AddCollectionVisible">
     <Form Model="@CollectionContext">
         <FormItem Label="Name">
-            <Input @bind-Value="@context.Name" />
+            <Input @bind-Value="@context.Name" AutoFocus />
         </FormItem>
     </Form>
 </Modal>

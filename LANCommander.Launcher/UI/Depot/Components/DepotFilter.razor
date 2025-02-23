@@ -8,7 +8,7 @@
             <Slider @bind-Value="ColumnSize" Step="50" Min="100" Max="250" />
         </FormItem>
         <FormItem Label="Title">
-            <Input @bind-Value="@context.SelectedOptions.Title" />
+            <Input @bind-Value="@context.SelectedOptions.Title" AutoFocus />
         </FormItem>
         <FormItem Label="Group By">
             <Select @bind-Value="@context.SelectedOptions.GroupBy" TItem="GroupBy" TItemValue="GroupBy" DataSource="Enum.GetValues<GroupBy>()">

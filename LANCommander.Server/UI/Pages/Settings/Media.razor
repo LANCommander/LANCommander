@@ -55,11 +55,14 @@
         }
     }
 
-    void Save()
+    async Task Save()
     {
         try
         {
             SettingService.SaveSettings(Settings);
+
+            await StorageLocationService.UpdateAsync(StorageLocation);
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

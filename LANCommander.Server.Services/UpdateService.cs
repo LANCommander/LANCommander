@@ -64,7 +64,7 @@ namespace LANCommander.Server.Services
             if (_settings.Update.ReleaseChannel == ReleaseChannel.Stable ||
                 _settings.Update.ReleaseChannel == ReleaseChannel.Prerelease)
             {
-                var release = await _gitHub.Repository.Release.Get(_owner, _repository, "v" + currentVersion);
+                var release = await _gitHub.Repository.Release.Get(_owner, _repository, "v" + currentVersion.WithoutMetadata());
 
                 var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
                 

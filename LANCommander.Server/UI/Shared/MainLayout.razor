@@ -122,7 +122,7 @@
         </ErrorHandler>
 
         <Footer>
-            LANCommander v@(UpdateService.GetCurrentVersion().ToString())
+            LANCommander v@(UpdateService.GetCurrentVersion().WithoutMetadata().ToString())
         </Footer>
     </Flex>
 </Layout>

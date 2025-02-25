@@ -35,8 +35,6 @@
         <Selection Key="@(context.Id.ToString())" />
         <BoundDataColumn
             Property="s => s.Game"
-            DefaultSortOrder="@SortDirection.Ascending"
-            Sortable
             Include="Game.Media">
             <Flex Align="FlexAlign.Center" Gap="FlexGap.Middle">
                 @if (context.Game != null)
@@ -46,7 +44,7 @@
                 }
             </Flex>
         </BoundDataColumn>
-        <BoundDataColumn Property="s => s.Name" Sortable />
+        <BoundDataColumn Property="s => s.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         <BoundDataColumn Property="s => s.Port" Sortable />
         <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
         <BoundDataColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />

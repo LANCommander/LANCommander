@@ -14,34 +14,37 @@ namespace LANCommander.Migrations
         {
             var settings = SettingService.GetSettings();
 
-            var files = Directory.EnumerateFiles("Media");
-
-            foreach (var file in files)
+            if (Directory.Exists("Media"))
             {
-                try
-                {
-                    uint crc = 0;
+                var files = Directory.EnumerateFiles("Media");
 
-                    using (FileStream fs = File.Open(file, FileMode.Open))
+                foreach (var file in files)
+                {
+                    try
                     {
-                        var buffer = new byte[4096];
+                        uint crc = 0;
 
-                        while (true)
+                        using (FileStream fs = File.Open(file, FileMode.Open))
                         {
-                            var count = fs.Read(buffer, 0, buffer.Length);
+                            var buffer = new byte[4096];
 
-                            if (count == 0)
-                                break;
+                            while (true)
+                            {
+                                var count = fs.Read(buffer, 0, buffer.Length);
 
-                            crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                                if (count == 0)
+                                    break;
+
+                                crc = Crc32Algorithm.Append(crc, buffer, 0, count);
+                            }
                         }
+
+                        migrationBuilder.Sql($"UPDATE Media SET Crc32 = '{crc.ToString("X")}' WHERE FileId = '{file.Replace("Media" + Path.DirectorySeparatorChar, "").ToUpper()}'");
                     }
+                    catch (Exception ex)
+                    {
 
-                    migrationBuilder.Sql($"UPDATE Media SET Crc32 = '{crc.ToString("X")}' WHERE FileId = '{file.Replace("Media" + Path.DirectorySeparatorChar, "").ToUpper()}'");
-                }
-                catch (Exception ex)
-                {
-
+                    }
                 }
             }
         }

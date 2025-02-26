@@ -249,10 +249,13 @@ static async Task InitializeServerProcesses(WebApplication app)
             {
                 logger.LogDebug("Autostarting server {ServerName} with a delay of {AutostartDelay} seconds", server.Name, server.AutostartDelay);
 
-                if (server.AutostartDelay > 0)
-                    await Task.Delay(server.AutostartDelay);
-
-                serverProcessService.StartServerAsync(server.Id);
+                Task.Run(() =>
+                {
+                    if (server.Autostart && server.AutostartDelay > 0)
+                        Task.Delay(TimeSpan.FromSeconds(server.AutostartDelay)).Wait();
+                    
+                    return serverProcessService.StartServerAsync(server.Id);
+                });
             }
             catch (Exception ex)
             {

@@ -114,6 +114,9 @@
                 {
                     await SetupService.ChangeProviderAsync(Settings.DatabaseProvider, Settings.DatabaseConnectionString);
 
+                    Settings.Authentication.MinimumSameSitePolicy = SameSiteMode.Lax;
+                    Settings.Authentication.CookieSecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    
                     SettingService.SaveSettings(Settings);
 
                     NavigationManager.NavigateTo("/FirstTimeSetup/Paths", true);

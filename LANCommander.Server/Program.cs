@@ -11,6 +11,7 @@ using Serilog;
 using LANCommander.Server;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Endpoints;
 using LANCommander.Server.Jobs.Background;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
@@ -106,8 +107,9 @@ app.UseStaticFiles();
 
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapFallbackToPage("/_Host");
+    endpoints.MapDownloadEndpoints();
     endpoints.MapControllers();
+    endpoints.MapFallbackToPage("/_Host");
 });
 
 app.MapRazorComponents<App>()

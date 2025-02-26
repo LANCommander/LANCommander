@@ -235,7 +235,10 @@ namespace LANCommander.Server.Services
                         
                         Running[server.Id] = cancellationTokenSource;
 
-                        await executionContext.ExecuteServerAsync(Mapper.Map<SDK.Models.Server>(server), cancellationTokenSource.Token);
+                        await executionContext.ExecuteServerAsync(Mapper.Map<SDK.Models.Server>(server), cancellationTokenSource);
+                        
+                        if (Running.ContainsKey(server.Id))
+                            Running.Remove(server.Id);
                         
                         OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
                     }

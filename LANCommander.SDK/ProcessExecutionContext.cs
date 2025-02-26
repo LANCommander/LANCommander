@@ -76,21 +76,25 @@ namespace LANCommander.SDK
         }
 
         public async Task ExecuteServerAsync(Models.Server server,
-            CancellationToken cancellationToken = default)
+            CancellationTokenSource cancellationTokenSource = default)
         {
             Process = new Process();
-            
-            Process.StartInfo.Arguments = ExpandVariables(server.Arguments, server.WorkingDirectory, skipSlashes: true);
-            Process.StartInfo.FileName = ExpandVariables(server.Path, server.WorkingDirectory);
-            Process.StartInfo.WorkingDirectory = server.WorkingDirectory;
-            Process.StartInfo.UseShellExecute = server.UseShellExecute;
             Process.EnableRaisingEvents = true;
+
+            var processStartInfo = new ProcessStartInfo();
+            
+            processStartInfo.Arguments = ExpandVariables(server.Arguments, server.WorkingDirectory, skipSlashes: true);
+            processStartInfo.FileName = ExpandVariables(server.Path, server.WorkingDirectory);
+            processStartInfo.WorkingDirectory = server.WorkingDirectory;
+            processStartInfo.UseShellExecute = server.UseShellExecute;
             
             if (!Process.StartInfo.UseShellExecute)
             {
-                Process.BeginErrorReadLine();
-                Process.BeginOutputReadLine();
+                processStartInfo.RedirectStandardError = true;
+                processStartInfo.RedirectStandardOutput = true;
             }
+            
+            Process.StartInfo = processStartInfo;
             
             if (OutputDataReceived != null)
                 Process.OutputDataReceived += OutputDataReceived;
@@ -106,8 +110,20 @@ namespace LANCommander.SDK
             bool exited = false;
 
             Process.Start();
+
+            Process.Exited += (sender, args) =>
+            {
+                if (cancellationTokenSource?.Token.CanBeCanceled ?? false)
+                    cancellationTokenSource.Cancel();
+            };
             
-            cancellationToken.WaitHandle.WaitOne();
+            if (processStartInfo.RedirectStandardError)
+                Process.BeginErrorReadLine();
+            
+            if (processStartInfo.RedirectStandardOutput)
+                Process.BeginOutputReadLine();
+            
+            cancellationTokenSource?.Token.WaitHandle.WaitOne();
             
             if (server.ProcessTerminationMethod == ProcessTerminationMethod.Close)
                 Process.CloseMainWindow();

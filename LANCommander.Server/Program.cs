@@ -252,7 +252,7 @@ static async Task InitializeServerProcesses(WebApplication app)
                 if (server.AutostartDelay > 0)
                     await Task.Delay(server.AutostartDelay);
 
-                await serverProcessService.StartServerAsync(server.Id);
+                serverProcessService.StartServerAsync(server.Id);
             }
             catch (Exception ex)
             {

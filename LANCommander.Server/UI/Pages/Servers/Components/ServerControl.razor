@@ -4,7 +4,7 @@
 @inject INotificationService NotificationService
 @implements IAsyncDisposable
 
-<Flex Gap="FlexGap.Large" Align="FlexAlign.Center">
+<Flex Gap="FlexGap.Large" Align="FlexAlign.Center" Wrap="FlexWrap.NoWrap">
     @switch (Status)
     {
         case ServerProcessStatus.Running:

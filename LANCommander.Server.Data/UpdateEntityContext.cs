@@ -85,6 +85,9 @@ public class UpdateEntityContext<TEntity>
         // Get the updated collection from the new entity
         var updatedCollection = compiledExpression.Invoke(_updatedEntity);
 
+        if (updatedCollection == null)
+            return;
+
         if (updatedCollection is IEnumerable<TRelatedEntity> updatedEntities)
         {
             var existingCollection = compiledExpression(_entity);

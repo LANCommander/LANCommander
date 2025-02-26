@@ -145,7 +145,7 @@
         }
     }
 
-    void ValidatePaths()
+    async Task ValidatePaths()
     {
         var valid = false;
 
@@ -155,13 +155,28 @@
             {
                 if (!Directory.Exists(storageLocation.Path))
                     Directory.CreateDirectory(storageLocation.Path);
+
+                if (storageLocation.Id == Guid.Empty)
+                    await StorageLocationService.AddAsync(storageLocation);
+                else
+                    await StorageLocationService.UpdateAsync(storageLocation);
             }
 
             if (!Directory.Exists(SavesStorageLocation.Path))
                 Directory.CreateDirectory(SavesStorageLocation.Path);
 
+            if (SavesStorageLocation.Id == Guid.Empty)
+                await StorageLocationService.AddAsync(SavesStorageLocation);
+            else
+                await StorageLocationService.UpdateAsync(SavesStorageLocation);
+
             if (!Directory.Exists(MediaStorageLocation.Path))
                 Directory.CreateDirectory(MediaStorageLocation.Path);
+
+            if (MediaStorageLocation.Id == Guid.Empty)
+                await StorageLocationService.AddAsync(MediaStorageLocation);
+            else
+                await StorageLocationService.UpdateAsync(MediaStorageLocation);
 
             valid = true;
         }

@@ -237,7 +237,7 @@ namespace LANCommander.Server.Services
                 
                 newEntity = (await context.AddAsync(newEntity)).Entity;
                 newEntity.CreatedOn = DateTime.UtcNow;
-                newEntity.CreatedById = currentUser.Id;
+                newEntity.CreatedById = currentUser?.Id;
                 
                 await context.SaveChangesAsync();
                 

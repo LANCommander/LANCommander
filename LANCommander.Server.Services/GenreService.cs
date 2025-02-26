@@ -17,7 +17,7 @@ namespace LANCommander.Server.Services
     {
         public override async Task<Genre> AddAsync(Genre entity)
         {
-            return await base.UpdateAsync(entity, async context =>
+            return await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(g => g.Games);
             });

@@ -206,26 +206,35 @@ static async Task EnsureDatabase(WebApplication app)
             
             var storageLocationService = scope.ServiceProvider.GetRequiredService<StorageLocationService>();
 
-            await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Archive && l.Default, new StorageLocation
+            var archiveLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Archive && l.Default, new StorageLocation
             {
                 Path = "Uploads",
                 Type = StorageLocationType.Archive,
                 Default = true,
             });
             
-            await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Media && l.Default, new StorageLocation
+            if (!Directory.Exists(archiveLocation.Value.Path))
+                Directory.CreateDirectory(archiveLocation.Value.Path);
+            
+            var mediaLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Media && l.Default, new StorageLocation
             {
                 Path = "Media",
                 Type = StorageLocationType.Media,
                 Default = true,
             });
             
-            await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Save && l.Default, new StorageLocation
+            if (!Directory.Exists(mediaLocation.Value.Path))
+                Directory.CreateDirectory(mediaLocation.Value.Path);
+            
+            var saveLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.Save && l.Default, new StorageLocation
             {
                 Path = "Saves",
                 Type = StorageLocationType.Save,
                 Default = true,
             });
+            
+            if (!Directory.Exists(saveLocation.Value.Path))
+                Directory.CreateDirectory(saveLocation.Value.Path);
         }
         else
             logger.LogDebug("No pending migrations are available. Skipping database migration.");

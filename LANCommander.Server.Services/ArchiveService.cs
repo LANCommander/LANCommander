@@ -66,7 +66,7 @@ namespace LANCommander.Server.Services
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
 
-            return await base.UpdateAsync(entity, async context =>
+            return await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(a => a.Game);
                 await context.UpdateRelationshipAsync(a => a.Redistributable);

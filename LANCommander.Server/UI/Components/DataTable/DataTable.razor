@@ -167,7 +167,7 @@
         if (Columns != null)
             ChildContent = Columns;
         
-        base.OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(
+        /*base.OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(
             this,
             async (args) =>
             {
@@ -179,7 +179,7 @@
             async (args) =>
             {
                 PageIndexChanged(args);
-            });
+            });*/
 
 
         await base.OnParametersSetAsync();
@@ -242,7 +242,7 @@
         if (!String.IsNullOrWhiteSpace(Search))
             parameters.Add("Search", Search);
         
-        NavigationManager.NavigateTo(QueryHelpers.AddQueryString(uri.AbsolutePath, parameters));
+        // NavigationManager.NavigateTo(QueryHelpers.AddQueryString(uri.AbsolutePath, parameters));
 
         Reload();
     }

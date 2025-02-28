@@ -221,11 +221,8 @@ namespace LANCommander.SDK.Services
             Logger?.LogTrace("Signaling to the server that we stopped the game...");
 
             try
-            {
-                await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromMilliseconds(500), async () =>
-                {
-                    await Client.PostRequestAsync<object>($"/api/Game/{id}/Stopped");
-                });
+            { 
+                await Client.PostRequestAsync<object>($"/api/Game/{id}/Stopped");
             }
             catch (Exception ex)
             {

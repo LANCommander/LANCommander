@@ -111,7 +111,7 @@ else
             return;
         }        
 
-        var primaryActions = actions.Where(a => a.IsPrimaryAction && LibraryService.IsInstalled(a.GameId));
+        var primaryActions = actions.Where(a => a.IsPrimaryAction && (LibraryService.IsInstalled(a.GameId) || a.GameId == Guid.Empty));
 
         if (primaryActions.Count() == 0)
         {

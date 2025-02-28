@@ -97,8 +97,12 @@ jobs:
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
         Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/Libraries/locales
 
+    - name: Compress Build Output
+      run: |
+        zip -r LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        path: LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
+        path: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
         name: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

@@ -46,7 +46,7 @@ public static class ServiceExtensions
         builder.Services.AddScoped<RoleService>();
         builder.Services.AddScoped<UserCustomFieldService>();
         builder.Services.AddScoped<AuthenticationService>();
-        builder.Services.AddScoped<SetupService>();
+        builder.Services.AddTransient<SetupService>();
         builder.Services.AddScoped(typeof(ImportService<>));
 
         // Register importers

@@ -24,7 +24,7 @@ jobs:
       - name: Download release artifact
         shell: pwsh
         run: |
-          $releaseAsset = "LANCommander.${{ matrix.app }}-Windows-${{ matrix.arch }}-v${{ env.VERSION }}"
+          $releaseAsset = "LANCommander.${{ matrix.app }}-Windows-${{ matrix.arch }}-v${{ env.VERSION }}.zip"
           gh release download ${{ github.ref_name }} -p $releaseAsset
           Expand-Archive $releaseAsset -DestinationPath ".\extracted"
         env:

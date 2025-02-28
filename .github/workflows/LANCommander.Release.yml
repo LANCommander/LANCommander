@@ -225,13 +225,6 @@ jobs:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
-      - name: Debug - List Build Directories
-        run: |
-          echo "Contents of ./Docker/build/linux-x64:"
-          ls -la ./Docker/build/linux-x64
-          echo "Contents of ./Docker:"
-          ls -la ./Docker
-
       - name: Draft Release
         uses: softprops/action-gh-release@v2
         with:

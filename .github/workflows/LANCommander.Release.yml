@@ -225,6 +225,11 @@ jobs:
           name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
+      - name: Debug - List Artifact Files
+        run: |
+          echo "Contents of ./artifacts:"
+          ls -la ./artifacts
+
       - name: Draft Release
         uses: softprops/action-gh-release@v2
         with:

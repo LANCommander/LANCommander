@@ -114,6 +114,11 @@ namespace LANCommander.Server.UI.Pages.Account
             
             ExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             
+            var screenshots = Directory.GetFiles(Path.Combine("wwwroot", "static", "login"), "*.jpg");
+
+            if (screenshots.Any())
+                ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
+            
             if (ModelState.IsValid)
             {
                 var user = CreateUser();

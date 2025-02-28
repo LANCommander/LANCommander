@@ -137,6 +137,11 @@ namespace LANCommander.Server.UI.Pages.Account
                 
                 return Challenge(properties, provider);
             }
+            
+            var screenshots = Directory.GetFiles(Path.Combine("wwwroot", "static", "login"), "*.jpg");
+
+            if (screenshots.Any())
+                ScreenshotUrl = screenshots[new Random().Next(0, screenshots.Length - 1)].Replace("wwwroot", "").Replace(Path.DirectorySeparatorChar, '/');
 
             if (ModelState.IsValid)
             {

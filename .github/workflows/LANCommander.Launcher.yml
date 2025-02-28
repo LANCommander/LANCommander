@@ -103,7 +103,7 @@ jobs:
 
     - name: Compress Build Output
       run: |
-        zip -r LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
+        Compress-Archive -Path LANCommander.Launcher/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/ -DestinationPath LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4

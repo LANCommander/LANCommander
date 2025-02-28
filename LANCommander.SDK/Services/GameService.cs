@@ -208,10 +208,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromMilliseconds(500), async () =>
-                {
-                    await Client.PostRequestAsync<object>($"/api/Game/{id}/Started");
-                });
+                await Client.PostRequestAsync<object>($"/api/Game/{id}/Started");
             }
             catch (Exception ex)
             {

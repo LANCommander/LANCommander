@@ -6,6 +6,7 @@ namespace LANCommander.SDK.Models
 {
     public class Action : KeyedModel
     {
+        public Guid GameId { get; set; }
         public string Name { get; set; }
         public string Arguments { get; set; }
         public string Path { get; set; }

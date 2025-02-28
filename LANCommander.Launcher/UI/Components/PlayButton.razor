@@ -98,6 +98,7 @@ else
     async Task Run()
     {
         var game = LibraryItem.DataItem as Game;
+        
         var actions = await Client.Games.GetActionsAsync(game.InstallDirectory, game.Id);
 
         await ChangeState(PlayButtonState.Starting);
@@ -110,7 +111,7 @@ else
             return;
         }        
 
-        var primaryActions = actions.Where(a => a.IsPrimaryAction);
+        var primaryActions = actions.Where(a => a.IsPrimaryAction && LibraryService.IsInstalled(a.GameId));
 
         if (primaryActions.Count() == 0)
         {

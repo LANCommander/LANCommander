@@ -128,6 +128,11 @@ namespace LANCommander.Launcher.Services
             return user.Library;
         }
 
+        public bool IsInstalled(Guid itemId)
+        {
+            return Items.Any(i => i.Key == itemId && (i.State == ListItemState.Installed || i.State == ListItemState.UpdateAvailable));
+        }
+
         public async Task<IEnumerable<ListItem>> GetItemsAsync()
         {
             Items.Clear();

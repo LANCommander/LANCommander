@@ -25,8 +25,6 @@ public static class LoggerExtensions
             
             if (settings.Logs.IgnorePings)
                 config.Filter.ByExcluding(Matching.WithProperty<string>("RequestPath", v => v.StartsWith("/api/Ping", StringComparison.OrdinalIgnoreCase)));
-            
-            config.WriteTo.Console();
 
             foreach (var provider in settings.Logs.Providers)
             {

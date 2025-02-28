@@ -306,7 +306,7 @@ namespace LANCommander.Server.Services
             var currentUser = await GetCurrentUserAsync(context);
             
             existingEntity.UpdatedOn = DateTime.UtcNow;
-            existingEntity.UpdatedById = currentUser.Id;
+            existingEntity.UpdatedById = currentUser?.Id;
 
             await context.SaveChangesAsync();
             

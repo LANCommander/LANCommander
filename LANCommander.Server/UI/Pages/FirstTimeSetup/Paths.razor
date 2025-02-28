@@ -2,6 +2,7 @@
 @using LANCommander.SDK.Enums
 @layout FirstTimeSetupLayout
 @inject StorageLocationService StorageLocationService
+@inject SetupService SetupService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -94,7 +95,9 @@
         
         try
         {
-            ArchiveStorageLocations = await StorageLocationService.GetAsync(l => l.Type == SDK.Enums.StorageLocationType.Archive);
+            ArchiveStorageLocations = await StorageLocationService
+                .AsNoTracking()
+                .GetAsync(l => l.Type == StorageLocationType.Archive);
         }
         catch (Exception ex)
         {
@@ -113,8 +116,9 @@
 
         try
         {
-
-            SavesStorageLocation = await StorageLocationService.FirstAsync(l => l.Type == SDK.Enums.StorageLocationType.Save && l.Default);
+            SavesStorageLocation = await StorageLocationService
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Type == StorageLocationType.Save && l.Default);
         }
         catch (Exception ex)
         {
@@ -130,7 +134,9 @@
 
         try
         {
-            MediaStorageLocation = await StorageLocationService.FirstAsync(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
+            MediaStorageLocation = await StorageLocationService
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
         }
         catch (Exception ex)
         {
@@ -147,47 +153,22 @@
 
     async Task ValidatePaths()
     {
-        var valid = false;
-
         try
         {
-            foreach (var storageLocation in ArchiveStorageLocations)
-            {
-                if (!Directory.Exists(storageLocation.Path))
-                    Directory.CreateDirectory(storageLocation.Path);
+            var locations = new List<StorageLocation>(ArchiveStorageLocations);
+            
+            locations.Add(SavesStorageLocation);
+            locations.Add(MediaStorageLocation);
 
-                if (storageLocation.Id == Guid.Empty)
-                    await StorageLocationService.AddAsync(storageLocation);
-                else
-                    await StorageLocationService.UpdateAsync(storageLocation);
-            }
-
-            if (!Directory.Exists(SavesStorageLocation.Path))
-                Directory.CreateDirectory(SavesStorageLocation.Path);
-
-            if (SavesStorageLocation.Id == Guid.Empty)
-                await StorageLocationService.AddAsync(SavesStorageLocation);
-            else
-                await StorageLocationService.UpdateAsync(SavesStorageLocation);
-
-            if (!Directory.Exists(MediaStorageLocation.Path))
-                Directory.CreateDirectory(MediaStorageLocation.Path);
-
-            if (MediaStorageLocation.Id == Guid.Empty)
-                await StorageLocationService.AddAsync(MediaStorageLocation);
-            else
-                await StorageLocationService.UpdateAsync(MediaStorageLocation);
-
-            valid = true;
+            await SetupService.UpdatePaths(locations);
+            
+            NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
         }
         catch (Exception ex)
         {
             Logger?.LogError(ex, $"Error validating path");
             MessageService.Error($"Error validating path: {ex.Message}", 10);
         }
-
-        if (valid)
-            NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
     }
 
     void SetDefault(StorageLocation storageLocation)

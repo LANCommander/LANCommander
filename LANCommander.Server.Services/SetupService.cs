@@ -1,5 +1,7 @@
-﻿using LANCommander.Server.Data;
+﻿using LANCommander.SDK.Enums;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
+using LANCommander.Server.Data.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,23 +11,16 @@ using Npgsql;
 
 namespace LANCommander.Server.Services
 {
-    public class SetupService : BaseService, IDisposable
+    public class SetupService(
+        ILogger<SetupService> logger,
+        IServiceProvider serviceProvider) : BaseService(logger), IDisposable
     {
-        private readonly IServiceProvider ServiceProvider;
-
-        public SetupService(
-            ILogger<SetupService> logger,
-            IServiceProvider serviceProvider) : base(logger)
-        {
-            ServiceProvider = serviceProvider;
-        }
-
         public async Task ChangeProviderAsync(DatabaseProvider provider, string connectionString)
         {
             DatabaseContext.Provider = provider;
             DatabaseContext.ConnectionString = connectionString;
 
-            using (var scope = ServiceProvider.CreateScope())
+            using (var scope = serviceProvider.CreateScope())
             {
                 var dbFactory = scope.ServiceProvider.GetService<IDbContextFactory<DatabaseContext>>();
                 var db = await dbFactory.CreateDbContextAsync();
@@ -97,6 +92,52 @@ namespace LANCommander.Server.Services
                 connection.Open();
 
                 return true;
+            }
+        }
+        
+        public async Task UpdatePaths(IEnumerable<StorageLocation> storageLocations)
+        {
+            if (!storageLocations.Any(l => l.Type == StorageLocationType.Archive && l.Default))
+                throw new Exception("Missing a default archive location");
+        
+            if (!storageLocations.Any(l => l.Type == StorageLocationType.Media && l.Default))
+                throw new Exception("Missing a default media location");
+        
+            if (!storageLocations.Any(l => l.Type == StorageLocationType.Save && l.Default))
+                throw new Exception("Missing a default save location");
+
+            using (var scope = serviceProvider.CreateScope())
+            {
+                var dbFactory = scope.ServiceProvider.GetService<IDbContextFactory<DatabaseContext>>();
+                var db = await dbFactory.CreateDbContextAsync();
+                
+                foreach (var storageLocation in storageLocations)
+                {
+                    if (!Directory.Exists(storageLocation.Path))
+                        Directory.CreateDirectory(storageLocation.Path);
+
+                    try
+                    {
+                        if (storageLocation.Id == Guid.Empty)
+                        {
+                            await db.StorageLocations.AddAsync(storageLocation);
+                        }
+                        else
+                        {
+                            var existingStorageLocation = await db.StorageLocations.FindAsync(storageLocation.Id);
+                            
+                            // Copy scalar values
+                            db.Entry(existingStorageLocation).CurrentValues.SetValues(storageLocation);
+                        }
+
+                        await db.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Could not create storage location {Path}", storageLocation.Path);
+                        throw new Exception($"Could not create storage location {storageLocation.Path}");
+                    }
+                }
             }
         }
 

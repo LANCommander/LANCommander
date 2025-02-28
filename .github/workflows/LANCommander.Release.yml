@@ -156,74 +156,81 @@ jobs:
       - name: Download Server Linux ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Server Linux x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Server macOS ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Server macOS x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Server Windows ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Server Windows x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Linux ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Linux x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher macOS ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher macOS x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Windows ARM64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
 
       - name: Download Launcher Windows x64
         uses: actions/download-artifact@v4
         with:
-          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}
+          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
           path: artifacts
+
+      - name: Debug - List Build Directories
+        run: |
+          echo "Contents of ./Docker/build/linux-x64:"
+          ls -la ./Docker/build/linux-x64
+          echo "Contents of ./Docker:"
+          ls -la ./Docker
 
       - name: Draft Release
         uses: softprops/action-gh-release@v2

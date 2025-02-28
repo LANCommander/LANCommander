@@ -101,4 +101,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         path: LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
-        name: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}
+        name: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

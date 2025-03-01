@@ -88,7 +88,7 @@ namespace LANCommander.SDK
             processStartInfo.WorkingDirectory = server.WorkingDirectory;
             processStartInfo.UseShellExecute = server.UseShellExecute;
             
-            if (!Process.StartInfo.UseShellExecute)
+            if (!server.UseShellExecute)
             {
                 processStartInfo.RedirectStandardError = true;
                 processStartInfo.RedirectStandardOutput = true;
@@ -96,10 +96,10 @@ namespace LANCommander.SDK
             
             Process.StartInfo = processStartInfo;
             
-            if (OutputDataReceived != null)
+            if (OutputDataReceived != null && !processStartInfo.UseShellExecute)
                 Process.OutputDataReceived += OutputDataReceived;
             
-            if (ErrorDataReceived != null)
+            if (OutputDataReceived != null && !processStartInfo.UseShellExecute)
                 Process.ErrorDataReceived += ErrorDataReceived;
             
             Logger?.LogTrace("Running server executable");

@@ -740,7 +740,7 @@ namespace LANCommander.SDK
             }
 
             var request = new RestRequest("/api/Auth/Validate")
-                .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                .AddHeader("Authorization", $"Bearer {token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
 
             if (!ignoreVersion)

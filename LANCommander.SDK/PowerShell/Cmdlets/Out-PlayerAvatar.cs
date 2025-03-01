@@ -14,7 +14,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
         {
             var result = Client.Profile.GetAvatarAsync().GetAwaiter().GetResult();
 
-            WriteObject(result);
+            WriteObject(result, false);
         }
     }
 }

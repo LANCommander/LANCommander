@@ -89,8 +89,15 @@ namespace LANCommander.SDK.Services
         public async Task<byte[]> GetAvatarAsync()
         {
             Logger?.LogTrace("Requesting avatar contents...");
-            
-            return await Client.GetRequestAsync<byte[]>("/api/Profile/Avatar");
+
+            using (var ms = new MemoryStream())
+            {
+                var stream = Client.StreamRequest("/api/Profile/Avatar");
+                
+                await stream.CopyToAsync(ms);
+                
+                return ms.ToArray();
+            }
         }
 
         public async Task<string> DownloadAvatar()

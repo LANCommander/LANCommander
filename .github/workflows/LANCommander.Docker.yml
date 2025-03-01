@@ -83,11 +83,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-          path: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: .
 
       - name: Unzip artifacts
         run: |
-          unzip -d ./Docker/build/linux-x64 LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          unzip -d ./Docker/build/linux-x64 ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
 
       # - name: Download Server arm64 Artifacts
       #   uses: actions/download-artifact@v4

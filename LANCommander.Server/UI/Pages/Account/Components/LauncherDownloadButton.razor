@@ -15,6 +15,11 @@
                         OnClick="() => NavigationManager.NavigateTo(downloadLink.Url)"
                         Style="text-align: left">
                         @downloadLink.Name
+                        
+                        @foreach (var tag in downloadLink.Tags)
+                        {
+                            <Tag Color="TagColor.Green">@tag</Tag>
+                        }
                     </Button>
                 }
             </Flex>
@@ -33,6 +38,7 @@
         public string Name { get; set; }
         public string Url { get; set; }
         public string Icon { get; set; }
+        public string[] Tags { get; set; }
     }
 
     IEnumerable<DownloadLink> DownloadLinks = new List<DownloadLink>();
@@ -51,11 +57,25 @@
         DownloadLinks = artifacts
             .OrderBy(a => a.Platform)
             .ThenBy(a => a.Architecture)
-            .Select(a => new DownloadLink
-        {
-            Name = $"{a.Platform} ({a.Architecture})",
-            Icon = _iconMap[a.Platform].ToString(),
-            Url = a.Url
-        });
+            .Select(a =>
+            {
+                var tags = new List<string>();
+
+                if (artifacts.Count(art => art.Platform == a.Platform && art.Architecture == a.Architecture) > 1)
+                {
+                    if (a.Url.ToLower().EndsWith(".exe"))
+                        tags.Add("exe");
+                    else if (a.Url.ToLower().EndsWith(".zip"))
+                        tags.Add("zip");
+                }
+                
+                return new DownloadLink
+                {
+                    Name = $"{a.Platform} ({a.Architecture})",
+                    Icon = _iconMap[a.Platform].ToString(),
+                    Url = a.Url,
+                    Tags = tags.ToArray()
+                };
+            });
     }
 }

@@ -13,7 +13,7 @@
                 <MenuItem RouterLink="@($"/Servers/{Id}/Autostart")">Autostart</MenuItem>
                 <MenuItem RouterLink="@($"/Servers/{Id}/HTTP")">HTTP</MenuItem>
                 <MenuItem RouterLink="@($"/Servers/{Id}/Consoles")">Consoles</MenuItem>
-                <MenuItem RouterLink="@($"/Servers/{Id}/Monitor")" Disabled="Server.ServerConsoles.Any()">Monitor</MenuItem>
+                <MenuItem RouterLink="@($"/Servers/{Id}/Monitor")" Disabled="Server.ServerConsoles != null && Server.ServerConsoles.Any()">Monitor</MenuItem>
                 <MenuItem RouterLink="@($"/Servers/{Id}/Scripts")">Scripts</MenuItem>
             }
         </Menu>

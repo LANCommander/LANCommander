@@ -4,31 +4,41 @@
 @inject LibraryService LibraryService
 @inject ImportService ImportService
 @inject MessageBusService MessageBusService
+@inject NavigationManager NavigationManager
 
 <Flex Vertical Class="library-list">
-    <Collapse>
-        @if (Groups.Count > 1)
-        {
-            foreach (var group in Groups.OrderByTitle(g => g))
+    @if (LibraryItems == null || !LibraryItems.Any())
+    {
+        <Empty Simple Description="false">
+            <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Browse Depot</Button>
+        </Empty>
+    }
+    else
+    {
+        <Collapse>
+            @if (Groups.Count > 1)
             {
-                <Panel Header="@group" Key="@group">
-                    <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
-                        <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
+                foreach (var group in Groups.OrderByTitle(g => g))
+                {
+                    <Panel Header="@group" Key="@group">
+                        <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
+                            <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem"/>
+                        </AntList>
+                    </Panel>
+                }
+            }
+            else
+            {
+                <Panel Class="no-header">
+                    <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
+                        <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem"/>
                     </AntList>
                 </Panel>
             }
-        }
-        else
-        {
-            <Panel Class="no-header">
-                <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
-                    <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem" />
-                </AntList>
-            </Panel>
-        }
-    </Collapse>
-    
-    <LibraryItemFilter />
+        </Collapse>
+
+        <LibraryItemFilter/>
+    }
 </Flex>
 
 @code {

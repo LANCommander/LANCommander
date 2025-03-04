@@ -4,7 +4,7 @@
 ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/LANCommander/LANCommander)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/LANCommander/LANCommander/LANCommander.Release.yml?branch=main)
 ![GitHub License](https://img.shields.io/github/license/LANCommander/LANCommander)
-![Wiki](https://img.shields.io/website?url=https%3A%2F%2Flancommander.app&label=wiki)
+![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fdocs.lancommander.app&label=documentation)
 ![Discord](https://img.shields.io/discord/1134004697712316506)
 [![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3DLANCommander%26type%3Dpatrons&style=flat)](https://patreon.com/LANCommander)
 
@@ -18,7 +18,6 @@ Builds for Windows, Linux, and macOS are provided, with varying levels of suppor
 
 ## Community
 * [Discord](https://discord.gg/vDEEWVt8EM)
-* [Wiki](https://lancommander.app/index.php/Main_Page)
 * [Patreon](https://patreon.com/LANCommander)
 
 ## Docker
@@ -55,12 +54,14 @@ It's worth joining our [Discord](https://discord.gg/vDEEWVt8EM) as some pre-pack
 LANCommander communicates over HTTP(S). There is no LAN cache configuration provided, but all downloads are provided through the `/api/Games/{id}/Download` route.
 
 ### Where can I get some help?
-Some documentation lives at the [Wiki](https://lancommander.app/index.php/Main_Page) including a [Getting Started](https://lancommander.app/index.php/Tutorials:Getting_Started) guide and a category for [Tutorials](https://lancommander.app/index.php/Category:Tutorials). It also contains a large library of sample configurations for [Games](https://lancommander.app/index.php/Category:Games) and [Redistributables](https://lancommander.app/index.php/Category:Redistributables).
+Documentation can be found at our [documentation site](https://docs.lancommander.app/). The [Getting Started](https://docs.lancommander.app/en/GettingStarted) guide contains enough information to get your server up and running in minutes. 
+
+Our soon to be retired [wiki](https://lancommander.app/index.php/Main_Page) is still available to plug any documentation holes while we work on updating the documentation site. [Tutorials](https://lancommander.app/index.php/Category:Tutorials) as well as sample configurations for [Games](https://lancommander.app/index.php/Category:Games) and [Redistributables](https://lancommander.app/index.php/Category:Redistributables) can be found there.
 
 ### How do I contribute?
 Hit that fork button, submit a PR, there are no hard rules right now.
 
-If you're not a developer but still want to contribute, writing documentation in the wiki is a great way to give back to the community!
+If you're not a developer but still want to contribute, contributing to our [documentation site](https://docs.lancommander.app/) is a great way to give back to the community!
 
 The LANCommander dev team is currently spearheaded by one developer in their free time. Paid donation tiers are available over at the [Patreon](https://patreon.com/LANCommander) page.
 

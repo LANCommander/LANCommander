@@ -31,7 +31,7 @@ builder.AddLogger();
 // Add services to the container.
 Log.Debug("Loading settings");
 Settings settings = SettingService.GetSettings(true);
-builder.Services.AddSingleton(settings);
+
 Log.Debug("Validating settings");
 if (settings.Authentication.TokenSecret.Length < 16)
 {
@@ -40,6 +40,8 @@ if (settings.Authentication.TokenSecret.Length < 16)
     SettingService.SaveSettings(settings);
 }
 Log.Debug("Done validating settings");
+
+builder.Services.AddSingleton(settings);
 
 ConfigureDatabaseProvider(settings, args);
 

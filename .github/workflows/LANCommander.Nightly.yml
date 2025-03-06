@@ -272,7 +272,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-          path: ./published
+          path: ./LANCommander.Server/published
 
       # - name: Download Server arm64 Artifacts
       #   uses: actions/download-artifact@v4

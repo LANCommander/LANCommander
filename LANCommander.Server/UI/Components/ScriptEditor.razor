@@ -61,7 +61,12 @@
         else if (!ServerId.IsNullOrEmpty())
             return s => s.ServerId == ServerId;
         else
-            return s => s.GameId == Guid.Empty && s.RedistributableId == Guid.Empty && s.ServerId == Guid.Empty;
+            return s => 
+                (s.GameId == null || s.GameId == Guid.Empty)
+                &&
+                (s.RedistributableId == null || s.RedistributableId == Guid.Empty)
+                &&
+                (s.ServerId == null || s.ServerId == Guid.Empty);
     }
 
     async void Edit(Guid? scriptId = null)

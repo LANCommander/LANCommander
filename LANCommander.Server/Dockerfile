@@ -9,6 +9,8 @@ COPY . ./
 RUN dotnet restore
 RUN dotnet publish -o out
 
-COPY published/ ./
+RUN ls -lah ./
+
+COPY ./published/ ./
 
 ENTRYPOINT ["dotnet", "LANCommander.Server.dll"]

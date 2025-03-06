@@ -272,7 +272,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
-          path: ./LANCommander.Server/published
+          path: ./
+
+      - name: Extract Server Artifacts
+        run: |
+          mkdir -p ./LANCommander.Server/published
+          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published
 
       # - name: Download Server arm64 Artifacts
       #   uses: actions/download-artifact@v4
@@ -289,7 +294,7 @@ jobs:
         id: push
         uses: docker/build-push-action@v6
         with:
-          context: ./Docker
+          context: ./LANCommander.Server
           file: ./LANCommander.Server/Dockerfile
           push: true
           platforms: linux/amd64

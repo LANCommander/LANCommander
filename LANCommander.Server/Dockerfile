@@ -4,6 +4,6 @@ WORKDIR /app
 EXPOSE 1337
 EXPOSE 35891/udp
 
-COPY published .
+COPY ./published /app
 
 ENTRYPOINT ["dotnet", "LANCommander.Server.dll"]

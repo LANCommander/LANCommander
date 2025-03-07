@@ -5,37 +5,72 @@ namespace LANCommander.Server.Services
 {
     public class IPXRelayService : BaseService
     {
-        private IPXRelay Relay;
+        private CancellationTokenSource? _relayCts;
+        private Task? _relayTask;
+        private IPXRelay? _relay;
 
         public IPXRelayService(ILogger<IPXRelayService> logger) : base(logger)
         {
-            if (Relay == null)
-                Relay = new IPXRelay();
+            if (_relay == null)
+                _relay = new IPXRelay();
 
             Init();
         }
 
         public void Init()
         {
-            if (Relay != null)
-                Stop();
+            var settings = SettingService.GetSettings();
 
-            if (Relay == null)
-                Relay = new IPXRelay(_settings.IPXRelay.Port);
+            StopAsync().Wait();
 
-            if (!_settings.IPXRelay.Logging)
-                Relay.DisableLogging();
+            _relay = new IPXRelay(settings.IPXRelay.Port);
 
-            if (_settings.IPXRelay.Enabled)
-                Relay.StartAsync();
+            if (!settings.IPXRelay.Logging)
+                _relay.DisableLogging();
+
+            if (settings.IPXRelay.Enabled)
+            {
+                _relayCts = new CancellationTokenSource();
+                _relayTask = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _relay.StartAsync(_relayCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to start IPX Relay");
+                    }
+                }, _relayCts.Token);
+            }
         }
 
-        public void Stop()
+        public async Task StopAsync()
         {
-            if (Relay != null)
-                Relay.Dispose();
+            if (_relayCts != null)
+            {
+                try
+                {
+                    _relayCts.CancelAsync();
+                }
+                catch (OperationCanceledException)
+                {
 
-            Relay = null;
+                }
+                finally
+                {
+                    _relayCts.Dispose();
+                    _relayCts = null;
+                }
+            }
+
+            _relay?.Stop();
+            _relay?.Dispose();
+            _relay = null;
         }
     }
 }

@@ -253,6 +253,9 @@ static async Task InitializeServerProcesses(WebApplication app)
         var serverProcessService = scope.ServiceProvider.GetRequiredService<ServerProcessService>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         logger.LogDebug("Autostarting Servers");
+        
+        // Autostart IPX relay
+        scope.ServiceProvider.GetService<IPXRelayService>();
 
         foreach (var server in await serverService.GetAsync(s => s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnApplicationStart))
         {

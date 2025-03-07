@@ -7,7 +7,7 @@
 	  <Company>LANCommander</Company>
 	  <Description>A .NET library for interacting with a LANCommander server</Description>
 	  <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
-	  <PackageIcon>icon.png</PackageIcon>
+	  <PackageIcon>package-icon.png</PackageIcon>
 	  <PackageReadmeFile>README.md</PackageReadmeFile>
 	  <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
 	  <RepositoryType>git</RepositoryType>

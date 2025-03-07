@@ -1,9 +1,0 @@
-#!/bin/bash
-
-PORT=$(grep '^Port:' /config/Settings.yml | awk '{ print $2 }')
-
-if [[ $(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${PORT:-1337}/") -eq 200 ]]; then
-    exit 0
-else
-    exit 1
-fi

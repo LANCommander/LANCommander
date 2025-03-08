@@ -7,4 +7,4 @@ EXPOSE 35891/udp
 
 COPY ./published /app
 
-ENTRYPOINT ["dotnet", "LANCommander.Server.dll"]
+ENTRYPOINT ["dotnet", "LANCommander.Server.dll", "--docker"]

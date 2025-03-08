@@ -25,6 +25,9 @@ var builder = WebApplication.CreateBuilder(args);
 if (args.Contains("--debugger"))
     WaitForDebugger();
 
+if (args.Contains("--docker"))
+    SettingService.WorkingDirectory = "/app/config";
+
 builder.AddAsService();
 builder.AddLogger();
 

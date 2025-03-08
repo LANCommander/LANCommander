@@ -6,15 +6,27 @@ namespace LANCommander.Server.Services
 {
     public class SettingService
     {
-        private const string SettingsFilename = "Settings.yml";
+        public static string WorkingDirectory { get; set; } = "";
+        private const string FileName = "Settings.yml";
+
+        public static string SettingsFile
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(WorkingDirectory))
+                    return Path.Combine(WorkingDirectory, FileName);
+                else
+                    return FileName;
+            }
+        }
 
         private static Models.Settings Settings { get; set; }
 
         public static Models.Settings LoadSettings()
         {
-            if (File.Exists(SettingsFilename))
+            if (File.Exists(SettingsFile))
             {
-                var contents = File.ReadAllText(SettingsFilename);
+                var contents = File.ReadAllText(SettingsFile);
 
                 var deserializer = new DeserializerBuilder()
                     .IgnoreUnmatchedProperties()
@@ -49,7 +61,7 @@ namespace LANCommander.Server.Services
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
-                File.WriteAllText(SettingsFilename, serializer.Serialize(settings));
+                File.WriteAllText(SettingsFile, serializer.Serialize(settings));
 
                 Settings = settings;
             }

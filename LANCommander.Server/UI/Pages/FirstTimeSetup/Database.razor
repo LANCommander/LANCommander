@@ -58,7 +58,8 @@
         switch (Settings.DatabaseProvider)
         {
             case DatabaseProvider.SQLite:
-                Settings.DatabaseConnectionString = "Data Source=LANCommander.db;Cache=Shared";
+                var dbPath = Path.Combine(SettingService.WorkingDirectory, "LANCommander.db");
+                Settings.DatabaseConnectionString = $"Data Source={dbPath};Cache=Shared";
                 break;
 
             case DatabaseProvider.MySQL:

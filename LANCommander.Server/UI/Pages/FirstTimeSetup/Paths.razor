@@ -74,14 +74,14 @@
     
     StorageLocation MediaStorageLocation = new()
     {
-        Path = "Media",
+        Path = Path.Combine(SettingService.WorkingDirectory, "Media"),
         Type = StorageLocationType.Media,
         Default = true,
     };
     
     StorageLocation SavesStorageLocation = new()
     {
-        Path = "Saves",
+        Path = Path.Combine(SettingService.WorkingDirectory, "Saves"),
         Type = StorageLocationType.Save,
         Default = true,
     };
@@ -108,7 +108,7 @@
             if (!ArchiveStorageLocations.Any())
                 ArchiveStorageLocations.Add(new StorageLocation
                 {
-                    Path = "Uploads",
+                    Path = Path.Combine(SettingService.WorkingDirectory, "Uploads"),
                     Type = StorageLocationType.Archive,
                     Default = true,
                 });
@@ -126,7 +126,7 @@
 
             SavesStorageLocation = new StorageLocation
             {
-                Path = "Saves",
+                Path = Path.Combine(SettingService.WorkingDirectory, "Saves"),
                 Type = StorageLocationType.Save,
                 Default = true,
             };
@@ -144,7 +144,7 @@
 
             MediaStorageLocation = new StorageLocation
             {
-                Path = "Media",
+                Path = Path.Combine(SettingService.WorkingDirectory, "Media"),
                 Type = StorageLocationType.Media,
                 Default = true,
             };

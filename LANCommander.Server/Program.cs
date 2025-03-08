@@ -33,7 +33,16 @@ builder.AddLogger();
 
 // Add services to the container.
 Log.Debug("Loading settings");
-Settings settings = SettingService.GetSettings(true);
+
+Settings settings;
+
+if (!File.Exists(SettingService.SettingsFile))
+{
+    settings = new Settings();
+    SettingService.SaveSettings(settings);
+}
+else
+    settings = SettingService.GetSettings(true);
 
 Log.Debug("Validating settings");
 if (settings.Authentication.TokenSecret.Length < 16)

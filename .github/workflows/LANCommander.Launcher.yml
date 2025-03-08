@@ -85,13 +85,13 @@ jobs:
     - name: Build UI Components
       run: |
         cd ./LANCommander.UI
-        npm ci
+        npm install
         npm run package
       
     - name: Install Launcher Node Dependencies
       run: |
         cd ./LANCommander.Launcher
-        npm ci
+        npm install
 
     # .NET builds
     - name: Publish Components

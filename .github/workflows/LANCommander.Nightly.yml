@@ -108,6 +108,7 @@ jobs:
       build_runtime: linux-arm64
       build_arch: arm64
       build_platform: Linux
+      build_configuration: Debug
 
   build_server_linux_x64:
     needs: prep
@@ -119,6 +120,7 @@ jobs:
       build_runtime: linux-x64
       build_arch: x64
       build_platform: Linux
+      build_configuration: Debug
 
   build_server_osx_arm64:
     needs: prep
@@ -130,6 +132,7 @@ jobs:
       build_runtime: osx-arm64
       build_arch: arm64
       build_platform: macOS
+      build_configuration: Debug
 
   build_server_osx_x64:
     needs: prep
@@ -141,6 +144,7 @@ jobs:
       build_runtime: osx-x64
       build_arch: x64
       build_platform: macOS
+      build_configuration: Debug
 
   build_server_win_arm64:
     needs: prep
@@ -152,6 +156,7 @@ jobs:
       build_runtime: win-arm64
       build_arch: arm64
       build_platform: Windows
+      build_configuration: Debug
 
   build_server_win_x64:
     needs: prep
@@ -163,6 +168,7 @@ jobs:
       build_runtime: win-x64
       build_arch: x64
       build_platform: Windows
+      build_configuration: Debug
 
   build_launcher_linux_arm64:
     needs: prep
@@ -174,6 +180,7 @@ jobs:
       build_runtime: linux-arm64
       build_arch: arm64
       build_platform: Linux
+      build_configuration: Debug
 
   build_launcher_linux_x64:
     needs: prep
@@ -185,6 +192,7 @@ jobs:
       build_runtime: linux-x64
       build_arch: x64
       build_platform: Linux
+      build_configuration: Debug
 
   build_launcher_osx_arm64:
     needs: prep
@@ -196,6 +204,7 @@ jobs:
       build_runtime: osx-arm64
       build_arch: arm64
       build_platform: macOS
+      build_configuration: Debug
 
   build_launcher_osx_x64:
     needs: prep
@@ -207,6 +216,7 @@ jobs:
       build_runtime: osx-x64
       build_arch: x64
       build_platform: macOS
+      build_configuration: Debug
 
   build_launcher_win_arm64:
     needs: prep
@@ -218,6 +228,7 @@ jobs:
       build_runtime: win-arm64
       build_arch: arm64
       build_platform: Windows
+      build_configuration: Debug
 
   build_launcher_win_x64:
     needs: prep
@@ -229,6 +240,7 @@ jobs:
       build_runtime: win-x64
       build_arch: x64
       build_platform: Windows
+      build_configuration: Debug
 
   # --------------------------------------------------------------------------
   # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:nightly

@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: 'Windows'
+      build_configuration:
+        description: 'Build Configuration (Debug/Release)'
+        required: false
+        type: string
+        default: 'Release'
 
 permissions:
   contents: write
@@ -95,12 +100,12 @@ jobs:
     # .NET builds
     - name: Publish Updater and Server
       run: |
-        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
-        dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+        dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
 
     - name: Bundle and Clean
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
         
         # Remove unnecessary files in a single operation
         $PathsToRemove = @(
@@ -121,7 +126,7 @@ jobs:
           'Libraries/locales'
         )
         
-        $BasePath = "LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish"
+        $BasePath = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
         foreach ($path in $PathsToRemove) {
           Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
         }
@@ -129,7 +134,7 @@ jobs:
     - name: Compress Build Output
       run: |
         $compress = @{
-          Path = "LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/*"
+          Path = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
           DestinationPath = "LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
           CompressionLevel = "Fastest"
         }

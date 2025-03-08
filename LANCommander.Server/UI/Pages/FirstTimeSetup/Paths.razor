@@ -57,6 +57,24 @@
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@MediaStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(MediaStorageLocation, path)" />
         </FormItem>
     }
+    
+    <Divider Text="Backups" />
+    
+    <FormItem>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Backups.StoragePath = OnPathSelected(path)" />
+    </FormItem>
+
+    <Divider Text="Launchers" />
+
+    <FormItem>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Launcher.StoragePath = OnPathSelected(path)" />
+    </FormItem>
+
+    <Divider Text="Servers" />
+
+    <FormItem>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Servers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Servers.StoragePath = OnPathSelected(path)" />
+    </FormItem>
 
     <FormItem>
         <Flex Justify="FlexJustify.End">
@@ -85,6 +103,8 @@
         Type = StorageLocationType.Save,
         Default = true,
     };
+
+    Settings Settings = SettingService.GetSettings();
 
     bool Loading = false;
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -162,6 +182,8 @@
 
             await SetupService.UpdatePaths(locations);
             
+            SettingService.SaveSettings(Settings);
+            
             NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
         }
         catch (Exception ex)
@@ -178,15 +200,20 @@
             archiveStorageLocation.Default = archiveStorageLocation.Id == storageLocation.Id;
         }
     }
-
-    void OnPathSelected(StorageLocation storageLocation, string path)
+    
+    string OnPathSelected(string path)
     {
         var appPath = Directory.GetCurrentDirectory();
 
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        storageLocation.Path = path;
+        return path;
+    }
+
+    void OnPathSelected(StorageLocation storageLocation, string path)
+    {
+        storageLocation.Path = OnPathSelected(path);
     }
 
     void AddArchiveStorageLocation()

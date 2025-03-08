@@ -43,6 +43,11 @@
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Administrator);
+        
+        var existingAdministrators = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
+        
+        if (existingAdministrators.Any())
+            NavigationManager.NavigateTo("/");
     }
 
     async Task CreateAdministratorUser()

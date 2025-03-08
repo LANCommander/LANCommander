@@ -84,7 +84,10 @@ jobs:
         cache-dependency-path: |
           LANCommander.UI/package-lock.json
           LANCommander.Launcher/package-lock.json
-        cache-dir: ${{ github.workspace }}/.npm
+
+    # Configure npm cache location
+    - name: Configure npm cache
+      run: npm config set cache "${{ github.workspace }}/.npm" --global
 
     # Parallel UI builds
     - name: Build UI Components

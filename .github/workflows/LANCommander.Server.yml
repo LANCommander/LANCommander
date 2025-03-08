@@ -48,58 +48,92 @@ jobs:
         replace-with: '/'
         flags: g
 
-    # dotnet
+    # Checkout code
     - uses: actions/checkout@v3
       with:
         submodules: true
+
+    # .NET Setup and Caching
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 9.0.102
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
     - name: Restore dependencies
       run: dotnet restore
 
-    # Auto Updater
-    - name: Publish Updater
-      run: dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
-
-    # Node.js
-    - name: Setup Node.js environment
+    # Node.js Setup and Caching
+    - name: Setup Node.js
       uses: actions/setup-node@v3.8.1
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: |
+          LANCommander.UI/package-lock.json
+          LANCommander.Server/package-lock.json
 
-    # UI
-    - run: cd ./LANCommander.UI; npm install; npm run package
+    # Parallel UI builds
+    - name: Build UI Components
+      run: |
+        cd ./LANCommander.UI
+        npm ci
+        npm run package
+      
+    - name: Install Server Node Dependencies
+      run: |
+        cd ./LANCommander.Server
+        npm ci
 
-    - run: cd ./LANCommander.Server; npm install
+    # .NET builds
+    - name: Publish Updater and Server
+      run: |
+        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+        dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
 
-    - name: Publish Server
-      run: dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c Release --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
-
-    - name: Bundle
+    - name: Bundle and Clean
       run: |
         Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/
-
-    - name: Remove Extra Files
-      run: |
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/compat
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/2.*
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/AntDesign/less
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/wwwroot/Identity/lib/bootstrap
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/LANCommander.ico
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/LANCommanderDark.ico
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/package-lock.json
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/package.json
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/*.pdb
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/hostfxr.dll.bak
-        Remove-Item -Recurse -Force -ErrorAction Continue LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/Libraries/locales
+        
+        # Remove unnecessary files in a single operation
+        $PathsToRemove = @(
+          'wwwroot/_content/BootstrapBlazor.PdfReader/compat',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/2.*',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map',
+          'wwwroot/_content/AntDesign/less',
+          'wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps',
+          'wwwroot/Identity/lib/bootstrap',
+          'LANCommander.ico',
+          'LANCommanderDark.ico',
+          'package-lock.json',
+          'package.json',
+          '*.pdb',
+          'hostfxr.dll.bak',
+          'Libraries/locales'
+        )
+        
+        $BasePath = "LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish"
+        foreach ($path in $PathsToRemove) {
+          Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
+        }
 
     - name: Compress Build Output
       run: |
-        Compress-Archive -Path LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/* -DestinationPath LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        $compress = @{
+          Path = "LANCommander.Server/bin/Release/net9.0/${{ inputs.build_runtime }}/publish/*"
+          DestinationPath = "LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
+          CompressionLevel = "Fastest"
+        }
+        Compress-Archive @compress
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4

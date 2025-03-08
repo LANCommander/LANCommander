@@ -80,14 +80,6 @@ jobs:
       uses: actions/setup-node@v3.8.1
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: |
-          LANCommander.UI/package-lock.json
-          LANCommander.Server/package-lock.json
-
-    # Configure npm cache location
-    - name: Configure npm cache
-      run: npm config set cache "${{ github.workspace }}/.npm" --global
 
     # Parallel UI builds
     - name: Build UI Components

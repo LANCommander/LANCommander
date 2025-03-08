@@ -38,7 +38,10 @@ Settings settings;
 
 if (!File.Exists(SettingService.SettingsFile))
 {
-    Directory.CreateDirectory(Path.GetDirectoryName(SettingService.SettingsFile));
+    var workingDirectory = Path.GetDirectoryName(SettingService.SettingsFile);
+    
+    if (!String.IsNullOrWhiteSpace(workingDirectory))
+        Directory.CreateDirectory(workingDirectory);
     
     settings = new Settings();
     SettingService.SaveSettings(settings);

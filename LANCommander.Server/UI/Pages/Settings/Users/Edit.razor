@@ -83,7 +83,9 @@
 
         if (authState.User.Identity.IsAuthenticated)
         {
-            User = await UserService.GetAsync(Username);
+            User = await UserService
+                .Include(u => u.CustomFields)
+                .FirstOrDefaultAsync(u => u.UserName == Username);
 
             if (User.CustomFields == null)
                 User.CustomFields = new List<UserCustomField>();

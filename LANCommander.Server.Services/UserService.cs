@@ -21,6 +21,8 @@ namespace LANCommander.Server.Services
         private readonly CollectionService CollectionService;
         private readonly IMapper Mapper;
         private readonly IFusionCache Cache;
+        
+        protected readonly List<Func<IQueryable<User>, IQueryable<User>>> _modifiers = new();
 
         public UserService(
             ILogger<UserService> logger,
@@ -163,97 +165,200 @@ namespace LANCommander.Server.Services
 
         }
 
-        public IBaseDatabaseService<User> AsSplitQuery()
-        {
-            throw new NotImplementedException();
-        }
-
         public async Task<ICollection<User>> GetAsync()
         {
-            return await IdentityContext.UserManager.Users.ToListAsync();
+            try
+            {
+                var queryable = IdentityContext.UserManager.Users.AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.ToListAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<ICollection<T>> GetAsync<T>()
         {
-            return await IdentityContext
-                .UserManager
-                .Users
-                .ProjectTo<T>(Mapper.ConfigurationProvider)
-                .ToListAsync();
+            try
+            {
+                var queryable = IdentityContext
+                    .UserManager
+                    .Users
+                    .AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable
+                    .ProjectTo<T>(Mapper.ConfigurationProvider)
+                    .ToListAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<User> GetAsync(Guid id)
         {
-            return await IdentityContext
-                .UserManager
-                .FindByIdAsync(id.ToString());
+            try
+            {
+                return await FirstOrDefaultAsync(u => u.Id == id);
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<T> GetAsync<T>(Guid id)
         {
-            var user = await IdentityContext
-                .UserManager
-                .FindByIdAsync(id.ToString());
-
-            return Mapper.Map<T>(user);
+            try
+            {
+                return await FirstOrDefaultAsync<T>(u => u.Id == id);
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<ICollection<User>> GetAsync(Expression<Func<User, bool>> predicate)
         {
-            return await IdentityContext
-                .UserManager
-                .Users
-                .Where(predicate)
-                .ToListAsync();
+            try
+            {
+                var queryable = IdentityContext
+                    .UserManager
+                    .Users
+                    .AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.Where(predicate).ToListAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<ICollection<T>> GetAsync<T>(Expression<Func<User, bool>> predicate)
         {
-            return await IdentityContext
-                .UserManager
-                .Users
-                .Where(predicate)
-                .ProjectTo<T>(Mapper.ConfigurationProvider)
-                .ToListAsync();
+            try
+            {
+                var queryable = IdentityContext
+                    .UserManager
+                    .Users
+                    .AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable
+                    .Where(predicate)
+                    .ProjectTo<T>(Mapper.ConfigurationProvider)
+                    .ToListAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<User> FirstOrDefaultAsync(Expression<Func<User, bool>> predicate)
         {
-            return await IdentityContext
-                .UserManager
-                .Users
-                .FirstOrDefaultAsync(predicate);
+            try
+            {
+                var queryable = IdentityContext
+                    .UserManager
+                    .Users
+                    .AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable.FirstOrDefaultAsync(predicate);
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<T> FirstOrDefaultAsync<T>(Expression<Func<User, bool>> predicate)
         {
-            return await IdentityContext
-                .UserManager
-                .Users
-                .Where(predicate)
-                .ProjectTo<T>(Mapper.ConfigurationProvider)
-                .FirstOrDefaultAsync();
+            try
+            {
+                var queryable = IdentityContext
+                    .UserManager
+                    .Users
+                    .AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable
+                    .Where(predicate)
+                    .ProjectTo<T>(Mapper.ConfigurationProvider)
+                    .FirstOrDefaultAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<User> FirstOrDefaultAsync<TKey>(Expression<Func<User, bool>> predicate, Expression<Func<User, TKey>> orderKeySelector)
         {
-            return await IdentityContext
-                .UserManager
-                .Users
-                .Where(predicate)
-                .OrderBy(orderKeySelector)
-                .FirstOrDefaultAsync();
+            try
+            {
+                var queryable = IdentityContext
+                    .UserManager
+                    .Users
+                    .AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable
+                    .Where(predicate)
+                    .OrderBy(orderKeySelector)
+                    .FirstOrDefaultAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<T> FirstOrDefaultAsync<T, TKey>(Expression<Func<User, bool>> predicate, Expression<Func<T, TKey>> orderKeySelector)
         {
-            return await IdentityContext
-                .UserManager
-                .Users
-                .Where(predicate)
-                .ProjectTo<T>(Mapper.ConfigurationProvider)
-                .OrderBy(orderKeySelector)
-                .FirstOrDefaultAsync();
+            try
+            {
+                var queryable = IdentityContext
+                    .UserManager
+                    .Users
+                    .AsQueryable();
+                
+                foreach (var modifier in _modifiers)
+                    queryable = modifier.Invoke(queryable);
+                
+                return await queryable
+                    .Where(predicate)
+                    .ProjectTo<T>(Mapper.ConfigurationProvider)
+                    .OrderBy(orderKeySelector)
+                    .FirstOrDefaultAsync();
+            }
+            finally
+            {
+                Reset();
+            }
         }
 
         public async Task<bool> ExistsAsync(Guid id)
@@ -317,35 +422,64 @@ namespace LANCommander.Server.Services
 
             await IdentityContext.UserManager.DeleteAsync(user);
         }
-
-        public IBaseDatabaseService<User> Include(Expression<Func<User, object>> includeExpression)
+        
+        public IBaseDatabaseService<User> AsNoTracking()
         {
-            throw new NotImplementedException();
+            return Query((queryable) =>
+            {
+                return queryable.AsNoTracking();
+            });
+        }
+
+        public IBaseDatabaseService<User> AsSplitQuery()
+        {
+            return Query((queryable) =>
+            {
+                return queryable.AsSplitQuery();
+            });
         }
 
         public IBaseDatabaseService<User> Query(Func<IQueryable<User>, IQueryable<User>> modifier)
         {
-            throw new NotImplementedException();
+            _modifiers.Add(modifier);
+
+            return this;
         }
 
         public IBaseDatabaseService<User> Include(params Expression<Func<User, object>>[] expressions)
         {
-            throw new NotImplementedException();
+            return Query((queryable) =>
+            {
+                foreach (var expression in expressions)
+                {
+                    queryable = queryable.Include(expression);
+                }
+
+                return queryable;
+            });
         }
 
-        public IBaseDatabaseService<User> SortBy(Expression<Func<User, object>> expression, SortDirection direction)
+        public IBaseDatabaseService<User> SortBy(Expression<Func<User, object>> expression, SortDirection direction = SortDirection.Ascending)
         {
-            throw new NotImplementedException();
+            switch (direction)
+            {
+                case SortDirection.Descending:
+                    return Query((queryable) =>
+                    {
+                        return queryable.OrderByDescending(expression);
+                    });
+                case SortDirection.Ascending:
+                default:
+                    return Query((queryable) =>
+                    {
+                        return queryable.OrderBy(expression);
+                    });
+            }
         }
-
-        public IBaseDatabaseService<User> AsNoTracking()
+        
+        protected void Reset()
         {
-            throw new NotImplementedException();
-        }
-
-        public Task<PaginatedResults<User>> PaginateAsync(Expression<Func<User, bool>> expression, int pageNumber, int pageSize)
-        {
-            throw new NotImplementedException();
+            _modifiers.Clear();
         }
 
         public void Dispose()

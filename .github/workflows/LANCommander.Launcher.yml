@@ -84,6 +84,7 @@ jobs:
         cache-dependency-path: |
           LANCommander.UI/package-lock.json
           LANCommander.Launcher/package-lock.json
+        cache-dir: ${{ github.workspace }}/.npm
 
     # Parallel UI builds
     - name: Build UI Components

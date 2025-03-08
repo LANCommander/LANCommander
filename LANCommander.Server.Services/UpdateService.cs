@@ -64,9 +64,16 @@ namespace LANCommander.Server.Services
             if (_settings.Update.ReleaseChannel == ReleaseChannel.Stable ||
                 _settings.Update.ReleaseChannel == ReleaseChannel.Prerelease)
             {
+                logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
+                
                 var release = await _gitHub.Repository.Release.Get(_owner, _repository, "v" + currentVersion.WithoutMetadata());
-
+                
                 var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
+                
+                if (assets.Any())
+                    logger.LogInformation($"Found the following assets:\n{String.Join("\n\t - ", assets.Select(a => a.Name))}");
+                else
+                    logger.LogError($"No assets found for v{currentVersion.WithoutMetadata()}!");
                 
                 foreach (var asset in assets)
                     yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl);
@@ -86,6 +93,13 @@ namespace LANCommander.Server.Services
                 {
                     var run = workflowRunsResponse.WorkflowRuns.FirstOrDefault();
                     var artifactsResponse = await _gitHub.Actions.Artifacts.ListWorkflowArtifacts(_owner, _repository, run.Id);
+                    
+                    logger.LogInformation($"Searching for artifacts for workflow run #{run.Id}");
+                    
+                    if (artifactsResponse.Artifacts.Any())
+                        logger.LogInformation($"Found the following artifacts:\n{String.Join("\n\t - ", artifactsResponse.Artifacts.Select(a => a.Name))}");
+                    else
+                        logger.LogError($"No artifacts found for workflow run #{run.Id}!");
 
                     foreach (var artifact in artifactsResponse.Artifacts)
                         yield return GetArtifactFromName(artifact.Name, artifact.ArchiveDownloadUrl);

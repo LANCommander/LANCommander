@@ -235,15 +235,23 @@ namespace LANCommander.Server.Services
                 
                 context.Entry(newEntity).CurrentValues.SetValues(addedEntity);
                 
-                newEntity = (await context.AddAsync(newEntity)).Entity;
                 newEntity.CreatedOn = DateTime.UtcNow;
                 newEntity.CreatedById = currentUser?.Id;
                 
+                newEntity = (await context.AddAsync(newEntity)).Entity;
+                
                 await context.SaveChangesAsync();
                 
-                addedEntity.Id = newEntity.Id;
+                if (additionalMapping != null)
+                {
+                    var updateContext = new UpdateEntityContext<T>(context, newEntity, addedEntity);
                 
-                return await UpdateAsync(addedEntity, additionalMapping);
+                    additionalMapping?.Invoke(updateContext);
+                }
+                
+                await context.SaveChangesAsync();
+
+                return newEntity;
             }
             finally
             {

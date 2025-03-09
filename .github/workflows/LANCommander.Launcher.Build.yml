@@ -1,4 +1,4 @@
-name: LANCommander Launcher
+name: LANCommander Launcher Build
 
 on:
   workflow_dispatch:

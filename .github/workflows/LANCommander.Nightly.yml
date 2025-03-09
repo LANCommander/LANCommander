@@ -115,7 +115,7 @@ jobs:
   build_server_linux_arm64:
     needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Server.yml
+    uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -127,7 +127,7 @@ jobs:
   build_server_linux_x64:
     needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Server.yml
+    uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -139,7 +139,7 @@ jobs:
   build_server_osx_arm64:
     needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Server.yml
+    uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -151,7 +151,7 @@ jobs:
   build_server_osx_x64:
     needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Server.yml
+    uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -163,7 +163,7 @@ jobs:
   build_server_win_arm64:
     needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Server.yml
+    uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -175,7 +175,7 @@ jobs:
   build_server_win_x64:
     needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Server.yml
+    uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -187,7 +187,7 @@ jobs:
   build_launcher_linux_arm64:
     needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Launcher.yml
+    uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -199,7 +199,7 @@ jobs:
   build_launcher_linux_x64:
     needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Launcher.yml
+    uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -211,7 +211,7 @@ jobs:
   build_launcher_osx_arm64:
     needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Launcher.yml
+    uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -223,7 +223,7 @@ jobs:
   build_launcher_osx_x64:
     needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Launcher.yml
+    uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -235,7 +235,7 @@ jobs:
   build_launcher_win_arm64:
     needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Launcher.yml
+    uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
@@ -247,7 +247,7 @@ jobs:
   build_launcher_win_x64:
     needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Launcher.yml
+    uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}

@@ -11,11 +11,13 @@
         TItem="Script"
         HidePagination
         Responsive
+        Size="TableSize.Small"
         Query="GetQueryExpression()">
+        <BoundDataColumn Property="s => s.Name" />
         <BoundDataColumn Property="s => s.Type">
             @context.Type.GetDisplayName()
         </BoundDataColumn>
-        <BoundDataColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Include="CreatedBy">
+        <BoundDataColumn Title="Created By" Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Include="CreatedBy">
             @context.CreatedBy?.UserName
         </BoundDataColumn>
         <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />

@@ -1,4 +1,4 @@
-﻿using LANCommander.Server.Data;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using LANCommander.Server.Models;
@@ -41,18 +41,12 @@ namespace LANCommander.Server.Services
 
         public async Task<string> GetArchiveFileLocationAsync(Archive archive)
         {
-            string storageLocationPath;
-            
-            if (archive.StorageLocation != null)
-                storageLocationPath = archive.StorageLocation.Path;
-            else
+            if (archive.StorageLocation == null)
             {
-                var storageLocation = await storageLocationService.GetAsync(archive.StorageLocationId);
-                
-                storageLocationPath = storageLocation.Path;
+                archive.StorageLocation = await storageLocationService.GetAsync(archive.StorageLocationId);
             }
-            
-            return Path.Combine(storageLocationPath, archive.ObjectKey);
+
+            return Path.Combine(archive.StorageLocation.Path, archive.ObjectKey);
         }
 
         public async Task<string> GetArchiveFileLocationAsync(string objectKey)

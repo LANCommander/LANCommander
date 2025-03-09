@@ -51,8 +51,16 @@ namespace LANCommander.Server.Data.Models
         [JsonIgnore]
         public ICollection<Media>? Media { get; set; }
 
+        public ICollection<UserRole> UserRoles { get; set; }
+        
         [NotMapped]
-        public ICollection<Role>? Roles { get; set; }
+        public ICollection<Role>? Roles {
+            get
+            {
+                return UserRoles?.Select(x => x.Role).ToList();
+            }
+        }
+        
         public ICollection<UserCustomField>? CustomFields { get; set; }
 
         [JsonIgnore]

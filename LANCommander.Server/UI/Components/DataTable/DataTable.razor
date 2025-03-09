@@ -10,7 +10,7 @@
 @using System.Web
 @namespace LANCommander.Server.UI.Components
 @attribute [CascadingTypeParameter(nameof(TItem))]
-@typeparam TItem where TItem : BaseModel
+@typeparam TItem where TItem : class, IBaseModel
 @inherits Table<TItem>
 @inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
 @inject NavigationManager NavigationManager

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LANCommander.Server.Data
 {
     public sealed class DatabaseContext(
-        DbContextOptions<DatabaseContext> options) : IdentityDbContext<User, Role, Guid>(options)
+        DbContextOptions<DatabaseContext> options) : IdentityDbContext<User, Role, Guid, UserClaim, UserRole, UserLogin, RoleClaim, UserToken>(options)
     {
         public static DatabaseProvider Provider = DatabaseProvider.Unknown;
         public static string ConnectionString = "";
@@ -269,22 +269,34 @@ namespace LANCommander.Server.Data
                 b.ToTable("Users");
             });
 
-            builder.Entity<IdentityUserRole<Guid>>(b =>
+            builder.Entity<UserRole>(b =>
             {
                 b.ToTable("UserRoles");
             });
 
-            builder.Entity<IdentityUserClaim<Guid>>(b =>
+            builder.Entity<UserRole>()
+                .HasOne(ur => ur.User)
+                .WithMany(u => u.UserRoles)
+                .HasForeignKey(ur => ur.UserId).IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            builder.Entity<UserRole>()
+                .HasOne(ur => ur.Role)
+                .WithMany(r => r.UserRoles)
+                .HasForeignKey(ur => ur.RoleId).IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<UserClaim>(b =>
             {
                 b.ToTable("UserClaims");
             });
 
-            builder.Entity<IdentityUserLogin<Guid>>(b =>
+            builder.Entity<UserLogin>(b =>
             {
                 b.ToTable("UserLogins");
             });
 
-            builder.Entity<IdentityUserToken<Guid>>(b =>
+            builder.Entity<UserToken>(b =>
             {
                 b.ToTable("UserTokens");
             });
@@ -294,7 +306,7 @@ namespace LANCommander.Server.Data
                 b.ToTable("Roles");
             });
 
-            builder.Entity<IdentityRoleClaim<Guid>>(b =>
+            builder.Entity<RoleClaim>(b =>
             {
                 b.ToTable("RoleClaims");
             });

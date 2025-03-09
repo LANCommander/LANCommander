@@ -30,9 +30,12 @@ namespace LANCommander.Server.UI.Components
 
             StateHasChanged();
 
-            if (!String.IsNullOrWhiteSpace(Include) && !Includes.Contains(Include))
+            var includes = Include.Split(',');
+
+            foreach (var include in includes)
             {
-                Includes.Add(Include);
+                if (!String.IsNullOrWhiteSpace(include) && !Includes.Contains(include))
+                    Includes.Add(include);
             }
 
             base.OnParametersSet();

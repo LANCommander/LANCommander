@@ -1,4 +1,5 @@
-﻿@inherits FeedbackComponent<Guid, Guid>
+﻿@using Microsoft.EntityFrameworkCore
+@inherits FeedbackComponent<Guid, Guid>
 @inject RoleService RoleService
 @inject UserService UserService
 @inject IMessageService MessageService
@@ -35,12 +36,17 @@
 
     private async Task LoadData()
     {
-        User = await UserService.GetAsync(Options);
+        User = await UserService
+            .Query(q =>
+            {
+                return q.Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role);
+            })
+            .GetAsync(Options);
+        
         Roles = await RoleService.GetAsync();
 
-        var currentRoles = await UserService.GetRolesAsync(User);
-
-        SelectedRoles = Roles.Where(r => currentRoles.Any(cr => r.Name == cr.Name)).ToList();
+        SelectedRoles = Roles.Where(r => User.Roles?.Any(cr => r.Name == cr.Name) ?? false).ToList();
     }
 
     async Task OnChange(TransferChangeArgs e)

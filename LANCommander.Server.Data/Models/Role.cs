@@ -8,6 +8,7 @@ namespace LANCommander.Server.Data.Models
     public class Role : IdentityRole<Guid>, IBaseModel
     {
         public ICollection<Collection> Collections { get; set; }
+        public ICollection<UserRole> UserRoles { get; set; }
         [NotMapped]
         public ICollection<User> Users { get; set; }
 

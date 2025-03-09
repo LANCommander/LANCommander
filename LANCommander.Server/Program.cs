@@ -127,6 +127,7 @@ app.UseStaticFiles();
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapDownloadEndpoints();
+    endpoints.MapSaveEndpoints();
     endpoints.MapControllers();
     endpoints.MapFallbackToPage("/_Host");
 });

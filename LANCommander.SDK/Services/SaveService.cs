@@ -61,7 +61,7 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> DownloadLatestAsync(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return await Client.DownloadRequestAsync($"/api/Saves/DownloadLatest/{gameId}", progressHandler, completeHandler);
+            return await Client.DownloadRequestAsync($"/api/Saves/Game/{gameId}/Latest/Download", progressHandler, completeHandler);
         }
 
         public IEnumerable<GameSave> Get(Guid gameId)
@@ -76,19 +76,19 @@ namespace LANCommander.SDK.Services
 
         public GameSave GetLatest(Guid gameId)
         {
-            return Client.GetRequest<GameSave>($"/api/Saves/Latest/{gameId}");
+            return Client.GetRequest<GameSave>($"/api/Saves/Game/{gameId}/Latest");
         }
 
         public Task<GameSave> GetLatestAsync(Guid gameId)
         {
-            return Client.GetRequestAsync<GameSave>($"/api/Saves/Latest/{gameId}");
+            return Client.GetRequestAsync<GameSave>($"/api/Saves/Game/{gameId}/Latest");
         }
 
         public GameSave Upload(Guid gameId, byte[] data)
         {
             Logger?.LogTrace("Uploading save...");
 
-            return Client.UploadRequest<GameSave>($"/api/Saves/Upload/{gameId}", gameId.ToString(), data);
+            return Client.UploadRequest<GameSave>($"/api/Saves/Game/{gameId}/Upload", gameId.ToString(), data);
         }
 
         public async Task DownloadAsync(string installDirectory, Guid gameId, Guid? saveId = null)
@@ -315,7 +315,7 @@ namespace LANCommander.SDK.Services
 
         public async Task DeleteAsync(Guid id)
         {
-            await Client.DeleteRequestAsync<bool>($"/api/Saves/Delete/{id}");
+            await Client.DeleteRequestAsync<bool>($"/api/Saves/{id}");
         }
 
         public IEnumerable<SavePathEntry> GetFileSavePathEntries(SavePath savePath, string installDirectory)

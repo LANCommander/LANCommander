@@ -97,9 +97,11 @@ namespace LANCommander.Server.UI.Pages.Account
             if (DatabaseContext.Provider == Data.Enums.DatabaseProvider.Unknown)
                 return Redirect("/FirstTimeSetup");
 
-            var administrators = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
+            var administratorRole = await RoleService
+                .Include(r => r.UserRoles)
+                .FirstOrDefaultAsync(r => r.Name == RoleService.AdministratorRoleName);
 
-            if (administrators == null || !administrators.Any())
+            if (administratorRole == null || administratorRole.UserRoles != null && !administratorRole.UserRoles.Any())
                 return Redirect("/FirstTimeSetup");
 
             if (!String.IsNullOrWhiteSpace(code))

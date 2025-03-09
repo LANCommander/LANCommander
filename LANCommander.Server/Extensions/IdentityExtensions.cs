@@ -28,6 +28,9 @@ public static class IdentityExtensions
         })
         .AddRoles<Role>()
         .AddEntityFrameworkStores<Data.DatabaseContext>()
+        .AddUserManager<UserManager<User>>()
+        .AddSignInManager<SignInManager<User>>()
+        .AddRoleManager<RoleManager<Role>>()
         .AddSignInManager()
         .AddDefaultTokenProviders();
 

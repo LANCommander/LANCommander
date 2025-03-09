@@ -139,7 +139,9 @@
                     if (TotalChanged.HasDelegate)
                         await TotalChanged.InvokeAsync(Total);
 
-                    if (queryModel != null)
+                    if (HidePagination)
+                        DataSource = await queryable.ToListAsync();
+                    else if (queryModel != null)
                         DataSource = await queryable.CurrentPagedRecords(queryModel).ToListAsync();
                     else
                         DataSource = await queryable.Take(PageSize).ToListAsync();

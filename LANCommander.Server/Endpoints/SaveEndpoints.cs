@@ -117,6 +117,7 @@ public static class SaveEndpoints
         var latestSave = await saveService
             .SortBy(s => s.CreatedOn, SortDirection.Descending)
             .Include(gs => gs.Game)
+            .Include(gs => gs.StorageLocation)
             .FirstOrDefaultAsync(gs => gs.GameId == gameId);
         
         if (latestSave == null)
@@ -145,6 +146,7 @@ public static class SaveEndpoints
         
         var save = await saveService
             .Include(s => s.Game)
+            .Include(s => s.StorageLocation)
             .FirstOrDefaultAsync(s => s.Id == id && s.UserId == user.Id);
 
         var fileName = save.GetUploadPath();
@@ -202,7 +204,7 @@ public static class SaveEndpoints
             if (!Directory.Exists(saveStorageLocation.Path))
                 Directory.CreateDirectory(saveStorageLocation.Path);
 
-            using (var stream = File.Create(save.GetUploadPath()))
+            using (var stream = File.Create(saveUploadPath))
             {
                 await file.CopyToAsync(stream);
             }

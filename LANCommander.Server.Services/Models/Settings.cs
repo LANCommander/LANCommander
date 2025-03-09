@@ -78,6 +78,7 @@ namespace LANCommander.Server.Services.Models
         public MediaSettings Media { get; set; } = new MediaSettings();
         public IPXRelaySettings IPXRelay { get; set; } = new IPXRelaySettings();
         public ServerSettings Servers { get; set; } = new ServerSettings();
+        public BackupSettings Backups { get; set; } = new BackupSettings();
         public UpdateSettings Update { get; set; } = new UpdateSettings();
         public LauncherSettings Launcher { get; set; } = new LauncherSettings();
         public LogSettings Logs { get; set; } = new LogSettings();
@@ -152,7 +153,6 @@ namespace LANCommander.Server.Services.Models
 
     public class UserSaveSettings
     {
-        public string StoragePath { get; set; } = "Saves";
         public int MaxSize { get; set; } = 25;
         public int MaxSaves { get; set; } = 0;
     }
@@ -176,6 +176,11 @@ namespace LANCommander.Server.Services.Models
         public string Host { get; set; } = "";
         public int Port { get; set; } = 213;
         public bool Logging { get; set; } = false;
+    }
+
+    public class BackupSettings
+    {
+        public string StoragePath { get; set; } = "Backups";
     }
 
     public class ServerSettings

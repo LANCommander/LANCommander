@@ -7,16 +7,7 @@ namespace LANCommander.Server.Extensions
     {
         public static string GetUploadPath(this Data.Models.GameSave gameSave)
         {
-            var settings = SettingService.GetSettings();
-
-            return Path.Combine(settings.UserSaves.StoragePath, gameSave.UserId.ToString(), gameSave.GameId.ToString(), gameSave.Id.ToString());
-        }
-
-        public static string GetGameSaveUploadPath(this Data.Models.User user)
-        {
-            var settings = SettingService.GetSettings();
-
-            return Path.Combine(settings.UserSaves.StoragePath, user.Id.ToString());
+            return Path.Combine(gameSave.StorageLocation.Path, gameSave.UserId.ToString(), gameSave.GameId.ToString(), gameSave.Id.ToString());
         }
     }
 }

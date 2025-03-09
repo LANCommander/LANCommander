@@ -182,10 +182,10 @@ static void PrepareDirectories(WebApplication app)
     logger.LogDebug("Ensuring required directories exist");
 
     IEnumerable<string> directories = [
-        settings.UserSaves.StoragePath,
         settings.Update.StoragePath,
+        settings.Launcher.StoragePath,
+        settings.Backups.StoragePath,
         "Snippets",
-        "Backups"
     ];
 
     foreach (var directory in directories)

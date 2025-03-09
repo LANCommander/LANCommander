@@ -1,4 +1,6 @@
 ﻿@page "/Settings/UserSaves"
+@using LANCommander.SDK.Enums
+@inject StorageLocationService StorageLocationService
 @inject IMessageService MessageService
 @inject ILogger<UserSaves> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -8,7 +10,7 @@
 <PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.UserSaves.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@SaveStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
 
         <FormItem Label="Max Size (MB)">
@@ -30,11 +32,19 @@
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-    void Save()
+    StorageLocation SaveStorageLocation = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SaveStorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == StorageLocationType.Save);
+    }
+
+    async Task Save()
     {
         try
         {
             SettingService.SaveSettings(Settings);
+            await StorageLocationService.UpdateAsync(SaveStorageLocation);
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)
@@ -51,6 +61,6 @@
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        Settings.UserSaves.StoragePath = path;
+        SaveStorageLocation.Path = path;
     }
 }

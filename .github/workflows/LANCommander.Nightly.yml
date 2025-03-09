@@ -29,6 +29,7 @@ jobs:
       version_semver: ${{ steps.set_version.outputs.VERSION_SEMVER }}
       version_tag: ${{ steps.set_version.outputs.VERSION_TAG }}
       changed: ${{ steps.check_diff.outputs.changed }}
+      build_dotnet_version: 9.0.102
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -98,25 +99,19 @@ jobs:
   # 2) BUILD JOBS (Server/Launcher) - only run if changes == 'true'
   #    Each calls your local workflow YAML with correct indentation
   # --------------------------------------------------------------------------
-  restore_server:
+  cache:
     needs: prep
     if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Server.Restore.yml
+    uses: ./.github/workflows/LANCommander.Cache.yml
     with:
-      build_dotnet_version: 9.0.102
-
-  restore_launcher:
-    needs: prep
-    if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Launcher.Restore.yml
-    with:
-      build_dotnet_version: 9.0.102
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
 
   build_server_linux_arm64:
-    needs: [prep, restore_server]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-arm64
@@ -125,10 +120,11 @@ jobs:
       build_configuration: Debug
 
   build_server_linux_x64:
-    needs: [prep, restore_server]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-x64
@@ -137,10 +133,11 @@ jobs:
       build_configuration: Debug
 
   build_server_osx_arm64:
-    needs: [prep, restore_server]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-arm64
@@ -149,10 +146,11 @@ jobs:
       build_configuration: Debug
 
   build_server_osx_x64:
-    needs: [prep, restore_server]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-x64
@@ -161,10 +159,11 @@ jobs:
       build_configuration: Debug
 
   build_server_win_arm64:
-    needs: [prep, restore_server]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-arm64
@@ -173,10 +172,11 @@ jobs:
       build_configuration: Debug
 
   build_server_win_x64:
-    needs: [prep, restore_server]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-x64
@@ -185,10 +185,11 @@ jobs:
       build_configuration: Debug
 
   build_launcher_linux_arm64:
-    needs: [prep, restore_launcher]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-arm64
@@ -197,10 +198,11 @@ jobs:
       build_configuration: Debug
 
   build_launcher_linux_x64:
-    needs: [prep, restore_launcher]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-x64
@@ -209,10 +211,11 @@ jobs:
       build_configuration: Debug
 
   build_launcher_osx_arm64:
-    needs: [prep, restore_launcher]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-arm64
@@ -221,10 +224,11 @@ jobs:
       build_configuration: Debug
 
   build_launcher_osx_x64:
-    needs: [prep, restore_launcher]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-x64
@@ -233,10 +237,11 @@ jobs:
       build_configuration: Debug
 
   build_launcher_win_arm64:
-    needs: [prep, restore_launcher]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-arm64
@@ -245,10 +250,11 @@ jobs:
       build_configuration: Debug
 
   build_launcher_win_x64:
-    needs: [prep, restore_launcher]
+    needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.Build.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-x64
@@ -262,8 +268,7 @@ jobs:
   finalize_nightly:
     needs: 
       - prep
-      - restore_server
-      - restore_launcher
+      - cache
       - build_server_linux_arm64
       - build_server_linux_x64
       - build_server_osx_arm64

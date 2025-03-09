@@ -12,6 +12,10 @@ on:
         description: 'Version Tag'
         required: true
         type: string
+      build_dotnet_version:
+        description: 'Build .NET Version'
+        required: true
+        type: string
       build_runtime:
         description: 'Build Runtime'
         required: false
@@ -52,6 +56,47 @@ jobs:
         pattern: '\\'
         replace-with: '/'
         flags: g
+
+    # Checkout code
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    # .NET Setup and Caching
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ inputs.build_dotnet_version }}
+
+    - name: Restore NuGet packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    # Node.js Setup and Caching
+    - name: Setup Node.js
+      uses: actions/setup-node@v3.8.1
+      with:
+        node-version: '20'
+
+    - name: Restore UI build
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/LANCommander.UI/wwwroot
+        key: ${{ runner.os }}-ui-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-ui-
+      
+    - name: Restore Server npm packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/LANCommander.Server/node_modules
+        key: ${{ runner.os }}-server-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-server-npm-
 
     # .NET builds
     - name: Publish Updater and Server

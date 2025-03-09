@@ -1,4 +1,4 @@
-name: LANCommander Launcher
+name: LANCommander Server Restore
 
 on:
   workflow_dispatch:
@@ -37,6 +37,9 @@ jobs:
       with:
         dotnet-version: ${{ inputs.build_dotnet_version }}
 
+    - name: Restore dependencies
+      run: dotnet restore
+
     - name: Cache NuGet packages
       uses: actions/cache@v3
       with:
@@ -44,9 +47,6 @@ jobs:
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
-
-    - name: Restore dependencies
-      run: dotnet restore
 
     # Node.js Setup and Caching
     - name: Setup Node.js
@@ -60,8 +60,37 @@ jobs:
         cd ./LANCommander.UI
         npm install
         npm run package
+
+    - name: Cache UI build
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/LANCommander.UI/wwwroot
+        key: ${{ runner.os }}-ui-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-ui-
       
+    - name: Install Server Node Dependencies
+      run: |
+        cd ./LANCommander.Server
+        npm install
+
+    - name: Cache Server npm packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/LANCommander.Server/node_modules
+        key: ${{ runner.os }}-server-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-server-npm-
+
     - name: Install Launcher Node Dependencies
       run: |
         cd ./LANCommander.Launcher
         npm install
+
+    - name: Cache Launcher npm packages
+      uses: actions/cache@v3
+      with:
+        path: ${{ github.workspace }}/LANCommander.Launcher/node_modules
+        key: ${{ runner.os }}-launcher-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-launcher-npm-

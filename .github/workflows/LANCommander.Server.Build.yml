@@ -1,4 +1,4 @@
-name: LANCommander Launcher
+name: LANCommander Server Build
 
 on:
   workflow_dispatch:
@@ -53,57 +53,15 @@ jobs:
         replace-with: '/'
         flags: g
 
-    # Checkout code
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-
-    # .NET Setup and Caching
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 9.0.102
-
-    - name: Cache NuGet packages
-      uses: actions/cache@v3
-      with:
-        path: ${{ github.workspace }}/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-nuget-
-
-    - name: Restore dependencies
-      run: dotnet restore
-
-    # Node.js Setup and Caching
-    - name: Setup Node.js
-      uses: actions/setup-node@v3.8.1
-      with:
-        node-version: '20'
-
-    # Parallel UI builds
-    - name: Build UI Components
-      run: |
-        cd ./LANCommander.UI
-        npm install
-        npm run package
-      
-    - name: Install Launcher Node Dependencies
-      run: |
-        cd ./LANCommander.Launcher
-        npm install
-
     # .NET builds
-    - name: Publish Components
+    - name: Publish Updater and Server
       run: |
         dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
-        dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
-        dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+        dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
 
     - name: Bundle and Clean
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
-        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
         
         # Remove unnecessary files in a single operation
         $PathsToRemove = @(
@@ -124,7 +82,7 @@ jobs:
           'Libraries/locales'
         )
         
-        $BasePath = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
+        $BasePath = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
         foreach ($path in $PathsToRemove) {
           Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
         }
@@ -132,8 +90,8 @@ jobs:
     - name: Compress Build Output
       run: |
         $compress = @{
-          Path = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
-          DestinationPath = "LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
+          Path = "LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
+          DestinationPath = "LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
           CompressionLevel = "Fastest"
         }
         Compress-Archive @compress
@@ -141,5 +99,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        path: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
-        name: LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        path: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip
+        name: LANCommander.Server-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip

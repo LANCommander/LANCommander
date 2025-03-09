@@ -98,8 +98,22 @@ jobs:
   # 2) BUILD JOBS (Server/Launcher) - only run if changes == 'true'
   #    Each calls your local workflow YAML with correct indentation
   # --------------------------------------------------------------------------
-  build_server_linux_arm64:
+  restore_server:
     needs: prep
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.Restore.yml
+    with:
+      build_dotnet_version: 9.0.102
+
+  restore_launcher:
+    needs: prep
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.Restore.yml
+    with:
+      build_dotnet_version: 9.0.102
+
+  build_server_linux_arm64:
+    needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
@@ -111,7 +125,7 @@ jobs:
       build_configuration: Debug
 
   build_server_linux_x64:
-    needs: prep
+    needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
@@ -123,7 +137,7 @@ jobs:
       build_configuration: Debug
 
   build_server_osx_arm64:
-    needs: prep
+    needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
@@ -135,7 +149,7 @@ jobs:
       build_configuration: Debug
 
   build_server_osx_x64:
-    needs: prep
+    needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
@@ -147,7 +161,7 @@ jobs:
       build_configuration: Debug
 
   build_server_win_arm64:
-    needs: prep
+    needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
@@ -159,7 +173,7 @@ jobs:
       build_configuration: Debug
 
   build_server_win_x64:
-    needs: prep
+    needs: [prep, restore_server]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
@@ -171,7 +185,7 @@ jobs:
       build_configuration: Debug
 
   build_launcher_linux_arm64:
-    needs: prep
+    needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
@@ -183,7 +197,7 @@ jobs:
       build_configuration: Debug
 
   build_launcher_linux_x64:
-    needs: prep
+    needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
@@ -195,7 +209,7 @@ jobs:
       build_configuration: Debug
 
   build_launcher_osx_arm64:
-    needs: prep
+    needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
@@ -207,7 +221,7 @@ jobs:
       build_configuration: Debug
 
   build_launcher_osx_x64:
-    needs: prep
+    needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
@@ -219,7 +233,7 @@ jobs:
       build_configuration: Debug
 
   build_launcher_win_arm64:
-    needs: prep
+    needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
@@ -231,7 +245,7 @@ jobs:
       build_configuration: Debug
 
   build_launcher_win_x64:
-    needs: prep
+    needs: [prep, restore_launcher]
     if: needs.prep.outputs.changed == 'true'
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
@@ -248,6 +262,8 @@ jobs:
   finalize_nightly:
     needs: 
       - prep
+      - restore_server
+      - restore_launcher
       - build_server_linux_arm64
       - build_server_linux_x64
       - build_server_osx_arm64

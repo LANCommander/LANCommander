@@ -152,11 +152,17 @@ namespace LANCommander.Server.Services
 
                     if (companyEntity == null)
                     {
-                        await companyService.AddAsync(new Company()
+                        companyEntity = await companyService.AddAsync(new Company()
                         {
                             Name = company,
                         });
                     }
+
+                    if (game.Developers == null)
+                        game.Developers = new List<Company>();
+                    
+                    if (game.Publishers == null)
+                        game.Publishers = new List<Company>();
                     
                     if (developers.Contains(company) && !game.Developers.Any(p => p.Id == companyEntity.Id))
                         game.Developers.Add(companyEntity);
@@ -171,6 +177,9 @@ namespace LANCommander.Server.Services
             if (result.IGDBMetadata.Genres != null && result.IGDBMetadata.Genres.Values != null)
             {
                 var genres = result.IGDBMetadata.Genres.Values.Select(g => g.Name);
+                
+                if (game.Genres == null)
+                    game.Genres = new List<Data.Models.Genre>();
 
                 foreach (var genre in genres)
                 {
@@ -187,6 +196,9 @@ namespace LANCommander.Server.Services
             if (result.IGDBMetadata.Keywords != null && result.IGDBMetadata.Keywords.Values != null)
             {
                 var tags = result.IGDBMetadata.Keywords.Values.Select(t => t.Name);
+                
+                if (game.Tags == null)
+                    game.Tags = new List<Data.Models.Tag>();
                 
                 foreach (var tag in tags)
                 {

@@ -11,7 +11,7 @@
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
     <PackageReference Include="IGDB" Version="5.1.0" />
-    <PackageReference Include="IPXRelayDotNet" Version="1.1.2" />
+    <PackageReference Include="IPXRelayDotNet" Version="1.1.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />

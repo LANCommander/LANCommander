@@ -65,9 +65,14 @@ namespace LANCommander.Server.Services
                 }
             }
 
-            _relay?.Stop();
-            _relay?.Dispose();
-            _relay = null;
+            try
+            {
+                _relay?.Stop();
+                _relay = null;
+            }
+            finally
+            {
+            }
         }
     }
 }

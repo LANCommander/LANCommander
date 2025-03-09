@@ -34,14 +34,16 @@
 @code {
     Settings Settings = SettingService.GetSettings();
 
-    private void Save()
+    async Task Save()
     {
         try
         {
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
 
-            IPXRelayService.Init();
+            await IPXRelayService.StopAsync();
+            
+            IPXRelayService.Init(Logger);
         }
         catch (Exception ex)
         {

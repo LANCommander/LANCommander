@@ -11,19 +11,16 @@ namespace LANCommander.Server.Services
 
         public IPXRelayService(ILogger<IPXRelayService> logger) : base(logger)
         {
-            if (_relay == null)
-                _relay = new IPXRelay();
-
-            Init();
+            Init(logger);
         }
 
-        public void Init()
+        public void Init(ILogger logger)
         {
             var settings = SettingService.GetSettings();
 
             StopAsync().Wait();
 
-            _relay = new IPXRelay(settings.IPXRelay.Port);
+            _relay = new IPXRelay(settings.IPXRelay.Port, logger);
 
             if (!settings.IPXRelay.Logging)
                 _relay.DisableLogging();

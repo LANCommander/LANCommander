@@ -64,10 +64,11 @@ jobs:
 
     # .NET Setup and Caching
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ inputs.build_dotnet_version }}
         cache: true
+        cache-dependency-path: '**/package-lock.json'
 
     - name: Restore dependencies
       run: dotnet restore --locked-mode

@@ -95,7 +95,16 @@ if (app.Environment.IsDevelopment())
     Log.Debug("App has been run in a development environment");
     app.UseMigrationsEndPoint();
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference("/api", options =>
+    {
+        options.Servers = [];
+        
+        options
+            .WithHttpBearerAuthentication(bearer =>
+            {
+                bearer.Token = "your-bearer-token";
+            });
+    });
 }
 else
 {

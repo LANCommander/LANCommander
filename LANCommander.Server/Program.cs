@@ -79,15 +79,15 @@ var app = builder.Build();
 app.UseCors("CorsPolicy");
 app.UseHttpsRedirection();
 
+app.UseMiddleware<RobotsMiddleware>();
+app.UseMiddleware<ApiVersioningMiddleware>();
+
 app.MapHub<GameServerHub>("/hubs/gameserver");
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
-
-app.UseRobots();
-app.UseApiVersioning();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

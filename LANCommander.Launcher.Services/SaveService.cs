@@ -15,7 +15,12 @@ namespace LANCommander.Launcher.Services
 
         public async Task<IEnumerable<GameSave>> Get(Guid gameId)
         {
-            return await Client.Saves.GetAsync(gameId);
+            var saves = await Client.Saves.GetAsync(gameId);
+            
+            if (saves == null)
+                saves = new List<GameSave>();
+
+            return saves;
         }
 
         public async Task DownloadLatestAsync(string installDirectory, Guid gameId)

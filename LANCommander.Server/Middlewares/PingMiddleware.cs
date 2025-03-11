@@ -11,11 +11,12 @@ namespace LANCommander.Server
             {
                 if (context.Request.Method == "HEAD" && context.Request.Headers.ContainsKey("X-Ping"))
                     context.Response.Headers["X-Pong"] = context.Request.Headers["X-Ping"].First().FastReverse();
+
+                return;
             }
-            catch
-            {
-                await next(context);
-            }
+            catch { }
+            
+            await next(context);
         }
     }
 }

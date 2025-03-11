@@ -34,7 +34,7 @@ public static class UriExtensions
                         Scheme = Uri.UriSchemeHttp,
                         Port = uri.Port,
                     }.Uri);
-                else if (uri.Scheme == Uri.UriSchemeHttps)
+                else if (uri.Scheme != Uri.UriSchemeHttps)
                     uris.Add(new UriBuilder(url)
                     {
                         Scheme = Uri.UriSchemeHttps,

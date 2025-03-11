@@ -39,11 +39,15 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ inputs.build_dotnet_version }}
-        cache: true
-        cache-dependency-path: '**/package.lock.json'
 
     - name: Restore dependencies
       run: dotnet restore --locked-mode
+
+    - name: NuGet Cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: ${{ runner.os }}-dotnet-${{ hashFiles('**/*.csproj') }}
 
     # Node.js Setup and Caching
     - name: Setup Node.js

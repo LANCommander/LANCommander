@@ -40,6 +40,9 @@ on:
 permissions:
   contents: write
 
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/package
+
 jobs:
   build:
     runs-on: windows-latest
@@ -67,8 +70,14 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ inputs.build_dotnet_version }}
-        cache: true
-        cache-dependency-path: '**/package-lock.json'
+
+    - name: NuGet Cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ env.NUGET_PACKAGES }}
+        key: ${{ runner.os }}-dotnet-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-dotnet-
 
     - name: Restore dependencies
       run: dotnet restore --locked-mode

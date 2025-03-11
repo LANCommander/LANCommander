@@ -55,11 +55,14 @@ namespace LANCommander.Server.Services
             {
                 try
                 {
-                    user = await IdentityContext.UserManager.FindByIdAsync(user.Id.ToString());
+                    user = await Query(q =>
+                    {
+                        return q
+                            .Include(u => u.UserRoles)
+                            .ThenInclude(ur => ur.Role);
+                    }).FirstOrDefaultAsync(u => u.Id == user.Id);
 
-                    var roleNames = await IdentityContext.UserManager.GetRolesAsync(user);
-
-                    return await IdentityContext.RoleManager.Roles.Where(r => roleNames.Contains(r.Name)).ToListAsync();
+                    return user.Roles;
                 }
                 catch (Exception ex)
                 {

@@ -12,6 +12,9 @@ on:
 permissions:
   contents: write
 
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/package
+
 jobs:
   build:
     runs-on: windows-latest
@@ -31,16 +34,16 @@ jobs:
       with:
         submodules: true
 
-    - name: Restore dependencies
-      run: dotnet restore --locked-mode
-
     # .NET Setup and Caching
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ inputs.build_dotnet_version }}
         cache: true
-        cache-dependency-path: '**/package-lock.json'
+        cache-dependency-path: '**/package.lock.json'
+
+    - name: Restore dependencies
+      run: dotnet restore --locked-mode
 
     # Node.js Setup and Caching
     - name: Setup Node.js
@@ -60,8 +63,6 @@ jobs:
       with:
         path: ${{ github.workspace }}/LANCommander.UI/wwwroot
         key: ${{ runner.os }}-ui-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-ui-
       
     - name: Install Server Node Dependencies
       run: |
@@ -73,8 +74,6 @@ jobs:
       with:
         path: ${{ github.workspace }}/LANCommander.Server/node_modules
         key: ${{ runner.os }}-server-npm-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-server-npm-
 
     - name: Install Launcher Node Dependencies
       run: |
@@ -86,5 +85,3 @@ jobs:
       with:
         path: ${{ github.workspace }}/LANCommander.Launcher/node_modules
         key: ${{ runner.os }}-launcher-npm-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-launcher-npm-

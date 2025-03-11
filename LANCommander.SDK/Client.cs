@@ -17,6 +17,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading.Tasks;
+using LANCommander.SDK.Extensions;
 
 namespace LANCommander.SDK
 {
@@ -115,13 +116,31 @@ namespace LANCommander.SDK
         {
             if (!String.IsNullOrWhiteSpace(baseUrl))
             {
-                Logger?.LogTrace("Using server address {ServerAddress}", baseUrl);
+                var urisToTry = baseUrl.SuggestValidUris();
 
-                BaseUrl = new Uri(baseUrl);
-                ApiClient = new RestClient(new RestClientOptions
+                foreach (var uri in urisToTry)
                 {
-                    BaseUrl = BaseUrl
-                });
+                    Logger?.LogInformation("Attempting to find server at {ServerAddress}", uri.ToString());
+                    
+                    try
+                    {
+                        ApiClient = new RestClient(uri);
+
+                        if (Ping())
+                        {
+                            BaseUrl = uri;
+
+                            // Successful! Found our service
+                            Logger?.LogInformation("Using server address {ServerAddress}", uri.ToString());
+
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        Logger?.LogError("Did not find server at {ServerAddress}", uri.ToString());
+                    }
+                }
             }
         }
 
@@ -666,11 +685,42 @@ namespace LANCommander.SDK
             return $"{BaseUrl}api/Auth/Login?Provider={provider}";
         }
 
+        public bool Ping()
+        {
+            try
+            {
+                var guid = Guid.NewGuid().ToString();
+                var request = new RestRequest("/api/Ping", Method.Head);
+                
+                request.AddHeader("X-Ping", guid);
+
+                var response = ApiClient.Execute(request);
+
+                return response.StatusCode == HttpStatusCode.OK && response.GetHeaderValue("X-Pong") == guid.FastReverse();
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public async Task<bool> PingAsync()
         {
-            var response = await ApiClient.ExecuteAsync(new RestRequest("/api/Ping", Method.Head));
+            try
+            {
+                var guid = Guid.NewGuid().ToString();
+                var request = new RestRequest("/api/Ping", Method.Head);
+                
+                request.AddHeader("X-Ping", guid);
 
-            return response.StatusCode == HttpStatusCode.OK;
+                var response = await ApiClient.ExecuteAsync(request);
+
+                return response.StatusCode == HttpStatusCode.OK && response.GetHeaderValue("X-Pong") == guid.FastReverse();
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public bool ValidateToken()

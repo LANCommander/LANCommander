@@ -81,6 +81,7 @@ app.UseHttpsRedirection();
 
 app.UseMiddleware<RobotsMiddleware>();
 app.UseMiddleware<ApiVersioningMiddleware>();
+app.UseMiddleware<PingMiddleware>();
 
 app.MapHub<GameServerHub>("/hubs/gameserver");
 

@@ -124,5 +124,16 @@ namespace LANCommander.SDK.Extensions
 
             return path;
         }
+
+        public static string FastReverse(this string input)
+        {
+            return string.Create(input.Length, input, (chars, state) => {
+                var pos = 0;
+                for (int i = state.Length -1 ; i >=0 ; i--)
+                {
+                    chars[pos++] = state[i];
+                }
+            });
+        }
     }
 }

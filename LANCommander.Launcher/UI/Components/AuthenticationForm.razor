@@ -20,7 +20,7 @@
             <div class="authentication-box">
                 @if (State.Stage == AuthenticationStage.SelectServer)
                 {
-                    <ServerSelector OnSelected="ServerSelected" />
+                    <ServerSelector OnSelected="ServerSelected" Connecting="_connecting" />
                 }
 
                 @if (State.Stage == AuthenticationStage.Login)
@@ -40,6 +40,8 @@
 @code {
     AuthenticationFormState State { get; set; }
 
+    bool _connecting { get; set; } = false;
+
     protected override void OnInitialized()
     {
         State = new()
@@ -49,9 +51,23 @@
         };
     }
 
-    void ServerSelected(string serverAddress)
+    async Task ServerSelected(string serverAddress)
     {
-        State.ServerAddress = serverAddress;
-        State.Stage = AuthenticationStage.Login;
+        try
+        {
+            _connecting = true;
+
+            await Client.ChangeServerAddressAsync(serverAddress);
+            State.ServerAddress = Client.GetServerAddress();
+            State.Stage = AuthenticationStage.Login;
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error(ex.Message);
+        }
+        finally
+        {
+            _connecting = false;
+        }
     }
 }

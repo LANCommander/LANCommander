@@ -53,7 +53,7 @@ public class AuthenticationService : BaseService
     
     public async Task Login(string serverAddress, string username, string password)
     {
-        Client.ChangeServerAddress(serverAddress);
+        await Client.ChangeServerAddressAsync(serverAddress);
 
         var token = await Client.AuthenticateAsync(username, password);
 
@@ -62,7 +62,7 @@ public class AuthenticationService : BaseService
 
     public async Task Login(string serverAddress, SDK.Models.AuthToken token)
     {
-        Client.ChangeServerAddress(serverAddress);
+        await Client.ChangeServerAddressAsync(serverAddress);
 
         Settings = SettingService.GetSettings();
 
@@ -98,7 +98,7 @@ public class AuthenticationService : BaseService
         if (password != passwordConfirmation)
             throw new Exception("Passwords do not match");
 
-        Client.ChangeServerAddress(serverAddress);
+        await Client.ChangeServerAddressAsync(serverAddress);
 
         var token = await Client.RegisterAsync(username, password, passwordConfirmation);
         

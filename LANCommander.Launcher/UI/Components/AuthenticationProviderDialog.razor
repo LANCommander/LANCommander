@@ -15,7 +15,7 @@
     
     public async Task Open(string baseUrl, AuthenticationProvider authenticationProvider)
     {
-        Client.UseServerAddress(baseUrl);
+        await Client.ChangeServerAddressAsync(baseUrl);
         
         AuthenticationProviderLoginUrl = Client.GetAuthenticationProviderLoginUrl(authenticationProvider.Slug);
 

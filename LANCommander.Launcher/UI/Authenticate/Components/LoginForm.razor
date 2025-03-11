@@ -76,7 +76,7 @@
     {
         AuthenticationProviders = new();
         
-        Client.ChangeServerAddress(ServerAddress);
+        await Client.ChangeServerAddressAsync(ServerAddress);
 
         try
         {

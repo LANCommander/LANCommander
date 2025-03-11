@@ -1,5 +1,4 @@
-﻿using LANCommander.SDK.Exceptions;
-using LANCommander.SDK.Models;
+﻿using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell.Cmdlets;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.Logging;
@@ -7,12 +6,10 @@ using RestSharp;
 using RestSharp.Interceptors;
 using Semver;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Management.Automation.Internal;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
@@ -84,12 +81,12 @@ namespace LANCommander.SDK
 
             BaseCmdlet.Client = this;
 
-            ChangeServerAddress(baseUrl);
+            ChangeServerAddressAsync(baseUrl).Wait();
         }
 
         public Client(string baseUrl, string defaultInstallDirectory, ILogger logger)
         {
-            ChangeServerAddress(baseUrl);
+            ChangeServerAddressAsync(baseUrl).Wait();
 
             DefaultInstallDirectory = defaultInstallDirectory;
 
@@ -112,7 +109,7 @@ namespace LANCommander.SDK
             Logger = logger;
         }
 
-        public void ChangeServerAddress(string baseUrl)
+        public async Task ChangeServerAddressAsync(string baseUrl)
         {
             if (!String.IsNullOrWhiteSpace(baseUrl))
             {
@@ -126,7 +123,7 @@ namespace LANCommander.SDK
                     {
                         ApiClient = new RestClient(uri);
 
-                        if (Ping())
+                        if (await PingAsync())
                         {
                             BaseUrl = uri;
 
@@ -141,6 +138,8 @@ namespace LANCommander.SDK
                         Logger?.LogError("Did not find server at {ServerAddress}", uri.ToString());
                     }
                 }
+
+                throw new Exception("Could not find a server at that address");
             }
         }
 
@@ -823,12 +822,6 @@ namespace LANCommander.SDK
         public void UseToken(AuthToken token)
         {
             Token = token;
-        }
-
-        public void UseServerAddress(string address)
-        {
-            BaseUrl = new Uri(address);
-            ApiClient = new RestClient(BaseUrl);
         }
 
         public string GetServerAddress()

@@ -277,7 +277,7 @@ namespace LANCommander.Launcher.Services
                 if (String.IsNullOrWhiteSpace(options.ServerAddress))
                     throw new ArgumentException("A server address must be specified");
 
-                Client.UseServerAddress(options.ServerAddress);
+                await Client.ChangeServerAddressAsync(options.ServerAddress);
 
                 var token = await Client.AuthenticateAsync(options.Username, options.Password);
 

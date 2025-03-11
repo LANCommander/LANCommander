@@ -15,8 +15,8 @@
 <Form Model="Model" OnFinish="() => SelectServer(ServerAddress)">
     <FormItem>
         <Flex Gap="FlexGap.Small">
-            <Input @bind-Value="ServerAddress" Placeholder="Server Address" AutoFocus />
-            <Button Type="ButtonType.Primary" HtmlType="submit">Connect</Button>
+            <Input @bind-Value="ServerAddress" Placeholder="Server Address" AutoFocus Disabled="Connecting" />
+            <Button Type="ButtonType.Primary" HtmlType="submit" Disabled="Connecting" Loading="Connecting">Connect</Button>
         </Flex>
     </FormItem>
 </Form>
@@ -46,7 +46,8 @@
 
 @code {
     [Parameter] public EventCallback<string> OnSelected { get; set; }
-
+    [Parameter] public bool Connecting { get; set; } = false;
+    
     bool BeaconActive = false;
     bool OfflineModeAvailable = false;
 
@@ -73,8 +74,6 @@
 
         if (OnSelected.HasDelegate)
             await OnSelected.InvokeAsync(serverAddress);
-
-        await InvokeAsync(StateHasChanged);
     }
     
     async Task ActivateBeacon()

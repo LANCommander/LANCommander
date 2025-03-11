@@ -14,7 +14,7 @@
 <Drawer Placement="DrawerPlacement.Bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
     @if (SelectedGame != null)
     {
-        <div class="game-details no-scrollbar">
+        <div @key="SelectedGame.Id" class="game-details no-scrollbar">
             <Button Class="game-details-close-btn" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" OnClick="Hide" />
 
             @if (SelectedGame != null)

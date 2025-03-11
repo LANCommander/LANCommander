@@ -89,6 +89,7 @@
 
     async Task LoadData()
     {
-        Saves = (await SaveService.Get(Options.Id)).OrderByDescending(s => s.CreatedOn);
+        Saves = await SaveService.Get(Options.Id);
+        Saves = Saves.OrderByDescending(s => s.CreatedOn);
     }
 }

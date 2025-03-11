@@ -91,12 +91,12 @@
 
     }
 
-    async Task ResetFilter()
+    public async Task ResetFilter()
     {
         await LibraryService.Filter.ResetFilter();
     }
 
-    async Task ApplyFilter()
+    public async Task ApplyFilter()
     {
         await LibraryService.Filter.UpdateFilter();
         await Popover.Close();

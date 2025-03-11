@@ -7,7 +7,7 @@
 @inject NavigationManager NavigationManager
 
 <Flex Vertical Class="library-list">
-    @if (LibraryItems == null || !LibraryItems.Any())
+    @if (LibraryService.Items == null || !LibraryService.Items.Any())
     {
         <Empty Simple Description="false">
             <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Browse Depot</Button>
@@ -15,29 +15,38 @@
     }
     else
     {
-        <Collapse>
-            @if (Groups.Count > 1)
-            {
-                foreach (var group in Groups.OrderByTitle(g => g))
+        if (LibraryItems == null || !LibraryItems.Any())
+        {
+            <Empty Simple Description="@("No Results Found")">
+                <Button Type="ButtonType.Primary" OnClick="Filter.ResetFilter">Reset Filter</Button>
+            </Empty>
+        }
+        else
+        {
+            <Collapse>
+                @if (Groups.Count > 1)
                 {
-                    <Panel Header="@group" Key="@group">
-                        <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
+                    foreach (var group in Groups.OrderByTitle(g => g))
+                    {
+                        <Panel Header="@group" Key="@group">
+                            <AntList DataSource="@(LibraryItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && !i.Groups.Any())))" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
+                                <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem"/>
+                            </AntList>
+                        </Panel>
+                    }
+                }
+                else
+                {
+                    <Panel Class="no-header">
+                        <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
                             <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem"/>
                         </AntList>
                     </Panel>
                 }
-            }
-            else
-            {
-                <Panel Class="no-header">
-                    <AntList DataSource="LibraryItems" TItem="Models.ListItem" Class="ant-list-clickable" Size="ListSize.Small">
-                        <LibraryListItem Model="@context" OnClick="() => SelectItem(context)" @bind-SelectedItem="SelectedItem"/>
-                    </AntList>
-                </Panel>
-            }
-        </Collapse>
+            </Collapse>
+        }
 
-        <LibraryItemFilter/>
+        <LibraryItemFilter @ref="Filter" />
     }
 </Flex>
 
@@ -47,6 +56,7 @@
 
     List<string> Groups = new();
     IEnumerable<Models.ListItem> LibraryItems;
+    LibraryItemFilter Filter;
 
     protected override async Task OnInitializedAsync()
     {

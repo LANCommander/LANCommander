@@ -17,52 +17,36 @@
      </PageHeaderExtra>
  </PageHeader>
 
-<PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
-        <FormItem Label="Restrict Games by Collection">
-            <Switch @bind-Checked="context.Roles.RestrictGamesByCollection" />
-        </FormItem>
-        <FormItem Label="Default Role">
-            <Select
-                TItem="RoleViewModel"
-                TItemValue="Guid"
-                DataSource="RolesDetails"
-                @bind-Value="context.Roles.DefaultRoleId"
-                LabelName="@nameof(RoleViewModel.Name)"
-                ValueName="@nameof(RoleViewModel.Id)"
-                Placeholder="Select a role"
-                DefaultActiveFirstOption="false"
-                EnableSearch />
-        </FormItem>
-    </Form>
-</PageContent>
+<DataTable
+    TItem="Role"
+    @ref="Table"
+    Size="TableSize.Small"
+    @bind-Total="Total"
+    Responsive
+    ColumnPicker
+    Searchable
+    SearchProperty="r => r.Name">
+    <Columns>
+        <BoundDataColumn Title="Name" Property="r => r.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
+        
+        <DataActions>
+            <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
 
-<Table TItem="RoleViewModel" DataSource="@RolesDetails" Loading="@(Loading)" Responsive>
-    <PropertyColumn Property="r => r.Name" Title="Name" />
-    <PropertyColumn Property="r => r.Collections" Title="Collections" />
-    <PropertyColumn Property="r => r.Users" Title="Users" />
-    <ActionColumn>
-        <Space Style="display: flex; justify-content: end">
-            <SpaceItem>
-                <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
-            </SpaceItem>
-            <SpaceItem>
-                @if (context.Name != RoleService.AdministratorRoleName)
-                {
-                    <Popconfirm OnConfirm="() => DeleteRole(context)" Title="Are you sure you want to delete this role?">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                     </Popconfirm>
-                }
-                else
-                {
-                    <Tooltip Title="The administrator role cannot be deleted.">
-                        <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
-                     </Tooltip>
-                }
-            </SpaceItem>
-        </Space>
-    </ActionColumn>
-</Table>
+            @if (context.Name != RoleService.AdministratorRoleName)
+            {
+                <Popconfirm OnConfirm="() => DeleteRole(context)" Title="Are you sure you want to delete this role?">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+                </Popconfirm>
+            }
+            else
+            {
+                <Tooltip Title="The administrator role cannot be deleted.">
+                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Disabled />
+                </Tooltip>
+            }
+        </DataActions>
+    </Columns>
+</DataTable>
 
 <Modal Title="Add a Role" @bind-Visible="AddRoleDialogVisible" OnOk="AddRole" OnCancel="() => AddRoleDialogVisible = false">
     <Form Model="NewRole">
@@ -73,48 +57,18 @@
 </Modal>
 
 @code {
-    ICollection<RoleViewModel> RolesDetails { get; set; } = new List<RoleViewModel>();
-    ICollection<Role> Roles { get; set; } = new List<Role>();
-
     Settings Settings = SettingService.GetSettings();
     bool Loading = true;
     bool AddRoleDialogVisible = false;
 
-    RoleViewModel NewRole = new RoleViewModel();
+    Role NewRole { get; set; } = new();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    DataTable<Role> Table;
+    int Total;
+
+    async Task DeleteRole(Role role)
     {
-        if (firstRender)
-            await LoadData();
-    }
-
-    async Task LoadData()
-    {
-        RolesDetails = new List<RoleViewModel>();
-        
-        Roles = await RoleService.Include(r => r.Collections).SortBy(r => r.Name).GetAsync();
-
-        foreach (var role in Roles)
-        {
-            var users = await RoleService.GetUsersAsync(role.Name);
-
-            RolesDetails.Add(new RoleViewModel
-            {
-                Id = role.Id,
-                Name = role.Name,
-                Collections = role.Collections != null ? role.Collections.Count : 0,
-                Users = users.Count()
-            });
-        }
-
-        Loading = false;
-
-        StateHasChanged();
-    }
-
-    async Task DeleteRole(RoleViewModel roleViewModel)
-    {
-        var role = await RoleService.FirstOrDefaultAsync(r => r.Name == roleViewModel.Name);
+        role = await RoleService.FirstOrDefaultAsync(r => r.Name == role.Name);
 
         if (role.Name == RoleService.AdministratorRoleName)
         {
@@ -124,7 +78,7 @@
         {
             await RoleService.DeleteAsync(role);
 
-            await LoadData();
+            Table.Reload();
 
             MessageService.Success($"Deleted {role.Name}!");
         }
@@ -132,8 +86,6 @@
 
     void ShowNewRoleDialog()
     {
-        NewRole = new RoleViewModel();
-
         AddRoleDialogVisible = true;
     }
 
@@ -155,7 +107,7 @@
                 Name = NewRole.Name
             });
 
-            await LoadData();
+            Table.Reload();
 
             MessageService.Success("Role added!");
         }

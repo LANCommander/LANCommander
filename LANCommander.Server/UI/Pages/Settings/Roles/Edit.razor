@@ -1,4 +1,5 @@
 ﻿@page "/Settings/Roles/{id:guid}"
+@using Microsoft.EntityFrameworkCore
 @inject RoleService RoleService
 @inject CollectionService CollectionService
 @inject IMessageService MessageService
@@ -38,7 +39,12 @@
     {
         Role = await RoleService
             .AsNoTracking()
-            .Include(r => r.Users)
+            .Query(q =>
+            {
+                return q
+                    .Include(r => r.UserRoles)
+                    .ThenInclude(ur => ur.User);
+            })
             .Include(r => r.Collections)
             .GetAsync(Id);
 

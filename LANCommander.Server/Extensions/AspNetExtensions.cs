@@ -110,10 +110,4 @@ public static class AspNetExtensions
         
         builder.WebHost.UseStaticWebAssets();
     }
-
-    public static void AddOpenApi(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddOpenApi();
-        builder.Services.AddEndpointsApiExplorer();
-    }
 }

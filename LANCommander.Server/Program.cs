@@ -19,6 +19,7 @@ using LANCommander.Server.UI;
 using Microsoft.AspNetCore.HttpOverrides;
 using Scalar.AspNetCore;
 using LANCommander.Server.Services.Importers;
+using LANCommander.Server.Startup;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -95,17 +96,7 @@ if (app.Environment.IsDevelopment())
 {
     Log.Debug("App has been run in a development environment");
     app.UseMigrationsEndPoint();
-    app.MapOpenApi();
-    app.MapScalarApiReference("/api", options =>
-    {
-        options.Servers = [];
-        
-        options
-            .WithHttpBearerAuthentication(bearer =>
-            {
-                bearer.Token = "your-bearer-token";
-            });
-    });
+
 }
 else
 {
@@ -133,6 +124,8 @@ Log.Debug("Registering Endpoints");
 app.MapHub<LoggingHub>("/logging");
 
 app.UseStaticFiles();
+
+app.MapScalar();
 
 app.UseEndpoints(endpoints =>
 {

@@ -81,12 +81,24 @@ namespace LANCommander.SDK
 
             BaseCmdlet.Client = this;
 
-            ChangeServerAddressAsync(baseUrl).Wait();
+            try
+            {
+                ChangeServerAddressAsync(baseUrl).Wait();
+            }
+            catch
+            {
+            }
         }
 
         public Client(string baseUrl, string defaultInstallDirectory, ILogger logger)
         {
-            ChangeServerAddressAsync(baseUrl).Wait();
+            try
+            {
+                ChangeServerAddressAsync(baseUrl).Wait();
+            }
+            catch
+            {
+            }
 
             DefaultInstallDirectory = defaultInstallDirectory;
 

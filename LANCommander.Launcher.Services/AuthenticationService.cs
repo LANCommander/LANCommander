@@ -62,25 +62,31 @@ public class AuthenticationService : BaseService
 
     public async Task Login(string serverAddress, SDK.Models.AuthToken token)
     {
-        await Client.ChangeServerAddressAsync(serverAddress);
-
-        Settings = SettingService.GetSettings();
-
-        Settings.Authentication.ServerAddress = serverAddress;
-        Settings.Authentication.AccessToken = token.AccessToken;
-        Settings.Authentication.RefreshToken = token.RefreshToken;
-
-        Client.UseToken(token);
-
-        if (await Client.ValidateTokenAsync())
+        try
         {
-            SetOfflineMode(false);
-            
-            SettingService.SaveSettings(Settings);
+            await Client.ChangeServerAddressAsync(serverAddress);
 
-            var user = await Client.Profile.GetAsync();
-            
-            OnLogin?.Invoke(this, EventArgs.Empty);
+            Settings = SettingService.GetSettings();
+
+            Settings.Authentication.ServerAddress = serverAddress;
+            Settings.Authentication.AccessToken = token.AccessToken;
+            Settings.Authentication.RefreshToken = token.RefreshToken;
+
+            Client.UseToken(token);
+
+            if (await Client.ValidateTokenAsync())
+            {
+                SetOfflineMode(false);
+
+                SettingService.SaveSettings(Settings);
+
+                var user = await Client.Profile.GetAsync();
+
+                OnLogin?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        catch
+        {
         }
     }
 

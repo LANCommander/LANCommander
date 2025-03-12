@@ -5,6 +5,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 using File = System.IO.File;
 using SortDirection = LANCommander.Server.Data.Enums.SortDirection;
 
@@ -54,7 +55,11 @@ public static class SaveEndpoints
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
 
         if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            
             return TypedResults.Unauthorized();
+        }
         
         var save = await saveService.FirstOrDefaultAsync(s => s.Id == id && s.UserId == user.Id);
         
@@ -75,7 +80,11 @@ public static class SaveEndpoints
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
 
         if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            
             return TypedResults.Unauthorized();
+        }
         
         var userSaves = await saveService.GetAsync<SDK.Models.GameSave>(gs => gs.UserId == user.Id && gs.GameId == gameId);
         
@@ -91,7 +100,11 @@ public static class SaveEndpoints
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
 
         if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            
             return TypedResults.Unauthorized();
+        }
         
         var latestSave = await saveService
             .SortBy(s => s.CreatedOn, SortDirection.Descending)
@@ -112,7 +125,11 @@ public static class SaveEndpoints
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
 
         if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            
             return TypedResults.Unauthorized();
+        }
         
         var latestSave = await saveService
             .SortBy(s => s.CreatedOn, SortDirection.Descending)
@@ -142,7 +159,11 @@ public static class SaveEndpoints
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
 
         if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            
             return TypedResults.Unauthorized();
+        }
         
         var save = await saveService
             .Include(s => s.Game)
@@ -173,7 +194,11 @@ public static class SaveEndpoints
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
 
         if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+            
             return TypedResults.Unauthorized();
+        }
         
         var game = await gameService.GetAsync(gameId);
         

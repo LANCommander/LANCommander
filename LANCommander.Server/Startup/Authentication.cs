@@ -1,24 +1,63 @@
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
-using System.Web;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
 
-namespace LANCommander.Server.Extensions;
+namespace LANCommander.Server.Startup;
 
-public static class AuthenticationBuilderExtensions
+public static class Authentication
 {
+    public static WebApplicationBuilder ConfigureAuthentication(this WebApplicationBuilder builder, Settings settings)
+    {
+        builder.Services.AddCascadingAuthenticationState();
+        builder.Services.AddAntiforgery(options =>
+        {
+            options.Cookie.SameSite = settings.Authentication.MinimumSameSitePolicy;
+            options.Cookie.SecurePolicy = settings.Authentication.CookieSecurePolicy;
+        });
+
+        return builder;
+    }
+    
+    public static AuthenticationBuilder AddAuthenticationProviders(this AuthenticationBuilder authBuilder, Settings settings)
+    {
+        foreach (var authenticationProvider in settings.Authentication.AuthenticationProviders)
+        {
+            try
+            {
+                switch (authenticationProvider.Type)
+                {
+                    case AuthenticationProviderType.OAuth2:
+                        authBuilder.AddOAuth(authenticationProvider);
+                        break;
+
+                    case AuthenticationProviderType.OpenIdConnect:
+                        authBuilder.AddOpenIdConnect(authenticationProvider);
+                        break;
+
+                    case AuthenticationProviderType.Saml:
+                        throw new NotImplementedException("SAML providers are not supported at this time.");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Authentication Provider {Name} could not be registered",
+                    authenticationProvider.Name);
+            }
+        }
+
+        return authBuilder;
+    }
+    
     public static AuthenticationBuilder AddOpenIdConnect(this AuthenticationBuilder authBuilder, AuthenticationProvider authenticationProvider)
     {
         if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))

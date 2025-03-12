@@ -60,7 +60,15 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet]
         public async Task<SDK.Models.DepotResults> GetAsync()
         {
-            var user = await UserService.GetAsync(User?.Identity?.Name);
+            var userName = User?.Identity?.Name;
+            var user = await UserService
+                .Query(q =>
+                {
+                    return q
+                        .Include(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role);
+                })
+                .FirstOrDefaultAsync(u => String.Equals(u.UserName, userName, StringComparison.OrdinalIgnoreCase));
             
             if (user == null)
                 return new SDK.Models.DepotResults();
@@ -95,6 +103,16 @@ namespace LANCommander.Server.Controllers.Api
             foreach (var game in results.Games)
             {
                 game.InLibrary = library.Games.Any(g => g.Id == game.Id);
+            }
+
+            if (!results.Games.Any())
+            {
+                string roles = "No roles";
+
+                if (user?.Roles?.Any() ?? false)
+                    String.Join(", ", user.Roles.Select(r => r.Name));
+                
+                Logger?.LogInformation("No games found in depot for user {UserName} (Roles: {Roles})", user?.UserName, roles);
             }
 
             return results;

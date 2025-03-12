@@ -56,7 +56,7 @@ namespace LANCommander.SDK.Services
 
         private async Task<string> DownloadAsync(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return await Client.DownloadRequestAsync($"/api/Saves/Download/{id}", progressHandler, completeHandler);
+            return await Client.DownloadRequestAsync($"/api/Saves/{id}/Download", progressHandler, completeHandler);
         }
 
         public async Task<string> DownloadLatestAsync(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)

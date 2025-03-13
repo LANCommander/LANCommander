@@ -28,7 +28,6 @@ public static class Identity
         .AddUserManager<UserManager<User>>()
         .AddSignInManager<SignInManager<User>>()
         .AddRoleManager<RoleManager<Role>>()
-        .AddSignInManager()
         .AddDefaultTokenProviders();
 
         builder.Services

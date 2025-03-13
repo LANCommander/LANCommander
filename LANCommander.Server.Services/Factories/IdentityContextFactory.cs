@@ -14,14 +14,14 @@ using System.Threading.Tasks;
 
 namespace LANCommander.Server.Services.Factories
 {
-    public class CustomUserStore : UserStore<User, Role, DatabaseContext, Guid>
+    public class CustomUserStore : UserStore<User, Role, DatabaseContext, Guid, UserClaim, UserRole, UserLogin, UserToken, RoleClaim>
     {
         public CustomUserStore(DatabaseContext context) : base(context)
         {
         }
     }
 
-    public class CustomRoleStore : RoleStore<Role, DatabaseContext, Guid>
+    public class CustomRoleStore : RoleStore<Role, DatabaseContext, Guid, UserRole, RoleClaim>
     {
         public CustomRoleStore(DatabaseContext context) : base(context)
         {

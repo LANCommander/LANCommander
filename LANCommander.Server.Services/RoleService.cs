@@ -36,7 +36,7 @@ namespace LANCommander.Server.Services
             var result = await roleManager.CreateAsync(role);
 
             if (result.Succeeded)
-                return await roleManager.FindByNameAsync(role.Name);
+                return await GetAsync(role.Name);
             
             throw new AddRoleException(result, "Could not create role");
         }
@@ -88,7 +88,16 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<User>> GetUsersAsync(string roleName)
         {
-            return await _identityContext.UserManager.GetUsersInRoleAsync(roleName);
+            var role = await Query(q =>
+            {
+                return q
+                    .Include(r => r.UserRoles)
+                    .ThenInclude(ur => ur.User);
+            }).AsNoTracking().FirstOrDefaultAsync(r => r.Name.ToLower() == roleName.ToLower());
+
+            if (role != null && role.Users != null)
+                return role.Users;
+            return new List<User>();
         }
     }
 }

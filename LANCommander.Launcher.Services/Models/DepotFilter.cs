@@ -27,25 +27,31 @@ namespace LANCommander.Launcher.Models
 
         public void Populate(DepotResults results)
         {
-            var multiplayerModes = results.Games
-                .Where(g => g.MultiplayerModes != null)
-                .SelectMany(g => g.MultiplayerModes);
+            if (results.Games == null)
+                results.Games = new List<DepotGame>();
+            
+            DataSource.Collections = results.Collections?.OrderBy(c => c.Name).ToList() ?? new List<SDK.Models.Collection>();
+            DataSource.Engines = results.Engines?.OrderBy(e => e.Name).ToList() ?? new List<SDK.Models.Engine>();
+            DataSource.Genres = results.Genres?.OrderBy(g => g.Name).ToList() ?? new List<SDK.Models.Genre>();
+            DataSource.Tags = results.Tags?.OrderBy(t => t.Name).ToList() ?? new List<SDK.Models.Tag>();
+            DataSource.Platforms = results.Platforms?.OrderBy(p => p.Name).ToList() ?? new List<SDK.Models.Platform>();
+            DataSource.Developers = results.Companies?.OrderBy(c => c.Name).ToList() ?? new List<SDK.Models.Company>();
+            DataSource.Publishers = results.Companies?.OrderBy(c => c.Name).ToList() ?? new List<SDK.Models.Company>();
 
-            DataSource.Collections = results.Collections.OrderBy(c => c.Name).ToList();
-            DataSource.Engines = results.Engines.OrderBy(e => e.Name).ToList();
-            DataSource.Genres = results.Genres.OrderBy(g => g.Name).ToList();
-            DataSource.Tags = results.Tags.OrderBy(t => t.Name).ToList();
-            DataSource.Platforms = results.Platforms.OrderBy(p => p.Name).ToList();
-            DataSource.Developers = results.Companies.OrderBy(c => c.Name).ToList();
-            DataSource.Publishers = results.Companies.OrderBy(c => c.Name).ToList();
+            if (results.Games.Any())
+            {
+                var multiplayerModes = results.Games
+                    .Where(g => g.MultiplayerModes != null)
+                    .SelectMany(g => g.MultiplayerModes);
 
-            if (results.Games.Any(li => li.Singleplayer))
-                DataSource.MinPlayers = 1;
-            else if (multiplayerModes.Any())
-                DataSource.MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
+                if (results.Games.Any(li => li.Singleplayer))
+                    DataSource.MinPlayers = 1;
+                else if (multiplayerModes.Any())
+                    DataSource.MinPlayers = multiplayerModes.Where(i => i != null).Min(i => i.MinPlayers);
 
-            if (multiplayerModes.Any())
-                DataSource.MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
+                if (multiplayerModes.Any())
+                    DataSource.MaxPlayers = multiplayerModes.Max(i => i.MaxPlayers);
+            }
 
             Initialized = true;
         }

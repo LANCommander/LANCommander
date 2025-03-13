@@ -9,6 +9,7 @@ public static class Middleware
         app.UseMiddleware<RobotsMiddleware>();
         app.UseMiddleware<ApiVersioningMiddleware>();
         app.UseMiddleware<PingMiddleware>();
+        app.UseMiddleware<BearerClaimsPrincipalMiddleware>();
         
         app.UseForwardedHeaders(new ForwardedHeadersOptions
         {

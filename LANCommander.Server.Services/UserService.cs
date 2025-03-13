@@ -39,12 +39,12 @@ namespace LANCommander.Server.Services
 
         public async Task<User> GetAsync(string userName)
         {
-            return await FirstOrDefaultAsync(u => String.Equals(u.UserName, userName, StringComparison.OrdinalIgnoreCase));
+            return await FirstOrDefaultAsync(u => u.UserName.ToUpper() == userName.ToUpper());
         }
 
         public async Task<T> GetAsync<T>(string userName)
         {
-            return await FirstOrDefaultAsync<T>(u => String.Equals(u.UserName, userName, StringComparison.OrdinalIgnoreCase));
+            return await FirstOrDefaultAsync<T>(u => u.UserName.ToUpper() == userName.ToUpper());
         }
 
         public async Task<IEnumerable<Role>> GetRolesAsync(User user)

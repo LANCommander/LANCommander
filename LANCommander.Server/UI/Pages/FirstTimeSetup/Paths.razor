@@ -67,7 +67,7 @@
     <Divider Text="Launchers" />
 
     <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Launcher.StoragePath = OnPathSelected(path)" />
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Launcher.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Launcher.StoragePath = OnPathSelected(path)" />
     </FormItem>
 
     <Divider Text="Servers" />

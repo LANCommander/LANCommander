@@ -13,9 +13,9 @@
 <Spin Spinning="Disabled">
     <Layout>
         <Content Class="depot">
-            <DepotFilter Items="@ListItems" />
+            <DepotFilter />
             
-            <DepotList Items="@ListItems" OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
+            <DepotList OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
         </Content>
     </Layout>
 

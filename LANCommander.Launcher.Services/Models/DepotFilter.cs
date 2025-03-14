@@ -148,13 +148,13 @@ namespace LANCommander.Launcher.Models
             return items;
         }
 
-        public async Task UpdateFilter()
+        public async Task UpdateFilterAsync()
         {
             if (OnChanged != null)
                 await OnChanged();
         }
 
-        public async Task ResetFilter()
+        public async Task ResetFilterAsync()
         {
             SelectedOptions = new DepotFilterModel();
 

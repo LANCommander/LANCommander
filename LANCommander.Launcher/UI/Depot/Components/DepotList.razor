@@ -1,67 +1,78 @@
-﻿@using LANCommander.SDK.Models
-@inject SDK.Client Client
+﻿@inject SDK.Client Client
 @inject DepotService DepotService
 
-@if (Items.Any())
-{
-    <div class="depot-list no-scrollbar">
-        @if (Groups.Count > 1)
-        {
-            @foreach (var group in Groups)
+<Spin Spinning="!Loaded">
+    @if (ListItems.Any())
+    {
+        <div class="depot-list no-scrollbar">
+            @if (Groups.Count > 1)
             {
-                <div class="depot-list-group">
-                    <Divider Text="@group" />
+                @foreach (var group in Groups)
+                {
+                    <div class="depot-list-group">
+                        <Divider Text="@group" />
 
-                    <div class="depot-list-group-items">
-                        @foreach (var item in Items.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && i.Groups.Length == 0)))
-                        {
-                            <DepotGameItem Item="item" OnClick="OnItemSelected" />
-                        }
+                        <div class="depot-list-group-items">
+                            @foreach (var item in ListItems.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && i.Groups.Length == 0)))
+                            {
+                                <DepotGameItem Item="item" OnClick="OnItemSelected" />
+                            }
+                        </div>
                     </div>
+                }
+            }
+            else
+            {
+                <div class="depot-list-items">
+                    @foreach (var item in ListItems)
+                    {
+                        <DepotGameItem Item="item" OnClick="OnItemSelected" />
+                    }
                 </div>
             }
-        }
-        else
-        {
-            <div class="depot-list-items">
-                @foreach (var item in Items)
-                {
-                    <DepotGameItem Item="item" OnClick="OnItemSelected" />
-                }
-            </div>
-        }
-    </div>
-}
-else if (DepotService.GetItemCount() > 0)
-{
-    <Result Title="No Results" />
-}
-else
-{
-    <Result
-        Status="ResultStatus.Error"
-        Title="No Results"
-        SubTitle="The depot is empty or you are unauthorized. Contact your adminstrator." />
-}
+        </div>
+    }
+    else if (DepotService.GetItemCount() > 0)
+    {
+        <Result Title="No Results" />
+    }
+    else if (Loaded)
+    {
+        <Result
+            Status="ResultStatus.Error"
+            Title="No Results"
+            SubTitle="The depot is empty or you are unauthorized. Contact your adminstrator." />
+    }
+</Spin>
 
 @code {
-    [Parameter] public IEnumerable<Models.ListItem> Items { get; set; }
     [Parameter] public EventCallback<Models.ListItem> OnItemSelected { get; set; }
+
+    IEnumerable<Models.ListItem> ListItems { get; set; } = new List<Models.ListItem>();
 
     List<string> Groups = new();
 
+    bool Loaded = false;
+    
     protected override async Task OnParametersSetAsync()
     {
+        DepotService.OnItemsFiltered += LoadFilteredItems;
+    }
+    
+    async Task LoadFilteredItems(IEnumerable<Models.ListItem> listItems)
+    {
+        ListItems = listItems;
+
+        Loaded = true;
+
         await UpdateGroups();
     }
 
     async Task UpdateGroups()
     {
-        Groups = Items.DistinctBy(i => i.Key).SelectMany(i => i.Groups).Distinct().ToList();
+        Groups = ListItems.DistinctBy(i => i.Key).SelectMany(i => i.Groups).Distinct().ToList();
 
-        var uncategorized = Items.Where(i => i.Groups == null || i.Groups.Length == 0).ToList();
-
-        if (Items.DistinctBy(i => i.Key).Any(i => i.Groups == null || i.Groups.Length == 0))
+        if (ListItems.DistinctBy(i => i.Key).Any(i => i.Groups == null || i.Groups.Length == 0))
             Groups.Add("Uncategorized");
 
         await InvokeAsync(StateHasChanged);

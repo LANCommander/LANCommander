@@ -3,7 +3,7 @@
 @inject DepotService DepotService
 
 <div class="depot-filter">
-    <Form @ref="Form" Model="DepotService.Filter" OnFinish="ApplyFilter" Layout="@FormLayout.Vertical">
+    <Form @ref="Form" Model="DepotService.Filter" OnFinish="DepotService.UpdateFilterAsync" Layout="@FormLayout.Vertical">
         <FormItem>
             <Slider @bind-Value="ColumnSize" Step="50" Min="100" Max="250" />
         </FormItem>
@@ -63,7 +63,7 @@
         </FormItem>
         <FormItem>
             <Button Type="ButtonType.Primary" HtmlType="submit">Apply</Button>
-            <Button Type="@ButtonType.Text" OnClick="ResetFilter" Icon="@IconType.Outline.Close" Danger />
+            <Button Type="@ButtonType.Text" OnClick="DepotService.ResetFilterAsync" Icon="@IconType.Outline.Close" Danger />
         </FormItem>
     </Form>
 </div>
@@ -76,24 +76,7 @@
 </style>
 
 @code {
-    [Parameter] public IEnumerable<Models.ListItem> Items { get; set; }
-
     double ColumnSize = 150;
 
     Form<Models.DepotFilter> Form;
-
-    async Task ResetFilter()
-    {
-        await DepotService.Filter.ResetFilter();
-    }
-
-    async Task ApplyFilter()
-    {
-        await DepotService.Filter.UpdateFilter();
-    }
-
-    public void Dispose()
-    {
-        //LibraryService.OnPreLibraryItemsFiltered -= PopulateFilter;
-    }
 }

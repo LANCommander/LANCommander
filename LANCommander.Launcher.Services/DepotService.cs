@@ -12,6 +12,9 @@ namespace LANCommander.Launcher.Services
         public ObservableCollection<ListItem> Items { get; set; } = new ObservableCollection<ListItem>();
         public DepotFilter Filter { get; set; } = new DepotFilter();
 
+        public delegate Task OnItemsLoadedHandler(IEnumerable<ListItem> items);
+        public event OnItemsLoadedHandler OnItemsLoaded;
+        
         public delegate Task OnItemsFilteredHandler(IEnumerable<ListItem> items);
         public event OnItemsFilteredHandler OnItemsFiltered;
 
@@ -32,6 +35,8 @@ namespace LANCommander.Launcher.Services
         {
             Items = new ObservableCollection<ListItem>(await GetItemsAsync());
 
+            if (OnItemsLoaded != null)
+                await OnItemsLoaded.Invoke(Items);
             if (OnItemsFiltered != null)
                 await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
 
@@ -64,6 +69,16 @@ namespace LANCommander.Launcher.Services
             return Items;
         }
 
+        public async Task ResetFilterAsync()
+        {
+            await Filter.ResetFilterAsync();
+        }
+
+        public async Task UpdateFilterAsync()
+        {
+            await Filter.UpdateFilterAsync();
+        }
+        
         public IEnumerable<ListItem> GetFilteredItems()
         {
             return Filter.ApplyFilter(Items);

@@ -142,7 +142,7 @@
                 Crc32 = String.Empty
             };
 
-            await MediaService.AddAsync(media);
+            media = await MediaService.AddAsync(media);
 
             Values.Add(await MediaService.GetAsync(media.Id));
         }

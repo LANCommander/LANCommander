@@ -26,7 +26,7 @@
             Login
         </Button>
 
-        <Button Type="ButtonType.Text" OnClick="@(() => NavigationManager.NavigateTo("/Authenticate/Register"))">
+        <Button Type="ButtonType.Text" OnClick="OnRegister">
             Register
         </Button>
     </FormItem>
@@ -63,7 +63,8 @@
 @code {
     [Parameter] public string ServerAddress { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
-    
+    [Parameter] public EventCallback OnRegister { get; set; }
+
     List<AuthenticationProvider> AuthenticationProviders = new();
 
     AuthRequest Model = new();

@@ -25,7 +25,7 @@
 
                 @if (State.Stage == AuthenticationStage.Login)
                 {
-                    <LoginForm ServerAddress="@State.ServerAddress" OnBack="() => State.Stage = AuthenticationStage.SelectServer" />
+                    <LoginForm ServerAddress="@State.ServerAddress" OnBack="() => State.Stage = AuthenticationStage.SelectServer" OnRegister="() => State.Stage = AuthenticationStage.Register" />
                 }
 
                 @if (State.Stage == AuthenticationStage.Register)

@@ -38,6 +38,11 @@ namespace LANCommander.Launcher.Services
             return Items;
         }
 
+        public int GetItemCount()
+        {
+            return Items.Count;
+        }
+
         public async Task<IEnumerable<ListItem>> GetItemsAsync()
         {
             Items.Clear();

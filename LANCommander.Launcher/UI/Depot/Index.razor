@@ -2,16 +2,19 @@
 @page "/Depot/{id:guid}"
 @using LANCommander.Launcher.Models
 @using LANCommander.Launcher.UI.Depot.Components
+@using LANCommander.SDK.Exceptions
 @implements IDisposable
 @inject NavigationManager NavigationManager
 @inject DepotService DepotService
 @inject KeepAliveService KeepAliveService
+@inject MessageService MessageService
+@inject ILogger<Index> Logger
 
 <Spin Spinning="Disabled">
     <Layout>
         <Content Class="depot">
             <DepotFilter Items="@ListItems" />
-
+            
             <DepotList Items="@ListItems" OnItemSelected="@((item) => NavigationManager.NavigateTo($"/Depot/{item.Key}"))" />
         </Content>
     </Layout>
@@ -46,7 +49,20 @@
         KeepAliveService.ConnectionEstablished += KeepAliveServiceOnConnectionEstablished;
         KeepAliveService.ConnectionLostPermanently += KeepAliveServiceOnConnectionLostPermanently;
 
-        await DepotService.RefreshItemsAsync();
+        try
+        {
+            await DepotService.RefreshItemsAsync();
+        }
+        catch (DepotNoResultsException ex)
+        {
+            MessageService.Error("Depot results could not be fetched");
+            Logger?.LogError(ex, "The depot returned no results");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Unexpected error fetching depot results");
+            Logger?.LogError(ex, "Unexpected error fetching depot results");
+        }
     }
 
     private void KeepAliveServiceOnConnectionLostPermanently(object? sender, EventArgs e)

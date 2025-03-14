@@ -7,6 +7,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using LANCommander.SDK.Exceptions;
 
 namespace LANCommander.SDK.Services
 {
@@ -29,7 +30,12 @@ namespace LANCommander.SDK.Services
 
         public async Task<DepotResults> GetAsync()
         {
-            return await Client.GetRequestAsync<DepotResults>("/api/Depot");
+            var results = await Client.GetRequestAsync<DepotResults>("/api/Depot");
+
+            if (results == null)
+                throw new DepotNoResultsException("Did not find any depot results");
+
+            return results;
         }
 
         public async Task<DepotGame> GetGameAsync(Guid gameId)

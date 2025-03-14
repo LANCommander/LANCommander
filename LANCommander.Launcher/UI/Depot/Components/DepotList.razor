@@ -1,33 +1,48 @@
 ﻿@using LANCommander.SDK.Models
 @inject SDK.Client Client
+@inject DepotService DepotService
 
-<div class="depot-list no-scrollbar">
-    @if (Groups.Count > 1)
-    {
-        @foreach (var group in Groups)
+@if (Items.Any())
+{
+    <div class="depot-list no-scrollbar">
+        @if (Groups.Count > 1)
         {
-            <div class="depot-list-group">
-                <Divider Text="@group" />
+            @foreach (var group in Groups)
+            {
+                <div class="depot-list-group">
+                    <Divider Text="@group" />
 
-                <div class="depot-list-group-items">
-                    @foreach (var item in Items.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && i.Groups.Length == 0)))
-                    {
-                        <DepotGameItem Item="item" OnClick="OnItemSelected" />
-                    }
+                    <div class="depot-list-group-items">
+                        @foreach (var item in Items.Where(i => i.Groups.Contains(group) || (group == "Uncategorized" && i.Groups.Length == 0)))
+                        {
+                            <DepotGameItem Item="item" OnClick="OnItemSelected" />
+                        }
+                    </div>
                 </div>
+            }
+        }
+        else
+        {
+            <div class="depot-list-items">
+                @foreach (var item in Items)
+                {
+                    <DepotGameItem Item="item" OnClick="OnItemSelected" />
+                }
             </div>
         }
-    }
-    else
-    {
-        <div class="depot-list-items">
-            @foreach (var item in Items)
-            {
-                <DepotGameItem Item="item" OnClick="OnItemSelected" />
-            }
-        </div>
-    }
-</div>
+    </div>
+}
+else if (DepotService.GetItemCount() > 0)
+{
+    <Result Title="No Results" />
+}
+else
+{
+    <Result
+        Status="ResultStatus.Error"
+        Title="No Results"
+        SubTitle="The depot is empty or you are unauthorized. Contact your adminstrator." />
+}
 
 @code {
     [Parameter] public IEnumerable<Models.ListItem> Items { get; set; }

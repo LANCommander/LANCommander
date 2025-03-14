@@ -68,7 +68,7 @@ namespace LANCommander.Server.Controllers.Api
                         .Include(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role);
                 })
-                .FirstOrDefaultAsync(u => String.Equals(u.UserName, userName, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefaultAsync(u => u.UserName.ToUpper() == userName.ToUpper());
             
             if (user == null)
                 return new SDK.Models.DepotResults();

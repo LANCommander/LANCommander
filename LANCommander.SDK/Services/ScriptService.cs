@@ -47,7 +47,6 @@ namespace LANCommander.SDK.Services
                     var script = new PowerShellScript(Enums.ScriptType.UserLogin);
 
                     script.AddVariable("User", user);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
 
                     script.UseInline(loginScript.Contents);
 
@@ -82,7 +81,6 @@ namespace LANCommander.SDK.Services
                     var script = new PowerShellScript(Enums.ScriptType.UserRegistration);
 
                     script.AddVariable("User", user);
-                    script.AddVariable("ServerAddress", Client.BaseUrl.ToString());
 
                     script.UseInline(registrationScript.Contents);
 

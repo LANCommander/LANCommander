@@ -19,7 +19,7 @@
             }
         </PropertyColumn>
         <PropertyColumn Property="p => p.WorkingDirectory" Title="Working Directory">
-            <Input @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" />
+            <FilePicker @bind-Value="context.WorkingDirectory" Disabled="@(context.Type == SavePathType.Registry)" ArchiveId="@ArchiveId" AllowDirectories Title="Select Working Directory" />
         </PropertyColumn>
         <PropertyColumn Property="p => p.IsRegex" Title="Regex">
             <Checkbox @bind-Checked="context.IsRegex" Disabled="@(context.Type == SavePathType.Registry)" />

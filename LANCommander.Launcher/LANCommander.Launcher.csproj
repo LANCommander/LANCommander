@@ -74,7 +74,7 @@
 
 	<Target Name="CompileGlobalSass" BeforeTargets="Compile">
 		<Message Text="Compiling global SCSS files" Importance="high" />
-		<Exec Command="npm run sass -- Styles:wwwroot/css" />
+		<Exec Command="npm run package" />
 	</Target>
 
 	<ItemGroup>

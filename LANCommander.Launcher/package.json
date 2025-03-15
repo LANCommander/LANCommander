@@ -3,13 +3,18 @@
   "version": "1.0.0",
   "description": "A launcher for the LANCommander digital game distribution platform",
   "scripts": {
-    "sass": "sass"
+    "package": "webpack"
   },
   "keywords": [],
   "author": "Pat Hartl <pat@pathar.tl>",
   "license": "MIT",
   "devDependencies": {
-    "sass": "^1.77.4"
+    "css-loader": "^7.1.2",
+    "mini-css-extract-plugin": "^2.9.2",
+    "sass": "^1.85.1",
+    "sass-loader": "^16.0.5",
+    "webpack": "^5.98.0",
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
     "anymatch": "^3.1.3",

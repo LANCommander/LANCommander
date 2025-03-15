@@ -37,10 +37,7 @@ $hero-max-height: 40vh;
         height: 100%;
     }
     
-    .ant-spin-nested-loading > div > .ant-spin-container {
-        overflow-y: scroll;
-        height: 100%;
-    }
+
 }
 
 .depot-filter {
@@ -67,6 +64,11 @@ $hero-max-height: 40vh;
     padding-right: $cover-horizontal-padding + $cover-gap;
     padding-bottom: $cover-vertical-padding + ($cover-gap * 2);
     background: linear-gradient(0deg, #111 0%, #000 25%, #000 75%, #111 100%);
+    
+    &-spinner > div > .ant-spin-container {
+        overflow-y: scroll;
+        height: 100%;
+    }
 }
 
 .depot-list-items,

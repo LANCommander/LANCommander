@@ -1,7 +1,7 @@
 ﻿@inject SDK.Client Client
 @inject DepotService DepotService
 
-<Spin Spinning="!Loaded">
+<Spin Spinning="!Loaded" WrapperClassName="depot-list-spinner">
     @if (ListItems.Any())
     {
         <div class="depot-list no-scrollbar">

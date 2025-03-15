@@ -39,6 +39,7 @@ $hero-max-height: 40vh;
     
     .ant-spin-nested-loading > div > .ant-spin-container {
         overflow-y: scroll;
+        height: 100%;
     }
 }
 

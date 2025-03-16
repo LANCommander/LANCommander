@@ -1,13 +1,9 @@
-﻿using LANCommander.Server.Data;
-using LANCommander.Server.Data.Enums;
+﻿using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
-using LANCommander.Server.Models;
 using LANCommander.Server.Services.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
-namespace LANCommander.Server.Services
+namespace LANCommander.Server.Services.Abstractions
 {
     public interface IBaseDatabaseService<T> where T : class, IBaseModel
     {

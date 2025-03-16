@@ -1,6 +1,6 @@
 ﻿using LANCommander.SDK.Models;
-using LANCommander.Server.Providers;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Semver;

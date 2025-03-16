@@ -1,8 +1,8 @@
 ﻿using craftersmine.SteamGridDBNet;
-using LANCommander.Server.Models;
 using LANCommander.SDK.Enums;
 using LANCommander.Steam;
 using System.Net.Mime;
+using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
 
 namespace LANCommander.Server.Services.MediaGrabbers

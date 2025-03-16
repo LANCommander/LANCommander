@@ -1,4 +1,4 @@
-﻿@using LANCommander.Server.Providers
+﻿@using LANCommander.Server.Services.Abstractions
 @inherits LayoutComponentBase
 @inject IVersionProvider VersionProvider
 @inject NavigationManager NavigationManager
@@ -9,9 +9,11 @@
     <Flex Vertical Justify="FlexJustify.SpaceBetween" Gap="FlexGap.Large" Class="layout-wrapper" >
         <ErrorHandler Title="Unexpected Error">
             <Body>
-                <Content>
+            <Content>
+                <ServerProcessMonitor>
                     @Body
-                </Content>
+                </ServerProcessMonitor>
+            </Content>
             </Body>
             <Extra>
                 <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.Refresh())">Refresh</Button>

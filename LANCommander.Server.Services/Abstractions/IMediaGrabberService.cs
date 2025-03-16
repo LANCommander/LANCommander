@@ -1,7 +1,7 @@
 ﻿using LANCommander.SDK.Enums;
 using LANCommander.Server.Services.Models;
 
-namespace LANCommander.Server.Services
+namespace LANCommander.Server.Services.Abstractions
 {
     public interface IMediaGrabberService
     {

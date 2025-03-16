@@ -1,4 +1,4 @@
-﻿using LANCommander.Server.Services;
+﻿using LANCommander.Server.Services.Abstractions;
 
 namespace LANCommander.Server
 {

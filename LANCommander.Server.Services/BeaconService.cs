@@ -1,5 +1,6 @@
 ﻿using BeaconLib;
 using LANCommander.Server.Models;
+using LANCommander.Server.Services.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 

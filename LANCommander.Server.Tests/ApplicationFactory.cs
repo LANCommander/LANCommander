@@ -1,6 +1,6 @@
 using System.Data.Common;
 using LANCommander.Server.Data;
-using LANCommander.Server.Services;
+using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Tests.Mocks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

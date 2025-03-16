@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Factories;
@@ -9,8 +8,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
+using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Exceptions;
-using LANCommander.Server.Services.Extensions;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services

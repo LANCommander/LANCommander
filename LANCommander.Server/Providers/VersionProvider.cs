@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Abstractions;
 using Semver;
 
 namespace LANCommander.Server.Providers;

@@ -1,6 +1,6 @@
 using Semver;
 
-namespace LANCommander.Server.Services;
+namespace LANCommander.Server.Services.Abstractions;
 
 public interface IVersionProvider
 {

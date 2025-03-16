@@ -1,44 +1,48 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-	  <Version>1.1.0</Version>
-	  <Authors>pathartl</Authors>
-	  <Company>LANCommander</Company>
-	  <Description>A .NET library for interacting with a LANCommander server</Description>
-	  <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
-	  <PackageIcon>package-icon.png</PackageIcon>
-	  <PackageReadmeFile>README.md</PackageReadmeFile>
-	  <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
-	  <RepositoryType>git</RepositoryType>
-	  <PackageTags>lancommander</PackageTags>
-	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Version>1.1.0</Version>
+        <Authors>pathartl</Authors>
+        <Company>LANCommander</Company>
+        <Description>A .NET library for interacting with a LANCommander server</Description>
+        <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
+        <PackageIcon>package-icon.png</PackageIcon>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>lancommander</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.9.1" />
-    <PackageReference Include="Crc32.NET" Version="1.2.0" />
-    <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.7" />
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.7" />
-    <PackageReference Include="PeanutButter.INI" Version="3.0.339" />
-    <PackageReference Include="RestSharp" Version="112.1.0" />
-    <PackageReference Include="Semver" Version="3.0.0" />
-    <PackageReference Include="SharpCompress" Version="0.39.0" />
-    <PackageReference Include="System.Management.Automation" Version="7.4.7" />
-	  <PackageReference Include="YamlDotNet" Version="16.3.0" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="CommandLineParser" Version="2.9.1" />
+        <PackageReference Include="Crc32.NET" Version="1.2.0" />
+        <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
+        <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.7" />
+        <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.7" />
+        <PackageReference Include="PeanutButter.INI" Version="3.0.339" />
+        <PackageReference Include="RestSharp" Version="112.1.0" />
+        <PackageReference Include="Semver" Version="3.0.0" />
+        <PackageReference Include="SharpCompress" Version="0.39.0" />
+        <PackageReference Include="System.Management.Automation" Version="7.4.7" />
+        <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Update="icon.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-    <None Update="README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="LANCommander.Server.Tests" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <None Update="icon.png">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+        <None Update="README.md">
+            <Pack>True</Pack>
+            <PackagePath>\</PackagePath>
+        </None>
+    </ItemGroup>
 
 </Project>

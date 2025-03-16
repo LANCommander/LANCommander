@@ -1,16 +1,26 @@
+using Microsoft.AspNetCore.Mvc.Testing;
+
 namespace LANCommander.Server.Tests;
 
-public class ClientFixture : IDisposable
+public class ApplicationFixture : WebApplicationFactory<Program>
 {
-    public SDK.Client Client { get; set; }
+    public static ApplicationFixture Instance;
     
-    public ClientFixture()
-    {
-        Client = new SDK.Client("", "C:\\Games");
-    }
+    public SDK.Client Client { get; set; }
 
-    public void Dispose()
+    public ApplicationFixture(WebApplicationFactory<Program> factory)
     {
-        Client.Disconnect();
+        if (Instance != null)
+            return;
+
+        Client = new SDK.Client(factory.CreateClient(), "C:\\Games");
+
+        Instance = this;
     }
+}
+
+[CollectionDefinition("Application")]
+public class ApplicationCollection : ICollectionFixture<WebApplicationFactory<Program>>
+{
+    
 }

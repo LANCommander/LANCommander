@@ -15,6 +15,7 @@ public class ApplicationFactory<TProgram>
     {
         builder.ConfigureServices(services =>
         {
+            #region DatabaseContext
             var dbContextDescriptor = services.SingleOrDefault(
                 d => d.ServiceType == 
                      typeof(IDbContextOptionsConfiguration<DatabaseContext>));
@@ -36,6 +37,7 @@ public class ApplicationFactory<TProgram>
             {
                 optionsBuilder.UseInMemoryDatabase("Test");
             });
+            #endregion
         });
     }
 }

@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -119,6 +120,30 @@ namespace LANCommander.SDK
             BaseCmdlet.Client = this;
 
             Logger = logger;
+        }
+
+        // Constructor for tests
+        internal Client(HttpClient httpClient, string defaultInstallDirectory)
+        {
+            ApiClient = new RestClient(httpClient);
+            
+            DefaultInstallDirectory = defaultInstallDirectory;
+
+            Games = new GameService(this, DefaultInstallDirectory);
+            Library = new LibraryService(this);
+            Depot = new DepotService(this);
+            Saves = new SaveService(this);
+            Redistributables = new RedistributableService(this);
+            Scripts = new ScriptService(this);
+            Profile = new ProfileService(this);
+            Media = new MediaService(this);
+            Launcher = new LauncherService(this);
+            Issues = new IssueService(this);
+            Lobbies = new LobbyService(this);
+            Servers = new ServerService(this);
+            PlaySessions = new PlaySessionService(this);
+
+            BaseCmdlet.Client = this;
         }
 
         public async Task ChangeServerAddressAsync(string baseUrl)

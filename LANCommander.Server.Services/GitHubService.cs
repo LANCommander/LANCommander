@@ -1,3 +1,4 @@
+using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -5,7 +6,7 @@ using Semver;
 
 namespace LANCommander.Server.Services;
 
-public class GitHubService(Logger<GitHubService> logger, IVersionProvider versionProvider)
+public class GitHubService(Logger<GitHubService> logger, IVersionProvider versionProvider) : IGitHubService
 {
     private const string _owner = "LANCommander";
     private const string _repository = "LANCommander";

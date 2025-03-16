@@ -1,4 +1,5 @@
 using LANCommander.SDK;
+using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Importers;
 using LANCommander.Server.Services.MediaGrabbers;
@@ -42,7 +43,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<AuthenticationService>();
-        services.AddSingleton<GitHubService>();
+        services.AddSingleton<IGitHubService, GitHubService>();
         services.AddTransient<SetupService>();
         services.AddScoped(typeof(ImportService<>));
 

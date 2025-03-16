@@ -86,3 +86,6 @@ app.GenerateThumbnails();
 
 app.Run();
 
+public partial class Program
+{
+}

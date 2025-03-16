@@ -1,4 +1,6 @@
-﻿@inherits LayoutComponentBase
+﻿@using LANCommander.Server.Providers
+@inherits LayoutComponentBase
+@inject IVersionProvider VersionProvider
 @inject NavigationManager NavigationManager
 
 <Layout Class="layout">
@@ -17,7 +19,7 @@
         </ErrorHandler>
 
         <Footer>
-            LANCommander v@(UpdateService.GetCurrentVersion().WithoutMetadata().ToString())
+            LANCommander v@(VersionProvider.GetCurrentVersion().WithoutMetadata().ToString())
         </Footer>
     </Flex>
 </Layout>

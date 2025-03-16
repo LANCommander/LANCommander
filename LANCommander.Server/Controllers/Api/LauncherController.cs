@@ -1,4 +1,5 @@
 ﻿using LANCommander.SDK.Models;
+using LANCommander.Server.Providers;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,12 +12,15 @@ namespace LANCommander.Server.Controllers.Api
     [ApiController]
     public class LauncherController : BaseApiController
     {
+        private readonly IVersionProvider _versionProvider;
         private readonly UpdateService UpdateService;
 
         public LauncherController(
             ILogger<LauncherController> logger,
+            IVersionProvider versionProvider,
             UpdateService updateService) : base(logger)
         {
+            _versionProvider = versionProvider;
             UpdateService = updateService;
         }
 
@@ -24,7 +28,7 @@ namespace LANCommander.Server.Controllers.Api
         [HttpGet("Download")]
         public async Task<IActionResult> DownloadAsync()
         {
-            var version = UpdateService.GetCurrentVersion();
+            var version = _versionProvider.GetCurrentVersion();
             var settings = SettingService.GetSettings();
             var fileName = $"LANCommander.Launcher-Windows-x64-v{version}.zip";
             var path = Path.Combine(settings.Launcher.StoragePath, fileName);
@@ -55,7 +59,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (SemVersion.TryParse(launcherVersionString, SemVersionStyles.Any, out var launcherVersion))
             {
-                var currentVersion = UpdateService.GetCurrentVersion();
+                var currentVersion = _versionProvider.GetCurrentVersion();
 
                 if (launcherVersion.ComparePrecedenceTo(currentVersion) < 0)
                 {

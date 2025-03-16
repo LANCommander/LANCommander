@@ -5,7 +5,9 @@ using Microsoft.Extensions.Logging;
 
 namespace LANCommander.Server.Services
 {
-    public class BeaconService(ILogger<BeaconService> logger) : BaseService(logger), IHostedService, IDisposable
+    public class BeaconService(
+        ILogger<BeaconService> logger,
+        IVersionProvider versionProvider) : BaseService(logger), IHostedService, IDisposable
     {
         private Beacon _beacon;
 
@@ -25,7 +27,7 @@ namespace LANCommander.Server.Services
             {
                 _settings.Beacon?.Address,
                 _settings.Beacon?.Name,
-                UpdateService.GetCurrentVersion().ToString(),
+                versionProvider.GetCurrentVersion().ToString(),
             };
 
             _beacon.BeaconData = String.Join('|', dataParts);

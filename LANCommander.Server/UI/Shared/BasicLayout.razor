@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@inject IVersionProvider VersionProvider
 
 <Layout Class="layout">
     <Content Style="padding: 24px;">
@@ -6,6 +7,6 @@
     </Content>
 
     <Footer Style="text-align: center; padding-top: 0;">
-        LANCommander v@(UpdateService.GetCurrentVersion().ToString())
+        LANCommander v@(VersionProvider.GetCurrentVersion().ToString())
     </Footer>
 </Layout>

@@ -16,6 +16,7 @@ namespace LANCommander.Server.Services
     public sealed class UpdateService(
         ILogger<UpdateService> logger,
         IHostApplicationLifetime applicationLifetime,
+        IVersionProvider versionProvider,
         ServerService serverService,
         ServerProcessService serverProcessService) : BaseService(logger)
     {
@@ -30,13 +31,6 @@ namespace LANCommander.Server.Services
             _gitHub = new GitHubClient(new ProductHeaderValue(_repository));
         }
 
-        public static SemVersion GetCurrentVersion()
-        {
-            var productVersion = FileVersionInfo.GetVersionInfo(Assembly.GetEntryAssembly().Location).ProductVersion;
-            
-            return SemVersion.Parse(productVersion);
-        }
-
         public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
         {
             if (!_settings.Launcher.HostUpdates)
@@ -47,7 +41,7 @@ namespace LANCommander.Server.Services
 
         public IEnumerable<LauncherArtifact> GetLauncherArtifactsFromLocalFiles()
         {
-            var currentVersion = GetCurrentVersion();
+            var currentVersion = versionProvider.GetCurrentVersion();
             var downloadedLaunchers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher.*v{currentVersion.WithoutMetadata()}.zip");
             
             foreach (var downloadedLauncher in downloadedLaunchers)
@@ -56,7 +50,7 @@ namespace LANCommander.Server.Services
 
         public async IAsyncEnumerable<LauncherArtifact> GetLauncherArtifactsFromGitHubAsync()
         {
-            var currentVersion = GetCurrentVersion();
+            var currentVersion = versionProvider.GetCurrentVersion();
             
             if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
                 currentVersion = SemVersion.Parse(_settings.Launcher.VersionOverride, SemVersionStyles.AllowV);
@@ -183,14 +177,14 @@ namespace LANCommander.Server.Services
             if (SemVersion.TryParse(version, SemVersionStyles.AllowV, out SemVersion semVersion))
                 return semVersion;
             else
-                return GetCurrentVersion();
+                return versionProvider.GetCurrentVersion();
         }
 
         public async Task<bool> UpdateAvailableAsync()
         {
             var latestVersion = await GetLatestVersionAsync();
 
-            var sortOrder = GetCurrentVersion().ComparePrecedenceTo(latestVersion);
+            var sortOrder = versionProvider.GetCurrentVersion().ComparePrecedenceTo(latestVersion);
 
             return sortOrder < 0;
         }

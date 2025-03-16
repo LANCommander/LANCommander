@@ -55,6 +55,10 @@
 		<ComponentScssFiles Include="**/*/*.scss" Exclude="node_modules/**;wwwroot/**;Styles/**" />
 	</ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="LANCommander.Server.Tests" />
+  </ItemGroup>
+
 	<ItemGroup>
 	  <ComponentScssFiles Remove="node_modules\**" />
 	  <TypeScriptCompile Remove="node_modules\**" />

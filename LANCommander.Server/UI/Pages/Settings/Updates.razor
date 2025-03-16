@@ -4,6 +4,7 @@
 @using Semver
 @inject IMessageService MessageService
 @inject UpdateService UpdateService
+@inject IVersionProvider VersionProvider
 @inject ILogger<Updates> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
@@ -93,7 +94,7 @@
         await InvokeAsync(StateHasChanged);
         await Task.Yield();
         
-        CurrentVersion = UpdateService.GetCurrentVersion();
+        CurrentVersion = VersionProvider.GetCurrentVersion();
         UpdateAvailable = await UpdateService.UpdateAvailableAsync();
         LatestVersion = await UpdateService.GetLatestVersionAsync();
         Releases = await UpdateService.GetReleasesAsync(5);

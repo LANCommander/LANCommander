@@ -7,6 +7,7 @@
 @inject PageService PageService
 @inject UpdateService UpdateService
 @inject StorageLocationService StorageLocationService
+@inject IVersionProvider VersionProvider
 @inject IMessageService MessageService
 @inject IFusionCache FusionCache
 @inject ILogger<Index> Logger
@@ -125,7 +126,7 @@
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
-        var currentVersion = UpdateService.GetCurrentVersion();
+        var currentVersion = VersionProvider.GetCurrentVersion();
         var currentRelease = await UpdateService.GetReleaseAsync(currentVersion);
 
         if (currentRelease != null)

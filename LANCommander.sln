@@ -40,6 +40,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server.Data.My
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LANCommander.Server.Data.PostgreSQL", "LANCommander.Server.Data.PostgreSQL\LANCommander.Server.Data.PostgreSQL.csproj", "{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Server.Tests", "LANCommander.Server.Tests\LANCommander.Server.Tests.csproj", "{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -110,6 +112,10 @@ Global
 		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{225A5DA1-9719-4EAA-A27E-C6C65D7324D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

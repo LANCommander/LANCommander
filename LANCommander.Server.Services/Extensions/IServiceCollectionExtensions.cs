@@ -42,6 +42,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<AuthenticationService>();
+        services.AddSingleton<GitHubService>();
         services.AddTransient<SetupService>();
         services.AddScoped(typeof(ImportService<>));
 

@@ -1,7 +1,4 @@
-using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
 namespace LANCommander.Server.Tests.Services;
@@ -12,33 +9,25 @@ public class UserServiceTests(ApplicationFixture fixture) : BaseTest(fixture)
     [Fact]
     public async Task CreateAdminUserShouldWork()
     {
-        var roleService = GetService<RoleService>();
-        var userService = GetService<UserService>();
-
-        roleService.AddAsync(new Role
-        {
-            Name = RoleService.AdministratorRoleName,
-        });
-
-        var user = await userService.AddAsync(new User
-        {
-            UserName = "admin",
-        });
-
-        await userService.ChangePassword(user.UserName, "Password1234");
-        await userService.AddToRoleAsync(user.UserName, RoleService.AdministratorRoleName);
-
-        user = await userService
-            .Query(q =>
-            {
-                return q
-                    .Include(u => u.UserRoles)
-                    .ThenInclude(ur => ur.Role);
-            })
-            .FirstOrDefaultAsync(u => u.UserName.ToLower() == user.UserName.ToLower());
+        var user = await EnsureAdminUserCreatedAsync();
         
-        user.UserName.ShouldBe("admin");
-        user.NormalizedUserName.ShouldBe("ADMIN");
+        user.UserName.ShouldBe(TestConstants.AdminUserName);
+        user.NormalizedUserName.ShouldBe(TestConstants.AdminUserName.ToUpper());
         user.Roles.ShouldContain(r => r.Name == RoleService.AdministratorRoleName);
+    }
+
+    [Fact]
+    public async Task ChangePasswordShouldWork()
+    {
+        var user = await EnsureAdminUserCreatedAsync();
+        var userService = GetService<UserService>();
+        
+        var result = await userService.ChangePassword(TestConstants.AdminUserName, TestConstants.AdminInitialPassword, TestConstants.AdminPassword);
+        
+        result.Succeeded.ShouldBeTrue();
+        
+        var validPassword = await userService.CheckPassword(TestConstants.AdminUserName, TestConstants.AdminPassword);
+        
+        validPassword.ShouldBeTrue();
     }
 }

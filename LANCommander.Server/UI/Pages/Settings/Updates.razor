@@ -4,6 +4,7 @@
 @using Semver
 @inject IMessageService MessageService
 @inject UpdateService UpdateService
+@inject GitHubService GitHubService
 @inject IVersionProvider VersionProvider
 @inject ILogger<Updates> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -96,8 +97,8 @@
         
         CurrentVersion = VersionProvider.GetCurrentVersion();
         UpdateAvailable = await UpdateService.UpdateAvailableAsync();
-        LatestVersion = await UpdateService.GetLatestVersionAsync();
-        Releases = await UpdateService.GetReleasesAsync(5);
+        LatestVersion = await GitHubService.GetLatestVersionAsync(Settings.Update.ReleaseChannel);
+        Releases = await GitHubService.GetReleasesAsync(5);
 
         Loading = false;
         

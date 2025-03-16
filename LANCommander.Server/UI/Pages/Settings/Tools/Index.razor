@@ -2,6 +2,7 @@
 @using Hangfire
 @using LANCommander.Helpers
 @using LANCommander.Server.Jobs.Background
+@using LANCommander.Server.Services.Exceptions
 @using ZiggyCreatures.Caching.Fusion
 @inject ArchiveService ArchiveService
 @inject PageService PageService
@@ -34,7 +35,7 @@
 
     <h3>Download Clients</h3>
     <p>Check for any client releases for the current version and download them to this server.</p>
-    <Button Type="ButtonType.Primary" OnClick="DownloadClients" Loading="DownloadingClients">Download</Button>
+    <Button Type="ButtonType.Primary" OnClick="DownloadLaunchers" Loading="DownloadingLaunchers">Download</Button>
 
     <Divider />
 
@@ -69,7 +70,7 @@
 
 @code {
     bool RecalculatingFileSizes = false;
-    bool DownloadingClients = false;
+    bool DownloadingLaunchers = false;
     bool FixingPageRoutes = false;
     bool RegeneratingThumbnails = false;
 
@@ -119,28 +120,30 @@
         MessageService.Success("Cache cleared!");
     }
 
-    async Task DownloadClients()
+    async Task DownloadLaunchers()
     {
-        DownloadingClients = true;
+        DownloadingLaunchers = true;
         
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
 
-        var currentVersion = VersionProvider.GetCurrentVersion();
-        var currentRelease = await UpdateService.GetReleaseAsync(currentVersion);
-
-        if (currentRelease != null)
+        try
         {
-            await UpdateService.DownloadLauncherReleaseAsync(currentRelease);
+            await UpdateService.DownloadLatestLauncherReleaseAsync();
 
-            MessageService.Success("Clients downloaded!");
+            MessageService.Success("Launchers downloaded!");
         }
-        else
+        catch (ReleaseNotFoundException ex)
         {
-            MessageService.Error("You are on an unsupported version and clients cannot be downloaded");
+            MessageService.Error($"Launchers could not be downloaded, unknown release {ex.Version}");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "An unknown error occurred while trying to download launchers");
+            MessageService.Error("An unknown error occurred");
         }
 
-        DownloadingClients = false;
+        DownloadingLaunchers = false;
         
         await Task.Yield();
         await InvokeAsync(StateHasChanged);

@@ -137,12 +137,11 @@ namespace LANCommander.Server.Services
         public Dictionary<Guid, LogFileMonitor> LogFileMonitors { get; set; } = new();
 
         private Dictionary<Guid, RCON> RconConnections { get; set; } = new();
+        private Dictionary<Guid, ServerProcessStatus> Status { get; set; } = new();
 
         public delegate void OnLogHandler(object sender, ServerLogEventArgs e);
         public event OnLogHandler OnLog;
-
-        public delegate void OnStatusUpdateHandler(object sender, ServerStatusUpdateEventArgs e);
-        public event OnStatusUpdateHandler OnStatusUpdate;
+        public event EventHandler<ServerStatusUpdateEventArgs> OnStatusUpdate;
         
         private readonly IServiceProvider ServiceProvider;
         private readonly SDK.Client Client;
@@ -179,8 +178,8 @@ namespace LANCommander.Server.Services
                 // Don't start the server if it's already started
                 if (GetStatus(server) != ServerProcessStatus.Stopped)
                     return;
-
-                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Starting));
+                
+                UpdateStatus(server, ServerProcessStatus.Starting);
 
                 _logger?.LogInformation("Starting server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
@@ -229,7 +228,7 @@ namespace LANCommander.Server.Services
                             StartMonitoringLog(logFile, server);
                         }
                     
-                        OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Running));
+                        UpdateStatus(server, ServerProcessStatus.Running);
                         
                         var cancellationTokenSource = new CancellationTokenSource();
                         
@@ -240,11 +239,11 @@ namespace LANCommander.Server.Services
                         if (Running.ContainsKey(server.Id))
                             Running.Remove(server.Id);
                         
-                        OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
+                        UpdateStatus(server, ServerProcessStatus.Stopped);
                     }
                     catch (Exception ex)
                     {
-                        OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
+                        UpdateStatus(server, ServerProcessStatus.Error, ex);
 
                         _logger?.LogError(ex, "Could not start server {ServerName} ({ServerId})", server.Name, server.Id);
                     }
@@ -271,7 +270,7 @@ namespace LANCommander.Server.Services
 
                 _logger?.LogInformation("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopping));
+                UpdateStatus(server, ServerProcessStatus.Stopping);
 
                 if (Running.ContainsKey(server.Id))
                 {
@@ -311,7 +310,7 @@ namespace LANCommander.Server.Services
                     }
                 }
 
-                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Stopped));
+                UpdateStatus(server, ServerProcessStatus.Stopped);
             }
         }
 
@@ -345,6 +344,25 @@ namespace LANCommander.Server.Services
             }
             else
                 return "";
+        }
+
+        private void UpdateStatus(Data.Models.Server server, ServerProcessStatus status, Exception ex = null)
+        {
+            if (ex != null)
+            {
+                Status[server.Id] = ServerProcessStatus.Error;
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
+            }
+            else if (!Status.ContainsKey(server.Id))
+            {
+                Status[server.Id] = status;
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
+            }
+            else if (Status[server.Id] != status)
+            {
+                Status[server.Id] = status;
+                OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
+            }
         }
 
         public ServerProcessStatus GetStatus(Data.Models.Server server)

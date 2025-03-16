@@ -13,15 +13,15 @@ namespace LANCommander.Server.Controllers.Api
     public class LauncherController : BaseApiController
     {
         private readonly IVersionProvider _versionProvider;
-        private readonly UpdateService UpdateService;
+        private readonly GitHubService _gitHubService;
 
         public LauncherController(
             ILogger<LauncherController> logger,
             IVersionProvider versionProvider,
-            UpdateService updateService) : base(logger)
+            GitHubService gitHubService) : base(logger)
         {
             _versionProvider = versionProvider;
-            UpdateService = updateService;
+            _gitHubService = gitHubService;
         }
 
         [AllowAnonymous]
@@ -35,7 +35,7 @@ namespace LANCommander.Server.Controllers.Api
 
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
             {
-                var release = await UpdateService.GetReleaseAsync(version);
+                var release = await _gitHubService.GetReleaseAsync(version);
 
                 if (release == null)
                     return NotFound();

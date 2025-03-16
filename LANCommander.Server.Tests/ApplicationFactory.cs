@@ -1,5 +1,7 @@
 using System.Data.Common;
 using LANCommander.Server.Data;
+using LANCommander.Server.Services;
+using LANCommander.Server.Tests.Mocks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +34,16 @@ public class ApplicationFactory<TProgram>
             {
                 optionsBuilder.UseInMemoryDatabase("Test");
             });
+            #endregion
+            
+            #region IVersionProvider
+
+            var versionProviderDescriptor = services.SingleOrDefault(
+                d => typeof(IVersionProvider).IsAssignableFrom(d.ServiceType));
+            
+            services.Remove(versionProviderDescriptor);
+
+            services.AddSingleton<IVersionProvider, VersionProviderMock>();
             #endregion
         });
     }

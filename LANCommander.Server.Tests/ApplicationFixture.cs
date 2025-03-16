@@ -2,25 +2,27 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace LANCommander.Server.Tests;
 
-public class ApplicationFixture : WebApplicationFactory<Program>
+public class ApplicationFixture : ApplicationFactory<Program>
 {
     public static ApplicationFixture Instance;
     
     public SDK.Client Client { get; set; }
+    public IServiceProvider ServiceProvider { get; set; }
 
-    public ApplicationFixture(WebApplicationFactory<Program> factory)
+    public ApplicationFixture(ApplicationFactory<Program> factory)
     {
         if (Instance != null)
             return;
 
         Client = new SDK.Client(factory.CreateClient(), "C:\\Games");
+        ServiceProvider = factory.Services;
 
         Instance = this;
     }
 }
 
 [CollectionDefinition("Application")]
-public class ApplicationCollection : ICollectionFixture<WebApplicationFactory<Program>>
+public class ApplicationCollection : ICollectionFixture<ApplicationFactory<Program>>
 {
     
 }

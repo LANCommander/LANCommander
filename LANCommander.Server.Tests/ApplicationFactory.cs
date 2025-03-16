@@ -32,11 +32,6 @@ public class ApplicationFactory<TProgram>
             {
                 optionsBuilder.UseInMemoryDatabase("Test");
             });
-            
-            services.AddDbContext<DatabaseContext>(optionsBuilder =>
-            {
-                optionsBuilder.UseInMemoryDatabase("Test");
-            });
             #endregion
         });
     }

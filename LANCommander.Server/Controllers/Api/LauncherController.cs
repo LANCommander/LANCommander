@@ -13,12 +13,12 @@ namespace LANCommander.Server.Controllers.Api
     public class LauncherController : BaseApiController
     {
         private readonly IVersionProvider _versionProvider;
-        private readonly GitHubService _gitHubService;
+        private readonly IGitHubService _gitHubService;
 
         public LauncherController(
             ILogger<LauncherController> logger,
             IVersionProvider versionProvider,
-            GitHubService gitHubService) : base(logger)
+            IGitHubService gitHubService) : base(logger)
         {
             _versionProvider = versionProvider;
             _gitHubService = gitHubService;

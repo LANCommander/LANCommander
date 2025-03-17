@@ -6,13 +6,13 @@ using Semver;
 
 namespace LANCommander.Server.Services;
 
-public class GitHubService(Logger<GitHubService> logger, IVersionProvider versionProvider) : IGitHubService
+public class GitHubService(ILogger<GitHubService> logger, IVersionProvider versionProvider) : IGitHubService
 {
     private const string _owner = "LANCommander";
     private const string _repository = "LANCommander";
     private const string _nightlyWorkflowFile = "LANCommander.Nightly.yml";
     
-    private GitHubClient _client;
+    private GitHubClient _client = new GitHubClient(new ProductHeaderValue(_repository));
 
     public async Task<SemVersion> GetLatestVersionAsync(ReleaseChannel releaseChannel)
     {

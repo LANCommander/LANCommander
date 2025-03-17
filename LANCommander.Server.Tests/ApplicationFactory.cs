@@ -45,6 +45,15 @@ public class ApplicationFactory<TProgram>
 
             services.AddSingleton<IVersionProvider, VersionProviderMock>();
             #endregion
+            
+            #region GitHubService
+            var gitHubServiceDescriptor = services.SingleOrDefault(
+                d => typeof(IGitHubService).IsAssignableFrom(d.ServiceType));
+            
+            services.Remove(gitHubServiceDescriptor);
+
+            services.AddSingleton(GitHubServiceMockFactory.Create());
+            #endregion
         });
     }
 }

@@ -5,7 +5,7 @@
 @using Semver
 @inject IMessageService MessageService
 @inject UpdateService UpdateService
-@inject GitHubService GitHubService
+@inject IGitHubService GitHubService
 @inject IVersionProvider VersionProvider
 @inject ILogger<Updates> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]

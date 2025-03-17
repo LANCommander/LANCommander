@@ -19,7 +19,7 @@ namespace LANCommander.Server.Services
         ILogger<UpdateService> logger,
         IHostApplicationLifetime applicationLifetime,
         IVersionProvider versionProvider,
-        GitHubService gitHubService,
+        IGitHubService gitHubService,
         ServerService serverService,
         ServerProcessService serverProcessService) : BaseService(logger)
     {

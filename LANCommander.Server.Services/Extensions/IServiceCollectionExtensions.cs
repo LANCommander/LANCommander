@@ -13,6 +13,7 @@ public static class IServiceCollectionExtensions
     public static IServiceCollection AddLANCommanderServer(this IServiceCollection services, Settings settings)
     {
         services.AddSingleton(new Client("", ""));
+        services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IdentityContextFactory>();
         services.AddScoped<SettingService>();
         services.AddScoped<ArchiveService>();
@@ -43,7 +44,6 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<AuthenticationService>();
-        services.AddSingleton<IGitHubService, GitHubService>();
         services.AddTransient<SetupService>();
         services.AddScoped(typeof(ImportService<>));
 

@@ -12,10 +12,16 @@
         Query="g => g.BaseGameId == Id && g.Type == GameType.Expansion">
         <BoundDataColumn Property="e => e.Title" Sortable Filterable />
         <BoundDataColumn Property="e => e.SortTitle" Sortable Filterable />
-        <BoundDataColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <BoundDataColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="s => s.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable>
+            <LocalTime Value="context.ReleasedOn" Format="MM/dd/yyyy" />
+        </BoundDataColumn>
+        <BoundDataColumn Property="s => s.CreatedOn" Sortable Filterable>
+            <LocalTime Value="context.CreatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="e => e.CreatedBy.UserName" Sortable Filterable Include="CreatedBy" />
-        <BoundDataColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
+        <BoundDataColumn Property="s => s.UpdatedOn" Sortable Filterable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="e => e.UpdatedBy.UserName" Sortable Filterable Include="CreatedBy" />
         <DataActions>
             <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{expansion.Id}", true))">Edit</Button>

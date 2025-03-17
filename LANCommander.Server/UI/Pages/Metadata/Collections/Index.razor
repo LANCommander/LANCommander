@@ -18,9 +18,13 @@
     <Columns>
         <BoundDataColumn Property="c => c.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         <BoundDataColumn Property="c => c.Games.Count" Sortable Title="Games" Include="Games" />
-        <BoundDataColumn Property="c => c.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="c => c.CreatedOn" Title="Created On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="c => c.CreatedBy != null ? c.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="c => c.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="c => c.UpdatedOn" Title="Updated On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions>
             <a href="@($"/Metadata/Collections/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>

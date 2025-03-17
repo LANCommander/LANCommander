@@ -32,7 +32,9 @@
             <ByteSize Value="context.UncompressedSize" />
         </BoundDataColumn>
         <BoundDataColumn Property="a => a.CreatedBy != null ? a.CreatedBy.UserName : String.Empty" Include="CreatedBy"/>
-        <BoundDataColumn Property="a => a.CreatedOn" Format="MM/dd/yyyy hh:mm tt" DefaultSortOrder="SortDirection.Descending"/>
+        <BoundDataColumn Property="s => s.CreatedOn" DefaultSortOrder="SortDirection.Descending">
+            <LocalTime Value="context.CreatedOn" />
+        </BoundDataColumn>
 
         <DataActions>
             <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">

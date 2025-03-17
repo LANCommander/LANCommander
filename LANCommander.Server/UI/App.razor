@@ -43,6 +43,7 @@
 
     <div class="page-wrapper">
         <AntContainer @rendermode="RenderMode.InteractiveServer" />
+        <LocalTimeInitializer @rendermode="RenderMode.InteractiveServer" />
 
         <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     </div>

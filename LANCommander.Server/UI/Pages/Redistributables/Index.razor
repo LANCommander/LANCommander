@@ -20,9 +20,13 @@
     <Columns>
         <BoundDataColumn Property="c => c.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         <BoundDataColumn Property="r => r.Games.Count" Title="Games" Sortable Include="Games" />
-        <BoundDataColumn Property="r => r.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="r => r.CreatedOn" Title="Created On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="r => r.CreatedBy != null ? r.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="r => r.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="r => r.UpdatedOn" Title="Updated On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="r => r.UpdatedBy != null ? r.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions>
             <a href="@($"/Redistributables/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>

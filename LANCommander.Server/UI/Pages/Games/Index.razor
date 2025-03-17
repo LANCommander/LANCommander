@@ -91,8 +91,13 @@
                 }
         </DataColumn>
 
-        <BoundDataColumn Property="g => g.CreatedOn" Title="Created On" Sortable />
-        <BoundDataColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable />
+        <BoundDataColumn Property="g => g.CreatedOn" Title="Created On" Sortable>
+            <LocalTime Value="context.CreatedOn" />
+        </BoundDataColumn>
+
+        <BoundDataColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         
         <BoundDataColumn Property="g => g.CreatedBy" Sortable Title="Created By" Include="CreatedBy">
             @context.CreatedBy?.UserName

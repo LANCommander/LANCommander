@@ -19,9 +19,13 @@
     </RightToolbar>
     <Columns>
         <BoundDataColumn Property="i => i.Game.Title" Title="Game" Include="Game" Sortable />
-        <BoundDataColumn Property="i => i.CreatedOn" Title="Created On" Sortable />
+        <BoundDataColumn Property="i => i.CreatedOn" Title="Opened" Sortable DefaultSortOrder="SortDirection.Descending">
+            <LocalTime Value="context.CreatedOn" Relative />
+        </BoundDataColumn>
         <BoundDataColumn Property="i => i.CreatedBy != null ? i.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
-        <BoundDataColumn Property="i => i.ResolvedOn" Title="Resolved On" Sortable DefaultSortOrder="AntDesign.SortDirection.Descending" />
+        <BoundDataColumn Property="i => i.ResolvedOn" Title="Resolved" Sortable>
+            <LocalTime Value="context.ResolvedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="i => i.ResolvedBy != null ? i.ResolvedBy.UserName : String.Empty" Title="Resolved By" Include="ResolvedBy" Sortable />
         <DataColumn TData="string" Title="Status" Sortable Filterable>
             @if (context.ResolvedOn == null)

@@ -46,9 +46,13 @@
         </BoundDataColumn>
         <BoundDataColumn Property="s => s.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         <BoundDataColumn Property="s => s.Port" Sortable />
-        <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="s => s.CreatedOn" Title="Created On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="s => s.UpdatedOn" Format="MM/dd/yyyy hh:mm tt" Sortable />
+        <BoundDataColumn Property="s => s.UpdatedOn" Title="Updated On" Sortable>
+            <LocalTime Value="context.UpdatedOn" />
+        </BoundDataColumn>
         <BoundDataColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions>
             <ServerControl ServerId="context.Id"/>

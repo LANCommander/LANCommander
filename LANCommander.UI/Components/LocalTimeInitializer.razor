@@ -1,0 +1,22 @@
+@using LANCommander.UI.Providers
+@using Microsoft.JSInterop
+@inject TimeProvider TimeProvider
+@inject IJSRuntime JS
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && TimeProvider is LocalTimeProvider localTimeProvider && !localTimeProvider.IsLocalTimeZoneSet)
+        {
+            try
+            {
+                var timeZone = await JS.InvokeAsync<string>("window.TimeProvider.GetLocalTimeZone");
+
+                localTimeProvider.SetLocalTimeZone(timeZone);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

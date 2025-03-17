@@ -21,7 +21,9 @@
         <BoundDataColumn Title="Created By" Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Include="CreatedBy">
             @context.CreatedBy?.UserName
         </BoundDataColumn>
-        <BoundDataColumn Property="s => s.CreatedOn" Format="MM/dd/yyyy hh:mm tt" />
+        <BoundDataColumn Property="s => s.CreatedOn">
+            <LocalTime Value="context.CreatedOn" />
+        </BoundDataColumn>
         <DataActions>
             <Button OnClick="() => Edit(context.Id)" Icon="@IconType.Outline.Edit" Type="ButtonType.Text"/>
 

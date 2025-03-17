@@ -42,7 +42,9 @@
                             break;
                     }
                 </DataColumn>
-                <BoundDataColumn Property="k => k.ClaimedOn" Format="MM/dd/yyyy hh:mm tt" Title="Claimed On" Sortable />
+                <BoundDataColumn Property="s => s.ClaimedOn" Title="Claimed" Sortable>
+                    <LocalTime Value="context.CreatedOn" Relative />
+                </BoundDataColumn>
                 <DataActions>
                     @if (context.IsAllocated())
                     {

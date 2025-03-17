@@ -1,0 +1,89 @@
+@using LANCommander.UI.Providers
+@implements IDisposable
+@inject TimeProvider TimeProvider
+
+@if (Value.HasValue && Value.Value != DateTime.MinValue)
+{
+    if (Relative)
+    {
+        <Tooltip Title="@(RenderLocalTime())">
+            @ToRelativeTime()
+        </Tooltip>
+    }
+    else
+    {
+        @RenderLocalTime()
+    }
+}
+
+@code {
+    [Parameter] public DateTime? Value { get; set; }
+    [Parameter] public bool Relative { get; set; } = false; 
+    [Parameter] public string Format { get; set; } = "MM/dd/yyyy hh:mm tt";
+
+    protected override void OnInitialized()
+    {
+        if (TimeProvider is LocalTimeProvider localTimeProvider)
+            localTimeProvider.LocalTimeZoneChanged += LocalTimeZoneChanged;
+    }
+
+    private void LocalTimeZoneChanged(object? sender, EventArgs e)
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string RenderLocalTime()
+    {
+        return ToLocalTime().ToString(Format);
+    }
+
+    private DateTime ToLocalTime()
+    {
+        return Value?.Kind switch
+        {
+            DateTimeKind.Local => Value.GetValueOrDefault(),
+            _ => DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeFromUtc(Value.GetValueOrDefault(), TimeProvider.LocalTimeZone), DateTimeKind.Local)
+        };
+    }
+
+    private string ToRelativeTime()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var timespan = now - ToLocalTime();
+
+        if (timespan.TotalSeconds < 5)
+            return "Just now";
+        if (timespan.TotalMinutes < 1)
+            return $"{(int)timespan.TotalSeconds} seconds ago";
+        if (timespan.TotalMinutes < 2)
+            return "A minute ago";
+        if (timespan.TotalHours < 1)
+            return $"{(int)timespan.TotalMinutes} minutes ago";
+        if (timespan.TotalHours < 2)
+            return "An hour ago";
+        if (timespan.TotalHours < 24)
+            return $"{(int)timespan.TotalHours} hours ago";
+        if (timespan.TotalDays < 2)
+            return "Yesterday";
+        if (timespan.TotalDays < 7)
+            return $"{(int)timespan.TotalDays} days ago";
+        if (timespan.TotalDays < 14)
+            return "A week ago";
+        if (timespan.TotalDays < 31)
+            return $"{(int)(timespan.TotalDays / 7)} weeks ago";
+        if (timespan.TotalDays < 60)
+            return "A month ago";
+        if (timespan.TotalDays < 365)
+            return $"{(int)(timespan.TotalDays / 30)} months ago";
+        if (timespan.TotalDays < 730)
+            return "A year ago";
+
+        return $"{(int)(timespan.TotalDays / 365)} years ago";
+    }
+    
+    public void Dispose()
+    {
+        if (TimeProvider is LocalTimeProvider localTimeProvider)
+            localTimeProvider.LocalTimeZoneChanged -= LocalTimeZoneChanged;
+    }
+}

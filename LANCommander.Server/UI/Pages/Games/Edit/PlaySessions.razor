@@ -12,15 +12,19 @@
         Responsive
         Context="session">
         <Columns>
-            <BoundDataColumn Property="ps => ps.Start" Sortable />
-            <BoundDataColumn Property="ps => ps.End" Sortable DefaultSortOrder="SortDirection.Descending" />
+            <BoundDataColumn Property="ps => ps.Start" Sortable>
+                <LocalTime Value="session.Start" />
+            </BoundDataColumn>
+            <BoundDataColumn Property="ps => ps.End" Sortable DefaultSortOrder="SortDirection.Descending">
+                <LocalTime Value="session.End" />
+            </BoundDataColumn>
             <BoundDataColumn Property="ps => ps.Duration" Sortable>
                 @if (session.Duration.HasValue)
                 {
                     <Text>@($"{(int)session.Duration.Value.TotalHours}:{session.Duration.Value.Minutes:D2}:{session.Duration.Value.Seconds:D2}")</Text>
                 }
             </BoundDataColumn>
-            <BoundDataColumn Property="ps => ps.CreatedBy.UserName" Sortable Include="CreatedBy" />
+            <BoundDataColumn Property="ps => ps.CreatedBy.UserName" Sortable Include="CreatedBy"/>
             <DataActions>
                 <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
                     <Popconfirm OnConfirm="() => Delete(session)" Title="Are you sure you want to delete this session?">

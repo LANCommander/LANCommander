@@ -31,7 +31,9 @@
             <ByteSize Value="@(context?.GameSaves?.Sum(s => s.Size) ?? 0)" />
         </DataColumn>
         
-        <BoundDataColumn Title="Created On" Property="u => u.CreatedOn" Sortable />
+        <BoundDataColumn Title="Created On" Property="u => u.CreatedOn" Sortable>
+            <LocalTime Value="context.CreatedOn" />
+        </BoundDataColumn>
         
         @if (Settings.Authentication.RequireApproval)
         {
@@ -39,7 +41,9 @@
                 <Checkbox Checked="context.Approved" />
             </DataColumn>
             
-            <BoundDataColumn Title="Approved On" Property="u => u.ApprovedOn" Sortable />
+            <BoundDataColumn Title="Approved On" Property="u => u.ApprovedOn" Sortable>
+                <LocalTime Value="context.ApprovedOn" />
+            </BoundDataColumn>
         }
         
         <DataActions>

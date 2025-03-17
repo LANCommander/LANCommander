@@ -44,7 +44,7 @@ jobs:
       run: dotnet restore --locked-mode
 
     - name: NuGet Cache
-      uses: actions/cache@v3
+      uses: actions/cache/save@v4
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-dotnet-${{ hashFiles('**/*.csproj') }}
@@ -63,7 +63,7 @@ jobs:
         npm run package
 
     - name: Cache UI build
-      uses: actions/cache@v3
+      uses: actions/cache/save@v4
       with:
         path: ${{ github.workspace }}/LANCommander.UI/wwwroot
         key: ${{ runner.os }}-ui-${{ hashFiles('**/package-lock.json') }}
@@ -74,7 +74,7 @@ jobs:
         npm install
 
     - name: Cache Server npm packages
-      uses: actions/cache@v3
+      uses: actions/cache/save@v4
       with:
         path: ${{ github.workspace }}/LANCommander.Server/node_modules
         key: ${{ runner.os }}-server-npm-${{ hashFiles('**/package-lock.json') }}
@@ -85,7 +85,7 @@ jobs:
         npm install
 
     - name: Cache Launcher npm packages
-      uses: actions/cache@v3
+      uses: actions/cache/save@v4
       with:
         path: ${{ github.workspace }}/LANCommander.Launcher/node_modules
         key: ${{ runner.os }}-launcher-npm-${{ hashFiles('**/package-lock.json') }}

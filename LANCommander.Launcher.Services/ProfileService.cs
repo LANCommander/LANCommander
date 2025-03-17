@@ -52,6 +52,9 @@ namespace LANCommander.Launcher.Services
         public async Task DownloadProfileInfoAsync()
         {
             var remoteProfile = await Client.Profile.GetAsync();
+
+            if (remoteProfile == null)
+                return;
             
             var localUser = await UserService
                 .GetAsync(remoteProfile.Id);

@@ -8,6 +8,7 @@
 
 <DataTable
     TItem="Company"
+    @ref="Table"
     Size="TableSize.Small"
     Responsive
     Searchable
@@ -42,7 +43,8 @@
     </Form>
 </Modal>
 
- @code {
+@code {
+    DataTable<Company> Table;
     bool EditCompanyVisible = false;
     Company CompanyContext = new();
 
@@ -73,6 +75,8 @@
             Logger.LogError(ex, $"Could not update/add {CompanyContext.Name}!");
         }
 
+        Table.Reload();
+
         await CloseEdit();
     }
 
@@ -92,9 +96,21 @@
 
         await InvokeAsync(StateHasChanged);
     }
-
-    async Task Delete(Company Company)
+    
+    async Task Delete(Company company)
     {
-        await CompanyService.DeleteAsync(Company);
+        try
+        {
+            await CompanyService.DeleteAsync(company);
+
+            MessageService.Success("Company deleted!");
+
+            Table.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete company!");
+            Logger?.LogError(ex, "Could not delete company");
+        }
     }
 }

@@ -1,5 +1,4 @@
 ﻿@page "/Metadata/Collections"
-@using LANCommander.Server.Data
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject CollectionService CollectionService
 @inject IMessageService MessageService
@@ -9,6 +8,7 @@
 
 <DataTable
     TItem="Collection"
+    @ref="Table"
     Size="@TableSize.Small"
     Searchable
     SearchProperty="c => c.Name">
@@ -44,14 +44,12 @@
 
     bool Visibility = false;
 
-    IEnumerable<Game> Selected;
-
-    DataTable<Game> Table;
-
     string Url;
 
     bool AddCollectionVisible;
     Collection CollectionContext = new();
+
+    DataTable<Collection> Table;
 
     async Task OpenAdd()
     {
@@ -77,6 +75,8 @@
 
             MessageService.Success($"{CollectionContext.Name} was added!");
 
+            Table.Reload();
+
             await CloseAdd();
         }
         catch (Exception ex)
@@ -86,10 +86,20 @@
         }
     }
 
-    async Task Delete(Collection Collection)
+    async Task Delete(Collection collection)
     {
-        Collections = new List<Collection>();
-        
-        await CollectionService.DeleteAsync(Collection);
+        try
+        {
+            await CollectionService.DeleteAsync(collection);
+            
+            Table.Reload();
+
+            MessageService.Success("Collection deleted!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete collection!");
+            Logger?.LogError(ex, "Could not delete collection");
+        }
     }
 }

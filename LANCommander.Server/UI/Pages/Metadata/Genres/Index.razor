@@ -8,6 +8,7 @@
 
 <DataTable
     TItem="Genre"
+    @ref="Table"
     Size="@TableSize.Small"
     Searchable
     SearchProperty="g => g.Name">
@@ -47,6 +48,8 @@
     bool EditGenreVisible = false;
     Genre GenreContext = new();
 
+    DataTable<Genre> Table;
+
     protected override async Task OnInitializedAsync()
     {
         Loading = false;
@@ -79,6 +82,8 @@
             Logger.LogError(ex, $"Could not update {GenreContext.Name}!");
         }
 
+        Table.Reload();
+
         await CloseEdit();
     }
 
@@ -99,12 +104,20 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    async Task Delete(Genre Genre)
+    async Task Delete(Genre genre)
     {
-        Loading = true;
-        
-        await GenreService.DeleteAsync(Genre);
+        try
+        {
+            await GenreService.DeleteAsync(genre);
 
-        Loading = false;
+            MessageService.Success("Genre deleted!");
+
+            Table.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete genre!");
+            Logger?.LogError(ex, "Could not delete genre");
+        }
     }
 }

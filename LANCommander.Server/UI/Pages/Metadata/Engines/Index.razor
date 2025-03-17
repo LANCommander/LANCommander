@@ -8,6 +8,7 @@
 
 <DataTable
     TItem="Engine"
+    @ref="Table"
     Size="@TableSize.Small"
     Searchable
     SearchProperty="e => e.Name">
@@ -49,6 +50,8 @@
     bool EditEngineVisible = false;
     Engine EngineContext = new();
 
+    DataTable<Engine> Table;
+
     protected override async Task OnInitializedAsync()
     {
         Loading = false;
@@ -81,6 +84,8 @@
             Logger.LogError(ex, "Could not add/update {EngineContext.Name}!");
         }
 
+        Table.Reload();
+
         await CloseEdit();
     }
 
@@ -100,15 +105,21 @@
 
         await InvokeAsync(StateHasChanged);
     }
-
-    async Task Delete(Engine Engine)
+    
+    async Task Delete(Engine engine)
     {
-        Engines = new List<Engine>();
+        try
+        {
+            await EngineService.DeleteAsync(engine);
 
-        Loading = true;
-        
-        await EngineService.DeleteAsync(Engine);
+            MessageService.Success("Engine deleted!");
 
-        Loading = false;
+            Table.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete engine!");
+            Logger?.LogError(ex, "Could not delete engine");
+        }
     }
 }

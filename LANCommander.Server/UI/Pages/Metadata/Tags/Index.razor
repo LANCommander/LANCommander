@@ -8,6 +8,7 @@
 
 <DataTable
     TItem="Data.Models.Tag"
+    @ref="Table"
     Size="@TableSize.Small"
     Searchable
     SearchProperty="t => t.Name">
@@ -47,6 +48,8 @@
     bool EditTagVisible;
     Data.Models.Tag TagContext = new();
 
+    DataTable<Data.Models.Tag> Table;
+
     protected override async Task OnInitializedAsync()
     {
         Loading = false;
@@ -79,6 +82,8 @@
             Logger.LogError(ex, $"Could not update/add {TagContext.Name}!");
         }
 
+        Table.Reload();
+
         await CloseEdit();
     }
 
@@ -99,18 +104,20 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    async Task Delete(Data.Models.Tag Tag)
+    async Task Delete(Data.Models.Tag tag)
     {
-        Loading = true;
-        
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        
-        await TagService.DeleteAsync(Tag);
+        try
+        {
+            await TagService.DeleteAsync(tag);
 
-        Loading = false;
-        
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
+            MessageService.Success("Tag deleted!");
+
+            Table.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete tag!");
+            Logger?.LogError(ex, "Could not delete tag");
+        }
     }
 }

@@ -8,6 +8,7 @@
 
 <DataTable
     TItem="Platform"
+    @ref="Table"
     Size="@TableSize.Small"
     Searchable
     SearchProperty="p => p.Name">
@@ -49,6 +50,8 @@
     bool EditPlatformVisible = false;
     Platform PlatformContext = new();
 
+    DataTable<Platform> Table;
+
     protected override async Task OnInitializedAsync()
     {
         Loading = false;
@@ -81,6 +84,8 @@
             Logger.LogError(ex, $"Could not add/update {PlatformContext.Name}!");
         }
 
+        Table.Reload();
+
         await CloseEdit();
     }
 
@@ -101,18 +106,20 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    async Task Delete(Platform Platform)
+    async Task Delete(Platform platform)
     {
-        Platforms = new List<Platform>();
+        try
+        {
+            await PlatformService.DeleteAsync(platform);
 
-        Loading = true;
+            MessageService.Success("Platform deleted!");
 
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        
-        await PlatformService.DeleteAsync(Platform);
-
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
+            Table.Reload();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete platform!");
+            Logger?.LogError(ex, "Could not delete platform");
+        }
     }
 }

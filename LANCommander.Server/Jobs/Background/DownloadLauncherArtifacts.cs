@@ -15,7 +15,12 @@ namespace LANCommander.Server.Jobs.Background
             var artifacts = await updateService.GetLauncherArtifactsFromGitHubAsync().ToListAsync();
             var localArtifacts = updateService.GetLauncherArtifactsFromLocalFiles();
 
-            foreach (var artifact in artifacts)
+            var allowedArtifacts = artifacts.Where(a =>
+                settings.Launcher.Architectures.Contains(a.Architecture) &&
+                settings.Launcher.Platforms.Contains(a.Platform))
+                .ToList();
+
+            foreach (var artifact in allowedArtifacts)
             {
                 using (var op = logger?.BeginOperation(" Downloading launcher artifact {ArtifactName} from GitHub", artifact.Name))
                 {

@@ -23,11 +23,6 @@ namespace LANCommander.Server.Services
         ServerService serverService,
         ServerProcessService serverProcessService) : BaseService(logger)
     {
-        //private GitHubClient _gitHub;
-
-        private const string _owner = "LANCommander";
-        private const string _repository = "LANCommander";
-
         public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
         {
             if (!_settings.Launcher.HostUpdates)
@@ -51,9 +46,10 @@ namespace LANCommander.Server.Services
             
             if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
                 currentVersion = SemVersion.Parse(_settings.Launcher.VersionOverride, SemVersionStyles.AllowV);
+
+            var releaseChannel = versionProvider.GetReleaseChannel(currentVersion);
             
-            if (_settings.Update.ReleaseChannel == ReleaseChannel.Stable ||
-                _settings.Update.ReleaseChannel == ReleaseChannel.Prerelease)
+            if (releaseChannel == ReleaseChannel.Stable || releaseChannel == ReleaseChannel.Prerelease)
             {
                 logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
 
@@ -70,11 +66,11 @@ namespace LANCommander.Server.Services
                     yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl);
             }
 
-            if (_settings.Update.ReleaseChannel == ReleaseChannel.Nightly)
+            if (releaseChannel == ReleaseChannel.Nightly)
             {
                 var nightlyArtifacts = await gitHubService.GetNightlyArtifactsAsync(_settings.Launcher.VersionOverride);
                 
-                foreach (var artifact in nightlyArtifacts)
+                foreach (var artifact in nightlyArtifacts.Where(a => a.Name.Contains("LANCommander.Launcher")))
                     yield return GetArtifactFromName(artifact.Name, artifact.ArchiveDownloadUrl);
             }
         }

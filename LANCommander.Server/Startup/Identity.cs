@@ -52,6 +52,11 @@ public static class Identity
             })
             .AddAuthenticationProviders(settings)
             .AddIdentityCookies();
+
+        builder.Services.AddAuthorizationBuilder()
+            .AddPolicy("Administrator", policy =>
+                policy
+                    .RequireRole("Administrator"));
         
         builder.Services.Configure<CookiePolicyOptions>(options =>
         {

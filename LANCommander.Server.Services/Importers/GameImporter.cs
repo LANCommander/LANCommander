@@ -84,6 +84,7 @@ public class GameImporter(
         game.Singleplayer = manifest.Singleplayer;
         game.SortTitle = manifest.SortTitle;
         game.Title = manifest.Title;
+        game.Type = manifest.Type;
         
         if (!exists)
             game = await gameService.AddAsync(game);

@@ -34,4 +34,10 @@
         <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Files\lotrbfme2.lcx">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

@@ -19,7 +19,7 @@ namespace LANCommander.SDK.Utilities;
 public class SavePacker : IDisposable
 {
     private string _installDirectory;
-    private Stream _stream;
+    private MemoryStream _stream;
     private ZipArchive _archive;
 
     /// <summary>
@@ -38,12 +38,7 @@ public class SavePacker : IDisposable
         switch (path.Type)
         {
             case SavePathType.File:
-                var entries = GetEntriesFromPath(path);
-
-                foreach (var entry in entries)
-                {
-                    _archive.AddEntry($"Files/{path.Id}/{entry.ArchivePath.TrimStart('/')}", entry.ActualPath.ExpandEnvironmentVariables(_installDirectory));
-                }
+                AddEntriesFromPath(path);
                 break;
             
             case SavePathType.Registry:
@@ -116,7 +111,7 @@ public class SavePacker : IDisposable
 
     public async Task<Stream> PackAsync()
     {
-        _archive.SaveTo(_stream, new WriterOptions(CompressionType.Deflate)
+        _archive.SaveTo(_stream, new WriterOptions(CompressionType.None)
         {
             ArchiveEncoding = new ArchiveEncoding() { Default = Encoding.UTF8 },
             LeaveStreamOpen = true,
@@ -125,6 +120,59 @@ public class SavePacker : IDisposable
         _stream.Position = 0;
         
         return _stream;
+    }
+
+    private void AddEntriesFromPath(SavePath savePath)
+    {
+        if (savePath.IsRegex)
+            AddEntriesFromFilePathPattern(savePath.Id, savePath.Path, savePath.WorkingDirectory);
+        else
+            AddEntriesFromFilePath(savePath.Id, savePath.Path, savePath.WorkingDirectory);
+    }
+
+    private void AddEntriesFromFilePath(Guid savePathId, string path, string workingDirectory)
+    {
+        var absoluteLocalWorkingDirectory = workingDirectory.ExpandEnvironmentVariables(_installDirectory);
+        var absoluteLocalPath = path.ExpandEnvironmentVariables(_installDirectory);
+        var absoluteFullLocalPath = Path.Combine(absoluteLocalWorkingDirectory, absoluteLocalPath);
+
+        if (Directory.Exists(absoluteFullLocalPath))
+        {
+            foreach (var file in Directory.GetFiles(absoluteFullLocalPath, "*", SearchOption.AllDirectories))
+            {
+                _archive.AddEntry($"Files/{savePathId}/{GetArchiveEntryName(file, absoluteLocalWorkingDirectory).TrimStart('/')}", file);
+            }
+        }
+        else
+        {
+            _archive.AddEntry(GetArchiveEntryName(absoluteFullLocalPath, absoluteLocalWorkingDirectory), absoluteFullLocalPath);
+        }
+    }
+
+    private void AddEntriesFromFilePathPattern(Guid savePathId, string pathPattern, string workingDirectory)
+    {
+        var absoluteLocalWorkingDirectory = workingDirectory.ExpandEnvironmentVariables(_installDirectory);
+        
+        if (String.IsNullOrWhiteSpace(workingDirectory))
+            absoluteLocalWorkingDirectory = _installDirectory;
+
+        if (Path.DirectorySeparatorChar == '\\')
+        {
+            pathPattern = pathPattern.Replace("\\", "\\\\");
+            pathPattern = pathPattern.Replace("/", "\\\\");
+        }
+
+        var regex = new Regex(pathPattern);
+        
+        var matchedFiles = Directory
+            .GetFiles(absoluteLocalWorkingDirectory.Replace('/', Path.DirectorySeparatorChar), "*", SearchOption.AllDirectories)
+            .Where(f => regex.IsMatch(f.Substring(absoluteLocalWorkingDirectory.Length).TrimStart(Path.DirectorySeparatorChar)))
+            .ToList();
+
+        foreach (var file in matchedFiles)
+        {
+            AddEntriesFromFilePath(savePathId, file, workingDirectory);
+        }
     }
 
     private IEnumerable<SavePathEntry> GetEntriesFromPath(SavePath path)

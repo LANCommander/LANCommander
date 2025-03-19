@@ -181,9 +181,9 @@ public static class SaveEndpoints
     }
 
     public static async Task<IResult> UploadSaveByGameAsync(
-        Stream body,
         Guid gameId,
         ClaimsPrincipal userPrincipal,
+        HttpContext httpContext,
         [FromServices] IMapper mapper,
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
@@ -212,19 +212,23 @@ public static class SaveEndpoints
             return TypedResults.InternalServerError(
                 "There is no save location available on the server. Check your server settings!");
 
-        using (var ms = new MemoryStream())
+        var form = await httpContext.Request.ReadFormAsync();
+        var file = form.Files.FirstOrDefault();
+        
+        if (file == null)
+            return TypedResults.BadRequest("No file was provided in the request.");
+        
+        using (var stream = file.OpenReadStream())
         {
-            await body.CopyToAsync(ms);
-            
             var save = new GameSave
             {
                 Game = game,
                 User = user,
-                Size = ms.Length,
+                Size = stream.Length,
                 StorageLocation = saveStorageLocation,
             };
             
-            ms.Seek(0, SeekOrigin.Begin);
+            stream.Seek(0, SeekOrigin.Begin);
         
             save = await saveService.AddAsync(save);
 
@@ -236,9 +240,9 @@ public static class SaveEndpoints
                 if (!Directory.Exists(saveUploadPath))
                     Directory.CreateDirectory(saveUploadPath);
                 
-                using (var stream = File.Create(saveUploadFile))
+                using (var fs = File.Create(saveUploadFile))
                 {
-                    await ms.CopyToAsync(stream);
+                    await stream.CopyToAsync(fs);
                 }
 
                 if (settings.UserSaves.MaxSaves > 0)

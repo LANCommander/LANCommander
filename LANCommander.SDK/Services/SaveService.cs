@@ -18,6 +18,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using LANCommander.SDK.Utilities;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -82,13 +83,6 @@ namespace LANCommander.SDK.Services
         public Task<GameSave> GetLatestAsync(Guid gameId)
         {
             return Client.GetRequestAsync<GameSave>($"/api/Saves/Game/{gameId}/Latest");
-        }
-
-        public GameSave Upload(Guid gameId, byte[] data)
-        {
-            Logger?.LogTrace("Uploading save...");
-
-            return Client.UploadRequest<GameSave>($"/api/Saves/Game/{gameId}/Upload", gameId.ToString(), data);
         }
 
         public async Task DownloadAsync(string installDirectory, Guid gameId, Guid? saveId = null)
@@ -237,79 +231,33 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        public async Task UploadAsync(string installDirectory, Guid gameId)
+        public async Task<Stream> PackAsync(string installDirectory, GameManifest manifest)
         {
-            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
-
-            if (manifest.SavePaths != null && manifest.SavePaths.Count() > 0)
+            using (var savePacker = new SavePacker(installDirectory))
             {
-                using (var ms = new MemoryStream())
-                using (var writer = WriterFactory.Open(ms, ArchiveType.Zip, new WriterOptions(CompressionType.Deflate)
-                {
-                    ArchiveEncoding = new ArchiveEncoding() { Default = Encoding.UTF8 }
-                }))
-                {
-                    #region Add files from defined paths
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
-                    {
-                        savePath.Entries = GetFileSavePathEntries(savePath, installDirectory);
+                if (manifest?.SavePaths.Any() ?? false)
+                    savePacker.AddPaths(manifest.SavePaths);
 
-                        foreach (var entry in savePath.Entries)
-                        {
-                            var localPath = GetLocalPath(entry.ActualPath, installDirectory);
+                await savePacker.AddManifestAsync(manifest);
+                
+                return await savePacker.PackAsync();
+            }
+        }
 
-                            if (Directory.Exists(localPath))
-                                AddDirectoryToZip(writer, entry.ArchivePath, localPath, savePath.Id);
-                            else if (File.Exists(localPath))
-                                writer.Write($"Files/{savePath.Id}/{entry.ArchivePath}", localPath);
-                        }
-                    }
-                    #endregion
+        public async Task<GameSave> UploadAsync(string installDirectory, Guid gameId)
+        {
+            using (var savePacker = new SavePacker(installDirectory))
+            {
+                var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
-                    #region Export registry keys
-                    if (manifest.SavePaths.Any(sp => sp.Type == Enums.SavePathType.Registry))
-                    {
-                        List<string> tempRegFiles = new List<string>();
+                if (manifest?.SavePaths.Any() ?? false)
+                    savePacker.AddPaths(manifest.SavePaths);
+                
+                await savePacker.AddManifestAsync(manifest);
+                
+                var stream = await savePacker.PackAsync();
 
-                        Logger?.LogTrace("Building registry export file");
-
-                        var exportCommand = new StringBuilder();
-
-                        foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.Registry))
-                        {
-                            var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
-
-                            exportCommand.AppendLine($"reg.exe export \"{savePath.Path.Replace(":\\", "\\")}\" \"{tempRegFile}\"");
-                            tempRegFiles.Add(tempRegFile);
-                        }
-
-                        var script = new PowerShellScript(Enums.ScriptType.SaveUpload);
-
-                        script.UseInline(exportCommand.ToString());
-
-                        if (Client.Scripts.Debug)
-                            script.EnableDebug();
-
-                        await script.ExecuteAsync<int>();
-
-                        var exportFile = new StringBuilder();
-
-                        foreach (var tempRegFile in tempRegFiles)
-                        {
-                            exportFile.AppendLine(File.ReadAllText(tempRegFile));
-                            File.Delete(tempRegFile);
-                        }
-
-                        writer.Write("_registry.reg", new MemoryStream(Encoding.UTF8.GetBytes(exportFile.ToString())));
-                    }
-                    #endregion
-
-                    writer.Write(ManifestHelper.ManifestFilename, new MemoryStream(Encoding.UTF8.GetBytes(ManifestHelper.Serialize(manifest))));
-
-                    ms.Seek(0, SeekOrigin.Begin);
-
-                    var save = Upload(manifest.Id, ms.ToArray());
-                }
+                return await Client.UploadRequestAsync<GameSave>($"/api/Saves/Game/{manifest.Id}/Upload", stream);
             }
         }
 
@@ -404,16 +352,6 @@ namespace LANCommander.SDK.Services
                 archivePath = archivePath.Replace(Path.DirectorySeparatorChar, '/');
 
             return archivePath;
-        }
-
-        private void AddDirectoryToZip(IWriter writer, string archivePath, string localPath, Guid pathId)
-        {
-            foreach (var file in Directory.GetFiles(localPath, "*", SearchOption.AllDirectories))
-            {
-                var fileArchivePath = file.Substring(localPath.Length).Replace(Path.DirectorySeparatorChar, '/').Trim('/');
-
-                writer.Write($"Files/{pathId}/{archivePath}/{fileArchivePath}", file);
-            }
         }
 
         private void ExtractFilesFromZip(string zipPath, string destination)

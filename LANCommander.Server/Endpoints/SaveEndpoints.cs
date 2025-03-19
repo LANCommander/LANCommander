@@ -22,7 +22,7 @@ public static class SaveEndpoints
         group.MapGet("/{id:guid}/Download", DownloadSaveByIdAsync);
         group.MapDelete("/{id:guid}", DeleteByIdAsync);
         group.MapGet("/Game/{gameId:guid}", GetSavesByGameAsync);
-        group.MapPost("/Game/{gameId:guid}/Upload", UploadSaveByGameAsync);
+        group.MapPost("/Game/{gameId:guid}/Upload", UploadSaveByGameAsync).DisableAntiforgery();
         group.MapGet("/Game/{gameId:guid}/Latest", GetLatestSaveByGameAsync);
         group.MapGet("/Game/{gameId:guid}/Latest/Download", DownloadLatestSaveByGameAsync);
     }
@@ -181,7 +181,7 @@ public static class SaveEndpoints
     }
 
     public static async Task<IResult> UploadSaveByGameAsync(
-        IFormFile file,
+        Stream body,
         Guid gameId,
         ClaimsPrincipal userPrincipal,
         [FromServices] IMapper mapper,
@@ -212,49 +212,57 @@ public static class SaveEndpoints
             return TypedResults.InternalServerError(
                 "There is no save location available on the server. Check your server settings!");
 
-        var save = new GameSave
+        using (var ms = new MemoryStream())
         {
-            Game = game,
-            User = user,
-            Size = file.Length,
-            StorageLocation = saveStorageLocation,
-        };
+            await body.CopyToAsync(ms);
+            
+            var save = new GameSave
+            {
+                Game = game,
+                User = user,
+                Size = ms.Length,
+                StorageLocation = saveStorageLocation,
+            };
+            
+            ms.Seek(0, SeekOrigin.Begin);
         
-        save = await saveService.AddAsync(save);
+            save = await saveService.AddAsync(save);
 
-        try
-        {
-            var saveUploadPath = Path.GetDirectoryName(save.GetUploadPath());
-
-            if (!Directory.Exists(saveStorageLocation.Path))
-                Directory.CreateDirectory(saveStorageLocation.Path);
-
-            using (var stream = File.Create(saveUploadPath))
+            try
             {
-                await file.CopyToAsync(stream);
-            }
+                var saveUploadFile = save.GetUploadPath();
+                var saveUploadPath = Path.GetDirectoryName(saveUploadFile);
 
-            if (settings.UserSaves.MaxSaves > 0)
+                if (!Directory.Exists(saveUploadPath))
+                    Directory.CreateDirectory(saveUploadPath);
+                
+                using (var stream = File.Create(saveUploadFile))
+                {
+                    await ms.CopyToAsync(stream);
+                }
+
+                if (settings.UserSaves.MaxSaves > 0)
+                {
+                    var savesToCull = await saveService
+                        .Query(q =>
+                        {
+                            return q
+                                .Where(s => s.UserId == user.Id && s.GameId == game.Id)
+                                .OrderByDescending(s => s.CreatedOn)
+                                .Skip(settings.UserSaves.MaxSaves);
+                        })
+                        .GetAsync();
+
+                    foreach (var saveToCull in savesToCull)
+                        await saveService.DeleteAsync(saveToCull);
+                }
+
+                return TypedResults.Ok(mapper.Map<SDK.Models.GameSave>(save));
+            }
+            catch (Exception ex)
             {
-                var savesToCull = await saveService
-                    .Query(q =>
-                    {
-                        return q
-                            .Where(s => s.UserId == user.Id && s.GameId == game.Id)
-                            .OrderByDescending(s => s.CreatedOn)
-                            .Skip(settings.UserSaves.MaxSaves);
-                    })
-                    .GetAsync();
-
-                foreach (var saveToCull in savesToCull)
-                    await saveService.DeleteAsync(saveToCull);
+                return TypedResults.InternalServerError(ex);
             }
-
-            return TypedResults.Ok(mapper.Map<SDK.Models.GameSave>(save));
-        }
-        catch (Exception ex)
-        {
-            return TypedResults.InternalServerError(ex);
         }
     }
 }

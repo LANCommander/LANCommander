@@ -12,25 +12,8 @@ public class GameServiceTests(ApplicationFixture fixture) : BaseTest(fixture)
     public async Task ImportMetadataExportShouldWorkAsync()
     {
         var importer = GetService<ImportService<Server.Data.Models.Game>>();
-        var storageLocationService = GetService<StorageLocationService>();
         
-        var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-        
-        Directory.CreateDirectory(tempPath);
-
-        await storageLocationService.AddAsync(new StorageLocation
-        {
-            Path = tempPath,
-            Type = StorageLocationType.Archive,
-            Default = true,
-        });
-
-        await storageLocationService.AddAsync(new StorageLocation
-        {
-            Path = tempPath,
-            Type = StorageLocationType.Media,
-            Default = true,
-        });
+        var tempPath = await EnsureStorageLocationsExistAsync();
 
         var game = await importer.ImportFromLocalFileAsync(Path.Combine("Files", "lotrbfme2.lcx"));
 

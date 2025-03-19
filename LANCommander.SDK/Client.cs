@@ -14,6 +14,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.ServiceModel.Channels;
 using System.Threading.Tasks;
 using LANCommander.SDK.Extensions;
 
@@ -516,6 +517,31 @@ namespace LANCommander.SDK
             {
                 OnError?.Invoke(this, ex);
                 
+                return default;
+            }
+        }
+
+        internal async Task<T> UploadRequestAsync<T>(string route, Stream stream, bool ignoreVersion = false)
+        {
+            try
+            {
+                var request = new RestRequest(route, Method.Post)
+                    .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
+                    .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+                if (!ignoreVersion && !IgnoreVersion)
+                    request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
+
+                request.AddFile("File", () => stream, "File");
+
+                var response = await ApiClient.PostAsync<T>(request);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                OnError?.Invoke(this, ex);
+
                 return default;
             }
         }

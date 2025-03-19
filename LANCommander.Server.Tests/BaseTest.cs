@@ -1,4 +1,5 @@
 using System.Formats.Asn1;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using Microsoft.EntityFrameworkCore;
@@ -66,6 +67,45 @@ public abstract class BaseTest : IClassFixture<ApplicationFixture>, IDisposable
             .FirstOrDefaultAsync(u => u.UserName.ToLower() == user.UserName.ToLower());
 
         return user;
+    }
+
+    protected async Task<string> EnsureStorageLocationsExistAsync()
+    {
+        var storageLocationService = GetService<StorageLocationService>();
+
+        var tempPath = GetTemporaryDirectory();
+
+        await storageLocationService.AddAsync(new StorageLocation
+        {
+            Path = tempPath,
+            Type = StorageLocationType.Archive,
+            Default = true,
+        });
+
+        await storageLocationService.AddAsync(new StorageLocation
+        {
+            Path = tempPath,
+            Type = StorageLocationType.Media,
+            Default = true,
+        });
+
+        await storageLocationService.AddAsync(new StorageLocation
+        {
+            Path = tempPath,
+            Type = StorageLocationType.Save,
+            Default = true,
+        });
+
+        return tempPath;
+    }
+
+    protected string GetTemporaryDirectory()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+
+        Directory.CreateDirectory(tempPath);
+        
+        return tempPath;
     }
 
     public void Dispose()

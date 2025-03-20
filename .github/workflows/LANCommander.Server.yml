@@ -104,6 +104,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-server-npm-
 
+    - name: Install Webpack
+      run: npm install -g webpack
+
     # .NET builds
     - name: Publish Updater and Server
       run: |

@@ -1,12 +1,21 @@
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
+using LANCommander.Server.Hubs;
 using LANCommander.Server.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace LANCommander.Server.Startup;
 
 public static class Servers
 {
+    public static WebApplicationBuilder AddServerProcessStatusMonitor(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<ServerProcessService>();
+
+        return builder;
+    }
+    
     public static async Task StartServerProcessesAsync(this WebApplication app)
     {
         if (DatabaseContext.Provider != DatabaseProvider.Unknown)
@@ -41,6 +50,19 @@ public static class Servers
                     logger.LogError(ex, "An unexpected error occurred while trying to autostart the server {ServerName}", server.Name);
                 }
             }
+        }
+    }
+
+    public class ServerProcessStatusService
+    {
+        public ServerProcessStatusService(
+            ServerProcessService serverProcessService,
+            IHubContext<ServerProcessHub> hubContext)
+        {
+            serverProcessService.OnStatusUpdate += async (sender, args) =>
+            {
+                await hubContext.Clients.All.SendAsync("StatusUpdate", args.Status.ToString());
+            };
         }
     }
 }

@@ -1,7 +1,9 @@
-﻿@inject ServerService ServerService
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@inject ServerService ServerService
 @inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
 @inject INotificationService NotificationService
+@inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
 <Flex Gap="FlexGap.Large" Align="FlexAlign.Center" Wrap="FlexWrap.NoWrap">
@@ -45,8 +47,10 @@
 </Flex>
 
 @code {
+    [CascadingParameter] public Dictionary<Guid, ServerProcessStatus> CurrentServerStatus { get; set; } = new();
     [Parameter] public Guid ServerId { get; set; }
 
+    HubConnection? HubConnection;
     Server Server;
     Timer Timer;
 
@@ -54,54 +58,70 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Server = await ServerService.GetAsync(ServerId);
-
-        ServerProcessService.OnStatusUpdate += OnStatusUpdate;
+        await Connect();
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnParametersSetAsync()
     {
-        if (firstRender)
-        {
-            Timer = new Timer(async (object? stateInfo) =>
-            {
-                Status = ServerProcessService.GetStatus(Server);
-
-                await InvokeAsync(StateHasChanged);
-            }, new AutoResetEvent(false), 2000, 2000);
-        }
+        if (!CurrentServerStatus.ContainsKey(ServerId))
+            Status = ServerProcessStatus.Stopped;
+        else
+            Status = CurrentServerStatus[ServerId];
+        
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
     }
 
-    void OnStatusUpdate(object sender, ServerStatusUpdateEventArgs args)
+    async Task Connect()
     {
-        if (args?.Server?.Id == ServerId)
-        {
-            Status = args.Status;
+        HubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
+            .WithAutomaticReconnect()
+            .Build();
 
-            if (Status == ServerProcessStatus.Error)
+        HubConnection.On<string>("OnConnected", async connectionId =>
+        {
+            await HubConnection.InvokeAsync("GetStatus", ServerId);
+        });
+
+        HubConnection.On<ServerProcessStatus, Guid>("StatusUpdate", (status, serverId) =>
+        {
+            if (ServerId == serverId && Status != status)
             {
-                NotificationService.Error(new NotificationConfig
-                {
-                    Message = $"Error starting server {args.Server.Name}",
-                    Description = args.Exception.Message,
-                });
+                Status = status;
+                InvokeAsync(StateHasChanged);
             }
-        }
+        });
+
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                await Task.Delay(1000);
+
+                if (HubConnection.State == HubConnectionState.Connected)
+                    await HubConnection.SendAsync("UpdateStatusAsync", ServerId.ToString());
+            }
+        });
+
+        await HubConnection.StartAsync();
     }
 
     async Task Start()
     {
-        await ServerProcessService.StartServerAsync(Server.Id);
+        if (HubConnection != null && HubConnection.State == HubConnectionState.Connected)
+            await HubConnection.InvokeAsync("StartServer", ServerId);
     }
 
-    void Stop()
+    async Task Stop()
     {
-        ServerProcessService.StopServerAsync(Server.Id);
+        if (HubConnection != null && HubConnection.State == HubConnectionState.Connected)
+            await HubConnection.InvokeAsync("StopServer", ServerId);
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (Timer != null)
-            await Timer.DisposeAsync();
+        if (HubConnection is not null)
+            await HubConnection.DisposeAsync();
     }
 }

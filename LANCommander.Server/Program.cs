@@ -28,6 +28,7 @@ builder.ConfigureAuthentication(settings);
 builder.AddIdentity(settings);
 builder.AddHangfire();
 builder.AddOpenApi();
+builder.AddServerProcessStatusMonitor();
 builder.AddLANCommanderServices(settings);
 builder.AddDatabase();
 

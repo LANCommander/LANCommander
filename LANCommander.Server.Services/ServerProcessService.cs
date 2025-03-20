@@ -364,16 +364,21 @@ namespace LANCommander.Server.Services
                 OnStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
             }
         }
-
+        
         public ServerProcessStatus GetStatus(Data.Models.Server server)
         {
             if (server == null)
                 return ServerProcessStatus.Stopped;
-            
-            if (Running.ContainsKey(server.Id) && Running[server.Id].IsCancellationRequested)
+
+            return GetStatus(server.Id);
+        }
+
+        public ServerProcessStatus GetStatus(Guid serverId)
+        {
+            if (Running.ContainsKey(serverId) && Running[serverId].IsCancellationRequested)
                 return ServerProcessStatus.Stopping;
             
-            if (Running.ContainsKey(server.Id) && !Running[server.Id].IsCancellationRequested)
+            if (Running.ContainsKey(serverId) && !Running[serverId].IsCancellationRequested)
                 return ServerProcessStatus.Running;
 
             return ServerProcessStatus.Stopped;

@@ -105,7 +105,7 @@ jobs:
           ${{ runner.os }}-server-npm-
 
     - name: Install Webpack
-      run: npm install -g webpack
+      run: npm install -g webpack webpack-cli
 
     # .NET builds
     - name: Publish Updater and Server

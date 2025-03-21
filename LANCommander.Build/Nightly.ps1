@@ -3,8 +3,7 @@
 . ./LANCommander.Build/Include/Build-Launcher.ps1
 
 $Version = Get-LastSemVerTag
-$Version.PreReleaseLabel = "nightly"
-$Version.BuildLabel = Get-Date -Format "yyyyMMddHHmm"
+$Version = [semver]"$($Version.Major).$($Version.Minor).$($Version.Patch)-nightly.$(Get-Date -Format "yyyyMMddHHmm")"
 
 $BuildTargets = 
     @{ Platform = 'Windows'; $Architecture = 'x64';    $Runtime = 'win' },

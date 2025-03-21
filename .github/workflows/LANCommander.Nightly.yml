@@ -98,7 +98,6 @@ jobs:
           - platform: osx
             name: macOS
     needs: [prep]
-    if: needs.prep.outputs.changed == 'true'
     steps:
       - id: build-server
         uses: ./.github/actions/LANCommander.Server

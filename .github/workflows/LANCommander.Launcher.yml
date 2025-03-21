@@ -88,21 +88,29 @@ jobs:
       with:
         node-version: '20'
 
+    - name: Restore UI npm packages
+      uses: actions/cache/restore@v4
+      with:
+        path: ./LANCommander.UI/node_modules
+        key: LANCommander.UI-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          LANCommander.UI-npm-
+
     - name: Restore UI build
       uses: actions/cache/restore@v4
       with:
-        path: ${{ github.workspace }}/LANCommander.UI/wwwroot
-        key: ${{ runner.os }}-ui-${{ hashFiles('**/package-lock.json') }}
+        path: ./LANCommander.UI/wwwroot
+        key: LANCommander.UI-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          ${{ runner.os }}-ui-
+          LANCommander.UI-
       
     - name: Restore Launcher npm packages
       uses: actions/cache/restore@v4
       with:
-        path: ${{ github.workspace }}/LANCommander.Launcher/node_modules
-        key: ${{ runner.os }}-launcher-npm-${{ hashFiles('**/package-lock.json') }}
+        path: ./LANCommander.Launcher/node_modules
+        key: LANCommander.Launcher-npm-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          ${{ runner.os }}-launcher-npm-
+          LANCommander.Launcher-npm-
 
     - name: Install Webpack
       run: npm install -g webpack webpack-cli

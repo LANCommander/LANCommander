@@ -25,10 +25,6 @@ jobs:
   # --------------------------------------------------------------------------
   prep:
     runs-on: ubuntu-latest
-    outputs:
-      version_semver: ${{ steps.set_version.outputs.VERSION_SEMVER }}
-      version_tag: ${{ steps.set_version.outputs.VERSION_TAG }}
-      changed: ${{ steps.check_diff.outputs.changed }}
     steps:
       - name: Check out code
         uses: actions/checkout@v4
@@ -45,37 +41,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Restore dependencies
-        run: dotnet restore --locked-mode
-
-      - name: Determine last semver and build nightly version
-        id: set_version
-        run: |
-          git fetch --tags
-          LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
-
-          if [ -z "$LAST_SEMVER_TAG" ]; then
-            echo "VERSION_SEMVER=0.0.0" >> $GITHUB_ENV
-          else
-            CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
-            DATE=$(date +'%Y%m%d')
-            FINAL_VERSION="${CLEAN_TAG}-nightly.${DATE}"
-
-            echo "VERSION_SEMVER=$CLEAN_TAG" >> $GITHUB_ENV
-            echo "VERSION_TAG=$FINAL_VERSION" >> $GITHUB_ENV
-          fi
-
-      - name: Check if commits since last nightly tag
-        id: check_diff
-        run: |
-          LAST_NIGHTLY_TAG="$(git tag --list --sort=-v:refname | grep -E 'nightly\.20[0-9]+' | head -n1 || true)"
-          
-          if [ -z "$LAST_NIGHTLY_TAG" ]; then
-            echo "changed=true" >> $GITHUB_ENV
-          else
-            COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline 2>/dev/null || true)
-            [ -z "$COMMITS" ] && echo "changed=false" >> $GITHUB_ENV || echo "changed=true" >> $GITHUB_ENV
-          fi
+      - name: Run Build Script
+        shell: pwsh
+        run: ./LANCommander.Build/Nightly.ps1
+        
 
   # --------------------------------------------------------------------------
   # 2) BUILD JOBS (Server/Launcher) - only run if changes == 'true'

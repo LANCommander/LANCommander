@@ -1,0 +1,23 @@
+<Flex Gap="FlexGap.Middle" Align="FlexAlign.Center">
+    @ChildContent
+
+    <Popover OverlayStyle="max-width: 300px;">
+        <ContentTemplate>
+            @Description
+        </ContentTemplate>
+        <ChildContent>
+            <Button
+                Size="Size"
+                Type="ButtonType.Link"
+                Icon="@IconType.Outline.QuestionCircle" />
+        </ChildContent>
+    </Popover>
+</Flex>
+
+
+
+@code {
+    [Parameter] public ButtonSize Size { get; set; } = ButtonSize.Small;
+    [Parameter] public RenderFragment Description { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; }
+}

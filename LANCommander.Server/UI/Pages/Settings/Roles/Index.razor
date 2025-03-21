@@ -4,18 +4,7 @@
 @inject ILogger<Index> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Roles">
-    <PageHeaderExtra>
-        <Space Direction="SpaceDirection.Horizontal">
-            <SpaceItem>
-                <Button Type="@ButtonType.Primary" OnClick="Save">Save</Button>
-            </SpaceItem>
-             <SpaceItem>
-                 <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
-             </SpaceItem>
-         </Space>
-     </PageHeaderExtra>
- </PageHeader>
+<PageHeader Title="Roles" />
 
 <DataTable
     TItem="Role"
@@ -46,6 +35,21 @@
             }
         </DataActions>
     </Columns>
+    <RightToolbar>
+        <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="FlexGap.Small">
+            <span style="white-space: nowrap;">Default Role:</span>
+            <Select
+                TItem="Role"
+                TItemValue="Guid"
+                DataSource="Roles"
+                OnSelectedItemChanged="DefaultRoleChanged"
+                LabelName="Name"
+                ValueName="Id"
+                DefaultActiveFirstOption="false"
+                @bind-Value="Settings.Roles.DefaultRoleId" Disabled="Loading"></Select>
+            <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
+        </Flex>
+    </RightToolbar>
 </DataTable>
 
 <Modal Title="Add a Role" @bind-Visible="AddRoleDialogVisible" OnOk="AddRole" OnCancel="() => AddRoleDialogVisible = false">
@@ -61,10 +65,18 @@
     bool Loading = true;
     bool AddRoleDialogVisible = false;
 
+    IEnumerable<Role> Roles { get; set; } = new List<Role>();
     Role NewRole { get; set; } = new();
 
     DataTable<Role> Table;
     int Total;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Roles = await RoleService.AsNoTracking().SortBy(r => r.Name).GetAsync();
+
+        Loading = false;
+    }
 
     async Task DeleteRole(Role role)
     {
@@ -118,17 +130,17 @@
         }
     }
 
-    void Save()
+    async Task DefaultRoleChanged(Role defaultRole)
     {
-        try
+        if (!Loading && defaultRole.Id != Settings.Roles.DefaultRoleId)
         {
+            Settings = SettingService.GetSettings();
+
+            Settings.Roles.DefaultRoleId = defaultRole.Id;
+        
             SettingService.SaveSettings(Settings);
-            MessageService.Success("Settings saved!");
-        }
-        catch (Exception ex)
-        {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+
+            MessageService.Success($"Default role updated!");
         }
     }
 }

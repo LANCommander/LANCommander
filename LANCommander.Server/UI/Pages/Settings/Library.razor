@@ -8,7 +8,25 @@
 <PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Enable User Libraries">
-            <Switch @bind-Checked="Settings.Library.EnableUserLibraries" />
+            <HelpButton>
+                <Description>
+                    Allows users to manage the games they see in their library. This also enables the Depot!
+                </Description>
+                <ChildContent>
+                    <Switch @bind-Checked="Settings.Library.EnableUserLibraries"/>
+                </ChildContent>
+            </HelpButton>
+        </FormItem>
+        
+        <FormItem Label="Restrict Games By Collection">
+            <HelpButton>
+                <Description>
+                    Restricts the games that users can see in their library and the depot based on their role. Visit Settings / Roles to assign collections to roles.
+                </Description>
+                <ChildContent>
+                    <Switch @bind-Checked="Settings.Roles.RestrictGamesByCollection"/>
+                </ChildContent>
+            </HelpButton>
         </FormItem>
 
         <FormItem>

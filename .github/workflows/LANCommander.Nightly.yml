@@ -99,6 +99,10 @@ jobs:
             name: macOS
     needs: [prep]
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - id: build-server
         uses: ./.github/actions/LANCommander.Server
         with:

@@ -1,6 +1,6 @@
-. ./LANCommander.Build/Includes/Get-LastSemVerTag.ps1
-. ./LANCommander.Build/Includes/Build-Server.ps1
-. ./LANCommander.Build/Includes/Build-Launcher.ps1
+. ./Includes/Get-LastSemVerTag.ps1
+. ./Includes/Build-Server.ps1
+. ./Includes/Build-Launcher.ps1
 
 $Version = Get-LastSemVerTag
 $Version.PreReleaseLabel = "nightly"

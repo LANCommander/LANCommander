@@ -9,17 +9,21 @@ function Build-Launcher {
         [String] $Configuration
     )
 
+    $AssemblyVersion = "$($Version.Major).$($Version.Minor).$($Version.Patch)"
+    $TagVersion = "v$($Version)"
+    $RuntimeIdentifier = "$Runtime-$Architecture"
+
     dotnet restore
 
     npm install --prefix ./LANCommander.UI
     npm install --prefix ./LANCommander.Launcher
 
-    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $Runtime -p:Version="$Version" -p:AssemblyVersion="$Version"
-    dotnet publish ./LANCommander.Launcher/LANCommander.Launcher.csproj -c $Configuration --self-contained --runtime $Runtime -p:Version="$Version" -p:AssemblyVersion="$Version"
-    dotnet publish ./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj -c $Configuration --self-contained --runtime $Runtime -p:Version="$Version" -p:AssemblyVersion="$Version"
+    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.Launcher/LANCommander.Launcher.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
 
-    Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/$Configuration/net9.0/$Runtime/publish/* LANCommander.Launcher/bin/$Configuration/net9.0/$Runtime/publish/
-    Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/$Configuration/net9.0/$Runtime/publish/* LANCommander.Launcher/bin/$Configuration/net9.0/$Runtime/publish/
+    Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/* LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/
+    Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/* LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/
 
     $PathsToRemove = @(
         'wwwroot/_content/BootstrapBlazor.PdfReader/compat',
@@ -39,14 +43,14 @@ function Build-Launcher {
         'Libraries/locales'
     )
       
-    $BasePath = "LANCommander.Launcher/bin/$Configuration/net9.0/$Runtime/publish"
+    $BasePath = "LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish"
 
     foreach ($path in $PathsToRemove) {
         Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
     }
 
     $Compress = @{
-        Path = "LANCommander.Launcher/bin/$Configuration/net9.0/$Runtime/publish/*"
+        Path = "LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/*"
         DestinationPath = "LANCommander.Launcher-$Platform-$Architecture-$Version.zip"
         CompressionLevel = "Fastest"
     }

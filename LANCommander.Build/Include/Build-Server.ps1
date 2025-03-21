@@ -11,16 +11,17 @@ function Build-Server {
 
     $AssemblyVersion = "$($Version.Major).$($Version.Minor).$($Version.Patch)"
     $TagVersion = "v$($Version)"
+    $RuntimeIdentifier = "$Runtime-$Architecture"
 
     dotnet restore
 
     npm install --prefix ./LANCommander.UI
     npm install --prefix ./LANCommander.Server
 
-    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $Runtime -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
-    dotnet publish ./LANCommander.Server/LANCommander.Server.csproj -c $Configuration --self-contained --runtime $Runtime -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.Server/LANCommander.Server.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
 
-    Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/$Configuration/net9.0/$Runtime/publish/* LANCommander.Server/bin/$Configuration/net9.0/$Runtime/publish/
+    Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/* LANCommander.Server/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/
 
     $PathsToRemove = @(
         'wwwroot/_content/BootstrapBlazor.PdfReader/compat',
@@ -40,14 +41,14 @@ function Build-Server {
         'Libraries/locales'
     )
       
-    $BasePath = "LANCommander.Server/bin/$Configuration/net9.0/$Runtime/publish"
+    $BasePath = "LANCommander.Server/bin/$Configuration/net9.0/$RuntimeIdentifier/publish"
 
     foreach ($path in $PathsToRemove) {
         Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
     }
 
     $Compress = @{
-        Path = "LANCommander.Server/bin/$Configuration/net9.0/$Runtime/publish/*"
+        Path = "LANCommander.Server/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/*"
         DestinationPath = "LANCommander.Server-$Platform-$Architecture-$TagVersion.zip"
         CompressionLevel = "Fastest"
     }

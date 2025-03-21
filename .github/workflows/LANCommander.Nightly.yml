@@ -34,65 +34,35 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          # Ensure we get all tags so we can find the latest
           fetch-depth: 0
 
       - name: Determine last semver and build nightly version
         id: set_version
-        shell: bash
         run: |
-          # Fetch all tags
           git fetch --tags
-
-          # Grab the last semver-ish tag (e.g., "v1.2.3", "v1.2.3-debug", or "1.2.3-nightly")
           LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
 
           if [ -z "$LAST_SEMVER_TAG" ]; then
-            echo "No semver tag found; defaulting to 0.0.0"
-            LAST_SEMVER_TAG="0.0.0"
+            echo "VERSION_SEMVER=0.0.0" >> $GITHUB_ENV
+          else
+            CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
+            DATE=$(date +'%Y%m%d')
+            FINAL_VERSION="${CLEAN_TAG}-nightly.${DATE}"
+
+            echo "VERSION_SEMVER=$CLEAN_TAG" >> $GITHUB_ENV
+            echo "VERSION_TAG=$FINAL_VERSION" >> $GITHUB_ENV
           fi
-
-          # Remove prefix 'v' and any suffix like "-debug", "-nightly", etc.
-          CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
-
-          # Build a nightly version string, e.g., "1.2.3-nightly.20250127"
-          DATE=$(date +'%Y%m%d')
-          FINAL_VERSION="${CLEAN_TAG}-nightly.${DATE}"
-
-          echo "Last semver tag: $LAST_SEMVER_TAG"
-          echo "Clean semver tag: $CLEAN_TAG"
-          echo "Nightly version: $FINAL_VERSION"
-
-          # Set output variables for GitHub Actions
-          echo "VERSION_SEMVER=$CLEAN_TAG" >> $GITHUB_ENV
-          echo "VERSION_TAG=$FINAL_VERSION" >> $GITHUB_ENV
-          echo "::set-output name=VERSION_SEMVER::$CLEAN_TAG"
-          echo "::set-output name=VERSION_TAG::$FINAL_VERSION"
 
       - name: Check if commits since last nightly tag
         id: check_diff
-        shell: bash
         run: |
-          # Fetch the last nightly tag
           LAST_NIGHTLY_TAG="$(git tag --list --sort=-v:refname | grep -E 'nightly\.20[0-9]+' | head -n1 || true)"
-
+          
           if [ -z "$LAST_NIGHTLY_TAG" ]; then
-            echo "No previous nightly tag found. Marking as changed."
-            echo "::set-output name=changed::true"
-            exit 0
-          fi
-
-          # Check for commits since that tag
-          set +e  # Disable exit on error temporarily
-          COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline 2>/dev/null || true)
-          set -e  # Re-enable exit on error
-
-          if [ -z "$COMMITS" ]; then
-            echo "No commits since last nightly tag: $LAST_NIGHTLY_TAG"
-            echo "::set-output name=changed::false"
+            echo "changed=true" >> $GITHUB_ENV
           else
-            echo "Found commits since $LAST_NIGHTLY_TAG"
-            echo "::set-output name=changed::true"
+            COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline 2>/dev/null || true)
+            [ -z "$COMMITS" ] && echo "changed=false" >> $GITHUB_ENV || echo "changed=true" >> $GITHUB_ENV
           fi
 
   # --------------------------------------------------------------------------
@@ -110,9 +80,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platform: ['win', 'linux', 'osx']
-        architecture: ['x64', 'arm64']
-        app: ['Server', 'Launcher']
+        platform: [win, linux, osx]
+        architecture: [x64, arm64]
+        app: [Server, Launcher]
         include:
           - platform: win
             name: Windows
@@ -126,26 +96,14 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          # Ensure we get all tags so we can find the latest
           fetch-depth: 0
-      - uses: './.github/workflows/LANCommander.Server.yml'
-        name: Server
+      - name: Build ${{ matrix.app }}
+        uses: ./.github/workflows/LANCommander.${{ matrix.app }}.yml
         with:
           build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
           version_semver: ${{ needs.prep.outputs.version_semver }}
           version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: ${{ matrix.platform }}-${{matrix.architecture}}
-          build_arch: ${{ matrix.architecture }}
-          build_platform: ${{ matrix.name }}
-          build_configuration: Debug
-
-      - uses: './.github/workflows/LANCommander.Launcher.yml'
-        name: Launcher
-        with:
-          build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
-          version_semver: ${{ needs.prep.outputs.version_semver }}
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: ${{ matrix.platform }}-${{matrix.architecture}}
+          build_runtime: ${{ matrix.platform }}-${{ matrix.architecture }}
           build_arch: ${{ matrix.architecture }}
           build_platform: ${{ matrix.name }}
           build_configuration: Debug
@@ -154,10 +112,7 @@ jobs:
   # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:nightly
   # --------------------------------------------------------------------------
   finalize_nightly:
-    needs: 
-      - prep
-      - cache
-      - build
+    needs: [prep, cache, build]
     if: needs.prep.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:

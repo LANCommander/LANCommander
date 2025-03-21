@@ -1,0 +1,84 @@
+name: 'Build LANCommander.Launcher'
+inputs:
+  version_semver:
+    description: "Semantic Version"
+    required: true
+    type: string
+  version_tag:
+    description: 'Version Tag'
+    required: true
+    type: string
+  build_dotnet_version:
+    description: 'Build .NET Version'
+    required: true
+    type: string
+  build_runtime:
+    description: 'Build Runtime'
+    required: false
+    type: string
+    default: 'win-x64'
+  build_arch:
+    description: 'Build Architecture'
+    required: false
+    type: string
+    default: 'x64'
+  build_platform:
+    description: 'Build Platform'
+    required: false
+    type: string
+    default: 'Windows'
+  build_configuration:
+    description: 'Build Configuration (Debug/Release)'
+    required: false
+    type: string
+    default: 'Release'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Publish Components
+      run: |
+        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+        dotnet publish "./LANCommander.Launcher/LANCommander.Launcher.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+        dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
+
+    - name: Bundle and Clean
+      run: |
+        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
+        Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
+        
+        # Remove unnecessary files in a single operation
+        $PathsToRemove = @(
+          'wwwroot/_content/BootstrapBlazor.PdfReader/compat',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/2.*',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map',
+          'wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map',
+          'wwwroot/_content/AntDesign/less',
+          'wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps',
+          'wwwroot/Identity/lib/bootstrap',
+          'LANCommander.ico',
+          'LANCommanderDark.ico',
+          'package-lock.json',
+          'package.json',
+          '*.pdb',
+          'hostfxr.dll.bak',
+          'Libraries/locales'
+        )
+        
+        $BasePath = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish"
+        foreach ($path in $PathsToRemove) {
+          Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
+        }
+
+    - name: Compress Build Output
+      run: |
+        $compress = @{
+          Path = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"
+          DestinationPath = "LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip"
+          CompressionLevel = "Fastest"
+        }
+        Compress-Archive @compress
+
+    - name: Output artifact path
+      run: echo "artifact=LANCommander.Launcher-${{ inputs.build_platform }}-${{ inputs.build_arch }}-v${{ inputs.version_tag }}.zip >> $GITHUB_OUTPUT"

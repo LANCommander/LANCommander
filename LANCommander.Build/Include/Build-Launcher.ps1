@@ -2,7 +2,7 @@ function Build-Launcher {
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory=$true)]
-        [String] $Version,
+        [SemVer] $Version,
         [String] $Runtime,
         [String] $Architecture,
         [String] $Platform,

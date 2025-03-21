@@ -110,13 +110,23 @@
     async Task Start()
     {
         if (HubConnection != null && HubConnection.State == HubConnectionState.Connected)
+        {
+            Status = ServerProcessStatus.Starting;
+            await Task.Yield();
+            
             await HubConnection.InvokeAsync("StartServer", ServerId);
+        }
     }
 
     async Task Stop()
     {
         if (HubConnection != null && HubConnection.State == HubConnectionState.Connected)
+        {
+            Status = ServerProcessStatus.Stopping;
+            await Task.Yield();
+            
             await HubConnection.InvokeAsync("StopServer", ServerId);
+        }
     }
 
     public async ValueTask DisposeAsync()

@@ -44,12 +44,12 @@ namespace LANCommander.Server.Hubs
 
         public async Task StartServer(Guid serverId)
         {
-            _serverProcessService.StartServerAsync(serverId);
+            Task.Run(() => _serverProcessService.StartServerAsync(serverId));
         }
 
         public async Task StopServer(Guid serverId)
         {
-            _serverProcessService.StopServerAsync(serverId);
+            Task.Run(() => _serverProcessService.StopServerAsync(serverId));
         }
 
         public void Log(Guid serverId, string message)

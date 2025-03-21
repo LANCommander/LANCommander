@@ -55,7 +55,7 @@
         </BoundDataColumn>
         <BoundDataColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions>
-            <ServerControl ServerId="context.Id"/>
+            <ServerControl ServerId="context.Id" />
 
             <a href="/Servers/@(context.Id)" class="ant-btn ant-btn-default">Edit</a>
 

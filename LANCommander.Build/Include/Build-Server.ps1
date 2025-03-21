@@ -10,7 +10,6 @@ function Build-Server {
     )
 
     $AssemblyVersion = "$($Version.Major).$($Version.Minor).$($Version.Patch)"
-    $TagVersion = "v$($Version)"
     $RuntimeIdentifier = "$Runtime-$Architecture"
 
     dotnet restore
@@ -18,8 +17,8 @@ function Build-Server {
     npm install --prefix ./LANCommander.UI
     npm install --prefix ./LANCommander.Server
 
-    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
-    dotnet publish ./LANCommander.Server/LANCommander.Server.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.Server/LANCommander.Server.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
 
     Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/* LANCommander.Server/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/
 
@@ -49,7 +48,7 @@ function Build-Server {
 
     $Compress = @{
         Path = "LANCommander.Server/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/*"
-        DestinationPath = "LANCommander.Server-$Platform-$Architecture-$TagVersion.zip"
+        DestinationPath = "LANCommander.Server-$Platform-$Architecture-v$Version.zip"
         CompressionLevel = "Fastest"
     }
 

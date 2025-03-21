@@ -10,7 +10,6 @@ function Build-Launcher {
     )
 
     $AssemblyVersion = "$($Version.Major).$($Version.Minor).$($Version.Patch)"
-    $TagVersion = "v$($Version)"
     $RuntimeIdentifier = "$Runtime-$Architecture"
 
     dotnet restore
@@ -18,9 +17,9 @@ function Build-Launcher {
     npm install --prefix ./LANCommander.UI
     npm install --prefix ./LANCommander.Launcher
 
-    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
-    dotnet publish ./LANCommander.Launcher/LANCommander.Launcher.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
-    dotnet publish ./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$TagVersion" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.Launcher/LANCommander.Launcher.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
+    dotnet publish ./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
 
     Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/* LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/
     Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/* LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/
@@ -51,7 +50,7 @@ function Build-Launcher {
 
     $Compress = @{
         Path = "LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/*"
-        DestinationPath = "LANCommander.Launcher-$Platform-$Architecture-$Version.zip"
+        DestinationPath = "LANCommander.Launcher-$Platform-$Architecture-v$Version.zip"
         CompressionLevel = "Fastest"
     }
 

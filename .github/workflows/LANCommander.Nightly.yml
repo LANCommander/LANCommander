@@ -123,6 +123,11 @@ jobs:
     needs: [prep, cache]
     if: needs.prep.outputs.changed == 'true'
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          # Ensure we get all tags so we can find the latest
+          fetch-depth: 0
       - uses: './.github/workflows/LANCommander.Server.yml'
         name: Server
         with:
@@ -133,7 +138,7 @@ jobs:
           build_arch: ${{ matrix.architecture }}
           build_platform: ${{ matrix.name }}
           build_configuration: Debug
-          
+
       - uses: './.github/workflows/LANCommander.Launcher.yml'
         name: Launcher
         with:

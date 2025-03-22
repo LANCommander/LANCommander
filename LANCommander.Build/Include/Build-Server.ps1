@@ -43,7 +43,7 @@ function Build-Server {
     $BasePath = "LANCommander.Server/bin/$Configuration/net9.0/$RuntimeIdentifier/publish"
 
     foreach ($path in $PathsToRemove) {
-        Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue "$BasePath/$path"
     }
 
     $Compress = @{

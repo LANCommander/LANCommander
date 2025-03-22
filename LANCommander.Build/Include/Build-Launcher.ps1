@@ -45,7 +45,7 @@ function Build-Launcher {
     $BasePath = "LANCommander.Launcher/bin/$Configuration/net9.0/$RuntimeIdentifier/publish"
 
     foreach ($path in $PathsToRemove) {
-        Remove-Item -Recurse -Force -ErrorAction Continue "$BasePath/$path"
+        Remove-Item -Force -Recurse -ErrorAction SilentlyContinue "$BasePath/$path"
     }
 
     $Compress = @{

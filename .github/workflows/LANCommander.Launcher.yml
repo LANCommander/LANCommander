@@ -93,6 +93,7 @@ jobs:
         dotnet publish "./LANCommander.Launcher.CLI/LANCommander.Launcher.CLI.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
 
     - name: Bundle and Clean
+      shell: pwsh
       run: |
         Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
         Copy-Item -Force -Recurse -Verbose LANCommander.Launcher.CLI/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
@@ -122,6 +123,7 @@ jobs:
         }
 
     - name: Compress Build Output
+      shell: pwsh
       run: |
         $compress = @{
           Path = "LANCommander.Launcher/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/*"

@@ -25,90 +25,262 @@ jobs:
   # --------------------------------------------------------------------------
   prep:
     runs-on: ubuntu-latest
+    outputs:
+      version_semver: ${{ steps.set_version.outputs.VERSION_SEMVER }}
+      version_tag: ${{ steps.set_version.outputs.VERSION_TAG }}
+      changed: ${{ steps.check_diff.outputs.changed }}
+      build_dotnet_version: 9.0.102
     steps:
       - name: Check out code
         uses: actions/checkout@v4
         with:
+          # Ensure we get all tags so we can find the latest
           fetch-depth: 0
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 9.0.102
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3.8.1
-        with:
-          node-version: '20'
-
-      - name: Run Build Script
-        shell: pwsh
+      - name: Determine last semver and build nightly version
+        id: set_version
+        shell: bash
         run: |
-          ./LANCommander.Build/Nightly.ps1
-        
+          # Fetch all tags
+          git fetch --tags
+
+          # Grab the last semver-ish tag (e.g., "v1.2.3", "v1.2.3-debug", or "1.2.3-nightly")
+          LAST_SEMVER_TAG="$(git tag --list --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+
+          if [ -z "$LAST_SEMVER_TAG" ]; then
+            echo "No semver tag found; defaulting to 0.0.0"
+            LAST_SEMVER_TAG="0.0.0"
+          fi
+
+          # Remove prefix 'v' and any suffix like "-debug", "-nightly", etc.
+          CLEAN_TAG="$(echo "${LAST_SEMVER_TAG#v}" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+')"
+
+          # Build a nightly version string, e.g., "1.2.3-nightly.20250127"
+          DATE=$(date +'%Y%m%d')
+          FINAL_VERSION="${CLEAN_TAG}-nightly.${DATE}"
+
+          echo "Last semver tag: $LAST_SEMVER_TAG"
+          echo "Clean semver tag: $CLEAN_TAG"
+          echo "Nightly version: $FINAL_VERSION"
+
+          # Set output variables for GitHub Actions
+          echo "VERSION_SEMVER=$CLEAN_TAG" >> $GITHUB_ENV
+          echo "VERSION_TAG=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "::set-output name=VERSION_SEMVER::$CLEAN_TAG"
+          echo "::set-output name=VERSION_TAG::$FINAL_VERSION"
+
+      - name: Check if commits since last nightly tag
+        id: check_diff
+        shell: bash
+        run: |
+          # Fetch the last nightly tag
+          LAST_NIGHTLY_TAG="$(git tag --list --sort=-v:refname | grep -E 'nightly\.20[0-9]+' | head -n1 || true)"
+
+          if [ -z "$LAST_NIGHTLY_TAG" ]; then
+            echo "No previous nightly tag found. Marking as changed."
+            echo "::set-output name=changed::true"
+            exit 0
+          fi
+
+          # Check for commits since that tag
+          set +e  # Disable exit on error temporarily
+          COMMITS=$(git log "${LAST_NIGHTLY_TAG}"..HEAD --oneline 2>/dev/null || true)
+          set -e  # Re-enable exit on error
+
+          if [ -z "$COMMITS" ]; then
+            echo "No commits since last nightly tag: $LAST_NIGHTLY_TAG"
+            echo "::set-output name=changed::false"
+          else
+            echo "Found commits since $LAST_NIGHTLY_TAG"
+            echo "::set-output name=changed::true"
+          fi
 
   # --------------------------------------------------------------------------
   # 2) BUILD JOBS (Server/Launcher) - only run if changes == 'true'
   #    Each calls your local workflow YAML with correct indentation
   # --------------------------------------------------------------------------
+  cache:
+    needs: prep
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Cache.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
 
-  build:
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    strategy:
-      matrix:
-        platform: [win, linux, osx]
-        architecture: [x64, arm64]
-        include:
-          - platform: win
-            name: Windows
-          - platform: linux
-            name: Linux
-          - platform: osx
-            name: macOS
-    needs: [prep]
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - id: build-server
-        uses: ./.github/actions/LANCommander.Server
-        with:
-          build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
-          version_semver: ${{ needs.prep.outputs.version_semver }}
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: ${{ matrix.platform }}-${{ matrix.architecture }}
-          build_arch: ${{ matrix.architecture }}
-          build_platform: ${{ matrix.name }}
-          build_configuration: Debug
-      - name: Upload Server Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ steps.build-server.outputs.artifact }}
-          name: LANCommander.Server-${{ matrix.name }}-${{ matrix.architecture }}-v${{ needs.prep.outputs.version_tag }}.zip
-      - id: build-launcher
-        uses: ./.github/actions/LANCommander.Launcher
-        with:
-          build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
-          version_semver: ${{ needs.prep.outputs.version_semver }}
-          version_tag: ${{ needs.prep.outputs.version_tag }}
-          build_runtime: ${{ matrix.platform }}-${{ matrix.architecture }}
-          build_arch: ${{ matrix.architecture }}
-          build_platform: ${{ matrix.name }}
-          build_configuration: Debug
-      - name: Upload Launcher Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ steps.build-launcher.outputs.artifact }}
-          name: LANCommander.Launcher-${{ matrix.name }}-${{ matrix.architecture }}-v${{ needs.prep.outputs.version_tag }}.zip
+  build_server_linux_arm64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
+      build_configuration: Debug
+
+  build_server_linux_x64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
+      build_configuration: Debug
+
+  build_server_osx_arm64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
+      build_configuration: Debug
+
+  build_server_osx_x64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
+      build_configuration: Debug
+
+  build_server_win_arm64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
+      build_configuration: Debug
+
+  build_server_win_x64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Server.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
+      build_configuration: Debug
+
+  build_launcher_linux_arm64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-arm64
+      build_arch: arm64
+      build_platform: Linux
+      build_configuration: Debug
+
+  build_launcher_linux_x64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: linux-x64
+      build_arch: x64
+      build_platform: Linux
+      build_configuration: Debug
+
+  build_launcher_osx_arm64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-arm64
+      build_arch: arm64
+      build_platform: macOS
+      build_configuration: Debug
+
+  build_launcher_osx_x64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: osx-x64
+      build_arch: x64
+      build_platform: macOS
+      build_configuration: Debug
+
+  build_launcher_win_arm64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-arm64
+      build_arch: arm64
+      build_platform: Windows
+      build_configuration: Debug
+
+  build_launcher_win_x64:
+    needs: [prep, cache]
+    if: needs.prep.outputs.changed == 'true'
+    uses: ./.github/workflows/LANCommander.Launcher.yml
+    with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
+      version_semver: ${{ needs.prep.outputs.version_semver }}
+      version_tag: ${{ needs.prep.outputs.version_tag }}
+      build_runtime: win-x64
+      build_arch: x64
+      build_platform: Windows
+      build_configuration: Debug
 
   # --------------------------------------------------------------------------
   # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:nightly
   # --------------------------------------------------------------------------
   finalize_nightly:
-    needs: [prep, build]
+    needs: 
+      - prep
+      - cache
+      - build_server_linux_arm64
+      - build_server_linux_x64
+      - build_server_osx_arm64
+      - build_server_osx_x64
+      - build_server_win_arm64
+      - build_server_win_x64
+      - build_launcher_linux_arm64
+      - build_launcher_linux_x64
+      - build_launcher_osx_arm64
+      - build_launcher_osx_x64
+      - build_launcher_win_arm64
+      - build_launcher_win_x64
     if: needs.prep.outputs.changed == 'true'
     runs-on: ubuntu-latest
     steps:

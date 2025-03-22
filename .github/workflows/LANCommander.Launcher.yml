@@ -72,7 +72,7 @@ jobs:
         dotnet-version: ${{ inputs.build_dotnet_version }}
 
     - name: NuGet Cache
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v3
       with:
         path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-dotnet-${{ hashFiles('**/*.csproj') }}
@@ -88,32 +88,21 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Restore UI npm packages
-      uses: actions/cache/restore@v4
-      with:
-        path: ./LANCommander.UI/node_modules
-        key: LANCommander.UI-npm-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          LANCommander.UI-npm-
-
     - name: Restore UI build
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v3
       with:
-        path: ./LANCommander.UI/wwwroot
-        key: LANCommander.UI-${{ hashFiles('**/package-lock.json') }}
+        path: ${{ github.workspace }}/LANCommander.UI/wwwroot
+        key: ${{ runner.os }}-ui-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          LANCommander.UI-
+          ${{ runner.os }}-ui-
       
     - name: Restore Launcher npm packages
-      uses: actions/cache/restore@v4
+      uses: actions/cache@v3
       with:
-        path: ./LANCommander.Launcher/node_modules
-        key: LANCommander.Launcher-npm-${{ hashFiles('**/package-lock.json') }}
+        path: ${{ github.workspace }}/LANCommander.Launcher/node_modules
+        key: ${{ runner.os }}-launcher-npm-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
-          LANCommander.Launcher-npm-
-
-    - name: Install Webpack
-      run: npm install -g webpack webpack-cli
+          ${{ runner.os }}-launcher-npm-
 
     # .NET builds
     - name: Publish Components

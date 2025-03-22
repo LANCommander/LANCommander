@@ -10,8 +10,8 @@ $BuildTargets =
     @{ Platform = 'Windows'; Architecture = 'arm64'; Runtime = 'win' },
     @{ Platform = 'Linux';   Architecture = 'x64';   Runtime = 'linux' },
     @{ Platform = 'Linux'; Architecture = 'arm64'; Runtime = 'linux' },
-    @{ Platform = 'Windows'; Architecture = 'x64';   Runtime = 'osx' },
-    @{ Platform = 'Windows'; Architecture = 'arm64'; Runtime = 'osx' }
+    @{ Platform = 'macOS'; Architecture = 'x64';   Runtime = 'osx' },
+    @{ Platform = 'macOS'; Architecture = 'arm64'; Runtime = 'osx' }
 
 Write-Host "Building Targets"
 

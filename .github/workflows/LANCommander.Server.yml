@@ -45,7 +45,7 @@ env:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -71,14 +71,6 @@ jobs:
       with:
         dotnet-version: ${{ inputs.build_dotnet_version }}
 
-    - name: NuGet Cache
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{ env.NUGET_PACKAGES }}
-        key: ${{ runner.os }}-dotnet-${{ hashFiles('**/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-dotnet-
-
     - name: Restore dependencies
       run: dotnet restore --locked-mode
 
@@ -88,21 +80,10 @@ jobs:
       with:
         node-version: '20'
 
-    - name: Restore UI build
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{ github.workspace }}/LANCommander.UI/wwwroot
-        key: ${{ runner.os }}-ui-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-ui-
-      
-    - name: Restore Server npm packages
-      uses: actions/cache/restore@v4
-      with:
-        path: ${{ github.workspace }}/LANCommander.Server/node_modules
-        key: ${{ runner.os }}-server-npm-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-server-npm-
+    - name: Install Node Packages
+      run: |
+        npm install --prefix ./LANCommander.UI
+        npm install --prefix ./LANCommander.Server
 
     # .NET builds
     - name: Publish Updater and Server

@@ -99,13 +99,6 @@ jobs:
   # 2) BUILD JOBS (Server/Launcher) - only run if changes == 'true'
   #    Each calls your local workflow YAML with correct indentation
   # --------------------------------------------------------------------------
-  cache:
-    needs: prep
-    if: needs.prep.outputs.changed == 'true'
-    uses: ./.github/workflows/LANCommander.Cache.yml
-    with:
-      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
-
   build_server_linux_arm64:
     needs: [prep]
     if: needs.prep.outputs.changed == 'true'
@@ -268,7 +261,6 @@ jobs:
   finalize_nightly:
     needs: 
       - prep
-      - cache
       - build_server_linux_arm64
       - build_server_linux_x64
       - build_server_osx_arm64

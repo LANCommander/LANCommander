@@ -8,21 +8,8 @@
 
   <Target Name="CompileFrontendResources" BeforeTargets="Compile">
     <Message Text="Compiling frontend" Importance="high" />
-    <Exec Command="npm install;npm run package" />
+    <Exec Command="npm run package" />
   </Target>
-
-  <ItemGroup>
-    <Content Include="webpack.config.js" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Components\ScriptLoader.razor" />
-    <None Include="Components\StylesheetLoader.razor" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
-  </ItemGroup>
 	
   <ItemGroup>
     <SupportedPlatform Include="browser" />

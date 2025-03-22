@@ -76,18 +76,4 @@
 		<Message Text="Compiling global SCSS files" Importance="high" />
 		<Exec Command="npm run package" />
 	</Target>
-
-	<ItemGroup>
-		<ComponentScssFiles Include="**/*/*.scss" Exclude="node_modules/**;wwwroot/**;Styles/**" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Include="package.json">
-	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-	  </None>
-	</ItemGroup>
 </Project>

@@ -51,22 +51,9 @@
 		<Exec Command="npm run package" />
 	</Target>
 
-	<ItemGroup>
-		<ComponentScssFiles Include="**/*/*.scss" Exclude="node_modules/**;wwwroot/**;Styles/**" />
-	</ItemGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="LANCommander.Server.Tests" />
-  </ItemGroup>
-
-	<ItemGroup>
-	  <ComponentScssFiles Remove="node_modules\**" />
-	  <TypeScriptCompile Remove="node_modules\**" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
-	</ItemGroup>
+    <ItemGroup>
+      <InternalsVisibleTo Include="LANCommander.Server.Tests" />
+    </ItemGroup>
 
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">
 	    <DefineConstants>WINDOWS</DefineConstants>
@@ -273,12 +260,6 @@
     <None Update="InstallService-Windows.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <TypeScriptCompile Update="wwwroot\js\Upload.ts">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </TypeScriptCompile>
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>

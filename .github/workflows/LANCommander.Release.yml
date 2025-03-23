@@ -14,6 +14,7 @@ jobs:
     outputs:
       version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
       version_semver: ${{ steps.trim_tag_ref.outputs.replaced }}
+      build_dotnet_version: 9.0.102
     steps:
       - uses: frabert/replace-string-action@v2
         name: Trim Tag Ref
@@ -28,126 +29,163 @@ jobs:
     needs: prep
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-arm64
       build_arch: arm64
       build_platform: Linux
+      build_configuration: Release
 
   build_server_linux_x64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-x64
       build_arch: x64
       build_platform: Linux
+      build_configuration: Release
 
   build_server_osx_arm64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-arm64
       build_arch: arm64
       build_platform: macOS
+      build_configuration: Release
 
   build_server_osx_x64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-x64
       build_arch: x64
       build_platform: macOS
+      build_configuration: Release
 
   build_server_win_arm64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-arm64
       build_arch: arm64
       build_platform: Windows
+      build_configuration: Release
 
   build_server_win_x64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Server.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-x64
       build_arch: x64
       build_platform: Windows
+      build_configuration: Release
 
   # Launcher
   build_launcher_linux_arm64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-arm64
       build_arch: arm64
       build_platform: Linux
+      build_configuration: Release
 
   build_launcher_linux_x64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: linux-x64
       build_arch: x64
       build_platform: Linux
+      build_configuration: Release
 
   build_launcher_osx_arm64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-arm64
       build_arch: arm64
       build_platform: macOS
+      build_configuration: Release
 
   build_launcher_osx_x64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: osx-x64
       build_arch: x64
       build_platform: macOS
+      build_configuration: Release
 
   build_launcher_win_arm64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-arm64
       build_arch: arm64
       build_platform: Windows
+      build_configuration: Release
 
   build_launcher_win_x64:
     needs: prep
     uses: ./.github/workflows/LANCommander.Launcher.yml
     with:
+      build_dotnet_version: ${{ needs.prep.outputs.build_dotnet_version }}
       version_semver: ${{ needs.prep.outputs.version_semver }}
       version_tag: ${{ needs.prep.outputs.version_tag }}
       build_runtime: win-x64
       build_arch: x64
       build_platform: Windows
+      build_configuration: Release
 
   build_release:
     runs-on: ubuntu-latest
-    needs: [prep, build_server_linux_arm64, build_server_linux_x64, build_server_osx_arm64, build_server_osx_x64, build_server_win_arm64, build_server_win_x64, build_launcher_linux_arm64, build_launcher_linux_x64, build_launcher_osx_arm64, build_launcher_osx_x64, build_launcher_win_arm64, build_launcher_win_x64]
+    needs:
+      - prep
+      - build_server_linux_arm64
+      - build_server_linux_x64
+      - build_server_osx_arm64
+      - build_server_osx_x64
+      - build_server_win_arm64
+      - build_server_win_x64
+      - build_launcher_linux_arm64
+      - build_launcher_linux_x64
+      - build_launcher_osx_arm64
+      - build_launcher_osx_x64
+      - build_launcher_win_arm64
+      - build_launcher_win_x64
 
     steps:
       - name: Create Temp Directory

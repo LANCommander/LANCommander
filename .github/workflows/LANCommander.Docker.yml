@@ -117,8 +117,8 @@ jobs:
         id: push
         uses: docker/build-push-action@v6
         with:
-          context: ./Docker
-          file: ./Docker/Dockerfile
+          context: ./LANCommander.Server
+          file: ./LANCommander.Server/Dockerfile
           push: true
           platforms: linux/amd64
           #platforms: linux/amd64,linux/arm64

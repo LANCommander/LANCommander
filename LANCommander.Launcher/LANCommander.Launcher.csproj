@@ -50,6 +50,16 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
+
+	<ItemGroup>
+	    <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+        <None Include="package.json">
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </None>
+	</ItemGroup>
   
     <ItemGroup>
         <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />

@@ -7,129 +7,23 @@ using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Net;
 using LANCommander.SDK;
+using LANCommander.Server.Services.Enums;
+using LANCommander.Server.Services.Models;
+using LANCommander.Server.Services.Utilities;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services
 {
-    public enum ServerProcessStatus
-    {
-        Retrieving,
-        Stopped,
-        Starting,
-        Stopping,
-        Running,
-        Error
-    }
 
-    public class ServerLogEventArgs : EventArgs
-    {
-        public string Line { get; private set; }
-        public ServerConsole Log { get; private set; }
 
-        public ServerLogEventArgs(string line, ServerConsole console)
-        {
-            Line = line;
-            Log = console;
-        }
-    }
 
-    public class ServerStatusUpdateEventArgs : EventArgs
-    {
-        public Data.Models.Server Server { get; private set; }
-        public ServerProcessStatus Status { get; private set; }
-        public Exception Exception { get; private set; }
 
-        public ServerStatusUpdateEventArgs(Data.Models.Server server, ServerProcessStatus status)
-        {
-            Server = server;
-            Status = status;
-        }
 
-        public ServerStatusUpdateEventArgs(Data.Models.Server server, ServerProcessStatus status, Exception exception) : this(server, status)
-        {
-            Exception = exception;
-        }
-    }
 
-    public class LogFileMonitor : IDisposable
-    {
-        private ManualResetEvent Latch;
-        private FileStream FileStream;
-        private FileSystemWatcher FileSystemWatcher;
 
-        public LogFileMonitor(Data.Models.Server server, ServerConsole serverConsole)
-        {
-            var logPath = Path.Combine(server.WorkingDirectory, serverConsole.Path);
 
-            if (File.Exists(serverConsole.Path))
-            {
-                var lockMe = new object();
-
-                Latch = new ManualResetEvent(true);
-                FileStream = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                FileSystemWatcher = new FileSystemWatcher(Path.GetDirectoryName(logPath));
-
-                FileSystemWatcher.Changed += (s, e) =>
-                {
-                    lock (lockMe)
-                    {
-                        if (e.FullPath != logPath)
-                            return;
-
-                        Latch.Set();
-                    }
-                };
-
-                using (var sr = new StreamReader(FileStream))
-                {
-                    while (true)
-                    {
-                        Thread.Sleep(100);
-
-                        Latch.WaitOne();
-
-                        lock (lockMe)
-                        {
-                            String line;
-
-                            while ((line = sr.ReadLine()) != null)
-                            {
-                                // hubContext.Clients.All.SendAsync("Log", serverConsole.ServerId, line);
-                                //OnLog?.Invoke(this, new ServerLogEventArgs(line, log));
-                            }
-
-                            Latch.Set();
-                        }
-                    }
-                }
-            }
-        }
-
-        public void Dispose()
-        {
-            if (Latch != null)
-                Latch.Dispose();
-
-            if (FileStream != null)
-                FileStream.Dispose();
-
-            if (FileSystemWatcher != null)
-                FileSystemWatcher.Dispose();
-        }
-    }
-
-    public class RconConnection
-    {
-        public RCON RCON { get; set; }
-        public LogReceiver LogReceiver { get; set; }
-
-        public RconConnection(string host, int port, string password)
-        {
-            RCON = new RCON(new IPEndPoint(IPAddress.Parse(host), port), password);
-        }
-    }
 
     public class ServerProcessService : BaseService
     {

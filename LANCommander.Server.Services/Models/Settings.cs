@@ -186,6 +186,13 @@ namespace LANCommander.Server.Services.Models
     public class ServerSettings
     {
         public string StoragePath { get; set; } = "Servers";
+        public IEnumerable<DockerHostConfiguration> Hosts { get; set; } = new List<DockerHostConfiguration>();
+    }
+
+    public class DockerHostConfiguration
+    {
+        public string Name { get; set; } = "Local";
+        public string Address { get; set; } = "/var/run/docker.sock";
     }
 
     public class UpdateSettings

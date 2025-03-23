@@ -14,6 +14,7 @@ namespace LANCommander.Server.Data.Models
         public string OnStartScriptPath { get; set; } = "";
         public string OnStopScriptPath { get; set; } = "";
 
+        public string ContainerId { get; set; } = "";
         public string Host { get; set; } = "";
         public int Port { get; set; } = 0;
 

@@ -57,6 +57,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+    </ItemGroup>
+
+    <ItemGroup>
       <InternalsVisibleTo Include="LANCommander.Server.Tests" />
     </ItemGroup>
 

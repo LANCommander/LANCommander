@@ -52,6 +52,11 @@
 	</Target>
 
     <ItemGroup>
+        <ComponentScssFiles Remove="node_modules\**" />
+        <TypeScriptCompile Remove="node_modules\**" />
+    </ItemGroup>
+
+    <ItemGroup>
       <InternalsVisibleTo Include="LANCommander.Server.Tests" />
     </ItemGroup>
 
@@ -119,15 +124,6 @@
     <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
     <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
     <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="libman.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
-    <Content Update="runtimeconfig.template.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
   <ItemGroup>

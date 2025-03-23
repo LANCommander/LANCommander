@@ -85,6 +85,11 @@ jobs:
         npm install --prefix ./LANCommander.UI
         npm install --prefix ./LANCommander.Server
 
+    - name: Package Frontend
+      run: |
+        npm run package --prefix ./LANCommander.UI
+        npm run package --prefix ./LANCommander.Server
+
     # .NET builds
     - name: Publish Updater and Server
       run: |

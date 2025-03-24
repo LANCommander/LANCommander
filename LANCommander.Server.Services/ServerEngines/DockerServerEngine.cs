@@ -19,15 +19,26 @@ public class DockerServerEngine(
     IMapper mapper,
     SDK.Client client) : IServerEngine
 {
-    private DockerClient Docker { get; set; }
+    private DockerClient _docker { get; set; }
+    private Dictionary<Guid, string> _tracked { get; set; } = new();
     
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
 
     public async Task Init(DockerHostConfiguration configuration)
     {
-        Docker = new DockerClientConfiguration(new Uri(configuration.Address)).CreateClient();
-    } 
+        _docker = new DockerClientConfiguration(new Uri(configuration.Address)).CreateClient();
+    }
+
+    public async Task<IEnumerable<ContainerListResponse>> GetContainersAsync()
+    {
+        var response = await _docker.Containers.ListContainersAsync(new ContainersListParameters()
+        {
+            All = true
+        });
+
+        return response;
+    }
     
     public async Task StartAsync(Guid serverId)
     {
@@ -76,7 +87,7 @@ public class DockerServerEngine(
 
         try
         {
-            await Docker.Containers.StartContainerAsync(server.ContainerId, new ContainerStartParameters());
+            await _docker.Containers.StartContainerAsync(server.ContainerId, new ContainerStartParameters());
         }
         catch (Exception ex)
         {
@@ -94,7 +105,7 @@ public class DockerServerEngine(
 
             logger?.LogInformation("Stopping server container \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-            await Docker.Containers.StopContainerAsync(server.ContainerId, new ContainerStopParameters());
+            await _docker.Containers.StopContainerAsync(server.ContainerId, new ContainerStopParameters());
             
             foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
             {
@@ -129,14 +140,22 @@ public class DockerServerEngine(
         
         using (var scope = serviceProvider.CreateScope())
         {
-            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+            if (!_tracked.ContainsKey(serverId))
+            {
+                var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
 
-            server = await serverService.GetAsync(serverId);
+                server = await serverService.GetAsync(serverId);
+                
+                if (server == null)
+                    return ServerProcessStatus.Stopped;
 
-            if (server == null)
-                return ServerProcessStatus.Stopped;
+                if (String.IsNullOrWhiteSpace(server.ContainerId))
+                    return ServerProcessStatus.Stopped;
 
-            var container = await Docker.Containers.InspectContainerAsync(server.ContainerId);
+                _tracked[serverId] = server.ContainerId;
+            }
+
+            var container = await _docker.Containers.InspectContainerAsync(_tracked[serverId]);
             
             if (container.State.Running)
                 return ServerProcessStatus.Running;

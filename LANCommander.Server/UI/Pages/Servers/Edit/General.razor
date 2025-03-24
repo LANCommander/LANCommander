@@ -77,11 +77,25 @@
             @if (context.Engine == ServerEngine.Docker)
             {
                 <FormItem Label="Docker Host">
-                    <Select DataSource="Settings.Servers.DockerHosts" LabelName="Name" ValueName="Id" @bind-Value="context.DockerHostId" OnSelectedItemChanged="(host) => ChangeDockerHost(host)" />
+                    <Select
+                        TItem="DockerHostConfiguration"
+                        TItemValue="Guid"
+                        DataSource="Settings.Servers.DockerHosts"
+                        LabelName="Name"
+                        ValueName="Id"
+                        @bind-Value="context.DockerHostId"
+                        OnSelectedItemChanged="ChangeDockerHost"></Select>
                 </FormItem>
                 
                 <FormItem Label="Container">
-                    <Select DataSource="Containers" Disabled="!Containers.Any()" LabelName="Name" ValueName="Id" @bind-Value="context.ContainerId" />
+                    <Select
+                        TItem="ContainerListResponse"
+                        TItemValue="string"
+                        DataSource="Containers"
+                        Disabled="!Containers.Any()"
+                        LabelName="Name"
+                        ValueName="Id"
+                        @bind-Value="context.ContainerId"></Select>
                 </FormItem>
             }
             

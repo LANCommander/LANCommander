@@ -3,13 +3,18 @@
 @page "/Servers/{id:guid}/General"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using System.Runtime.InteropServices
+@using Docker.DotNet.Models
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Data.Enums
+@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.ServerEngines
 @using LANCommander.Server.UI.Pages.Servers.Components
 @inject ServerService ServerService
 @inject GameService GameService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
+@inject IServiceProvider ServiceProvider
 
 <ServerEditView Id="Id">
     <TitleTemplate>
@@ -64,6 +69,22 @@
                     </ItemTemplate>
                 </Select>
             </FormItem>
+            
+            <FormItem Label="Engine">
+                <EnumSelect TEnum="ServerEngine" bind-Value="context.Engine" />
+            </FormItem>
+            
+            @if (context.Engine == ServerEngine.Docker)
+            {
+                <FormItem Label="Docker Host">
+                    <Select DataSource="Settings.Servers.DockerHosts" LabelName="Name" ValueName="Id" @bind-Value="context.DockerHostId" OnSelectedItemChanged="(host) => ChangeDockerHost(host)" />
+                </FormItem>
+                
+                <FormItem Label="Container">
+                    <Select DataSource="Containers" Disabled="!Containers.Any()" LabelName="Name" ValueName="Id" @bind-Value="context.ContainerId" />
+                </FormItem>
+            }
+            
             <FormItem Label="Executable Path">
                 <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="(path) => context.WorkingDirectory = Path.GetDirectoryName(path)" />
             </FormItem>
@@ -104,6 +125,10 @@
     [Parameter] public Guid Id { get; set; }
     
     IEnumerable<Game> Games = new List<Game>();
+    IEnumerable<ContainerListResponse> Containers = new List<ContainerListResponse>();
+
+    DockerServerEngine DockerServerEngine;
+    Settings Settings = SettingService.GetSettings();
 
     Guid GameId;
     
@@ -134,6 +159,12 @@
     protected override async Task OnInitializedAsync()
     {
         Games = await GameService.Include(g => g.Media).GetAsync();
+    }
+
+    async Task ChangeDockerHost(DockerHostConfiguration hostConfiguration)
+    {
+        DockerServerEngine = ServiceProvider.GetService<DockerServerEngine>();
+        Containers = await DockerServerEngine.GetContainersAsync(hostConfiguration.Id);
     }
     
     async Task Save(Server server)

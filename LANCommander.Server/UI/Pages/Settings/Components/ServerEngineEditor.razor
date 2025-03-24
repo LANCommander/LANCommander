@@ -1,0 +1,62 @@
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    @if (!Settings.Servers.DockerHosts.Any())
+    {
+        <Empty Description="@("No Docker hosts have been configured")" />
+    }
+    
+    <Collapse>
+        @foreach (var dockerHost in Settings.Servers.DockerHosts)
+        {
+            <Panel Header="@dockerHost.Name">
+                <ExtraTemplate>
+                    <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(dockerHost)"/>
+                </ExtraTemplate>
+                <ChildContent>
+                    <Form Model="dockerHost" Layout="FormLayout.Vertical">
+                        <FormItem Label="Name">
+                            <Input @bind-Value="context.Name" BindOnInput />
+                        </FormItem>
+                        
+                        <FormItem Label="Address">
+                            <Input @bind-Value="context.Address" />
+                        </FormItem>
+                    </Form>
+                </ChildContent>
+            </Panel>
+        }
+    </Collapse>
+
+    <Flex Justify="FlexJustify.Center">
+        <Button OnClick="Add" Type="ButtonType.Primary">Add Host</Button>
+    </Flex>
+</Flex>
+
+@code {
+    [Parameter] public IEnumerable<DockerHostConfiguration> Values { get; set; }
+    [Parameter] public EventCallback<IEnumerable<DockerHostConfiguration>> ValuesChanged { get; set; }
+        
+    Settings Settings = SettingService.GetSettings();
+
+    List<DockerHostConfiguration> DockerHosts = new();
+
+    protected override void OnParametersSet()
+    {
+        DockerHosts = Values.ToList();
+    }
+    
+    async Task Add()
+    {
+        DockerHosts.Add(new DockerHostConfiguration());
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(DockerHosts);
+    }
+    
+    async Task Remove(DockerHostConfiguration dockerHost)
+    {
+        DockerHosts.Remove(dockerHost);
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(DockerHosts);
+    }
+}

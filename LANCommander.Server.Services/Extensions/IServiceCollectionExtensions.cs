@@ -4,6 +4,7 @@ using LANCommander.Server.Services.Factories;
 using LANCommander.Server.Services.Importers;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Extensions;
@@ -51,6 +52,14 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IImporter<Data.Models.Game>, GameImporter>();
         services.AddScoped<IImporter<Data.Models.Server>, ServerImporter>();
         services.AddScoped<IImporter<Data.Models.Redistributable>, RedistributableImporter>();
+        
+        // Register server engines
+        services.AddKeyedSingleton<IServerEngine, LocalServerEngine>("Local");
+
+        foreach (var dockerHost in settings.Servers.DockerHosts)
+        {
+            services.AddKeyedSingleton<IServerEngine, DockerServerEngine>(dockerHost.Id.ToString());
+        }
 
         services.AddSingleton<ServerProcessService>();
         services.AddSingleton<IPXRelayService>();

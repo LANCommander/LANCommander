@@ -79,7 +79,7 @@ app.MapRazorComponents<App>()
 app.PrepareDirectories();
 
 await app.MigrateDatabaseAsync();
-await app.StartServerProcessesAsync();
+await app.StartServersAsync();
 
 app.GenerateThumbnails();
 

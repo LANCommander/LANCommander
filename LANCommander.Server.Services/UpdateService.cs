@@ -12,6 +12,7 @@ using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Services.Models;
+using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -19,10 +20,10 @@ namespace LANCommander.Server.Services
     public sealed class UpdateService(
         ILogger<UpdateService> logger,
         IHostApplicationLifetime applicationLifetime,
+        IServiceProvider serviceProvider,
         IVersionProvider versionProvider,
         IGitHubService gitHubService,
-        ServerService serverService,
-        ServerProcessService serverProcessService) : BaseService(logger)
+        ServerService serverService) : BaseService(logger)
     {
         public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
         {
@@ -125,10 +126,13 @@ namespace LANCommander.Server.Services
 
             var servers = await serverService.GetAsync();
 
-            foreach (var server in servers)
+            foreach (var engine in serviceProvider.GetServices<IServerEngine>())
             {
-                if (serverProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                    serverProcessService.StopServerAsync(server.Id);
+                foreach (var server in servers)
+                {
+                    if (engine.IsManaging(server.Id))
+                        await engine.StopAsync(server.Id);
+                }
             }
 
             _logger?.LogInformation("Servers stopped");

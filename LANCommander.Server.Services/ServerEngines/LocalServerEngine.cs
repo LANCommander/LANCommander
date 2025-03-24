@@ -2,6 +2,7 @@ using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
+using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
@@ -25,7 +26,28 @@ public class LocalServerEngine(
     private Dictionary<Guid, CancellationTokenSource> _running { get; set; } = new();
     private Dictionary<Guid, ServerProcessStatus> _status { get; set; } = new();
     private Dictionary<Guid, LogFileMonitor> _logFileMonitors { get; set; } = new();
-    
+
+    public async Task InitializeAsync()
+    {
+        using (var scope = serviceProvider.CreateScope())
+        {
+            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+
+            var servers = await serverService.GetAsync(s =>
+                s.Engine == ServerEngine.Local);
+
+            foreach (var server in servers)
+            {
+                _status[server.Id] = ServerProcessStatus.Stopped;
+            }
+        }
+    }
+
+    public bool IsManaging(Guid serverId)
+    {
+        return _running.ContainsKey(serverId) || _status.ContainsKey(serverId);
+    }
+
     public async Task StartAsync(Guid serverId)
     {
         Data.Models.Server server;

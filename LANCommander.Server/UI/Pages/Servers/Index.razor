@@ -1,11 +1,12 @@
 ﻿@page "/Servers"
+@using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.Services.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
-@inject ServerProcessService ServerProcessService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
+@inject IServiceProvider ServiceProvider
 
 <PageHeader Title="Servers" Subtitle="@Total.ToString()" />
 
@@ -120,27 +121,30 @@
 
     async Task StartServers()
     {
-        foreach (var server in SelectedServers)
+        foreach (var engine in ServiceProvider.GetServices<IServerEngine>())
         {
-            try
+            foreach (var server in SelectedServers)
             {
-                var status = ServerProcessService.GetStatus(server);
-
-                if (status == ServerProcessStatus.Stopped || status == ServerProcessStatus.Error)
+                try
                 {
-                    ServerProcessService.StartServerAsync(server.Id);
+                    if (engine.IsManaging(server.Id))
+                        engine.StartAsync(server.Id);
                 }
+                catch { }
             }
-            catch { }
+            
         }
     }
 
     void StopServers()
     {
-        foreach (var server in SelectedServers)
+        foreach (var engine in ServiceProvider.GetServices<IServerEngine>())
         {
-            if (ServerProcessService.GetStatus(server) == ServerProcessStatus.Running)
-                ServerProcessService.StopServerAsync(server.Id);
+            foreach (var server in SelectedServers)
+            {
+                if (engine.IsManaging(server.Id))
+                    engine.StopAsync(server.Id);
+            }
         }
     }
 

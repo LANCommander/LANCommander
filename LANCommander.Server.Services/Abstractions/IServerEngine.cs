@@ -5,6 +5,8 @@ namespace LANCommander.Server.Services.Abstractions;
 
 public interface IServerEngine
 {
+    public Task InitializeAsync();
+    public bool IsManaging(Guid serverId);
     public Task StartAsync(Guid serverId);
     public Task StopAsync(Guid serverId);
     public Task<ServerProcessStatus> GetStatusAsync(Guid serverId);

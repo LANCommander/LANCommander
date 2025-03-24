@@ -4,6 +4,7 @@ using Docker.DotNet.Models;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
+using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Models;
@@ -19,30 +20,60 @@ public class DockerServerEngine(
     IMapper mapper,
     SDK.Client client) : IServerEngine
 {
-    private DockerClient _docker { get; set; }
-    private Dictionary<Guid, string> _tracked { get; set; } = new();
-    
+    private DockerHostConfiguration _config;
+    private Dictionary<Guid, DockerClient> _dockerClients = new();
+    private Dictionary<Guid, (Guid HostId, string ContainerId)> _tracked { get; set; } = new();
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
 
-    public async Task Init(DockerHostConfiguration configuration)
+    public async Task InitializeAsync()
     {
-        _docker = new DockerClientConfiguration(new Uri(configuration.Address)).CreateClient();
+        var settings = SettingService.GetSettings();
+
+        foreach (var hostConfig in settings.Servers.DockerHosts)
+        {
+            _dockerClients[hostConfig.Id] = new DockerClientConfiguration(new Uri(hostConfig.Address)).CreateClient();
+        }
+        
+        using (var scope = serviceProvider.CreateScope())
+        {
+            var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+
+            var servers = await serverService.GetAsync(s =>
+                s.Engine == ServerEngine.Docker);
+
+            foreach (var server in servers)
+            {
+                if (_dockerClients.ContainsKey(server.DockerHostId))
+                    _tracked[server.Id] = (server.DockerHostId, server.ContainerId);
+            }
+        }
     }
 
-    public async Task<IEnumerable<ContainerListResponse>> GetContainersAsync()
+    public async Task<IEnumerable<ContainerListResponse>> GetContainersAsync(Guid dockerHostId)
     {
-        var response = await _docker.Containers.ListContainersAsync(new ContainersListParameters()
+        if (!_dockerClients.ContainsKey(dockerHostId))
+            return Enumerable.Empty<ContainerListResponse>();
+        
+        var response = await _dockerClients[dockerHostId].Containers.ListContainersAsync(new ContainersListParameters()
         {
             All = true
         });
 
         return response;
     }
-    
+
+    public bool IsManaging(Guid serverId)
+    {
+        return _tracked.ContainsKey(serverId);
+    }
+
     public async Task StartAsync(Guid serverId)
     {
         Data.Models.Server server;
+
+        if (!_tracked.ContainsKey(serverId))
+            throw new Exception("Server is not being tracked by this engine.");
 
         using (var scope = serviceProvider.CreateScope())
         {
@@ -87,7 +118,8 @@ public class DockerServerEngine(
 
         try
         {
-            await _docker.Containers.StartContainerAsync(server.ContainerId, new ContainerStartParameters());
+            await _dockerClients[server.DockerHostId].Containers
+                .StartContainerAsync(server.ContainerId, new ContainerStartParameters());
         }
         catch (Exception ex)
         {
@@ -97,6 +129,9 @@ public class DockerServerEngine(
 
     public async Task StopAsync(Guid serverId)
     {
+        if (!_tracked.ContainsKey(serverId))
+            throw new Exception("Server is not being tracked by this engine.");
+        
         using (var scope = serviceProvider.CreateScope())
         {
             var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
@@ -105,7 +140,7 @@ public class DockerServerEngine(
 
             logger?.LogInformation("Stopping server container \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-            await _docker.Containers.StopContainerAsync(server.ContainerId, new ContainerStopParameters());
+            await _dockerClients[server.DockerHostId].Containers.StopContainerAsync(server.ContainerId, new ContainerStopParameters());
             
             foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
             {
@@ -136,7 +171,7 @@ public class DockerServerEngine(
 
     public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
     {
-        Data.Models.Server server;
+        Data.Models.Server server = null;
         
         using (var scope = serviceProvider.CreateScope())
         {
@@ -152,22 +187,28 @@ public class DockerServerEngine(
                 if (String.IsNullOrWhiteSpace(server.ContainerId))
                     return ServerProcessStatus.Stopped;
 
-                _tracked[serverId] = server.ContainerId;
+                _tracked[serverId] = (server.DockerHostId, server.ContainerId);
             }
 
-            var container = await _docker.Containers.InspectContainerAsync(_tracked[serverId]);
-            
-            if (container.State.Running)
-                return ServerProcessStatus.Running;
+            try
+            {
+                var container = await _dockerClients[_tracked[serverId].HostId].Containers.InspectContainerAsync(_tracked[serverId].ContainerId);
 
-            if (container.State.Paused)
-                return ServerProcessStatus.Stopped;
-            
-            if (container.State.Dead)
-                return ServerProcessStatus.Stopped;
-            
-            if (container.State.Restarting)
-                return ServerProcessStatus.Starting;
+                if (container.State.Running)
+                    return ServerProcessStatus.Running;
+
+                if (container.State.Paused)
+                    return ServerProcessStatus.Stopped;
+
+                if (container.State.Dead)
+                    return ServerProcessStatus.Stopped;
+
+                if (container.State.Restarting)
+                    return ServerProcessStatus.Starting;
+            }
+            catch
+            {
+            }
 
             return ServerProcessStatus.Stopped;
         }

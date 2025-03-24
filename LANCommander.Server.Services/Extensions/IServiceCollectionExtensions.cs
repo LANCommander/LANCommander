@@ -53,15 +53,10 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IImporter<Data.Models.Server>, ServerImporter>();
         services.AddScoped<IImporter<Data.Models.Redistributable>, RedistributableImporter>();
         
-        // Register server engines
-        services.AddKeyedSingleton<IServerEngine, LocalServerEngine>("Local");
-
-        foreach (var dockerHost in settings.Servers.DockerHosts)
-        {
-            services.AddKeyedSingleton<IServerEngine, DockerServerEngine>(dockerHost.Id.ToString());
-        }
-
-        services.AddSingleton<ServerProcessService>();
+        // Register server engine
+        services.AddSingleton<IServerEngine, LocalServerEngine>();
+        services.AddSingleton<IServerEngine, DockerServerEngine>();
+        
         services.AddSingleton<IPXRelayService>();
         
         services.AddAutoMapper(typeof(MappingProfile));

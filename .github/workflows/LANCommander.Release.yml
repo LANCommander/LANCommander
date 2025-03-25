@@ -287,3 +287,69 @@ jobs:
             artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+
+      - name: Download Server x64 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: ./
+    
+      - name: Extract Server Artifacts
+        run: |
+          mkdir -p ./LANCommander.Server/published
+          unzip ./LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip -d ./LANCommander.Server/published
+
+          - name: Login to Docker Hub
+          uses: docker/login-action@v3
+          with:
+            username: ${{ secrets.DOCKER_USERNAME }}
+            password: ${{ secrets.DOCKER_PASSWORD }}
+  
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # - name: Download Server arm64 Artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+      #     path: ./published
+
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v2
+      - name: Setup buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./LANCommander.Server
+          file: ./LANCommander.Server/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.prep.outputs.version_tag }}
+            BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          provenance: true
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

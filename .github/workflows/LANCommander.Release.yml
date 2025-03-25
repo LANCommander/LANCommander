@@ -291,6 +291,9 @@ jobs:
             artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
             artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
 
+      - name: Checkout Repo for Docker build
+        uses: actions/checkout@v4
+
       - name: Download Server x64 Artifacts
         uses: actions/download-artifact@v4
         with:

@@ -1,62 +1,80 @@
+@using LANCommander.Server.Data.Enums
 <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
-    @if (!Settings.Servers.DockerHosts.Any())
+    @if (!Settings.Servers.ServerEngines.Any())
     {
         <Empty Description="@("No Docker hosts have been configured")" />
     }
     
     <Collapse>
-        @foreach (var dockerHost in Settings.Servers.DockerHosts)
+        @foreach (var serverEngine in Settings.Servers.ServerEngines)
         {
-            <Panel Header="@dockerHost.Name">
-                <ExtraTemplate>
-                    <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(dockerHost)"/>
-                </ExtraTemplate>
-                <ChildContent>
-                    <Form Model="dockerHost" Layout="FormLayout.Vertical">
+            @if (serverEngine.Type == ServerEngine.Local)
+            {
+                <Panel Header="@serverEngine.Name">
+                    <ExtraTemplate>
+                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(serverEngine)"/>
+                    </ExtraTemplate>
+                    <Form Model="serverEngine" Layout="FormLayout.Vertical">
                         <FormItem Label="Name">
                             <Input @bind-Value="context.Name" BindOnInput />
                         </FormItem>
-                        
-                        <FormItem Label="Address">
-                            <Input @bind-Value="context.Address" />
-                        </FormItem>
                     </Form>
-                </ChildContent>
-            </Panel>
+                </Panel>                
+            }
+            
+            @if (serverEngine.Type == ServerEngine.Docker)
+            {
+                <Panel Header="@serverEngine.Name">
+                    <ExtraTemplate>
+                        <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(serverEngine)"/>
+                    </ExtraTemplate>
+                    <ChildContent>
+                        <Form Model="serverEngine" Layout="FormLayout.Vertical">
+                            <FormItem Label="Name">
+                                <Input @bind-Value="context.Name" BindOnInput />
+                            </FormItem>
+                        
+                            <FormItem Label="Address">
+                                <Input @bind-Value="context.Address" />
+                            </FormItem>
+                        </Form>
+                    </ChildContent>
+                </Panel>
+            }
         }
     </Collapse>
 
     <Flex Justify="FlexJustify.Center">
-        <Button OnClick="Add" Type="ButtonType.Primary">Add Host</Button>
+        <Button OnClick="Add" Type="ButtonType.Primary">Add Engine</Button>
     </Flex>
 </Flex>
 
 @code {
-    [Parameter] public IEnumerable<DockerHostConfiguration> Values { get; set; }
-    [Parameter] public EventCallback<IEnumerable<DockerHostConfiguration>> ValuesChanged { get; set; }
+    [Parameter] public IEnumerable<ServerEngineConfiguration> Values { get; set; }
+    [Parameter] public EventCallback<IEnumerable<ServerEngineConfiguration>> ValuesChanged { get; set; }
         
     Settings Settings = SettingService.GetSettings();
 
-    List<DockerHostConfiguration> DockerHosts = new();
+    List<ServerEngineConfiguration> ServerEngines = new();
 
     protected override void OnParametersSet()
     {
-        DockerHosts = Values.ToList();
+        ServerEngines = Values.OrderBy(e => e.Type).ThenBy(e => e.Name).ToList();
     }
     
     async Task Add()
     {
-        DockerHosts.Add(new DockerHostConfiguration());
+        ServerEngines.Add(new ServerEngineConfiguration());
 
         if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(DockerHosts);
+            await ValuesChanged.InvokeAsync(ServerEngines);
     }
     
-    async Task Remove(DockerHostConfiguration dockerHost)
+    async Task Remove(ServerEngineConfiguration serverEngine)
     {
-        DockerHosts.Remove(dockerHost);
+        ServerEngines.Remove(serverEngine);
 
         if (ValuesChanged.HasDelegate)
-            await ValuesChanged.InvokeAsync(DockerHosts);
+            await ValuesChanged.InvokeAsync(ServerEngines);
     }
 }

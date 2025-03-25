@@ -78,9 +78,9 @@
             {
                 <FormItem Label="Docker Host">
                     <Select
-                        TItem="DockerHostConfiguration"
+                        TItem="ServerEngineConfiguration"
                         TItemValue="Guid?"
-                        DataSource="Settings.Servers.DockerHosts"
+                        DataSource="Settings.Servers.ServerEngines"
                         LabelName="Name"
                         ValueName="Id"
                         @bind-Value="context.DockerHostId"
@@ -175,7 +175,7 @@
         Games = await GameService.Include(g => g.Media).GetAsync();
     }
 
-    async Task ChangeDockerHost(DockerHostConfiguration hostConfiguration)
+    async Task ChangeDockerHost(ServerEngineConfiguration hostConfiguration)
     {
         DockerServerEngine = ServiceProvider.GetService<DockerServerEngine>();
         Containers = await DockerServerEngine.GetContainersAsync(hostConfiguration.Id);

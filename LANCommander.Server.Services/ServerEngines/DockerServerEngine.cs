@@ -20,7 +20,7 @@ public class DockerServerEngine(
     IMapper mapper,
     SDK.Client client) : IServerEngine
 {
-    private DockerHostConfiguration _config;
+    private ServerEngineConfiguration _config;
     private Dictionary<Guid, DockerClient> _dockerClients = new();
     private Dictionary<Guid, (Guid HostId, string ContainerId)> _tracked { get; set; } = new();
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
@@ -30,10 +30,10 @@ public class DockerServerEngine(
     {
         var settings = SettingService.GetSettings();
 
-        foreach (var hostConfig in settings.Servers.DockerHosts)
+        foreach (var serverEngineConfig in settings.Servers.ServerEngines.Where(se => se.Type == ServerEngine.Docker))
         {
-            if (hostConfig != null && !String.IsNullOrWhiteSpace(hostConfig.Address) && Uri.TryCreate(hostConfig.Address, UriKind.Absolute, out var hostAddress))
-                _dockerClients[hostConfig.Id] = new DockerClientConfiguration(hostAddress).CreateClient();
+            if (serverEngineConfig != null && !String.IsNullOrWhiteSpace(serverEngineConfig.Address) && Uri.TryCreate(serverEngineConfig.Address, UriKind.Absolute, out var hostAddress))
+                _dockerClients[serverEngineConfig.Id] = new DockerClientConfiguration(hostAddress).CreateClient();
         }
         
         using (var scope = serviceProvider.CreateScope())

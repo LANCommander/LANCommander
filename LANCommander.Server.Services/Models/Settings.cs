@@ -193,7 +193,7 @@ namespace LANCommander.Server.Services.Models
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = "Local";
-        public string Address { get; set; } = "/var/run/docker.sock";
+        public string Address { get; set; } = "unix:///var/run/docker.sock";
     }
 
     public class UpdateSettings

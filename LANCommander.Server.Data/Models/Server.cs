@@ -1,4 +1,5 @@
-﻿using LANCommander.SDK.Enums;
+﻿using System.ComponentModel.DataAnnotations;
+using LANCommander.SDK.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using LANCommander.Server.Data.Enums;
@@ -13,10 +14,12 @@ namespace LANCommander.Server.Data.Models
         public string Arguments { get; set; } = "";
         public string WorkingDirectory { get; set; } = "";
 
+        
         public string OnStartScriptPath { get; set; } = "";
         public string OnStopScriptPath { get; set; } = "";
 
-        public Guid DockerHostId { get; set; }
+        public Guid? DockerHostId { get; set; }
+        [MaxLength(64)]
         public string ContainerId { get; set; } = "";
         public string Host { get; set; } = "";
         public int Port { get; set; } = 0;

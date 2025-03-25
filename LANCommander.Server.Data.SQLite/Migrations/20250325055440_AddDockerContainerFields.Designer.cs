@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250324084200_UseGuidDockerHostId")]
-    partial class UseGuidDockerHostId
+    [Migration("20250325055440_AddDockerContainerFields")]
+    partial class AddDockerContainerFields
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1191,6 +1191,7 @@ namespace LANCommander.Migrations
 
                     b.Property<string>("ContainerId")
                         .IsRequired()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("CreatedById")
@@ -1199,7 +1200,7 @@ namespace LANCommander.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("DockerHostId")
+                    b.Property<Guid?>("DockerHostId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Engine")

@@ -1188,6 +1188,7 @@ namespace LANCommander.Migrations
 
                     b.Property<string>("ContainerId")
                         .IsRequired()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("CreatedById")
@@ -1196,7 +1197,7 @@ namespace LANCommander.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("DockerHostId")
+                    b.Property<Guid?>("DockerHostId")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Engine")

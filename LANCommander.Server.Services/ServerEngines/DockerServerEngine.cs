@@ -32,7 +32,8 @@ public class DockerServerEngine(
 
         foreach (var hostConfig in settings.Servers.DockerHosts)
         {
-            _dockerClients[hostConfig.Id] = new DockerClientConfiguration(new Uri(hostConfig.Address)).CreateClient();
+            if (hostConfig != null && !String.IsNullOrWhiteSpace(hostConfig.Address) && Uri.TryCreate(hostConfig.Address, UriKind.Absolute, out var hostAddress))
+                _dockerClients[hostConfig.Id] = new DockerClientConfiguration(hostAddress).CreateClient();
         }
         
         using (var scope = serviceProvider.CreateScope())
@@ -44,8 +45,8 @@ public class DockerServerEngine(
 
             foreach (var server in servers)
             {
-                if (_dockerClients.ContainsKey(server.DockerHostId))
-                    _tracked[server.Id] = (server.DockerHostId, server.ContainerId);
+                if (server.DockerHostId.HasValue && _dockerClients.ContainsKey(server.DockerHostId.Value))
+                    _tracked[server.Id] = (server.DockerHostId.Value, server.ContainerId);
             }
         }
     }
@@ -118,8 +119,9 @@ public class DockerServerEngine(
 
         try
         {
-            await _dockerClients[server.DockerHostId].Containers
-                .StartContainerAsync(server.ContainerId, new ContainerStartParameters());
+            if (server.DockerHostId.HasValue)
+                await _dockerClients[server.DockerHostId.Value].Containers
+                    .StartContainerAsync(server.ContainerId, new ContainerStartParameters());
         }
         catch (Exception ex)
         {
@@ -140,7 +142,8 @@ public class DockerServerEngine(
 
             logger?.LogInformation("Stopping server container \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
-            await _dockerClients[server.DockerHostId].Containers.StopContainerAsync(server.ContainerId, new ContainerStopParameters());
+            if (server.DockerHostId.HasValue)
+                await _dockerClients[server.DockerHostId.Value].Containers.StopContainerAsync(server.ContainerId, new ContainerStopParameters());
             
             foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
             {
@@ -184,10 +187,13 @@ public class DockerServerEngine(
                 if (server == null)
                     return ServerProcessStatus.Stopped;
 
+                if (!server.DockerHostId.HasValue)
+                    return ServerProcessStatus.Stopped;
+
                 if (String.IsNullOrWhiteSpace(server.ContainerId))
                     return ServerProcessStatus.Stopped;
 
-                _tracked[serverId] = (server.DockerHostId, server.ContainerId);
+                _tracked[serverId] = (server.DockerHostId.Value, server.ContainerId);
             }
 
             try

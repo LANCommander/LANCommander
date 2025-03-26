@@ -3,6 +3,7 @@ using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Hubs;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LANCommander.Server.Startup;
@@ -11,19 +12,26 @@ public static class Servers
 {
     public static WebApplicationBuilder AddServerProcessStatusMonitor(this WebApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<ServerProcessService>();
+        builder.Services.AddSingleton<ServerEngineStatusService>();
 
         return builder;
     }
     
-    public static async Task StartServerProcessesAsync(this WebApplication app)
+    public static async Task StartServersAsync(this WebApplication app)
     {
         if (DatabaseContext.Provider != DatabaseProvider.Unknown)
         {
             // Autostart any server processes
             using var scope = app.Services.CreateScope();
             var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
-            var serverProcessService = scope.ServiceProvider.GetRequiredService<ServerProcessService>();
+
+            var serverEngines = scope.ServiceProvider.GetServices<IServerEngine>();
+
+            foreach (var engine in serverEngines)
+            {
+                await engine.InitializeAsync();
+            }
+            
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             
             logger.LogDebug("Autostarting Servers");
@@ -41,8 +49,14 @@ public static class Servers
                     {
                         if (server.Autostart && server.AutostartDelay > 0)
                             Task.Delay(TimeSpan.FromSeconds(server.AutostartDelay)).Wait();
-                    
-                        return serverProcessService.StartServerAsync(server.Id);
+
+                        foreach (var engine in serverEngines)
+                        {
+                            if (engine.IsManaging(server.Id))
+                                return engine.StartAsync(server.Id);
+                        }
+
+                        return Task.CompletedTask;
                     });
                 }
                 catch (Exception ex)
@@ -53,16 +67,19 @@ public static class Servers
         }
     }
 
-    public class ServerProcessStatusService
+    public class ServerEngineStatusService
     {
-        public ServerProcessStatusService(
-            ServerProcessService serverProcessService,
-            IHubContext<ServerProcessHub> hubContext)
+        public ServerEngineStatusService(
+            IServiceProvider serviceProvider,
+            IHubContext<GameServerHub> hubContext)
         {
-            serverProcessService.OnStatusUpdate += async (sender, args) =>
+            foreach (var engine in serviceProvider.GetServices<IServerEngine>())
             {
-                await hubContext.Clients.All.SendAsync("StatusUpdate", args.Status.ToString());
-            };
+                engine.OnServerStatusUpdate += async (sender, args) =>
+                {
+                    await hubContext.Clients.All.SendAsync("StatusUpdate", args.Status.ToString());
+                };
+            }
         }
     }
 }

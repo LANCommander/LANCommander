@@ -30,12 +30,10 @@ builder.AddHangfire();
 builder.AddOpenApi();
 builder.AddServerProcessStatusMonitor();
 builder.AddLANCommanderServices(settings);
-builder.AddDatabase();
+builder.AddDatabase(settings, args);
 
 Log.Debug("Building Application");
 var app = builder.Build();
-
-app.UseDatabase(args);
 
 app.UseCors("CorsPolicy");
 app.UseHttpsRedirection();
@@ -81,7 +79,7 @@ app.MapRazorComponents<App>()
 app.PrepareDirectories();
 
 await app.MigrateDatabaseAsync();
-await app.StartServerProcessesAsync();
+await app.StartServersAsync();
 
 app.GenerateThumbnails();
 

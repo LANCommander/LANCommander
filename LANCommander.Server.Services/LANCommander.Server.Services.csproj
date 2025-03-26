@@ -10,6 +10,7 @@
     <PackageReference Include="AutoMapper" Version="13.0.1" />
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
+    <PackageReference Include="Docker.DotNet.Enhanced" Version="3.126.1" />
     <PackageReference Include="IGDB" Version="5.1.0" />
     <PackageReference Include="IPXRelayDotNet" Version="1.1.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.1" />

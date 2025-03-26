@@ -6,28 +6,22 @@ using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Octokit;
 using Serilog;
 
 namespace LANCommander.Server.Startup;
 
 public static class Database
 {
-    public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddDatabase(this WebApplicationBuilder builder, Settings settings, string[] args)
     {
         builder.Services.AddDbContextFactory<DatabaseContext>();
         builder.Services.AddDbContext<DatabaseContext>();
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-        return builder;
-    }
-
-    public static WebApplication UseDatabase(this WebApplication app, string[] args)
-    {
-        var settings = app.Services.GetService<Settings>();
         
         var databaseProviderParameter = args.FirstOrDefault(arg => arg.StartsWith("--database-provider="))?.Split('=', 2).Last();
         var connectionStringParameter = args.FirstOrDefault(arg => arg.StartsWith("--connection-string="))?.Split('=', 2).Last();
-
+        
         if (!String.IsNullOrWhiteSpace(databaseProviderParameter))
             DatabaseContext.Provider = Enum.Parse<DatabaseProvider>(databaseProviderParameter);
         else
@@ -38,8 +32,8 @@ public static class Database
         else
             DatabaseContext.ConnectionString = settings.DatabaseConnectionString;
 
-        return app;
-    } 
+        return builder;
+    }
 
     public static async Task MigrateDatabaseAsync(this WebApplication app)
     {

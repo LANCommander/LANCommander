@@ -7,7 +7,7 @@ public static class Thumbnails
 {
     public static WebApplication GenerateThumbnails(this WebApplication app)
     {
-        BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
+        //BackgroundJob.Enqueue<GenerateThumbnailsJob>(x => x.ExecuteAsync());
 
         return app;
     }

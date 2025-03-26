@@ -3,10 +3,15 @@
 @page "/Servers/{id:guid}/General"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using System.Runtime.InteropServices
+@using Docker.DotNet.Models
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Data.Enums
+@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.ServerEngines
 @using LANCommander.Server.UI.Pages.Servers.Components
 @inject ServerService ServerService
 @inject GameService GameService
+@inject DockerServerEngine DockerServerEngine
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
@@ -64,6 +69,36 @@
                     </ItemTemplate>
                 </Select>
             </FormItem>
+            
+            <FormItem Label="Engine">
+                <EnumSelect TEnum="ServerEngine" @bind-Value="context.Engine" />
+            </FormItem>
+            
+            @if (context.Engine == ServerEngine.Docker)
+            {
+                <FormItem Label="Docker Host">
+                    <Select
+                        TItem="ServerEngineConfiguration"
+                        TItemValue="Guid?"
+                        DataSource="Settings.Servers.ServerEngines"
+                        LabelName="Name"
+                        ValueName="Id"
+                        @bind-Value="context.DockerHostId"
+                        OnSelectedItemChanged="ChangeDockerHost"></Select>
+                </FormItem>
+                
+                <FormItem Label="Container">
+                    <Select
+                        TItem="DockerContainer"
+                        TItemValue="string"
+                        DataSource="Containers"
+                        Disabled="!Containers.Any()"
+                        LabelName="Name"
+                        ValueName="Id"
+                        @bind-Value="context.ContainerId"></Select>
+                </FormItem>
+            }
+            
             <FormItem Label="Executable Path">
                 <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="(path) => context.WorkingDirectory = Path.GetDirectoryName(path)" />
             </FormItem>
@@ -104,6 +139,9 @@
     [Parameter] public Guid Id { get; set; }
     
     IEnumerable<Game> Games = new List<Game>();
+    IEnumerable<DockerContainer> Containers = new List<DockerContainer>();
+    
+    Settings Settings = SettingService.GetSettings();
 
     Guid GameId;
     
@@ -134,6 +172,11 @@
     protected override async Task OnInitializedAsync()
     {
         Games = await GameService.Include(g => g.Media).GetAsync();
+    }
+
+    async Task ChangeDockerHost(ServerEngineConfiguration hostConfiguration)
+    {
+        Containers = await DockerServerEngine.GetContainersAsync(hostConfiguration.Id);
     }
     
     async Task Save(Server server)

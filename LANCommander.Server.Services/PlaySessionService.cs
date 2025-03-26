@@ -15,7 +15,6 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        ServerProcessService serverProcessService,
         ServerService serverService) : BaseDatabaseService<PlaySession>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<PlaySession> AddAsync(PlaySession entity)

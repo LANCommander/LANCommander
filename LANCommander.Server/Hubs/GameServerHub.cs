@@ -1,17 +1,18 @@
 ﻿using LANCommander.Server.Services;
+using LANCommander.Server.Services.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LANCommander.Server.Hubs
 {
     public class GameServerHub : Hub
     {
-        readonly ServerProcessService _serverProcessService;
+        readonly IEnumerable<IServerEngine> _serverEngines;
         readonly ServerService _serverService;
         
         public GameServerHub(
-            ServerProcessService serverProcessService,
+            IServiceProvider serviceProvider,
             ServerService serverService) {
-            _serverProcessService = serverProcessService;
+            _serverEngines = serviceProvider.GetServices<IServerEngine>();
             _serverService = serverService;
         }
 
@@ -24,9 +25,11 @@ namespace LANCommander.Server.Hubs
 
         public async Task UpdateStatusAsync(Guid serverId)
         {
-            var status = _serverProcessService.GetStatus(serverId);
-        
-            await Clients.All.SendAsync("StatusUpdate", status, serverId);
+            foreach (var serverEngine in _serverEngines)
+            {
+                if (serverEngine.IsManaging(serverId))
+                    await Clients.All.SendAsync("StatusUpdate", await serverEngine.GetStatusAsync(serverId), serverId);
+            }
         }
 
         public override async Task OnConnectedAsync()
@@ -43,13 +46,21 @@ namespace LANCommander.Server.Hubs
         }
 
         public async Task StartServer(Guid serverId)
-        {
-            Task.Run(() => _serverProcessService.StartServerAsync(serverId));
+        {           
+            foreach (var serverEngine in _serverEngines)
+            {
+                if (serverEngine.IsManaging(serverId))
+                    Task.Run(() => serverEngine.StartAsync(serverId));
+            }
         }
 
         public async Task StopServer(Guid serverId)
         {
-            Task.Run(() => _serverProcessService.StopServerAsync(serverId));
+            foreach (var serverEngine in _serverEngines)
+            {
+                if (serverEngine.IsManaging(serverId))
+                    Task.Run(() => serverEngine.StopAsync(serverId));
+            }
         }
 
         public void Log(Guid serverId, string message)

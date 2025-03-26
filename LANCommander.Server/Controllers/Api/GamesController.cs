@@ -5,6 +5,8 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Abstractions;
+using LANCommander.Server.Services.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -26,12 +28,13 @@ namespace LANCommander.Server.Controllers.Api
         private readonly UserService UserService;
         private readonly PlaySessionService PlaySessionService;
         private readonly ServerService ServerService;
-        private readonly ServerProcessService ServerProcessService;
+        private readonly IEnumerable<IServerEngine> ServerEngines;
         private readonly IFusionCache Cache;
         private readonly IMapper Mapper;
 
         public GamesController(
             ILogger<GamesController> logger,
+            IServiceProvider serviceProvider,
             IFusionCache cache,
             IMapper mapper,
             GameService gameService,
@@ -41,8 +44,7 @@ namespace LANCommander.Server.Controllers.Api
             ArchiveService archiveService,
             UserService userService,
             PlaySessionService playSessionService,
-            ServerService serverService,
-            ServerProcessService serverProcessService) : base(logger)
+            ServerService serverService) : base(logger)
         {
             GameService = gameService;
             ImportService = importService;
@@ -52,7 +54,7 @@ namespace LANCommander.Server.Controllers.Api
             UserService = userService;
             PlaySessionService = playSessionService;
             ServerService = serverService;
-            ServerProcessService = serverProcessService;
+            ServerEngines = serviceProvider.GetServices<IServerEngine>();
             Cache = cache;
             Mapper = mapper;
         }
@@ -212,9 +214,13 @@ namespace LANCommander.Server.Controllers.Api
                 var servers = await ServerService.GetAsync(s =>
                     s.GameId == game.Id && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
 
-                foreach (var server in servers)
+                foreach (var serverEngine in ServerEngines)
                 {
-                    ServerProcessService.StartServerAsync(server.Id);
+                    foreach (var server in servers)
+                    {
+                        if (serverEngine.IsManaging(server.Id) && (await serverEngine.GetStatusAsync(server.Id) == ServerProcessStatus.Stopped))
+                            await serverEngine.StartAsync(server.Id);
+                    }
                 }
             }
             catch (Exception ex)
@@ -254,23 +260,6 @@ namespace LANCommander.Server.Controllers.Api
                 return BadRequest();
 
             await PlaySessionService.EndSessionAsync(game.Id, user.Id);
-
-            #region Autostart Servers
-            try
-            {
-                var servers = await ServerService.GetAsync(s =>
-                    s.GameId == game.Id && s.Autostart && s.AutostartMethod == ServerAutostartMethod.OnPlayerActivity);
-
-                foreach (var server in servers)
-                {
-                    ServerProcessService.StartServerAsync(server.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Servers could not be autostarted");
-            }
-            #endregion
             
             #region Run server scripts
             try

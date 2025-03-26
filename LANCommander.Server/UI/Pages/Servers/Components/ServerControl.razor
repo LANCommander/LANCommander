@@ -1,6 +1,6 @@
-﻿@using Microsoft.AspNetCore.SignalR.Client
+﻿@using LANCommander.Server.Services.Enums
+@using Microsoft.AspNetCore.SignalR.Client
 @inject ServerService ServerService
-@inject ServerProcessService ServerProcessService
 @inject IMessageService MessageService
 @inject INotificationService NotificationService
 @inject NavigationManager NavigationManager
@@ -92,19 +92,31 @@
                 InvokeAsync(StateHasChanged);
             }
         });
-
+        
         _ = Task.Run(async () =>
         {
-            while (true)
+            try
             {
-                await Task.Delay(1000);
+                while (true)
+                {
+                    await Task.Delay(1000);
 
-                if (HubConnection.State == HubConnectionState.Connected)
-                    await HubConnection.SendAsync("UpdateStatusAsync", ServerId.ToString());
+                    if (HubConnection.State == HubConnectionState.Connected)
+                        await HubConnection.SendAsync("UpdateStatusAsync", ServerId.ToString());
+                }
+            }
+            catch
+            {
             }
         });
 
-        await HubConnection.StartAsync();
+        try
+        {
+            await HubConnection.StartAsync();
+        }
+        catch
+        {
+        }
     }
 
     async Task Start()

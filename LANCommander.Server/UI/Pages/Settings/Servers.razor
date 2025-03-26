@@ -1,20 +1,25 @@
 ﻿@page "/Settings/Servers"
+@using LANCommander.Server.UI.Pages.Settings.Components
 @inject IMessageService MessageService
 @inject ILogger<Servers> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Servers" />
+<PageHeader Title="Servers">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="Storage Path">
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Servers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
-
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
     </Form>
+    
+    <Divider Text="Docker Hosts" />
+    
+    <ServerEngineEditor @bind-Values="Settings.Servers.ServerEngines" />
 </PageContent>
 
 @code {
@@ -26,7 +31,12 @@
     {
         try
         {
-            SettingService.SaveSettings(Settings);
+            var settings = SettingService.GetSettings();
+
+            settings.Servers = Settings.Servers;
+            
+            SettingService.SaveSettings(settings);
+            
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

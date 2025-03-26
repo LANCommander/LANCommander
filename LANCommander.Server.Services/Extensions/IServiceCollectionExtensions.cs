@@ -53,9 +53,11 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IImporter<Data.Models.Server>, ServerImporter>();
         services.AddScoped<IImporter<Data.Models.Redistributable>, RedistributableImporter>();
         
-        // Register server engine
+        // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();
-        services.AddSingleton<IServerEngine, DockerServerEngine>();
+        
+        services.AddSingleton<DockerServerEngine>();
+        services.AddSingleton<IServerEngine>(provider => provider.GetService<DockerServerEngine>());
         
         services.AddSingleton<IPXRelayService>();
         

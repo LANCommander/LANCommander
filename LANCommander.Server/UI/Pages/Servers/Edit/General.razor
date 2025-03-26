@@ -11,10 +11,10 @@
 @using LANCommander.Server.UI.Pages.Servers.Components
 @inject ServerService ServerService
 @inject GameService GameService
+@inject DockerServerEngine DockerServerEngine
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<General> Logger
-@inject IServiceProvider ServiceProvider
 
 <ServerEditView Id="Id">
     <TitleTemplate>
@@ -89,7 +89,7 @@
                 
                 <FormItem Label="Container">
                     <Select
-                        TItem="ContainerListResponse"
+                        TItem="DockerContainer"
                         TItemValue="string"
                         DataSource="Containers"
                         Disabled="!Containers.Any()"
@@ -139,9 +139,8 @@
     [Parameter] public Guid Id { get; set; }
     
     IEnumerable<Game> Games = new List<Game>();
-    IEnumerable<ContainerListResponse> Containers = new List<ContainerListResponse>();
-
-    DockerServerEngine DockerServerEngine;
+    IEnumerable<DockerContainer> Containers = new List<DockerContainer>();
+    
     Settings Settings = SettingService.GetSettings();
 
     Guid GameId;
@@ -177,7 +176,6 @@
 
     async Task ChangeDockerHost(ServerEngineConfiguration hostConfiguration)
     {
-        DockerServerEngine = ServiceProvider.GetService<DockerServerEngine>();
         Containers = await DockerServerEngine.GetContainersAsync(hostConfiguration.Id);
     }
     

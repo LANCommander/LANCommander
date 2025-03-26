@@ -22,7 +22,7 @@ public class DockerServerEngine(
 {
     private ServerEngineConfiguration _config;
     private Dictionary<Guid, DockerClient> _dockerClients = new();
-    private Dictionary<Guid, (Guid HostId, string ContainerId)> _tracked { get; set; } = new();
+    private Dictionary<Guid, DockerContainer> _tracked { get; set; } = new();
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
 
@@ -46,22 +46,32 @@ public class DockerServerEngine(
             foreach (var server in servers)
             {
                 if (server.DockerHostId.HasValue && _dockerClients.ContainsKey(server.DockerHostId.Value))
-                    _tracked[server.Id] = (server.DockerHostId.Value, server.ContainerId);
+                    _tracked[server.Id] = new DockerContainer
+                    {
+                        HostId = server.DockerHostId.Value,
+                        Id = server.ContainerId,
+                        Name = server.Name,
+                    };
             }
         }
     }
 
-    public async Task<IEnumerable<ContainerListResponse>> GetContainersAsync(Guid dockerHostId)
+    public async Task<IEnumerable<DockerContainer>> GetContainersAsync(Guid dockerHostId)
     {
         if (!_dockerClients.ContainsKey(dockerHostId))
-            return Enumerable.Empty<ContainerListResponse>();
+            return Enumerable.Empty<DockerContainer>();
         
         var response = await _dockerClients[dockerHostId].Containers.ListContainersAsync(new ContainersListParameters()
         {
             All = true
         });
 
-        return response;
+        return response.Where(i => i != null).Select(i => new DockerContainer
+        {
+            Id = i.ID,
+            HostId = dockerHostId,
+            Name = i.Names.FirstOrDefault()
+        });
     }
 
     public bool IsManaging(Guid serverId)
@@ -193,12 +203,17 @@ public class DockerServerEngine(
                 if (String.IsNullOrWhiteSpace(server.ContainerId))
                     return ServerProcessStatus.Stopped;
 
-                _tracked[serverId] = (server.DockerHostId.Value, server.ContainerId);
+                _tracked[serverId] = new DockerContainer
+                {
+                    Id = server.ContainerId,
+                    HostId = server.DockerHostId.Value,
+                    Name = server.Name,
+                };
             }
 
             try
             {
-                var container = await _dockerClients[_tracked[serverId].HostId].Containers.InspectContainerAsync(_tracked[serverId].ContainerId);
+                var container = await _dockerClients[_tracked[serverId].HostId].Containers.InspectContainerAsync(_tracked[serverId].Id);
 
                 if (container.State.Running)
                     return ServerProcessStatus.Running;

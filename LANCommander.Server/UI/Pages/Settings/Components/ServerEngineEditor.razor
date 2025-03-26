@@ -14,11 +14,13 @@
                     <ExtraTemplate>
                         <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => Remove(serverEngine)"/>
                     </ExtraTemplate>
-                    <Form Model="serverEngine" Layout="FormLayout.Vertical">
-                        <FormItem Label="Name">
-                            <Input @bind-Value="context.Name" BindOnInput />
-                        </FormItem>
-                    </Form>
+                    <ChildContent>
+                        <Form Model="serverEngine" Layout="FormLayout.Vertical">
+                            <FormItem Label="Name">
+                                <Input @bind-Value="context.Name" BindOnInput />
+                            </FormItem>
+                        </Form>
+                    </ChildContent>
                 </Panel>                
             }
             

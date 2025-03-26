@@ -71,7 +71,7 @@
             </FormItem>
             
             <FormItem Label="Engine">
-                <EnumSelect TEnum="ServerEngine" bind-Value="context.Engine" />
+                <EnumSelect TEnum="ServerEngine" @bind-Value="context.Engine" />
             </FormItem>
             
             @if (context.Engine == ServerEngine.Docker)

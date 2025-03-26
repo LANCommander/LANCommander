@@ -92,19 +92,31 @@
                 InvokeAsync(StateHasChanged);
             }
         });
-
+        
         _ = Task.Run(async () =>
         {
-            while (true)
+            try
             {
-                await Task.Delay(1000);
+                while (true)
+                {
+                    await Task.Delay(1000);
 
-                if (HubConnection.State == HubConnectionState.Connected)
-                    await HubConnection.SendAsync("UpdateStatusAsync", ServerId.ToString());
+                    if (HubConnection.State == HubConnectionState.Connected)
+                        await HubConnection.SendAsync("UpdateStatusAsync", ServerId.ToString());
+                }
+            }
+            catch
+            {
             }
         });
 
-        await HubConnection.StartAsync();
+        try
+        {
+            await HubConnection.StartAsync();
+        }
+        catch
+        {
+        }
     }
 
     async Task Start()

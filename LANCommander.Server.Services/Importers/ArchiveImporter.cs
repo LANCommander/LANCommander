@@ -21,10 +21,6 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
         if (archiveEntry == null)
             throw new ImportSkippedException<Archive>(record, "Matching archive file does not exist in import archive");
 
-        if (importContext.Record is not Data.Models.Game && importContext.Record is not Data.Models.Redistributable)
-            throw new ImportSkippedException<Archive>(record,
-                $"Cannot import an archive for a {typeof(TParentRecord).Name}");
-
         Data.Models.Archive archive = null;
         string path = "";
 
@@ -40,9 +36,11 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
 
             if (importContext.Record is Data.Models.Game game)
                 newArchive.Game = game;
-            
-            if (importContext.Record is Data.Models.Redistributable redistributable)
+            else if (importContext.Record is Data.Models.Redistributable redistributable)
                 newArchive.Redistributable = redistributable;
+            else
+                throw new ImportSkippedException<Archive>(record,
+                    $"Cannot import an archive for a {typeof(TParentRecord).Name}");
             
             archive = await _archiveService.AddAsync(newArchive);
             archive = await _archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
@@ -89,11 +87,11 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
 
     public async Task<bool> ExistsAsync(Archive archive)
     {
-        if (importContext.Record is not Data.Models.Game game)
+        if (importContext.Record is not Data.Models.Game game || importContext.Record is not Data.Models.Redistributable)
             throw new ImportSkippedException<Archive>(archive,
-                $"Cannot import a archive for a {typeof(TParentRecord).Name}");
+                $"Cannot import an archive for a {typeof(TParentRecord).Name}");
         
         return await _archiveService
-            .ExistsAsync(a => a.Id == archive.Id);
+            .ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
     }
 }

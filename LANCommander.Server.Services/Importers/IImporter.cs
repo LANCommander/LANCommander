@@ -12,5 +12,5 @@ public interface IImporter<TRecord>
 {
     Task<TRecord> AddAsync(TRecord record);
     Task<TRecord> UpdateAsync(TRecord record);
-    Task<bool> ExistsAsync(TRecord archive);
+    Task<bool> ExistsAsync(TRecord record);
 }

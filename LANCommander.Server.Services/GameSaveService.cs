@@ -2,6 +2,7 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
+using LANCommander.SDK.Enums;
 using LANCommander.Server.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -15,7 +16,8 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameSave>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory,
+        StorageLocationService storageLocationService) : BaseDatabaseService<GameSave>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<GameSave> AddAsync(GameSave entity)
         {
@@ -68,6 +70,11 @@ namespace LANCommander.Server.Services
         public string GetSavePath(GameSave save)
         {
             return Path.Combine(save.StorageLocation.Path, save.UserId.ToString(), save.GameId.ToString(), $"{save.Id}");
+        }
+
+        public async Task<StorageLocation> GetDefaultStorageLocationAsync()
+        {
+            return await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Save && l.Default);
         }
     }
 }

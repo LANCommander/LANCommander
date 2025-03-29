@@ -26,6 +26,7 @@ namespace LANCommander.Server.Services.Abstractions
         Task<U> FirstOrDefaultAsync<U>(Expression<Func<T, bool>> predicate);
 
         Task<bool> ExistsAsync(Guid id);
+        Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
 
         Task<T> AddAsync(T entity);
 

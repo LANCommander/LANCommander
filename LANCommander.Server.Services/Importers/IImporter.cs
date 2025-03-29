@@ -2,7 +2,15 @@ using System.IO.Compression;
 
 namespace LANCommander.Server.Services.Importers;
 
-public interface IImporter<T>
+/// <summary>
+/// Implementations should be able to process a single record. This will be called
+/// by the import service to process records in its queue. Only one instance of
+/// this needs to exist for each type.
+/// </summary>
+/// <typeparam name="TRecord"></typeparam>
+public interface IImporter<TRecord>
 {
-    Task<T> ImportAsync(Guid objectKey, ZipArchive importZip);
+    Task<TRecord> AddAsync(TRecord record);
+    Task<TRecord> UpdateAsync(TRecord record);
+    Task<bool> ExistsAsync(TRecord archive);
 }

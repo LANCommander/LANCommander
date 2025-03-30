@@ -3,20 +3,20 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class CustomFieldImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<GameCustomField>
+public class CustomFieldImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
 {
     GameService _gameService = serviceProvider.GetRequiredService<GameService>();
     
-    public async Task<GameCustomField> AddAsync(GameCustomField record)
+    public async Task<Data.Models.GameCustomField> AddAsync(GameCustomField record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<GameCustomField>(record, $"Cannot import customField for a {typeof(TParentRecord).Name}");
 
         try
         {
-            await _gameService.SetCustomFieldAsync(game.Id, record.Name, record.Value);
+            var customField = await _gameService.SetCustomFieldAsync(game.Id, record.Name, record.Value);
 
-            return record;
+            return customField;
         }
         catch (Exception ex)
         {
@@ -24,7 +24,7 @@ public class CustomFieldImporter<TParentRecord>(ServiceProvider serviceProvider,
         }
     }
 
-    public async Task<GameCustomField> UpdateAsync(GameCustomField record)
+    public async Task<Data.Models.GameCustomField> UpdateAsync(GameCustomField record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<GameCustomField>(record, $"Cannot import customFields for a {typeof(TParentRecord).Name}");
@@ -34,9 +34,9 @@ public class CustomFieldImporter<TParentRecord>(ServiceProvider serviceProvider,
         try
         {
             if (existing.Value != record.Value)
-                await _gameService.SetCustomFieldAsync(game.Id, record.Name, record.Value);
+                existing = await _gameService.SetCustomFieldAsync(game.Id, record.Name, record.Value);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

@@ -3,11 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Key>
+public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Key, Data.Models.Key>
 {
     KeyService _keyService = serviceProvider.GetRequiredService<KeyService>();
     
-    public async Task<Key> AddAsync(Key record)
+    public async Task<Data.Models.Key> AddAsync(Key record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Key>(record, $"Cannot import keys for a {typeof(TParentRecord).Name}");
@@ -25,7 +25,7 @@ public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
 
             key = await _keyService.AddAsync(key);
 
-            return record;
+            return key;
         }
         catch (Exception ex)
         {
@@ -33,7 +33,7 @@ public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
         }
     }
 
-    public async Task<Key> UpdateAsync(Key record)
+    public async Task<Data.Models.Key> UpdateAsync(Key record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Key>(record, $"Cannot import keys for a {typeof(TParentRecord).Name}");
@@ -49,7 +49,7 @@ public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
             
             existing = await _keyService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

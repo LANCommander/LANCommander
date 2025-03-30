@@ -4,11 +4,11 @@ using Game = LANCommander.Server.Data.Models.Game;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class GenreImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Genre>
+public class GenreImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Genre, Data.Models.Genre>
 {
     GenreService _genreService = serviceProvider.GetRequiredService<GenreService>();
     
-    public async Task<Genre> AddAsync(Genre record)
+    public async Task<Data.Models.Genre> AddAsync(Genre record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Genre>(record, $"Cannot import genres for a {typeof(TParentRecord).Name}");
@@ -23,7 +23,7 @@ public class GenreImporter<TParentRecord>(ServiceProvider serviceProvider, Impor
 
             genre = await _genreService.AddAsync(genre);
 
-            return record;
+            return genre;
         }
         catch (Exception ex)
         {
@@ -31,7 +31,7 @@ public class GenreImporter<TParentRecord>(ServiceProvider serviceProvider, Impor
         }
     }
 
-    public async Task<Genre> UpdateAsync(Genre record)
+    public async Task<Data.Models.Genre> UpdateAsync(Genre record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Genre>(record, $"Cannot import genres for a {typeof(TParentRecord).Name}");
@@ -47,7 +47,7 @@ public class GenreImporter<TParentRecord>(ServiceProvider serviceProvider, Impor
             
             existing = await _genreService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

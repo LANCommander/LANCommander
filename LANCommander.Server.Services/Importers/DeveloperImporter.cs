@@ -4,11 +4,11 @@ using Game = LANCommander.Server.Data.Models.Game;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class DeveloperImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Company>
+public class DeveloperImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Company, Data.Models.Company>
 {
     CompanyService _companyService = serviceProvider.GetRequiredService<CompanyService>();
     
-    public async Task<Company> AddAsync(Company record)
+    public async Task<Data.Models.Company> AddAsync(Company record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {typeof(TParentRecord).Name}");
@@ -23,7 +23,7 @@ public class DeveloperImporter<TParentRecord>(ServiceProvider serviceProvider, I
 
             company = await _companyService.AddAsync(company);
 
-            return record;
+            return company;
         }
         catch (Exception ex)
         {
@@ -31,7 +31,7 @@ public class DeveloperImporter<TParentRecord>(ServiceProvider serviceProvider, I
         }
     }
 
-    public async Task<Company> UpdateAsync(Company record)
+    public async Task<Data.Models.Company> UpdateAsync(Company record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {typeof(TParentRecord).Name}");
@@ -47,7 +47,7 @@ public class DeveloperImporter<TParentRecord>(ServiceProvider serviceProvider, I
             
             existing = await _companyService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

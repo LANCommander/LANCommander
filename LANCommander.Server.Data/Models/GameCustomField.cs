@@ -17,4 +17,15 @@ public class GameCustomField : BaseModel
     [ForeignKey(nameof(GameId))]
     [InverseProperty("CustomFields")]
     public Game? Game { get; set; }
+
+    public GameCustomField()
+    {
+        
+    }
+    
+    public GameCustomField(string name, string value)
+    {
+        Name = name;
+        Value = value;
+    }
 }

@@ -4,11 +4,11 @@ using Game = LANCommander.Server.Data.Models.Game;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class EngineImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Engine>
+public class EngineImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Engine, Data.Models.Engine>
 {
     EngineService _engineService = serviceProvider.GetRequiredService<EngineService>();
     
-    public async Task<Engine> AddAsync(Engine record)
+    public async Task<Data.Models.Engine> AddAsync(Engine record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Engine>(record, $"Cannot import engine for a {typeof(TParentRecord).Name}");
@@ -23,7 +23,7 @@ public class EngineImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
 
             engine = await _engineService.AddAsync(engine);
 
-            return record;
+            return engine;
         }
         catch (Exception ex)
         {
@@ -31,7 +31,7 @@ public class EngineImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
         }
     }
 
-    public async Task<Engine> UpdateAsync(Engine record)
+    public async Task<Data.Models.Engine> UpdateAsync(Engine record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Engine>(record, $"Cannot import engines for a {typeof(TParentRecord).Name}");
@@ -47,7 +47,7 @@ public class EngineImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
             
             existing = await _engineService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

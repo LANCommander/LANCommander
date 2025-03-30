@@ -4,11 +4,11 @@ using Action = LANCommander.SDK.Models.Action;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Action>
+public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Action, Data.Models.Action>
 {
     ActionService _actionService = serviceProvider.GetRequiredService<ActionService>();
     
-    public async Task<Action> AddAsync(Action record)
+    public async Task<Data.Models.Action> AddAsync(Action record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Action>(record, $"Cannot import action for a {typeof(TParentRecord).Name}");
@@ -27,7 +27,7 @@ public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
 
             action = await _actionService.AddAsync(action);
 
-            return record;
+            return action;
         }
         catch (Exception ex)
         {
@@ -35,7 +35,7 @@ public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
         }
     }
 
-    public async Task<Action> UpdateAsync(Action record)
+    public async Task<Data.Models.Action> UpdateAsync(Action record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Action>(record, $"Cannot import actions for a {typeof(TParentRecord).Name}");
@@ -51,7 +51,7 @@ public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
             
             existing = await _actionService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

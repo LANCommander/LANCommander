@@ -4,11 +4,11 @@ using Game = LANCommander.Server.Data.Models.Game;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Collection>
+public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Collection, Data.Models.Collection>
 {
     CollectionService _collectionService = serviceProvider.GetRequiredService<CollectionService>();
     
-    public async Task<Collection> AddAsync(Collection record)
+    public async Task<Data.Models.Collection> AddAsync(Collection record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Collection>(record, $"Cannot import collections for a {typeof(TParentRecord).Name}");
@@ -23,7 +23,7 @@ public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, 
 
             collection = await _collectionService.AddAsync(collection);
 
-            return record;
+            return collection;
         }
         catch (Exception ex)
         {
@@ -31,7 +31,7 @@ public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, 
         }
     }
 
-    public async Task<Collection> UpdateAsync(Collection record)
+    public async Task<Data.Models.Collection> UpdateAsync(Collection record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Collection>(record, $"Cannot import collections for a {typeof(TParentRecord).Name}");
@@ -47,7 +47,7 @@ public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, 
             
             existing = await _collectionService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

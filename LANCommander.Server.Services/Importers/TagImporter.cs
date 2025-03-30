@@ -4,11 +4,11 @@ using Game = LANCommander.Server.Data.Models.Game;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Tag>
+public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Tag, Data.Models.Tag>
 {
     TagService _tagService = serviceProvider.GetRequiredService<TagService>();
     
-    public async Task<Tag> AddAsync(Tag record)
+    public async Task<Data.Models.Tag> AddAsync(Tag record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Tag>(record, $"Cannot import tags for a {typeof(TParentRecord).Name}");
@@ -23,7 +23,7 @@ public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
 
             tag = await _tagService.AddAsync(tag);
 
-            return record;
+            return tag;
         }
         catch (Exception ex)
         {
@@ -31,7 +31,7 @@ public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
         }
     }
 
-    public async Task<Tag> UpdateAsync(Tag record)
+    public async Task<Data.Models.Tag> UpdateAsync(Tag record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Tag>(record, $"Cannot import tags for a {typeof(TParentRecord).Name}");
@@ -47,7 +47,7 @@ public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
             
             existing = await _tagService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

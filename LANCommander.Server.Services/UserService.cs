@@ -99,6 +99,11 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public async Task<bool> ExistsAsync(Expression<Func<User, bool>> predicate)
+        {
+            return await IdentityContext.DatabaseContext.Users.AnyAsync(predicate);
+        }
+
         public async Task<User> AddAsync(User user)
         {
             var result = await IdentityContext.UserManager.CreateAsync(user);

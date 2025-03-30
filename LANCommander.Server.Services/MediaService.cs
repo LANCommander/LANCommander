@@ -271,7 +271,7 @@ namespace LANCommander.Server.Services
             {
                 var response = await http.GetStreamAsync(sourceUrl);
 
-                return await UploadMediaAsync(response, media);
+                return await WriteToFileAsync(media, response);
             }
         }
 

@@ -139,6 +139,34 @@ namespace LANCommander.Server.Services
             return GetManifest(game);
         }
 
+        public async Task<GameCustomField> GetCustomFieldAsync(Guid id, string name)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.CustomFields)
+                .GetAsync(id);
+            
+            return game.CustomFields.FirstOrDefault(c => c.Name == name);
+        }
+
+        public async Task<GameCustomField> SetCustomFieldAsync(Guid id, string name, string value)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.CustomFields)
+                .GetAsync(id);
+            
+            if (game.CustomFields.Any(c => c.Name == name))
+                foreach (var customField in game.CustomFields.Where(c => c.Name == name))
+                    customField.Value = value;
+            else
+            {
+                game.CustomFields.Add(new GameCustomField());
+            }
+
+            return await GetCustomFieldAsync(id, name);
+        }
+
         public GameManifest GetManifest(Game game)
         {
             if (game == null)
@@ -170,6 +198,9 @@ namespace LANCommander.Server.Services
 
             if (game.Developers != null && game.Developers.Count > 0)
                 manifest.Developers = game.Developers.Select(g => g.Name).ToArray();
+            
+            if (game.Platforms != null && game.Platforms.Count > 0)
+                manifest.Platforms = game.Platforms.Select(g => g.Name).ToArray();
 
             if (game.Collections != null && game.Collections.Count > 0)
                 manifest.Collections = game.Collections.Select(c => c.Name).ToArray();

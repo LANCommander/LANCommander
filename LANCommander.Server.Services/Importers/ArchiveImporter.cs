@@ -10,11 +10,11 @@ namespace LANCommander.Server.Services.Importers;
 /// </summary>
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
-public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Archive>
+public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Archive, Data.Models.Archive>
 {
     ArchiveService _archiveService = serviceProvider.GetRequiredService<ArchiveService>();
     
-    public async Task<Archive> AddAsync(Archive record)
+    public async Task<Data.Models.Archive> AddAsync(Archive record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}");
 
@@ -45,7 +45,7 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
             archive = await _archiveService.AddAsync(newArchive);
             archive = await _archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
 
-            return record;
+            return archive;
         }
         catch (Exception ex)
         {
@@ -56,7 +56,7 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
         }
     }
 
-    public async Task<Archive> UpdateAsync(Archive archive)
+    public async Task<Data.Models.Archive> UpdateAsync(Archive archive)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
         var existing = await _archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
@@ -77,7 +77,7 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
             if (File.Exists(existingPath))
                 File.Delete(existingPath);
 
-            return archive;
+            return existing;
         }
         catch (Exception ex)
         {

@@ -3,11 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<SavePath>
+public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<SavePath, Data.Models.SavePath>
 {
     SavePathService _savePathService = serviceProvider.GetRequiredService<SavePathService>();
     
-    public async Task<SavePath> AddAsync(SavePath record)
+    public async Task<Data.Models.SavePath> AddAsync(SavePath record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<SavePath>(record, $"Cannot import save path for a {typeof(TParentRecord).Name}");
@@ -26,7 +26,7 @@ public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, Im
 
             savePath = await _savePathService.AddAsync(savePath);
 
-            return record;
+            return savePath;
         }
         catch (Exception ex)
         {
@@ -34,7 +34,7 @@ public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, Im
         }
     }
 
-    public async Task<SavePath> UpdateAsync(SavePath record)
+    public async Task<Data.Models.SavePath> UpdateAsync(SavePath record)
     {
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<SavePath>(record, $"Cannot import savePaths for a {typeof(TParentRecord).Name}");
@@ -50,7 +50,7 @@ public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, Im
             
             existing = await _savePathService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

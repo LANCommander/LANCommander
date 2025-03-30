@@ -3,11 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Script>
+public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Script, Data.Models.Script>
 {
     ScriptService _scriptService = serviceProvider.GetRequiredService<ScriptService>();
     
-    public async Task<Script> AddAsync(Script record)
+    public async Task<Data.Models.Script> AddAsync(Script record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
         
@@ -45,7 +45,7 @@ public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
 
             script = await _scriptService.AddAsync(newScript);
 
-            return record;
+            return script;
         }
         catch (Exception ex)
         {
@@ -56,7 +56,7 @@ public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
         }
     }
 
-    public async Task<Script> UpdateAsync(Script record)
+    public async Task<Data.Models.Script> UpdateAsync(Script record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
 
@@ -87,7 +87,7 @@ public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
 
             existing = await _scriptService.UpdateAsync(existing);
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

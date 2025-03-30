@@ -10,12 +10,12 @@ namespace LANCommander.Server.Services.Importers;
 /// </summary>
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
-public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<GameSave>
+public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<GameSave, Data.Models.GameSave>
 {
     UserService _userService = serviceProvider.GetRequiredService<UserService>();
     GameSaveService _gameSaveService = serviceProvider.GetRequiredService<GameSaveService>();
     
-    public async Task<GameSave> AddAsync(GameSave record)
+    public async Task<Data.Models.GameSave> AddAsync(GameSave record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}");
 
@@ -54,7 +54,7 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
                 PreserveFileTime = true,
             });
 
-            return record;
+            return save;
         }
         catch (Exception ex)
         {
@@ -65,7 +65,7 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
         }
     }
 
-    public async Task<GameSave> UpdateAsync(GameSave record)
+    public async Task<Data.Models.GameSave> UpdateAsync(GameSave record)
     {
         var existing = await _gameSaveService.FirstOrDefaultAsync(s => s.User.UserName == record.User.UserName && s.CreatedOn == record.CreatedOn);
         
@@ -86,7 +86,7 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
                 PreserveFileTime = true,
             });
 
-            return record;
+            return existing;
         }
         catch (Exception ex)
         {

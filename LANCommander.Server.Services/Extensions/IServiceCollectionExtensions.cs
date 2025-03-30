@@ -49,9 +49,9 @@ public static class IServiceCollectionExtensions
         services.AddScoped(typeof(ImportService<>));
 
         // Register importers
-        services.AddScoped<IImporter<Data.Models.Game>, GameImporter>();
-        services.AddScoped<IImporter<Data.Models.Server>, ServerImporter>();
-        services.AddScoped<IImporter<Data.Models.Redistributable>, RedistributableImporter>();
+        services.AddScoped<ImportContext<Data.Models.Game>>();
+        services.AddScoped<ImportContext<Data.Models.Redistributable>>();
+        services.AddScoped<ImportContext<Data.Models.Server>>();
         
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();

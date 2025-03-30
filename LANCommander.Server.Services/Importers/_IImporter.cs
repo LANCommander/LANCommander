@@ -8,9 +8,9 @@ namespace LANCommander.Server.Services.Importers;
 /// this needs to exist for each type.
 /// </summary>
 /// <typeparam name="TRecord"></typeparam>
-public interface IImporter<TRecord>
+public interface IImporter<TRecord, TEntity>
 {
-    Task<TRecord> AddAsync(TRecord record);
-    Task<TRecord> UpdateAsync(TRecord record);
+    Task<TEntity> AddAsync(TRecord record);
+    Task<TEntity> UpdateAsync(TRecord record);
     Task<bool> ExistsAsync(TRecord record);
 }

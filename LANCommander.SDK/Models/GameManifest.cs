@@ -17,6 +17,7 @@ namespace LANCommander.SDK
         public string Engine { get; set; }
         public IEnumerable<string> Genre { get; set; }
         public IEnumerable<string> Tags { get; set; }
+        public IEnumerable<string> Platforms { get; set; }
         public IEnumerable<string> Publishers { get; set; }
         public IEnumerable<string> Developers { get; set; }
         public IEnumerable<string> Collections { get; set; }
@@ -31,6 +32,7 @@ namespace LANCommander.SDK
         public IEnumerable<Script> Scripts { get; set; }
         public IEnumerable<Media> Media { get; set; }
         public IEnumerable<Archive> Archives { get; set; }
+        public IEnumerable<GameSave> Saves { get; set; }
         public IEnumerable<Guid> DependentGames { get; set; }
         public IEnumerable<Redistributable> Redistributables { get; set; }
         public IEnumerable<GameCustomField> CustomFields { get; set; }

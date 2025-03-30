@@ -24,6 +24,7 @@ public class ImportContext<TRecord>(
     public MediaImporter<TRecord> Media { get; private set; }
     public MultiplayerModeImporter<TRecord> MultiplayerModes { get; private set; }
     public PlatformImporter<TRecord> Platforms { get; private set; }
+    public PlaySessionImporter<TRecord> PlaySessions { get; private set; }
     public PublisherImporter<TRecord> Publishers { get; private set; }
     public SaveImporter<TRecord> Saves { get; private set; }
     public SavePathImporter<TRecord> SavePaths { get; private set; }
@@ -55,6 +56,7 @@ public class ImportContext<TRecord>(
         Media = new MediaImporter<TRecord>(serviceProvider, this);
         MultiplayerModes = new MultiplayerModeImporter<TRecord>(serviceProvider, this);
         Platforms = new PlatformImporter<TRecord>(serviceProvider, this);
+        PlaySessions = new PlaySessionImporter<TRecord>(serviceProvider, this);
         Publishers = new PublisherImporter<TRecord>(serviceProvider, this);
         Saves = new SaveImporter<TRecord>(serviceProvider, this);
         SavePaths = new SavePathImporter<TRecord>(serviceProvider, this);
@@ -101,6 +103,8 @@ public class ImportContext<TRecord>(
                 await ImportRecordAsync(multiplayerMode, MultiplayerModes);
             else if (record is SDK.Models.Platform platform)
                 await ImportRecordAsync(platform, Platforms);
+            else if (record is SDK.Models.PlaySession playSession)
+                await ImportRecordAsync(playSession, PlaySessions);
             else if (record is SDK.Models.GameSave gameSave)
                 await ImportRecordAsync(gameSave, Saves);
             else if (record is SDK.Models.SavePath savePath)

@@ -1,5 +1,5 @@
 using LANCommander.SDK.Enums;
-using LANCommander.SDK.Models;
+using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
@@ -82,9 +82,9 @@ public class MediaImporter<TParentRecord>(ServiceProvider serviceProvider, Impor
 
     public Task<bool> ExistsAsync(Media media)
     {
-        if (importContext.Record is not Game)
+        if (importContext.Record is not Game game)
             throw new ImportSkippedException<Media>(media, $"Cannot import media for a {typeof(TParentRecord).Name}");
                 
-        return _mediaService.ExistsAsync(m => m.Type == media.Type && m.Game.Id == media.Id);
+        return _mediaService.ExistsAsync(m => m.Type == media.Type && m.Id == media.Id);
     }
 }

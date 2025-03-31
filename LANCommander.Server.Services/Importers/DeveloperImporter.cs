@@ -1,6 +1,5 @@
-using LANCommander.SDK.Models;
+using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
-using Game = LANCommander.Server.Data.Models.Game;
 
 namespace LANCommander.Server.Services.Importers;
 
@@ -17,7 +16,7 @@ public class DeveloperImporter<TParentRecord>(ServiceProvider serviceProvider, I
         {
             var company = new Data.Models.Company
             {
-                DevelopedGames = new List<Game>() { game },
+                DevelopedGames = new List<Data.Models.Game>() { game },
                 Name = record.Name,
             };
 
@@ -41,7 +40,7 @@ public class DeveloperImporter<TParentRecord>(ServiceProvider serviceProvider, I
         try
         {
             if (existing.DevelopedGames == null)
-                existing.DevelopedGames = new List<Game>();
+                existing.DevelopedGames = new List<Data.Models.Game>();
             
             existing.DevelopedGames.Add(game);
             

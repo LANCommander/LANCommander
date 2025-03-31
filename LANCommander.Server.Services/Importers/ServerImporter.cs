@@ -1,238 +1,82 @@
-using LANCommander.Server.Data.Models;
-using LANCommander.SDK.Helpers;
-using System.IO.Compression;
-using LANCommander.SDK.Enums;
-using LANCommander.Server.Data.Enums;
-using LANCommander.Server.Services.Extensions;
-using LANCommander.Server.Services.Models;
+using AutoMapper;
+using Microsoft.Extensions.DependencyInjection;
+using SharpCompress.Archives;
+using SharpCompress.Common;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ServerImporter(
-    ArchiveService archiveService,
-    GameService gameService,
-    ScriptService scriptService,
-    ServerService serverService,
-    Settings settings) : IImporter<Data.Models.Server>
+public class ServerImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
-    public async Task<Data.Models.Server> ImportAsync(Guid objectKey, ZipArchive importZip)
+    private readonly ServerService _serverService = serviceProvider.GetService<ServerService>();
+    private readonly GameService _gameService = serviceProvider.GetService<GameService>();
+    private readonly UserService _userService = serviceProvider.GetService<UserService>();
+    private readonly IMapper _mapper = serviceProvider.GetService<IMapper>();
+    
+    public async Task<Data.Models.Server> AddAsync(SDK.Models.Manifest.Server record)
     {
-        var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var manifest = ManifestHelper.Deserialize<SDK.Models.Server>(await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+        var server = _mapper.Map<Data.Models.Server>(record);
 
-        var server = await InitializeServerFromManifest(manifest);
-
-        server = await UpdateGame(server, manifest);
-        server = await UpdateConsoles(server, manifest);
-        server = await UpdateHttpPaths(server, manifest);
-        server = await UpdateScripts(server, manifest, importZip);
-        server = await UpdateActions(server, manifest);
-        await ExtractFiles(server, importZip);
-
-        if (await serverService.ExistsAsync(server.Id))
-            server = await serverService.UpdateAsync(server);
-        else
-            server = await serverService.AddAsync(server);
-
-        return server;
+        try
+        {
+            await ExtractFiles(server);
+            
+            return await _serverService.AddAsync(server);
+        }
+        catch (Exception ex)
+        {
+            throw new ImportSkippedException<SDK.Models.Manifest.Server>(record, "An unknown error occured while trying to add server", ex);
+        }
     }
 
-    private async Task<Data.Models.Server> InitializeServerFromManifest(SDK.Models.Server manifest)
+    public async Task<Data.Models.Server> UpdateAsync(SDK.Models.Manifest.Server record)
     {
-        var exists = await serverService.ExistsAsync(manifest.Id);
+        var existing = await _serverService.FirstOrDefaultAsync(s => s.Id == record.Id || s.Name == record.Name);
 
-        Data.Models.Server server;
-
-        if (!exists)
-            server = new Data.Models.Server()
-            {
-                Id = manifest.Id,
-            };
-        else
+        try
         {
-            server = await serverService.Include(s => s.Game)
-                .Include(s => s.Actions)
-                .Include(s => s.Scripts)
-                .Include(s => s.HttpPaths)
-                .Include(s => s.ServerConsoles)
-                .FirstOrDefaultAsync(s => s.Id == manifest.Id);  
+            existing.Name = record.Name;
+            existing.Path = record.Path;
+            existing.WorkingDirectory = record.WorkingDirectory;
+            existing.Arguments = record.Arguments;
+            existing.Host = record.Host;
+            existing.Port = record.Port;
+            existing.Autostart = record.Autostart;
+            existing.AutostartMethod = record.AutostartMethod;
+            existing.AutostartDelay = record.AutostartDelay;
+            existing.ContainerId = record.ContainerId;
+            existing.UseShellExecute = record.UseShellExecute;
+            existing.Game = await _gameService.FirstOrDefaultAsync(g =>
+                g.Id.ToString() == record.Game || g.Title == record.Game);
+            existing.CreatedBy = await _userService.GetAsync(record.CreatedBy);
+            existing.CreatedOn = record.CreatedOn;
+            existing.UpdatedBy = await _userService.GetAsync(record.UpdatedBy);
+            existing.UpdatedOn = DateTime.Now;
+            existing.ProcessTerminationMethod = record.ProcessTerminationMethod;
+            
+            existing = await _serverService.UpdateAsync(existing);
+
+            await ExtractFiles(existing);
+
+            return existing;
         }
-
-        server.Name = manifest.Name;
-        server.Autostart = manifest.Autostart;
-        server.AutostartMethod = (ServerAutostartMethod)(int)manifest.AutostartMethod;
-        server.AutostartDelay = manifest.AutostartDelay;
-        server.WorkingDirectory = Path.Combine(settings.Servers.StoragePath, server.Name.SanitizeFilename());
-        server.Path = manifest.Path.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
-        server.Arguments = manifest.Arguments.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
-        server.UseShellExecute = manifest.UseShellExecute;
-        server.ProcessTerminationMethod = manifest.ProcessTerminationMethod;
-        server.OnStartScriptPath = manifest.OnStartScriptPath;
-        server.OnStopScriptPath = manifest.OnStopScriptPath;
-        server.Port = manifest.Port;
-
-        return server;
+        catch (Exception ex)
+        {
+            throw new ImportSkippedException<SDK.Models.Manifest.Server>(record, "An unknown error occurred while trying to update server", ex);
+        }
     }
 
-    private async Task<Data.Models.Server> UpdateGame(Data.Models.Server server, SDK.Models.Server manifest)
+    public async Task<bool> ExistsAsync(SDK.Models.Manifest.Server record)
     {
-        if (manifest.Game != null)
-        {
-            var game = await gameService.GetAsync(manifest.Game.Id);
-            server.Game = game;
-        }
-
-        return server;
+        return await _serverService.ExistsAsync(s => s.Id == record.Id || s.Name == record.Name);
     }
-
-    private async Task<Data.Models.Server> UpdateConsoles(Data.Models.Server server, SDK.Models.Server manifest)
+    
+    private async Task ExtractFiles(Data.Models.Server server)
     {
-        if (server.ServerConsoles == null)
-            server.ServerConsoles = new List<ServerConsole>();
-
-        foreach (var serverConsole in server.ServerConsoles)
+        
+        foreach (var entry in importContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/")))
         {
-            var manifestConsole = manifest.ServerConsoles.FirstOrDefault(c => c.Id == serverConsole.Id);
-
-            if (manifestConsole != null)
-            {
-                serverConsole.ServerId = server.Id;
-                serverConsole.Name = manifestConsole.Name;
-                serverConsole.Type = (ServerConsoleType)(int)manifestConsole.Type;
-                serverConsole.Path = manifestConsole.Path;
-                serverConsole.Host = manifestConsole.Host;
-                serverConsole.Port = manifestConsole.Port;
-            }
-            else
-                server.ServerConsoles.Remove(serverConsole);
-        }
-
-        if (manifest.ServerConsoles != null)
-        {
-            foreach (var manifestConsole in manifest.ServerConsoles.Where(mc => !server.ServerConsoles.Any(c => c.Id != mc.Id)))
-            {
-                server.ServerConsoles.Add(new ServerConsole
-                {
-                    Id = manifestConsole.Id,
-                    Server = server,
-                    Name = manifestConsole.Name,
-                    Type = (ServerConsoleType)(int)manifestConsole.Type,
-                    Path = manifestConsole.Path,
-                    Host = manifestConsole.Host,
-                    Port = manifestConsole.Port,
-                });
-            }
-        }
-
-        return server;
-    }
-
-    private async Task<Data.Models.Server> UpdateHttpPaths(Data.Models.Server server, SDK.Models.Server manifest)
-    {
-        if (server.HttpPaths == null)
-            server.HttpPaths = new List<ServerHttpPath>();
-
-        foreach (var httpPath in server.HttpPaths)
-        {
-            var manifestHttpPath = manifest.HttpPaths.FirstOrDefault(p => p.Id == httpPath.Id);
-
-            if (manifestHttpPath != null)
-            {
-                httpPath.LocalPath = manifestHttpPath.LocalPath.Replace(manifest.WorkingDirectory, server.WorkingDirectory);
-                httpPath.Path = manifestHttpPath.Path;
-            }
-            else
-                server.HttpPaths.Remove(httpPath);
-        }
-
-        if (manifest.HttpPaths != null)
-        {
-            foreach (var manifestPath in manifest.HttpPaths.Where(mp => !server.HttpPaths.Any(p => p.Id != mp.Id)))
-            {
-                server.HttpPaths.Add(new ServerHttpPath()
-                {
-                    Id = manifestPath.Id,
-                    Path = manifestPath.Path,
-                    LocalPath = manifestPath.LocalPath
-                });
-            }
-        }
-
-        return server;
-    }
-
-    private async Task<Data.Models.Server> UpdateScripts(Data.Models.Server server, SDK.Models.Server manifest, ZipArchive importZip)
-    {
-        if (server.Scripts == null)
-            server.Scripts = new List<Script>();
-
-        foreach (var script in server.Scripts)
-        {
-            var manifestScript = manifest.Scripts.FirstOrDefault(s => s.Id == script.Id);
-
-            if (manifestScript != null)
-            {
-                script.Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}");
-                script.Description = manifestScript.Description;
-                script.Name = manifestScript.Name;
-                script.RequiresAdmin = manifestScript.RequiresAdmin;
-                script.Type = (ScriptType)(int)manifestScript.Type;
-            }
-            else
-                server.Scripts.Remove(script);
-        }
-
-        if (manifest.Scripts != null)
-        {
-            foreach (var manifestScript in manifest.Scripts.Where(ms => !server.Scripts.Any(s => s.Id == ms.Id)))
-            {
-                var newScript = new Script
-                {
-                    Id = manifestScript.Id,
-                    Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
-                    Description = manifestScript.Description,
-                    Name = manifestScript.Name,
-                    RequiresAdmin = manifestScript.RequiresAdmin,
-                    Type = (ScriptType)(int)manifestScript.Type,
-                    CreatedOn = manifestScript.CreatedOn,
-                };
-                
-                newScript = await scriptService.AddAsync(newScript);
-                
-                server.Scripts.Add(newScript);
-            }
-        }
-
-        return server;
-    }
-
-    private async Task<Data.Models.Server> UpdateActions(Data.Models.Server server, SDK.Models.Server manifest)
-    {
-        server.Actions = new List<Data.Models.Action>();
-
-        if (manifest.Actions != null && manifest.Actions.Count() > 0)
-        foreach (var manifestAction in manifest.Actions)
-        {
-            new Data.Models.Action()
-            {
-                Name = manifestAction.Name,
-                Arguments = manifestAction.Arguments,
-                Path = manifestAction.Path,
-                WorkingDirectory = manifestAction.WorkingDirectory,
-                PrimaryAction = manifestAction.IsPrimaryAction,
-                SortOrder = manifestAction.SortOrder,
-            };
-        }
-
-        return server;
-    }
-
-    private async Task ExtractFiles(Data.Models.Server server, ZipArchive importZip)
-    {
-        foreach (var entry in importZip.Entries.Where(a => a.FullName.StartsWith("Files/")))
-        {
-            var destination = entry.FullName
-                .Substring(6, entry.FullName.Length - 6)
+            var destination = entry.Key
+                .Substring(6, entry.Key.Length - 6)
                 .TrimEnd('/')
                 .Replace('/', Path.DirectorySeparatorChar);
 
@@ -243,8 +87,13 @@ public class ServerImporter(
             if (!String.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
-            if (!entry.FullName.EndsWith('/'))
-                entry.ExtractToFile(destination, true);
+            if (!entry.Key.EndsWith('/'))
+                entry.WriteToFile(destination, new ExtractionOptions
+                {
+                    Overwrite = true,
+                    PreserveAttributes = true,
+                    PreserveFileTime = true,
+                });
         }
     }
 } 

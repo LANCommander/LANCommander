@@ -1,12 +1,13 @@
-﻿using LANCommander.SDK.Enums;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using LANCommander.SDK.Enums;
 
-namespace LANCommander.SDK.Models
+namespace LANCommander.SDK.Models.Manifest
 {
     public class Game : BaseModel
     {
-        public int IGDBId { get; set; }
+        public Guid Id { get; set; }
+        public long? IGDBId { get; set; }
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string DirectoryName { get; set; }
@@ -14,10 +15,9 @@ namespace LANCommander.SDK.Models
         public string Description { get; set; }
         public bool Singleplayer { get; set; }
         public DateTime ReleasedOn { get; set; }
-        public bool InLibrary { get; set; }
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
-        public Guid BaseGameId { get; set; }
+        public string BaseGame { get; set; }
         public Engine Engine { get; set; }
         public virtual IEnumerable<Action> Actions { get; set; }
         public virtual IEnumerable<Archive> Archives { get; set; }
@@ -37,8 +37,7 @@ namespace LANCommander.SDK.Models
         public virtual IEnumerable<Tag> Tags { get; set; }
         
         public virtual IEnumerable<Redistributable> Redistributables { get; set; }
-        public virtual IEnumerable<Server> Servers { get; set; }
-        public virtual IEnumerable<Guid> DependentGames { get; set; }
+        public virtual IEnumerable<Game> Addons { get; set; }
 
         public bool IsAddon
         {

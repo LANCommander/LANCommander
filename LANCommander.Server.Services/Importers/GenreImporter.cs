@@ -1,6 +1,5 @@
-using LANCommander.SDK.Models;
+using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
-using Game = LANCommander.Server.Data.Models.Game;
 
 namespace LANCommander.Server.Services.Importers;
 
@@ -17,7 +16,7 @@ public class GenreImporter<TParentRecord>(ServiceProvider serviceProvider, Impor
         {
             var genre = new Data.Models.Genre
             {
-                Games = new List<Game>() { game },
+                Games = new List<Data.Models.Game>() { game },
                 Name = record.Name,
             };
 
@@ -41,7 +40,7 @@ public class GenreImporter<TParentRecord>(ServiceProvider serviceProvider, Impor
         try
         {
             if (existing.Games == null)
-                existing.Games = new List<Game>();
+                existing.Games = new List<Data.Models.Game>();
             
             existing.Games.Add(game);
             

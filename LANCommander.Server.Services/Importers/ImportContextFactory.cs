@@ -4,10 +4,14 @@ using SharpCompress.Archives.Zip;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ImportContextFactory<TRecord>(ServiceProvider serviceProvider) where TRecord : class
+public class ImportContextFactory(ServiceProvider serviceProvider)
 {
-    public ImportContext<TRecord> Create<TRecord>(ZipArchive zipArchive, TRecord record, ImportRecordFlags flags)
+    public ImportContext<TRecord> Create<TRecord>(ZipArchive zipArchive, ImportRecordFlags flags)
     {
-        return new ImportContext<TRecord>(serviceProvider, zipArchive, record);
+        var context = new ImportContext<TRecord>(serviceProvider, zipArchive, record);
+
+        context.Initialize(zipArchive, record);
+
+        return context;
     }
 }

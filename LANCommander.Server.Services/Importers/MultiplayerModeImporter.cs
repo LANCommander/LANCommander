@@ -1,6 +1,5 @@
-using LANCommander.SDK.Models;
+using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
-using MultiplayerMode = LANCommander.SDK.Models.MultiplayerMode;
 
 namespace LANCommander.Server.Services.Importers;
 
@@ -17,7 +16,6 @@ public class MultiplayerModeImporter<TParentRecord>(ServiceProvider serviceProvi
         {
             var multiplayerMode = new Data.Models.MultiplayerMode
             {
-                Id = record.Id,
                 Game = game,
                 Description = record.Description,
                 Type = record.Type,

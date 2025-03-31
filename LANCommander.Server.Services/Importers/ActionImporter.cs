@@ -1,6 +1,6 @@
-using LANCommander.SDK.Models;
+using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
-using Action = LANCommander.SDK.Models.Action;
+using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.Services.Importers;
 
@@ -17,7 +17,6 @@ public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
         {
             var action = new Data.Models.Action
             {
-                Id = record.Id,
                 Game = game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
@@ -40,7 +39,7 @@ public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Action>(record, $"Cannot import actions for a {typeof(TParentRecord).Name}");
 
-        var existing = await _actionService.FirstOrDefaultAsync(p => p.Id == record.Id);
+        var existing = await _actionService.FirstOrDefaultAsync(a => a.Name == record.Name);
 
         try
         {
@@ -64,6 +63,6 @@ public class ActionImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
         if (importContext.Record is not Data.Models.Game game)
             throw new ImportSkippedException<Action>(record, $"Cannot import actions for a {typeof(TParentRecord).Name}");
         
-        return await _actionService.ExistsAsync(p => p.Id == record.Id);
+        return await _actionService.ExistsAsync(a => a.Name == record.Name);
     }
 }

@@ -1,4 +1,4 @@
-using LANCommander.SDK.Models;
+using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;

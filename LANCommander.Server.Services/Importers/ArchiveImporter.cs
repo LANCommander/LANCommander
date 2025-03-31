@@ -1,7 +1,5 @@
-using LANCommander.SDK.Models;
+using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
-using SharpCompress.Archives;
-using SharpCompress.Common;
 
 namespace LANCommander.Server.Services.Importers;
 

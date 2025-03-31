@@ -1,148 +1,57 @@
-using LANCommander.Server.Data.Models;
-using LANCommander.SDK.Helpers;
-using System.IO.Compression;
-using LANCommander.SDK.Enums;
-using LANCommander.Server.Data.Enums;
-using LANCommander.Server.Services.Extensions;
+using LANCommander.SDK.Models.Manifest;
+using AutoMapper;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class RedistributableImporter(
-    ArchiveService archiveService,
-    ScriptService scriptService,
-    RedistributableService redistributableService) : IImporter<Redistributable>
+public class RedistributableImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Redistributable, Data.Models.Redistributable>
 {
-    public async Task<Redistributable> ImportAsync(Guid objectKey, ZipArchive importZip)
+    private readonly RedistributableService _redistributableService;
+    private readonly UserService _userService = serviceProvider.GetService<UserService>();
+    private readonly IMapper _mapper = serviceProvider.GetService<IMapper>();
+    
+    public async Task<Data.Models.Redistributable> AddAsync(Redistributable record)
     {
-        var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
-        var manifest =
-            ManifestHelper.Deserialize<SDK.Models.Redistributable>(
-                await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
+        var redistributable = _mapper.Map<Data.Models.Redistributable>(record);
 
-        var redistributable = await InitializeFromManifest(manifest);
-
-        redistributable = await UpdateScripts(redistributable, manifest, importZip);
-        redistributable = await UpdateArchives(redistributable, manifest, importZip, importArchive);
-
-        if (await redistributableService.ExistsAsync(redistributable.Id))
-            redistributable = await redistributableService.UpdateAsync(redistributable);
-        else
-            redistributable = await redistributableService.AddAsync(redistributable);
-
-        await archiveService.DeleteAsync(importArchive);
-
-        return redistributable;
+        try
+        {
+            return await _redistributableService.AddAsync(redistributable);
+        }
+        catch (Exception ex)
+        {
+            throw new ImportSkippedException<Redistributable>(record,
+                "An unknown error occurred while trying to add redistributable", ex);
+        }
     }
 
-    private async Task<Redistributable> InitializeFromManifest(SDK.Models.Redistributable manifest)
+    public async Task<Data.Models.Redistributable> UpdateAsync(Redistributable record)
     {
-        var redistributable = await redistributableService.GetAsync(manifest.Id);
-        var exists = redistributable != null;
+        var existing = await _redistributableService.FirstOrDefaultAsync(r => r.Id == record.Id || r.Name == record.Name);
 
-        if (!exists)
-            redistributable = new Redistributable();
+        try
+        {
+            existing.Name = record.Name;
+            existing.Description = record.Description;
+            existing.Notes = record.Notes;
+            existing.CreatedOn = record.CreatedOn;
+            existing.CreatedBy = await _userService.GetAsync(record.CreatedBy);
+            existing.UpdatedOn = record.UpdatedOn;
+            existing.UpdatedBy = await _userService.GetAsync(record.UpdatedBy);
 
-        redistributable.Id = manifest.Id;
-        redistributable.Name = manifest.Name;
-        redistributable.Description = manifest.Description;
-        redistributable.Notes = manifest.Notes;
+            existing = await _redistributableService.UpdateAsync(existing);
 
-        return redistributable;
+            return existing;
+        }
+        catch (Exception ex)
+        {
+            throw new ImportSkippedException<Redistributable>(record,
+                "An unknown error occurred while trying to add redistributable", ex);
+        }
     }
 
-    private async Task<Redistributable> UpdateScripts(Redistributable redistributable, SDK.Models.Redistributable manifest, ZipArchive importZip)
+    public async Task<bool> ExistsAsync(Redistributable record)
     {
-        if (redistributable.Scripts == null)
-            redistributable.Scripts = new List<Script>();
-
-        foreach (var script in redistributable.Scripts)
-        {
-            var manifestScript = manifest.Scripts.FirstOrDefault(s => s.Id == script.Id);
-
-            if (manifestScript != null)
-            {
-                script.Contents = await importZip.ReadAllTextAsync($"Scripts/{script.Id}");
-                script.Description = manifestScript.Description;
-                script.Name = manifestScript.Name;
-                script.RequiresAdmin = manifestScript.RequiresAdmin;
-                script.Type = (ScriptType)(int)manifestScript.Type;
-            }
-            else
-                redistributable.Scripts.Remove(script);
-        }
-
-        if (manifest.Scripts != null)
-        {
-            foreach (var manifestScript in manifest.Scripts.Where(ms => !redistributable.Scripts.Any(s => s.Id == ms.Id)))
-            {
-                var newScript = new Script
-                {
-                    Id = manifestScript.Id,
-                    Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
-                    Description = manifestScript.Description,
-                    Name = manifestScript.Name,
-                    RequiresAdmin = manifestScript.RequiresAdmin,
-                    Type = (ScriptType)(int)manifestScript.Type,
-                    CreatedOn = manifestScript.CreatedOn,
-                };
-
-                newScript = await scriptService.AddAsync(newScript);
-                
-                redistributable.Scripts.Add(newScript);
-            }
-        }
-
-        return redistributable;
-    }
-
-    private async Task<Redistributable> UpdateArchives(Redistributable redistributable, SDK.Models.Redistributable manifest, ZipArchive importZip, Archive importArchive)
-    {
-        if (redistributable.Archives == null)
-            redistributable.Archives = new List<Archive>();
-
-        foreach (var archive in redistributable.Archives)
-        {
-            var manifestArchive = manifest.Archives.FirstOrDefault(a => a.Id == archive.Id);
-
-            if (manifestArchive != null)
-            {
-                archive.Changelog = manifestArchive.Changelog;
-                archive.ObjectKey = manifestArchive.ObjectKey;
-                archive.Version = manifestArchive.Version;
-                archive.CreatedOn = manifestArchive.CreatedOn;
-                archive.StorageLocation = importArchive.StorageLocation;
-
-                var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
-
-                importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
-
-                archive.CompressedSize = new FileInfo(extractionLocation).Length;
-            }
-        }
-
-        if (manifest.Archives != null)
-            foreach (var manifestArchive in manifest.Archives.Where(ma => !redistributable.Archives.Any(a => a.Id == ma.Id)))
-            {
-                var archive = new Archive()
-                {
-                    Id = manifestArchive.Id,
-                    ObjectKey = manifestArchive.ObjectKey,
-                    Changelog = manifestArchive.Changelog,
-                    Version = manifestArchive.Version,
-                    CreatedOn = manifestArchive.CreatedOn,
-                    StorageLocation = importArchive.StorageLocation,
-                };
-
-                var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
-
-                importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
-
-                archive.CompressedSize = new FileInfo(extractionLocation).Length;
-
-                redistributable.Archives.Add(archive);
-            }
-
-        return redistributable;
+        return await _redistributableService.ExistsAsync(r => r.Id == record.Id || r.Name == record.Name);
     }
 } 

@@ -6,12 +6,15 @@ namespace LANCommander.Server.Services.Importers;
 
 public class ImportContext<TRecord>(
     ServiceProvider serviceProvider,
-    ZipArchive archive,
-    TRecord record) : IDisposable
+    ZipArchive archive) : IDisposable
 {
-    public TRecord Record { get; } = record;
+    public TRecord Record { get; private set; }
     public StorageLocation ArchiveStorageLocation { get; }
     public ZipArchive Archive { get; } = archive;
+    
+    public GameImporter<TRecord> Games { get; private set; }
+    public RedistributableImporter<TRecord> Redistributables { get; private set; }
+    public ServerImporter<TRecord> Servers { get; private set; }
     
     public ActionImporter<TRecord> Actions { get; private set; }
     public ArchiveImporter<TRecord> Archives { get; private set; }
@@ -29,6 +32,8 @@ public class ImportContext<TRecord>(
     public SaveImporter<TRecord> Saves { get; private set; }
     public SavePathImporter<TRecord> SavePaths { get; private set; }
     public ScriptImporter<TRecord> Scripts { get; private set; }
+    public ServerConsoleImporter<TRecord> ServerConsoles { get; private set; }
+    public ServerHttpPathImporter<TRecord> ServerHttpPaths { get; private set; }
     public TagImporter<TRecord> Tags { get; private set; }
 
     public int Remaining => _queue.Count;
@@ -43,7 +48,7 @@ public class ImportContext<TRecord>(
     public EventHandler<object> OnRecordProcessed;
     public EventHandler<object> OnRecordError;
     
-    public void Initialize(ZipArchive archive, TRecord record)
+    public void Initialize()
     {
         Actions = new ActionImporter<TRecord>(serviceProvider, this);
         Archives = new ArchiveImporter<TRecord>(serviceProvider, this);
@@ -61,7 +66,18 @@ public class ImportContext<TRecord>(
         Saves = new SaveImporter<TRecord>(serviceProvider, this);
         SavePaths = new SavePathImporter<TRecord>(serviceProvider, this);
         Scripts = new ScriptImporter<TRecord>(serviceProvider, this);
+        ServerConsoles = new ServerConsoleImporter<TRecord>(serviceProvider, this);
+        ServerHttpPaths = new ServerHttpPathImporter<TRecord>(serviceProvider, this);
         Tags = new TagImporter<TRecord>(serviceProvider, this);
+        
+        Games = new GameImporter<TRecord>(serviceProvider, this);
+        Redistributables = new RedistributableImporter<TRecord>(serviceProvider, this);
+        Servers = new ServerImporter<TRecord>(serviceProvider, this);
+    }
+
+    public void Use(TRecord record)
+    {
+        Record = record;
     }
 
     public async Task AddToQueueAsync(IEnumerable<object> records)
@@ -78,40 +94,44 @@ public class ImportContext<TRecord>(
     {
         foreach (var record in _queue)
         {
-            if (record is SDK.Models.Action action)
+            if (record is SDK.Models.Manifest.Action action)
                 await ImportRecordAsync(action, Actions);
-            else if (record is SDK.Models.Archive archive)
+            else if (record is SDK.Models.Manifest.Archive archive)
                 await ImportRecordAsync(archive, Archives);
-            else if (record is SDK.Models.Collection collection)
+            else if (record is SDK.Models.Manifest.Collection collection)
                 await ImportRecordAsync(collection, Collections);
-            else if (record is SDK.Models.GameCustomField customField)
+            else if (record is SDK.Models.Manifest.GameCustomField customField)
                 await ImportRecordAsync(customField, CustomFields);
-            else if (record is SDK.Models.Company company)
+            else if (record is SDK.Models.Manifest.Company company)
             {
                 await ImportRecordAsync(company, Developers);
                 await ImportRecordAsync(company, Publishers);
             }
-            else if (record is SDK.Models.Engine engine)
+            else if (record is SDK.Models.Manifest.Engine engine)
                 await ImportRecordAsync(engine, Engines);
-            else if (record is SDK.Models.Genre genre)
+            else if (record is SDK.Models.Manifest.Genre genre)
                 await ImportRecordAsync(genre, Genres);
-            else if (record is SDK.Models.Key key)
+            else if (record is SDK.Models.Manifest.Key key)
                 await ImportRecordAsync(key, Keys);
-            else if (record is SDK.Models.Media media)
+            else if (record is SDK.Models.Manifest.Media media)
                 await ImportRecordAsync(media, Media);
-            else if (record is SDK.Models.MultiplayerMode multiplayerMode)
+            else if (record is SDK.Models.Manifest.MultiplayerMode multiplayerMode)
                 await ImportRecordAsync(multiplayerMode, MultiplayerModes);
-            else if (record is SDK.Models.Platform platform)
+            else if (record is SDK.Models.Manifest.Platform platform)
                 await ImportRecordAsync(platform, Platforms);
-            else if (record is SDK.Models.PlaySession playSession)
+            else if (record is SDK.Models.Manifest.PlaySession playSession)
                 await ImportRecordAsync(playSession, PlaySessions);
-            else if (record is SDK.Models.GameSave gameSave)
-                await ImportRecordAsync(gameSave, Saves);
-            else if (record is SDK.Models.SavePath savePath)
+            else if (record is SDK.Models.Manifest.Save save)
+                await ImportRecordAsync(save, Saves);
+            else if (record is SDK.Models.Manifest.SavePath savePath)
                 await ImportRecordAsync(savePath, SavePaths);
-            else if (record is SDK.Models.Script script)
+            else if (record is SDK.Models.Manifest.Script script)
                 await ImportRecordAsync(script, Scripts);
-            else if (record is SDK.Models.Tag tag)
+            else if (record is SDK.Models.Manifest.ServerConsole serverConsole)
+                await ImportRecordAsync(serverConsole, ServerConsoles);
+            else if (record is SDK.Models.Manifest.ServerHttpPath serverHttpPath)
+                await ImportRecordAsync(serverHttpPath, ServerHttpPaths);
+            else if (record is SDK.Models.Manifest.Tag tag)
                 await ImportRecordAsync(tag, Tags);
         }
     }

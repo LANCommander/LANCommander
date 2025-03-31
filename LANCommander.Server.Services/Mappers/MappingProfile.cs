@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using LANCommander.SDK.Models;
+using LANCommander.Server.Services;
 
 namespace LANCommander.Server
 {
@@ -64,6 +65,30 @@ namespace LANCommander.Server
             CreateMap<Data.Models.Game, EntityReference>()
                 .ForMember(dest => dest.Name,
                     opt => opt.MapFrom(src => src.Title));
+            
+            CreateManifestMappings();
+        }
+
+        private void CreateManifestMappings()
+        {
+            CreateMap<Data.Models.Action, SDK.Models.Manifest.Action>().ReverseMap();
+            CreateMap<Data.Models.Archive, SDK.Models.Manifest.Archive>().ReverseMap();
+            CreateMap<Data.Models.Collection, SDK.Models.Manifest.Collection>().ReverseMap();
+            CreateMap<Data.Models.Engine, SDK.Models.Manifest.Engine>().ReverseMap();
+            CreateMap<Data.Models.GameSave, SDK.Models.Manifest.Save>().ReverseMap();
+            CreateMap<Data.Models.Genre, SDK.Models.Manifest.Genre>().ReverseMap();
+            CreateMap<Data.Models.Key, SDK.Models.Manifest.Key>().ReverseMap();
+            CreateMap<Data.Models.Media, SDK.Models.Manifest.Media>().ReverseMap();
+            CreateMap<Data.Models.MultiplayerMode, SDK.Models.Manifest.MultiplayerMode>().ReverseMap();
+            CreateMap<Data.Models.Platform, SDK.Models.Manifest.Platform>().ReverseMap();
+            CreateMap<Data.Models.PlaySession, SDK.Models.Manifest.PlaySession>().ReverseMap();
+            CreateMap<Data.Models.Redistributable, SDK.Models.Manifest.Redistributable>().ReverseMap();
+            CreateMap<Data.Models.Server, SDK.Models.Manifest.Server>().ReverseMap();
+            CreateMap<Data.Models.ServerConsole, SDK.Models.Manifest.ServerConsole>().ReverseMap();
+            CreateMap<Data.Models.ServerHttpPath, SDK.Models.Manifest.ServerHttpPath>().ReverseMap();
+            CreateMap<Data.Models.SavePath, SDK.Models.Manifest.SavePath>().ReverseMap();
+            CreateMap<Data.Models.Script, SDK.Models.Manifest.Script>().ReverseMap();
+            CreateMap<Data.Models.Tag, SDK.Models.Manifest.Tag>().ReverseMap();
         }
 
         private void CreateEntityReferenceMap<TEntity>(Expression<Func<TEntity, string>> nameMember)

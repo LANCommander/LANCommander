@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using ZipArchive = SharpCompress.Archives.Zip.ZipArchive;
 
 namespace LANCommander.Server.Services.Importers;
 
@@ -10,6 +11,8 @@ namespace LANCommander.Server.Services.Importers;
 /// <typeparam name="TRecord"></typeparam>
 public interface IImporter<TRecord, TEntity>
 {
+    Task<ImportItemInfo> InfoAsync(TRecord record);
+    bool CanImport(TRecord record);
     Task<TEntity> AddAsync(TRecord record);
     Task<TEntity> UpdateAsync(TRecord record);
     Task<bool> ExistsAsync(TRecord record);

@@ -3,24 +3,32 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class PublisherImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Company, Data.Models.Company>
+public class PublisherImporter<TParentRecord>(
+    CompanyService companyService,
+    ImportContext<TParentRecord> importContext) : IImporter<Company, Data.Models.Company>
+    where TParentRecord : Data.Models.BaseModel
 {
-    CompanyService _companyService = serviceProvider.GetRequiredService<CompanyService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(Company record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+        };
+    }
+
+    public bool CanImport(Company record) => importContext.Record is Data.Models.Company;
+
     public async Task<Data.Models.Company> AddAsync(Company record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import publishers for a {typeof(TParentRecord).Name}");
-
         try
         {
             var company = new Data.Models.Company
             {
-                PublishedGames = new List<Data.Models.Game>() { game },
+                PublishedGames = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
                 Name = record.Name,
             };
 
-            company = await _companyService.AddAsync(company);
+            company = await companyService.AddAsync(company);
 
             return company;
         }
@@ -32,19 +40,16 @@ public class PublisherImporter<TParentRecord>(ServiceProvider serviceProvider, I
 
     public async Task<Data.Models.Company> UpdateAsync(Company record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import publishers for a {typeof(TParentRecord).Name}");
-
-        var existing = await _companyService.Include(g => g.PublishedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
+        var existing = await companyService.Include(g => g.PublishedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
 
         try
         {
             if (existing.PublishedGames == null)
                 existing.PublishedGames = new List<Data.Models.Game>();
             
-            existing.PublishedGames.Add(game);
+            existing.PublishedGames.Add(importContext.Record as Data.Models.Game);
             
-            existing = await _companyService.UpdateAsync(existing);
+            existing = await companyService.UpdateAsync(existing);
 
             return existing;
         }
@@ -56,9 +61,6 @@ public class PublisherImporter<TParentRecord>(ServiceProvider serviceProvider, I
 
     public async Task<bool> ExistsAsync(Company record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import publishers for a {typeof(TParentRecord).Name}");
-        
-        return await _companyService.ExistsAsync(c => c.Name == record.Name);
+        return await companyService.ExistsAsync(c => c.Name == record.Name);
     }
 }

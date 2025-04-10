@@ -3,25 +3,34 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ServerHttpPathImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
+public class ServerHttpPathImporter<TParentRecord>(
+    ServerHttpPathService serverHttpPathService,
+    ServerService serverService,
+    ImportContext<TParentRecord> importContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
+    where TParentRecord : Data.Models.BaseModel
 {
-    ServerHttpPathService _serverHttpPathService = serviceProvider.GetRequiredService<ServerHttpPathService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(ServerHttpPath record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Path,
+        };
+    }
+
+    public bool CanImport(ServerHttpPath record) => importContext.Record is Data.Models.Server;
+
     public async Task<Data.Models.ServerHttpPath> AddAsync(ServerHttpPath record)
     {
-        if (importContext.Record is not Data.Models.Server server)
-            throw new ImportSkippedException<ServerHttpPath>(record, $"Cannot import server console for a {typeof(TParentRecord).Name}");
-
         try
         {
             var serverHttpPath = new Data.Models.ServerHttpPath
             {
                 LocalPath = record.LocalPath,
                 Path = record.Path,
-                Server = server,
+                Server = await serverService.FirstOrDefaultAsync(s => s.Name == (importContext.Record as Data.Models.Server).Name),
             };
 
-            serverHttpPath = await _serverHttpPathService.AddAsync(serverHttpPath);
+            serverHttpPath = await serverHttpPathService.AddAsync(serverHttpPath);
 
             return serverHttpPath;
         }
@@ -33,18 +42,17 @@ public class ServerHttpPathImporter<TParentRecord>(ServiceProvider serviceProvid
 
     public async Task<Data.Models.ServerHttpPath> UpdateAsync(ServerHttpPath record)
     {
-        if (importContext.Record is not Data.Models.Server server)
-            throw new ImportSkippedException<ServerHttpPath>(record, $"Cannot import server consoles for a {typeof(TParentRecord).Name}");
-
-        var existing = await _serverHttpPathService.FirstOrDefaultAsync(p => p.Path == record.Path);
+        var existing = await serverHttpPathService.FirstOrDefaultAsync(p => p.Path == record.Path);
 
         try
         {
             existing.LocalPath = record.LocalPath;
             existing.Path = record.Path;
-            existing.Server = server;
+            existing.Server =
+                await serverService.FirstOrDefaultAsync(
+                    s => s.Name == (importContext.Record as Data.Models.Server).Name);
             
-            existing = await _serverHttpPathService.UpdateAsync(existing);
+            existing = await serverHttpPathService.UpdateAsync(existing);
 
             return existing;
         }
@@ -56,9 +64,8 @@ public class ServerHttpPathImporter<TParentRecord>(ServiceProvider serviceProvid
 
     public async Task<bool> ExistsAsync(ServerHttpPath record)
     {
-        if (importContext.Record is not Data.Models.Server server)
-            throw new ImportSkippedException<ServerHttpPath>(record, $"Cannot import serverHttpPaths for a {typeof(TParentRecord).Name}");
-        
-        return await _serverHttpPathService.ExistsAsync(p => p.Path == record.Path);
+        return await serverHttpPathService
+            .Include(p => p.Server)
+            .ExistsAsync(p => p.Path == record.Path && p.Server.Name == (importContext.Record as Data.Models.Server).Name);
     }
 }

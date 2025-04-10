@@ -1,29 +1,36 @@
 using LANCommander.SDK.Models.Manifest;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Key, Data.Models.Key>
+public class KeyImporter<TParentRecord>(
+    KeyService keyService,
+    ImportContext<TParentRecord> importContext) : IImporter<Key, Data.Models.Key>
+    where TParentRecord : Data.Models.BaseModel
 {
-    KeyService _keyService = serviceProvider.GetRequiredService<KeyService>();
+    public async Task<ImportItemInfo> InfoAsync(Key record)
+    {
+        return new ImportItemInfo
+        {
+            Name = new String('*', record.Value.Length),
+        };
+    }
+
+    public bool CanImport(Key record) => importContext.Record is Data.Models.Game;
     
     public async Task<Data.Models.Key> AddAsync(Key record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Key>(record, $"Cannot import keys for a {typeof(TParentRecord).Name}");
-
         try
         {
             var key = new Data.Models.Key
             {
-                Game = game,
+                Game = importContext.Record as Data.Models.Game,
                 AllocationMethod = record.AllocationMethod,
                 ClaimedByComputerName = record.ClaimedByComputerName,
                 ClaimedByIpv4Address = record.ClaimedByIpv4Address,
                 ClaimedByMacAddress = record.ClaimedByMacAddress,
             };
 
-            key = await _keyService.AddAsync(key);
+            key = await keyService.AddAsync(key);
 
             return key;
         }
@@ -35,10 +42,7 @@ public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
 
     public async Task<Data.Models.Key> UpdateAsync(Key record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Key>(record, $"Cannot import keys for a {typeof(TParentRecord).Name}");
-
-        var existing = await _keyService.FirstOrDefaultAsync(k => k.Value == record.Value);
+        var existing = await keyService.FirstOrDefaultAsync(k => k.Value == record.Value);
 
         try
         {
@@ -47,7 +51,7 @@ public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
             existing.ClaimedByIpv4Address = record.ClaimedByIpv4Address;
             existing.ClaimedByMacAddress = record.ClaimedByMacAddress;
             
-            existing = await _keyService.UpdateAsync(existing);
+            existing = await keyService.UpdateAsync(existing);
 
             return existing;
         }
@@ -59,9 +63,6 @@ public class KeyImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
 
     public async Task<bool> ExistsAsync(Key record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Key>(record, $"Cannot import keys for a {typeof(TParentRecord).Name}");
-        
-        return await _keyService.ExistsAsync(k => k.Value == record.Value);
+        return await keyService.ExistsAsync(k => k.Value == record.Value);
     }
 }

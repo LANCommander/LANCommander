@@ -3,24 +3,32 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Collection, Data.Models.Collection>
+public class CollectionImporter<TParentRecord>(
+    CollectionService collectionService,
+    ImportContext<TParentRecord> importContext) : IImporter<Collection, Data.Models.Collection>
+    where TParentRecord : Data.Models.BaseModel
 {
-    CollectionService _collectionService = serviceProvider.GetRequiredService<CollectionService>();
+    public async Task<ImportItemInfo> InfoAsync(Collection record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+        };
+    }
+
+    public bool CanImport(Collection record) => importContext.Record is Data.Models.Game;
     
     public async Task<Data.Models.Collection> AddAsync(Collection record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Collection>(record, $"Cannot import collections for a {typeof(TParentRecord).Name}");
-
         try
         {
             var collection = new Data.Models.Collection
             {
-                Games = new List<Data.Models.Game>() { game },
+                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
                 Name = record.Name,
             };
 
-            collection = await _collectionService.AddAsync(collection);
+            collection = await collectionService.AddAsync(collection);
 
             return collection;
         }
@@ -32,19 +40,16 @@ public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, 
 
     public async Task<Data.Models.Collection> UpdateAsync(Collection record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Collection>(record, $"Cannot import collections for a {typeof(TParentRecord).Name}");
-
-        var existing = await _collectionService.Include(c => c.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
+        var existing = await collectionService.Include(c => c.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
         try
         {
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(game);
+            existing.Games.Add(importContext.Record as Data.Models.Game);
             
-            existing = await _collectionService.UpdateAsync(existing);
+            existing = await collectionService.UpdateAsync(existing);
 
             return existing;
         }
@@ -56,9 +61,6 @@ public class CollectionImporter<TParentRecord>(ServiceProvider serviceProvider, 
 
     public async Task<bool> ExistsAsync(Collection record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Collection>(record, $"Cannot import collections for a {typeof(TParentRecord).Name}");
-        
-        return await _collectionService.ExistsAsync(c => c.Name == record.Name);
+        return await collectionService.ExistsAsync(c => c.Name == record.Name);
     }
 }

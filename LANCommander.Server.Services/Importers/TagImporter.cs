@@ -3,24 +3,32 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Tag, Data.Models.Tag>
+public class TagImporter<TParentRecord>(
+    TagService tagService,
+    ImportContext<TParentRecord> importContext) : IImporter<Tag, Data.Models.Tag>
+    where TParentRecord : Data.Models.BaseModel
 {
-    TagService _tagService = serviceProvider.GetRequiredService<TagService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(Tag record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+        };
+    }
+
+    public bool CanImport(Tag record) => importContext.Record is Data.Models.Game;
+
     public async Task<Data.Models.Tag> AddAsync(Tag record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Tag>(record, $"Cannot import tags for a {typeof(TParentRecord).Name}");
-
         try
         {
             var tag = new Data.Models.Tag
             {
-                Games = new List<Data.Models.Game>() { game },
+                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
                 Name = record.Name,
             };
 
-            tag = await _tagService.AddAsync(tag);
+            tag = await tagService.AddAsync(tag);
 
             return tag;
         }
@@ -32,19 +40,16 @@ public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
 
     public async Task<Data.Models.Tag> UpdateAsync(Tag record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Tag>(record, $"Cannot import tags for a {typeof(TParentRecord).Name}");
-
-        var existing = await _tagService.Include(t => t.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
+        var existing = await tagService.Include(t => t.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
         try
         {
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(game);
+            existing.Games.Add(importContext.Record as Data.Models.Game);
             
-            existing = await _tagService.UpdateAsync(existing);
+            existing = await tagService.UpdateAsync(existing);
 
             return existing;
         }
@@ -56,9 +61,6 @@ public class TagImporter<TParentRecord>(ServiceProvider serviceProvider, ImportC
 
     public async Task<bool> ExistsAsync(Tag record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Tag>(record, $"Cannot import tags for a {typeof(TParentRecord).Name}");
-        
-        return await _tagService.ExistsAsync(c => c.Name == record.Name);
+        return await tagService.ExistsAsync(c => c.Name == record.Name);
     }
 }

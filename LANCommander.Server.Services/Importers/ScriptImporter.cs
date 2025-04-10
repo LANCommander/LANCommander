@@ -3,10 +3,27 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Script, Data.Models.Script>
+public class ScriptImporter<TParentRecord>(
+    ScriptService scriptService,
+    ImportContext<TParentRecord> importContext) : IImporter<Script, Data.Models.Script>
+    where TParentRecord : Data.Models.BaseModel
 {
-    ScriptService _scriptService = serviceProvider.GetRequiredService<ScriptService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(Script record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+            Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}")?.Size ?? 0,
+        };
+    }
+
+    public bool CanImport(Script record) =>
+        importContext.Record is Data.Models.Game
+        ||
+        importContext.Record is Data.Models.Redistributable
+        ||
+        importContext.Record is Data.Models.Server;
+
     public async Task<Data.Models.Script> AddAsync(Script record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
@@ -34,23 +51,20 @@ public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
                 newScript.Redistributable = redistributable;
             else if (importContext.Record is Data.Models.Server server)
                 newScript.Server = server;
-            else
-                throw new ImportSkippedException<Script>(record,
-                    $"Cannot import a script for a {typeof(TParentRecord).Name}");
 
             using (var streamReader = new StreamReader(archiveEntry.OpenEntryStream()))
             {
                 newScript.Contents = await streamReader.ReadToEndAsync();
             }
 
-            script = await _scriptService.AddAsync(newScript);
+            script = await scriptService.AddAsync(newScript);
 
             return script;
         }
         catch (Exception ex)
         {
             if (script != null)
-                await _scriptService.DeleteAsync(script);
+                await scriptService.DeleteAsync(script);
             
             throw new ImportSkippedException<Script>(record, "An unknown error occured while importing script", ex);
         }
@@ -60,17 +74,14 @@ public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
 
-        Data.Models.Script existing;
+        Data.Models.Script existing = null;
         
         if (importContext.Record is Data.Models.Game game)
-            existing = await _scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
+            existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
         else if (importContext.Record is Data.Models.Redistributable redistributable)
-            existing = await _scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
+            existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
         else if (importContext.Record is Data.Models.Server server)
-            existing = await _scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
-        else
-            throw new ImportSkippedException<Script>(record,
-                $"Cannot import a script for a {typeof(TParentRecord).Name}");
+            existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
 
         try
         {
@@ -85,7 +96,7 @@ public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
                 existing.Contents = await streamReader.ReadToEndAsync();
             }
 
-            existing = await _scriptService.UpdateAsync(existing);
+            existing = await scriptService.UpdateAsync(existing);
 
             return existing;
         }
@@ -95,17 +106,17 @@ public class ScriptImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
         }
     }
 
-    public Task<bool> ExistsAsync(Script record)
+    public async Task<bool> ExistsAsync(Script record)
     {
         if (importContext.Record is Data.Models.Game game)
-            return _scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
+            return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
         
         if (importContext.Record is Data.Models.Redistributable redistributable)
-            return _scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
+            return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
         
         if (importContext.Record is Data.Models.Server server)
-            return _scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
-        
-        throw new ImportSkippedException<Script>(record, $"Cannot import a script for a {typeof(TParentRecord).Name}");
+            return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
+
+        return false;
     }
 }

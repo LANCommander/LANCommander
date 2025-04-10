@@ -3,26 +3,35 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class PlaySessionImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<PlaySession, Data.Models.PlaySession>
+public class PlaySessionImporter<TParentRecord>(
+    PlaySessionService playSessionService,
+    UserService userService,
+    ImportContext<TParentRecord> importContext) : IImporter<PlaySession, Data.Models.PlaySession>
+    where TParentRecord : Data.Models.BaseModel
 {
-    PlaySessionService _playSessionService = serviceProvider.GetRequiredService<PlaySessionService>();
-    UserService _userService = serviceProvider.GetRequiredService<UserService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(PlaySession record)
+    {
+        return new ImportItemInfo
+        {
+            Name = $"{record.User} - {record.Start}-{record.End}",
+        };
+    }
+
+    public bool CanImport(PlaySession record) => importContext.Record is Data.Models.Game;
+
     public async Task<Data.Models.PlaySession> AddAsync(PlaySession record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<PlaySession>(record, $"Cannot import playSessions for a {typeof(TParentRecord).Name}");
-        
         try
         {
             var playSession = new Data.Models.PlaySession
             {
                 Start = record.Start,
                 End = record.End,
-                User = await _userService.GetAsync(record.User),
+                User = await userService.GetAsync(record.User),
+                Game = importContext.Record as Data.Models.Game,
             };
 
-            playSession = await _playSessionService.AddAsync(playSession);
+            playSession = await playSessionService.AddAsync(playSession);
 
             return playSession;
         }
@@ -34,19 +43,17 @@ public class PlaySessionImporter<TParentRecord>(ServiceProvider serviceProvider,
 
     public async Task<Data.Models.PlaySession> UpdateAsync(PlaySession record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<PlaySession>(record, $"Cannot import playSessions for a {typeof(TParentRecord).Name}");
-        
-        var user = await _userService.GetAsync(record.User);
+        var game = importContext.Record as Data.Models.Game;
+        var user = await userService.GetAsync(record.User);
 
-        var existing = await _playSessionService.FirstOrDefaultAsync(ps => ps.GameId == game.Id && ps.Start == record.Start && ps.UserId == user.Id);
+        var existing = await playSessionService.FirstOrDefaultAsync(ps => ps.GameId == game.Id && ps.Start == record.Start && ps.UserId == user.Id);
 
         try
         {
             existing.Start = record.Start;
             existing.End = record.End;
             
-            existing = await _playSessionService.UpdateAsync(existing);
+            existing = await playSessionService.UpdateAsync(existing);
 
             return existing;
         }
@@ -58,11 +65,9 @@ public class PlaySessionImporter<TParentRecord>(ServiceProvider serviceProvider,
 
     public async Task<bool> ExistsAsync(PlaySession record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<PlaySession>(record, $"Cannot import play sessions for a {typeof(TParentRecord).Name}");
+        var game = importContext.Record as Data.Models.Game;
+        var user = await userService.GetAsync(record.User);
         
-        var user = await _userService.GetAsync(record.User);
-        
-        return await _playSessionService.ExistsAsync(ps => ps.GameId == game.Id && ps.Start == record.Start && ps.UserId == user.Id);
+        return await playSessionService.ExistsAsync(ps => (ps.Game.Id == game.Id || ps.Game.Title == game.Title) && ps.Start == record.Start && ps.UserId == user.Id);
     }
 }

@@ -1,5 +1,7 @@
+using System.Web.Services.Description;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
+using SharpCompress.Archives.Zip;
 
 namespace LANCommander.Server.Services.Importers;
 
@@ -8,9 +10,20 @@ namespace LANCommander.Server.Services.Importers;
 /// </summary>
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
-public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Archive, Data.Models.Archive>
+public class ArchiveImporter<TParentRecord>(
+    ArchiveService archiveService,
+    ImportContext<TParentRecord> importContext) : IImporter<Archive, Data.Models.Archive> where TParentRecord : Data.Models.BaseModel
 {
-    ArchiveService _archiveService = serviceProvider.GetRequiredService<ArchiveService>();
+    public async Task<ImportItemInfo> InfoAsync(Archive record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Version,
+            Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}")?.Size ?? 0,
+        };
+    }
+
+    public bool CanImport(Archive record) => importContext.Record is Data.Models.Game || importContext.Record is Data.Models.Redistributable;
     
     public async Task<Data.Models.Archive> AddAsync(Archive record)
     {
@@ -40,15 +53,15 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
                 throw new ImportSkippedException<Archive>(record,
                     $"Cannot import an archive for a {typeof(TParentRecord).Name}");
             
-            archive = await _archiveService.AddAsync(newArchive);
-            archive = await _archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
+            archive = await archiveService.AddAsync(newArchive);
+            archive = await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
 
             return archive;
         }
         catch (Exception ex)
         {
             if (archive != null)
-                await _archiveService.DeleteAsync(archive);
+                await archiveService.DeleteAsync(archive);
             
             throw new ImportSkippedException<Archive>(record, "An unknown error occured while importing archive file", ex);
         }
@@ -57,8 +70,8 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
     public async Task<Data.Models.Archive> UpdateAsync(Archive archive)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
-        var existing = await _archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
-        var existingPath = await _archiveService.GetArchiveFileLocationAsync(existing);
+        var existing = await archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
+        var existingPath = await archiveService.GetArchiveFileLocationAsync(existing);
         
         if (archiveEntry == null)
             throw new ImportSkippedException<Archive>(archive, "Matching archive file does not exist in import archive");
@@ -69,8 +82,8 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
             existing.Changelog = archive.Changelog;
             existing.StorageLocation = importContext.ArchiveStorageLocation;
             
-            existing = await _archiveService.UpdateAsync(existing);
-            existing = await _archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
+            existing = await archiveService.UpdateAsync(existing);
+            existing = await archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
             
             if (File.Exists(existingPath))
                 File.Delete(existingPath);
@@ -85,11 +98,12 @@ public class ArchiveImporter<TParentRecord>(ServiceProvider serviceProvider, Imp
 
     public async Task<bool> ExistsAsync(Archive archive)
     {
-        if (importContext.Record is not Data.Models.Game game || importContext.Record is not Data.Models.Redistributable)
-            throw new ImportSkippedException<Archive>(archive,
-                $"Cannot import an archive for a {typeof(TParentRecord).Name}");
+        if (importContext.Record is Data.Models.Game game)
+            return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
         
-        return await _archiveService
-            .ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
+        if (importContext.Record is Data.Models.Redistributable redistributable)
+            return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.RedistributableId == redistributable.Id);
+        
+        throw new ImportSkippedException<Archive>(archive, $"Cannot import an archive for a {typeof(TParentRecord).Name}");
     }
 }

@@ -3,24 +3,32 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class PlatformImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Platform, Data.Models.Platform>
+public class PlatformImporter<TParentRecord>(
+    PlatformService platformService,
+    ImportContext<TParentRecord> importContext) : IImporter<Platform, Data.Models.Platform>
+    where TParentRecord : Data.Models.BaseModel
 {
-    PlatformService _platformService = serviceProvider.GetRequiredService<PlatformService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(Platform record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+        };
+    }
+
+    public bool CanImport(Platform record) => importContext.Record is Data.Models.Game;
+
     public async Task<Data.Models.Platform> AddAsync(Platform record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Platform>(record, $"Cannot import platforms for a {typeof(TParentRecord).Name}");
-
         try
         {
             var platform = new Data.Models.Platform
             {
-                Games = new List<Data.Models.Game>() { game },
+                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
                 Name = record.Name,
             };
 
-            platform = await _platformService.AddAsync(platform);
+            platform = await platformService.AddAsync(platform);
 
             return platform;
         }
@@ -32,19 +40,16 @@ public class PlatformImporter<TParentRecord>(ServiceProvider serviceProvider, Im
 
     public async Task<Data.Models.Platform> UpdateAsync(Platform record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Platform>(record, $"Cannot import platforms for a {typeof(TParentRecord).Name}");
-
-        var existing = await _platformService.Include(p => p.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
+        var existing = await platformService.Include(p => p.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
         try
         {
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(game);
+            existing.Games.Add(importContext.Record as Data.Models.Game);
             
-            existing = await _platformService.UpdateAsync(existing);
+            existing = await platformService.UpdateAsync(existing);
 
             return existing;
         }
@@ -56,9 +61,6 @@ public class PlatformImporter<TParentRecord>(ServiceProvider serviceProvider, Im
 
     public async Task<bool> ExistsAsync(Platform record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Platform>(record, $"Cannot import platforms for a {typeof(TParentRecord).Name}");
-        
-        return await _platformService.ExistsAsync(c => c.Name == record.Name);
+        return await platformService.ExistsAsync(c => c.Name == record.Name);
     }
 }

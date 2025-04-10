@@ -5,36 +5,57 @@ using SharpCompress.Archives.Zip;
 namespace LANCommander.Server.Services.Importers;
 
 public class ImportContext<TRecord>(
-    ServiceProvider serviceProvider,
-    ZipArchive archive) : IDisposable
+    GameImporter gameImporter,
+    RedistributableImporter redistributableImporter,
+    ServerImporter serverImporter,
+    IImporter<SDK.Models.Manifest.Action, Data.Models.Action> actionImporter,
+    IImporter<SDK.Models.Manifest.Archive, Data.Models.Archive> archiveImporter,
+    IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection> collectionImporter,
+    IImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> customFieldImporter,
+    IImporter<SDK.Models.Manifest.Company, Data.Models.Company> developerImporter,
+    IImporter<SDK.Models.Manifest.Engine, Data.Models.Engine> engineImporter,
+    IImporter<SDK.Models.Manifest.Genre, Data.Models.Genre> genreImporter,
+    IImporter<SDK.Models.Manifest.Key, Data.Models.Key> keyImporter,
+    IImporter<SDK.Models.Manifest.Media, Data.Models.Media> mediaImporter,
+    IImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> multiplayerModeImporter,
+    IImporter<SDK.Models.Manifest.Platform, Data.Models.Platform> platformImporter,
+    IImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> playSessionImporter,
+    IImporter<SDK.Models.Manifest.Company, Data.Models.Company> publisherImporter,
+    IImporter<SDK.Models.Manifest.Save, Data.Models.GameSave> saveImporter,
+    IImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> savePathImporter,
+    IImporter<SDK.Models.Manifest.Script, Data.Models.Script> scriptImporter,
+    IImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> serverConsoleImporter,
+    IImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> serverHttpPathImporter,
+    IImporter<SDK.Models.Manifest.Tag, Data.Models.Tag> tagImporter)
+    where TRecord : Data.Models.BaseModel
 {
     public TRecord Record { get; private set; }
     public StorageLocation ArchiveStorageLocation { get; }
-    public ZipArchive Archive { get; } = archive;
-    
-    public GameImporter<TRecord> Games { get; private set; }
-    public RedistributableImporter<TRecord> Redistributables { get; private set; }
-    public ServerImporter<TRecord> Servers { get; private set; }
-    
-    public ActionImporter<TRecord> Actions { get; private set; }
-    public ArchiveImporter<TRecord> Archives { get; private set; }
-    public CollectionImporter<TRecord> Collections { get; private set; }
-    public CustomFieldImporter<TRecord> CustomFields { get; private set; }
-    public DeveloperImporter<TRecord> Developers { get; private set; }
-    public EngineImporter<TRecord> Engines { get; private set; }
-    public GenreImporter<TRecord> Genres { get; private set; }
-    public KeyImporter<TRecord> Keys { get; private set; }
-    public MediaImporter<TRecord> Media { get; private set; }
-    public MultiplayerModeImporter<TRecord> MultiplayerModes { get; private set; }
-    public PlatformImporter<TRecord> Platforms { get; private set; }
-    public PlaySessionImporter<TRecord> PlaySessions { get; private set; }
-    public PublisherImporter<TRecord> Publishers { get; private set; }
-    public SaveImporter<TRecord> Saves { get; private set; }
-    public SavePathImporter<TRecord> SavePaths { get; private set; }
-    public ScriptImporter<TRecord> Scripts { get; private set; }
-    public ServerConsoleImporter<TRecord> ServerConsoles { get; private set; }
-    public ServerHttpPathImporter<TRecord> ServerHttpPaths { get; private set; }
-    public TagImporter<TRecord> Tags { get; private set; }
+    public ZipArchive Archive { get; private set; }
+
+    public GameImporter Games { get; private set; } = gameImporter;
+    public RedistributableImporter Redistributables { get; private set; } = redistributableImporter;
+    public ServerImporter Servers { get; private set; } = serverImporter;
+
+    public IImporter<SDK.Models.Manifest.Action, Data.Models.Action> Actions = actionImporter;
+    public IImporter<SDK.Models.Manifest.Archive, Data.Models.Archive> Archives = archiveImporter;
+    public IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection> Collections = collectionImporter;
+    public IImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> CustomFields = customFieldImporter;
+    public IImporter<SDK.Models.Manifest.Company, Data.Models.Company> Developers = developerImporter;
+    public IImporter<SDK.Models.Manifest.Engine, Data.Models.Engine> Engines = engineImporter;
+    public IImporter<SDK.Models.Manifest.Genre, Data.Models.Genre> Genres = genreImporter;
+    public IImporter<SDK.Models.Manifest.Key, Data.Models.Key> Keys = keyImporter;
+    public IImporter<SDK.Models.Manifest.Media, Data.Models.Media> Media = mediaImporter;
+    public IImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> MultiplayerModes = multiplayerModeImporter;
+    public IImporter<SDK.Models.Manifest.Platform, Data.Models.Platform> Platforms = platformImporter;
+    public IImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> PlaySessions = playSessionImporter;
+    public IImporter<SDK.Models.Manifest.Company, Data.Models.Company> Publishers = publisherImporter;
+    public IImporter<SDK.Models.Manifest.Save, Data.Models.GameSave> Saves = saveImporter;
+    public IImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> SavePaths = savePathImporter;
+    public IImporter<SDK.Models.Manifest.Script, Data.Models.Script> Scripts = scriptImporter;
+    public IImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> ServerConsoles = serverConsoleImporter;
+    public IImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> ServerHttpPaths = serverHttpPathImporter;
+    public IImporter<SDK.Models.Manifest.Tag, Data.Models.Tag> Tags = tagImporter;
 
     public int Remaining => _queue.Count;
     public int Processed => _processed.Count;
@@ -47,35 +68,13 @@ public class ImportContext<TRecord>(
     public EventHandler<object> OnRecordAdded;
     public EventHandler<object> OnRecordProcessed;
     public EventHandler<object> OnRecordError;
-    
-    public void Initialize()
-    {
-        Actions = new ActionImporter<TRecord>(serviceProvider, this);
-        Archives = new ArchiveImporter<TRecord>(serviceProvider, this);
-        Collections = new CollectionImporter<TRecord>(serviceProvider, this);
-        CustomFields = new CustomFieldImporter<TRecord>(serviceProvider, this);
-        Developers = new DeveloperImporter<TRecord>(serviceProvider, this);
-        Engines = new EngineImporter<TRecord>(serviceProvider, this);
-        Genres = new GenreImporter<TRecord>(serviceProvider, this);
-        Keys = new KeyImporter<TRecord>(serviceProvider, this);
-        Media = new MediaImporter<TRecord>(serviceProvider, this);
-        MultiplayerModes = new MultiplayerModeImporter<TRecord>(serviceProvider, this);
-        Platforms = new PlatformImporter<TRecord>(serviceProvider, this);
-        PlaySessions = new PlaySessionImporter<TRecord>(serviceProvider, this);
-        Publishers = new PublisherImporter<TRecord>(serviceProvider, this);
-        Saves = new SaveImporter<TRecord>(serviceProvider, this);
-        SavePaths = new SavePathImporter<TRecord>(serviceProvider, this);
-        Scripts = new ScriptImporter<TRecord>(serviceProvider, this);
-        ServerConsoles = new ServerConsoleImporter<TRecord>(serviceProvider, this);
-        ServerHttpPaths = new ServerHttpPathImporter<TRecord>(serviceProvider, this);
-        Tags = new TagImporter<TRecord>(serviceProvider, this);
-        
-        Games = new GameImporter<TRecord>(serviceProvider, this);
-        Redistributables = new RedistributableImporter<TRecord>(serviceProvider, this);
-        Servers = new ServerImporter<TRecord>(serviceProvider, this);
-    }
 
-    public void Use(TRecord record)
+    public void UseArchive(ZipArchive archive)
+    {
+        Archive = archive;
+    }
+    
+    public void UseRecord(TRecord record)
     {
         Record = record;
     }
@@ -156,10 +155,5 @@ public class ImportContext<TRecord>(
             Errored.Add(record, ex.Message);
             OnRecordError?.Invoke(this, ex);
         }
-    }
-    
-    public void Dispose()
-    {
-        archive.Dispose();
     }
 }

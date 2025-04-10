@@ -4,19 +4,29 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class GameImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Game, Data.Models.Game>
+public class GameImporter(
+    GameService gameService,
+    UserService userService,
+    IMapper mapper,
+    ImportContext<Data.Models.Game> importContext) : IImporter<Game, Data.Models.Game>
 {
-    private readonly GameService _gameService = serviceProvider.GetService<GameService>();
-    private readonly UserService _userService = serviceProvider.GetService<UserService>();
-    private readonly IMapper _mapper = serviceProvider.GetService<IMapper>();
+    public async Task<ImportItemInfo> InfoAsync(Game record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Title,
+        };
+    }
+
+    public bool CanImport(Game record) => true;
     
     public async Task<Data.Models.Game> AddAsync(Game record)
     {
-        var game = _mapper.Map<Data.Models.Game>(record);
+        var game = mapper.Map<Data.Models.Game>(record);
 
         try
         {
-            return await _gameService.AddAsync(game);
+            return await gameService.AddAsync(game);
         }
         catch (Exception ex)
         {
@@ -26,7 +36,7 @@ public class GameImporter<TParentRecord>(ServiceProvider serviceProvider, Import
 
     public async Task<Data.Models.Game> UpdateAsync(Game record)
     {
-        var existing = await _gameService.FirstOrDefaultAsync(g => g.Id == record.Id || g.Title == record.Title);
+        var existing = await gameService.FirstOrDefaultAsync(g => g.Id == record.Id || g.Title == record.Title);
 
         try
         {
@@ -38,12 +48,14 @@ public class GameImporter<TParentRecord>(ServiceProvider serviceProvider, Import
             existing.Singleplayer = record.Singleplayer;
             existing.Type = record.Type;
             existing.IGDBId = record.IGDBId;
-            existing.CreatedBy = await _userService.GetAsync(record.CreatedBy);
+            existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
             existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedBy = await _userService.GetAsync(record.UpdatedBy);
+            existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
             existing.DirectoryName = record.DirectoryName;
 
-            existing = await _gameService.UpdateAsync(existing);
+            existing = await gameService.UpdateAsync(existing);
+            
+            importContext.UseRecord(existing);
 
             return existing;
         }
@@ -55,6 +67,6 @@ public class GameImporter<TParentRecord>(ServiceProvider serviceProvider, Import
 
     public async Task<bool> ExistsAsync(Game record)
     {
-        return await _gameService.ExistsAsync(g => g.Id == record.Id || g.Title == record.Title);
+        return await gameService.ExistsAsync(g => g.Id == record.Id || g.Title == record.Title);
     }
 }

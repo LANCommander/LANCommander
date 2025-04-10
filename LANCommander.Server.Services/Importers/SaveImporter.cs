@@ -10,11 +10,23 @@ namespace LANCommander.Server.Services.Importers;
 /// </summary>
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
-public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<Save, Data.Models.GameSave>
+public class SaveImporter<TParentRecord>(
+    UserService userService,
+    GameSaveService gameSaveService,
+    ImportContext<TParentRecord> importContext) : IImporter<Save, Data.Models.GameSave>
+    where TParentRecord : Data.Models.BaseModel
 {
-    UserService _userService = serviceProvider.GetRequiredService<UserService>();
-    GameSaveService _gameSaveService = serviceProvider.GetRequiredService<GameSaveService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(Save record)
+    {
+        return new ImportItemInfo
+        {
+            Name = $"{record.User} - {record.CreatedOn}",
+            Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}")?.Size ?? 0,
+        };
+    }
+
+    public bool CanImport(Save record) => importContext.Record is Data.Models.Game;
+
     public async Task<Data.Models.GameSave> AddAsync(Save record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}");
@@ -22,30 +34,26 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
         if (archiveEntry == null)
             throw new ImportSkippedException<Save>(record, "Matching save file does not exist in archive");
 
-        var user = await _userService.GetAsync(record.User);
+        var user = await userService.GetAsync(record.User);
 
         if (user == null)
             throw new ImportSkippedException<Save>(record, "Save file's owner does not exist");
-
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Save>(record,
-                $"Cannot import a save for a {typeof(TParentRecord).Name}");
 
         Data.Models.GameSave save = null;
         string path = "";
 
         try
         {
-            save = await _gameSaveService.AddAsync(new Data.Models.GameSave()
+            save = await gameSaveService.AddAsync(new Data.Models.GameSave()
             {
                 CreatedBy = user,
                 User = user,
                 CreatedOn = record.CreatedOn,
-                Game = game,
-                StorageLocation = await _gameSaveService.GetDefaultStorageLocationAsync(),
+                Game = importContext.Record as Data.Models.Game,
+                StorageLocation = await gameSaveService.GetDefaultStorageLocationAsync(),
             });
 
-            path = _gameSaveService.GetSavePath(save);
+            path = gameSaveService.GetSavePath(save);
             
             archiveEntry.WriteToFile(path, new ExtractionOptions()
             {
@@ -59,7 +67,7 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
         catch (Exception ex)
         {
             if (save != null)
-                await _gameSaveService.DeleteAsync(save);
+                await gameSaveService.DeleteAsync(save);
             
             throw new ImportSkippedException<Save>(record, "An unknown error occured while importing save file", ex);
         }
@@ -67,7 +75,7 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
 
     public async Task<Data.Models.GameSave> UpdateAsync(Save record)
     {
-        var existing = await _gameSaveService.FirstOrDefaultAsync(s => s.User.UserName == record.User && s.CreatedOn == record.CreatedOn);
+        var existing = await gameSaveService.FirstOrDefaultAsync(s => s.User.UserName == record.User && s.CreatedOn == record.CreatedOn);
         
         // We only need to extract the save file
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}");
@@ -77,7 +85,7 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
         
         try
         {
-            var path = _gameSaveService.GetSavePath(existing);
+            var path = gameSaveService.GetSavePath(existing);
             
             archiveEntry.WriteToFile(path, new ExtractionOptions()
             {
@@ -96,12 +104,8 @@ public class SaveImporter<TParentRecord>(ServiceProvider serviceProvider, Import
 
     public async Task<bool> ExistsAsync(Save archive)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Save>(archive,
-                $"Cannot import a save for a {typeof(TParentRecord).Name}");
-        
-        return await _gameSaveService
+        return await gameSaveService
             .Include(s => s.User)
-            .ExistsAsync(s => s.User.UserName == archive.User && s.CreatedOn == archive.CreatedOn && s.GameId == game.Id);
+            .ExistsAsync(s => s.User.UserName == archive.User && s.CreatedOn == archive.CreatedOn && s.GameId == importContext.Record.Id);
     }
 }

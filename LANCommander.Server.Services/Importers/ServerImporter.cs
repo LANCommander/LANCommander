@@ -5,22 +5,35 @@ using SharpCompress.Common;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ServerImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
+public class ServerImporter(
+    ServerService serverService,
+    GameService gameService,
+    UserService userService,
+    IMapper mapper,
+    ImportContext<Data.Models.Server> importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
-    private readonly ServerService _serverService = serviceProvider.GetService<ServerService>();
-    private readonly GameService _gameService = serviceProvider.GetService<GameService>();
-    private readonly UserService _userService = serviceProvider.GetService<UserService>();
-    private readonly IMapper _mapper = serviceProvider.GetService<IMapper>();
+    public async Task<ImportItemInfo> InfoAsync(SDK.Models.Manifest.Server record)
+    {
+        var fileEntries = importContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/"));
+        
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+            Size = fileEntries.Sum(f => f.Size),
+        };
+    }
+
+    public bool CanImport(SDK.Models.Manifest.Server record) => true;
     
     public async Task<Data.Models.Server> AddAsync(SDK.Models.Manifest.Server record)
     {
-        var server = _mapper.Map<Data.Models.Server>(record);
+        var server = mapper.Map<Data.Models.Server>(record);
 
         try
         {
             await ExtractFiles(server);
             
-            return await _serverService.AddAsync(server);
+            return await serverService.AddAsync(server);
         }
         catch (Exception ex)
         {
@@ -30,7 +43,7 @@ public class ServerImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
 
     public async Task<Data.Models.Server> UpdateAsync(SDK.Models.Manifest.Server record)
     {
-        var existing = await _serverService.FirstOrDefaultAsync(s => s.Id == record.Id || s.Name == record.Name);
+        var existing = await serverService.FirstOrDefaultAsync(s => s.Id == record.Id || s.Name == record.Name);
 
         try
         {
@@ -45,15 +58,15 @@ public class ServerImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
             existing.AutostartDelay = record.AutostartDelay;
             existing.ContainerId = record.ContainerId;
             existing.UseShellExecute = record.UseShellExecute;
-            existing.Game = await _gameService.FirstOrDefaultAsync(g =>
+            existing.Game = await gameService.FirstOrDefaultAsync(g =>
                 g.Id.ToString() == record.Game || g.Title == record.Game);
-            existing.CreatedBy = await _userService.GetAsync(record.CreatedBy);
+            existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
             existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedBy = await _userService.GetAsync(record.UpdatedBy);
+            existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
             existing.UpdatedOn = DateTime.Now;
             existing.ProcessTerminationMethod = record.ProcessTerminationMethod;
             
-            existing = await _serverService.UpdateAsync(existing);
+            existing = await serverService.UpdateAsync(existing);
 
             await ExtractFiles(existing);
 
@@ -67,7 +80,7 @@ public class ServerImporter<TParentRecord>(ServiceProvider serviceProvider, Impo
 
     public async Task<bool> ExistsAsync(SDK.Models.Manifest.Server record)
     {
-        return await _serverService.ExistsAsync(s => s.Id == record.Id || s.Name == record.Name);
+        return await serverService.ExistsAsync(s => s.Id == record.Id || s.Name == record.Name);
     }
     
     private async Task ExtractFiles(Data.Models.Server server)

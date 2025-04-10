@@ -3,18 +3,26 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class CustomFieldImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
+public class CustomFieldImporter<TParentRecord>(
+    GameService gameService,
+    ImportContext<TParentRecord> importContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
+    where TParentRecord : Data.Models.BaseModel
 {
-    GameService _gameService = serviceProvider.GetRequiredService<GameService>();
+    public async Task<ImportItemInfo> InfoAsync(GameCustomField record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+        };
+    }
+
+    public bool CanImport(GameCustomField record) => importContext.Record is Data.Models.Game;
     
     public async Task<Data.Models.GameCustomField> AddAsync(GameCustomField record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<GameCustomField>(record, $"Cannot import customField for a {typeof(TParentRecord).Name}");
-
         try
         {
-            var customField = await _gameService.SetCustomFieldAsync(game.Id, record.Name, record.Value);
+            var customField = await gameService.SetCustomFieldAsync(importContext.Record.Id, record.Name, record.Value);
 
             return customField;
         }
@@ -26,15 +34,12 @@ public class CustomFieldImporter<TParentRecord>(ServiceProvider serviceProvider,
 
     public async Task<Data.Models.GameCustomField> UpdateAsync(GameCustomField record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<GameCustomField>(record, $"Cannot import customFields for a {typeof(TParentRecord).Name}");
-
-        var existing = await _gameService.GetCustomFieldAsync(game.Id, record.Name);
+        var existing = await gameService.GetCustomFieldAsync(importContext.Record.Id, record.Name);
 
         try
         {
             if (existing.Value != record.Value)
-                existing = await _gameService.SetCustomFieldAsync(game.Id, record.Name, record.Value);
+                existing = await gameService.SetCustomFieldAsync(importContext.Record.Id, record.Name, record.Value);
 
             return existing;
         }
@@ -46,9 +51,6 @@ public class CustomFieldImporter<TParentRecord>(ServiceProvider serviceProvider,
 
     public async Task<bool> ExistsAsync(GameCustomField record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<GameCustomField>(record, $"Cannot import custom fields for a {typeof(TParentRecord).Name}");
-
-        return (await _gameService.GetCustomFieldAsync(game.Id, record.Name)) == null;
+        return (await gameService.GetCustomFieldAsync(importContext.Record.Id, record.Name)) == null;
     }
 }

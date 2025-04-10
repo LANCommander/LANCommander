@@ -3,28 +3,37 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<SavePath, Data.Models.SavePath>
+public class SavePathImporter<TParentRecord>(
+    SavePathService savePathService,
+    ServiceProvider serviceProvider,
+    ImportContext<TParentRecord> importContext) : IImporter<SavePath, Data.Models.SavePath>
+    where TParentRecord : Data.Models.BaseModel
 {
-    SavePathService _savePathService = serviceProvider.GetRequiredService<SavePathService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(SavePath record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Path,
+        };
+    }
+
+    public bool CanImport(SavePath record) => importContext.Record is Data.Models.Game;
+
     public async Task<Data.Models.SavePath> AddAsync(SavePath record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<SavePath>(record, $"Cannot import save path for a {typeof(TParentRecord).Name}");
-
         try
         {
             var savePath = new Data.Models.SavePath
             {
                 Id = record.Id,
-                Game = game,
+                Game = importContext.Record as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 IsRegex = record.IsRegex,
                 Type = record.Type,
             };
 
-            savePath = await _savePathService.AddAsync(savePath);
+            savePath = await savePathService.AddAsync(savePath);
 
             return savePath;
         }
@@ -36,19 +45,17 @@ public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, Im
 
     public async Task<Data.Models.SavePath> UpdateAsync(SavePath record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<SavePath>(record, $"Cannot import savePaths for a {typeof(TParentRecord).Name}");
-
-        var existing = await _savePathService.FirstOrDefaultAsync(p => p.Id == record.Id);
+        var existing = await savePathService.FirstOrDefaultAsync(p => p.Id == record.Id);
 
         try
         {
+            existing.Game = importContext.Record as Data.Models.Game;
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.IsRegex = record.IsRegex;
             existing.Type = record.Type;
             
-            existing = await _savePathService.UpdateAsync(existing);
+            existing = await savePathService.UpdateAsync(existing);
 
             return existing;
         }
@@ -60,9 +67,6 @@ public class SavePathImporter<TParentRecord>(ServiceProvider serviceProvider, Im
 
     public async Task<bool> ExistsAsync(SavePath record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<SavePath>(record, $"Cannot import savePaths for a {typeof(TParentRecord).Name}");
-        
-        return await _savePathService.ExistsAsync(p => p.Id == record.Id);
+        return await savePathService.ExistsAsync(p => p.Id == record.Id);
     }
 }

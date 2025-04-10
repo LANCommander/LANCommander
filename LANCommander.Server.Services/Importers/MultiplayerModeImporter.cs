@@ -3,20 +3,28 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class MultiplayerModeImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
+public class MultiplayerModeImporter<TParentRecord>(
+    MultiplayerModeService multiplayerModeService,
+    ImportContext<TParentRecord> importContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
+    where TParentRecord : Data.Models.BaseModel
 {
-    MultiplayerModeService _multiplayerModeService = serviceProvider.GetRequiredService<MultiplayerModeService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(MultiplayerMode record)
+    {
+        return new ImportItemInfo
+        {
+            Name = String.IsNullOrWhiteSpace(record.Description) ? record.Type.ToString() : $"{record.Type} - {record.Description}",
+        };
+    }
+
+    public bool CanImport(MultiplayerMode record) => importContext.Record is Data.Models.Game;
+
     public async Task<Data.Models.MultiplayerMode> AddAsync(MultiplayerMode record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<MultiplayerMode>(record, $"Cannot import multiplayer mode for a {typeof(TParentRecord).Name}");
-
         try
         {
             var multiplayerMode = new Data.Models.MultiplayerMode
             {
-                Game = game,
+                Game = importContext.Record as Data.Models.Game,
                 Description = record.Description,
                 Type = record.Type,
                 Spectators = record.Spectators,
@@ -25,7 +33,7 @@ public class MultiplayerModeImporter<TParentRecord>(ServiceProvider serviceProvi
                 NetworkProtocol = record.NetworkProtocol,
             };
 
-            multiplayerMode = await _multiplayerModeService.AddAsync(multiplayerMode);
+            multiplayerMode = await multiplayerModeService.AddAsync(multiplayerMode);
 
             return multiplayerMode;
         }
@@ -37,10 +45,9 @@ public class MultiplayerModeImporter<TParentRecord>(ServiceProvider serviceProvi
 
     public async Task<Data.Models.MultiplayerMode> UpdateAsync(MultiplayerMode record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<MultiplayerMode>(record, $"Cannot import multiplayer modes for a {typeof(TParentRecord).Name}");
-
-        var existing = await _multiplayerModeService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == record.Type);
+        var game = importContext.Record as Data.Models.Game;
+        
+        var existing = await multiplayerModeService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == record.Type);
 
         try
         {
@@ -51,7 +58,7 @@ public class MultiplayerModeImporter<TParentRecord>(ServiceProvider serviceProvi
             existing.MaxPlayers = record.MaxPlayers;
             existing.NetworkProtocol = record.NetworkProtocol;
             
-            existing = await _multiplayerModeService.UpdateAsync(existing);
+            existing = await multiplayerModeService.UpdateAsync(existing);
 
             return existing;
         }
@@ -63,9 +70,8 @@ public class MultiplayerModeImporter<TParentRecord>(ServiceProvider serviceProvi
 
     public async Task<bool> ExistsAsync(MultiplayerMode record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<MultiplayerMode>(record, $"Cannot import multiplayer modes for a {typeof(TParentRecord).Name}");
+        var game = importContext.Record as Data.Models.Game;
         
-        return await _multiplayerModeService.ExistsAsync(m => m.GameId == game.Id && m.Type == record.Type);
+        return await multiplayerModeService.ExistsAsync(m => m.GameId == game.Id && m.Type == record.Type);
     }
 }

@@ -10,7 +10,9 @@ namespace LANCommander.Server.Services;
 
 public class ImportService(
     ILogger<ImportService> logger,
-    ImportContextFactory contextFactory,
+    ImportContext<Data.Models.Game> gameContext,
+    ImportContext<Data.Models.Redistributable> redistributableContext,
+    ImportContext<Data.Models.Server> serverContext,
     StorageLocationService storageLocationService,
     ArchiveService archiveService) : BaseService(logger)
 {
@@ -50,6 +52,20 @@ public class ImportService(
         File.Copy(localFilePath, importArchivePath, true);
         
         return await ImportFromUploadArchiveAsync(objectKey);
+    }
+
+    public async Task<IEnumerable<ImportItemInfo>> GetImportInfoAsync<TRecord>(Guid objectKey, ImportRecordFlags importRecordFlags) where TRecord : Data.Models.BaseModel
+    {
+        var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
+        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+        var importItemInfos = new List<ImportItemInfo>();
+
+        using (var importZip = ZipArchive.Open(importArchivePath))
+        {
+            gameContext.UseArchive(importZip);
+            
+            importItemInfos.AddRange();
+        }
     }
 
     public async Task ImportGameAsync(SDK.Models.Manifest.Game record, Guid objectKey, ImportRecordFlags importRecordFlags)

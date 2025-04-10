@@ -3,15 +3,23 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ServerConsoleImporter<TParentRecord>(ServiceProvider serviceProvider, ImportContext<TParentRecord> importContext) : IImporter<ServerConsole, Data.Models.ServerConsole>
+public class ServerConsoleImporter<TParentRecord>(
+    ServerConsoleService serverConsoleService,
+    ImportContext<TParentRecord> importContext) : IImporter<ServerConsole, Data.Models.ServerConsole>
+    where TParentRecord : Data.Models.BaseModel
 {
-    ServerConsoleService _serverConsoleService = serviceProvider.GetRequiredService<ServerConsoleService>();
-    
+    public async Task<ImportItemInfo> InfoAsync(ServerConsole record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+        };
+    }
+
+    public bool CanImport(ServerConsole record) => importContext.Record is Data.Models.ServerConsole;
+
     public async Task<Data.Models.ServerConsole> AddAsync(ServerConsole record)
     {
-        if (importContext.Record is not Data.Models.Server server)
-            throw new ImportSkippedException<ServerConsole>(record, $"Cannot import server console for a {typeof(TParentRecord).Name}");
-
         try
         {
             var serverConsole = new Data.Models.ServerConsole
@@ -21,10 +29,10 @@ public class ServerConsoleImporter<TParentRecord>(ServiceProvider serviceProvide
                 Path = record.Path,
                 Host = record.Host,
                 Port = record.Port,
-                Server = server,
+                Server = importContext.Record as Data.Models.Server,
             };
 
-            serverConsole = await _serverConsoleService.AddAsync(serverConsole);
+            serverConsole = await serverConsoleService.AddAsync(serverConsole);
 
             return serverConsole;
         }
@@ -36,10 +44,9 @@ public class ServerConsoleImporter<TParentRecord>(ServiceProvider serviceProvide
 
     public async Task<Data.Models.ServerConsole> UpdateAsync(ServerConsole record)
     {
-        if (importContext.Record is not Data.Models.Server server)
-            throw new ImportSkippedException<ServerConsole>(record, $"Cannot import server consoles for a {typeof(TParentRecord).Name}");
-
-        var existing = await _serverConsoleService.FirstOrDefaultAsync(c => c.Name == record.Name);
+        var existing = await serverConsoleService
+            .Include(c => c.Server)
+            .FirstOrDefaultAsync(c => c.Name == record.Name && c.Server.Name == (importContext.Record as Data.Models.Server).Name);
 
         try
         {
@@ -49,7 +56,7 @@ public class ServerConsoleImporter<TParentRecord>(ServiceProvider serviceProvide
             existing.Host = record.Host;
             existing.Port = record.Port;
             
-            existing = await _serverConsoleService.UpdateAsync(existing);
+            existing = await serverConsoleService.UpdateAsync(existing);
 
             return existing;
         }
@@ -61,9 +68,8 @@ public class ServerConsoleImporter<TParentRecord>(ServiceProvider serviceProvide
 
     public async Task<bool> ExistsAsync(ServerConsole record)
     {
-        if (importContext.Record is not Data.Models.Server server)
-            throw new ImportSkippedException<ServerConsole>(record, $"Cannot import serverConsoles for a {typeof(TParentRecord).Name}");
-        
-        return await _serverConsoleService.ExistsAsync(c => c.Name == record.Name);
+        return await serverConsoleService
+            .Include(c => c.Server)
+            .ExistsAsync(c => c.Name == record.Name && c.Server.Name == (importContext.Record as Data.Models.Server).Name);
     }
 }

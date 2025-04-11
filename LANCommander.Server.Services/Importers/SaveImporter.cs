@@ -1,3 +1,4 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 using SharpCompress.Archives;
@@ -10,22 +11,22 @@ namespace LANCommander.Server.Services.Importers;
 /// </summary>
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
-public class SaveImporter<TParentRecord>(
+public class SaveImporter(
     UserService userService,
     GameSaveService gameSaveService,
-    ImportContext<TParentRecord> importContext) : IImporter<Save, Data.Models.GameSave>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Save, Data.Models.GameSave>
 {
     public async Task<ImportItemInfo> InfoAsync(Save record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Saves,
             Name = $"{record.User} - {record.CreatedOn}",
             Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}")?.Size ?? 0,
         };
     }
 
-    public bool CanImport(Save record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Save record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.GameSave> AddAsync(Save record)
     {
@@ -49,7 +50,7 @@ public class SaveImporter<TParentRecord>(
                 CreatedBy = user,
                 User = user,
                 CreatedOn = record.CreatedOn,
-                Game = importContext.Record as Data.Models.Game,
+                Game = importContext.DataRecord as Data.Models.Game,
                 StorageLocation = await gameSaveService.GetDefaultStorageLocationAsync(),
             });
 
@@ -106,6 +107,6 @@ public class SaveImporter<TParentRecord>(
     {
         return await gameSaveService
             .Include(s => s.User)
-            .ExistsAsync(s => s.User.UserName == archive.User && s.CreatedOn == archive.CreatedOn && s.GameId == importContext.Record.Id);
+            .ExistsAsync(s => s.User.UserName == archive.User && s.CreatedOn == archive.CreatedOn && s.GameId == importContext.DataRecord.Id);
     }
 }

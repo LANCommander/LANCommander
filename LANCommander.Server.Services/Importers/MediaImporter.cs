@@ -4,22 +4,22 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class MediaImporter<TParentRecord>(
+public class MediaImporter(
     StorageLocationService storageLocationService,
     MediaService mediaService,
-    ImportContext<TParentRecord> importContext) : IImporter<Media, Data.Models.Media>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Media, Data.Models.Media>
 {
     public async Task<ImportItemInfo> InfoAsync(Media record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Media,
             Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
             Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}")?.Size ?? 0,
         };
     }
 
-    public bool CanImport(Media record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Media record) => importContext.DataRecord is Data.Models.Game;
     
     public async Task<Data.Models.Media> AddAsync(Media record)
     {
@@ -34,7 +34,7 @@ public class MediaImporter<TParentRecord>(
         {
             media = new Data.Models.Media
             {
-                Game = importContext.Record as Data.Models.Game,
+                Game = importContext.DataRecord as Data.Models.Game,
                 CreatedOn = record.CreatedOn,
                 Type = record.Type,
                 UpdatedOn = record.UpdatedOn,
@@ -67,7 +67,7 @@ public class MediaImporter<TParentRecord>(
 
         try
         {
-            existing.Game = importContext.Record as Data.Models.Game;
+            existing.Game = importContext.DataRecord as Data.Models.Game;
             existing.Name = record.Name;
             existing.MimeType = record.MimeType;
             existing.CreatedOn = record.CreatedOn;

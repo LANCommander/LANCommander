@@ -1,27 +1,28 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class DeveloperImporter<TParentRecord>(
+public class DeveloperImporter(
     CompanyService companyService,
-    ImportContext<TParentRecord> importContext) : IImporter<Company, Data.Models.Company>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Company, Data.Models.Company>
 {
     public async Task<ImportItemInfo> InfoAsync(Company record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Developers,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Company record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Company record) => importContext.DataRecord is Data.Models.Game;
     
     public async Task<Data.Models.Company> AddAsync(Company record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {typeof(TParentRecord).Name}");
+        if (importContext.DataRecord is not Data.Models.Game game)
+            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {importContext.DataRecord.GetType().Name}");
 
         try
         {
@@ -43,8 +44,8 @@ public class DeveloperImporter<TParentRecord>(
 
     public async Task<Data.Models.Company> UpdateAsync(Company record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {typeof(TParentRecord).Name}");
+        if (importContext.DataRecord is not Data.Models.Game game)
+            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {importContext.DataRecord.GetType().Name}");
 
         var existing = await companyService.Include(g => g.DevelopedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -67,8 +68,8 @@ public class DeveloperImporter<TParentRecord>(
 
     public async Task<bool> ExistsAsync(Company record)
     {
-        if (importContext.Record is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {typeof(TParentRecord).Name}");
+        if (importContext.DataRecord is not Data.Models.Game game)
+            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {importContext.DataRecord.GetType().Name}");
         
         return await companyService.ExistsAsync(c => c.Name == record.Name);
     }

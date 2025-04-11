@@ -1,4 +1,5 @@
 using System.Web.Services.Description;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 using SharpCompress.Archives.Zip;
@@ -10,20 +11,21 @@ namespace LANCommander.Server.Services.Importers;
 /// </summary>
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
-public class ArchiveImporter<TParentRecord>(
+public class ArchiveImporter(
     ArchiveService archiveService,
-    ImportContext<TParentRecord> importContext) : IImporter<Archive, Data.Models.Archive> where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Archive, Data.Models.Archive>
 {
     public async Task<ImportItemInfo> InfoAsync(Archive record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Archives,
             Name = record.Version,
             Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}")?.Size ?? 0,
         };
     }
 
-    public bool CanImport(Archive record) => importContext.Record is Data.Models.Game || importContext.Record is Data.Models.Redistributable;
+    public bool CanImport(Archive record) => importContext.DataRecord is Data.Models.Game || importContext.DataRecord is Data.Models.Redistributable;
     
     public async Task<Data.Models.Archive> AddAsync(Archive record)
     {
@@ -45,13 +47,13 @@ public class ArchiveImporter<TParentRecord>(
                 Changelog = record.Changelog,
             };
 
-            if (importContext.Record is Data.Models.Game game)
+            if (importContext.DataRecord is Data.Models.Game game)
                 newArchive.Game = game;
-            else if (importContext.Record is Data.Models.Redistributable redistributable)
+            else if (importContext.DataRecord is Data.Models.Redistributable redistributable)
                 newArchive.Redistributable = redistributable;
             else
                 throw new ImportSkippedException<Archive>(record,
-                    $"Cannot import an archive for a {typeof(TParentRecord).Name}");
+                    $"Cannot import an archive for a {record.GetType().Name}");
             
             archive = await archiveService.AddAsync(newArchive);
             archive = await archiveService.WriteToFileAsync(archive, archiveEntry.OpenEntryStream());
@@ -98,12 +100,12 @@ public class ArchiveImporter<TParentRecord>(
 
     public async Task<bool> ExistsAsync(Archive archive)
     {
-        if (importContext.Record is Data.Models.Game game)
+        if (importContext.DataRecord is Data.Models.Game game)
             return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
         
-        if (importContext.Record is Data.Models.Redistributable redistributable)
+        if (importContext.DataRecord is Data.Models.Redistributable redistributable)
             return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.RedistributableId == redistributable.Id);
         
-        throw new ImportSkippedException<Archive>(archive, $"Cannot import an archive for a {typeof(TParentRecord).Name}");
+        throw new ImportSkippedException<Archive>(archive, $"Cannot import an archive for a {importContext.DataRecord.GetType().Name}");
     }
 }

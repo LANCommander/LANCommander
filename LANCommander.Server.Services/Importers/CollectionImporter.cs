@@ -1,22 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class CollectionImporter<TParentRecord>(
+public class CollectionImporter(
     CollectionService collectionService,
-    ImportContext<TParentRecord> importContext) : IImporter<Collection, Data.Models.Collection>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Collection, Data.Models.Collection>
 {
     public async Task<ImportItemInfo> InfoAsync(Collection record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Collections,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Collection record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Collection record) => importContext.DataRecord is Data.Models.Game;
     
     public async Task<Data.Models.Collection> AddAsync(Collection record)
     {
@@ -24,7 +25,7 @@ public class CollectionImporter<TParentRecord>(
         {
             var collection = new Data.Models.Collection
             {
-                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -47,7 +48,7 @@ public class CollectionImporter<TParentRecord>(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.Record as Data.Models.Game);
+            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
             
             existing = await collectionService.UpdateAsync(existing);
 

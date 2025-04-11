@@ -1,21 +1,22 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class KeyImporter<TParentRecord>(
+public class KeyImporter(
     KeyService keyService,
-    ImportContext<TParentRecord> importContext) : IImporter<Key, Data.Models.Key>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Key, Data.Models.Key>
 {
     public async Task<ImportItemInfo> InfoAsync(Key record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Keys,
             Name = new String('*', record.Value.Length),
         };
     }
 
-    public bool CanImport(Key record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Key record) => importContext.DataRecord is Data.Models.Game;
     
     public async Task<Data.Models.Key> AddAsync(Key record)
     {
@@ -23,7 +24,7 @@ public class KeyImporter<TParentRecord>(
         {
             var key = new Data.Models.Key
             {
-                Game = importContext.Record as Data.Models.Game,
+                Game = importContext.DataRecord as Data.Models.Game,
                 AllocationMethod = record.AllocationMethod,
                 ClaimedByComputerName = record.ClaimedByComputerName,
                 ClaimedByIpv4Address = record.ClaimedByIpv4Address,

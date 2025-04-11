@@ -29,6 +29,6 @@ namespace LANCommander.SDK.Models.Manifest
         public virtual IEnumerable<ServerConsole> ServerConsoles { get; set; }
         public virtual IEnumerable<ServerHttpPath> HttpPaths { get; set; }
         public virtual IEnumerable<Script> Scripts { get; set; }
-        public virtual IEnumerable<Models.Action> Actions { get; set; }
+        public virtual IEnumerable<Action> Actions { get; set; }
     }
 }

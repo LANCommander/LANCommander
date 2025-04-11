@@ -1,22 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class MultiplayerModeImporter<TParentRecord>(
+public class MultiplayerModeImporter(
     MultiplayerModeService multiplayerModeService,
-    ImportContext<TParentRecord> importContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
 {
     public async Task<ImportItemInfo> InfoAsync(MultiplayerMode record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.MultiplayerModes,
             Name = String.IsNullOrWhiteSpace(record.Description) ? record.Type.ToString() : $"{record.Type} - {record.Description}",
         };
     }
 
-    public bool CanImport(MultiplayerMode record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(MultiplayerMode record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.MultiplayerMode> AddAsync(MultiplayerMode record)
     {
@@ -24,7 +25,7 @@ public class MultiplayerModeImporter<TParentRecord>(
         {
             var multiplayerMode = new Data.Models.MultiplayerMode
             {
-                Game = importContext.Record as Data.Models.Game,
+                Game = importContext.DataRecord as Data.Models.Game,
                 Description = record.Description,
                 Type = record.Type,
                 Spectators = record.Spectators,
@@ -45,7 +46,7 @@ public class MultiplayerModeImporter<TParentRecord>(
 
     public async Task<Data.Models.MultiplayerMode> UpdateAsync(MultiplayerMode record)
     {
-        var game = importContext.Record as Data.Models.Game;
+        var game = importContext.DataRecord as Data.Models.Game;
         
         var existing = await multiplayerModeService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == record.Type);
 
@@ -70,7 +71,7 @@ public class MultiplayerModeImporter<TParentRecord>(
 
     public async Task<bool> ExistsAsync(MultiplayerMode record)
     {
-        var game = importContext.Record as Data.Models.Game;
+        var game = importContext.DataRecord as Data.Models.Game;
         
         return await multiplayerModeService.ExistsAsync(m => m.GameId == game.Id && m.Type == record.Type);
     }

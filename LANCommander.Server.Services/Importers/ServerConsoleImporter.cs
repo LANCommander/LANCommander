@@ -1,22 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ServerConsoleImporter<TParentRecord>(
+public class ServerConsoleImporter(
     ServerConsoleService serverConsoleService,
-    ImportContext<TParentRecord> importContext) : IImporter<ServerConsole, Data.Models.ServerConsole>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<ServerConsole, Data.Models.ServerConsole>
 {
     public async Task<ImportItemInfo> InfoAsync(ServerConsole record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.ServerConsoles,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(ServerConsole record) => importContext.Record is Data.Models.ServerConsole;
+    public bool CanImport(ServerConsole record) => importContext.DataRecord is Data.Models.ServerConsole;
 
     public async Task<Data.Models.ServerConsole> AddAsync(ServerConsole record)
     {
@@ -29,7 +30,7 @@ public class ServerConsoleImporter<TParentRecord>(
                 Path = record.Path,
                 Host = record.Host,
                 Port = record.Port,
-                Server = importContext.Record as Data.Models.Server,
+                Server = importContext.DataRecord as Data.Models.Server,
             };
 
             serverConsole = await serverConsoleService.AddAsync(serverConsole);
@@ -46,7 +47,7 @@ public class ServerConsoleImporter<TParentRecord>(
     {
         var existing = await serverConsoleService
             .Include(c => c.Server)
-            .FirstOrDefaultAsync(c => c.Name == record.Name && c.Server.Name == (importContext.Record as Data.Models.Server).Name);
+            .FirstOrDefaultAsync(c => c.Name == record.Name && c.Server.Name == (importContext.DataRecord as Data.Models.Server).Name);
 
         try
         {
@@ -70,6 +71,6 @@ public class ServerConsoleImporter<TParentRecord>(
     {
         return await serverConsoleService
             .Include(c => c.Server)
-            .ExistsAsync(c => c.Name == record.Name && c.Server.Name == (importContext.Record as Data.Models.Server).Name);
+            .ExistsAsync(c => c.Name == record.Name && c.Server.Name == (importContext.DataRecord as Data.Models.Server).Name);
     }
 }

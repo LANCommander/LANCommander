@@ -1,22 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class GenreImporter<TParentRecord>(
+public class GenreImporter(
     GenreService genreService,
-    ImportContext<TParentRecord> importContext) : IImporter<Genre, Data.Models.Genre>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Genre, Data.Models.Genre>
 {
     public async Task<ImportItemInfo> InfoAsync(Genre record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Genres,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Genre record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Genre record) => importContext.DataRecord is Data.Models.Game;
     
     public async Task<Data.Models.Genre> AddAsync(Genre record)
     {
@@ -24,7 +25,7 @@ public class GenreImporter<TParentRecord>(
         {
             var genre = new Data.Models.Genre
             {
-                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -47,7 +48,7 @@ public class GenreImporter<TParentRecord>(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.Record as Data.Models.Game);
+            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
             
             existing = await genreService.UpdateAsync(existing);
 

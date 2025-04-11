@@ -10,7 +10,7 @@ public class ServerImporter(
     GameService gameService,
     UserService userService,
     IMapper mapper,
-    ImportContext<Data.Models.Server> importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
+    ImportContext importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
     public async Task<ImportItemInfo> InfoAsync(SDK.Models.Manifest.Server record)
     {

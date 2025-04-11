@@ -8,7 +8,7 @@ public class RedistributableImporter(
     RedistributableService redistributableService,
     UserService userService,
     IMapper mapper,
-    ImportContext<Data.Models.Redistributable> importContext) : IImporter<Redistributable, Data.Models.Redistributable>
+    ImportContext importContext) : IImporter<Redistributable, Data.Models.Redistributable>
 {
     public async Task<ImportItemInfo> InfoAsync(Redistributable record)
     {

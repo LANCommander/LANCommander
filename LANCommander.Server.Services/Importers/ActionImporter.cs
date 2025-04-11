@@ -1,3 +1,4 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 using SharpCompress.Archives.Zip;
@@ -5,14 +6,14 @@ using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ActionImporter<TParentRecord>(
+public class ActionImporter(
     ActionService actionService,
-    ImportContext<TParentRecord> importContext) : IImporter<Action, Data.Models.Action> where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Action, Data.Models.Action>
 {
     public async Task<ImportItemInfo> InfoAsync(Action record) =>
-        await Task.Run(() => new ImportItemInfo { Name = record.Name });
+        await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
 
-    public bool CanImport(Action record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Action record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Action> AddAsync(Action record)
     {
@@ -20,7 +21,7 @@ public class ActionImporter<TParentRecord>(
         {
             var action = new Data.Models.Action
             {
-                Game = importContext.Record as Data.Models.Game,
+                Game = importContext.DataRecord as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 PrimaryAction = record.IsPrimaryAction,
@@ -47,7 +48,7 @@ public class ActionImporter<TParentRecord>(
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.PrimaryAction = record.IsPrimaryAction;
             existing.SortOrder = record.SortOrder;
-            existing.Game = importContext.Record as Data.Models.Game;
+            existing.Game = importContext.DataRecord as Data.Models.Game;
             
             existing = await actionService.UpdateAsync(existing);
 
@@ -61,6 +62,6 @@ public class ActionImporter<TParentRecord>(
 
     public async Task<bool> ExistsAsync(Action record)
     {
-        return await actionService.ExistsAsync(a => a.Name == record.Name && a.GameId == importContext.Record.Id);
+        return await actionService.ExistsAsync(a => a.Name == record.Name && a.GameId == importContext.DataRecord.Id);
     }
 }

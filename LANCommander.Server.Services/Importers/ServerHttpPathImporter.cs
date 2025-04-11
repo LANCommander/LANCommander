@@ -1,23 +1,24 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ServerHttpPathImporter<TParentRecord>(
+public class ServerHttpPathImporter(
     ServerHttpPathService serverHttpPathService,
     ServerService serverService,
-    ImportContext<TParentRecord> importContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
 {
     public async Task<ImportItemInfo> InfoAsync(ServerHttpPath record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.ServerHttpPaths,
             Name = record.Path,
         };
     }
 
-    public bool CanImport(ServerHttpPath record) => importContext.Record is Data.Models.Server;
+    public bool CanImport(ServerHttpPath record) => importContext.DataRecord is Data.Models.Server;
 
     public async Task<Data.Models.ServerHttpPath> AddAsync(ServerHttpPath record)
     {
@@ -27,7 +28,7 @@ public class ServerHttpPathImporter<TParentRecord>(
             {
                 LocalPath = record.LocalPath,
                 Path = record.Path,
-                Server = await serverService.FirstOrDefaultAsync(s => s.Name == (importContext.Record as Data.Models.Server).Name),
+                Server = await serverService.FirstOrDefaultAsync(s => s.Name == (importContext.DataRecord as Data.Models.Server).Name),
             };
 
             serverHttpPath = await serverHttpPathService.AddAsync(serverHttpPath);
@@ -50,7 +51,7 @@ public class ServerHttpPathImporter<TParentRecord>(
             existing.Path = record.Path;
             existing.Server =
                 await serverService.FirstOrDefaultAsync(
-                    s => s.Name == (importContext.Record as Data.Models.Server).Name);
+                    s => s.Name == (importContext.DataRecord as Data.Models.Server).Name);
             
             existing = await serverHttpPathService.UpdateAsync(existing);
 
@@ -66,6 +67,6 @@ public class ServerHttpPathImporter<TParentRecord>(
     {
         return await serverHttpPathService
             .Include(p => p.Server)
-            .ExistsAsync(p => p.Path == record.Path && p.Server.Name == (importContext.Record as Data.Models.Server).Name);
+            .ExistsAsync(p => p.Path == record.Path && p.Server.Name == (importContext.DataRecord as Data.Models.Server).Name);
     }
 }

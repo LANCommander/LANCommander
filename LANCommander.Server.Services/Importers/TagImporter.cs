@@ -1,22 +1,22 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class TagImporter<TParentRecord>(
+public class TagImporter(
     TagService tagService,
-    ImportContext<TParentRecord> importContext) : IImporter<Tag, Data.Models.Tag>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Tag, Data.Models.Tag>
 {
     public async Task<ImportItemInfo> InfoAsync(Tag record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Tags,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Tag record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Tag record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Tag> AddAsync(Tag record)
     {
@@ -24,7 +24,7 @@ public class TagImporter<TParentRecord>(
         {
             var tag = new Data.Models.Tag
             {
-                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -47,7 +47,7 @@ public class TagImporter<TParentRecord>(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.Record as Data.Models.Game);
+            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
             
             existing = await tagService.UpdateAsync(existing);
 

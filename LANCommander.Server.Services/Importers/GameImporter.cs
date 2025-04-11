@@ -1,4 +1,5 @@
 using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,7 +9,7 @@ public class GameImporter(
     GameService gameService,
     UserService userService,
     IMapper mapper,
-    ImportContext<Data.Models.Game> importContext) : IImporter<Game, Data.Models.Game>
+    ImportContext importContext) : IImporter<Game, Data.Models.Game>
 {
     public async Task<ImportItemInfo> InfoAsync(Game record)
     {
@@ -55,7 +56,7 @@ public class GameImporter(
 
             existing = await gameService.UpdateAsync(existing);
             
-            importContext.UseRecord(existing);
+            // importContext.UseRecord(existing);
 
             return existing;
         }

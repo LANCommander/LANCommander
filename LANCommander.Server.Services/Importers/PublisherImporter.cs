@@ -1,22 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class PublisherImporter<TParentRecord>(
+public class PublisherImporter(
     CompanyService companyService,
-    ImportContext<TParentRecord> importContext) : IImporter<Company, Data.Models.Company>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Company, Data.Models.Company>
 {
     public async Task<ImportItemInfo> InfoAsync(Company record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Publishers,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Company record) => importContext.Record is Data.Models.Company;
+    public bool CanImport(Company record) => importContext.DataRecord is Data.Models.Company;
 
     public async Task<Data.Models.Company> AddAsync(Company record)
     {
@@ -24,7 +25,7 @@ public class PublisherImporter<TParentRecord>(
         {
             var company = new Data.Models.Company
             {
-                PublishedGames = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
+                PublishedGames = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -47,7 +48,7 @@ public class PublisherImporter<TParentRecord>(
             if (existing.PublishedGames == null)
                 existing.PublishedGames = new List<Data.Models.Game>();
             
-            existing.PublishedGames.Add(importContext.Record as Data.Models.Game);
+            existing.PublishedGames.Add(importContext.DataRecord as Data.Models.Game);
             
             existing = await companyService.UpdateAsync(existing);
 

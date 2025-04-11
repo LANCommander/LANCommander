@@ -47,37 +47,35 @@ public static class IServiceCollectionExtensions
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<AuthenticationService>();
         services.AddTransient<SetupService>();
-        services.AddScoped(typeof(ImportService));
 
         // Register importers
-        services.AddScoped<ImportContext<Data.Models.Game>>();
-        services.AddScoped<ImportContext<Data.Models.Redistributable>>();
-        services.AddScoped<ImportContext<Data.Models.Server>>();
+        services.AddScoped<ImportContextFactory>();
+        services.AddScoped<ImportContext>();
         
         services.AddScoped<IImporter<SDK.Models.Manifest.Game, Data.Models.Game>, GameImporter>();
         services.AddScoped<IImporter<SDK.Models.Manifest.Redistributable, Data.Models.Redistributable>, RedistributableImporter>();
         services.AddScoped<IImporter<SDK.Models.Manifest.Server, Data.Models.Server>, ServerImporter>();
         
-        services.AddScoped<IImporter<SDK.Models.Manifest.Action, Data.Models.Action>, ActionImporter<Data.Models.Action>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Archive, Data.Models.Archive>, ArchiveImporter<Data.Models.Archive>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter<Data.Models.Collection>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField>, CustomFieldImporter<Data.Models.GameCustomField>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Company, Data.Models.Company>, PublisherImporter<Data.Models.Company>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter<Data.Models.Collection>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Engine, Data.Models.Engine>, EngineImporter<Data.Models.Engine>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Genre, Data.Models.Genre>, GenreImporter<Data.Models.Genre>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Key, Data.Models.Key>, KeyImporter<Data.Models.Key>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Media, Data.Models.Media>, MediaImporter<Data.Models.Media>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode>, MultiplayerModeImporter<Data.Models.MultiplayerMode>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Platform, Data.Models.Platform>, PlatformImporter<Data.Models.Platform>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession>, PlaySessionImporter<Data.Models.PlaySession>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Company, Data.Models.Company>, PublisherImporter<Data.Models.Company>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Save, Data.Models.GameSave>, SaveImporter<Data.Models.GameSave>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath>, SavePathImporter<Data.Models.SavePath>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Script, Data.Models.Script>, ScriptImporter<Data.Models.Script>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole>, ServerConsoleImporter<Data.Models.ServerConsole>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath>, ServerHttpPathImporter<Data.Models.ServerHttpPath>>();
-        services.AddScoped<IImporter<SDK.Models.Manifest.Tag, Data.Models.Tag>, TagImporter<Data.Models.Tag>>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Action, Data.Models.Action>, ActionImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Archive, Data.Models.Archive>, ArchiveImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField>, CustomFieldImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Company, Data.Models.Company>, PublisherImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Engine, Data.Models.Engine>, EngineImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Genre, Data.Models.Genre>, GenreImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Key, Data.Models.Key>, KeyImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Media, Data.Models.Media>, MediaImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode>, MultiplayerModeImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Platform, Data.Models.Platform>, PlatformImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession>, PlaySessionImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Company, Data.Models.Company>, PublisherImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Save, Data.Models.GameSave>, SaveImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath>, SavePathImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Script, Data.Models.Script>, ScriptImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole>, ServerConsoleImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath>, ServerHttpPathImporter>();
+        services.AddScoped<IImporter<SDK.Models.Manifest.Tag, Data.Models.Tag>, TagImporter>();
         
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();

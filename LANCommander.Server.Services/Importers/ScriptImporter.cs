@@ -1,28 +1,29 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class ScriptImporter<TParentRecord>(
+public class ScriptImporter(
     ScriptService scriptService,
-    ImportContext<TParentRecord> importContext) : IImporter<Script, Data.Models.Script>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Script, Data.Models.Script>
 {
     public async Task<ImportItemInfo> InfoAsync(Script record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Scripts,
             Name = record.Name,
             Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}")?.Size ?? 0,
         };
     }
 
     public bool CanImport(Script record) =>
-        importContext.Record is Data.Models.Game
+        importContext.DataRecord is Data.Models.Game
         ||
-        importContext.Record is Data.Models.Redistributable
+        importContext.DataRecord is Data.Models.Redistributable
         ||
-        importContext.Record is Data.Models.Server;
+        importContext.DataRecord is Data.Models.Server;
 
     public async Task<Data.Models.Script> AddAsync(Script record)
     {
@@ -45,11 +46,11 @@ public class ScriptImporter<TParentRecord>(
                 Type = record.Type,
             };
 
-            if (importContext.Record is Data.Models.Game game)
+            if (importContext.DataRecord is Data.Models.Game game)
                 newScript.Game = game;
-            else if (importContext.Record is Data.Models.Redistributable redistributable)
+            else if (importContext.DataRecord is Data.Models.Redistributable redistributable)
                 newScript.Redistributable = redistributable;
-            else if (importContext.Record is Data.Models.Server server)
+            else if (importContext.DataRecord is Data.Models.Server server)
                 newScript.Server = server;
 
             using (var streamReader = new StreamReader(archiveEntry.OpenEntryStream()))
@@ -76,11 +77,11 @@ public class ScriptImporter<TParentRecord>(
 
         Data.Models.Script existing = null;
         
-        if (importContext.Record is Data.Models.Game game)
+        if (importContext.DataRecord is Data.Models.Game game)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
-        else if (importContext.Record is Data.Models.Redistributable redistributable)
+        else if (importContext.DataRecord is Data.Models.Redistributable redistributable)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
-        else if (importContext.Record is Data.Models.Server server)
+        else if (importContext.DataRecord is Data.Models.Server server)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
 
         try
@@ -108,13 +109,13 @@ public class ScriptImporter<TParentRecord>(
 
     public async Task<bool> ExistsAsync(Script record)
     {
-        if (importContext.Record is Data.Models.Game game)
+        if (importContext.DataRecord is Data.Models.Game game)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
         
-        if (importContext.Record is Data.Models.Redistributable redistributable)
+        if (importContext.DataRecord is Data.Models.Redistributable redistributable)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
         
-        if (importContext.Record is Data.Models.Server server)
+        if (importContext.DataRecord is Data.Models.Server server)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
 
         return false;

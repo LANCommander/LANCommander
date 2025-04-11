@@ -1,22 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class EngineImporter<TParentRecord>(
+public class EngineImporter(
     EngineService engineService,
-    ImportContext<TParentRecord> importContext) : IImporter<Engine, Data.Models.Engine>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Engine, Data.Models.Engine>
 {
     public async Task<ImportItemInfo> InfoAsync(Engine record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Engine,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Engine record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Engine record) => importContext.DataRecord is Data.Models.Game;
     
     public async Task<Data.Models.Engine> AddAsync(Engine record)
     {
@@ -24,7 +25,7 @@ public class EngineImporter<TParentRecord>(
         {
             var engine = new Data.Models.Engine
             {
-                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -47,7 +48,7 @@ public class EngineImporter<TParentRecord>(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.Record as Data.Models.Game);
+            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
             
             existing = await engineService.UpdateAsync(existing);
 

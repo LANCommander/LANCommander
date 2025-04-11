@@ -1,22 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class PlatformImporter<TParentRecord>(
+public class PlatformImporter(
     PlatformService platformService,
-    ImportContext<TParentRecord> importContext) : IImporter<Platform, Data.Models.Platform>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<Platform, Data.Models.Platform>
 {
     public async Task<ImportItemInfo> InfoAsync(Platform record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.Platforms,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Platform record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(Platform record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Platform> AddAsync(Platform record)
     {
@@ -24,7 +25,7 @@ public class PlatformImporter<TParentRecord>(
         {
             var platform = new Data.Models.Platform
             {
-                Games = new List<Data.Models.Game>() { importContext.Record as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -47,7 +48,7 @@ public class PlatformImporter<TParentRecord>(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.Record as Data.Models.Game);
+            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
             
             existing = await platformService.UpdateAsync(existing);
 

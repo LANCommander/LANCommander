@@ -1,23 +1,23 @@
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
-public class SavePathImporter<TParentRecord>(
+public class SavePathImporter(
     SavePathService savePathService,
-    ServiceProvider serviceProvider,
-    ImportContext<TParentRecord> importContext) : IImporter<SavePath, Data.Models.SavePath>
-    where TParentRecord : Data.Models.BaseModel
+    ImportContext importContext) : IImporter<SavePath, Data.Models.SavePath>
 {
     public async Task<ImportItemInfo> InfoAsync(SavePath record)
     {
         return new ImportItemInfo
         {
+            Flag = ImportRecordFlags.SavePaths,
             Name = record.Path,
         };
     }
 
-    public bool CanImport(SavePath record) => importContext.Record is Data.Models.Game;
+    public bool CanImport(SavePath record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.SavePath> AddAsync(SavePath record)
     {
@@ -26,7 +26,7 @@ public class SavePathImporter<TParentRecord>(
             var savePath = new Data.Models.SavePath
             {
                 Id = record.Id,
-                Game = importContext.Record as Data.Models.Game,
+                Game = importContext.DataRecord as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 IsRegex = record.IsRegex,
@@ -49,7 +49,7 @@ public class SavePathImporter<TParentRecord>(
 
         try
         {
-            existing.Game = importContext.Record as Data.Models.Game;
+            existing.Game = importContext.DataRecord as Data.Models.Game;
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.IsRegex = record.IsRegex;

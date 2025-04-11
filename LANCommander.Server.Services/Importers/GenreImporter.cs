@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class GenreImporter(
+    IMapper mapper,
     GenreService genreService,
-    ImportContext importContext) : IImporter<Genre, Data.Models.Genre>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Genre, Data.Models.Genre>
 {
     public async Task<ImportItemInfo> InfoAsync(Genre record)
     {
@@ -18,7 +21,8 @@ public class GenreImporter(
     }
 
     public bool CanImport(Genre record) => importContext.DataRecord is Data.Models.Game;
-    
+    public bool CanExport(Genre record) => exportContext.DataRecord is Data.Models.Game;
+
     public async Task<Data.Models.Genre> AddAsync(Genre record)
     {
         try
@@ -58,6 +62,11 @@ public class GenreImporter(
         {
             throw new ImportSkippedException<Genre>(record, "An unknown error occured while importing genre", ex);
         }
+    }
+
+    public async Task<Genre> ExportAsync(Data.Models.Genre entity)
+    {
+        return mapper.Map<Genre>(entity);
     }
 
     public async Task<bool> ExistsAsync(Genre record)

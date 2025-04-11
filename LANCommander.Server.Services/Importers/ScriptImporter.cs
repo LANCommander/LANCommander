@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class ScriptImporter(
+    IMapper mapper,
     ScriptService scriptService,
-    ImportContext importContext) : IImporter<Script, Data.Models.Script>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Script, Data.Models.Script>
 {
     public async Task<ImportItemInfo> InfoAsync(Script record)
     {
@@ -24,6 +27,13 @@ public class ScriptImporter(
         importContext.DataRecord is Data.Models.Redistributable
         ||
         importContext.DataRecord is Data.Models.Server;
+
+    public bool CanExport(Script record) =>
+        exportContext.DataRecord is Data.Models.Game
+        ||
+        exportContext.DataRecord is Data.Models.Redistributable
+        ||
+        exportContext.DataRecord is Data.Models.Server;
 
     public async Task<Data.Models.Script> AddAsync(Script record)
     {
@@ -105,6 +115,22 @@ public class ScriptImporter(
         {
             throw new ImportSkippedException<Script>(record, "An unknown error occured while importing script", ex);
         }
+    }
+
+    public async Task<Script> ExportAsync(Data.Models.Script entity)
+    {
+        using (var stream = new MemoryStream())
+        using (var writer = new StreamWriter(stream))
+        {
+            writer.Write(entity.Contents);
+            writer.Flush();
+            
+            stream.Position = 0;
+            
+            exportContext.Archive.AddEntry($"Scripts/{entity.Id}", stream);
+        }
+        
+        return mapper.Map<Script>(entity);
     }
 
     public async Task<bool> ExistsAsync(Script record)

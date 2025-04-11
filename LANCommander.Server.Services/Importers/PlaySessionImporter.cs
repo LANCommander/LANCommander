@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,9 +6,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class PlaySessionImporter(
+    IMapper mapper,
     PlaySessionService playSessionService,
     UserService userService,
-    ImportContext importContext) : IImporter<PlaySession, Data.Models.PlaySession>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<PlaySession, Data.Models.PlaySession>
 {
     public async Task<ImportItemInfo> InfoAsync(PlaySession record)
     {
@@ -19,6 +22,7 @@ public class PlaySessionImporter(
     }
 
     public bool CanImport(PlaySession record) => importContext.DataRecord is Data.Models.Game;
+    public bool CanExport(PlaySession record) => exportContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.PlaySession> AddAsync(PlaySession record)
     {
@@ -62,6 +66,11 @@ public class PlaySessionImporter(
         {
             throw new ImportSkippedException<PlaySession>(record, "An unknown error occured while importing playSession", ex);
         }
+    }
+
+    public async Task<PlaySession> ExportAsync(Data.Models.PlaySession entity)
+    {
+        return mapper.Map<PlaySession>(entity);
     }
 
     public async Task<bool> ExistsAsync(PlaySession record)

@@ -49,6 +49,24 @@ namespace LANCommander.Server.Services
             });
         }
 
+        public async Task<SDK.Models.Manifest.Server> GetManifestAsync(Guid serverId)
+        {
+            var server = await AsNoTracking()
+                .AsSplitQuery()
+                .Query(q =>
+                {
+                    return q
+                        .Include(s => s.Actions)
+                        .Include(s => s.HttpPaths)
+                        .Include(s => s.ServerConsoles)
+                        .Include(s => s.Scripts);
+
+                })
+                .GetAsync<SDK.Models.Manifest.Server>(serverId);
+
+            return server;
+        }
+
         public async Task RunGameStartedScriptsAsync(Guid serverId, Guid userId)
         {
             var user = await userService.GetAsync(userId);

@@ -6,10 +6,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class GameImporter(
+    IMapper mapper,
     GameService gameService,
     UserService userService,
-    IMapper mapper,
-    ImportContext importContext) : IImporter<Game, Data.Models.Game>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Game, Data.Models.Game>
 {
     public async Task<ImportItemInfo> InfoAsync(Game record)
     {
@@ -20,7 +21,8 @@ public class GameImporter(
     }
 
     public bool CanImport(Game record) => true;
-    
+    public bool CanExport(Game record) => true;
+
     public async Task<Data.Models.Game> AddAsync(Game record)
     {
         var game = mapper.Map<Data.Models.Game>(record);
@@ -64,6 +66,11 @@ public class GameImporter(
         {
             throw new ImportSkippedException<Game>(record, "An unknown error occurred while trying to update game", ex);
         }
+    }
+
+    public async Task<Game> ExportAsync(Data.Models.Game entity)
+    {
+        return mapper.Map<Game>(entity);
     }
 
     public async Task<bool> ExistsAsync(Game record)

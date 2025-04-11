@@ -1,19 +1,21 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
-using LANCommander.SDK.Models.Manifest;
-using Microsoft.Extensions.DependencyInjection;
-using SharpCompress.Archives.Zip;
 using Action = LANCommander.SDK.Models.Manifest.Action;
 
 namespace LANCommander.Server.Services.Importers;
 
 public class ActionImporter(
+    IMapper mapper,
     ActionService actionService,
-    ImportContext importContext) : IImporter<Action, Data.Models.Action>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Action, Data.Models.Action>
 {
     public async Task<ImportItemInfo> InfoAsync(Action record) =>
         await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
 
     public bool CanImport(Action record) => importContext.DataRecord is Data.Models.Game;
+    
+    public bool CanExport(Action record) => exportContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Action> AddAsync(Action record)
     {
@@ -58,6 +60,11 @@ public class ActionImporter(
         {
             throw new ImportSkippedException<Action>(record, "An unknown error occured while importing action", ex);
         }
+    }
+
+    public async Task<Action> ExportAsync(Data.Models.Action entity)
+    {
+        return mapper.Map<Action>(entity);
     }
 
     public async Task<bool> ExistsAsync(Action record)

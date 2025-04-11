@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class PublisherImporter(
+    IMapper mapper,
     CompanyService companyService,
-    ImportContext importContext) : IImporter<Company, Data.Models.Company>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Company, Data.Models.Company>
 {
     public async Task<ImportItemInfo> InfoAsync(Company record)
     {
@@ -18,6 +21,7 @@ public class PublisherImporter(
     }
 
     public bool CanImport(Company record) => importContext.DataRecord is Data.Models.Company;
+    public bool CanExport(Company record) => exportContext.DataRecord is Data.Models.Company;
 
     public async Task<Data.Models.Company> AddAsync(Company record)
     {
@@ -58,6 +62,11 @@ public class PublisherImporter(
         {
             throw new ImportSkippedException<Company>(record, "An unknown error occured while importing publisher", ex);
         }
+    }
+
+    public async Task<Company> ExportAsync(Data.Models.Company entity)
+    {
+        return mapper.Map<Company>(entity);
     }
 
     public async Task<bool> ExistsAsync(Company record)

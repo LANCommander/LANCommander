@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class CollectionImporter(
+    IMapper mapper,
     CollectionService collectionService,
-    ImportContext importContext) : IImporter<Collection, Data.Models.Collection>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Collection, Data.Models.Collection>
 {
     public async Task<ImportItemInfo> InfoAsync(Collection record)
     {
@@ -18,7 +21,8 @@ public class CollectionImporter(
     }
 
     public bool CanImport(Collection record) => importContext.DataRecord is Data.Models.Game;
-    
+    public bool CanExport(Collection record) => exportContext.DataRecord is Data.Models.Game;
+
     public async Task<Data.Models.Collection> AddAsync(Collection record)
     {
         try
@@ -58,6 +62,11 @@ public class CollectionImporter(
         {
             throw new ImportSkippedException<Collection>(record, "An unknown error occured while importing collection", ex);
         }
+    }
+
+    public async Task<Collection> ExportAsync(Data.Models.Collection entity)
+    {
+        return mapper.Map<Collection>(entity);
     }
 
     public async Task<bool> ExistsAsync(Collection record)

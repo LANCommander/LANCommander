@@ -6,11 +6,12 @@ using SharpCompress.Common;
 namespace LANCommander.Server.Services.Importers;
 
 public class ServerImporter(
+    IMapper mapper,
     ServerService serverService,
     GameService gameService,
     UserService userService,
-    IMapper mapper,
-    ImportContext importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
     public async Task<ImportItemInfo> InfoAsync(SDK.Models.Manifest.Server record)
     {
@@ -24,7 +25,8 @@ public class ServerImporter(
     }
 
     public bool CanImport(SDK.Models.Manifest.Server record) => true;
-    
+    public bool CanExport(SDK.Models.Manifest.Server record) => true;
+
     public async Task<Data.Models.Server> AddAsync(SDK.Models.Manifest.Server record)
     {
         var server = mapper.Map<Data.Models.Server>(record);
@@ -76,6 +78,24 @@ public class ServerImporter(
         {
             throw new ImportSkippedException<SDK.Models.Manifest.Server>(record, "An unknown error occurred while trying to update server", ex);
         }
+    }
+
+    public async Task<SDK.Models.Manifest.Server> ExportAsync(Data.Models.Server entity)
+    {
+        var files = Directory.GetFiles(entity.WorkingDirectory, "*", SearchOption.AllDirectories);
+
+        foreach (var file in files)
+        {
+            var fileInfo = new FileInfo(file);
+
+            using (var fs = fileInfo.OpenRead())
+            {
+                // Probably need to handle working directory
+                exportContext.Archive.AddEntry($"Files/{fileInfo.Name}", fs);
+            }
+        }
+        
+        return mapper.Map<SDK.Models.Manifest.Server>(entity);
     }
 
     public async Task<bool> ExistsAsync(SDK.Models.Manifest.Server record)

@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class EngineImporter(
+    IMapper mapper,
     EngineService engineService,
-    ImportContext importContext) : IImporter<Engine, Data.Models.Engine>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Engine, Data.Models.Engine>
 {
     public async Task<ImportItemInfo> InfoAsync(Engine record)
     {
@@ -18,7 +21,8 @@ public class EngineImporter(
     }
 
     public bool CanImport(Engine record) => importContext.DataRecord is Data.Models.Game;
-    
+    public bool CanExport(Engine record) => exportContext.DataRecord is Data.Models.Game;
+
     public async Task<Data.Models.Engine> AddAsync(Engine record)
     {
         try
@@ -58,6 +62,11 @@ public class EngineImporter(
         {
             throw new ImportSkippedException<Engine>(record, "An unknown error occured while importing engine", ex);
         }
+    }
+
+    public async Task<Engine> ExportAsync(Data.Models.Engine entity)
+    {
+        return mapper.Map<Engine>(entity);
     }
 
     public async Task<bool> ExistsAsync(Engine record)

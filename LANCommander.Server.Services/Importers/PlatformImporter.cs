@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class PlatformImporter(
+    IMapper mapper,
     PlatformService platformService,
-    ImportContext importContext) : IImporter<Platform, Data.Models.Platform>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Platform, Data.Models.Platform>
 {
     public async Task<ImportItemInfo> InfoAsync(Platform record)
     {
@@ -18,6 +21,7 @@ public class PlatformImporter(
     }
 
     public bool CanImport(Platform record) => importContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Platform record) => exportContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Platform> AddAsync(Platform record)
     {
@@ -58,6 +62,11 @@ public class PlatformImporter(
         {
             throw new ImportSkippedException<Platform>(record, "An unknown error occured while importing platform", ex);
         }
+    }
+
+    public async Task<Platform> ExportAsync(Data.Models.Platform entity)
+    {
+        return mapper.Map<Platform>(entity);
     }
 
     public async Task<bool> ExistsAsync(Platform record)

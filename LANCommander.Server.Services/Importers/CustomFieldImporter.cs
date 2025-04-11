@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class CustomFieldImporter(
+    IMapper mapper,
     GameService gameService,
-    ImportContext importContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
 {
     public async Task<ImportItemInfo> InfoAsync(GameCustomField record)
     {
@@ -18,7 +21,8 @@ public class CustomFieldImporter(
     }
 
     public bool CanImport(GameCustomField record) => importContext.DataRecord is Data.Models.Game;
-    
+    public bool CanExport(GameCustomField record) => exportContext.DataRecord is Data.Models.Game;
+
     public async Task<Data.Models.GameCustomField> AddAsync(GameCustomField record)
     {
         try
@@ -48,6 +52,11 @@ public class CustomFieldImporter(
         {
             throw new ImportSkippedException<GameCustomField>(record, "An unknown error occured while importing customField", ex);
         }
+    }
+
+    public async Task<GameCustomField> ExportAsync(Data.Models.GameCustomField entity)
+    {
+        return mapper.Map<GameCustomField>(entity);
     }
 
     public async Task<bool> ExistsAsync(GameCustomField record)

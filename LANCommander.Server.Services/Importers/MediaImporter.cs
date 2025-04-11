@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class MediaImporter(
+    IMapper mapper,
     StorageLocationService storageLocationService,
     MediaService mediaService,
+    ExportContext exportContext,
     ImportContext importContext) : IImporter<Media, Data.Models.Media>
 {
     public async Task<ImportItemInfo> InfoAsync(Media record)
@@ -20,7 +23,8 @@ public class MediaImporter(
     }
 
     public bool CanImport(Media record) => importContext.DataRecord is Data.Models.Game;
-    
+    public bool CanExport(Media record) => exportContext.DataRecord is Data.Models.Game;
+
     public async Task<Data.Models.Media> AddAsync(Media record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
@@ -85,6 +89,19 @@ public class MediaImporter(
         {
             throw new ImportSkippedException<Media>(record, "An unknown error occured while importing media file", ex);
         }
+    }
+
+    public async Task<Media> ExportAsync(Data.Models.Media entity)
+    {
+        var path = await mediaService.GetMediaPathAsync(entity.Id);
+        var fileInfo = new FileInfo(path);
+
+        using (var fs = fileInfo.OpenRead())
+        {
+            exportContext.Archive.AddEntry($"Media/{entity.Id}", fs);
+        }
+        
+        return mapper.Map<Media>(entity);
     }
 
     public Task<bool> ExistsAsync(Media media)

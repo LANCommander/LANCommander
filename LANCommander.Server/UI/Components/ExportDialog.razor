@@ -1,0 +1,151 @@
+﻿@using LANCommander.SDK.Enums
+@using LANCommander.Server.Services.Importers
+@inherits FeedbackComponent<ExportDialogOptions>
+@inject ArchiveService ArchiveService
+@inject ExportContextFactory ExportContextFactory
+@inject IMessageService MessageService
+@inject ILogger<ExportDialog> Logger
+
+
+    <Collapse>
+        @foreach (var group in ImportItems.GroupBy(i => i.Flag))
+        {
+            <Panel ShowArrow="false" Key="@group.Key.ToString()">
+                <HeaderTemplate>
+                    <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
+                    <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                        <Text>@group.Key</Text>
+                        
+                        @{
+                            var size = group.Sum(i => i.Size);
+
+                            if (size > 0)
+                            {
+                                <ByteSize Value="size" />
+                            }
+                        }
+                    </Flex>
+                </HeaderTemplate>
+                <ChildContent>
+                    <AntList DataSource="group">
+                        <ChildContent Context="item">
+                            <ListItem>
+                                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                                    <Text>@item.Name</Text>
+
+                                    @if (item.Size > 0)
+                                    {
+                                        <ByteSize Value="item.Size"/>
+                                    }
+                                </Flex>
+                            </ListItem>
+                        </ChildContent>
+                    </AntList>
+                </ChildContent>
+            </Panel>
+        }
+    </Collapse>
+    
+    <Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
+        <Button OnClick="Export" Type="@ButtonType.Primary">Export</Button>
+        <Button OnClick="Cancel">Cancel</Button>
+    </Flex>
+}
+
+@code {
+    ExportContext ExportContext;
+
+    IEnumerable<ImportItemInfo> ImportItems = new List<ImportItemInfo>();
+
+    Dictionary<ImportRecordFlags, bool> SelectedFlags = Enum.GetValues<ImportRecordFlags>()
+        .ToDictionary(
+            f => f,
+            _ => true);
+
+    protected override async Task OnInitializedAsync()
+    {
+        ExportContext = ExportContextFactory.Create();
+        
+        ImportContext.OnRecordError += RecordError;
+        ImportContext.OnRecordAdded += RecordAdded;
+        ImportContext.OnRecordProcessed += RecordProcessed;
+    }
+
+    private void RecordProcessed(object? sender, object e)
+    {
+        
+    }
+
+    private void RecordAdded(object? sender, object e)
+    {
+        
+    }
+
+    private void RecordError(object? sender, object e)
+    {
+        
+    }
+
+    async Task Export()
+    {
+        
+    }
+
+    async Task Cancel()
+    {
+        await CloseFeedbackAsync();
+    }
+
+    public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
+    {
+        ExportContext.Dispose();
+        
+        await base.OnFeedbackCancelAsync(args);
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        ExportContext.Dispose();
+        
+        await base.OnFeedbackOkAsync(args);
+    }
+
+    public async Task OnUploadCompleted(string data)
+    {
+        if (Guid.TryParse(data, out var objectKey))
+        {
+            try
+            {
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+                
+                ImportItems = await ExportContext.InitializeAsync(Options.RecordId, Options.RecordType);
+
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("An unknown error occurred while trying to parse the import file");
+                Logger.LogError(ex, "An unknown error occurred while trying to parse the import file");
+            }
+        }
+        else
+        {
+            await InvokeAsync(StateHasChanged);
+
+            MessageService.Error("Import file failed to upload!");
+            Logger.LogError("Import file failed to upload!");
+
+            await CloseFeedbackAsync();
+        }
+    }
+
+    public async Task OnUploadError(string message)
+    {
+        await InvokeAsync(StateHasChanged);
+
+        MessageService.Error("An error occurred while trying to import");
+        Logger.LogError($"An error occurred while trying to import: {message}");
+
+        await CloseFeedbackAsync();
+    }
+}

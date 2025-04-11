@@ -1,4 +1,5 @@
 using System.Web.Services.Description;
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,9 @@ namespace LANCommander.Server.Services.Importers;
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
 public class ArchiveImporter(
+    IMapper mapper,
     ArchiveService archiveService,
+    ExportContext exportContext,
     ImportContext importContext) : IImporter<Archive, Data.Models.Archive>
 {
     public async Task<ImportItemInfo> InfoAsync(Archive record)
@@ -26,7 +29,8 @@ public class ArchiveImporter(
     }
 
     public bool CanImport(Archive record) => importContext.DataRecord is Data.Models.Game || importContext.DataRecord is Data.Models.Redistributable;
-    
+    public bool CanExport(Archive record) => exportContext.DataRecord is Data.Models.Game || exportContext.DataRecord is Data.Models.Redistributable;
+
     public async Task<Data.Models.Archive> AddAsync(Archive record)
     {
         var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}");
@@ -96,6 +100,19 @@ public class ArchiveImporter(
         {
             throw new ImportSkippedException<Archive>(archive, "An unknown error occured while importing archive file", ex);
         }
+    }
+
+    public async Task<Archive> ExportAsync(Data.Models.Archive entity)
+    {
+        var path = await archiveService.GetArchiveFileLocationAsync(entity);
+        var fileInfo = new FileInfo(path);
+
+        using (var fs = fileInfo.OpenRead())
+        {
+            exportContext.Archive.AddEntry($"Archives/{entity.Id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
+        }
+        
+        return mapper.Map<Archive>(entity);
     }
 
     public async Task<bool> ExistsAsync(Archive archive)

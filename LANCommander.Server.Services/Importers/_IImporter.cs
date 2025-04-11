@@ -13,7 +13,9 @@ public interface IImporter<TRecord, TEntity>
 {
     Task<ImportItemInfo> InfoAsync(TRecord record);
     bool CanImport(TRecord record);
+    bool CanExport(TRecord record);
     Task<TEntity> AddAsync(TRecord record);
     Task<TEntity> UpdateAsync(TRecord record);
+    Task<TRecord> ExportAsync(TEntity entity);
     Task<bool> ExistsAsync(TRecord record);
 }

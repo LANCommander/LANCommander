@@ -5,10 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class RedistributableImporter(
+    IMapper mapper,
     RedistributableService redistributableService,
     UserService userService,
-    IMapper mapper,
-    ImportContext importContext) : IImporter<Redistributable, Data.Models.Redistributable>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Redistributable, Data.Models.Redistributable>
 {
     public async Task<ImportItemInfo> InfoAsync(Redistributable record)
     {
@@ -19,6 +20,7 @@ public class RedistributableImporter(
     }
 
     public bool CanImport(Redistributable record) => true;
+    public bool CanExport(Redistributable record) => true;
 
     public async Task<Data.Models.Redistributable> AddAsync(Redistributable record)
     {
@@ -58,6 +60,11 @@ public class RedistributableImporter(
             throw new ImportSkippedException<Redistributable>(record,
                 "An unknown error occurred while trying to add redistributable", ex);
         }
+    }
+
+    public async Task<Redistributable> ExportAsync(Data.Models.Redistributable entity)
+    {
+        return mapper.Map<Redistributable>(entity);
     }
 
     public async Task<bool> ExistsAsync(Redistributable record)

@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,9 +6,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class ServerHttpPathImporter(
+    IMapper mapper,
     ServerHttpPathService serverHttpPathService,
     ServerService serverService,
-    ImportContext importContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
 {
     public async Task<ImportItemInfo> InfoAsync(ServerHttpPath record)
     {
@@ -19,6 +22,7 @@ public class ServerHttpPathImporter(
     }
 
     public bool CanImport(ServerHttpPath record) => importContext.DataRecord is Data.Models.Server;
+    public bool CanExport(ServerHttpPath record) => exportContext.DataRecord is Data.Models.Server;
 
     public async Task<Data.Models.ServerHttpPath> AddAsync(ServerHttpPath record)
     {
@@ -61,6 +65,12 @@ public class ServerHttpPathImporter(
         {
             throw new ImportSkippedException<ServerHttpPath>(record, "An unknown error occured while importing server console", ex);
         }
+    }
+
+    public async Task<ServerHttpPath> ExportAsync(Data.Models.ServerHttpPath entity)
+    {
+        // Include all files?
+        return mapper.Map<ServerHttpPath>(entity);
     }
 
     public async Task<bool> ExistsAsync(ServerHttpPath record)

@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class SavePathImporter(
+    IMapper mapper,
     SavePathService savePathService,
-    ImportContext importContext) : IImporter<SavePath, Data.Models.SavePath>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<SavePath, Data.Models.SavePath>
 {
     public async Task<ImportItemInfo> InfoAsync(SavePath record)
     {
@@ -18,6 +21,7 @@ public class SavePathImporter(
     }
 
     public bool CanImport(SavePath record) => importContext.DataRecord is Data.Models.Game;
+    public bool CanExport(SavePath record) => exportContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.SavePath> AddAsync(SavePath record)
     {
@@ -63,6 +67,11 @@ public class SavePathImporter(
         {
             throw new ImportSkippedException<SavePath>(record, "An unknown error occured while importing save path", ex);
         }
+    }
+
+    public async Task<SavePath> ExportAsync(Data.Models.SavePath entity)
+    {
+        return mapper.Map<SavePath>(entity);
     }
 
     public async Task<bool> ExistsAsync(SavePath record)

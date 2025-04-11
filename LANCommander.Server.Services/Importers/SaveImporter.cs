@@ -1,5 +1,7 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
+using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.DependencyInjection;
 using SharpCompress.Archives;
 using SharpCompress.Common;
@@ -12,9 +14,11 @@ namespace LANCommander.Server.Services.Importers;
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
 /// <param name="importContext">The context (archive, parent record> of the import</param>
 public class SaveImporter(
+    IMapper mapper,
     UserService userService,
     GameSaveService gameSaveService,
-    ImportContext importContext) : IImporter<Save, Data.Models.GameSave>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<Save, Data.Models.GameSave>
 {
     public async Task<ImportItemInfo> InfoAsync(Save record)
     {
@@ -27,6 +31,7 @@ public class SaveImporter(
     }
 
     public bool CanImport(Save record) => importContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Save record) => exportContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.GameSave> AddAsync(Save record)
     {
@@ -101,6 +106,19 @@ public class SaveImporter(
         {
             throw new ImportSkippedException<Save>(record, "An unknown error occured while importing save file", ex);
         }
+    }
+
+    public async Task<Save> ExportAsync(GameSave entity)
+    {
+        var path = await gameSaveService.GetSavePathAsync(entity.Id);
+        var fileInfo = new FileInfo(path);
+
+        using (var fs = fileInfo.OpenRead())
+        {
+            exportContext.Archive.AddEntry($"Saves/{entity.Id}", fs);
+        }
+        
+        return mapper.Map<Save>(entity);
     }
 
     public async Task<bool> ExistsAsync(Save archive)

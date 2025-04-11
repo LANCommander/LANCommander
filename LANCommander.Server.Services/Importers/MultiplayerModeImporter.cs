@@ -1,3 +1,4 @@
+using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using Microsoft.Extensions.DependencyInjection;
@@ -5,8 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace LANCommander.Server.Services.Importers;
 
 public class MultiplayerModeImporter(
+    IMapper mapper,
     MultiplayerModeService multiplayerModeService,
-    ImportContext importContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
+    ImportContext importContext,
+    ExportContext exportContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
 {
     public async Task<ImportItemInfo> InfoAsync(MultiplayerMode record)
     {
@@ -18,6 +21,7 @@ public class MultiplayerModeImporter(
     }
 
     public bool CanImport(MultiplayerMode record) => importContext.DataRecord is Data.Models.Game;
+    public bool CanExport(MultiplayerMode record) => exportContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.MultiplayerMode> AddAsync(MultiplayerMode record)
     {
@@ -67,6 +71,11 @@ public class MultiplayerModeImporter(
         {
             throw new ImportSkippedException<MultiplayerMode>(record, "An unknown error occured while importing multiplayer mode", ex);
         }
+    }
+
+    public async Task<MultiplayerMode> ExportAsync(Data.Models.MultiplayerMode entity)
+    {
+        return mapper.Map<MultiplayerMode>(entity);
     }
 
     public async Task<bool> ExistsAsync(MultiplayerMode record)

@@ -22,7 +22,7 @@ namespace LANCommander.Server.Jobs.Background
 
             foreach (var artifact in allowedArtifacts)
             {
-                using (var op = logger?.BeginOperation(" Downloading launcher artifact {ArtifactName} from GitHub", artifact.Name))
+                using (var op = logger?.BeginOperation("Downloading launcher artifact {ArtifactName} from GitHub", artifact.Name))
                 {
                     if (!localArtifacts.Any(a => a.Name.EndsWith(artifact.Name)))
                     {
@@ -30,6 +30,7 @@ namespace LANCommander.Server.Jobs.Background
                         using (var fs = new FileStream(Path.Combine(settings.Launcher.StoragePath, artifact.Name), FileMode.Create))
                         {
                             await downloadStream.CopyToAsync(fs);
+                            op.Complete();
                         }
                     }
                 }

@@ -6,6 +6,15 @@
     <Popover Trigger="new[] { Trigger.Hover }">
         <ContentTemplate>
             <Flex Vertical Gap="FlexGap.Small">
+                @if (IsInitializing)
+                {
+                    <span ita>Fetching Launchers &mldr;</span>
+                }
+                else if (DownloadLinks.Count() == 0) 
+                {
+                    <span>No Launchers available</span>
+                }
+
                 @foreach (var downloadLink in DownloadLinks)
                 {
                     <Button
@@ -15,7 +24,7 @@
                         OnClick="() => NavigationManager.NavigateTo(downloadLink.Url, true)"
                         Style="text-align: left">
                         @downloadLink.Name
-                        
+
                         @foreach (var tag in downloadLink.Tags)
                         {
                             <Tag Color="TagColor.Green">@tag</Tag>
@@ -25,7 +34,11 @@
             </Flex>
         </ContentTemplate>
         <ChildContent>
-            <Button Type="ButtonType.Primary" Size="ButtonSize.Large">
+            <Button Type="ButtonType.Primary" 
+                    Size="ButtonSize.Large" 
+                    Disabled="@(DownloadLinks.Count() == 0)"
+                    Loading="@(DownloadLinks.Count() == 0)"
+            >
                 Download Launcher
             </Button>
         </ChildContent>
@@ -41,6 +54,8 @@
         public string[] Tags { get; set; }
     }
 
+    bool IsInitializing = false;
+
     IEnumerable<DownloadLink> DownloadLinks = new List<DownloadLink>();
 
     readonly Hashtable _iconMap = new()
@@ -52,30 +67,38 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var artifacts = await UpdateService.GetLauncherArtifactsAsync();
+        try
+        {
+            IsInitializing = true;
+            var artifacts = await UpdateService.GetLauncherArtifactsAsync();
 
-        DownloadLinks = artifacts
-            .OrderBy(a => a.Platform)
-            .ThenBy(a => a.Architecture)
-            .Select(a =>
-            {
-                var tags = new List<string>();
+            DownloadLinks = artifacts
+                .OrderBy(a => a.Platform)
+                .ThenBy(a => a.Architecture)
+                .Select(a =>
+                {
+                    var tags = new List<string>();
 
-                if (artifacts.Count(art => art.Platform == a.Platform && art.Architecture == a.Architecture) > 1)
-                {
-                    if (a.Url.ToLower().EndsWith(".exe"))
-                        tags.Add("exe");
-                    else if (a.Url.ToLower().EndsWith(".zip"))
-                        tags.Add("zip");
-                }
-                
-                return new DownloadLink
-                {
-                    Name = $"{a.Platform} ({a.Architecture})",
-                    Icon = _iconMap[a.Platform].ToString(),
-                    Url = a.Url,
-                    Tags = tags.ToArray()
-                };
-            });
+                    if (artifacts.Count(art => art.Platform == a.Platform && art.Architecture == a.Architecture) > 1)
+                    {
+                        if (a.Url.ToLower().EndsWith(".exe"))
+                            tags.Add("exe");
+                        else if (a.Url.ToLower().EndsWith(".zip"))
+                            tags.Add("zip");
+                    }
+
+                    return new DownloadLink
+                    {
+                        Name = $"{a.Platform} ({a.Architecture})",
+                        Icon = _iconMap[a.Platform].ToString(),
+                        Url = a.Url,
+                        Tags = tags.ToArray()
+                    };
+                });
+        }
+        finally
+        {
+            IsInitializing = false;
+        }
     }
 }

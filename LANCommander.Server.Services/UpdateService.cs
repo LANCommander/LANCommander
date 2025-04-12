@@ -29,10 +29,20 @@ namespace LANCommander.Server.Services
 
         public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
         {
-            if (!_settings.Launcher.HostUpdates)
-                return await GetLauncherArtifactsFromGitHubAsync().ToListAsync();
+            List<LauncherArtifact> launchers = [];
 
-            return GetLauncherArtifactsFromLocalFiles();
+            if (_settings.Launcher.HostUpdates)
+            {
+                launchers.AddRange(GetLauncherArtifactsFromLocalFiles());
+            }
+
+            if (launchers.Count == 0 || _settings.Launcher.IncludeOnlineUpdates)
+            {
+                var githubLaunchers = await GetLauncherArtifactsFromGitHubAsync().ToListAsync();
+                launchers.AddRange(githubLaunchers);
+            }
+
+            return launchers;
         }
 
         public IEnumerable<LauncherArtifact> GetLauncherArtifactsFromLocalFiles()

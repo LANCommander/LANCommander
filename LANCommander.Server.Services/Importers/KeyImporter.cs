@@ -7,10 +7,18 @@ namespace LANCommander.Server.Services.Importers;
 public class KeyImporter(
     IMapper mapper,
     KeyService keyService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Key, Data.Models.Key>
+    ImportContext importContext) : IImporter<Key, Data.Models.Key>
 {
-    public async Task<ImportItemInfo> InfoAsync(Key record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Key record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Keys,
+            Name = new String('*', record.Value.Length),
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Key record)
     {
         return new ImportItemInfo
         {
@@ -20,7 +28,7 @@ public class KeyImporter(
     }
 
     public bool CanImport(Key record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Key record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Key record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Key> AddAsync(Key record)
     {

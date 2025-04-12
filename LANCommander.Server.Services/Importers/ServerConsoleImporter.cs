@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class ServerConsoleImporter(
     IMapper mapper,
     ServerConsoleService serverConsoleService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<ServerConsole, Data.Models.ServerConsole>
+    ImportContext importContext) : IImporter<ServerConsole, Data.Models.ServerConsole>
 {
-    public async Task<ImportItemInfo> InfoAsync(ServerConsole record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(ServerConsole record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.ServerConsoles,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(ServerConsole record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class ServerConsoleImporter(
     }
 
     public bool CanImport(ServerConsole record) => importContext.DataRecord is Data.Models.ServerConsole;
-    public bool CanExport(ServerConsole record) => exportContext.DataRecord is Data.Models.ServerConsole;
+    public bool CanExport(ServerConsole record) => importContext.DataRecord is Data.Models.ServerConsole;
 
     public async Task<Data.Models.ServerConsole> AddAsync(ServerConsole record)
     {

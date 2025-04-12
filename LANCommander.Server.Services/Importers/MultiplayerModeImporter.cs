@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class MultiplayerModeImporter(
     IMapper mapper,
     MultiplayerModeService multiplayerModeService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
+    ImportContext importContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
 {
-    public async Task<ImportItemInfo> InfoAsync(MultiplayerMode record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(MultiplayerMode record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.MultiplayerModes,
+            Name = String.IsNullOrWhiteSpace(record.Description) ? record.Type.ToString() : $"{record.Type} - {record.Description}",
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(MultiplayerMode record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class MultiplayerModeImporter(
     }
 
     public bool CanImport(MultiplayerMode record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(MultiplayerMode record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(MultiplayerMode record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.MultiplayerMode> AddAsync(MultiplayerMode record)
     {

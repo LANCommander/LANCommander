@@ -170,7 +170,7 @@ else
             {
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
                 
-                ImportItems = await ImportContext.InitializeAsync(archivePath);
+                ImportItems = await ImportContext.InitializeImportAsync(archivePath);
 
                 await InvokeAsync(StateHasChanged);
             }

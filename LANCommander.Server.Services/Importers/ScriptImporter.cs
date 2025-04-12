@@ -8,16 +8,25 @@ namespace LANCommander.Server.Services.Importers;
 public class ScriptImporter(
     IMapper mapper,
     ScriptService scriptService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Script, Data.Models.Script>
+    ImportContext importContext) : IImporter<Script, Data.Models.Script>
 {
-    public async Task<ImportItemInfo> InfoAsync(Script record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Script record)
     {
         return new ImportItemInfo
         {
             Flag = ImportRecordFlags.Scripts,
             Name = record.Name,
             Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}")?.Size ?? 0,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Script record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Scripts,
+            Name = record.Name,
+            Size = record.Contents.Length,
         };
     }
 
@@ -29,11 +38,11 @@ public class ScriptImporter(
         importContext.DataRecord is Data.Models.Server;
 
     public bool CanExport(Script record) =>
-        exportContext.DataRecord is Data.Models.Game
+        importContext.DataRecord is Data.Models.Game
         ||
-        exportContext.DataRecord is Data.Models.Redistributable
+        importContext.DataRecord is Data.Models.Redistributable
         ||
-        exportContext.DataRecord is Data.Models.Server;
+        importContext.DataRecord is Data.Models.Server;
 
     public async Task<Data.Models.Script> AddAsync(Script record)
     {
@@ -127,7 +136,7 @@ public class ScriptImporter(
             
             stream.Position = 0;
             
-            exportContext.Archive.AddEntry($"Scripts/{entity.Id}", stream);
+            importContext.Archive.AddEntry($"Scripts/{entity.Id}", stream);
         }
         
         return mapper.Map<Script>(entity);

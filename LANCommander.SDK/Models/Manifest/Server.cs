@@ -26,9 +26,9 @@ namespace LANCommander.SDK.Models.Manifest
         public int AutostartDelay { get; set; }
 
         public string Game { get; set; }
-        public virtual IEnumerable<ServerConsole> ServerConsoles { get; set; }
-        public virtual IEnumerable<ServerHttpPath> HttpPaths { get; set; }
-        public virtual IEnumerable<Script> Scripts { get; set; }
-        public virtual IEnumerable<Action> Actions { get; set; }
+        public virtual ICollection<ServerConsole> ServerConsoles { get; set; } = new List<ServerConsole>();
+        public virtual ICollection<ServerHttpPath> HttpPaths { get; set; } = new List<ServerHttpPath>();
+        public virtual ICollection<Script> Scripts { get; set; } = new List<Script>();
+        public virtual ICollection<Action> Actions { get; set; } = new List<Action>();
     }
 }

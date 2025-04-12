@@ -15,10 +15,9 @@ namespace LANCommander.Server.Services.Importers;
 public class ArchiveImporter(
     IMapper mapper,
     ArchiveService archiveService,
-    ExportContext exportContext,
     ImportContext importContext) : IImporter<Archive, Data.Models.Archive>
 {
-    public async Task<ImportItemInfo> InfoAsync(Archive record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Archive record)
     {
         return new ImportItemInfo
         {
@@ -28,8 +27,21 @@ public class ArchiveImporter(
         };
     }
 
+    public async Task<ImportItemInfo> GetExportInfoAsync(Archive record)
+    {
+        var archivePath = await archiveService.GetArchiveFileLocationAsync(record.ObjectKey);
+        var fileInfo = new FileInfo(archivePath);
+        
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Archives,
+            Name = record.Version,
+            Size = fileInfo.Length,
+        };
+    }
+
     public bool CanImport(Archive record) => importContext.DataRecord is Data.Models.Game || importContext.DataRecord is Data.Models.Redistributable;
-    public bool CanExport(Archive record) => exportContext.DataRecord is Data.Models.Game || exportContext.DataRecord is Data.Models.Redistributable;
+    public bool CanExport(Archive record) => importContext.DataRecord is Data.Models.Game || importContext.DataRecord is Data.Models.Redistributable;
 
     public async Task<Data.Models.Archive> AddAsync(Archive record)
     {
@@ -109,7 +121,7 @@ public class ArchiveImporter(
 
         using (var fs = fileInfo.OpenRead())
         {
-            exportContext.Archive.AddEntry($"Archives/{entity.Id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
+            importContext.Archive.AddEntry($"Archives/{entity.Id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
         }
         
         return mapper.Map<Archive>(entity);

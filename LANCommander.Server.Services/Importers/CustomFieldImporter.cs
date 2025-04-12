@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class CustomFieldImporter(
     IMapper mapper,
     GameService gameService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
+    ImportContext importContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
 {
-    public async Task<ImportItemInfo> InfoAsync(GameCustomField record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(GameCustomField record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.CustomFields,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(GameCustomField record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class CustomFieldImporter(
     }
 
     public bool CanImport(GameCustomField record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(GameCustomField record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(GameCustomField record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.GameCustomField> AddAsync(GameCustomField record)
     {

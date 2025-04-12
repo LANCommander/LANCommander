@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class DeveloperImporter(
     IMapper mapper,
     CompanyService companyService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Company, Data.Models.Company>
+    ImportContext importContext) : IImporter<Company, Data.Models.Company>
 {
-    public async Task<ImportItemInfo> InfoAsync(Company record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Company record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Developers,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Company record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class DeveloperImporter(
     }
 
     public bool CanImport(Company record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Company record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Company record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Company> AddAsync(Company record)
     {

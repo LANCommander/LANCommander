@@ -11,7 +11,8 @@ namespace LANCommander.Server.Services.Importers;
 /// <typeparam name="TRecord"></typeparam>
 public interface IImporter<TRecord, TEntity>
 {
-    Task<ImportItemInfo> InfoAsync(TRecord record);
+    Task<ImportItemInfo> GetImportInfoAsync(TRecord record);
+    Task<ImportItemInfo> GetExportInfoAsync(TRecord record);
     bool CanImport(TRecord record);
     bool CanExport(TRecord record);
     Task<TEntity> AddAsync(TRecord record);

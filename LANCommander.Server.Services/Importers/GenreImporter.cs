@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class GenreImporter(
     IMapper mapper,
     GenreService genreService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Genre, Data.Models.Genre>
+    ImportContext importContext) : IImporter<Genre, Data.Models.Genre>
 {
-    public async Task<ImportItemInfo> InfoAsync(Genre record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Genre record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Genres,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Genre record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class GenreImporter(
     }
 
     public bool CanImport(Genre record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Genre record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Genre record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Genre> AddAsync(Genre record)
     {

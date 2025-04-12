@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class EngineImporter(
     IMapper mapper,
     EngineService engineService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Engine, Data.Models.Engine>
+    ImportContext importContext) : IImporter<Engine, Data.Models.Engine>
 {
-    public async Task<ImportItemInfo> InfoAsync(Engine record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Engine record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Engine,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Engine record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class EngineImporter(
     }
 
     public bool CanImport(Engine record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Engine record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Engine record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Engine> AddAsync(Engine record)
     {

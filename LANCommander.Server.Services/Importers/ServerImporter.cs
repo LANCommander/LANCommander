@@ -10,10 +10,9 @@ public class ServerImporter(
     ServerService serverService,
     GameService gameService,
     UserService userService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
+    ImportContext importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
-    public async Task<ImportItemInfo> InfoAsync(SDK.Models.Manifest.Server record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(SDK.Models.Manifest.Server record)
     {
         var fileEntries = importContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/"));
         
@@ -21,6 +20,26 @@ public class ServerImporter(
         {
             Name = record.Name,
             Size = fileEntries.Sum(f => f.Size),
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(SDK.Models.Manifest.Server record)
+    {
+        var files = Directory.GetFiles(record.WorkingDirectory, "*", SearchOption.AllDirectories);
+
+        long size = 0;
+        
+        foreach (var file in files)
+        {
+            var fileInfo = new FileInfo(file);
+            
+            size += fileInfo.Length;
+        }
+        
+        return new ImportItemInfo
+        {
+            Name = record.Name,
+            Size = size
         };
     }
 
@@ -91,7 +110,7 @@ public class ServerImporter(
             using (var fs = fileInfo.OpenRead())
             {
                 // Probably need to handle working directory
-                exportContext.Archive.AddEntry($"Files/{fileInfo.Name}", fs);
+                importContext.Archive.AddEntry($"Files/{fileInfo.Name}", fs);
             }
         }
         

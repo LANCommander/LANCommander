@@ -9,10 +9,17 @@ public class GameImporter(
     IMapper mapper,
     GameService gameService,
     UserService userService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Game, Data.Models.Game>
+    ImportContext importContext) : IImporter<Game, Data.Models.Game>
 {
-    public async Task<ImportItemInfo> InfoAsync(Game record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Game record)
+    {
+        return new ImportItemInfo
+        {
+            Name = record.Title,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Game record)
     {
         return new ImportItemInfo
         {

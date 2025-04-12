@@ -17,10 +17,9 @@ public class SaveImporter(
     IMapper mapper,
     UserService userService,
     GameSaveService gameSaveService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Save, Data.Models.GameSave>
+    ImportContext importContext) : IImporter<Save, Data.Models.GameSave>
 {
-    public async Task<ImportItemInfo> InfoAsync(Save record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Save record)
     {
         return new ImportItemInfo
         {
@@ -30,8 +29,21 @@ public class SaveImporter(
         };
     }
 
+    public async Task<ImportItemInfo> GetExportInfoAsync(Save record)
+    {
+        var savePath = await gameSaveService.GetSavePathAsync(record.Id);
+        var fileInfo = new FileInfo(savePath);
+        
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Saves,
+            Name = $"{record.User} - {record.CreatedOn}",
+            Size = fileInfo.Length,
+        };
+    }
+
     public bool CanImport(Save record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Save record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Save record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.GameSave> AddAsync(Save record)
     {
@@ -115,7 +127,7 @@ public class SaveImporter(
 
         using (var fs = fileInfo.OpenRead())
         {
-            exportContext.Archive.AddEntry($"Saves/{entity.Id}", fs);
+            importContext.Archive.AddEntry($"Saves/{entity.Id}", fs);
         }
         
         return mapper.Map<Save>(entity);

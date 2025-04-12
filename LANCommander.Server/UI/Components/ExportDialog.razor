@@ -2,7 +2,7 @@
 @using LANCommander.Server.Services.Importers
 @inherits FeedbackComponent<ExportDialogOptions>
 @inject ArchiveService ArchiveService
-@inject ExportContextFactory ExportContextFactory
+@inject ImportContextFactory ImportContextFactory
 @inject IMessageService MessageService
 @inject ILogger<ExportDialog> Logger
 
@@ -53,7 +53,7 @@
 }
 
 @code {
-    ExportContext ExportContext;
+    ImportContext ImportContext;
 
     IEnumerable<ImportItemInfo> ImportItems = new List<ImportItemInfo>();
 
@@ -64,7 +64,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ExportContext = ExportContextFactory.Create();
+        ImportContext = ImportContextFactory.Create();
         
         ImportContext.OnRecordError += RecordError;
         ImportContext.OnRecordAdded += RecordAdded;
@@ -88,7 +88,21 @@
 
     async Task Export()
     {
-        
+        ImportRecordFlags? flags = null;
+
+        foreach (var flag in SelectedFlags.Where(d => d.Value))
+        {
+            if (flags == null)
+                flags = flag.Key;
+            else
+                flags &= flag.Key;
+        }
+
+        await ImportContext.PrepareExportQueueAsync(flags.Value);
+
+        await InvokeAsync(StateHasChanged);
+
+        await ImportContext.ExportQueueAsync();
     }
 
     async Task Cancel()
@@ -98,14 +112,14 @@
 
     public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
     {
-        ExportContext.Dispose();
+        ImportContext.Dispose();
         
         await base.OnFeedbackCancelAsync(args);
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        ExportContext.Dispose();
+        ImportContext.Dispose();
         
         await base.OnFeedbackOkAsync(args);
     }
@@ -117,35 +131,25 @@
             try
             {
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
-                
-                ImportItems = await ExportContext.InitializeAsync(Options.RecordId, Options.RecordType);
+
+                ImportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
 
                 await InvokeAsync(StateHasChanged);
             }
             catch (Exception ex)
             {
-                MessageService.Error("An unknown error occurred while trying to parse the import file");
-                Logger.LogError(ex, "An unknown error occurred while trying to parse the import file");
+                MessageService.Error("An unknown error occurred while trying to gather export details");
+                Logger.LogError(ex, "An unknown error occurred while trying to gather export details");
             }
         }
         else
         {
             await InvokeAsync(StateHasChanged);
 
-            MessageService.Error("Import file failed to upload!");
-            Logger.LogError("Import file failed to upload!");
+            MessageService.Error("Export file failed to generate!");
+            Logger.LogError("Export file failed to generate!");
 
             await CloseFeedbackAsync();
         }
-    }
-
-    public async Task OnUploadError(string message)
-    {
-        await InvokeAsync(StateHasChanged);
-
-        MessageService.Error("An error occurred while trying to import");
-        Logger.LogError($"An error occurred while trying to import: {message}");
-
-        await CloseFeedbackAsync();
     }
 }

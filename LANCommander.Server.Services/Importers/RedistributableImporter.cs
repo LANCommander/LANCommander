@@ -8,10 +8,17 @@ public class RedistributableImporter(
     IMapper mapper,
     RedistributableService redistributableService,
     UserService userService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Redistributable, Data.Models.Redistributable>
+    ImportContext importContext) : IImporter<Redistributable, Data.Models.Redistributable>
 {
-    public async Task<ImportItemInfo> InfoAsync(Redistributable record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Redistributable record)
+    {
+        return new ImportItemInfo()
+        {
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Redistributable record)
     {
         return new ImportItemInfo()
         {

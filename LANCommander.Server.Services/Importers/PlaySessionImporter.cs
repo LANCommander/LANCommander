@@ -9,10 +9,18 @@ public class PlaySessionImporter(
     IMapper mapper,
     PlaySessionService playSessionService,
     UserService userService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<PlaySession, Data.Models.PlaySession>
+    ImportContext importContext) : IImporter<PlaySession, Data.Models.PlaySession>
 {
-    public async Task<ImportItemInfo> InfoAsync(PlaySession record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(PlaySession record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.PlaySessions,
+            Name = $"{record.User} - {record.Start}-{record.End}",
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(PlaySession record)
     {
         return new ImportItemInfo
         {
@@ -22,7 +30,7 @@ public class PlaySessionImporter(
     }
 
     public bool CanImport(PlaySession record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(PlaySession record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(PlaySession record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.PlaySession> AddAsync(PlaySession record)
     {

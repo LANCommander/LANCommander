@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class CollectionImporter(
     IMapper mapper,
     CollectionService collectionService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Collection, Data.Models.Collection>
+    ImportContext importContext) : IImporter<Collection, Data.Models.Collection>
 {
-    public async Task<ImportItemInfo> InfoAsync(Collection record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Collection record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Collections,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Collection record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class CollectionImporter(
     }
 
     public bool CanImport(Collection record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Collection record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Collection record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Collection> AddAsync(Collection record)
     {

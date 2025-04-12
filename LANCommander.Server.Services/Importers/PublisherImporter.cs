@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class PublisherImporter(
     IMapper mapper,
     CompanyService companyService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Company, Data.Models.Company>
+    ImportContext importContext) : IImporter<Company, Data.Models.Company>
 {
-    public async Task<ImportItemInfo> InfoAsync(Company record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Company record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Publishers,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Company record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class PublisherImporter(
     }
 
     public bool CanImport(Company record) => importContext.DataRecord is Data.Models.Company;
-    public bool CanExport(Company record) => exportContext.DataRecord is Data.Models.Company;
+    public bool CanExport(Company record) => importContext.DataRecord is Data.Models.Company;
 
     public async Task<Data.Models.Company> AddAsync(Company record)
     {

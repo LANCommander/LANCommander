@@ -9,10 +9,9 @@ public class MediaImporter(
     IMapper mapper,
     StorageLocationService storageLocationService,
     MediaService mediaService,
-    ExportContext exportContext,
     ImportContext importContext) : IImporter<Media, Data.Models.Media>
 {
-    public async Task<ImportItemInfo> InfoAsync(Media record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Media record)
     {
         return new ImportItemInfo
         {
@@ -22,8 +21,21 @@ public class MediaImporter(
         };
     }
 
+    public async Task<ImportItemInfo> GetExportInfoAsync(Media record)
+    {
+        var mediaPath = await mediaService.GetMediaPathAsync(record.Id);
+        var fileInfo = new FileInfo(mediaPath);
+        
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Media,
+            Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
+            Size = fileInfo.Length,
+        };
+    }
+
     public bool CanImport(Media record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Media record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Media record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Media> AddAsync(Media record)
     {
@@ -98,7 +110,7 @@ public class MediaImporter(
 
         using (var fs = fileInfo.OpenRead())
         {
-            exportContext.Archive.AddEntry($"Media/{entity.Id}", fs);
+            importContext.Archive.AddEntry($"Media/{entity.Id}", fs);
         }
         
         return mapper.Map<Media>(entity);

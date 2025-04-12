@@ -7,10 +7,18 @@ namespace LANCommander.Server.Services.Importers;
 public class TagImporter(
     IMapper mapper,
     TagService tagService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Tag, Data.Models.Tag>
+    ImportContext importContext) : IImporter<Tag, Data.Models.Tag>
 {
-    public async Task<ImportItemInfo> InfoAsync(Tag record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Tag record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Tags,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Tag record)
     {
         return new ImportItemInfo
         {
@@ -20,7 +28,7 @@ public class TagImporter(
     }
 
     public bool CanImport(Tag record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Tag record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Tag record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Tag> AddAsync(Tag record)
     {

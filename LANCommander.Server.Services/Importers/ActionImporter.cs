@@ -7,15 +7,17 @@ namespace LANCommander.Server.Services.Importers;
 public class ActionImporter(
     IMapper mapper,
     ActionService actionService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Action, Data.Models.Action>
+    ImportContext importContext) : IImporter<Action, Data.Models.Action>
 {
-    public async Task<ImportItemInfo> InfoAsync(Action record) =>
+    public async Task<ImportItemInfo> GetImportInfoAsync(Action record) =>
+        await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Action record) =>
         await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
 
     public bool CanImport(Action record) => importContext.DataRecord is Data.Models.Game;
     
-    public bool CanExport(Action record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Action record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Action> AddAsync(Action record)
     {

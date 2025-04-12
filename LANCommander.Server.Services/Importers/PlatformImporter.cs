@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class PlatformImporter(
     IMapper mapper,
     PlatformService platformService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<Platform, Data.Models.Platform>
+    ImportContext importContext) : IImporter<Platform, Data.Models.Platform>
 {
-    public async Task<ImportItemInfo> InfoAsync(Platform record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(Platform record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.Platforms,
+            Name = record.Name,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(Platform record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class PlatformImporter(
     }
 
     public bool CanImport(Platform record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Platform record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(Platform record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.Platform> AddAsync(Platform record)
     {

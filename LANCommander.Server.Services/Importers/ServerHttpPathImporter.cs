@@ -9,10 +9,18 @@ public class ServerHttpPathImporter(
     IMapper mapper,
     ServerHttpPathService serverHttpPathService,
     ServerService serverService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
+    ImportContext importContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
 {
-    public async Task<ImportItemInfo> InfoAsync(ServerHttpPath record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(ServerHttpPath record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.ServerHttpPaths,
+            Name = record.Path,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(ServerHttpPath record)
     {
         return new ImportItemInfo
         {
@@ -22,7 +30,7 @@ public class ServerHttpPathImporter(
     }
 
     public bool CanImport(ServerHttpPath record) => importContext.DataRecord is Data.Models.Server;
-    public bool CanExport(ServerHttpPath record) => exportContext.DataRecord is Data.Models.Server;
+    public bool CanExport(ServerHttpPath record) => importContext.DataRecord is Data.Models.Server;
 
     public async Task<Data.Models.ServerHttpPath> AddAsync(ServerHttpPath record)
     {

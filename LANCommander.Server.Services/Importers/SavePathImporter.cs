@@ -8,10 +8,18 @@ namespace LANCommander.Server.Services.Importers;
 public class SavePathImporter(
     IMapper mapper,
     SavePathService savePathService,
-    ImportContext importContext,
-    ExportContext exportContext) : IImporter<SavePath, Data.Models.SavePath>
+    ImportContext importContext) : IImporter<SavePath, Data.Models.SavePath>
 {
-    public async Task<ImportItemInfo> InfoAsync(SavePath record)
+    public async Task<ImportItemInfo> GetImportInfoAsync(SavePath record)
+    {
+        return new ImportItemInfo
+        {
+            Flag = ImportRecordFlags.SavePaths,
+            Name = record.Path,
+        };
+    }
+
+    public async Task<ImportItemInfo> GetExportInfoAsync(SavePath record)
     {
         return new ImportItemInfo
         {
@@ -21,7 +29,7 @@ public class SavePathImporter(
     }
 
     public bool CanImport(SavePath record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(SavePath record) => exportContext.DataRecord is Data.Models.Game;
+    public bool CanExport(SavePath record) => importContext.DataRecord is Data.Models.Game;
 
     public async Task<Data.Models.SavePath> AddAsync(SavePath record)
     {

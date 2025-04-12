@@ -36,9 +36,12 @@ namespace LANCommander.Server.Services
         public IEnumerable<LauncherArtifact> GetLauncherArtifactsFromLocalFiles()
         {
             var currentVersion = versionProvider.GetCurrentVersion();
-            var downloadedLaunchers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher.*v{currentVersion.WithoutMetadata()}.zip");
-            
-            foreach (var downloadedLauncher in downloadedLaunchers)
+            var downloadedLaunchers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher*v{currentVersion.WithoutMetadata()}.*");
+            var downloadedInstallers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher-{currentVersion.WithoutMetadata()}*Setup*.*");
+
+            var downloads = downloadedLaunchers.Concat(downloadedInstallers).Distinct();
+
+            foreach (var downloadedLauncher in downloads)
                 yield return GetArtifactFromName(downloadedLauncher);
         }
 

@@ -80,7 +80,7 @@ namespace LANCommander.Server.Services
                     logger.LogError($"No assets found for v{currentVersion.WithoutMetadata()}!");
                 
                 foreach (var asset in assets)
-                    yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl);
+                    yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl, isOnline: true, isPrerelease: release.Prerelease);
             }
 
             if (releaseChannel == ReleaseChannel.Nightly)
@@ -88,11 +88,11 @@ namespace LANCommander.Server.Services
                 var nightlyArtifacts = await gitHubService.GetNightlyArtifactsAsync(_settings.Launcher.VersionOverride);
                 
                 foreach (var artifact in nightlyArtifacts.Where(a => a.Name.Contains("LANCommander.Launcher")))
-                    yield return GetArtifactFromName(artifact.Name, artifact.ArchiveDownloadUrl);
+                    yield return GetArtifactFromName(artifact.Name, artifact.ArchiveDownloadUrl, isOnline: true, isPrerelease: true, isNightly: true);
             }
         }
 
-        private LauncherArtifact GetArtifactFromName(string name, string url = "")
+        private LauncherArtifact GetArtifactFromName(string name, string url = "", bool isOnline = false, bool isPrerelease = false, bool isNightly = false)
         {
             var platform = LauncherPlatform.Windows;
             var architecture = LauncherArchitecture.x64;
@@ -119,6 +119,9 @@ namespace LANCommander.Server.Services
                 Platform = platform,
                 Architecture = architecture,
                 Url = url,
+                IsOnline = isOnline,
+                IsPrerelease = isPrerelease,
+                IsNightly = isNightly,
             };
         }
 
@@ -287,5 +290,8 @@ namespace LANCommander.Server.Services
         public required string Url { get; set; }
         public LauncherPlatform Platform { get; set; }
         public LauncherArchitecture Architecture { get; set; }
+        public bool IsOnline { get; set; }
+        public bool IsPrerelease { get; set; }
+        public bool IsNightly { get; set; }
     }
 }

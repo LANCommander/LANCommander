@@ -17,19 +17,31 @@
 
                 @foreach (var downloadLink in DownloadLinks)
                 {
-                    <Button
-                        Type="ButtonType.Text"
-                        Block
-                        Icon="@downloadLink.Icon"
-                        OnClick="() => NavigationManager.NavigateTo(downloadLink.Url, true)"
-                        Style="text-align: left">
-                        @downloadLink.Name
+                    <Button Type="ButtonType.Text"
+                            Block
+                            Icon="@downloadLink.Icon"
+                            OnClick="() => NavigationManager.NavigateTo(downloadLink.Url, true)"
+                            Style="text-align: left">
+                        <GridRow Wrap="false" Align="@RowAlign.Middle" Justify="@RowJustify.SpaceBetween">
+                            <GridCol Flex=@("auto")>
+                                @downloadLink.Name
 
-                        @foreach (var tag in downloadLink.Tags)
-                        {
-                            <Tag Color="TagColor.Green">@tag</Tag>
-                        }
+                                @foreach (var tag in downloadLink.Tags)
+                                {
+                                    <Tag Icon="@tag.Icon" Color="@(tag.ColorOverride ?? TagColor.Green)">@tag.Name</Tag>
+                                }
+                            </GridCol>
+                            <GridCol Flex=@("none")>
+                                <div style="padding-left: 8px;">
+                                    @if (downloadLink.IsOnline)
+                                    {
+                                        <Icon Type="@IconType.Outline.Cloud" />
+                                    }
+                                </div>
+                            </GridCol>
+                        </GridRow>
                     </Button>
+
                 }
             </Flex>
         </ContentTemplate>
@@ -48,16 +60,30 @@
 @code {
     class DownloadLink
     {
+        public class Tag
+        {
+            public Tag(string name)
+            {
+                Name = name;
+                Icon = string.Empty;
+            }
+            public string Name { get; set; }
+            public string Icon { get; set; }
+            public TagColor? ColorOverride { get; set; }
+        }
+
         public string Name { get; set; }
         public string Url { get; set; }
         public string Icon { get; set; }
-        public string[] Tags { get; set; }
+        public Tag[] Tags { get; set; }
+        public bool IsOnline { get; set; }
     }
 
     bool IsInitializing = false;
 
     IEnumerable<DownloadLink> DownloadLinks = new List<DownloadLink>();
 
+    readonly string DefaultIcon = IconType.Fill.QuestionCircle;
     readonly Hashtable _iconMap = new()
     {
         [LauncherPlatform.Windows] = IconType.Fill.Windows,
@@ -77,22 +103,28 @@
                 .ThenBy(a => a.Architecture)
                 .Select(a =>
                 {
-                    var tags = new List<string>();
+                    var tags = new List<DownloadLink.Tag>();
 
                     if (artifacts.Count(art => art.Platform == a.Platform && art.Architecture == a.Architecture) > 1)
                     {
                         if (a.Url.ToLower().EndsWith(".exe"))
-                            tags.Add("exe");
+                            tags.Add(new DownloadLink.Tag("exe"));
                         else if (a.Url.ToLower().EndsWith(".zip"))
-                            tags.Add("zip");
+                            tags.Add(new DownloadLink.Tag("zip"));
                     }
+
+                    if (a.IsNightly)
+                        tags.Add(new DownloadLink.Tag("nightly") { Icon = IconType.Fill.Fire, ColorOverride = TagColor.Volcano });
+                    else if (a.IsPrerelease)
+                        tags.Add(new DownloadLink.Tag("pre") { ColorOverride = TagColor.Gold });
 
                     return new DownloadLink
                     {
                         Name = $"{a.Platform} ({a.Architecture})",
-                        Icon = _iconMap[a.Platform].ToString(),
+                        Icon = _iconMap[a.Platform]?.ToString() ?? DefaultIcon,
                         Url = a.Url,
-                        Tags = tags.ToArray()
+                        Tags = tags.ToArray(),
+                        IsOnline = a.IsOnline,
                     };
                 });
         }

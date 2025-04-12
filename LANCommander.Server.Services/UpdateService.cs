@@ -25,6 +25,8 @@ namespace LANCommander.Server.Services
         IGitHubService gitHubService,
         ServerService serverService) : BaseService(logger)
     {
+        public const string ArtifactUrlBase = "/download/Launcher/";
+
         public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
         {
             if (!_settings.Launcher.HostUpdates)
@@ -84,6 +86,7 @@ namespace LANCommander.Server.Services
         {
             var platform = LauncherPlatform.Windows;
             var architecture = LauncherArchitecture.x64;
+            var assetName = Path.GetFileName(name);
 
             if (name.Contains("Windows"))
                 platform = LauncherPlatform.Windows;
@@ -98,7 +101,7 @@ namespace LANCommander.Server.Services
                 architecture = LauncherArchitecture.arm64;
 
             if (String.IsNullOrWhiteSpace(url))
-                url = $"/Launcher/{name}";
+                url = $"{ArtifactUrlBase}{assetName}";
 
             return new LauncherArtifact
             {
@@ -250,12 +253,28 @@ namespace LANCommander.Server.Services
 
             applicationLifetime.StopApplication();
         }
+
+        public string GetLauncherFileLocation(LauncherArtifact artifact)
+        {
+            return GetLauncherFileLocation(artifact.Name);
+        }
+
+        public string GetLauncherFileLocation(string objectKey)
+        {
+            return Path.Combine(_settings.Launcher.StoragePath, objectKey);
+        }
+
+        public LauncherArtifact GetLauncherArtifact(string objectKey)
+        {
+            string name = Path.Combine(_settings.Launcher.StoragePath, objectKey);
+            return GetArtifactFromName(name);
+        }
     }
 
     public class LauncherArtifact
     {
-        public string Name { get; set; }
-        public string Url { get; set; }
+        public required string Name { get; set; }
+        public required string Url { get; set; }
         public LauncherPlatform Platform { get; set; }
         public LauncherArchitecture Architecture { get; set; }
     }

@@ -15,6 +15,7 @@ public static class DownloadEndpoints
 
         group.MapGet("/Archive/{id:guid}", DownloadArchiveAsync);
         group.MapGet("/Save/{id:guid}", DownloadSaveAsync);
+        group.MapGet("/Launcher/{objectKey}", DownloadLauncherAsync);
     }
 
     internal static async Task<IResult> DownloadArchiveAsync(
@@ -69,5 +70,25 @@ public static class DownloadEndpoints
             $"{save.User?.UserName} - {(save.Game != null ? "Unknown" : save.Game?.Title)} - {save.CreatedOn.ToString("MM-dd-yyyy.hh-mm")}.zip";
         
         return TypedResults.File(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read), fileDownloadName: name, contentType: MediaTypeNames.Application.Zip);
+    }
+
+    internal static IResult DownloadLauncherAsync(
+        string objectKey,
+        ClaimsPrincipal user,
+        [FromServices] UpdateService updateService)
+    {
+        if (string.IsNullOrEmpty(objectKey))
+            return TypedResults.NotFound();
+
+        if (objectKey.Contains("..") || objectKey.Contains(Path.AltDirectorySeparatorChar) || objectKey.Contains(Path.DirectorySeparatorChar))
+            return TypedResults.BadRequest("Bad object key provided.");
+
+        var fileName = updateService.GetLauncherFileLocation(objectKey);
+
+        var file = new FileInfo(fileName);
+        if (!file.Exists)
+            return TypedResults.NotFound();
+
+        return TypedResults.File(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read), fileDownloadName: file.Name, contentType: MediaTypeNames.Application.Octet);
     }
 }

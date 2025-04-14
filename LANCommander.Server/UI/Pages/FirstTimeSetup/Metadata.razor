@@ -22,7 +22,7 @@
         <Input @bind-Value="context.IGDBClientId" />
     </FormItem>
     <FormItem Label="Client Secret">
-        <InputPassword @bind-Value="context.IGDBClientSecret" />
+        <InputPassword @bind-Value="context.IGDBClientSecret" AutoComplete="false" />
     </FormItem>
 
     <Divider Text="SteamGridDB Credentials" />
@@ -32,7 +32,7 @@
     </p>
 
     <FormItem Label="API Key">
-        <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" />
+        <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" AutoComplete="false" />
     </FormItem>
 
     <FormItem>

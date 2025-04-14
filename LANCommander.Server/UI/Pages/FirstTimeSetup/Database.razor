@@ -51,6 +51,13 @@
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Database);
+
+        if (Settings.DatabaseProvider != Data.Enums.DatabaseProvider.Unknown)
+        {
+            var isSetupInitialized = await SetupService.IsSetupInitialized();
+            if (isSetupInitialized)
+                NavigationManager.NavigateTo("/");
+        }
     }
 
     void OnDatabaseProviderChanged()

@@ -1,6 +1,7 @@
 ﻿@page "/FirstTimeSetup/Administrator"
 @using LANCommander.Server.Services.Exceptions
 @layout FirstTimeSetupLayout
+@inject SetupService SetupService
 @inject RoleService RoleService
 @inject UserService UserService
 @inject NavigationManager NavigationManager
@@ -43,10 +44,9 @@
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Administrator);
-        
-        var existingAdministrators = await RoleService.GetUsersAsync(RoleService.AdministratorRoleName);
-        
-        if (existingAdministrators.Any())
+
+        var isSetupInitialized = await SetupService.IsSetupInitialized();
+        if (isSetupInitialized)
             NavigationManager.NavigateTo("/");
     }
 
@@ -75,7 +75,7 @@
                 if (role == null)
                     role = await RoleService.AddAsync(new Role
                     {
-                        Name = RoleService.AdministratorRoleName
+                        Name = RoleService.AdministratorRoleName,
                     });
             }
             catch (AddRoleException ex)

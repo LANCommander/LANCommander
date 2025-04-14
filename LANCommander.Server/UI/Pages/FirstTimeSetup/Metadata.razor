@@ -1,5 +1,6 @@
 ﻿@page "/FirstTimeSetup/Metadata"
 @layout FirstTimeSetupLayout
+@inject SetupService SetupService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -55,6 +56,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var isSetupInitialized = await SetupService.IsSetupInitialized();
+        if (isSetupInitialized)
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Metadata);
 
         Settings = SettingService.GetSettings();

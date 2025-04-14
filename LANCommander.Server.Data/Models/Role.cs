@@ -10,7 +10,13 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Collection> Collections { get; set; }
         public ICollection<UserRole> UserRoles { get; set; }
         [NotMapped]
-        public ICollection<User> Users { get; set; }
+        public ICollection<User> Users 
+        {
+            get
+            {
+                return UserRoles?.Select(ur => ur.User).ToArray() ?? [];
+            }
+        }
 
         [Display(Name = "Created On")]
         public DateTime CreatedOn { get; set; }

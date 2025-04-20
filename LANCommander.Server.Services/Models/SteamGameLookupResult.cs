@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using LANCommander.Server.Data.Models;
 
-namespace LANCommander.Steam
+namespace LANCommander.Server.Services.Models
 {
-    public class GameSearchResult
+    public class SteamGameLookupResult
     {
         public string Name { get; set; }
         public int AppId { get; set; }

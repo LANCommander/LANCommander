@@ -1,0 +1,121 @@
+﻿@inherits FeedbackComponent<GameMediaConfirmOptions>
+@using AntDesign.TableModels
+@inject SteamService SteamService
+@inject IMessageService MessageService
+@inject ILogger<GameMetadataLookup> Logger
+
+<Table DataSource="Medias" Size="TableSize.Small" RowKey="c => c.Id" @bind-SelectedRows="Selected" Loading="Loading" HidePagination="true">
+    <Selection Type="SelectionType.Checkbox" />
+    <PropertyColumn Property="c => c.Type" Title="Type" />
+    <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
+        <Image Width="auto" Src="@(context.ThumbnailUrl ?? context.SourceUrl)" PreviewSrc="@(context.SourceUrl)" Style="max-height: 80px; max-width: 100px" />
+    </PropertyColumn>
+</Table>
+
+@code 
+{
+    IEnumerable<MediaGrabberResult> Medias = new List<MediaGrabberResult>();
+    IEnumerable<MediaGrabberResult> Selected = new List<MediaGrabberResult>();
+
+    bool Loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task Close()
+    {
+        await CloseFeedbackAsync();
+    }
+
+    async Task LoadData()
+    {
+        Loading = true;
+
+        var assets = await GetAssets();
+        var icons = await GetIcons();
+
+        Medias = new MediaGrabberResult[0]
+            .Concat(assets)
+            .Concat(icons)
+            .OrderBy(x => x.Type)
+            .ToList();
+
+        Loading = false;
+    }
+
+    private async Task<IEnumerable<MediaGrabberResult>> GetIcons()
+    {
+        var icons = await SteamService.SearchIconsAsync(Options.GameName);
+        return icons
+            .Where(icon => icon.AppId == Options.AppId)
+            .Select(icon => new MediaGrabberResult()
+            {
+                Id = Guid.NewGuid().ToString(),
+                SourceUrl = icon.IconUrl,
+                ThumbnailUrl = icon.IconUrl,
+                Group = Options.GameName,
+                MimeType = System.Net.Mime.MediaTypeNames.Image.Jpeg,
+                Type = MediaType.Icon,
+            })
+            .ToArray();
+    }
+
+    private async Task<IEnumerable<MediaGrabberResult>> GetAssets()
+    {
+        var results = new List<MediaGrabberResult>();
+
+        var assets = await SteamService.GetWebAssetsAsync(Options.AppId);
+        assets = assets.Where(x => !x.AssetType.IsIn(Steam.WebAssetType.CapsuleLarge, Steam.WebAssetType.Capsule));
+
+        results.AddRange(assets.Select(asset => new MediaGrabberResult()
+        {
+            Id = Guid.NewGuid().ToString(),
+            SourceUrl = asset.AssetUrl,
+            ThumbnailUrl = asset.AssetUrl,
+            Group = Options.GameName,
+            MimeType = asset.MimeType,
+
+            Type = asset.AssetType switch
+            {
+                Steam.WebAssetType.CapsuleLarge => MediaType.PageImage,
+                Steam.WebAssetType.Capsule => MediaType.PageImage,
+                Steam.WebAssetType.Header => MediaType.Background,
+                Steam.WebAssetType.HeroCapsule => MediaType.Cover,
+                Steam.WebAssetType.LibraryHeader => MediaType.Background,
+                Steam.WebAssetType.LibraryHero => MediaType.Background,
+                Steam.WebAssetType.LibraryCover => MediaType.Cover,
+                Steam.WebAssetType.Logo => MediaType.Logo,
+                _ => throw new ArgumentOutOfRangeException(nameof(Steam.WebAssetType), $"Not expected direction value: {asset.AssetType}"),
+            },
+        }));
+
+        var manual = await SteamService.GetWebManualAsync(Options.AppId);
+        if (manual != null)
+        {
+            results.Add(new MediaGrabberResult()
+            {
+                Id = Guid.NewGuid().ToString(),
+                Type = MediaType.Manual,
+                SourceUrl = manual.ManualUrl,
+                ThumbnailUrl = manual.PreviewUrl,
+                Group = Options.GameName,
+                MimeType = manual.MimeType,
+            });
+        }
+
+        return results.ToArray();
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        Loading = false;
+        StateHasChanged();
+        await Task.Yield();
+
+        await base.CloseFeedbackAsync();
+
+        Options.ResultSelected?.Invoke(Options.GameId, Selected);
+    }
+}

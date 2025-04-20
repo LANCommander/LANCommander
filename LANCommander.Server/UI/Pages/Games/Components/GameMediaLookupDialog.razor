@@ -1,0 +1,120 @@
+﻿@inherits FeedbackComponent<GameMediaLookupOptions>
+@using AntDesign.TableModels
+@inject ModalService ModalService
+@inject SteamService SteamService
+@inject IMessageService MessageService
+@inject ILogger<GameMetadataLookup> Logger
+
+<GridRow>
+    <Search @bind-Value="Options.GameSearch" DefaultValue="@Options.GameSearch" BindOnInput="true" AutoFocus="false"
+        OnSearch="SearchFieldOnSearch"
+        OnkeyDown="SearchFieldOnKeyDown"
+    />
+</GridRow>
+
+<Table 
+    @ref="ResultsTable"
+    TItem="SteamGameLookupResult"
+    DataSource="Results"
+    HidePagination="true"
+    Loading="Loading"
+    OnRowClick="OnRowClicked"
+    @bind-SelectedRows="SelectedResults"
+    Responsive>
+
+    <Selection Key="@context.AppId.ToString()" Type="SelectionType.Radio" />
+    <PropertyColumn Property="p => p.ImageUrl" Title="Preview" Width="100px" Align="ColumnAlign.Center">
+        @if (!string.IsNullOrEmpty(context.ImageUrl))
+        {
+            <Image Width="100px" Src="@(context.ImageUrl)" PreviewVisible="false" />
+        }
+    </PropertyColumn>
+    <PropertyColumn Property="g => g.Name" Title="Title" />
+</Table>
+
+@code 
+{
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    ITable? ResultsTable;
+
+    List<SteamGameLookupResult> Results { get; set; } = new List<SteamGameLookupResult>();
+    IEnumerable<SteamGameLookupResult> SelectedResults { get; set; }
+    bool Loading = true;
+    bool Searching = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SearchForGame(Options.GameSearch);
+    }
+
+    private void OnRowClicked(RowData<SteamGameLookupResult> row)
+    {
+        ResultsTable.SetSelection(new string[] { row.Data.AppId.ToString() });
+    }
+
+    private async Task SearchFieldOnSearch(string search)
+    {
+        if (!Searching && !String.IsNullOrWhiteSpace(Options.GameSearch))
+            await SearchForGame(search);
+    }
+
+    private async Task SearchFieldOnKeyDown(KeyboardEventArgs e)
+    {
+        if (!Searching && (e.Code == "Enter" || e.Code == "NumpadEnter") && !String.IsNullOrWhiteSpace(Options.GameSearch))
+            await SearchForGame(Options.GameSearch);
+    }
+
+    private async Task SearchForGame(string title)
+    {
+        try
+        {
+            Searching = true;
+            Loading = true;
+            Results = new List<SteamGameLookupResult>();
+
+            var games = await SteamService.SearchGameAsync(title);
+            if (games != null)
+            {
+                Results.AddRange(games);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred when retrieving Steam lookup data");
+            Logger.LogError(ex, "An unknown error occurred when retrieving Steam lookup data");
+        }
+        finally
+        {
+            Searching = false;
+            Loading = false;
+        }
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await base.CloseFeedbackAsync();
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Choose and confirm Media",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Select",
+        };
+
+        var result = SelectedResults.FirstOrDefault();
+        var appId = result?.AppId ?? 0;
+        var gameName = result?.Name ?? string.Empty;
+        var lookupOptions = new GameMediaConfirmOptions()
+        {
+            GameId = Options.GameId,
+            GameName = gameName,
+            AppId = appId,
+            ResultSelected = Options.ResultSelected,
+        };
+
+        var modalRef = ModalService.CreateModal<GameMediaConfirmDialog, GameMediaConfirmOptions>(modalOptions, lookupOptions);
+    }
+}

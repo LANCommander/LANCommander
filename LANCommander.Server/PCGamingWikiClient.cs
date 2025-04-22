@@ -2,6 +2,7 @@
 using LANCommander.SDK;
 using Newtonsoft.Json;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Reflection;
@@ -79,21 +80,6 @@ namespace LANCommander.PCGamingWiki
             return null;
         }
 
-        public async Task<Dictionary<string, int>> GetMultiplayerPlayerCounts(string keyword)
-        {
-            var pageId = await GetPageIDAsync(keyword);
-            if (pageId != null)
-            {
-                var pageContent = await GetPageContentAsync(pageId);
-
-                var dom = new HtmlDocument();
-                dom.LoadHtml(pageContent ?? string.Empty);
-                return GetMultiplayerPlayerCounts(dom);
-            }
-
-            return [];
-        }
-
         public Dictionary<string, int> GetMultiplayerPlayerCounts(Uri url)
         {
             if (url == null)
@@ -104,56 +90,94 @@ namespace LANCommander.PCGamingWiki
             return GetMultiplayerPlayerCounts(dom);
         }
 
+        public async Task<Dictionary<string, int>> GetMultiplayerPlayerCounts(string keyword)
+        {
+            var data = await SearchAndParseMultiplayerPlayerData(keyword, info => info.ToDictionary(x => x.Key, y => y.Value.PlayerCount));
+            return data ?? [];
+        }
+
+        public async Task<IEnumerable<MultiplayerInfo>> GetMultiplayerPlayerInfo(string keyword)
+        {
+            var data = await SearchAndParseMultiplayerPlayerData(keyword, info => info.Values.ToArray());
+            return data ?? [];
+        }
+
+        protected async Task<T?> SearchAndParseMultiplayerPlayerData<T>(string keyword, Func<Dictionary<string, MultiplayerInfo>, T> dataPropagateFunction) where T : class
+        {
+            var pageId = await GetPageIDAsync(keyword);
+            if (pageId != null)
+            {
+                var pageContent = await GetPageContentAsync(pageId);
+
+                var dom = new HtmlDocument();
+                dom.LoadHtml(pageContent ?? string.Empty);
+                var data = ParseMultiplayerPlayerInfo(dom);
+                return dataPropagateFunction.Invoke(data);
+            }
+
+            return null;
+        }
+
         protected Dictionary<string, int> GetMultiplayerPlayerCounts(HtmlDocument dom)
+        {
+            return ParseMultiplayerPlayerInfo(dom).ToDictionary(x => x.Key, y => y.Value.PlayerCount);
+        }
+
+        protected Dictionary<string, MultiplayerInfo> ParseMultiplayerPlayerInfo(HtmlDocument dom)
         {
             ArgumentNullException.ThrowIfNull(dom);
 
-            var results = new Dictionary<string, int>();
-
             HtmlNode multiplayerTable = dom.GetElementbyId("table-network-multiplayer");
+
             if (multiplayerTable == null)
-                return results;
+                return [];
+
+            var results = new Dictionary<string, MultiplayerInfo>(StringComparer.OrdinalIgnoreCase);
 
             var multiplayerRows = multiplayerTable.SelectNodes(".//tr[contains(@class, 'table-network-multiplayer-body-row')]");
             var multiplayerAbbrs = multiplayerTable.SelectNodes(".//abbr");
             var multiplayerCounts = multiplayerTable.SelectNodes(".//td[contains(@class, 'table-network-multiplayer-body-players')]");
+            var multiplayerNotes = multiplayerTable.SelectNodes(".//td[contains(@class, 'table-network-multiplayer-body-notes')]");
 
             foreach (var row in multiplayerRows)
             {
-                var abbr = row.SelectNodes(".//abbr");
-                var count = row.SelectNodes(".//td[contains(@class, 'table-network-multiplayer-body-players')]");
+                var abbr_node = row.SelectNodes(".//abbr");
+                var count_node = row.SelectNodes(".//td[contains(@class, 'table-network-multiplayer-body-players')]");
+                var notes_node = row.SelectNodes(".//td[contains(@class, 'table-network-multiplayer-body-notes')]");
 
-                if (abbr == null || count == null)
+                if (abbr_node == null || count_node == null)
                     continue;
 
-                var type = abbr[0].InnerText;
-                var players = count[0].InnerText;
-
-                int playerCount = 0;
-
-                if (Int32.TryParse(players, out playerCount))
+                var type = abbr_node[0].InnerText;
+                var players = count_node[0].InnerText;
+                var notes = null as string;
+                if (notes_node.Count == 1 && notes_node[0]?.ChildNodes.Count > 0)
                 {
-                    switch (type.ToLower())
-                    {
-                        case "local play":
-                            results["Local Play"] = playerCount;
-                            break;
+                    var notelines = notes_node.FirstOrDefault()?.ChildNodes
+                        .Select(x => x.InnerText)
+                        .Select(x => x.TrimEnd('.'));
+                    notes = string.Join("\n", notelines ?? []);
+                }
 
-                        case "lan play":
-                            results["LAN Play"] = playerCount;
-                            break;
+                if (type == null)
+                    continue;
 
-                        case "online play":
-                            results["Online Play"] = playerCount;
-                            break;
-                    }
+                results.TryAdd(type, new MultiplayerInfo { MultiplayerType = type });
+
+                if (Int32.TryParse(players, out int playerCount))
+                {
+                    results[type].PlayerCount = playerCount;
+                }
+                if (!string.IsNullOrEmpty(notes))
+                {
+                    results[type].Notes = notes;
                 }
             }
 
             return results;
         }
 
-        protected async Task<string?> GetPageIDAsync(string keyword)
+        public async Task<string?> GetPageIDAsync(string keyword)
         {
             try
             {
@@ -179,7 +203,7 @@ namespace LANCommander.PCGamingWiki
             return null;
         }
 
-        protected async Task<string?> GetPageContentAsync(string pageId)
+        public async Task<string?> GetPageContentAsync(string pageId)
         {
             try
             {
@@ -199,5 +223,12 @@ namespace LANCommander.PCGamingWiki
 
             return null;
         }
+    }
+
+    public record MultiplayerInfo()
+    {
+        public required string MultiplayerType { get; set; }
+        public int PlayerCount { get; set; }
+        public string? Notes { get; set; }
     }
 }

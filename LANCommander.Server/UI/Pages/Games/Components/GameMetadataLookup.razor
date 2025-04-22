@@ -212,25 +212,28 @@ else
 
         try
         {
-            var playerCounts = await PCGamingWikiClient.GetMultiplayerPlayerCounts(gameTitle);
+            var multiplayerInfo = await PCGamingWikiClient.GetMultiplayerPlayerInfo(gameTitle);
 
-            if (playerCounts != null)
+            if (multiplayerInfo != null)
             {
-                foreach (var playerCount in playerCounts)
+                foreach (var info in multiplayerInfo)
                 {
                     MultiplayerType type;
 
-                    switch (playerCount.Key)
+                    switch (info.MultiplayerType.ToLower())
                     {
-                        case "Local Play":
+                        case "local":
+                        case "local play":
                             type = MultiplayerType.Local;
                             break;
 
-                        case "LAN Play":
+                        case "lan":
+                        case "lan play":
                             type = MultiplayerType.LAN;
                             break;
 
-                        case "Online Play":
+                        case "online":
+                        case "online play":
                             type = MultiplayerType.Online;
                             break;
 
@@ -241,8 +244,9 @@ else
                     multiplayerModes.Add(new MultiplayerMode()
                     {
                         Type = type,
-                        MaxPlayers = playerCount.Value,
-                        MinPlayers = 2
+                        MaxPlayers = info.PlayerCount,
+                        MinPlayers = 2,
+                        Description = info.Notes,
                     });
                 }
             }

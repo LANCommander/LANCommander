@@ -19,3 +19,9 @@
 @use '_page-editor';
 @use '_uploader';
 @use '_mobile';
+
+// Fix Blazor rejoin dialog font color being white, force to black
+// see: https://github.com/dotnet/aspnetcore/issues/57453
+#components-reconnect-modal {
+    color: black !important;
+}

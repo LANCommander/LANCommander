@@ -47,6 +47,7 @@ namespace LANCommander.SDK
         public readonly ServerService Servers;
         public readonly PlaySessionService PlaySessions;
         public readonly TagService Tags;
+        public readonly BeaconService Beacon;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -83,6 +84,7 @@ namespace LANCommander.SDK
             Servers = new ServerService(this);
             PlaySessions = new PlaySessionService(this);
             Tags = new TagService(this);
+            Beacon = new BeaconService(this);
 
             BaseCmdlet.Client = this;
 
@@ -121,6 +123,7 @@ namespace LANCommander.SDK
             Servers = new ServerService(this, logger);
             PlaySessions = new PlaySessionService(this, logger);
             Tags = new TagService(this, logger);
+            Beacon = new BeaconService(this, logger);
 
             BaseCmdlet.Client = this;
 

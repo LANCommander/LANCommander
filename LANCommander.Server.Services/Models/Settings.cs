@@ -99,6 +99,7 @@ namespace LANCommander.Server.Services.Models
         public bool Enabled { get; set; } = true;
         public string Name { get; set; } = "LANCommander";
         public string Address { get; set; } = "";
+        public int Port { get; set; } = 35891;
     }
 
     public class AuthenticationSettings

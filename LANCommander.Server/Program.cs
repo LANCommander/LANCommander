@@ -80,6 +80,7 @@ app.PrepareDirectories();
 
 await app.MigrateDatabaseAsync();
 await app.StartServersAsync();
+await app.StartBeaconAsync();
 
 app.GenerateThumbnails();
 

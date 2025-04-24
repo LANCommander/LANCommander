@@ -65,9 +65,16 @@
     private async Task<IEnumerable<MediaGrabberResult>> GetAssets()
     {
         var results = new List<MediaGrabberResult>();
+        var assets = new List<SteamGameAssetLookupResult>();
 
-        var assets = await SteamService.GetWebAssetsAsync(Options.AppId);
-        assets = assets.Where(x => !x.AssetType.IsIn(Steam.WebAssetType.CapsuleLarge, Steam.WebAssetType.Capsule));
+        var appAssets = await SteamService.GetWebAssetsAsync(Options.AppId);
+        assets.AddRange(appAssets.Where(x => !x.AssetType.IsIn(Steam.WebAssetType.CapsuleLarge, Steam.WebAssetType.Capsule)));
+
+        if (Options.PackageId.HasValue)
+        {
+            var packageAssets = await SteamService.GetWebAssetsAsync(Options.PackageId.Value, isPackage: true);
+            assets.AddRange(packageAssets.Where(x => !x.AssetType.IsIn(Steam.WebAssetType.CapsuleLarge, Steam.WebAssetType.Capsule)));
+        }
 
         results.AddRange(assets.Select(asset => new MediaGrabberResult()
         {

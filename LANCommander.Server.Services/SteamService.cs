@@ -33,6 +33,7 @@ namespace LANCommander.Server.Services
                 {
                     Name = x.Name,
                     AppId = x.AppId,
+                    PackageId = x.PackageId,
                     ImageUrl = x.ImageUrl,
                 };
             });
@@ -70,20 +71,25 @@ namespace LANCommander.Server.Services
             };
         }
 
-        public async Task<IEnumerable<SteamGameAssetLookupResult>> GetWebAssetsAsync(int appId)
+        public Task<IEnumerable<SteamGameAssetLookupResult>> GetWebAssetsAsync(int appId)
+        {
+            return GetWebAssetsAsync(appId, isPackage: false);
+        }
+
+        public async Task<IEnumerable<SteamGameAssetLookupResult>> GetWebAssetsAsync(int appOrPackageId, bool isPackage)
         {
             var result = new List<SteamGameAssetLookupResult>();
 
             foreach (WebAssetType type in Enum.GetValues<WebAssetType>())
             {
-                var existsResult = await Client.HasWebAssetAsync(appId, type);
+                var existsResult = await Client.HasWebAssetAsync(appOrPackageId, type, isPackage);
                 if (!existsResult.Exists)
                     continue;
 
-                var url = SteamClient.GetWebAssetUri(appId, type);
+                var url = SteamClient.GetWebAssetUri(appOrPackageId, type, isPackage);
                 result.Add(new SteamGameAssetLookupResult()
                 {
-                    AppId = appId,
+                    AppId = appOrPackageId,
                     AssetType = type,
                     AssetUrl = url.ToString(),
                     MimeType = existsResult.MimeType,

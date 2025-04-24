@@ -22,7 +22,7 @@
     @bind-SelectedRows="SelectedResults"
     Responsive>
 
-    <Selection Key="@context.AppId.ToString()" Type="SelectionType.Radio" />
+    <Selection Key="@context.UniqueKey" Type="SelectionType.Radio" />
     <PropertyColumn Property="p => p.ImageUrl" Title="Preview" Width="100px" Align="ColumnAlign.Center">
         @if (!string.IsNullOrEmpty(context.ImageUrl))
         {
@@ -50,7 +50,7 @@
 
     private void OnRowClicked(RowData<SteamGameLookupResult> row)
     {
-        ResultsTable.SetSelection(new string[] { row.Data.AppId.ToString() });
+        ResultsTable.SetSelection(new string[] { row.Data.UniqueKey });
     }
 
     private async Task SearchFieldOnSearch(string search)
@@ -106,12 +106,14 @@
 
         var result = SelectedResults.FirstOrDefault();
         var appId = result?.AppId ?? 0;
+        var packageId = result?.PackageId;
         var gameName = result?.Name ?? string.Empty;
         var lookupOptions = new GameMediaConfirmOptions()
         {
             GameId = Options.GameId,
             GameName = gameName,
             AppId = appId,
+            PackageId = packageId,
             ResultSelected = Options.ResultSelected,
         };
 

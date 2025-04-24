@@ -42,6 +42,7 @@ namespace LANCommander.Steam
                 try
                 {
                     var appId = match.Attributes["data-ds-appid"].Value;
+                    var packageId = match.Attributes["data-ds-packageid"]?.Value;
                     string imageUrl = null;
                     var matchNameElement = match.SelectSingleNode(".//div[@class = 'match_name']");
                     var matchImageElement = match.SelectSingleNode(".//div[@class = 'match_img']/img");
@@ -51,6 +52,7 @@ namespace LANCommander.Steam
                     }
 
                     appId = appId.Split(',').First();
+                    packageId = packageId?.Split(',')?.FirstOrDefault();
 
                     if (matchNameElement != null)
                     {
@@ -58,6 +60,7 @@ namespace LANCommander.Steam
                         {
                             Name = matchNameElement.InnerText,
                             AppId = Convert.ToInt32(appId),
+                            PackageId = packageId != null ? Convert.ToInt32(packageId) : (int?)null,
                             ImageUrl = imageUrl,
                         });
                     }
@@ -74,9 +77,14 @@ namespace LANCommander.Steam
             return await ApiClient.GetAsync<IEnumerable<IconSearchResult>>(queryUrl);
         }
 
-        public async Task<(bool Exists, string MimeType)> HasWebAssetAsync(int appId, WebAssetType webAssetType)
+        public Task<(bool Exists, string MimeType)> HasWebAssetAsync(int appId, WebAssetType webAssetType)
         {
-            var webAssetUri = GetWebAssetUri(appId, webAssetType);
+            return HasWebAssetAsync(appId, webAssetType, isPackage: false);
+        }
+
+        public async Task<(bool Exists, string MimeType)> HasWebAssetAsync(int appOrPackageId, WebAssetType webAssetType, bool isPackage)
+        {
+            var webAssetUri = GetWebAssetUri(appOrPackageId, webAssetType, isPackage);
             var response = await HttpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, webAssetUri));
 
             var exists = response.Content.Headers.ContentType.MediaType == MediaTypeNames.Image.Jpeg || response.Content.Headers.ContentType.MediaType == "image/png";
@@ -115,6 +123,11 @@ namespace LANCommander.Steam
 
         public static Uri GetWebAssetUri(int appId, WebAssetType type)
         {
+            return GetWebAssetUri(appId, type, isPackage: false);
+        }
+
+        public static Uri GetWebAssetUri(int appOrPackageId, WebAssetType type, bool isPackage)
+        {
             Dictionary<WebAssetType, string> webAssetTypeMap = new Dictionary<WebAssetType, string>()
             {
                 { WebAssetType.Capsule, "capsule_231x87.jpg" },
@@ -127,7 +140,8 @@ namespace LANCommander.Steam
                 { WebAssetType.Logo, "logo.png" }
             };
 
-            return new Uri($"https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{appId}/{webAssetTypeMap[type]}");
+            string path = isPackage ? "subs" : "apps";
+            return new Uri($"https://shared.cloudflare.steamstatic.com/store_item_assets/steam/{path}/{appOrPackageId}/{webAssetTypeMap[type]}");
         }
 
         public void Dispose()

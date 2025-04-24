@@ -157,6 +157,9 @@ namespace LANCommander.PCGamingWiki
                         .Select(x => x.InnerText)
                         .Select(x => x.TrimEnd('.'));
                     notes = string.Join("\n", notelines ?? []);
+                    notes = notes.Replace("\n\n", ". ");
+                    notes = notes.ReplaceLineEndings("");
+                    notes = HttpUtility.HtmlDecode(notes);
                 }
 
                 if (type == null)

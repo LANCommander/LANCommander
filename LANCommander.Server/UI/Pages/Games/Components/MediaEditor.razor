@@ -10,17 +10,18 @@
         <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
             @if (MediaService.FileExists(context))
             {
-                if (context.Thumbnail != null && context.Type == MediaType.Manual)
+                string originalPath = $"/api/Media/{context.Id}/Download?fileId={context.FileId}";
+                string thumbnailPath = context.Thumbnail != null
+                    ? $"/api/Media/{context.Thumbnail?.Id}/Download?fileId={context.Thumbnail?.FileId}"
+                    : $"/api/Media/{context.Id}/Thumbnail?fileId={context.FileId}";
+
+                if (context.Type == MediaType.Manual)
                 {
-                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail?.Id}/Download?fileId={context.Thumbnail?.FileId}")" PreviewVisible="false" OnClick="() => OpenManual(context)"/>
+                    <Image Width="100px" Src="@thumbnailPath" PreviewVisible="false" OnClick="() => OpenManual(context)" />
                 }
-                else if (context.Thumbnail != null)
+                else
                 {
-                    <Image Width="100px" Src="@($"/api/Media/{context.Thumbnail?.Id}/Download?fileId={context.Thumbnail?.FileId}")"/>
-                }
-                else if (context.Type != MediaType.Manual)
-                {
-                    <Image Width="100px" Src="@($"/api/Media/{context.Id}/Download?fileId={context.FileId}")"/>
+                    <Image Width="100px" Src="@thumbnailPath" PreviewSrc="@originalPath" />
                 }
             }
         </PropertyColumn>

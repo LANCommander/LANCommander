@@ -1,4 +1,6 @@
 ﻿@page "/Settings/Beacon"
+@using LANCommander.SDK
+@inject Client Client
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
@@ -31,12 +33,17 @@
 @code {
     Settings Settings = SettingService.GetSettings();
 
-    void Save()
+    async Task Save()
     {
         try
         {
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
+
+            if (Settings.Beacon.Enabled)
+                await Client.Beacon.StartBeaconAsync(Settings.Beacon.Port, Settings.Beacon.Address, Settings.Beacon.Name);
+            else
+                await Client.Beacon.StopBeaconAsync();
         }
         catch (Exception ex)
         {

@@ -69,10 +69,10 @@ public class BeaconService
             if (attempt >= retryAttempts || cancellationToken.IsCancellationRequested)
                 break;
 
-            await Parallel.ForEachAsync(_probeClients, cancellationToken, async (client, token) =>
+            foreach (var probe in _probeClients)
             {
-                await client.SendAsync();
-            });
+                await probe.SendAsync();
+            }
             
             await Task.Delay(retryInterval, cancellationToken);
         }

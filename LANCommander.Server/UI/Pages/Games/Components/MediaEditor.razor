@@ -6,7 +6,7 @@
 @inject ILogger<MediaEditor> Logger
 
 <Flex Vertical Gap="FlexGap.Large" Style="width: 100%" Class="media-editor">
-    <Table TItem="Media" DataSource="@Values" HidePagination="true" Responsive>
+    <Table TItem="Media" DataSource="@Values" RowKey="c => c.Id" HidePagination="true" Responsive>
         <PropertyColumn Property="p => p.Id" Title="Preview" Width="100px" Align="ColumnAlign.Center">
             @if (MediaService.FileExists(context))
             {
@@ -25,7 +25,7 @@
             }
         </PropertyColumn>
         <PropertyColumn Property="p => p.Type">
-            <Select @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="AllowedMediaTypes"/>
+            <Select @key="context.Id" @bind-Value="context.Type" TItem="MediaType" TItemValue="MediaType" DataSource="AllowedMediaTypes" />
         </PropertyColumn>
         <PropertyColumn Property="p => p.Name">
             @if (context.Type == MediaType.Manual)

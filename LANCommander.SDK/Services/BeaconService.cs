@@ -43,18 +43,25 @@ public class BeaconService
     /// <param name="retryAttempts">The number of attempts to make before giving up</param>
     /// <param name="retryInterval">THe interval (in ms) between probe packets</param>
     /// <param name="cancellationToken"></param>
-    public async Task StartProbeAsync(int port = 420, int retryAttempts = 10, int retryInterval = 2000,
+    public async Task StartProbeAsync(int port = 35891, int retryAttempts = 10, int retryInterval = 2000,
         CancellationToken cancellationToken = default)
     {
         int attempt = 0;
         
         foreach (var networkInterface in GetNetworkInterfaces())
         {
-            var probeClient = new DiscoveryProbe(networkInterface);
+            try
+            {
+                var probeClient = new DiscoveryProbe(networkInterface);
 
-            await probeClient.BindSocketAsync(port);
-            
-            _probeClients.Add(probeClient);
+                await probeClient.BindSocketAsync(port);
+
+                _probeClients.Add(probeClient);
+            }
+            catch
+            {
+                // ignored
+            }
         }
         
         while (!cancellationToken.IsCancellationRequested)
@@ -62,10 +69,10 @@ public class BeaconService
             if (attempt >= retryAttempts || cancellationToken.IsCancellationRequested)
                 break;
 
-            await Parallel.ForEachAsync(_probeClients, cancellationToken, async (client, token) =>
+            foreach (var probe in _probeClients)
             {
-                await client.SendAsync();
-            });
+                await probe.SendAsync();
+            }
             
             await Task.Delay(retryInterval, cancellationToken);
         }
@@ -94,23 +101,35 @@ public class BeaconService
     {
         foreach (var networkInterface in GetNetworkInterfaces())
         {
-            var beaconClient = new DiscoveryBeacon(networkInterface);
-
-            await beaconClient.StartAsync(port);
-
-            beaconClient.OnProbe += async (beacon, probeEndPoint) =>
+            try
             {
-                var message = new BeaconMessage
+                var beaconClient = new DiscoveryBeacon(networkInterface);
+
+                await beaconClient.StartAsync(port);
+
+                beaconClient.OnProbe += async (beacon, probeEndPoint) =>
                 {
-                    Address = address,
-                    Name = name,
-                    Version = Client.GetCurrentVersion().ToString(),
+                    var message = new BeaconMessage
+                    {
+                        Address = address,
+                        Name = name,
+                        Version = Client.GetCurrentVersion().ToString(),
+                    };
+
+                    await beacon.SendAsync(JsonSerializer.Serialize(message), probeEndPoint);
                 };
 
-                await beacon.SendAsync(JsonSerializer.Serialize(message), probeEndPoint);
-            };
-            
-            _beaconClients.Add(beaconClient);
+                _beaconClients.Add(beaconClient);
+            }
+            catch (NetworkInformationException)
+            {
+                _logger?.LogError("Unable to start beacon on network interface {NetworkInterface}",
+                    networkInterface.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Unknown error while starting beacon on network interface {NetworkInterface}", networkInterface.Name);
+            }
         }
     }
 

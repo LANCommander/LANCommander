@@ -15,7 +15,7 @@ public class DiscoveryBeacon
     private readonly UdpClient _udpClient;
     private readonly Socket _socket;
 
-    private int _port = 420;
+    private int _port = 35891;
 
     private byte[] _buffer = new byte[BufferSize];
 

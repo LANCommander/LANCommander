@@ -17,7 +17,7 @@ public class DiscoveryProbe : IDisposable
 {
     private const int BufferSize = 1024;
     
-    private int _port = 420;
+    private int _port = 35891;
     private readonly UdpClient _udpClient;
     private readonly Socket _socket;
     private readonly IEnumerable<IPEndPoint> _broadcastEndpoints;
@@ -38,7 +38,7 @@ public class DiscoveryProbe : IDisposable
         
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 
-        _broadcastEndpoints = networkInterface.GetBroadcastAddresses().Select(ba => new IPEndPoint(ba, 420));
+        _broadcastEndpoints = networkInterface.GetBroadcastAddresses().Select(ba => new IPEndPoint(ba, _port));
         _probeId = Encoding.ASCII.GetBytes(Guid.NewGuid().ToString());
         _cancellationTokenSource = new CancellationTokenSource();
     }

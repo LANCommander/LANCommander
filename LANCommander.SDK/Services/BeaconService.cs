@@ -43,7 +43,7 @@ public class BeaconService
     /// <param name="retryAttempts">The number of attempts to make before giving up</param>
     /// <param name="retryInterval">THe interval (in ms) between probe packets</param>
     /// <param name="cancellationToken"></param>
-    public async Task StartProbeAsync(int port = 420, int retryAttempts = 10, int retryInterval = 2000,
+    public async Task StartProbeAsync(int port = 35891, int retryAttempts = 10, int retryInterval = 2000,
         CancellationToken cancellationToken = default)
     {
         int attempt = 0;

@@ -2,6 +2,7 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,8 +14,15 @@ namespace LANCommander.Server.Services
 {
     public class SetupService(
         ILogger<SetupService> logger,
+        UserManager<User> userManager,
         IServiceProvider serviceProvider) : BaseService(logger), IDisposable
     {
+        public async Task<bool> IsSetupInitialized()
+        {
+            var admins = await userManager.GetUsersInRoleAsync(RoleService.AdministratorRoleName);
+            return admins.Any();
+        }
+
         public async Task ChangeProviderAsync(DatabaseProvider provider, string connectionString)
         {
             DatabaseContext.Provider = provider;

@@ -10,10 +10,16 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Collection> Collections { get; set; }
         public ICollection<UserRole> UserRoles { get; set; }
         [NotMapped]
-        public ICollection<User> Users { get; set; }
+        public ICollection<User> Users 
+        {
+            get
+            {
+                return UserRoles?.Select(ur => ur.User).ToArray() ?? [];
+            }
+        }
 
         [Display(Name = "Created On")]
-        public DateTime CreatedOn { get; set; }
+        public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 
         public Guid? CreatedById { get; set; }
         [ForeignKey(nameof(CreatedById))]
@@ -22,7 +28,7 @@ namespace LANCommander.Server.Data.Models
         public User? CreatedBy { get; set; }
 
         [Display(Name = "Updated On")]
-        public DateTime UpdatedOn { get; set; }
+        public DateTime UpdatedOn { get; set; } = DateTime.UtcNow;
 
         public Guid? UpdatedById { get; set; }
         [ForeignKey(nameof(UpdatedById))]

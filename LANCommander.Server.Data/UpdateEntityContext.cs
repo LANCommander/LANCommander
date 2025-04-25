@@ -101,15 +101,8 @@ public class UpdateEntityContext<TEntity>
                 var updatedTrackedEntities = updatedEntities
                     .Select(e => trackedEntities.FirstOrDefault(t => t.Id == e.Id) ?? e)
                     .ToList();
-                
-                // Clear the existing collection and add all updated entities
-                existingEntities.Clear();
-                foreach (var entity in updatedTrackedEntities)
-                {
-                    existingEntities.Add(entity);
-                }
 
-                // Update values for existing entities
+                // Update values for existing entities first
                 foreach (var existingEntity in existingEntities)
                 {
                     var updatedEntity = updatedEntities.FirstOrDefault(e => e.Id == existingEntity.Id);
@@ -118,7 +111,14 @@ public class UpdateEntityContext<TEntity>
                         _context.Entry(existingEntity).CurrentValues.SetValues(updatedEntity);
                     }
                 }
-                    
+
+                // Clear the existing collection and add all updated entities
+                existingEntities.Clear();
+                foreach (var entity in updatedTrackedEntities)
+                {
+                    existingEntities.Add(entity);
+                }
+
                 _context.Entry(_entity).State = EntityState.Modified;
             }
         }

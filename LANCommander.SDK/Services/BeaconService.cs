@@ -50,11 +50,18 @@ public class BeaconService
         
         foreach (var networkInterface in GetNetworkInterfaces())
         {
-            var probeClient = new DiscoveryProbe(networkInterface);
+            try
+            {
+                var probeClient = new DiscoveryProbe(networkInterface);
 
-            await probeClient.BindSocketAsync(port);
-            
-            _probeClients.Add(probeClient);
+                await probeClient.BindSocketAsync(port);
+
+                _probeClients.Add(probeClient);
+            }
+            catch
+            {
+                // ignored
+            }
         }
         
         while (!cancellationToken.IsCancellationRequested)
@@ -94,23 +101,35 @@ public class BeaconService
     {
         foreach (var networkInterface in GetNetworkInterfaces())
         {
-            var beaconClient = new DiscoveryBeacon(networkInterface);
-
-            await beaconClient.StartAsync(port);
-
-            beaconClient.OnProbe += async (beacon, probeEndPoint) =>
+            try
             {
-                var message = new BeaconMessage
+                var beaconClient = new DiscoveryBeacon(networkInterface);
+
+                await beaconClient.StartAsync(port);
+
+                beaconClient.OnProbe += async (beacon, probeEndPoint) =>
                 {
-                    Address = address,
-                    Name = name,
-                    Version = Client.GetCurrentVersion().ToString(),
+                    var message = new BeaconMessage
+                    {
+                        Address = address,
+                        Name = name,
+                        Version = Client.GetCurrentVersion().ToString(),
+                    };
+
+                    await beacon.SendAsync(JsonSerializer.Serialize(message), probeEndPoint);
                 };
 
-                await beacon.SendAsync(JsonSerializer.Serialize(message), probeEndPoint);
-            };
-            
-            _beaconClients.Add(beaconClient);
+                _beaconClients.Add(beaconClient);
+            }
+            catch (NetworkInformationException)
+            {
+                _logger?.LogError("Unable to start beacon on network interface {NetworkInterface}",
+                    networkInterface.Name);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Unknown error while starting beacon on network interface {NetworkInterface}", networkInterface.Name);
+            }
         }
     }
 

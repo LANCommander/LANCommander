@@ -71,6 +71,17 @@ namespace LANCommander.Server.Services
             await base.DeleteAsync(entity);
         }
 
+        public override async Task DeleteRangeAsync(IEnumerable<Media> entities)
+        {
+            DeleteLocalMediaFiles(entities);
+
+            var gameIds = entities.Select(x => x.GameId).Distinct();
+            var expirationTasks = gameIds.Select(gameId => cache.ExpireGameCacheAsync(gameId));
+            await Task.WhenAll(expirationTasks);
+
+            await base.DeleteRangeAsync(entities);
+        }
+
         public static bool FileExists(Media entity)
         {
             var path = GetMediaPath(entity);
@@ -262,6 +273,14 @@ namespace LANCommander.Server.Services
         {
             FileHelpers.DeleteIfExists(GetMediaPath(media));
             FileHelpers.DeleteIfExists(GetThumbnailPath(media));
+        }
+
+        public void DeleteLocalMediaFiles(IEnumerable<Media> medias)
+        {
+            foreach (var media in medias)
+            {
+                DeleteLocalMediaFile(media);
+            }
         }
 
         public async Task<Media> DownloadMediaAsync(string sourceUrl, Media media)

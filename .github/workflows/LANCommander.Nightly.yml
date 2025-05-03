@@ -258,7 +258,7 @@ jobs:
   # --------------------------------------------------------------------------
   # 3) FINALIZE: if changes == 'true', gather artifacts + push Docker:nightly
   # --------------------------------------------------------------------------
-  finalize_nightly:
+  publish_docker_image:
     needs: 
       - prep
       - build_server_linux_arm64
@@ -354,3 +354,113 @@ jobs:
         with:
           name: version.${{ needs.prep.outputs.version_tag }}
           path: version.txt
+  publish_nightly_release:
+    runs-on: ubuntu-latest
+    needs:
+      - prep
+      - publish_docker_image
+    steps:
+      - name: Create Temp Directory
+        run: mkdir -p artifacts
+
+      - name: Download Server Linux ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Server Linux x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Server macOS ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Server macOS x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Server Windows ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Server Windows x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Linux ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Linux x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher macOS ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher macOS x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Windows ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+
+      - name: Download Launcher Windows x64
+        uses: actions/download-artifact@v4
+        with:
+          name: LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+          path: artifacts
+          
+      - name: Delete existing release assets
+        uses: dev-drprasad/delete-tag-and-release@v1.1
+        with:
+          tag_name: nightly
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly Build v${{ needs.prep.outputs.version_tag }}
+          draft: false
+          prerelease: true
+          generate_release_notes: true
+          body: This is the latest nightly build. These builds are generated automatically and should be considered unstable.
+          files: |
+            artifacts/LANCommander.Server-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Server-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Server-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Server-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Server-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Server-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Windows-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Windows-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-macOS-arm64-v${{ needs.prep.outputs.version_tag }}.zip
+            artifacts/LANCommander.Launcher-macOS-x64-v${{ needs.prep.outputs.version_tag }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

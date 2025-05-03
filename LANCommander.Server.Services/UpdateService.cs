@@ -66,30 +66,30 @@ namespace LANCommander.Server.Services
 
             var releaseChannel = versionProvider.GetReleaseChannel(currentVersion);
             
-            if (releaseChannel == ReleaseChannel.Stable || releaseChannel == ReleaseChannel.Prerelease)
-            {
-                logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
-
-                var release = await gitHubService.GetReleaseAsync(currentVersion);
-                
-                var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
-                
-                if (assets.Any())
-                    logger.LogInformation($"Found the following assets:\n{String.Join("\n\t - ", assets.Select(a => a.Name))}");
-                else
-                    logger.LogError($"No assets found for v{currentVersion.WithoutMetadata()}!");
-                
-                foreach (var asset in assets)
-                    yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl, isOnline: true, isPrerelease: release.Prerelease);
-            }
+            if (releaseChannel != _settings.Update.ReleaseChannel)
+                releaseChannel = _settings.Update.ReleaseChannel;
+            
+            var tag = $"v{currentVersion.WithoutMetadata()}";
 
             if (releaseChannel == ReleaseChannel.Nightly)
-            {
-                var nightlyArtifacts = await gitHubService.GetNightlyArtifactsAsync(_settings.Launcher.VersionOverride);
-                
-                foreach (var artifact in nightlyArtifacts.Where(a => a.Name.Contains("LANCommander.Launcher")))
-                    yield return GetArtifactFromName(artifact.Name, artifact.ArchiveDownloadUrl, isOnline: true, isPrerelease: true, isNightly: true);
-            }
+                tag = "nightly";
+            
+            if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
+                tag = _settings.Launcher.VersionOverride;
+            
+            logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
+
+            var release = await gitHubService.GetReleaseAsync(tag);
+            
+            var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
+            
+            if (assets.Any())
+                logger.LogInformation($"Found the following assets:\n{String.Join("\n\t - ", assets.Select(a => a.Name))}");
+            else
+                logger.LogError($"No assets found for v{currentVersion.WithoutMetadata()}!");
+            
+            foreach (var asset in assets)
+                yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl, isOnline: true, isPrerelease: release.Prerelease, isNightly: tag == "nightly");
         }
 
         private LauncherArtifact GetArtifactFromName(string name, string url = "", bool isOnline = false, bool isPrerelease = false, bool isNightly = false)

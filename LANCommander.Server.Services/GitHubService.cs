@@ -66,7 +66,12 @@ public class GitHubService(ILogger<GitHubService> logger, IVersionProvider versi
 
     public async Task<Release?> GetReleaseAsync(SemVersion version)
     {
-        return await _client.Repository.Release.Get(_owner, _repository, $"v{version.WithoutMetadata()}");
+        return await GetReleaseAsync($"v{version.WithoutMetadata()}");
+    }
+
+    public async Task<Release?> GetReleaseAsync(string tag)
+    {
+        return await _client.Repository.Release.Get(_owner, _repository, tag);
     }
 
     public async Task<IEnumerable<Release>> GetReleasesAsync(int count)

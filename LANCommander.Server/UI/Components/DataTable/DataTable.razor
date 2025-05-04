@@ -112,14 +112,24 @@
 
                     if (!String.IsNullOrWhiteSpace(Search) && SearchProperty != null)
                     {
-                        var search = Search.ToLower().Trim();
+                        var search = Search.StripPunctuation().ToLower().Trim();
 
                         var parameter = SearchProperty.Parameters[0];
-                        var propertyAccess = SearchProperty.Body;
+                        
+                        Expression body = SearchProperty.Body;
+
+                        // Apply multiple REPLACE(...) calls to strip punctuation
+                        string[] punctuationToStrip = { ".", ",", "!", "?", ";", ":", "'", "\"", "-", "(", ")", "[", "]", "{", "}", "/" };
+
+                        foreach (var symbol in punctuationToStrip)
+                        {
+                            var replaceMethod = typeof(string).GetMethod(nameof(string.Replace), new[] { typeof(string), typeof(string) });
+                            body = Expression.Call(body, replaceMethod, Expression.Constant(symbol), Expression.Constant(""));
+                        }
                         
                         // Apply .ToLower()
                         var toLowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
-                        var toLowerExpression = Expression.Call(propertyAccess, toLowerMethod);
+                        var toLowerExpression = Expression.Call(body, toLowerMethod);
 
                         // Apply .Contains(search)
                         var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) });

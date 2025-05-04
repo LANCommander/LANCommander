@@ -46,7 +46,9 @@
                 LabelName="Name"
                 ValueName="Id"
                 DefaultActiveFirstOption="false"
-                @bind-Value="Settings.Roles.DefaultRoleId" Disabled="Loading"></Select>
+                Value="Settings.Roles.DefaultRoleId"
+                Disabled="Loading"
+                Style="min-width: 100px;"></Select>
             <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
         </Flex>
     </RightToolbar>

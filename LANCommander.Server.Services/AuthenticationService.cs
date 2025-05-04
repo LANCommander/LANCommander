@@ -141,11 +141,11 @@ namespace LANCommander.Server.Services
             };
         }
 
-        public async Task<AuthToken> RegisterAsync(string userName, string password, string passwordConfirmation)
+        public async Task<AuthToken> RegisterAsync(string userName, string password)
         {
-            if (password != passwordConfirmation)
-                throw new UserRegistrationException("Passwords don't match");
-            
+            if (string.IsNullOrWhiteSpace(password))
+                throw new UserRegistrationException("Password is empty");
+
             var user = await userService.GetAsync(userName);
 
             if (user != null)

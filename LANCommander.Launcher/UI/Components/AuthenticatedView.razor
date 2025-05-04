@@ -25,7 +25,11 @@
         {
             await Validate();
         };
-        
+        AuthenticationService.OnRegister += async (sender, args) =>
+        {
+            await Validate();
+        };
+
         await Validate();
     }
 

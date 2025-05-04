@@ -27,7 +27,6 @@ namespace LANCommander.Server.Controllers.Api
     {
         public string UserName { get; set; }
         public string Password { get; set; }
-        public string PasswordConfirmation { get; set; }
     }
 
     [Route("api/[controller]")]
@@ -142,8 +141,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var token = await AuthenticationService.RegisterAsync(model.UserName, model.Password,
-                    model.PasswordConfirmation);
+                var token = await AuthenticationService.RegisterAsync(model.UserName, model.Password);
 
                 return Ok(token);
             }

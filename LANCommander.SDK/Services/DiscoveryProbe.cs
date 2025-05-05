@@ -43,12 +43,20 @@ public class DiscoveryProbe : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
     }
 
+    /// <summary>
+    /// Send a probe packet to all network interface broadcast addresses
+    /// </summary>
     public async Task SendAsync()
     {
         foreach (var endpoint in _broadcastEndpoints)
             await _udpClient.SendAsync(_probeId, _probeId.Length, endpoint);
     }
 
+    /// <summary>
+    /// Listen for responses from beacons
+    /// </summary>
+    /// <param name="port">Port to listen on/param>
+    /// <exception cref="NetworkInformationException">Failed to bind to network interface</exception>
     public async Task BindSocketAsync(int port)
     {
         _port = port;
@@ -74,6 +82,10 @@ public class DiscoveryProbe : IDisposable
         }
     }
 
+    /// <summary>
+    /// Deserialize message from server as BeaconMessage
+    /// </summary>
+    /// <param name="ar"></param>
     private void ReceiveCallback(IAsyncResult ar)
     {
         try

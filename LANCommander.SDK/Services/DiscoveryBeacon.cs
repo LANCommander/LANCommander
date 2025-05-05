@@ -18,6 +18,8 @@ public class DiscoveryBeacon
     private int _port = 35891;
 
     private byte[] _buffer = new byte[BufferSize];
+    
+    public IPEndPoint InterfaceIPEndPoint { get; private set; }
 
     public delegate void OnProbeHandler(DiscoveryBeacon beacon, IPEndPoint probeEndPoint);
     public event OnProbeHandler OnProbe;
@@ -31,6 +33,11 @@ public class DiscoveryBeacon
         _socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
     }
 
+    /// <summary>
+    /// Listen for any broadcast packets on specified port
+    /// </summary>
+    /// <param name="port">Beacon port</param>
+    /// <exception cref="NetworkInformationException">Failure to bind to a network interface</exception>
     public async Task StartAsync(int port)
     {
         _port = port;
@@ -46,8 +53,10 @@ public class DiscoveryBeacon
                 throw new NetworkInformationException();
 
             EndPoint fromEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            
+            InterfaceIPEndPoint = new IPEndPoint(addressInformation.Address, _port);
 
-            _socket.Bind(new IPEndPoint(addressInformation.Address, _port));
+            _socket.Bind(InterfaceIPEndPoint);
             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref fromEndPoint, ReceiveCallback,
                 null);
         }

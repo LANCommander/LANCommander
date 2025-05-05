@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using LANCommander.SDK.Interceptors;
 using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 
@@ -15,8 +16,8 @@ namespace LANCommander.SDK.Services;
 public class BeaconService
 {
     public delegate void OnBeaconResponseHandler(object sender, BeaconResponseArgs e);
-
     public event OnBeaconResponseHandler OnBeaconResponse;
+    
     
     private UdpClient _udpClient;
     private readonly Client _client;
@@ -24,6 +25,8 @@ public class BeaconService
     
     private List<DiscoveryProbe> _probeClients = new();
     private List<DiscoveryBeacon> _beaconClients = new();
+    
+    private List<IBeaconMessageInterceptor> _beaconMessageInterceptors = new();
 
     public BeaconService(Client client)
     {
@@ -34,6 +37,18 @@ public class BeaconService
     {
         _client = client;
         _logger = logger;
+    }
+
+    public void Initialize()
+    {
+        _beaconMessageInterceptors = new List<IBeaconMessageInterceptor>();
+    }
+
+    public BeaconService AddBeaconMessageInterceptor(IBeaconMessageInterceptor interceptor)
+    {
+        _beaconMessageInterceptors.Add(interceptor);
+
+        return this;
     }
 
     /// <summary>
@@ -94,6 +109,12 @@ public class BeaconService
         }
     }
 
+    /// <summary>
+    /// Start listening for probe broadcasts
+    /// </summary>
+    /// <param name="port">Port to listen on</param>
+    /// <param name="address">The server address to send to the probe</param>
+    /// <param name="name">The name of the server to send to the probe</param>
     public async Task StartBeaconAsync(
         int port,
         string address,
@@ -116,6 +137,11 @@ public class BeaconService
                         Version = Client.GetCurrentVersion().ToString(),
                     };
 
+                    foreach (var interceptor in _beaconMessageInterceptors)
+                    {
+                        message = await interceptor.ExecuteAsync(message, beacon.InterfaceIPEndPoint);
+                    }
+
                     await beacon.SendAsync(JsonSerializer.Serialize(message), probeEndPoint);
                 };
 
@@ -133,6 +159,9 @@ public class BeaconService
         }
     }
 
+    /// <summary>
+    /// Kill any running beacons
+    /// </summary>
     public async Task StopBeaconAsync()
     {
         foreach (var beaconClient in _beaconClients)
@@ -141,6 +170,10 @@ public class BeaconService
         }
     }
 
+    /// <summary>
+    /// Get active network interfaces on the system
+    /// </summary>
+    /// <returns></returns>
     private IEnumerable<NetworkInterface> GetNetworkInterfaces()
     {
         var networkInterfaces = NetworkInterface

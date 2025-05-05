@@ -46,31 +46,34 @@
             <Button Type="ButtonType.Primary" OnClick="EditView.Save">Save</Button>
         </Flex>
     </TitleExtraTemplate>
-    <ChildContent Context="redistributable">
-        <Form Model="redistributable" Layout="@FormLayout.Vertical">
-            <FormItem Label="Name">
-                <Input @bind-Value="@context.Name" AutoFocus="redistributable.Id == Guid.Empty" />
-            </FormItem>
+    <ChildContent>
+        @if (context != null)
+        {
+            <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
+                <FormItem Label="Name">
+                <Input @bind-Value="@context.Name" AutoFocus="context.Id == Guid.Empty" />
+                </FormItem>
 
-            <FormItem Label="Notes">
-                <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
-            </FormItem>
+                <FormItem Label="Notes">
+                    <TextArea @bind-Value="@context.Notes" MaxLength=2000 ShowCount />
+                </FormItem>
 
-            <FormItem Label="Description">
-                <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
-            </FormItem>
+                <FormItem Label="Description">
+                    <TextArea @bind-Value="@context.Description" MaxLength=500 ShowCount />
+                </FormItem>
 
-            <FormItem Label="Games">
-                <TransferInput
-                    Style="height: 350px"
-                    Searchable
-                    LeftTitle="Available"
-                    RightTitle="Selected"
-                    DataSource="Games"
-                    TitleSelector="r => r.Title"
-                    @bind-Values="context.Games" />
-            </FormItem>
-        </Form>
+                <FormItem Label="Games">
+                    <TransferInput
+                        Style="height: 350px"
+                        Searchable
+                        LeftTitle="Available"
+                        RightTitle="Selected"
+                        DataSource="Games"
+                        TitleSelector="r => r.Title"
+                        @bind-Values="context.Games" />
+                </FormItem>
+            </Form>
+        }
     </ChildContent>
 </RedistributableEditView>
 

@@ -8,10 +8,10 @@
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
             <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/General")">General</MenuItem>
 
-            @if (Redistributable?.Id != Guid.Empty)
+            @if (Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Archives")">Archives</MenuItem>
-                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem RouterLink="@($"/Redistributables/{Id}/Archives")">Archives</MenuItem>
+                <MenuItem RouterLink="@($"/Redistributables/{Id}/Scripts")">Scripts</MenuItem>
             }
         </Menu>
     </Sider>

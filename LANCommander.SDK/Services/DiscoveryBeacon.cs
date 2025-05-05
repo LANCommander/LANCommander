@@ -73,7 +73,7 @@ public class DiscoveryBeacon
     /// <param name="endPoint">The endpoint of the client</param>
     public async Task SendAsync(string message, IPEndPoint endPoint)
     {
-        var client = new UdpClient(_port);
+        var client = new UdpClient();
         
         byte[] data = Encoding.UTF8.GetBytes(message);
         

@@ -3,10 +3,13 @@
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject RedistributableService RedistributableService
 @inject NavigationManager NavigationManager
+@inject IMessageService MessageService
+@inject ILogger<Index> Logger
 
 <PageHeader Title="Redistributables" Subtitle="@Total.ToString()" />
 
 <DataTable
+    @ref="Table"
     TItem="Redistributable"
     Size="TableSize.Small"
     @bind-Total="Total"
@@ -55,7 +58,8 @@
     bool Loading = true;
 
     int Total;
-    
+
+    DataTable<Redistributable> Table;
     ImportUploadDialog ImportUploadDialog;
 
     protected override async Task OnInitializedAsync()
@@ -70,16 +74,27 @@
 
     async Task Delete(Redistributable redistributable)
     {
-        Loading = true;
+        try
+        {
+            Loading = true;
         
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        
-        await RedistributableService.DeleteAsync(redistributable);
-        
-        Loading = false;
-        
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
+            await RedistributableService.DeleteAsync(redistributable);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Could not delete the redistributable!");
+            Logger.LogError(ex, "Could not delete the redistributable!");
+        }
+        finally
+        {
+            Loading = false;
+        }
+
+        await Reload();
+    }
+
+    async Task Reload()
+    {
+        Table.ReloadData();
     }
 }

@@ -1,0 +1,52 @@
+﻿@inherits FeedbackComponent<MultiplayerModeModesConfirmOptions>
+@using AntDesign.TableModels
+@using PCGW = LANCommander.PCGamingWiki
+@inject PCGWService PCGWService
+@inject IMessageService MessageService
+@inject ILogger<MultiplayerModeModesConfirmDialog> Logger
+
+<Table DataSource="Modes" Size="TableSize.Small" RowKey="c => c.MultiplayerType" @bind-SelectedRows="Selected" Loading="Loading" HidePagination="true">
+    <Selection Type="SelectionType.Checkbox" />
+    <PropertyColumn Property="c => c.MultiplayerType" Title="Type" />
+    <PropertyColumn Property="c => c.PlayerCount" Title="Players" />
+    <PropertyColumn Property="c => c.Notes" Title="Notes" />
+</Table>
+
+@code 
+{
+    IEnumerable<PCGWMultiplayerModeLookupResult> Modes = new List<PCGWMultiplayerModeLookupResult>();
+    IEnumerable<PCGWMultiplayerModeLookupResult> Selected = new List<PCGWMultiplayerModeLookupResult>();
+
+    bool Loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    async Task Close()
+    {
+        await CloseFeedbackAsync();
+    }
+
+    async Task LoadData()
+    {
+        Loading = true;
+
+        var modes = await PCGWService.GetMultiplayerPlayerInfoAsync(Options.PageId);
+        Modes = modes?.OrderBy(x => x.MultiplayerType).ToArray();
+
+        Loading = false;
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        Loading = false;
+        StateHasChanged();
+        await Task.Yield();
+
+        await base.CloseFeedbackAsync();
+
+        Options.ResultSelected?.Invoke(Options.GameId, Selected);
+    }
+}

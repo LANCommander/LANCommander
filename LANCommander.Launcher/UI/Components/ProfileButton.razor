@@ -43,7 +43,7 @@
 
     User User;
     Guid AvatarId = Guid.Empty;
-    string Alias = "Player";
+    string Alias = Settings.DEFAULT_GAME_USERNAME;
 
     protected override async Task OnInitializedAsync()
     {
@@ -52,7 +52,7 @@
             User = await UserService.GetCurrentUser();
 
             AvatarId = User?.Avatar?.Id ?? Guid.Empty;
-            Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? "Player" : User.Alias;
+            Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? Settings.DEFAULT_GAME_USERNAME : User.Alias;
         };
         
         await ProfileService.DownloadProfileInfoAsync();

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LANCommander.Launcher.Data.Models;
 
@@ -9,4 +10,8 @@ public class User : BaseModel
     public string? Alias { get; set; }
     public Media? Avatar { get; set; }
     public Library? Library { get; set; }
+
+    [JsonIgnore]
+    [NotMapped]
+    public string? GetUserNameSafe => Alias ?? UserName;
 }

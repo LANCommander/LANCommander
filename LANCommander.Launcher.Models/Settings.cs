@@ -7,6 +7,8 @@ namespace LANCommander.Launcher.Models
 {
     public class Settings
     {
+        public const string DEFAULT_GAME_USERNAME = "Player";
+
         public int LaunchCount { get; set; } = 0;
 
         public DatabaseSettings Database { get; set; } = new DatabaseSettings();

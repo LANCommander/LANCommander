@@ -62,10 +62,24 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
         [Alias("keepkey", "keydup")]
         [Parameter(Mandatory = false)]
         public bool KeepKeyDuplicates { get; set; } = true;
+        [Alias("nokey", "nokeydup")]
+        [Parameter(Mandatory = false)]
+        public SwitchParameter NoKeyDuplicates
+        {
+            get => new(!KeepKeyDuplicates);
+            set => KeepKeyDuplicates = !value.ToBool();
+        }
 
         [Alias("keepsec", "secdup")]
         [Parameter(Mandatory = false)]
         public bool KeepSectionDuplicates { get; set; } = true;
+        [Alias("nosec", "nosecdup")]
+        [Parameter(Mandatory = false)]
+        public SwitchParameter NoSectionDuplicates 
+        {
+            get => new(!KeepSectionDuplicates);
+            set => KeepSectionDuplicates = !value.ToBool();
+        }
 
         [Alias("encoding", "enc")]
         [Parameter(Mandatory = false)]

@@ -44,12 +44,14 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
         public string FilePath { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the value should be wrapped in quotes.
-        /// Useful for handling special characters.
+        /// If set, controls whether the value should be wrapped in quotes.
+        /// If <c>null</c>, the cmdlet will add quotes if the value is not already quoted.
+        /// If <c>true</c>, quotes will be enforced.
+        /// If <c>false</c>, any surrounding quotes will be removed.
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "If set, the value will be wrapped in quotes. Useful to handle special characters.")]
+        [Parameter(Mandatory = false, HelpMessage = "If set, controls whether the value will be wrapped in quotes. Nullable: if null, adds quotes if missing; if true, enforces quotes; if false, removes quotes.")]
         [Alias("wrap", "quotes")]
-        public bool WrapValueInQuotes { get; set; } = false;
+        public bool? WrapValueInQuotes { get; set; } = null;
 
         /// <summary>
         /// Gets or sets a switch parameter that updates an existing key or adds a new one if it does not exist.
@@ -211,19 +213,23 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                 list.ForEach(x => iniSection.Keys.Remove(x));
             }
 
-            // If removal is not the only operation, proceed with updating or adding the value.
+            // If removal is not the sole operation, proceed with updating or adding the value.
             if (!OnlyRemove)
             {
                 // assuming most of the engines interpret INI files from top to bottom using the last value of a multiple existing key, we update the last found key
                 var firstMatch = iniSection.Keys.LastOrDefault(keyMatcher);
-                // If appending is always enabled or the key is being added, insert a new key-value pair
+                var iniValue = Value;
+
+                // Adjust the value's surrounding quotes based on the WrapValueInQuotes parameter.
+                iniValue = ApplyQuoteWrapping(iniValue, firstMatch?.Value);
+
                 // Insert a new key-value pair if appending is enforced or the key does not exist.
                 if (AlwaysAppend.ToBool() || (UpdateOrAdd && firstMatch == null))
                 {
                     if (InsertIndex.HasValue && InsertIndex.Value >= 0)
-                        iniSection.Keys.Insert(Math.Clamp(InsertIndex.Value, 0, iniSection.Keys.Count - 1), Key, Value);
+                        iniSection.Keys.Insert(Math.Clamp(InsertIndex.Value, 0, iniSection.Keys.Count - 1), Key, iniValue);
                     else
-                        iniSection.Keys.Add(Key, Value);
+                        iniSection.Keys.Add(Key, iniValue);
                 }
                 else if (firstMatch != null)
                 {
@@ -237,13 +243,60 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                         iniSection.Keys.Remove(firstMatch);
                         iniSection.Keys.Insert(insertIndex, firstMatch);
                     }
-                    firstMatch.Value = Value;
+                    // Update the existing key's value.
+                    firstMatch.Value = iniValue;
                 }
                 // No else clause – updating without adding a new key should be possible.
             }
 
             // Save the modified INI file.
             ini.Save(FilePath);
+        }
+
+        /// <summary>
+        /// Applies quote wrapping on the given string based on the <see cref="WrapValueInQuotes"/> parameter.
+        /// <list type="bullet">
+        /// <item>
+        /// <description>If <c>null</c>: uses the quoting format of the existing INI value if available.</description>
+        /// </item>
+        /// <item>
+        /// <description>If <c>true</c>: enforces quotes around the value.</description>
+        /// </item>
+        /// <item>
+        /// <description>If <c>false</c>: ensures the value is stored without quotes.</description>
+        /// </item>
+        /// </list>
+        /// </summary>
+        /// <param name="newValue">The new value to be processed.</param>
+        /// <param name="existingValue">The existing INI value (if any) for reference.</param>
+        /// <returns>The processed string with quotes applied or removed according to the settings.</returns>
+        private string ApplyQuoteWrapping(string newValue, string existingValue)
+        {
+            if (string.IsNullOrEmpty(newValue))
+                return newValue;
+
+            bool isNewValueQuoted = newValue.StartsWith("\"") && newValue.EndsWith("\"") ||
+                                    newValue.StartsWith("'") && newValue.EndsWith("'");
+
+            bool isExistingValueQuoted = !string.IsNullOrEmpty(existingValue) &&
+                                         (existingValue.StartsWith("\"") && existingValue.EndsWith("\"") ||
+                                          existingValue.StartsWith("'") && existingValue.EndsWith("'"));
+
+            if (WrapValueInQuotes == null)
+            {
+                // If null, use the quoting style of the existing value if available.
+                return isExistingValueQuoted ? $"\"{newValue}\"" : newValue;
+            }
+            else if (WrapValueInQuotes.Value)
+            {
+                // If true, enforce quotes.
+                return isNewValueQuoted ? newValue : $"\"{newValue}\"";
+            }
+            else
+            {
+                // If false, remove any surrounding quotes.
+                return isNewValueQuoted ? newValue.Substring(1, newValue.Length - 2) : newValue;
+            }
         }
     }
 }

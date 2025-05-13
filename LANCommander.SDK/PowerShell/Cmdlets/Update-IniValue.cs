@@ -120,8 +120,15 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
             ini.Load(FilePath);
 
             var iniSection = ini.Sections[Section];
-            if (iniSection == null)
+            if (iniSection == null && !AlwaysAppend && !UpdateOrAdd)
                 return;
+
+            // create new if not existing
+            if (iniSection == null)
+            {
+                iniSection = new IniSection(ini, Section);
+                ini.Sections.Add(iniSection);
+            }
 
             bool keyMatcher(IniKey x) => string.Equals(x.Name, Key, StringComparison.OrdinalIgnoreCase);
 

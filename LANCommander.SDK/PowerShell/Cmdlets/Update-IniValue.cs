@@ -35,7 +35,14 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
         [Parameter(Mandatory = false)]
         [Alias("add")]
-        public bool UpdateOrAdd { get; set; } = true;
+        public SwitchParameter UpdateOrAdd { get; set; } = true;
+        [Alias("update-only", "only-update")]
+        [Parameter(Mandatory = false)]
+        public SwitchParameter NoAdd
+        {
+            get => new(!UpdateOrAdd);
+            set => UpdateOrAdd = !value.ToBool();
+        }
 
         [Alias("remove-only")]
         [Parameter(Mandatory = false)]

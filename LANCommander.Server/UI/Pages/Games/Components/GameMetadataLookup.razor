@@ -2,6 +2,7 @@
 @using LANCommander.PCGamingWiki
 @using LANCommander.SDK.Enums
 @inject IGDBService IGDBService
+@inject PCGWService PCGWService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<GameMetadataLookup> Logger
@@ -59,6 +60,7 @@ else
 }
 
 @code {
+
     [Parameter] public EventCallback<GameLookupResult> OnResultSelected { get; set; }
     [Parameter] public string ButtonText { get; set; }
     [Parameter] public bool AutoFocus { get; set; }
@@ -212,40 +214,17 @@ else
 
         try
         {
-            var multiplayerInfo = await PCGamingWikiClient.GetMultiplayerPlayerInfo(gameTitle);
+            var multiplayerInfo = await PCGWService.SearchGameForMultiplayerPlayerInfoAsync(gameTitle);
 
             if (multiplayerInfo != null)
             {
                 foreach (var info in multiplayerInfo)
                 {
-                    MultiplayerType type;
-
-                    switch (info.MultiplayerType.ToLower())
-                    {
-                        case "local":
-                        case "local play":
-                            type = MultiplayerType.Local;
-                            break;
-
-                        case "lan":
-                        case "lan play":
-                            type = MultiplayerType.LAN;
-                            break;
-
-                        case "online":
-                        case "online play":
-                            type = MultiplayerType.Online;
-                            break;
-
-                        default:
-                            continue;
-                    }
-
                     multiplayerModes.Add(new MultiplayerMode()
                     {
-                        Type = type,
-                        MaxPlayers = info.PlayerCount,
+                        Type = info.MultiplayerType,
                         MinPlayers = 2,
+                        MaxPlayers = info.PlayerCount ?? 65536,
                         Description = info.Notes,
                     });
                 }

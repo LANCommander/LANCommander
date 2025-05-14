@@ -1,0 +1,171 @@
+﻿@inherits FeedbackComponent<MultiplayerModeGameLookupOptions>
+@using AntDesign.TableModels
+@inject ModalService ModalService
+@inject PCGWService PCGWService
+@inject HttpClient Http
+@inject IMessageService MessageService
+@inject ILogger<MultiplayerModeGameLookupDialog> Logger
+
+<GridRow>
+    <Search @bind-Value="Options.GameSearch" DefaultValue="@Options.GameSearch" BindOnInput="true" AutoFocus="false"
+        OnSearch="SearchFieldOnSearch"
+        OnkeyDown="SearchFieldOnKeyDown"
+    />
+</GridRow>
+
+<Table 
+    @ref="ResultsTable"
+    TItem="PCGWGameLookupResult"
+    DataSource="Results"
+    HidePagination="true"
+    Loading="Loading"
+    OnRowClick="OnRowClicked"
+    @bind-SelectedRows="SelectedResults"
+    Responsive>
+
+    <Selection Key="@context.PageID.ToString()" Type="SelectionType.Radio" />
+    @* 
+    <!-- NOTE: Image due to cross-origin currently removed -->
+
+    <PropertyColumn Property="g => g.CoverURL" Title="Preview" Width="100px" Align="ColumnAlign.Center">
+        @if (!string.IsNullOrEmpty(context.CoverURL))
+        {
+            <Image Width="100px" Src="@(context.CoverURL)" PreviewVisible="false" /> 
+        }
+    </PropertyColumn> *@
+    <PropertyColumn Property="g => g.PageName" Title="Page/Game" />
+    <PropertyColumn Property="g => g.Released" Title="Release" />
+    <PropertyColumn Property="g => g.Developers" Title="Developer(s)" />
+</Table>
+
+@if (MoreResults)
+{
+    <Button Type="ButtonType.Primary" OnClick="ShowMore" Block>Show More</Button>
+}
+
+@code 
+{
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    ITable? ResultsTable;
+
+    List<PCGWGameLookupResult> Results { get; set; } = new List<PCGWGameLookupResult>();
+    IEnumerable<PCGWGameLookupResult> SelectedResults { get; set; }
+
+    bool Loading = true;
+    bool Searching = true;
+    bool MoreResults = false;
+    int SearchOffset = 0;
+    int SearchLimit = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await SearchForGame(Options.GameSearch);
+    }
+
+    private void OnRowClicked(RowData<PCGWGameLookupResult> row)
+    {
+        ResultsTable.SetSelection(new string[] { row.Data.PageID.ToString() });
+    }
+
+    private async Task SearchFieldOnSearch(string search)
+    {
+        if (!Searching && !String.IsNullOrWhiteSpace(Options.GameSearch))
+            await SearchForGame(search);
+    }
+
+    private async Task SearchFieldOnKeyDown(KeyboardEventArgs e)
+    {
+        if (!Searching && (e.Code == "Enter" || e.Code == "NumpadEnter") && !String.IsNullOrWhiteSpace(Options.GameSearch))
+            await SearchForGame(Options.GameSearch);
+    }
+
+    private async Task ShowMore()
+    {
+        MoreResults = false;
+        SearchOffset += Results.Count;
+
+        await SearchForGame(Options.GameSearch, false);
+    }
+
+    private async Task SearchForGame(string title, bool newSearch = true)
+    {
+        try
+        {
+            Searching = true;
+            Loading = true;
+
+            if (newSearch)
+            {
+                Results = new List<PCGWGameLookupResult>();
+                SearchOffset = 0;
+            }
+
+            var results = await PCGWService.SearchGamesAsync(title, SearchLimit, SearchOffset) ?? [];
+
+            MoreResults = results?.Count() == SearchLimit;
+
+            var gameResults = results?.Select(r =>
+            {
+                // build date info by merging all dates
+                var dates = r.Released?.Select(x => x.Year).Distinct().ToArray() ?? [];
+                var dateString = dates.Count() == 0 ? string.Empty : dates.Count() > 1
+                    ? $"{dates.Min()}-{dates.Max()}"
+                    : $"{dates.FirstOrDefault()}";
+
+                return new PCGWGameLookupResult
+                {
+                    PageID = r.PageID,
+                    PageName = r.PageName,
+
+                    Released = dateString,
+                    Developers = string.Join(", ", r.Developers ?? []),
+                    Publishers = string.Join(", ", r.Publishers ?? []),
+                    AppId = r.SteamAppIds?.Order().FirstOrDefault() ?? 0,
+                    AppIds = string.Join(", ", r.SteamAppIds ?? []),
+                    CoverURL = r.CoverURL,
+                };
+            }) ?? [];
+
+            Results.AddRange(gameResults);
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred when retrieving PCGamingWiki lookup data");
+            Logger.LogError(ex, "An unknown error occurred when retrieving PCGamingWiki lookup data");
+        }
+        finally
+        {
+            Searching = false;
+            Loading = false;
+        }
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await base.CloseFeedbackAsync();
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Choose and confirm Modes",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Select",
+            Width = 640,
+        };
+
+        var result = SelectedResults.FirstOrDefault();
+        var pageId = result?.PageID ?? 0;
+        var gameName = result?.PageName ?? string.Empty;
+        var lookupOptions = new MultiplayerModeModesConfirmOptions()
+        {
+            GameId = Options.GameId,
+            GameName = gameName,
+            PageId = pageId,
+            ResultSelected = Options.ResultSelected,
+        };
+
+        var modalRef = ModalService.CreateModal<MultiplayerModeModesConfirmDialog, MultiplayerModeModesConfirmOptions>(modalOptions, lookupOptions);
+    }
+}

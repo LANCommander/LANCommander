@@ -64,6 +64,7 @@
 
     <GridRow Justify="RowJustify.End">
         <GridCol>
+            <Button OnClick="LookupMedia">Lookup Media from Steam</Button>
             <Button OnClick="AddMedia" Type="@ButtonType.Primary">Add Media</Button>
         </GridCol>
     </GridRow>
@@ -121,6 +122,28 @@
             MessageService.Error($"{media.Type} could not be updated.");
             Logger.LogError(ex, $"{media.Type} could not be updated.");
         }
+    }
+
+    private async Task LookupMedia()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Game Media Lookup",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Select",
+        };
+
+        var lookupOptions = new GameMediaLookupOptions()
+        {
+            GameId = GameId,
+            GameSearch = GameTitle,
+            ResultSelected = OnLookupResultSelected,
+        };
+
+        var modalRef = ModalService.CreateModal<GameMediaLookupDialog, GameMediaLookupOptions>(modalOptions, lookupOptions);
+        await Task.Yield();
     }
 
     private async Task AddMedia()
@@ -260,6 +283,48 @@
         };
 
         var modalRef = await ModalService.CreateModalAsync<PdfReaderDialog, Media>(modalOptions, media);
+    }
+
+    private async void OnLookupResultSelected(Guid gameId, IEnumerable<MediaGrabberResult> mediaSources)
+    {
+        if (mediaSources == null || mediaSources.Count() == 0)
+            return;
+
+        var defaultStorageLocation = await MediaService.GetDefaultStorageLocationAsync();
+
+        foreach (var mediaSource in mediaSources)
+        {
+            if (!AllowedMediaTypes.Contains(mediaSource.Type))
+                continue;
+
+            Media media = Values.FirstOrDefault(existing => existing.Type == mediaSource.Type);
+            if (media == null)
+            {
+                media = new Media
+                {
+                    GameId = GameId,
+                    Type = mediaSource.Type,
+                    StorageLocationId = defaultStorageLocation.Id,
+                    Crc32 = String.Empty,
+                };
+
+                media = await MediaService.AddAsync(media);
+            }
+            else 
+            {
+                MediaService.DeleteLocalMediaFile(media);
+            }
+
+            media.SourceUrl = mediaSource.SourceUrl;
+            media.MimeType = mediaSource.MimeType;
+            media.Name = mediaSource.Type == MediaType.Manual ? "Manual" : null;
+            media = await MediaService.DownloadMediaAsync(mediaSource.SourceUrl, media);
+        }
+
+        Values = await MediaService.GetAsync(m => m.GameId == gameId);
+
+        if (ValuesChanged.HasDelegate)
+            await ValuesChanged.InvokeAsync(Values);
     }
 
     private void NavigateToSettings()

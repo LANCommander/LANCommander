@@ -152,6 +152,12 @@ namespace LANCommander.Launcher.Services
                         }
                     }
 
+                    var childGamesIds = game.DependentGames.ToArray();
+                    foreach (var childGameId in childGamesIds)
+                    {
+                        await ImportGameAsync(childGameId);
+                    }
+                    
                     #region Update Game Engine
 
                     if (game.Engine == null && localGame.Engine != null)

@@ -269,7 +269,7 @@ else
 
         foreach (var manifest in manifests)
         {
-            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.Alias);
+            await Client.Scripts.RunNameChangeScriptAsync(Game.InstallDirectory, Game.Id, user.GetUserNameSafe ?? Settings.DEFAULT_GAME_USERNAME);
         }
     }
 

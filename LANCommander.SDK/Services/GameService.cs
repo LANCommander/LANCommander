@@ -604,6 +604,37 @@ namespace LANCommander.SDK.Services
             #endregion
         }
 
+        public async Task UninstallAddonsAsync(string installDirectory, Guid baseGameId, IEnumerable<Guid> addonIds)
+        {
+            var baseManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, baseGameId);
+
+            addonIds ??= [];
+            foreach (var dependentGame in baseManifest.DependentGames)
+            {
+                if (!addonIds.Contains(dependentGame))
+                    continue;
+
+                try
+                {
+                    await UninstallAddonAsync(installDirectory, dependentGame);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, $"Could not uninstall dependent game {dependentGame} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
+                }
+            }
+        }
+
+        public async Task UninstallAddonAsync(string installDirectory, Guid addonGameId)
+        {
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, addonGameId);
+
+            if (manifest != null)
+            {
+                await UninstallAsync(installDirectory, manifest.Id);
+            }
+        }
+
         public async Task<string> MoveAsync(Guid gameId, string oldInstallDirectory, string newInstallDirectory)
         {
             var game = await GetAsync(gameId);

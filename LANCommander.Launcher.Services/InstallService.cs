@@ -216,7 +216,12 @@ namespace LANCommander.Launcher.Services
                     // Probably doing a modification of some sort
                     if (localGame.InstallDirectory.StartsWith(currentItem.InstallDirectory))
                     {
-                        await Client.Games.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, currentItem.AddonIds);
+                        var allAddons = remoteGame.DependentGames.ToArray();
+                        var removeAddons = allAddons.Except(currentItem.AddonIds ?? []).ToArray();
+                        var addAddons = allAddons.Intersect(currentItem.AddonIds ?? []).ToArray();
+
+                        await Client.Games.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
+                        await Client.Games.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
                         
                         UpdateGameState(currentItem, localGame, localGame.InstallDirectory);
                         await GameService.UpdateAsync(localGame);
@@ -340,15 +345,25 @@ namespace LANCommander.Launcher.Services
             localGame.InstalledVersion = currentItem.Version;
             localGame.InstalledOn ??= DateTime.Now;
 
-            foreach (var addonId in (currentItem.AddonIds ?? []))
+            foreach (var localAddon in (localGame.DependentGames ?? []))
             {
-                var localAddon = localGame.DependentGames.FirstOrDefault(d => d.Id == addonId);
-                if (localAddon == null) continue;
+                bool isInstalled = currentItem.AddonIds?.Contains(localAddon.Id) ?? false;
 
-                localAddon.InstallDirectory = installDirectory;
-                localAddon.Installed = true;
-                localAddon.InstalledVersion = currentItem.AddonVersions.TryGetValue(localAddon.Id, out var addonVersion) ? addonVersion : null;
-                localAddon.InstalledOn ??= DateTime.Now;
+                if (isInstalled)
+                {
+                    localAddon.InstallDirectory = installDirectory;
+                    localAddon.Installed = true;
+                    localAddon.InstalledVersion = (currentItem.AddonVersions ?? []).TryGetValue(localAddon.Id, out var addonVersion) ? addonVersion : null;
+                    localAddon.InstalledOn ??= DateTime.Now;
+                }
+                else
+                {
+
+                    localAddon.InstallDirectory = null;
+                    localAddon.Installed = false;
+                    localAddon.InstalledVersion = null;
+                    localAddon.InstalledOn = null;
+                }
             }
         }
 

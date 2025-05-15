@@ -109,7 +109,7 @@
         if (!Game.Installed)
             return InstallOperation.Install;
 
-        if (Game.DependentGames.Any(g => !g.Installed && SelectedAddons.Any(a => a.Id == g.Id)))
+        if (Game.DependentGames.Any(g => g.Installed ^ SelectedAddons.Any(a => a.Id == g.Id)))
             return InstallOperation.Modify;
 
         if (!Game.InstallDirectory.StartsWith(SelectedDirectory))

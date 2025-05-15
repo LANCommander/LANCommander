@@ -917,9 +917,18 @@ namespace LANCommander.SDK.Services
 
             if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGameId != Guid.Empty)
             {
-                var baseGame = await Client.Games.GetAsync(game.BaseGameId);
+                // modify installation passes the original installation of the game including the game folder, use the existing folder,
+                // otherwise a name change could lead to installing files into differnt folder
+                if (Path.Exists(installDirectory) && Path.Exists(Path.Combine(installDirectory, ".lancommander")))
+                {
+                    return installDirectory;
+                }
+                else
+                {
+                    var baseGame = await Client.Games.GetAsync(game.BaseGameId);
 
-                return await GetInstallDirectory(baseGame, installDirectory);
+                    return await GetInstallDirectory(baseGame, installDirectory);
+                }
             }
             else
                 return Path.Combine(installDirectory, game.Title.SanitizeFilename());

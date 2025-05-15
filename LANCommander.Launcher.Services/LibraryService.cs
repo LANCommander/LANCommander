@@ -217,6 +217,7 @@ namespace LANCommander.Launcher.Services
                 .Include(g => g.Platforms)
                 .Include(g => g.Media)
                 .Include(g => g.MultiplayerModes)
+                .Include(g => g.DependentGames)
                 .FirstOrDefaultAsync(g => g.Id == key);
 
             return new ListItem(game);

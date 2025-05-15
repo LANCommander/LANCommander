@@ -53,7 +53,7 @@ namespace LANCommander.Launcher.Services
             Queue.CollectionChanged += (sender, e) =>
             {
                 OnQueueChanged?.Invoke();
-            };
+            }; 
 
             Client.Games.OnInstallProgressUpdate += (e) =>
             {
@@ -79,7 +79,15 @@ namespace LANCommander.Launcher.Services
             OnQueueChanged?.Invoke();
         }
 
-        public async Task Add(Game game, string installDirectory = "", Guid[] addonIds = null)
+        [Obsolete("Use Add(Game, string, Game[]) instead.")]
+        public async Task AddObsolete(Game game, string installDirectory = "", Guid[]? addonIds = null)
+        {
+            var addons = addonIds != null ? await Client.Games.GetAddonsAsync(game.Id) : [];
+            var selectedAddons = addons?.Where(x => addons.Contains(x)).ToArray();
+            await Add(game, installDirectory, selectedAddons);
+        }
+
+        public async Task Add(Game game, string installDirectory = "", SDK.Models.Game[]? addons = null)
         {
             var gameInfo = await Client.Games.GetAsync(game.Id);
 
@@ -118,8 +126,14 @@ namespace LANCommander.Launcher.Services
 
                 queueItem.InstallDirectory = installDirectory;
 
-                if (addonIds != null && addonIds.Length > 0)
+                if (addons != null && addons.Length > 0)
+                {
+                    var versions = addons.ToLookup(addon => addon.Id, x => x.Archives.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version);
+                    var addonIds = addons.Select(x => x.Id).ToArray() ?? [];
+
                     queueItem.AddonIds = addonIds;
+                    queueItem.AddonVersions = addonIds.ToDictionary(x => x, y => versions[y]?.FirstOrDefault());
+                }
 
                 if (Queue.Any(i => i.State))
                     Queue.Add(queueItem);
@@ -201,7 +215,16 @@ namespace LANCommander.Launcher.Services
                 {
                     // Probably doing a modification of some sort
                     if (localGame.InstallDirectory.StartsWith(currentItem.InstallDirectory))
+                    {
                         await Client.Games.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, currentItem.AddonIds);
+                        
+                        UpdateGameState(currentItem, localGame, localGame.InstallDirectory);
+                        await GameService.UpdateAsync(localGame);
+                        
+                        currentItem.Status = InstallStatus.Complete;
+                        OnQueueChanged?.Invoke();
+                        OnInstallComplete?.Invoke(localGame);
+                    }
                     else
                     {
                         await Move(currentItem, localGame, remoteGame);
@@ -230,11 +253,7 @@ namespace LANCommander.Launcher.Services
                 try
                 {
                     installDirectory = await Client.Games.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds);
-
-                    localGame.InstallDirectory = installDirectory;
-                    localGame.Installed = true;
-                    localGame.InstalledVersion = currentItem.Version;
-                    localGame.InstalledOn = DateTime.Now;
+                    UpdateGameState(currentItem, localGame, installDirectory);
                 }
                 catch (InstallCanceledException ex)
                 {
@@ -312,6 +331,25 @@ namespace LANCommander.Launcher.Services
             }
 
             await Next();
+        }
+
+        private static void UpdateGameState(IInstallQueueItem currentItem, Game localGame, string installDirectory)
+        {
+            localGame.InstallDirectory = installDirectory;
+            localGame.Installed = true;
+            localGame.InstalledVersion = currentItem.Version;
+            localGame.InstalledOn ??= DateTime.Now;
+
+            foreach (var addonId in (currentItem.AddonIds ?? []))
+            {
+                var localAddon = localGame.DependentGames.FirstOrDefault(d => d.Id == addonId);
+                if (localAddon == null) continue;
+
+                localAddon.InstallDirectory = installDirectory;
+                localAddon.Installed = true;
+                localAddon.InstalledVersion = currentItem.AddonVersions.TryGetValue(localAddon.Id, out var addonVersion) ? addonVersion : null;
+                localAddon.InstalledOn ??= DateTime.Now;
+            }
         }
 
         public async Task Move(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame)

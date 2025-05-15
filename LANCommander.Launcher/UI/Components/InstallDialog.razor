@@ -59,11 +59,10 @@
 
     string SelectedDirectory = "";
 
-    List<SDK.Models.Game> Addons = new();
-
     SDK.Models.Game RemoteGame;
     Data.Models.Game Game;
 
+    List<SDK.Models.Game> Addons = new();
     IEnumerable<SDK.Models.Game> SelectedAddons = new List<SDK.Models.Game>();
 
     enum InstallOperation
@@ -77,7 +76,7 @@
     protected override async Task OnInitializedAsync()
     {
         Game = Options.DataItem as Game;
-        
+
         if (Game.Installed)
             SelectedDirectory = Settings.Games.InstallDirectories.FirstOrDefault(d => Game.InstallDirectory.StartsWith(d));
 
@@ -86,6 +85,9 @@
 
         RemoteGame = await Client.Games.GetAsync(Options.Key);
         Addons = (await Client.Games.GetAddonsAsync(Options.Key)).OrderByTitle(g => g.SortTitle ?? g.Title).ToList();
+
+        var localAddons = Game?.DependentGames.Where(g => g.Installed).Select(addon => addon.Id).ToArray() ?? [];
+        SelectedAddons = Addons?.Where(addon => localAddons.Contains(addon.Id)).ToList() ?? [];
     }
 
     async Task Close()
@@ -97,7 +99,7 @@
     {
         var game = Options.DataItem as Game;
 
-        InstallService.Add(game, SelectedDirectory, SelectedAddons.Select(a => a.Id).ToArray());
+        InstallService.Add(game, SelectedDirectory, SelectedAddons.ToArray());
 
         await CloseFeedbackAsync();
     }

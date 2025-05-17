@@ -37,13 +37,18 @@ namespace LANCommander.SDK.Helpers
             return tempPath;
         }
 
-        public static async Task SaveScriptAsync(Game game, ScriptType type)
+        public static Task SaveScriptAsync(Game game, ScriptType type)
+        {
+            return SaveScriptAsync(game, type, game.InstallDirectory);
+        }
+        
+        public static async Task SaveScriptAsync(Game game, ScriptType type, string installDirectory)
         {
             var scriptContents = GetScriptContents(game, type);
 
             if (!String.IsNullOrWhiteSpace(scriptContents))
             {
-                var filename = GetScriptFilePath(game.InstallDirectory, game.Id, type);
+                var filename = GetScriptFilePath(installDirectory, game.Id, type);
 
                 if (!Directory.Exists(Path.GetDirectoryName(filename)))
                     Directory.CreateDirectory(Path.GetDirectoryName(filename));

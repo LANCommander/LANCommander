@@ -213,6 +213,9 @@ namespace LANCommander.Launcher.Services
 
                 if (localGame.Installed)
                 {
+                    // update current local installed game first, might be moved afterwards
+                    await Client.Games.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+
                     // Probably doing a modification of some sort
                     if (localGame.InstallDirectory.StartsWith(currentItem.InstallDirectory))
                     {

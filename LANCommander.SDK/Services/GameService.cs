@@ -365,10 +365,7 @@ namespace LANCommander.SDK.Services
             var writeManifestSuccess = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromSeconds(1), false, async () =>
             {
                 Logger?.LogTrace("Attempting to get game manifest");
-
-                manifest = GetManifest(game.Id);
-
-                await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
+                manifest = await WriteManifestAsync(game.InstallDirectory, game);
 
                 return true;
             });
@@ -376,12 +373,8 @@ namespace LANCommander.SDK.Services
             if (!writeManifestSuccess)
                 throw new InstallException("Could not grab the manifest file. Retry the install or check your connection");
 
-            Logger?.LogTrace("Saving scripts");
-
-            foreach (var script in game.Scripts)
-            {
-                await ScriptHelper.SaveScriptAsync(game, script.Type);
-            }
+            // store scripts locally
+            await WriteScriptsAsync(game.InstallDirectory, game);
 
             _installProgress.Progress = 1;
             _installProgress.BytesTransferred = _installProgress.TotalBytes;
@@ -756,7 +749,33 @@ namespace LANCommander.SDK.Services
 
             return File.Exists(metadataPath);
         }
-         
+
+        public async Task UpdateGameInstallationAsync(string installDirectory, Game game)
+        {
+            // update game and scripts locally
+            await WriteManifestAsync(installDirectory, game);
+            await WriteScriptsAsync(installDirectory, game);
+        }
+
+        private async Task<GameManifest> WriteManifestAsync(string installDirectory, Game game)
+        {
+            Logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
+            GameManifest manifest = GetManifest(game.Id);
+            Logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
+            await ManifestHelper.WriteAsync(manifest, installDirectory);
+            return manifest;
+        }
+
+        private async Task WriteScriptsAsync(string installDirectory, Game game)
+        {
+            Logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
+
+            foreach (var script in game.Scripts)
+            {
+                await ScriptHelper.SaveScriptAsync(game, script.Type, installDirectory);
+            }
+        }
+
         private async Task RunPostInstallScripts(Game game)
         {
             if (game.Scripts != null && game.Scripts.Any())

@@ -92,7 +92,7 @@
                     <Flex Gap="FlexGap.Small" Wrap="FlexWrap.NoWrap">
                         <Select TItem="Game"
                                 TItemValue="Guid?"
-                                DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                                DataSource="@Games.Where(g => g.Id != context.Id).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
                                 @bind-Value="@context.BaseGameId"
                                 LabelName="Title"
                                 ValueName="Id"
@@ -208,6 +208,7 @@
         {
             if (game.Id != Guid.Empty)
             {
+                game.BaseGame = null; // clearing base game, model setup will write the BaseGameId value, referenced model will be loaded on update/get
                 game = await GameService.UpdateAsync(game);
 
                 await MessageService.Success("Game updated!");

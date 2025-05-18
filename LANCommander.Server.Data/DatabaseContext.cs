@@ -1,4 +1,5 @@
 ﻿using LANCommander.Server.Data.Enums;
+using LANCommander.Server.Data.Interceptors;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -14,6 +15,8 @@ namespace LANCommander.Server.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor());
+
             optionsBuilder.EnableDetailedErrors();
             optionsBuilder.EnableSensitiveDataLogging();
 

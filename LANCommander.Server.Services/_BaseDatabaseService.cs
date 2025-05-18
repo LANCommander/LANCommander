@@ -340,7 +340,25 @@ namespace LANCommander.Server.Services
                 Reset();
             }
         }
-        
+
+        public virtual async Task DeleteRangeAsync(IEnumerable<T> entities)
+        {
+            try
+            {
+                await cache.ExpireAsync($"{typeof(T).FullName}");
+
+                using var context = await dbContextFactory.CreateDbContextAsync();
+
+                context.Set<T>().RemoveRange(entities);
+
+                await context.SaveChangesAsync();
+            }
+            finally
+            {
+                Reset();
+            }
+        }
+
         private async Task<User?> GetCurrentUserAsync(DatabaseContext context)
         {
             var httpContext = httpContextAccessor?.HttpContext;

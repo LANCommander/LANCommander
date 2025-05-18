@@ -185,6 +185,8 @@
 
     private async Task LoadData()
     {
+        var allowedTypes = new[] { GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod };
+
         Engines = await EngineService.SortBy(g => g.Name).GetAsync();
         Companies = await CompanyService.SortBy(g => g.Name).GetAsync();
         Genres = await GenreService.SortBy(g => g.Name).GetAsync();
@@ -193,7 +195,8 @@
         Collections = await CollectionService.SortBy(g => g.Name).GetAsync();
         Games = (await GameService
             .Include(g => g.Media.Where(m => m.Type == MediaType.Icon))
-            .GetAsync(g => g.Type == GameType.MainGame)).OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+            .GetAsync(g => allowedTypes.Contains(g.Type)))
+            .OrderByTitle(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
         Redistributables = (await RedistributableService.GetAsync()).OrderByTitle(r => r.Name);
 
         Loaded = true;

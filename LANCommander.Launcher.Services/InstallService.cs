@@ -223,9 +223,10 @@ namespace LANCommander.Launcher.Services
                         var removeAddons = allAddons.Except(currentItem.AddonIds ?? []).ToArray();
                         var addAddons = allAddons.Intersect(currentItem.AddonIds ?? []).ToArray();
 
-                        await Client.Games.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
-                        await Client.Games.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
-                        
+                        var uninstallResult = await Client.Games.UninstallAddonsAsync(localGame.InstallDirectory, localGame.Id, removeAddons);
+                        var installResult = await Client.Games.InstallAddonsAsync(localGame.InstallDirectory, localGame.Id, addAddons);
+                        await Client.Games.RestoreFilesAsync(localGame.InstallDirectory, localGame.Id, uninstallResult.FileList, installResult.FileList);
+
                         UpdateGameState(currentItem, localGame, localGame.InstallDirectory);
                         await GameService.UpdateAsync(localGame);
                         
@@ -260,7 +261,8 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    installDirectory = await Client.Games.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds);
+                    var gameFileList = await Client.Games.InstallAsync(remoteGame.Id, currentItem.InstallDirectory, currentItem.AddonIds);
+                    installDirectory = gameFileList.InstallDirectory;
                     UpdateGameState(currentItem, localGame, installDirectory);
                 }
                 catch (InstallCanceledException ex)

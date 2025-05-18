@@ -166,6 +166,7 @@ namespace LANCommander.SDK.Services
             }
 
             var destination = Path.Combine(GameService.GetMetadataDirectoryPath(game.InstallDirectory, redistributable.Id), "Files");
+            var files = new List<ExtractionResult.FileEntry>();
 
             Logger?.LogTrace("Downloading and extracting {Redistributable} to path {Destination}", redistributable.Name, destination);
 
@@ -195,6 +196,12 @@ namespace LANCommander.SDK.Services
 
                     reader.EntryExtractionProgress += (sender, e) =>
                     {
+                        files.Add(new ExtractionResult.FileEntry
+                        {
+                            EntryPath = e.Item.Key,
+                            LocalPath = Path.Combine(destination, e.Item.Key),
+                        });
+
                         OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
                         {
                             Entry = e.Item,
@@ -232,6 +239,7 @@ namespace LANCommander.SDK.Services
             {
                 extractionResult.Success = true;
                 extractionResult.Directory = destination;
+                extractionResult.Files = files;
                 Logger?.LogTrace("Redistributable {Redistributable} successfully downloaded and extracted to {Destination}", redistributable.Name, destination);
             }
 

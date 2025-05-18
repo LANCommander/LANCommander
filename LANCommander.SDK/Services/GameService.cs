@@ -113,11 +113,14 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
+                        if (ManifestHelper.Exists(installDirectory, dependentGameId))
+                        {
                             var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
 
-                        if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
+                            if (dependentGameManifest?.Type == GameType.Expansion || dependentGameManifest?.Type == GameType.Mod)
                                 manifests.Add(dependentGameManifest);
                         }
+                    }
                     catch (Exception ex)
                     {
                         Logger?.LogError(ex, $"Could not load manifest from dependent game {dependentGameId}");
@@ -332,7 +335,7 @@ namespace LANCommander.SDK.Services
 
                 if (!Directory.Exists(destination))
                     destination = await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts);
-                }
+            }
 
             try
             {

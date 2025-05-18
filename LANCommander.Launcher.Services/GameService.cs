@@ -49,14 +49,10 @@ namespace LANCommander.Launcher.Services
                 try
                 {
                     OnUninstall?.Invoke(game);
-                    
+
                     await Client.Games.UninstallAsync(game.InstallDirectory, game.Id);
 
-                    game.InstallDirectory = null;
-                    game.Installed = false;
-                    game.InstalledOn = null;
-                    game.InstalledVersion = null;
-
+                    ClearGameState(game);
                     await UpdateAsync(game);
 
                     OnUninstallComplete?.Invoke(game);
@@ -77,7 +73,7 @@ namespace LANCommander.Launcher.Services
             if (Client.IsConnected())
             {
                 var profile = await Client.Profile.GetAsync();
-                
+
                 userId = profile.Id;
             }
             else
@@ -100,6 +96,22 @@ namespace LANCommander.Launcher.Services
             finally
             {
                 await PlaySessionService.EndSession(game.Id, userId);
+            }
+        }
+
+        protected void ClearGameState(Game game)
+        {
+            if (game == null)
+                return;
+
+            game.InstallDirectory = null;
+            game.Installed = false;
+            game.InstalledOn = null;
+            game.InstalledVersion = null;
+
+            foreach (var addon in (game.DependentGames ?? []))
+            {
+                ClearGameState(addon);
             }
         }
     }

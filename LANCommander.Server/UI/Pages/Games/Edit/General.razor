@@ -92,7 +92,7 @@
                     <Flex Gap="FlexGap.Small" Wrap="FlexWrap.NoWrap">
                         <Select TItem="Game"
                                 TItemValue="Guid?"
-                                DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
+                                DataSource="@Games.Where(g => g.Id != context.Id).OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
                                 @bind-Value="@context.BaseGameId"
                                 LabelName="Title"
                                 ValueName="Id"

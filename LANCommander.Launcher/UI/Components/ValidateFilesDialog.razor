@@ -25,11 +25,19 @@
             <ByteSize Value="context.Length" />
         }
     </PropertyColumn>
+    <Column TData="string" Title="Source Game">
+        @{
+            GameTitleMap.TryGetValue(context.GameId.GetValueOrDefault(Guid.Empty), out var title);
+        }
+        @(title ?? Options.Title)
+    </Column>
 </Table>
 
 @code {
     IEnumerable<ArchiveValidationConflict> Conflicts = new List<ArchiveValidationConflict>();
     IEnumerable<ArchiveValidationConflict> Selected = new List<ArchiveValidationConflict>();
+
+    IDictionary<Guid, string> GameTitleMap = new Dictionary<Guid, string>();
 
     bool Loading = true;
 
@@ -45,6 +53,9 @@
 
     async Task LoadData()
     {
+        var localAddons = Options.DependentGames?.Where(g => g.Installed).ToArray() ?? [];
+        GameTitleMap = localAddons.ToDictionary(x => x.Id, x => x.Title);
+
         Conflicts = await Client.Games.ValidateFilesAsync(Options.InstallDirectory, Options.Id);
 
         Loading = false;
@@ -56,7 +67,7 @@
         StateHasChanged();
         await Task.Yield();
 
-        await Client.Games.DownloadFilesAsync(Options.InstallDirectory, Options.Id, Selected.Select(e => e.FullName));
+        await Client.Games.DownloadFilesAsync(Options.InstallDirectory, Selected.Select(e => (e.GameId ?? Options.Id, e.FullName)).ToArray());
 
         Loading = false;
         StateHasChanged();

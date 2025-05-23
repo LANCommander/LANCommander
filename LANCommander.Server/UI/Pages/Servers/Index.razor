@@ -56,7 +56,7 @@
             <LocalTime Value="context.UpdatedOn" />
         </BoundDataColumn>
         <BoundDataColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <DataActions>
+        <DataActions TData="string">
             <ServerControl ServerId="context.Id" />
 
             <a href="/Servers/@(context.Id)" class="ant-btn ant-btn-default">Edit</a>

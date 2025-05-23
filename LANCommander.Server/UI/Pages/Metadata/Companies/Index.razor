@@ -28,7 +28,7 @@
         <BoundDataColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <BoundDataColumn Property="c => c.DevelopedGames.Count" Sortable Title="Developed Games" Include="DevelopedGames" />
         <BoundDataColumn Property="c => c.PublishedGames.Count" Sortable Title="Published Games" Include="PublishedGames" />
-        <DataActions>
+        <DataActions TData="string">
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this company?">
                 <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger />
             </Popconfirm>

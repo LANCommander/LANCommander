@@ -46,7 +46,7 @@
             </BoundDataColumn>
         }
         
-        <DataActions>
+        <DataActions TData="string">
             <DropdownButton Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))">
                 <Overlay>
                     <Menu>

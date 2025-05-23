@@ -45,6 +45,24 @@ namespace LANCommander.Server.Services
             return this;
         }
 
+        public IBaseDatabaseService<T> Include(params string[] includes)
+        {
+            return Include(includes);
+        }
+
+        public IBaseDatabaseService<T> Include(IEnumerable<string> includes)
+        {
+            return Query((queryable) =>
+            {
+                foreach (var include in includes)
+                {
+                    queryable = queryable.Include(include);
+                }
+
+                return queryable;
+            });
+        }
+
         public IBaseDatabaseService<T> Include(params Expression<Func<T, object>>[] expressions)
         {
             return Query((queryable) =>
@@ -56,8 +74,6 @@ namespace LANCommander.Server.Services
 
                 return queryable;
             });
-
-            return this;
         }
 
         public IBaseDatabaseService<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending)

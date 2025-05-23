@@ -17,3 +17,10 @@
 .table-toolbar {
     padding: 12px;
 }
+
+.ant-table-row-indent + .ant-table-row-expand-icon {
+    vertical-align: middle;
+    display: inline;
+    float: none;
+    margin-top: 0;
+}

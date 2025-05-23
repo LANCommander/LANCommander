@@ -45,7 +45,7 @@
                 <BoundDataColumn Property="s => s.ClaimedOn" Title="Claimed" Sortable>
                     <LocalTime Value="context.CreatedOn" Relative />
                 </BoundDataColumn>
-                <DataActions>
+                <DataActions TData="string">
                     @if (context.IsAllocated())
                     {
                         <Button OnClick="() => Release(context)">Release</Button>

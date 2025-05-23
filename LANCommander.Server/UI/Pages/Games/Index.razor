@@ -1,5 +1,6 @@
 ﻿@page "/Games"
 @using SortDirection = AntDesign.SortDirection
+@using AntDesign.TableModels
 @attribute [Authorize]
 @inject GameService GameService
 @inject NavigationManager NavigationManager
@@ -18,7 +19,9 @@
     Responsive
     ColumnPicker
     Searchable
-    SearchProperty="g => g.Title">
+    SearchProperty="g => g.Title"
+    Children="(g, dg) => dg.BaseGameId == g.Id"
+    Query="g => g.Type != GameType.Expansion && g.Type != GameType.Mod">
     <RightToolbar>
         @if (Selected != null && Selected.Count() > 0)
         {
@@ -36,13 +39,17 @@
 
         <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
     
-        <BoundDataColumn Property="g => g.MultiplayerModes.Count > 0" Include="MultiplayerModes" Sortable Title="Multiplayer">
+        <BoundDataColumn Property="g => g.MultiplayerModes" Include="MultiplayerModes" Sortable Title="Multiplayer">
             <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
         </BoundDataColumn>
 
-        <BoundDataColumn Property="g => g.Keys.Count" Title="Total Keys" Include="Keys" Sortable />
-        <BoundDataColumn Property="g => g.Keys.Count(k => k.ClaimedOn.HasValue)" Title="Keys Allocated" Include="Keys" Sortable />
-
+        <BoundDataColumn Property="g => g.Keys" Title="Total Keys" Include="Keys" Sortable>
+            @context.Keys?.Count
+        </BoundDataColumn>
+        <BoundDataColumn Property="g => g.Keys" Title="Keys Allocated" Include="Keys" Sortable>
+            @context.Keys?.Count(k => k.ClaimedOn.HasValue)
+        </BoundDataColumn>
+        
         <DataColumn TData="string[]" Title="Collections" Include="Collections">
             @if (context.Collections != null)
                 foreach (var collection in context.Collections)
@@ -107,7 +114,7 @@
             @context.UpdatedBy?.UserName
         </BoundDataColumn>
 
-        <DataActions>
+        <DataActions TData="string">
             <a href="@($"/Games/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this game?">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />

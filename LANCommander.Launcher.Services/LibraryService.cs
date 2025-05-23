@@ -138,9 +138,20 @@ namespace LANCommander.Launcher.Services
             return user.Library;
         }
 
+        private static bool IsInstalled(ListItem item)
+        {
+            return item != null && (item.State == ListItemState.Installed || item.State == ListItemState.UpdateAvailable);
+        }
+
         public bool IsInstalled(Guid itemId)
         {
-            return Items.Any(i => i.Key == itemId && (i.State == ListItemState.Installed || i.State == ListItemState.UpdateAvailable));
+            return Items.Any(i => i.Key == itemId && IsInstalled(i));
+        }
+
+        public async Task<bool> IsInstalledAsync(Guid itemId)
+        {
+            var items = await GetItemsAsync();
+            return items.Any(i => IsInstalled(i));
         }
 
         public bool IsInLibrary(Guid itemId)

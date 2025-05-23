@@ -5,6 +5,7 @@ using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 
 namespace LANCommander.Launcher.Services
@@ -13,6 +14,7 @@ namespace LANCommander.Launcher.Services
     {
         private readonly AuthenticationService AuthenticationService;
         private readonly PlaySessionService PlaySessionService;
+        private readonly IServiceProvider ServiceProvider;
         private readonly SaveService SaveService;
         private readonly MessageBusService MessageBusService;
 
@@ -32,12 +34,14 @@ namespace LANCommander.Launcher.Services
             ILogger<GameService> logger,
             AuthenticationService authenticationService,
             PlaySessionService playSessionService,
+            IServiceProvider serviceProvider,
             SaveService saveService,
             MessageBusService messageBusService) : base(dbContext, client, logger)
         {
             Settings = SettingService.GetSettings();
             AuthenticationService = authenticationService;
             PlaySessionService = playSessionService;
+            ServiceProvider = serviceProvider;
             SaveService = saveService;
             MessageBusService = messageBusService;
         }
@@ -51,6 +55,21 @@ namespace LANCommander.Launcher.Services
                     OnUninstall?.Invoke(game);
 
                     await Client.Games.UninstallAsync(game.InstallDirectory, game.Id);
+
+                    if (game.BaseGameId.HasValue)
+                    {
+                        var libraryService = ServiceProvider.GetService<LibraryService>();
+                        var isInstalled = await libraryService!.IsInstalledAsync(game.BaseGameId.Value);
+
+                        if (!isInstalled)
+                        {
+                            var baseGame = await GetAsync(game.BaseGameId.Value);
+
+                            await Client.Games.UninstallAsync(game.InstallDirectory, baseGame?.Id ?? game.BaseGameId.Value);
+
+                            ClearGameState(baseGame!, skipAddons: true);
+                        }
+                    }
 
                     ClearGameState(game);
                     await UpdateAsync(game);
@@ -99,7 +118,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        protected void ClearGameState(Game game)
+        protected void ClearGameState(Game game, bool skipAddons = false)
         {
             if (game == null)
                 return;
@@ -109,9 +128,12 @@ namespace LANCommander.Launcher.Services
             game.InstalledOn = null;
             game.InstalledVersion = null;
 
-            foreach (var addon in (game.DependentGames ?? []))
+            if (!skipAddons)
             {
-                ClearGameState(addon);
+                foreach (var addon in (game.DependentGames ?? []))
+                {
+                    ClearGameState(addon);
+                }
             }
         }
     }

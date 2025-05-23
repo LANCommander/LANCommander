@@ -63,7 +63,7 @@
         {
             server = await ServerService.UpdateAsync(server);
 
-            await MessageService.Success("Autostart configuration updated!");
+            await MessageService.SuccessAsync("Autostart configuration updated!");
         }
         catch (Exception ex)
         {

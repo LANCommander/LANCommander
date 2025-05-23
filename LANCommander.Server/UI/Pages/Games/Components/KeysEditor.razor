@@ -107,7 +107,7 @@
     {
         await KeyService.ReleaseAsync(key);
 
-        await MessageService.Success("Key was unallocated!");
+        await MessageService.SuccessAsync("Key was unallocated!");
     }
 
     async Task Save()

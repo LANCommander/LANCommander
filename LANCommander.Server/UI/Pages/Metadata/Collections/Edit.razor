@@ -92,7 +92,7 @@
             {
                 Collection = await CollectionService.UpdateAsync(Collection);
 
-                await MessageService.Success("Collection updated!");
+                await MessageService.SuccessAsync("Collection updated!");
             }
             else
             {

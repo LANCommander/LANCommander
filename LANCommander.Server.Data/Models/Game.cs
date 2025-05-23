@@ -58,5 +58,26 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Page>? Pages { get; set; }
         public ICollection<Library> Libraries { get; set; }
         public ICollection<GameCustomField>? CustomFields { get; set; }
+        
+        [NotMapped]
+        public bool IsAddon => AddonTypes.Contains(Type);
+
+        [NotMapped]
+        public GameType[] AddonTypes =
+        [
+            GameType.Expansion,
+            GameType.Mod
+        ];
+        
+        [NotMapped]
+        public IEnumerable<Game> Addons {
+            get
+            {
+                if (DependentGames != null)
+                    return DependentGames.Where(g => AddonTypes.Contains(g.Type));
+                else
+                    return [];
+            }
+        }
     }
 }

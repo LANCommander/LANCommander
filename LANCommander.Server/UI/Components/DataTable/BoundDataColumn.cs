@@ -47,8 +47,15 @@ namespace LANCommander.Server.UI.Components
                 }
                 else if (IsBody)
                 {
-                    var compiledProperty = Property.Compile();
-                    GetValue = rowData => compiledProperty.Invoke(((RowData<TItem>)rowData).DataItem.Data);
+                    try
+                    {
+                        var compiledProperty = Property.Compile();
+                        GetValue = rowData => compiledProperty.Invoke(((RowData<TItem>)rowData).DataItem.Data);
+                    }
+                    catch
+                    {
+                        GetValue = rowData => default;
+                    }
                 }
 
                 if (Sortable)
@@ -65,7 +72,7 @@ namespace LANCommander.Server.UI.Components
                 ColumnVisibility.Add(ColIndex, !Hide);
             
             ClassMapper.If("column-hidden", () => ColumnVisibility.ContainsKey(ColIndex) && !ColumnVisibility[ColIndex]);
-
+            
             StateHasChanged();
             
             if (!String.IsNullOrWhiteSpace(Include) && !Includes.Contains(Include))

@@ -17,7 +17,7 @@
         <BoundDataColumn Property="g => g.Size">
             <ByteSize Value="save.Size" />
         </BoundDataColumn>
-        <DataActions>
+        <DataActions TData="string">
             <a href="/Download/Save/@(save.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                 <Icon Type="@IconType.Outline.Download"/>
             </a>

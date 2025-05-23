@@ -40,7 +40,7 @@
         <BoundDataColumn Property="s => s.Size" Sortable Title="Size">
             <ByteSize Value="context.Size" />
         </BoundDataColumn>
-        <DataActions>
+        <DataActions TData="string">
             <a href="/Download/Save/@(context.Id)" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                 <Icon Type="@IconType.Outline.Download"/>
             </a>

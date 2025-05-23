@@ -18,7 +18,7 @@
     <Columns>
         <BoundDataColumn Title="Name" Property="r => r.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         
-        <DataActions>
+        <DataActions TData="string">
             <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
 
             @if (context.Name != RoleService.AdministratorRoleName)

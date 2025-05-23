@@ -44,7 +44,7 @@
         {
             server = await ServerService.UpdateAsync(server);
 
-            await MessageService.Success("HTTP paths updated!");
+            await MessageService.SuccessAsync("HTTP paths updated!");
         }
         catch (Exception ex)
         {

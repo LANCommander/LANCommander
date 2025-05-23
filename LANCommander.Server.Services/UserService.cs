@@ -121,7 +121,7 @@ namespace LANCommander.Server.Services
             var user = await GetAsync(userName);
 
             var result = await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
-
+            
             await Cache.RemoveByTagAsync(["User/Security", "User/Roles", $"User/{user.Id}", $"Library/{user.Id}"]);
 
             if (!result.Succeeded)

@@ -54,7 +54,7 @@
         {
             server = await ServerService.UpdateAsync(server);
 
-            await MessageService.Success("Consoles updated!");
+            await MessageService.SuccessAsync("Consoles updated!");
         }
         catch (Exception ex)
         {

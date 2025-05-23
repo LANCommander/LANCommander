@@ -26,7 +26,7 @@
         <BoundDataColumn Property="g => g.PlaySessions.Count(ps => ps.UserId == User.Id)" Title="Play Sessions" Include="PlaySessions" Sortable />
         <BoundDataColumn Property="g => g.GameSaves.Count(gs => gs.UserId == User.Id)" Title="Saves" Include="GameSaves" Sortable />
 
-        <DataActions>
+        <DataActions TData="string">
             <Popconfirm OnConfirm="() => RemoveFromLibrary(context)" Title="Are you sure you want to remove this game from your library?">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
             </Popconfirm>

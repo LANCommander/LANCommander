@@ -78,8 +78,11 @@ namespace LANCommander.Server.Services
             {
                 foreach (var dependentGame in game.DependentGames)
                 {
-                    if (library.Games.Any(g => g.Id == dependentGame.Id) && dependentGame.Id != game.Id)
-                        library.Games.Remove(dependentGame);
+                    if (dependentGame.IsAddon)
+                    {
+                        if (library.Games.Any(g => g.Id == dependentGame.Id) && dependentGame.Id != game.Id)
+                            library.Games.Remove(dependentGame);
+                    }
                 }
             }
 

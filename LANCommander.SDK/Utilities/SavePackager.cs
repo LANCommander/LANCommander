@@ -143,7 +143,7 @@ public class SavePacker : IDisposable
                 _archive.AddEntry($"Files/{savePathId}/{GetArchiveEntryName(file, absoluteLocalWorkingDirectory).TrimStart('/')}", file);
             }
         }
-        else
+        else if (File.Exists(absoluteFullLocalPath))
         {
             _archive.AddEntry(GetArchiveEntryName(absoluteFullLocalPath, absoluteLocalWorkingDirectory), absoluteFullLocalPath);
         }

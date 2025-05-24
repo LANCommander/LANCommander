@@ -204,7 +204,7 @@ namespace LANCommander.Server.Services
                 {
                     var tagEntity = await tagService.AddMissingAsync(t => t.Name == tag, new Data.Models.Tag { Name = tag });
 
-                    if (game.Tags.Any(t => t.Id == tagEntity.Value.Id))
+                    if (!game.Tags.Any(t => t.Id == tagEntity.Value.Id))
                         game.Tags.Add(tagEntity.Value);
                 }
             }

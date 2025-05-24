@@ -136,16 +136,19 @@ public class SavePacker : IDisposable
         var absoluteLocalPath = path.ExpandEnvironmentVariables(_installDirectory);
         var absoluteFullLocalPath = Path.Combine(absoluteLocalWorkingDirectory, absoluteLocalPath);
 
+        var archiveBaseFolder = $"Files/{savePathId}/";
         if (Directory.Exists(absoluteFullLocalPath))
         {
             foreach (var file in Directory.GetFiles(absoluteFullLocalPath, "*", SearchOption.AllDirectories))
             {
-                _archive.AddEntry($"Files/{savePathId}/{GetArchiveEntryName(file, absoluteLocalWorkingDirectory).TrimStart('/')}", file);
+                var archivePath = $"{archiveBaseFolder}{GetArchiveEntryName(file, absoluteLocalWorkingDirectory).TrimStart('/')}";
+                _archive.AddEntry(archivePath, file);
             }
         }
-        else
+        else if (File.Exists(absoluteFullLocalPath))
         {
-            _archive.AddEntry(GetArchiveEntryName(absoluteFullLocalPath, absoluteLocalWorkingDirectory), absoluteFullLocalPath);
+            var archivePath = $"{archiveBaseFolder}{GetArchiveEntryName(absoluteFullLocalPath, absoluteLocalWorkingDirectory).TrimStart('/')}";
+            _archive.AddEntry(archivePath, absoluteFullLocalPath);
         }
     }
 

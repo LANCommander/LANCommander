@@ -24,6 +24,7 @@ public class LocalServerEngine(
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
     
     private Dictionary<Guid, CancellationTokenSource> _running { get; set; } = new();
+    private Dictionary<Guid, ServerProcessState> _state { get; set; } = new();
     private Dictionary<Guid, ServerProcessStatus> _status { get; set; } = new();
     private Dictionary<Guid, LogFileMonitor> _logFileMonitors { get; set; } = new();
 
@@ -70,7 +71,7 @@ public class LocalServerEngine(
                 return;
 
             // Don't start the server if it's already started
-            if (await GetStatusAsync(serverId) != ServerProcessStatus.Stopped)
+            if ((await GetStateAsync(serverId)).Status != ServerProcessStatus.Stopped)
                 return;
             
             UpdateStatus(server, ServerProcessStatus.Starting);
@@ -204,33 +205,43 @@ public class LocalServerEngine(
         }
     }
 
-    public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
+    public async Task<ServerProcessState> GetStateAsync(Guid serverId)
     {
-        var status = ServerProcessStatus.Stopped;
+        if (!_state.ContainsKey(serverId))
+            _state[serverId] = new ServerProcessState();
         
-        if (_running.ContainsKey(serverId) && _running[serverId].IsCancellationRequested)
-            status = ServerProcessStatus.Stopping;
-        else if (_running.ContainsKey(serverId) && !_running[serverId].IsCancellationRequested)
-            status = ServerProcessStatus.Running;
+        if (_state[serverId].CancellationToken.IsCancellationRequested)
+            _state[serverId].Status = ServerProcessStatus.Stopping;
+        else
+            _state[serverId].Status = ServerProcessStatus.Running;
 
-        return await Task.FromResult(status);
+        if (!_state[serverId].Process.HasExited)
+        {
+            _state[serverId].MemoryUsage = _state[serverId].Process.WorkingSet64;
+            _state[serverId].ProcessorLoad = (_state[serverId].Process.TotalProcessorTime - _state[serverId].LastMeasuredProcessorTime).TotalMilliseconds / (Environment.ProcessorCount * _state[serverId].ProcessTimer.ElapsedMilliseconds);
+
+            _state[serverId].ProcessTimer.Restart();
+            _state[serverId].LastMeasuredProcessorTime = _state[serverId].Process.TotalProcessorTime;
+        }
+        
+        return await Task.FromResult(_state[serverId]);
     }
-    
+
     private void UpdateStatus(Data.Models.Server server, ServerProcessStatus status, Exception ex = null)
     {
         if (ex != null)
         {
-            _status[server.Id] = ServerProcessStatus.Error;
+            _state[server.Id].Status = ServerProcessStatus.Error;
             OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
         }
         else if (!_status.ContainsKey(server.Id))
         {
-            _status[server.Id] = status;
+            _state[server.Id].Status = status;
             OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
         }
-        else if (_status[server.Id] != status)
+        else if (_state[server.Id].Status != status)
         {
-            _status[server.Id] = status;
+            _state[server.Id].Status = status;
             OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
         }
     }

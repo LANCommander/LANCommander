@@ -74,16 +74,16 @@ namespace LANCommander.Server.Services
 
             var game = library.Games.FirstOrDefault(g => g.Id == gameId);
 
-            if (game.DependentGames != null && game.DependentGames.Any())
+            if (game != null && game.DependentGames != null && game.DependentGames.Any())
             {
                 foreach (var dependentGame in game.DependentGames)
                 {
                     if (library.Games.Any(g => g.Id == dependentGame.Id) && dependentGame.Id != game.Id)
-                        await RemoveFromLibraryAsync(userId, dependentGame.Id);
+                        library.Games.Remove(dependentGame);
                 }
             }
 
-            library.Games.Remove(game);
+            library.Games.Remove(game!);
 
             await UpdateAsync(library);
 

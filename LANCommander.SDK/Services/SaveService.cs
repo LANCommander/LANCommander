@@ -155,14 +155,16 @@ namespace LANCommander.SDK.Services
 
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
-                        foreach (var entry in savePath.Entries)
+                        var entries = Client.Saves.GetFileSavePathEntries(savePath, installDirectory) ?? [];
+
+                        foreach (var entry in entries)
                         {
                             var entryPath = Path.Combine(tempLocation, tempLocationFilePath, savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
                             var destinationPath = entry.ActualPath.ExpandEnvironmentVariables(installDirectory);
 
                             if (File.Exists(entryPath))
                             {
-                                var destinationDirectory = Path.GetDirectoryName(entryPath);
+                                var destinationDirectory = Path.GetDirectoryName(destinationPath);
 
                                 Directory.CreateDirectory(destinationDirectory);
 
@@ -179,11 +181,11 @@ namespace LANCommander.SDK.Services
 
                                 foreach (var entryFile in entryFiles)
                                 {
-                                    var destinationDirectory = Path.GetDirectoryName(entryFile);
+                                    var fileDestination = entryFile.Replace(entryPath, destinationPath);
+                                    
+                                    var destinationDirectory = Path.GetDirectoryName(fileDestination);
 
                                     Directory.CreateDirectory(destinationDirectory);
-
-                                    var fileDestination = entryFile.Replace(entryPath, destinationPath);
 
                                     if (File.Exists(fileDestination))
                                         File.Delete(fileDestination);

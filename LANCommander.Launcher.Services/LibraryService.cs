@@ -33,7 +33,10 @@ namespace LANCommander.Launcher.Services
         public ObservableCollection<ListItem> Items { get; set; } = new ObservableCollection<ListItem>();
 
         public delegate Task OnLibraryChangedHandler(IEnumerable<ListItem> items);
-        public event OnLibraryChangedHandler OnLibraryChanged;
+        public event OnLibraryChangedHandler? OnLibraryChanged;
+
+        public delegate Task OnLibraryItemsUpdatedHandler(IEnumerable<ListItem>? itemsUpdatedOrAdded = null, IEnumerable<ListItem>? itemsRemoved = null);
+        public event OnLibraryItemsUpdatedHandler? OnLibraryItemsUpdated;
 
         public delegate Task OnPreLibraryItemsFilteredHandler(IEnumerable<ListItem> items);
         public event OnPreLibraryItemsFilteredHandler OnPreLibraryItemsFiltered;
@@ -69,13 +72,20 @@ namespace LANCommander.Launcher.Services
 
         private async Task InstallService_OnInstallComplete(Game game)
         {
-            if (OnLibraryChanged != null)
-                await OnLibraryChanged.Invoke(Items);
+            await LibraryChanged();
         }
 
-        public async Task<IEnumerable<ListItem>> RefreshItemsAsync()
+        public async Task<IEnumerable<ListItem>> RefreshItemsAsync(bool forcePersistent = false)
         {
+            if (forcePersistent)
+            {
+                // clearing pending changes in tracker to force load data from database
+                Context.ChangeTracker.Clear();
+            }
+
             Items = new ObservableCollection<ListItem>(await GetItemsAsync());
+
+            await LibraryChanged();
 
             if (OnItemsFiltered != null)
                 await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
@@ -225,12 +235,10 @@ namespace LANCommander.Launcher.Services
 
             if (!Items.Any(i => i.Key == game.Id))
             {
-                Items.Add(new ListItem(game));
+                var item = new ListItem(game);
+                Items.Add(item);
 
-                await LibraryChanged();
-            
-                if (OnItemsFiltered != null)
-                    await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
+                await LibraryItemsUpdated(itemsUpdatedOrAdded: [item]);
             }
         }
 
@@ -253,6 +261,8 @@ namespace LANCommander.Launcher.Services
             var localGame = await GameService.GetAsync(id);
             var library = await GetByUserAsync(AuthenticationService.GetUserId());
 
+            // update library items
+
             addonIds ??= [];
             foreach (var addonId in addonIds)
             {
@@ -268,24 +278,32 @@ namespace LANCommander.Launcher.Services
             await UpdateAsync(library);
 
             await Client.Library.RemoveFromLibrary(id, addonIds);
+
+
+            // handle removing item from libray list locally
             
             var itemToRemove = Items.FirstOrDefault(i => i.Key == id);
             
             if (itemToRemove != null)
                 Items.Remove(itemToRemove);
 
-            Items.RemoveAll(i => addonIds.Contains(i.Key));
+            var addonsToRemove = Items.Where(i => addonIds.Contains(i.Key));
+            Items.RemoveRange(addonsToRemove);
 
-            await LibraryChanged();
-            
-            if (OnItemsFiltered != null)
-                await OnItemsFiltered.Invoke(Filter.ApplyFilter(Items));
+            var itemsRemoved = addonsToRemove.Concat([itemToRemove!]) ?? [];
+            await LibraryItemsUpdated(itemsRemoved: itemsRemoved);
         }
 
-        public async Task LibraryChanged()
+        public async Task LibraryChanged(IEnumerable<ListItem>? items = null)
         {
             if (OnLibraryChanged != null)
-                await OnLibraryChanged.Invoke(Items);
+                await OnLibraryChanged.Invoke(items ?? Items);
+        }
+
+        public async Task LibraryItemsUpdated(IEnumerable<ListItem>? itemsUpdatedOrAdded = null, IEnumerable<ListItem>? itemsRemoved = null)
+        {
+            if (OnLibraryItemsUpdated != null)
+                await OnLibraryItemsUpdated(itemsUpdatedOrAdded: itemsUpdatedOrAdded, itemsRemoved: itemsRemoved);
         }
 
         public async Task FilterChanged()

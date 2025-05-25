@@ -246,6 +246,7 @@ else
         if (!hasStandaloneDependent)
         {
             await LibraryService.RemoveFromLibraryAsync(Game.Id);
+            await LibraryService.RefreshItemsAsync(true);
             return;
         }
 

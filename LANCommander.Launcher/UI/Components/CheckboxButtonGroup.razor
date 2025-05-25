@@ -11,7 +11,7 @@
             }
             else
             {
-                <Button OnClick="() => Deselect(item)" Block Icon="@IconType.Fill.CheckCircle">@item.Label</Button>
+                <Button OnClick="() => Deselect(item)" Block @attributes="GetButtonAttributes(item.DataItem, true)">@item.Label</Button>
             }
         }
         else
@@ -22,7 +22,7 @@
             }
             else
             {
-                <Button OnClick="() => Select(item)" Block>@item.Label</Button>
+                <Button OnClick="() => Select(item)" Block @attributes="GetButtonAttributes(item.DataItem, false)">@item.Label</Button>
             }
         }
     }
@@ -32,10 +32,18 @@
     [Parameter] public IEnumerable<TItem> DataSource { get; set; }
     [Parameter] public Func<TItem, object> KeySelector { get; set; }
     [Parameter] public Func<TItem, string> LabelSelector { get; set; }
+    [Parameter] public Func<TItem, bool> DisableSelector { get; set; }
     [Parameter] public IEnumerable<TItem> Selected { get; set; }
     [Parameter] public EventCallback<IEnumerable<TItem>> SelectedChanged { get; set; }
 
     [Parameter] public SpaceDirection Direction { get; set; } = SpaceDirection.Horizontal;
+
+    [Parameter] public string? IconSelected { get; set; } = IconType.Fill.CheckCircle;
+    [Parameter] public string? IconUnselected { get; set; } = null;
+
+    [Parameter] public (string key, object value)[] ButtonProps { get; set; } = [];
+    [Parameter] public (string key, object value)[] ButtonPropsSelected { get; set; } = [];
+    [Parameter] public (string key, object value)[] ButtonPropsUnselected { get; set; } = [];
 
     [Parameter] public RenderFragment<TItem>? ButtonSelectedTemplate { get; set; }
     [Parameter] public RenderFragment<TItem>? ButtonUnselectedTemplate { get; set; }
@@ -68,6 +76,26 @@
         {
             SelectedKeys = Selected.Select(item => KeySelector.Invoke(item).ToString()).ToList();
         }
+    }
+
+    private Dictionary<string, object> GetButtonAttributes(TItem item, bool selected)
+    {
+        var attributes = new Dictionary<string, object>();
+
+        string? icon = selected ? IconSelected : IconUnselected;
+        if (icon != null) attributes["Icon"] = icon;
+
+        foreach (var buttonprop in ButtonProps ?? []) 
+            attributes.TryAdd(buttonprop.key, buttonprop.value);
+
+        var props = selected ? ButtonPropsSelected : ButtonPropsUnselected;
+        foreach (var buttonprop in props ?? []) 
+            attributes.TryAdd(buttonprop.key, buttonprop.value);
+
+        if (DisableSelector?.Invoke(item) ?? false)
+            attributes.TryAdd("Disabled", true);
+
+        return attributes;
     }
 
     async Task Select(CheckboxButtonGroupItem<TItem> item)

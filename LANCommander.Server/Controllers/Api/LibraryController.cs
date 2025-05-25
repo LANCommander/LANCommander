@@ -102,13 +102,19 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpPost("RemoveFromLibrary/{id}")]
-        public async Task<bool> RemoveFromLibraryAsync(Guid id)
+        public Task<bool> RemoveFromLibraryAsync(Guid id)
+        {
+            return RemoveFromLibraryAsync(id, SDK.Models.GenericGuidsRequest.Empty);
+        }
+
+        [HttpPost("RemoveFromLibrary/{id}/addons")]
+        public async Task<bool> RemoveFromLibraryAsync(Guid id, [FromBody] SDK.Models.GenericGuidsRequest addonGuids)
         {
             try
             {
                 var user = await UserService.GetAsync(User.Identity.Name);
 
-                await LibraryService.RemoveFromLibraryAsync(user.Id, id);
+                await LibraryService.RemoveFromLibraryAsync(user.Id, id, addonGuids?.Guids ?? []);
 
                 await Cache.ExpireAsync($"Library/{user.Id}");
 

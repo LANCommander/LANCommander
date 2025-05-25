@@ -133,6 +133,11 @@ namespace LANCommander.Launcher.Services
             return Items.Any(i => i.Key == itemId && (i.State == ListItemState.Installed || i.State == ListItemState.UpdateAvailable));
         }
 
+        public bool IsInLibrary(Guid itemId)
+        {
+            return Items.Any(i => i.Key == itemId);
+        }
+
         public async Task<IEnumerable<ListItem>> GetItemsAsync()
         {
             Items.Clear();
@@ -152,6 +157,7 @@ namespace LANCommander.Launcher.Services
                     .Include(g => g.Developers)
                     .Include(g => g.Tags)
                     .Include(g => g.MultiplayerModes)
+                    .Include(g => g.DependentGames)
                     .ToListAsync();
 
                 Filter.Populate(games);
@@ -237,21 +243,38 @@ namespace LANCommander.Launcher.Services
             await Client.Library.AddToLibrary(id);
         }
 
-        public async Task RemoveFromLibraryAsync(Guid id)
+        public Task RemoveFromLibraryAsync(Guid id)
+        {
+            return RemoveFromLibraryAsync(id, []);
+        }
+
+        public async Task RemoveFromLibraryAsync(Guid id, params Guid[] addonIds)
         {
             var localGame = await GameService.GetAsync(id);
             var library = await GetByUserAsync(AuthenticationService.GetUserId());
 
+            addonIds ??= [];
+            foreach (var addonId in addonIds)
+            {
+                var localAddon = await GameService.GetAsync(addonId);
+                if (localAddon != null)
+                {
+                    library.Games.Remove(localAddon);
+                }
+            }
+
             library.Games.Remove(localGame);
             
             await UpdateAsync(library);
-            
-            await Client.Library.RemoveFromLibrary(id);
+
+            await Client.Library.RemoveFromLibrary(id, addonIds);
             
             var itemToRemove = Items.FirstOrDefault(i => i.Key == id);
             
             if (itemToRemove != null)
                 Items.Remove(itemToRemove);
+
+            Items.RemoveAll(i => addonIds.Contains(i.Key));
 
             await LibraryChanged();
             

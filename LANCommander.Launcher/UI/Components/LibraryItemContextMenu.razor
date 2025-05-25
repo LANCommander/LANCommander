@@ -239,7 +239,29 @@ else
 
     async Task RemoveFromLibrary()
     {
-        await LibraryService.RemoveFromLibraryAsync(Game.Id);
+        var hasStandaloneDependent = Game.DependentGames?
+            .Where(g => g.Type != Data.Enums.GameType.Expansion && g.Type != Data.Enums.GameType.Mod)
+            .Any(g => LibraryService.IsInLibrary(g.Id)) ?? false;
+
+        if (!hasStandaloneDependent)
+        {
+            await LibraryService.RemoveFromLibraryAsync(Game.Id);
+            return;
+        }
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Remove {Model.Name} from library",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            Draggable = true,
+            Centered = true,
+            WrapClassName = "ant-modal-wrap-no-padding",
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<RemoveFromLibraryDialog, Models.ListItem, string>(modalOptions, Model);
     }
 
     async Task RunInstallScripts()

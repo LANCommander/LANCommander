@@ -101,9 +101,10 @@
 
     public void Dispose()
     {
+        DepotService.OnItemsFiltered -= LoadFilteredItems;
+
         KeepAliveService.ConnectionEstablished -= KeepAliveServiceOnConnectionEstablished;
         KeepAliveService.ConnectionSevered -= KeepAliveServiceOnConnectionSevered;
         KeepAliveService.ConnectionLostPermanently -= KeepAliveServiceOnConnectionLostPermanently;
     }
-
 }

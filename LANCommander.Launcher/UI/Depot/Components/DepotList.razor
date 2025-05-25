@@ -77,4 +77,9 @@
 
         await InvokeAsync(StateHasChanged);
     }
+
+    public void Dispose()
+    {
+        DepotService.OnItemsFiltered -= LoadFilteredItems;
+    }
 }

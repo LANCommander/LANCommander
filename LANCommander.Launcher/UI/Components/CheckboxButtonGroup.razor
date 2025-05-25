@@ -62,6 +62,12 @@
             Selected = false,
             DataItem = i
         });
+
+        // Sync the incoming Selected parameter with internal state.
+        if (Selected != null)
+        {
+            SelectedKeys = Selected.Select(item => KeySelector.Invoke(item).ToString()).ToList();
+        }
     }
 
     async Task Select(CheckboxButtonGroupItem<TItem> item)

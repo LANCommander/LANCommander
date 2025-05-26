@@ -34,16 +34,7 @@
             break;
     }
 
-    @if (Status != ServerProcessStatus.Running)
-    {
-        <Button Type="@ButtonType.Primary" OnClick="() => Start()" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
-    }
-    else
-    {
-        <Popconfirm OnConfirm="() => Stop()" Title="Are you sure you want to kill this server process?">
-            <Button Danger Type="@ButtonType.Primary">Stop</Button>
-        </Popconfirm>
-    }
+    <Switch Checked="_switchState" Loading="_loading" Control OnClick="ToggleState" Disabled="_loading" />
 </Flex>
 
 @code {
@@ -53,6 +44,22 @@
     HubConnection? HubConnection;
     Server Server;
     Timer Timer;
+
+    bool _switchState
+    {
+        get
+        {
+            return Status == ServerProcessStatus.Starting || Status == ServerProcessStatus.Running;
+        }
+    }
+
+    bool _loading
+    {
+        get
+        {
+            return Status == ServerProcessStatus.Retrieving || Status == ServerProcessStatus.Stopping || Status == ServerProcessStatus.Starting;
+        }
+    }
 
     ServerProcessStatus Status = ServerProcessStatus.Retrieving;
 
@@ -67,9 +74,17 @@
             Status = ServerProcessStatus.Stopped;
         else
             Status = CurrentServerStatus[ServerId];
-        
+
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
+    }
+
+    async Task ToggleState()
+    {
+        if (!_switchState && !_loading)
+            await Start();
+        else if (!_loading)
+            await Stop();
     }
 
     async Task Connect()

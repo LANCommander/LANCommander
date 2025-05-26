@@ -19,7 +19,7 @@ namespace LANCommander.SDK
         private readonly Client Client;
         private readonly ILogger Logger;
 
-        private Process Process;
+        private Process Process = new();
 
         private Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
 
@@ -78,7 +78,6 @@ namespace LANCommander.SDK
         public async Task ExecuteServerAsync(Models.Server server,
             CancellationTokenSource cancellationTokenSource = default)
         {
-            Process = new Process();
             Process.EnableRaisingEvents = true;
 
             var processStartInfo = new ProcessStartInfo();
@@ -176,8 +175,6 @@ namespace LANCommander.SDK
                     AddVariable(customField.Name, customField.Value);
                 }
             }
-
-            Process = new Process();
 
             Process.StartInfo.Arguments = ExpandVariables(action.Arguments, installDirectory, skipSlashes: true);
             Process.StartInfo.FileName = ExpandVariables(action.Path, installDirectory);

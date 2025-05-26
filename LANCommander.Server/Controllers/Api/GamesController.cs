@@ -218,7 +218,7 @@ namespace LANCommander.Server.Controllers.Api
                 {
                     foreach (var server in servers)
                     {
-                        if (serverEngine.IsManaging(server.Id) && (await serverEngine.GetStatusAsync(server.Id) == ServerProcessStatus.Stopped))
+                        if (serverEngine.IsManaging(server.Id) && ((await serverEngine.GetStateAsync(server.Id)).Status == ServerProcessStatus.Stopped))
                             await serverEngine.StartAsync(server.Id);
                     }
                 }

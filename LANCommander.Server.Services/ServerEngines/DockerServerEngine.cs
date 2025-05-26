@@ -234,4 +234,9 @@ public class DockerServerEngine(
             return ServerProcessStatus.Stopped;
         }
     }
+
+    public Task<ServerProcessState> GetStateAsync(Guid serverId)
+    {
+        return Task.FromResult(new ServerProcessState());
+    }
 }

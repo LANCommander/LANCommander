@@ -28,7 +28,7 @@ namespace LANCommander.Server.Hubs
             foreach (var serverEngine in _serverEngines)
             {
                 if (serverEngine.IsManaging(serverId))
-                    await Clients.All.SendAsync("StatusUpdate", await serverEngine.GetStatusAsync(serverId), serverId);
+                    await Clients.All.SendAsync("StatusUpdate", (await serverEngine.GetStateAsync(serverId)).Status, serverId);
             }
         }
 

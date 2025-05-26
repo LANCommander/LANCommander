@@ -68,7 +68,12 @@ namespace LANCommander.Server.Services
                 await AddToLibraryAsync(userId, game.BaseGame.Id);
         }
 
-        public async Task RemoveFromLibraryAsync(Guid userId, Guid gameId)
+        public Task RemoveFromLibraryAsync(Guid userId, Guid gameId)
+        {
+            return RemoveFromLibraryAsync(userId, gameId, addonIds: []);
+        }
+
+        public async Task RemoveFromLibraryAsync(Guid userId, Guid gameId, Guid[] addonIds)
         {
             var library = await GetByUserIdAsync(userId);
 
@@ -76,9 +81,10 @@ namespace LANCommander.Server.Services
 
             if (game != null && game.DependentGames != null && game.DependentGames.Any())
             {
+                addonIds ??= [];
                 foreach (var dependentGame in game.DependentGames)
                 {
-                    if (dependentGame.IsAddon)
+                    if (dependentGame.IsAddon || addonIds.Contains(dependentGame.Id))
                     {
                         if (library.Games.Any(g => g.Id == dependentGame.Id) && dependentGame.Id != game.Id)
                             library.Games.Remove(dependentGame);

@@ -21,7 +21,7 @@
     Searchable
     SearchProperty="g => g.Title"
     Children="(g, dg) => dg.BaseGameId == g.Id"
-    Query="g => g.Type != GameType.Expansion && g.Type != GameType.Mod">
+    Query="g => g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod)">
     <RightToolbar>
         @if (Selected != null && Selected.Count() > 0)
         {

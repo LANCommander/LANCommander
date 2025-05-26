@@ -18,9 +18,10 @@
     Responsive
     Query="a => (GameId != Guid.Empty && a.GameId == GameId) || (RedistributableId != Guid.Empty && a.RedistributableId == RedistributableId)">
     <RightToolbar>
+        <Button OnClick="RecalculateFileSizes" Type="@ButtonType.Default">Recalculate File Sizes</Button>
         <Button OnClick="UploadArchive" Type="@ButtonType.Primary">Upload Archive</Button>
     </RightToolbar>
-    
+
     <Columns>
         <BoundDataColumn Property="a => a.Version">
             <Input Type="InputType.Text" Bordered="false" @bind-Value="context.Version" OnBlur="() => Update(context)"/>
@@ -37,11 +38,13 @@
         </BoundDataColumn>
 
         <DataActions TData="string">
+            <Button Icon="@IconType.Outline.Sync" Type="@ButtonType.Text" OnClick="() => RecalculateFileSize(context)" />
+
             <a href="/Download/Archive/@context.Id" target="_blank" class="ant-btn ant-btn-text ant-btn-icon-only">
                 <Icon Type="@IconType.Outline.Download"/>
             </a>
 
-            <Button Icon="@IconType.Outline.FolderOpen" Type="@ButtonType.Text" OnClick="() => BrowseArchive(context)"/>
+            <Button Icon="@IconType.Outline.FolderOpen" Type="@ButtonType.Text" OnClick="() => BrowseArchive(context)" />
 
             <Popconfirm Title="Are you sure you want to delete this archive?" OnConfirm="() => Delete(context)">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
@@ -62,6 +65,46 @@
     protected override void OnInitialized()
     {
         HttpClient.BaseAddress = new Uri(Navigator.BaseUri);
+    }
+
+    private async Task RecalculateFileSizes()
+    {
+        MessageService.Info("Recalculating File Sizes...");
+
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+
+        var archives = Table.DataSource;
+
+        var results = new List<bool>();
+        foreach (var archive in archives)
+        {
+            var result = await archiveService.RecalculateFileSizeArchiveAsync(archive);
+            results.Add(result);
+        }
+
+        if (results.All(x => x))
+            MessageService.Success("File sizes recalculated!");
+        else
+            MessageService.Warning("File sizes recalculated but some failed!");
+
+        await Task.Yield();
+        await InvokeAsync(StateHasChanged);
+        Table.Reload();
+    }
+
+    private async Task RecalculateFileSize(Archive archive)
+    {
+        MessageService.Info("Recalculating File Sizes...");
+
+        archive = await archiveService.AsNoTracking().GetAsync(archive.Id);
+        var result = await archiveService.RecalculateFileSizeArchiveAsync(archive);
+        await ArchiveUploaded(archive.Id);
+
+        if(result)
+            MessageService.Success("File sizes recalculated!");
+        else
+            MessageService.Error("Recalculating file sizes failed!");
     }
 
     private async Task Download(Archive archive)

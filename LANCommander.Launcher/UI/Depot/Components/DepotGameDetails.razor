@@ -42,14 +42,21 @@
                                 <SpaceItem>
                                     @if (IsInstalled)
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="ViewInLibrary">View in Library</Button>
+                                        if (IsInLibrary)
+                                        {
+                                            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="ViewInLibrary">View in Library</Button>
+                                        }
+                                        else
+                                        {
+                                            <Button Type="ButtonType.Dashed" Size="ButtonSize.Large" Style="pointer-events: none;">Installed</Button>
+                                        }
                                     }
                                     else
                                     {
                                         <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install" Loading="Installing">Install</Button>
                                     }
 
-                                    @if (SelectedGame.InLibrary)
+                                    @if (IsInLibrary || SelectedGame.InLibrary)
                                     {
                                         <Tooltip Title="Remove from Library">
                                             <Button Size="ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" Loading="RemovingFromLibrary" />
@@ -88,7 +95,7 @@
                                 <div class="game-metadata-description">@SelectedGame.Description</div>
                             }
 
-                            @if (SelectedGame.ReleasedOn != null)
+                            @if (SelectedGame!.ReleasedOn > DateTime.MinValue)
                             {
                                 <div class="game-metadata-released-on">
                                     <h3>Released On</h3>
@@ -96,7 +103,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame.Developers != null && SelectedGame.Developers.Any())
+                            @if (SelectedGame?.Developers != null && SelectedGame.Developers.Any())
                             {
                                 <div class="game-metadata-developers">
                                     <h3>Developers</h3>
@@ -104,7 +111,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame.Publishers != null && SelectedGame.Publishers.Any())
+                            @if (SelectedGame?.Publishers != null && SelectedGame.Publishers.Any())
                             {
                                 <div class="game-metadata-publishers">
                                     <h3>Publishers</h3>
@@ -112,7 +119,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame.Genres != null && SelectedGame.Genres.Any())
+                            @if (SelectedGame?.Genres != null && SelectedGame.Genres.Any())
                             {
                                 <div class="game-metadata-genres">
                                     <h3>Genres</h3>
@@ -120,7 +127,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame.Tags != null && SelectedGame.Tags.Any())
+                            @if (SelectedGame?.Tags != null && SelectedGame.Tags.Any())
                             {
                                 <div class="game-metadata-tags">
                                     <h3>Tags</h3>
@@ -146,9 +153,10 @@
     [Parameter] public Guid ItemId { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    SDK.Models.Game SelectedGame { get; set; }
+    SDK.Models.Game? SelectedGame { get; set; }
     bool Visible { get; set; } = false;
     bool IsInstalled { get; set; } = false;
+    bool IsInLibrary { get; set; } = false;
 
     bool Installing { get; set; } = false;
     bool AddingToLibrary { get; set; } = false;
@@ -170,10 +178,8 @@
 
                 var game = await GameService.GetAsync(ItemId);
 
-                if (game == null || !game.Installed)
-                    IsInstalled = false;
-                else
-                    IsInstalled = true;
+                IsInstalled = game?.Installed ?? false;
+                IsInLibrary = LibraryService.IsInLibrary(ItemId);
             }
         }
         catch (Exception ex)
@@ -205,6 +211,12 @@
 
     async Task Install()
     {
+        if (SelectedGame == null)
+        {
+            MessageService.Success($"No game selected. Aborting installation!");
+            return;
+        }
+
         Installing = true;
         StateHasChanged();
         await Task.Yield();
@@ -214,10 +226,15 @@
 
         var libraryItem = LibraryService.GetItem(SelectedGame.Id);
         var game = libraryItem.DataItem as Game;
+        if (game == null)
+        {
+            MessageService.Success($"No game added to library. Unable to proceed!");
+            return;
+        }
 
         await Hide();
 
-        if (Settings.Games.InstallDirectories.Length > 1 || game.DependentGames.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)))
+        if (Settings.Games.InstallDirectories.Length > 1 || (game?.DependentGames?.Any(g => g.Type.IsIn(Data.Enums.GameType.Expansion, Data.Enums.GameType.Mod)) ?? false))
         {
             var modalOptions = new ModalOptions()
             {
@@ -236,7 +253,7 @@
         }
         else
         {
-            await InstallService.Add(game);
+            await InstallService.Add(game!);
         }
     }
 
@@ -249,6 +266,12 @@
             await Task.Yield();
         }
 
+        if (SelectedGame == null)
+        {
+            MessageService.Success($"No game selected. Aborting adding to library!");
+            return;
+        }
+
         try
         {
             await ImportService.ImportGameAsync(SelectedGame.Id);
@@ -257,14 +280,14 @@
 
             MessageService.Success($"{SelectedGame.Title} was added to your library!");
 
-            SelectedGame.InLibrary = true;
+            SelectedGame.InLibrary = IsInLibrary = LibraryService.IsInLibrary(SelectedGame.Id);
         }
         catch (Exception ex)
         {
             Logger?.LogError(ex, $"{SelectedGame.Title} ({SelectedGame.Id}) could not be added to your library!");
             MessageService.Error($"{SelectedGame.Title} could not be added to your library!");
         }
-        
+
         AddingToLibrary = false;
         StateHasChanged();
         await Task.Yield();
@@ -279,6 +302,12 @@
             await Task.Yield();
         }
 
+        if (SelectedGame == null)
+        {
+            MessageService.Success($"No game selected. Aborting removing from library!");
+            return;
+        }
+
         try
         {
             await LibraryService.RemoveFromLibraryAsync(SelectedGame.Id);
@@ -286,7 +315,7 @@
 
             MessageService.Success($"{SelectedGame.Title} was removed from your library!");
 
-            SelectedGame.InLibrary = false;
+            SelectedGame.InLibrary = IsInLibrary = LibraryService.IsInLibrary(SelectedGame.Id);
         }
         catch (Exception ex)
         {
@@ -313,7 +342,7 @@
     {
         var totalTime = new TimeSpan(game.PlaySessions
             .Where(ps => ps.End != null && ps.Start != null)
-            .Select(ps => ps.End.Value.Subtract(ps.Start.Value))
+            .Select(ps => ps.End!.Value.Subtract(ps.Start!.Value))
             .Sum(ts => ts.Ticks));
         if (totalTime.TotalMinutes < 1)
             return "None";
@@ -327,10 +356,7 @@
     {
         var lastSession = game.PlaySessions.Where(ps => ps.End != null && ps.Start != null).OrderByDescending(ps => ps.End).FirstOrDefault();
 
-        if (lastSession == null)
-            return "Never";
-        else
-            return lastSession.End.Value.ToRelativeDate();
+        return lastSession?.End?.ToRelativeDate() ?? "Never";
     }
 
     async Task ViewInLibrary()

@@ -35,7 +35,7 @@ namespace LANCommander.Launcher.Services
         public delegate Task OnLibraryChangedHandler(IEnumerable<ListItem> items);
         public event OnLibraryChangedHandler? OnLibraryChanged;
 
-        public delegate Task OnLibraryItemsUpdatedHandler(IEnumerable<ListItem>? itemsUpdatedOrAdded = null, IEnumerable<ListItem>? itemsRemoved = null);
+        public delegate Task OnLibraryItemsUpdatedHandler(IEnumerable<ListItem> itemsUpdatedOrAdded, IEnumerable<ListItem> itemsRemoved);
         public event OnLibraryItemsUpdatedHandler? OnLibraryItemsUpdated;
 
         public delegate Task OnPreLibraryItemsFilteredHandler(IEnumerable<ListItem> items);
@@ -303,7 +303,11 @@ namespace LANCommander.Launcher.Services
         public async Task LibraryItemsUpdated(IEnumerable<ListItem>? itemsUpdatedOrAdded = null, IEnumerable<ListItem>? itemsRemoved = null)
         {
             if (OnLibraryItemsUpdated != null)
+            {
+                itemsUpdatedOrAdded = itemsUpdatedOrAdded?.ToArray() ?? [];
+                itemsRemoved = itemsRemoved?.ToArray() ?? [];
                 await OnLibraryItemsUpdated(itemsUpdatedOrAdded: itemsUpdatedOrAdded, itemsRemoved: itemsRemoved);
+            }
         }
 
         public async Task FilterChanged()

@@ -159,6 +159,8 @@ namespace LANCommander.SDK
                     await terminator.WaitForExitAsync();
                 }
             }
+
+            Process = null;
         }
 
         public async Task ExecuteGameActionAsync(string installDirectory, Guid gameId, Models.Action action, string args = "", CancellationToken cancellationToken = default)

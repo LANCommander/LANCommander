@@ -196,7 +196,7 @@ public class LocalServerEngine(
         }
     }
 
-    public async Task<ServerProcessState> GetStateAsync(Guid serverId)
+    public async Task<IServerState> GetStateAsync(Guid serverId)
     {
         if (serverId == Guid.Empty)
             return null!;
@@ -208,7 +208,7 @@ public class LocalServerEngine(
         {
             _state[serverId].Status = ServerProcessStatus.Running;
             
-            _state[serverId].MemoryUsage = _state[serverId].Process.PrivateMemorySize64;
+            _state[serverId].MemoryUsage = (ulong)_state[serverId].Process.PrivateMemorySize64;
             _state[serverId].ProcessorLoad = (_state[serverId].Process.TotalProcessorTime - _state[serverId].LastMeasuredProcessorTime).TotalMilliseconds / (Environment.ProcessorCount * _state[serverId].ProcessTimer.ElapsedMilliseconds);
 
             _state[serverId].ProcessTimer.Restart();

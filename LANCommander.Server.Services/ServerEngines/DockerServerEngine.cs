@@ -21,8 +21,8 @@ public class DockerServerEngine(
     SDK.Client client) : IServerEngine
 {
     private ServerEngineConfiguration _config;
+    private Dictionary<Guid, ServerDockerContainerState> _state = new();
     private Dictionary<Guid, DockerClient> _dockerClients = new();
-    private Dictionary<Guid, DockerContainer> _tracked { get; set; } = new();
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
 
@@ -46,7 +46,7 @@ public class DockerServerEngine(
             foreach (var server in servers)
             {
                 if (server.DockerHostId.HasValue && _dockerClients.ContainsKey(server.DockerHostId.Value))
-                    _tracked[server.Id] = new DockerContainer
+                    _state[server.Id].Container = new DockerContainer
                     {
                         HostId = server.DockerHostId.Value,
                         Id = server.ContainerId,
@@ -76,14 +76,14 @@ public class DockerServerEngine(
 
     public bool IsManaging(Guid serverId)
     {
-        return _tracked.ContainsKey(serverId);
+        return _state.ContainsKey(serverId);
     }
 
     public async Task StartAsync(Guid serverId)
     {
         Data.Models.Server server;
 
-        if (!_tracked.ContainsKey(serverId))
+        if (!IsManaging(serverId))
             throw new Exception("Server is not being tracked by this engine.");
 
         using (var scope = serviceProvider.CreateScope())
@@ -141,7 +141,7 @@ public class DockerServerEngine(
 
     public async Task StopAsync(Guid serverId)
     {
-        if (!_tracked.ContainsKey(serverId))
+        if (!IsManaging(serverId))
             throw new Exception("Server is not being tracked by this engine.");
         
         using (var scope = serviceProvider.CreateScope())
@@ -182,13 +182,13 @@ public class DockerServerEngine(
         }
     }
 
-    public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
+    private async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
     {
         Data.Models.Server server = null;
         
         using (var scope = serviceProvider.CreateScope())
         {
-            if (!_tracked.ContainsKey(serverId))
+            if (!IsManaging(serverId))
             {
                 var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
 
@@ -203,7 +203,7 @@ public class DockerServerEngine(
                 if (String.IsNullOrWhiteSpace(server.ContainerId))
                     return ServerProcessStatus.Stopped;
 
-                _tracked[serverId] = new DockerContainer
+                _state[serverId].Container = new DockerContainer
                 {
                     Id = server.ContainerId,
                     HostId = server.DockerHostId.Value,
@@ -213,7 +213,7 @@ public class DockerServerEngine(
 
             try
             {
-                var container = await _dockerClients[_tracked[serverId].HostId].Containers.InspectContainerAsync(_tracked[serverId].Id);
+                var container = await _dockerClients[_state[serverId].Container.HostId].Containers.InspectContainerAsync(_state[serverId].Container.Id);
 
                 if (container.State.Running)
                     return ServerProcessStatus.Running;
@@ -235,8 +235,35 @@ public class DockerServerEngine(
         }
     }
 
-    public Task<ServerProcessState> GetStateAsync(Guid serverId)
+    public async Task<IServerState> GetStateAsync(Guid serverId)
     {
-        return Task.FromResult(new ServerProcessState());
+        if (!IsManaging(serverId))
+            _state[serverId] = new ServerDockerContainerState();
+
+        var statsProgress = new Progress<ContainerStatsResponse>(stats =>
+        {
+            // Calculate CPU usage
+            var cpuDelta = stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage;
+            var systemDelta = stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage;
+            double cpuPercentage = 0;
+            
+            if (systemDelta > 0 && cpuDelta > 0)
+                cpuPercentage = ((double)cpuDelta / systemDelta) * stats.CPUStats.OnlineCPUs * 100.0;
+
+            _state[serverId].ProcessorLoad = cpuPercentage;
+            _state[serverId].MemoryUsage = stats.MemoryStats.Usage;
+        });
+        
+        try
+        {
+            _dockerClients[_state[serverId].Container.HostId].Containers.GetContainerStatsAsync(_state[serverId].Container.Id, new ContainerStatsParameters { Stream = false}, statsProgress);
+        }
+        catch
+        {
+            _state[serverId].MemoryUsage = 0;
+            _state[serverId].ProcessorLoad = 0;
+        }
+        
+        return await Task.FromResult(_state[serverId]);
     }
 }

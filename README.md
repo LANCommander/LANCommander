@@ -33,7 +33,7 @@ services:
       - PGID=1000
       - TZ=Etc/UTC
     volumes:
-      - /path/to/appdata/config:/config
+      - /path/to/appdata/config:/app/config
     ports:
       - 1337:1337/tcp   # Webinterface
       - 35891:35891/udp # Beacon Broadcast

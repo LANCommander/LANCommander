@@ -82,27 +82,18 @@
         
         var archives = await ArchiveService.AsNoTracking().GetAsync();
 
+        var results = new List<bool>();
+
         foreach (var archive in archives)
         {
-            try
-            {
-                var path = await ArchiveService.GetArchiveFileLocationAsync(archive);
-
-                if (File.Exists(path))
-                {
-                    archive.CompressedSize = await ArchiveService.GetCompressedSizeAsync(archive);
-                    archive.UncompressedSize = await ArchiveService.GetUncompressedSizeAsync(archive);
-
-                    await ArchiveService.UpdateAsync(archive);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "Could not recalculate file size for archive {ArchiveId}", archive.Id);
-            }
+            var result = await ArchiveService.RecalculateFileSizeArchiveAsync(archive);
+            results.Add(result);
         }
 
-        MessageService.Success("File sizes recalculated!");
+        if (results.All(x => x))
+            MessageService.Success("File sizes recalculated!");
+        else
+            MessageService.Warning("File sizes recalculated but some failed!");
 
         RecalculatingFileSizes = false;
         

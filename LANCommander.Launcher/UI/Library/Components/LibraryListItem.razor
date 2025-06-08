@@ -2,8 +2,8 @@
 
 <Dropdown Trigger="new Trigger[] { Trigger.ContextMenu }" Style="display: block; width: 100%;">
     <Overlay>
-        <Menu>
-            <LibraryItemContextMenu Model="Model" />
+        <Menu Class="library-context" Selectable="false">
+            <LibraryItemContextMenu Model="Model" ShowPrimaryActions="true" />
         </Menu>
     </Overlay>
     <ChildContent>

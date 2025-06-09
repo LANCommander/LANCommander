@@ -137,7 +137,7 @@ public class AuthenticationService : BaseService
 
         Settings.Authentication.OfflineMode = state;
 
-        if (!state)
+        if (state)
             Client.Disconnect();
 
         SettingService.SaveSettings(Settings);

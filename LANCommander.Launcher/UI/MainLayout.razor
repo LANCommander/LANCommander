@@ -7,6 +7,7 @@
 @inject ImportService ImportService
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
+@inject KeepAliveService KeepAliveService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
@@ -100,7 +101,7 @@
     public bool Importing;
     public bool Connecting;
 
-    public ConnectionState ConnectionState = new();
+    public ConnectionState ConnectionState = default!;
 
     public IMessageService Messages { get; set; }
 
@@ -144,6 +145,7 @@
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
+        ConnectionState = KeepAliveService.GetConnectionState();
         Messages = MessageService;
 
         AuthenticationService.OnOfflineModeChanged += OnOfflineModeChanged;

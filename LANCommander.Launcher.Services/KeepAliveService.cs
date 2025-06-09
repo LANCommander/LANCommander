@@ -19,6 +19,8 @@ public class KeepAliveService : BaseService
     private int MaxRetries = 10;
     private bool ConnectionLost = false;
 
+    private Models.ConnectionState ConnectionState = new();
+
     public event EventHandler ConnectionSevered;
     public event EventHandler ConnectionLostPermanently;
     public event EventHandler ConnectionEstablished;
@@ -42,6 +44,11 @@ public class KeepAliveService : BaseService
         };
 
         ConnectionEstablished += (sender, args) => StartMonitoring();
+    }
+
+    public Models.ConnectionState GetConnectionState()
+    {
+        return ConnectionState;
     }
 
     public void StartMonitoring()

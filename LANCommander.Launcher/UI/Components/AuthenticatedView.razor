@@ -1,6 +1,7 @@
 @using ConnectionState = LANCommander.Launcher.Models.ConnectionState
 @inject AuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
+@inject KeepAliveService KeepAliveService
 
 <CascadingValue Value="ConnectionState">
     @if (ConnectionState.IsConnected || ConnectionState.OfflineModeEnabled)
@@ -17,10 +18,12 @@
     [Parameter] public RenderFragment Authenticated { get; set; }
     [Parameter] public RenderFragment NotAuthenticated { get; set; }
 
-    public ConnectionState ConnectionState = new();
+    private ConnectionState ConnectionState = default!;
 
     protected override async Task OnInitializedAsync()
     {
+        ConnectionState = KeepAliveService.GetConnectionState();
+
         AuthenticationService.OnLogin += async (sender, args) =>
         {
             await Validate();

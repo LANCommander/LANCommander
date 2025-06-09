@@ -54,8 +54,16 @@
             AvatarId = User?.Avatar?.Id ?? Guid.Empty;
             Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? Settings.DEFAULT_GAME_USERNAME : User.Alias;
         };
-        
-        await ProfileService.DownloadProfileInfoAsync();
+
+        if (ConnectionState.OfflineModeEnabled)
+        {
+            string userName = AuthenticationService.GetCurrentUserName();
+            Alias = string.IsNullOrEmpty(userName) ? Alias : userName;
+        }
+        else
+        {
+            await ProfileService.DownloadProfileInfoAsync();
+        }
     }
     
 

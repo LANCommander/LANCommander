@@ -180,7 +180,7 @@ public class AuthenticationService : BaseService
         if (decodedToken == null)
             return String.Empty;
 
-        return decodedToken.Claims.First(claim => claim.Type == ClaimTypes.Name).Value;
+        return decodedToken.Claims?.FirstOrDefault(claim => claim.Type == ClaimTypes.Name)?.Value ?? string.Empty;
     }
 
     public JwtSecurityToken DecodeToken()
@@ -194,7 +194,7 @@ public class AuthenticationService : BaseService
             
             return handler.ReadToken(Settings.Authentication.AccessToken) as JwtSecurityToken;
         }
-        catch (Exception ex)
+        catch
         {
             return null;
         }

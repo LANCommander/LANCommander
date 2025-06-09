@@ -36,9 +36,17 @@
                                     </ContentTemplate>
                                 </Popover>
                             }
-                            else 
+                            else if (ConnectionState.IsConnected)
                             {
-                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@Import"/>
+                                <Tooltip Title="Re-import library" MouseEnterDelay="0.5">
+                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@Import"/>
+                                </Tooltip>
+                            }
+                            else
+                            {
+                                <Tooltip Title="Reconnect to server" MouseEnterDelay="0.5">
+                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
+                                </Tooltip>
                             }
                         </SpaceItem>
 

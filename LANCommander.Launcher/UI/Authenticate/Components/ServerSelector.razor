@@ -44,7 +44,16 @@
         <Flex Justify="FlexJustify.Center" Class="load-more">
             @if (BeaconActive)
             {
-                <Button Type="ButtonType.Primary" Loading="true" Disabled>Scanning</Button>
+                <Dropdown Trigger="@(new [] { Trigger.Hover })">
+                    <Overlay>
+                        <Menu>
+                            <MenuItem Key="Cancel" OnClick="CancelBeacon">Cancel</MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button Type="ButtonType.Primary" Loading="true" Disabled>Scanning</Button>
+                    </ChildContent>
+                </Dropdown>
             }
             else
             {
@@ -57,32 +66,40 @@
 @code {
     [Parameter] public EventCallback<string> OnSelected { get; set; }
     [Parameter] public bool Connecting { get; set; } = false;
-    
+    bool IsInitializing = false;
+
     bool BeaconActive = false;
     bool OfflineModeAvailable = false;
 
     string ServerAddress = String.Empty;
-    
+
     AuthRequest Model = new();
     List<DiscoveredServer> DiscoveredServers = new();
+    private CancellationTokenSource DiscoveryToken = new CancellationTokenSource();
+
     Models.Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {
+        IsInitializing = true;
+        Connecting = true;
         OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
-        
+
         Client.Beacon.OnBeaconResponse += OnBeaconResponse;
 
         if (!OfflineModeAvailable)
         {
             ActivateBeacon();
         }
+
+        Connecting = false;
+        IsInitializing = false;
     }
 
     private void OnBeaconResponse(object sender, BeaconResponseArgs e)
     {
         var discoveredServer = new DiscoveredServer(e.Message, e.EndPoint);
-        
+
         if (DiscoveredServers.All(s => s.Address != discoveredServer.Address))
             DiscoveredServers.Add(discoveredServer);
     }
@@ -103,18 +120,43 @@
         NavigationManager.NavigateTo("/", forceLoad: true);
     }
 
+    void CancelBeacon()
+    {
+        DiscoveryToken?.Cancel();
+    }
+
     async Task ActivateBeacon()
     {
-        BeaconActive = true;
+        try
+        {
+            BeaconActive = true;
+            await InvokeAsync(StateHasChanged);
 
-        await Client.Beacon.StartProbeAsync();
+            // give the UI a chance to render:
+            await Task.Yield();
 
-        await Task.Delay(10000);
+            if ((DiscoveryToken?.TryReset() ?? false) == false)
+            {
+                DiscoveryToken = new();
+            }
 
-        await Client.Beacon.StopProbeAsync();
-        
-        BeaconActive = false;
+            await Client.Beacon.StartProbeAsync(cancellationToken: DiscoveryToken.Token);
+            await Task.Delay(10000, DiscoveryToken.Token);
+            await Client.Beacon.StopProbeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            BeaconActive = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
-        await InvokeAsync(StateHasChanged);
+    public void Dispose()
+    {
+        DiscoveryToken?.Cancel();
+        DiscoveryToken?.Dispose();
     }
 }

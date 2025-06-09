@@ -16,6 +16,13 @@
                 Settings
             </MenuItem>
 
+            @if (!Settings.Authentication.OfflineMode)
+            {
+                <MenuItem OnClick="SwitchToOfflineMode">
+                    Switch to offline mode
+                </MenuItem>
+            }
+
             @if (!ConnectionState.OfflineModeEnabled)
             {
                 <MenuItem OnClick="Logout">
@@ -39,7 +46,7 @@
 
 @code {
     [CascadingParameter] public ConnectionState ConnectionState { get; set; }
-    Models.Settings Settings = null;
+    Models.Settings Settings = SettingService.GetSettings();
 
     User User;
     Guid AvatarId = Guid.Empty;
@@ -96,5 +103,12 @@
         await AuthenticationService.Logout();
 
         NavigationManager.NavigateTo("/Authenticate");
+    }
+
+    void SwitchToOfflineMode()
+    {
+        AuthenticationService.SetOfflineMode(true);
+
+        NavigationManager.NavigateTo("/", forceLoad: true);
     }
 }

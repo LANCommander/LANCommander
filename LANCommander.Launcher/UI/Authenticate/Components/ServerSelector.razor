@@ -12,10 +12,21 @@
 </PageHeader>
 
 <Form Model="Model" OnFinish="() => SelectServer(ServerAddress)">
+
+    @if (OfflineModeAvailable)
+    {
+        <Alert Message="The server appears to be offline. Please try reconnecting or use offline mode." Type="AlertType.Warning" ShowIcon="true" Style="margin-bottom: 16px;" />
+    }
+
     <FormItem>
         <Flex Gap="FlexGap.Small">
             <Input @bind-Value="ServerAddress" Placeholder="Server Address" AutoFocus Disabled="Connecting" />
             <Button Type="ButtonType.Primary" HtmlType="submit" Disabled="Connecting" Loading="Connecting">Connect</Button>
+
+            @if (OfflineModeAvailable)
+            {
+                <Button OnClick="() => OfflineMode()">Offline</Button>
+            }
         </Flex>
     </FormItem>
 </Form>
@@ -61,8 +72,11 @@
         OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
         
         Client.Beacon.OnBeaconResponse += OnBeaconResponse;
-        
-        ActivateBeacon();
+
+        if (!OfflineModeAvailable)
+        {
+            ActivateBeacon();
+        }
     }
 
     private void OnBeaconResponse(object sender, BeaconResponseArgs e)
@@ -82,7 +96,13 @@
         if (OnSelected.HasDelegate)
             await OnSelected.InvokeAsync(serverAddress);
     }
-    
+
+    void OfflineMode()
+    {
+        AuthenticationService.LoginOffline();
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
+
     async Task ActivateBeacon()
     {
         BeaconActive = true;

@@ -10,6 +10,7 @@ namespace LANCommander.Launcher.Services;
 public class AuthenticationService : BaseService
 {
     private Settings Settings;
+    private bool TemporarilyOffline;
 
     public event EventHandler OnLogin;
     public event EventHandler OnLogout;
@@ -34,14 +35,18 @@ public class AuthenticationService : BaseService
     {
         try
         {
-            return await Client.PingAsync();
+            if (Client.IsConfigured())
+            {
+                return await Client.PingAsync();
+            }
         }
         catch
         {
-            return false;
         }
+
+        return false;
     }
-    
+
     public async Task Login()
     {
         await Login(Settings.Authentication.ServerAddress, new SDK.Models.AuthToken
@@ -77,6 +82,7 @@ public class AuthenticationService : BaseService
             if (await Client.ValidateTokenAsync())
             {
                 SetOfflineMode(false);
+                TemporarilyOffline = false;
 
                 SettingService.SaveSettings(Settings);
 
@@ -128,7 +134,13 @@ public class AuthenticationService : BaseService
 
     public bool OfflineModeEnabled()
     {
-        return Settings.Authentication.OfflineMode;
+        return TemporarilyOffline || Settings.Authentication.OfflineMode;
+    }
+
+    public void LoginOffline()
+    {
+        TemporarilyOffline = true;
+        OnOfflineModeChanged?.Invoke(true);
     }
 
     public void SetOfflineMode(bool state)
@@ -148,6 +160,8 @@ public class AuthenticationService : BaseService
     public async Task Logout()
     {
         await Client.LogoutAsync();
+
+        TemporarilyOffline = false;
 
         Settings = SettingService.GetSettings();
         
@@ -183,9 +197,11 @@ public class AuthenticationService : BaseService
         return decodedToken.Claims?.FirstOrDefault(claim => claim.Type == ClaimTypes.Name)?.Value ?? string.Empty;
     }
 
-    public JwtSecurityToken DecodeToken()
+    public JwtSecurityToken? DecodeToken()
     {
-        if (Settings.Authentication.AccessToken == null)
+        Settings = SettingService.GetSettings();
+
+        if (string.IsNullOrEmpty(Settings.Authentication.AccessToken))
             return null;
 
         try
@@ -202,7 +218,7 @@ public class AuthenticationService : BaseService
 
     public bool HasStoredCredentials()
     {
-        if (Settings.Authentication.AccessToken == null)
+        if (string.IsNullOrEmpty(Settings.Authentication.AccessToken))
             return false;
 
         var decodedToken = DecodeToken();

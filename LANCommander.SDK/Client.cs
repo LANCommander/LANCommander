@@ -221,6 +221,11 @@ namespace LANCommander.SDK
             }
         }
 
+        public bool IsConfigured()
+        {
+            return ApiClient != null && !string.IsNullOrWhiteSpace(BaseUrl?.ToString());
+        }
+
         public bool IsConnected()
         {
             return Connected;

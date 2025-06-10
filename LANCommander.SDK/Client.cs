@@ -193,6 +193,12 @@ namespace LANCommander.SDK
             {
                 var urisToTry = baseUrl.SuggestValidUris();
 
+                // if url is fully qualified, limit specific urls
+                if (Uri.TryCreate(baseUrl, UriKind.RelativeOrAbsolute, out var baseUri) && baseUrl.Contains(':'))
+                {
+                    urisToTry = urisToTry.Take(baseUri.IsAbsoluteUri ? 1 : 2);
+                }
+
                 foreach (var uri in urisToTry)
                 {
                     Logger?.LogInformation("Attempting to find server at {ServerAddress}", uri.ToString());

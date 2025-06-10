@@ -31,6 +31,11 @@ public class AuthenticationService : BaseService
         return Client.IsConnected();
     }
 
+    public string GetServerAddress()
+    {
+        return Client.IsConfigured() ? Client.GetServerAddress() : string.Empty;
+    }
+
     public async Task<bool> IsServerOnlineAsync()
     {
         try
@@ -164,8 +169,11 @@ public class AuthenticationService : BaseService
         TemporarilyOffline = false;
 
         Settings = SettingService.GetSettings();
-        
-        Settings.Authentication = new AuthenticationSettings();
+
+        Settings.Authentication = new AuthenticationSettings
+        {
+            ServerAddress = Settings.Authentication.ServerAddress, // keep server address when logging out
+        };
 
         SettingService.SaveSettings(Settings);
         

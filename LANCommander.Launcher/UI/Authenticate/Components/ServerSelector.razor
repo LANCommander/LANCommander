@@ -82,6 +82,12 @@
     protected override async Task OnInitializedAsync()
     {
         IsInitializing = true;
+
+        if (Client.IsConfigured())
+        {
+            ServerAddress = Client.GetServerAddress() ?? string.Empty;
+        }
+
         Connecting = true;
         OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
 

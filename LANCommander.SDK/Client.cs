@@ -90,7 +90,7 @@ namespace LANCommander.SDK
 
             try
             {
-                ChangeServerAddressAsync(baseUrl).Wait();
+                ConfigureServerAddress(baseUrl);
             }
             catch
             {
@@ -101,7 +101,7 @@ namespace LANCommander.SDK
         {
             try
             {
-                ChangeServerAddressAsync(baseUrl).Wait();
+                ConfigureServerAddress(baseUrl);
             }
             catch
             {
@@ -155,6 +155,36 @@ namespace LANCommander.SDK
             IgnoreVersion = true;
 
             BaseCmdlet.Client = this;
+        }
+
+        public void ConfigureServerAddress(string baseUrl)
+        {
+            if (!String.IsNullOrWhiteSpace(baseUrl))
+            {
+                var urisToTry = baseUrl.SuggestValidUris();
+
+                foreach (var uri in urisToTry)
+                {
+                    Logger?.LogInformation("Attempting to configure server at {ServerAddress}", uri.ToString());
+
+                    try
+                    {
+                        ApiClient = new RestClient(uri);
+                        BaseUrl = uri;
+
+                        // Successful! Found our service
+                        Logger?.LogInformation("Using server address {ServerAddress}", uri.ToString());
+
+                        return;
+                    }
+                    catch
+                    {
+                        Logger?.LogError("Could not configure server at {ServerAddress}", uri.ToString());
+                    }
+                }
+
+                throw new Exception("Could not configure a server at that address");
+            }
         }
 
         public async Task ChangeServerAddressAsync(string baseUrl)

@@ -152,9 +152,11 @@
         }
         catch (OperationCanceledException)
         {
+            // ignore, handled in finally
         }
         finally
         {
+            Client.Beacon.CleanupProbe();
             BeaconActive = false;
             await InvokeAsync(StateHasChanged);
         }

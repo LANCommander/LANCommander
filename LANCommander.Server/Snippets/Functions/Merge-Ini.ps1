@@ -1,0 +1,1 @@
+﻿Merge-Ini -SourceFilePath "$InstallDirectory\patch.ini" -DestinationFilePath "$InstallDirectory\config.ini" -clear -append

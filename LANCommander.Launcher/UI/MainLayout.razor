@@ -43,7 +43,7 @@
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@ImportHandler.Import"/>
                                 </Tooltip>
                             }
-                            else
+                            else if (!string.IsNullOrEmpty(Settings.Authentication.AccessToken))
                             {
                                 <Tooltip Title="Reconnect to server" MouseEnterDelay="0.5">
                                     <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>

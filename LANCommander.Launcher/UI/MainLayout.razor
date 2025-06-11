@@ -164,6 +164,7 @@
             ConnectionState.IsConnected = true;
             ConnectionState.OfflineModeEnabled = false;
 
+            await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);
         }
 

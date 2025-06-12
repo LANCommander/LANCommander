@@ -19,7 +19,7 @@
     <CustomWindow HeaderHeight="37">
         <HeaderExtraControlsLayout>
             <Space Direction="SpaceDirection.Horizontal">
-                <AuthenticatedView>
+                <AuthenticatedView NoAutoValidate="true">
                     <Authenticated>
                         <SpaceItem>
                             @if (ImportStatus.IsActive)
@@ -55,7 +55,7 @@
                             <ProfileButton/>
                         </SpaceItem>
                     </Authenticated>
-                    
+
                     <NotAuthenticated>
                         <SpaceItem>
                             <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
@@ -67,7 +67,7 @@
         <WindowContent>
             <ErrorHandler Title="Launcher Crashed">
                 <Body>
-                    <AuthenticatedView>
+                    <AuthenticatedView NoAutoValidate="false">
                         <Authenticated>
                             @Body
 
@@ -158,11 +158,13 @@
 
         if (await LANCommander.ValidateTokenAsync(token))
         {
+            ConnectionState.IsStartup = true;
             await AuthenticationService.Login();
             await ProfileService.DownloadProfileInfoAsync();
 
             ConnectionState.IsConnected = true;
             ConnectionState.OfflineModeEnabled = false;
+            ConnectionState.IsStartup = false;
 
             await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);

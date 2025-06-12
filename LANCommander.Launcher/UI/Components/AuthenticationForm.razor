@@ -6,6 +6,7 @@
 @inject ProfileService ProfileService
 @inject NavigationManager NavigationManager
 @inject SDK.Client Client
+@inject AuthenticationService AuthenticationService
 @inject IMessageService MessageService
 @inject ILogger<System.Index> Logger
 
@@ -37,17 +38,38 @@
 </CascadingValue>
 
 @code {
+    [CascadingParameter] public Models.ConnectionState ConnectionState { get; set; }
+
     AuthenticationFormState State { get; set; }
 
     bool _connecting { get; set; } = false;
 
-    protected override void OnInitialized()
+    private Models.Settings Settings = SettingService.GetSettings();
+
+    protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         State = new()
         {
-            Stage = AuthenticationStage.SelectServer,
-            ServerAddress = String.Empty,
+            Stage = AuthenticationStage.None,
+            ServerAddress = AuthenticationService.GetServerAddress(),
         };
+
+        bool hasServer = await AuthenticationService.IsServerOnlineAsync();
+        if (hasServer)
+        {
+            if (!ConnectionState.IsStartup)
+            {
+                State.Stage = AuthenticationService.HasStoredCredentials() || Settings.LaunchCount > 0
+                    ? AuthenticationStage.Login
+                    : AuthenticationStage.Register;
+            }
+        }
+        else
+        {
+            State.Stage = AuthenticationStage.SelectServer;
+        }
     }
 
     async Task ServerSelected(string serverAddress)

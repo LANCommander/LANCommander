@@ -17,6 +17,7 @@
 @code {
     [Parameter] public RenderFragment Authenticated { get; set; }
     [Parameter] public RenderFragment NotAuthenticated { get; set; }
+    [Parameter] public bool NoAutoValidate { get; set; }
 
     private ConnectionState ConnectionState = default!;
     private bool IsValidating = false;
@@ -34,7 +35,8 @@
             await Validate();
         };
 
-        await Validate();
+        if (!NoAutoValidate)
+            await Validate();
     }
 
     public async Task Validate()

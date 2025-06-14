@@ -1,6 +1,7 @@
 using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.PowerShell;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
@@ -121,7 +122,8 @@ public class LocalServerEngine(
                     
                     var cancellationTokenSource = new CancellationTokenSource();
 
-                    _state[server.Id].Process = executionContext.GetProcess();
+                    _state[server.Id].EntryProcess = executionContext.GetProcess();
+                    _state[server.Id].Processes = _state[server.Id].EntryProcess.GetChildren().ToList();
                     _state[server.Id].CancellationToken = cancellationTokenSource;
 
                     await executionContext.ExecuteServerAsync(mapper.Map<SDK.Models.Server>(server), cancellationTokenSource);
@@ -204,15 +206,23 @@ public class LocalServerEngine(
         if (!_state.ContainsKey(serverId))
             _state[serverId] = new ServerProcessState();
 
+        _state[serverId].Processes = _state[serverId].EntryProcess.GetChildren().ToList();
+
         if (IsRunning(serverId))
         {
-            _state[serverId].Status = ServerProcessStatus.Running;
+            var processorTime = TimeSpan.FromMilliseconds(_state[serverId].Processes.Sum(p => p.TotalProcessorTime.TotalMilliseconds));
             
-            _state[serverId].MemoryUsage = (ulong)_state[serverId].Process.PrivateMemorySize64;
-            _state[serverId].ProcessorLoad = (_state[serverId].Process.TotalProcessorTime - _state[serverId].LastMeasuredProcessorTime).TotalMilliseconds / (Environment.ProcessorCount * _state[serverId].ProcessTimer.ElapsedMilliseconds);
+            _state[serverId].Status = ServerProcessStatus.Running;
+            _state[serverId].MemoryUsage = (ulong)_state[serverId].Processes.Sum(p => p.PrivateMemorySize64);
+            _state[serverId].ProcessorLoad =
+                (processorTime - _state[serverId].LastMeasuredProcessorTime).TotalMilliseconds /
+                (Environment.ProcessorCount * _state[serverId].ProcessTimer.ElapsedMilliseconds);
 
+            if (Double.IsNaN(_state[serverId].ProcessorLoad))
+                _state[serverId].ProcessorLoad = 0;
+            
             _state[serverId].ProcessTimer.Restart();
-            _state[serverId].LastMeasuredProcessorTime = _state[serverId].Process.TotalProcessorTime;
+            _state[serverId].LastMeasuredProcessorTime = processorTime;
         }
         else if (IsStopped(serverId))
             _state[serverId].Status = ServerProcessStatus.Stopped;
@@ -224,18 +234,40 @@ public class LocalServerEngine(
     
     private bool IsRunning(Guid serverId)
     {
-        return !_state[serverId].CancellationToken.IsCancellationRequested && (!_state[serverId].Process?.HasExited ?? false);
+        bool exited;
+
+        try
+        {
+            exited = _state[serverId].Processes.All(p => p.HasExited);
+        }
+        catch
+        {
+            exited = true;
+        }
+        
+        return !_state[serverId].CancellationToken.IsCancellationRequested && !exited;
     }
 
     private bool IsStopped(Guid serverId)
     {
-        return _state[serverId].CancellationToken == null || _state[serverId].Process == null || _state[serverId].Process.HasExited;
+        bool exited;
+
+        try
+        {
+            exited = _state[serverId].Processes.All(p => p.HasExited);
+        }
+        catch
+        {
+            exited = true;
+        }
+        
+        return _state[serverId].CancellationToken == null || !_state[serverId].Processes.Any() || exited;
     }
 
     private bool IsStopping(Guid serverId)
     {
         return _state[serverId].CancellationToken.IsCancellationRequested &&
-               (_state[serverId].Process == null || _state[serverId].Process.HasExited);
+               (!_state[serverId].Processes.Any() || _state[serverId].Processes.All(p => p.HasExited));
     }
     
 

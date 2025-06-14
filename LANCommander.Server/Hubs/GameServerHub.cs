@@ -1,4 +1,5 @@
-﻿using LANCommander.Server.Services;
+﻿using LANCommander.SDK;
+using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
 using Microsoft.AspNetCore.SignalR;
 
@@ -16,19 +17,19 @@ namespace LANCommander.Server.Hubs
             _serverService = serverService;
         }
 
-        public async Task GetStatus(Guid serverId)
+        public async Task GetState(Guid serverId)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"Server/{serverId}");
 
-            await UpdateStatusAsync(serverId);
+            await UpdateStateAsync(serverId);
         }
 
-        public async Task UpdateStatusAsync(Guid serverId)
+        public async Task UpdateStateAsync(Guid serverId)
         {
             foreach (var serverEngine in _serverEngines)
             {
                 if (serverEngine.IsManaging(serverId))
-                    await Clients.All.SendAsync("StatusUpdate", (await serverEngine.GetStateAsync(serverId)).Status, serverId);
+                    await Clients.All.SendAsync("StateUpdate", await serverEngine.GetStateAsync(serverId), serverId);
             }
         }
 

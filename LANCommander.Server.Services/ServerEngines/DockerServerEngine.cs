@@ -249,6 +249,9 @@ public class DockerServerEngine(
             
             if (systemDelta > 0 && cpuDelta > 0)
                 cpuPercentage = ((double)cpuDelta / systemDelta) * stats.CPUStats.OnlineCPUs * 100.0;
+            
+            if (Double.IsNaN(cpuPercentage))
+                cpuPercentage = 0;
 
             _state[serverId].ProcessorLoad = cpuPercentage;
             _state[serverId].MemoryUsage = stats.MemoryStats.Usage;

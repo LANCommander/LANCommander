@@ -121,8 +121,8 @@ namespace LANCommander.SDK
             
             if (processStartInfo.RedirectStandardOutput)
                 Process.BeginOutputReadLine();
-            
-            cancellationTokenSource?.Token.WaitHandle.WaitOne();
+
+            await Process.WaitForAllExitAsync(cancellationTokenSource.Token);
             
             if (server.ProcessTerminationMethod == ProcessTerminationMethod.Close)
                 Process.CloseMainWindow();

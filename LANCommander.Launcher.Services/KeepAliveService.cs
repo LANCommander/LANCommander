@@ -54,6 +54,7 @@ public class KeepAliveService : BaseService
     public void StartMonitoring()
     {
         RetryCount = 0;
+        ConnectionLost = false;
 
         CheckConnectionTimer?.Stop();
         CheckConnectionTimer?.Dispose();

@@ -102,12 +102,13 @@ public class KeepAliveService : BaseService
         if (serverOnline && ConnectionLost)
         {
             ConnectionLost = false;
-            
-            RetryConnectionTimer.Stop();
-            RetryConnectionTimer.Elapsed -= RetryConnection;
-            
+
+            RetryConnectionTimer?.Stop();
+            RetryConnectionTimer?.Dispose();
+            RetryConnectionTimer = null;
+
             ConnectionEstablished?.Invoke(this, EventArgs.Empty);
-            
+
             AuthenticationService.SetOfflineMode(false);
         }
         else
@@ -116,11 +117,12 @@ public class KeepAliveService : BaseService
 
             if (RetryCount == MaxRetries)
             {
+                RetryConnectionTimer?.Stop();
+                RetryConnectionTimer?.Dispose();
+                RetryConnectionTimer = null;
+
                 ConnectionLostPermanently?.Invoke(this, EventArgs.Empty);
-                
-                RetryConnectionTimer.Stop();
-                RetryConnectionTimer.Elapsed -= RetryConnection;
-                
+
                 AuthenticationService.SetOfflineMode(true);
             }
         }

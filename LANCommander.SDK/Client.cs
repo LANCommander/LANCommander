@@ -812,8 +812,10 @@ namespace LANCommander.SDK
             {
                 var guid = Guid.NewGuid().ToString();
                 var request = new RestRequest("/api/Ping", Method.Head);
-                
                 request.AddHeader("X-Ping", guid);
+
+                // specify timeout for ping response
+                request.Timeout = TimeSpan.FromSeconds(4);
 
                 var response = await ApiClient.ExecuteAsync(request);
 
@@ -843,6 +845,9 @@ namespace LANCommander.SDK
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            // specify timeout for auth response
+            request.Timeout = TimeSpan.FromSeconds(8);
 
             if (!ignoreVersion && !IgnoreVersion)
                 request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
@@ -894,6 +899,9 @@ namespace LANCommander.SDK
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            // specify timeout for auth response
+            request.Timeout = TimeSpan.FromSeconds(8);
 
             if (!ignoreVersion && !IgnoreVersion)
                 request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };

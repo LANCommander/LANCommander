@@ -194,9 +194,13 @@ namespace LANCommander.SDK
                 var urisToTry = baseUrl.SuggestValidUris();
 
                 // if url is fully qualified, limit specific urls
-                if (Uri.TryCreate(baseUrl, UriKind.RelativeOrAbsolute, out var baseUri) && baseUrl.Contains(':'))
+                if (Uri.TryCreate(baseUrl, UriKind.RelativeOrAbsolute, out var baseUri))
                 {
-                    urisToTry = urisToTry.Take(baseUri.IsAbsoluteUri ? 1 : 2);
+                    var hasPort = baseUrl.Replace(Uri.SchemeDelimiter, "").Contains(':');
+                    if (hasPort)
+                    {
+                        urisToTry = urisToTry.Take(baseUri.IsAbsoluteUri ? 1 : 2);
+                    }
                 }
 
                 foreach (var uri in urisToTry)

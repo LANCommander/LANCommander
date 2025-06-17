@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Exceptions;
+using LANCommander.Server.Data;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -18,6 +19,7 @@ namespace LANCommander.Server.Services
     {
         private readonly IdentityContext IdentityContext;
         private readonly CollectionService CollectionService;
+        private readonly IDbContextFactory<DatabaseContext> ContextFactory;
         private readonly IMapper Mapper;
         private readonly IFusionCache Cache;
         
@@ -28,10 +30,12 @@ namespace LANCommander.Server.Services
             IMapper mapper,
             IFusionCache cache,
             CollectionService collectionService,
+            IDbContextFactory<DatabaseContext> contextFactory,
             IdentityContextFactory identityContextFactory) : base(logger)
         {
             IdentityContext = identityContextFactory.Create();
             CollectionService = collectionService;
+            ContextFactory = contextFactory;
             Mapper = mapper;
             Cache = cache;
         }
@@ -99,10 +103,35 @@ namespace LANCommander.Server.Services
             }
         }
 
-        public async Task<User> AddAsync(User user)
+        public Task<User> AddAsync(User user)
         {
-            var result = await IdentityContext.UserManager.CreateAsync(user);
-            
+            return AddAsync(user, bypassPasswordPolicy: false);
+        }
+
+        public async Task<User> AddAsync(User user, bool bypassPasswordPolicy, string? password = null)
+        {
+            IdentityResult result;
+            if (bypassPasswordPolicy && !string.IsNullOrEmpty(password))
+            {
+                user.SecurityStamp = Guid.NewGuid().ToString();
+                user.ConcurrencyStamp = Guid.NewGuid().ToString();
+
+                // hash & set password
+                var hasher = new PasswordHasher<User>();
+                user.PasswordHash = hasher.HashPassword(user, password);
+
+                // insert & save
+                using var context = await ContextFactory.CreateDbContextAsync();
+                context.Users!.Add(user);
+                await context.SaveChangesAsync();
+
+                result = IdentityResult.Success;
+            }
+            else
+            {
+                result = await IdentityContext.UserManager.CreateAsync(user);
+            }
+
             if (result.Succeeded)
                 return await IdentityContext.UserManager.FindByNameAsync(user.UserName);
             else
@@ -151,13 +180,30 @@ namespace LANCommander.Server.Services
             return result;
         }
 
-        public async Task<IdentityResult> ChangePassword(string userName, string newPassword)
+        public Task<IdentityResult> ChangePassword(string userName, string newPassword)
         {
+            return ChangePassword(userName, newPassword, bypassPolicy: false);
+        }
+
+        public async Task<IdentityResult> ChangePassword(string userName, string newPassword, bool bypassPolicy)
+        {
+            IdentityResult result;
             var user = await GetAsync(userName);
 
-            var token = await IdentityContext.UserManager.GeneratePasswordResetTokenAsync(user);
+            if (bypassPolicy && IdentityContext.UserManager.PasswordValidators.Any())
+            {
+                await IdentityContext.UserManager.RemovePasswordAsync(user);
 
-            return await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+                result = await IdentityContext.UserManager.AddPasswordAsync(user, newPassword);
+            }
+            else
+            {
+                var token = await IdentityContext.UserManager.GeneratePasswordResetTokenAsync(user);
+
+                result = await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+            }
+
+            return result;
         }
 
         public async Task SignOut()

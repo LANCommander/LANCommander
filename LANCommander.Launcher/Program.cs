@@ -13,6 +13,7 @@ using Photino.Blazor;
 using Photino.Blazor.CustomWindow.Extensions;
 using Photino.NET;
 using Serilog;
+using Serilog.Events;
 using Serilog.Extensions.Logging;
 using System;
 using System.Diagnostics;
@@ -32,8 +33,14 @@ namespace LANCommander.Launcher
         {
             var settings = SettingService.GetSettings();
 
+            // Map the Microsoft.Extensions.Logging.LogLevel to Serilog.LogEventLevel.
+            var serilogLogLevel = MapLogLevel(settings.Debug.LoggingLevel);
+
             using var Logger = new LoggerConfiguration()
-                .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Serilog.Events.LogEventLevel.Warning)
+                .MinimumLevel.Is(serilogLogLevel)
+                .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.AspNetCore.Components", LogEventLevel.Warning)
+                .MinimumLevel.Override("AntDesign", LogEventLevel.Warning)
                 .Enrich.WithProperty("Application", typeof(Program).Assembly.GetName().Name)
                 .WriteTo.File(Path.Combine(settings.Debug.LoggingPath, "log-.txt"), rollingInterval: settings.Debug.LoggingArchivePeriod)
 #if DEBUG
@@ -41,7 +48,7 @@ namespace LANCommander.Launcher
 #endif
                 .CreateLogger();
 
-            Logger?.Debug("Starting up launcher...");
+            Logger?.Information($"Starting up launcher v{UpdateService.GetCurrentVersion()}...");
             Logger?.Debug("Loading settings from file");
 
             var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
@@ -195,6 +202,27 @@ namespace LANCommander.Launcher
             SettingService.SaveSettings(settings);
 
             return true;
+        }
+
+        /// <summary>
+        /// Maps Microsoft.Extensions.Logging.LogLevel to Serilog.Events.LogEventLevel.
+        /// </summary>
+        private static LogEventLevel MapLogLevel(LogLevel level)
+        {
+            return level switch
+            {
+                LogLevel.Trace => LogEventLevel.Verbose,
+                LogLevel.Debug => LogEventLevel.Debug,
+                LogLevel.Information => LogEventLevel.Information,
+                LogLevel.Warning => LogEventLevel.Warning,
+                LogLevel.Error => LogEventLevel.Error,
+                LogLevel.Critical => LogEventLevel.Fatal,
+                // LogLevel.None indicates logging should be disabled.
+                // Serilog does not have a direct "Off" level so you might choose to
+                // either bypass logging configuration or set it high enough to ignore messages.
+                LogLevel.None => LogEventLevel.Fatal,
+                _ => LogEventLevel.Information
+            };
         }
     }
 }

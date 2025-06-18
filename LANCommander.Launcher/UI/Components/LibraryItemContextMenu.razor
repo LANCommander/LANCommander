@@ -15,7 +15,7 @@
 {
     @foreach (var action in GameActions.OrderBy(a => a.SortOrder))
     {
-        <MenuItem OnClick="() => Run(Game, action)">
+        <MenuItem OnClick="() => Run(Game, action)" Class="@(action.IsPrimaryAction ? "primary-action" : "")">
             @action.Name
         </MenuItem>
     }
@@ -103,9 +103,10 @@ else
 @code {
     [Parameter] public Models.ListItem Model { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
+    [Parameter] public bool ShowPrimaryActions { get; set; }
 
     Data.Models.Game Game { get; set; }
-    IEnumerable<SDK.Models.Action> GameActions { get; set; }
+    IEnumerable<SDK.Models.Action> GameActions { get; set; } = [];
 
     Settings Settings;
 
@@ -116,18 +117,23 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Model.DataItem is Game)
+        if (Model.DataItem is Game game)
         {
-            Game = Model.DataItem as Game;
-            GameActions = new List<SDK.Models.Action>();
+            Game = game;
+            List<SDK.Models.Action> actions = [];
 
             if (Game.Installed)
             {
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(Game.InstallDirectory, Game.Id);
 
                 if (manifest != null)
-                    GameActions = manifest.Actions.Where(a => !a.IsPrimaryAction).ToList();
+                {
+                    actions = manifest.Actions.Where(a => ShowPrimaryActions || !a.IsPrimaryAction).ToList();
+                }
             }
+
+            GameActions = actions;
+            StateHasChanged();
         }
     }
 

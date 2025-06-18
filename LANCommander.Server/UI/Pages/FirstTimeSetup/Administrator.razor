@@ -106,8 +106,7 @@
 
                 try
                 {
-                    await UserService.AddAsync(user);
-                    await UserService.ChangePassword(user.UserName, Model.Password);
+                    await UserService.AddAsync(user, bypassPasswordPolicy: true, Model.Password);
                     await UserService.AddToRolesAsync(user.UserName, [RoleService.AdministratorRoleName]);
 
                     Logger?.LogInformation("Administrator created a new account with password.");

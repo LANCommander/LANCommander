@@ -65,9 +65,10 @@ public class BeaconService
         
         foreach (var networkInterface in GetNetworkInterfaces())
         {
+            DiscoveryProbe probeClient = null;
             try
             {
-                var probeClient = new DiscoveryProbe(networkInterface);
+                probeClient = new DiscoveryProbe(networkInterface);
 
                 await probeClient.BindSocketAsync(port);
 
@@ -76,6 +77,8 @@ public class BeaconService
             catch
             {
                 // ignored
+                probeClient?.Dispose();
+                _probeClients.Remove(probeClient);
             }
         }
         
@@ -86,6 +89,8 @@ public class BeaconService
 
             foreach (var probe in _probeClients)
             {
+                if (probe.IsDisposed)
+                    continue;
                 await probe.SendAsync();
             }
             
@@ -107,6 +112,23 @@ public class BeaconService
         {
             probeClient.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Cleans up ressources created for probing
+    /// </summary>
+    /// <remarks>Clears list of current probe clients</remarks>
+    public void CleanupProbe()
+    {
+        foreach (var probeClient in _probeClients)
+        {
+            if (!probeClient.IsDisposed)
+            {
+                probeClient.Dispose();
+            }
+        }
+
+        _probeClients.Clear();
     }
 
     /// <summary>

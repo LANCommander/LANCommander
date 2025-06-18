@@ -13,7 +13,7 @@
         }
         else
         {
-            if (Client.Settings.EnableUserLibraries)
+            if (Client.Settings?.EnableUserLibraries ?? false)
             {
                 <ConnectionStateView>
                     <Online>
@@ -29,16 +29,25 @@
         }
     </div>
 
-    @if (InstallService.Queue.Any(qi => qi.State))
-    {
-        <div class="downloader" @onclick="() => ShowDownloadQueue()" style="flex-shrink: 0;">
-            <CurrentDownloadItem ShowIcon="true"/>
-        </div>
-    }
-    else
-    {
-        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
-    }
+    <ConnectionStateView>
+        <Online>
+            @if (InstallService.Queue.Any(qi => qi.State))
+            {
+                <div class="downloader" @onclick="() => ShowDownloadQueue()" style="flex-shrink: 0;">
+                    <CurrentDownloadItem ShowIcon="true"/>
+                </div>
+            }
+            else
+            {
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
+            }
+        </Online>
+        <Offline>
+            <Tooltip Title="You are currently offline" Placement="Placement.TopLeft">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" Disabled>Downloads</Button>
+            </Tooltip>
+        </Offline>
+    </ConnectionStateView>
 
     <div style="flex: 1; text-align:  right;">
         <Tooltip Title="Coming soon!" Placement="Placement.TopRight">
@@ -51,7 +60,7 @@
 
 @code {
     [CascadingParameter] public bool Connected { get; set; }
-    
+
     bool DownloadQueueVisible = false;
 
     DownloadQueue DownloadQueue;

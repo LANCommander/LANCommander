@@ -7,6 +7,7 @@
 @inject ImportService ImportService
 @inject ProfileService ProfileService
 @inject AuthenticationService AuthenticationService
+@inject KeepAliveService KeepAliveService
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
@@ -18,27 +19,35 @@
     <CustomWindow HeaderHeight="37">
         <HeaderExtraControlsLayout>
             <Space Direction="SpaceDirection.Horizontal">
-                <AuthenticatedView>
+                <AuthenticatedView NoAutoValidate="true">
                     <Authenticated>
                         <SpaceItem>
-                            @if (Importing)
+                            @if (ImportStatus.IsActive)
                             {
                                 <Popover Placement="Placement.BottomRight" IsButton Trigger="new[] { Trigger.Hover }">
                                     <ChildContent>
-                                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" Loading="@Importing"/>
+                                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" Loading="true"/>
                                     </ChildContent>
                                     <ContentTemplate>
                                         <ImportProgressDisplay 
-                                            Index="@ImportStatusIndex" 
-                                            Total="@ImportStatusTotal" 
+                                            Index="@ImportStatus.Index" 
+                                            Total="@ImportStatus.Total" 
                                             CurrentItem="@(_importProgress?.CurrentItem)" 
                                         />
                                     </ContentTemplate>
                                 </Popover>
                             }
-                            else 
+                            else if (ConnectionState.IsConnected)
                             {
-                                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@Import"/>
+                                <Tooltip Title="Re-import library" MouseEnterDelay="0.5">
+                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Sync" OnClick="@ImportHandler.Import"/>
+                                </Tooltip>
+                            }
+                            else if (!string.IsNullOrEmpty(Settings.Authentication.AccessToken))
+                            {
+                                <Tooltip Title="Reconnect to server" MouseEnterDelay="0.5">
+                                    <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
+                                </Tooltip>
                             }
                         </SpaceItem>
 
@@ -46,7 +55,7 @@
                             <ProfileButton/>
                         </SpaceItem>
                     </Authenticated>
-                    
+
                     <NotAuthenticated>
                         <SpaceItem>
                             <Button Type="@ButtonType.Text" Icon="@IconType.Outline.CloudSync" OnClick="Connect" Loading="@Connecting" Danger/>
@@ -58,7 +67,7 @@
         <WindowContent>
             <ErrorHandler Title="Launcher Crashed">
                 <Body>
-                    <AuthenticatedView>
+                    <AuthenticatedView NoAutoValidate="false">
                         <Authenticated>
                             @Body
 
@@ -74,10 +83,11 @@
                         </NotAuthenticated>
                     </AuthenticatedView>
 
+                    <ImportHandler @ref="ImportHandler" Progress="OnImportProcess" />
                     <UpdateChecker/>
                     <AntContainer/>
                 </Body>
-                
+
                 <Extra>
                     <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/", true))">View Library</Button>
                 </Extra>
@@ -91,12 +101,16 @@
     public bool Importing;
     public bool Connecting;
 
-    public ConnectionState ConnectionState = new();
-    
+    public ConnectionState ConnectionState = default!;
+
     public IMessageService Messages { get; set; }
 
+    ImportHandler ImportHandler;
+    ImportHandler.ImportProgressEventArgs ImportStatus = new();
+    private ImportProgress _importProgress => ImportService.Progress;
+
     string RandomQuip = "";
-    
+
     string[] CrashQuips = new[]
     {
         "You Died.",
@@ -128,38 +142,34 @@
         "Damn, those alien bastards are gonna pay for shooting up my ride"
     };
 
-    int ImportStatusIndex = 0;
-    int ImportStatusTotal = 0;
-
-    private ImportProgress _importProgress => ImportService.Progress;
-
     protected override async Task OnInitializedAsync()
     {
         Settings = SettingService.GetSettings();
+        ConnectionState = KeepAliveService.GetConnectionState();
         Messages = MessageService;
 
-        ImportManagerService.OnImportRequested += Import;
         AuthenticationService.OnOfflineModeChanged += OnOfflineModeChanged;
-        
-        Settings = SettingService.GetSettings();
 
         var token = new SDK.Models.AuthToken
         {
             AccessToken = Settings.Authentication.AccessToken,
             RefreshToken = Settings.Authentication.RefreshToken
         };
-        
+
         if (await LANCommander.ValidateTokenAsync(token))
         {
+            ConnectionState.IsStartup = true;
             await AuthenticationService.Login();
             await ProfileService.DownloadProfileInfoAsync();
-            
+
             ConnectionState.IsConnected = true;
             ConnectionState.OfflineModeEnabled = false;
+            ConnectionState.IsStartup = false;
 
+            await ImportManagerService.RequestImport();
             await InvokeAsync(StateHasChanged);
         }
-    
+
         var randIndex = new Random().Next(0, CrashQuips.Length - 1);
         RandomQuip = CrashQuips[randIndex];
     }
@@ -170,23 +180,18 @@
         {
             AuthenticationService.OnOfflineModeChanged -= OnOfflineModeChanged;
         }
-
-        if (ImportService != null)
-        {
-            ImportService.OnImportComplete -= OnImportCompleteHandler;
-            ImportService.OnImportUpdated -= OnImportUpdatedHandler;
-        }
-
-        if (ImportManagerService != null)
-        {
-            ImportManagerService.OnImportRequested -= Import;
-        }
     }
 
     async void OnOfflineModeChanged(bool state)
     {
         ConnectionState.OfflineModeEnabled = state;
         ConnectionState.IsConnected = LANCommander.IsConnected();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async void OnImportProcess(ImportHandler.ImportProgressEventArgs importProgress)
+    {
+        ImportStatus = importProgress;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -215,7 +220,7 @@
             await ProfileService.DownloadProfileInfoAsync();
 
             MessageService.Success("Back Online!");
-            
+
             ConnectionState.IsConnected = true;
             ConnectionState.OfflineModeEnabled = false;
 
@@ -252,67 +257,13 @@
     async Task Logout()
     {
         await AuthenticationService.Logout();
-        
+
         ConnectionState.IsConnected = false;
         ConnectionState.OfflineModeEnabled = false;
 
         NavigationManager.NavigateTo("/Authenticate");
     }
 
-    public async Task Import()
-    {
-        if (!Importing)
-        {
-            Logger?.LogInformation("Starting import process");
-
-            // Clear any existing handlers
-            ImportService.OnImportComplete -= OnImportCompleteHandler;
-            ImportService.OnImportUpdated -= OnImportUpdatedHandler;
-
-            // Add our handlers
-            ImportService.OnImportComplete += OnImportCompleteHandler;
-            ImportService.OnImportFailed += OnImportFailedHandler;
-            ImportService.OnImportUpdated += OnImportUpdatedHandler;
-
-            // Now start the import process
-            Importing = true;
-            ImportStatusIndex = 0;
-            ImportStatusTotal = 0;
-            await InvokeAsync(StateHasChanged);
-            MessageService.Info("Import Started", 2.5);
-
-            Logger?.LogInformation("Starting import");
-            await ImportService.ImportLibraryAsync(); // Call directly instead of using JS
-        }
-    }
-
-    private async Task OnImportCompleteHandler()
-    {
-        Logger?.LogInformation("Import Complete handler called");
-        Importing = false;
-        ImportStatusIndex = 0;
-        ImportStatusTotal = 0;
-        MessageService.Success("Import Complete", 3);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnImportFailedHandler(Exception ex)
-    {
-        Importing = false;
-        ImportStatusIndex = 0;
-        ImportStatusTotal = 0;
-        MessageService.Error("Import Failed", 3);
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnImportUpdatedHandler(ImportStatusUpdate status)
-    {
-        Logger?.LogInformation("Import Update handler called: {Index}/{Total}", 
-            status.Index, status.Total);
-        ImportStatusIndex = status.Index;
-        ImportStatusTotal = status.Total;
-        await InvokeAsync(StateHasChanged);
-    }
 }
 
 <style>

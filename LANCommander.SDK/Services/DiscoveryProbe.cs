@@ -16,7 +16,8 @@ namespace LANCommander.SDK.Services;
 public class DiscoveryProbe : IDisposable
 {
     private const int BufferSize = 1024;
-    
+
+    private bool _disposed = false;
     private int _port = 35891;
     private readonly UdpClient _udpClient;
     private readonly Socket _socket;
@@ -76,7 +77,7 @@ public class DiscoveryProbe : IDisposable
             _socket.Bind(new IPEndPoint(addressInformation.Address, _port));
             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref fromEndpoint, ReceiveCallback, null);
         }
-        catch (SocketException ex)
+        catch (SocketException)
         {
             throw;
         }
@@ -115,18 +116,23 @@ public class DiscoveryProbe : IDisposable
         {
             // Socket closed
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Log error
         }
     }
 
+    public bool IsDisposed => _disposed;
+
     public void Dispose()
     {
+        OnBeaconResponse = null;
+
         _udpClient?.Close();
         _udpClient?.Dispose();
         _socket?.Close();
         _socket?.Dispose();
         _cancellationTokenSource?.Dispose();
+        _disposed = true;
     }
 }

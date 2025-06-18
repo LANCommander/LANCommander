@@ -69,15 +69,14 @@
 
     AuthRequest Model = new();
     bool Loading = false;
+    private string? PreviousServerAddress;
     AuthenticationProviderDialog AuthenticationProviderDialog;
-    
+
     Models.Settings Settings = SettingService.GetSettings();
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
         AuthenticationProviders = new();
-        
-        await Client.ChangeServerAddressAsync(ServerAddress);
 
         try
         {
@@ -90,8 +89,17 @@
         {
             Logger.LogError(ex, "Could not get authentication providers");
         }
-        
+
         StateHasChanged();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ServerAddress != PreviousServerAddress)
+        {
+            await Client.ChangeServerAddressAsync(ServerAddress);
+        }
+        PreviousServerAddress = ServerAddress;
     }
 
     async Task OnFinish(EditContext editContext)

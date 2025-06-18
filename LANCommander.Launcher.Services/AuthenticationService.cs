@@ -10,6 +10,7 @@ namespace LANCommander.Launcher.Services;
 public class AuthenticationService : BaseService
 {
     private Settings Settings;
+    private bool TemporarilyOffline;
 
     public event EventHandler OnLogin;
     public event EventHandler OnLogout;
@@ -30,18 +31,27 @@ public class AuthenticationService : BaseService
         return Client.IsConnected();
     }
 
+    public string GetServerAddress()
+    {
+        return Client.IsConfigured() ? Client.GetServerAddress() : string.Empty;
+    }
+
     public async Task<bool> IsServerOnlineAsync()
     {
         try
         {
-            return await Client.PingAsync();
+            if (Client.IsConfigured())
+            {
+                return await Client.PingAsync();
+            }
         }
         catch
         {
-            return false;
         }
+
+        return false;
     }
-    
+
     public async Task Login()
     {
         await Login(Settings.Authentication.ServerAddress, new SDK.Models.AuthToken
@@ -77,6 +87,7 @@ public class AuthenticationService : BaseService
             if (await Client.ValidateTokenAsync())
             {
                 SetOfflineMode(false);
+                TemporarilyOffline = false;
 
                 SettingService.SaveSettings(Settings);
 
@@ -128,7 +139,13 @@ public class AuthenticationService : BaseService
 
     public bool OfflineModeEnabled()
     {
-        return Settings.Authentication.OfflineMode;
+        return TemporarilyOffline || Settings.Authentication.OfflineMode;
+    }
+
+    public void LoginOffline()
+    {
+        TemporarilyOffline = true;
+        OnOfflineModeChanged?.Invoke(true);
     }
 
     public void SetOfflineMode(bool state)
@@ -137,7 +154,7 @@ public class AuthenticationService : BaseService
 
         Settings.Authentication.OfflineMode = state;
 
-        if (!state)
+        if (state)
             Client.Disconnect();
 
         SettingService.SaveSettings(Settings);
@@ -149,9 +166,14 @@ public class AuthenticationService : BaseService
     {
         await Client.LogoutAsync();
 
+        TemporarilyOffline = false;
+
         Settings = SettingService.GetSettings();
-        
-        Settings.Authentication = new AuthenticationSettings();
+
+        Settings.Authentication = new AuthenticationSettings
+        {
+            ServerAddress = Settings.Authentication.ServerAddress, // keep server address when logging out
+        };
 
         SettingService.SaveSettings(Settings);
         
@@ -180,12 +202,14 @@ public class AuthenticationService : BaseService
         if (decodedToken == null)
             return String.Empty;
 
-        return decodedToken.Claims.First(claim => claim.Type == ClaimTypes.Name).Value;
+        return decodedToken.Claims?.FirstOrDefault(claim => claim.Type == ClaimTypes.Name)?.Value ?? string.Empty;
     }
 
-    public JwtSecurityToken DecodeToken()
+    public JwtSecurityToken? DecodeToken()
     {
-        if (Settings.Authentication.AccessToken == null)
+        Settings = SettingService.GetSettings();
+
+        if (string.IsNullOrEmpty(Settings.Authentication.AccessToken))
             return null;
 
         try
@@ -194,7 +218,7 @@ public class AuthenticationService : BaseService
             
             return handler.ReadToken(Settings.Authentication.AccessToken) as JwtSecurityToken;
         }
-        catch (Exception ex)
+        catch
         {
             return null;
         }
@@ -202,7 +226,7 @@ public class AuthenticationService : BaseService
 
     public bool HasStoredCredentials()
     {
-        if (Settings.Authentication.AccessToken == null)
+        if (string.IsNullOrEmpty(Settings.Authentication.AccessToken))
             return false;
 
         var decodedToken = DecodeToken();

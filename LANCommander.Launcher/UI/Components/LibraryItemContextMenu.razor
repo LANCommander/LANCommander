@@ -37,13 +37,13 @@
         <MenuDivider />
     }
 
-    <MenuItem OnClick="() => OpenSaveManager()">
+    <MenuItem OnClick="() => OpenSaveManager()" Disabled="ConnectionState.OfflineModeEnabled">
         Manage Saves
     </MenuItem>
 
     if (Settings.Games.InstallDirectories.Length > 1 || Game.DependentGames.Any(g => g.Type == Data.Enums.GameType.Expansion || g.Type == Data.Enums.GameType.Mod))
     {
-        <MenuItem OnClick="() => Modify()">
+        <MenuItem OnClick="() => Modify()" Disabled="ConnectionState.OfflineModeEnabled">
             Modify
         </MenuItem>
     }
@@ -51,10 +51,10 @@
     <MenuItem OnClick="() => BrowseFiles()">
         Browse Files
     </MenuItem>
-    <MenuItem OnClick="() => ValidateFiles()">
+    <MenuItem OnClick="() => ValidateFiles()" Disabled="ConnectionState.OfflineModeEnabled">
         Validate Files
     </MenuItem>
-    <MenuItem OnClick="() => RemoveFromLibrary()">
+    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="ConnectionState.OfflineModeEnabled">
         Remove
     </MenuItem>
     <MenuItem OnClick="() => Uninstall()">
@@ -63,10 +63,10 @@
 }
 else
 {
-    <MenuItem OnClick="() => Install()">
+    <MenuItem OnClick="() => Install()" Disabled="ConnectionState.OfflineModeEnabled">
         Install
     </MenuItem>
-    <MenuItem OnClick="() => RemoveFromLibrary()">
+    <MenuItem OnClick="() => RemoveFromLibrary()" Disabled="ConnectionState.OfflineModeEnabled">
         Remove
     </MenuItem>
 }
@@ -94,7 +94,7 @@ else
 
 <MenuDivider />
 
-<MenuItem OnClick="() => ReportIssue()">
+<MenuItem OnClick="() => ReportIssue()" Disabled="ConnectionState.OfflineModeEnabled">
     Report Issue
 </MenuItem>
 
@@ -103,6 +103,7 @@ else
 @code {
     [Parameter] public Models.ListItem Model { get; set; }
     [Parameter] public RenderFragment MenuExtra { get; set; }
+    [CascadingParameter] public ConnectionState ConnectionState { get; set; }
 
     Data.Models.Game Game { get; set; }
     IEnumerable<SDK.Models.Action> GameActions { get; set; }

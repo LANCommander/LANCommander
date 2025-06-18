@@ -24,10 +24,6 @@ namespace LANCommander.Launcher.Services.Extensions
                 var authenticationService = scope.ServiceProvider.GetService<AuthenticationService>();
                 var keepAliveService = scope.ServiceProvider.GetService<KeepAliveService>();
 
-                #region Sign in
-                authenticationService.Login().Wait();
-                #endregion
-
                 #region Scaffold Required Directories
                 try
                 {

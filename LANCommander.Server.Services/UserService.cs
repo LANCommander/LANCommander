@@ -142,6 +142,34 @@ namespace LANCommander.Server.Services
             return await IdentityContext.UserManager.CheckPasswordAsync(user, password);
         }
 
+        public async Task<IdentityResult> CheckRegister(User user, string password)
+        {
+            var registerErrors = new List<IdentityError>();
+            var userManager = IdentityContext.UserManager;
+
+            foreach (var validator in userManager.UserValidators ?? [])
+            {
+                var result = await validator.ValidateAsync(userManager, user);
+                if (!result.Succeeded)
+                {
+                    registerErrors.AddRange(result.Errors);
+                }
+            }
+
+            foreach (var validator in userManager.PasswordValidators ?? [])
+            {
+                var result = await validator.ValidateAsync(userManager, user, password);
+                if (!result.Succeeded)
+                {
+                    registerErrors.AddRange(result.Errors);
+                }
+            }
+
+            return registerErrors.Count > 0
+                ? IdentityResult.Failed(registerErrors.ToArray())
+                : IdentityResult.Success;
+        }
+
         public async Task<IdentityResult> ChangePassword(string userName, string currentPassword, string newPassword)
         {
             var user = await GetAsync(userName);

@@ -158,6 +158,12 @@ namespace LANCommander.Server.Services
             user = new Data.Models.User();
             user.UserName = userName;
 
+            var registerResult = await userService.CheckRegister(user, password);
+            if (!registerResult.Succeeded)
+            {
+                throw new UserRegistrationException(registerResult, "Could not register user");
+            }
+
             user = await userService.AddAsync(user);
 
             if (user != null)

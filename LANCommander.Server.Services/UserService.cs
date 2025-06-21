@@ -36,6 +36,19 @@ namespace LANCommander.Server.Services
             Cache = cache;
         }
 
+        public void Reconfigure(Settings settings)
+        {
+            var options = IdentityContext.UserManager.Options;
+            if (options == null || settings == null) 
+                return;
+
+            options.Password.RequireNonAlphanumeric = settings.Authentication.PasswordRequireNonAlphanumeric;
+            options.Password.RequireLowercase = settings.Authentication.PasswordRequireLowercase;
+            options.Password.RequireUppercase = settings.Authentication.PasswordRequireUppercase;
+            options.Password.RequireDigit = settings.Authentication.PasswordRequireDigit;
+            options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
+        }
+
         public async Task<User> GetAsync(string userName)
         {
             return await FirstOrDefaultAsync(u => u.UserName.ToUpper() == userName.ToUpper());

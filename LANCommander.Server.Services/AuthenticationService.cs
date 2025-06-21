@@ -22,36 +22,34 @@ namespace LANCommander.Server.Services
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
-            if (!String.IsNullOrWhiteSpace(userName) && await userService.CheckPassword(userName, password))
+            if (string.IsNullOrWhiteSpace(userName) || await userService.CheckPassword(userName, password) == false)
+                throw new UserAuthenticationException("Invalid username or password");
+
+            var token = await LoginAsync(userName);
+
+            try
             {
-                var token = await LoginAsync(userName);
+                var user = await userService.GetAsync<User>(userName);
+                var scripts = await scriptService.GetAsync<SDK.Models.Script>(s => s.Type == ScriptType.UserLogin);
 
-                try
+                if (scripts.Any())
                 {
-                    var user = await userService.GetAsync<User>(userName);
-                    var scripts = await scriptService.GetAsync<SDK.Models.Script>(s => s.Type == ScriptType.UserLogin);
+                    var client = new SDK.Client(_settings.Beacon.Address, "", logger);
 
-                    if (scripts.Any())
+                    client.UseToken(token);
+
+                    foreach (var script in scripts)
                     {
-                        var client = new SDK.Client(_settings.Beacon.Address, "", logger);
-
-                        client.UseToken(token);
-
-                        foreach (var script in scripts)
-                        {
-                            await client.Scripts.RunUserLoginScript(script, user);
-                        }
+                        await client.Scripts.RunUserLoginScript(script, user);
                     }
                 }
-                catch (Exception ex)
-                {
-                    logger?.LogError(ex, "Could not execute user login script");
-                }
-
-                return token;
             }
-            else
-                throw new Exception("Invalid username or password");
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Could not execute user login script");
+            }
+
+            return token;
         }
 
         public async Task<AuthToken> LoginAsync(string userName)
@@ -59,12 +57,12 @@ namespace LANCommander.Server.Services
             var user = await userService.GetAsync(userName);
             
             if (user == null)
-                throw new Exception("Invalid username or password");
+                throw new UserAuthenticationException("Invalid username or password");
                 
             _logger?.LogDebug("Password check for user {UserName} was successful", user.UserName);
 
             if (_settings.Authentication.RequireApproval && !user.Approved && !await userService.IsInRoleAsync(user, RoleService.AdministratorRoleName))
-                throw new Exception("Account must be approved by an administrator");
+                throw new UserAuthenticationException("Account must be approved by an administrator");
                 
             var userRoles = await userService.GetRolesAsync(user);
 

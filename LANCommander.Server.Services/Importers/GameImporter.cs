@@ -434,7 +434,8 @@ public class GameImporter(
                 importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetMediaPath(media), true);
                 media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
                 await mediaService.UpdateAsync(media);
-                
+                await mediaService.GenerateThumbnailAsync(media);
+
                 updatedMedia.Add(media);
             }
         }
@@ -451,6 +452,7 @@ public class GameImporter(
                     Type = manifestMedia.Type,
                     CreatedOn = manifestMedia.CreatedOn,
                     StorageLocationId = mediaStorageLocation.Id,
+                    StorageLocation = mediaStorageLocation, // required for thumbnail generation expecting valid storage location entity
                     GameId = game.Id,
                 };
 
@@ -458,7 +460,8 @@ public class GameImporter(
                 importZip.ExtractEntry($"Media/{manifestMedia.FileId}", mediaPath, true);
                 media.Crc32 = SDK.Services.MediaService.CalculateChecksum(mediaPath);
                 media = await mediaService.AddAsync(media);
-                
+                await mediaService.GenerateThumbnailAsync(media);
+
                 updatedMedia.Add(media);
             }
         }

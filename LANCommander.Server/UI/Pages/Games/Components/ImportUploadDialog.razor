@@ -42,7 +42,7 @@
     IBrowserFile File;
     ChunkUploader ChunkUploader;
     StorageLocation StorageLocation = new();
-    
+
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     bool IsValid = false;
@@ -59,7 +59,7 @@
         await ChunkUploader.Clear();
     }
 
-     async Task Cancel()
+    async Task Cancel()
     {
         await ChunkUploader.Clear();
         await CloseFeedbackAsync();
@@ -77,6 +77,7 @@
 
                 MessageService.Success($"{game.Title} successfully imported!");
 
+                await (base.OkCancelRef?.OnOk?.Invoke() ?? Task.CompletedTask);
                 await CloseFeedbackAsync();
             }
             catch (Exception ex)
@@ -91,6 +92,7 @@
 
             MessageService.Error("Import file failed to upload!");
 
+            await (base.OkCancelRef?.OnCancel?.Invoke() ?? Task.CompletedTask);
             await CloseFeedbackAsync();
         }
 

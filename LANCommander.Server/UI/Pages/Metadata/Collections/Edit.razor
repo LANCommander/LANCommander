@@ -19,42 +19,42 @@
     <Column TData="string" Title="Icon">
         <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
     </Column>
-    
+
     <PropertyColumn Property="g => g.Title" Sortable Filterable DefaultSortOrder="SortDirection.Ascending" />
-    
+
     <PropertyColumn Property="g => g.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
-    
+
     <PropertyColumn Property="g => g.Singleplayer" Sortable Filterable>
         <Checkbox Disabled="true" Checked="context.Singleplayer" />
     </PropertyColumn>
-    
+
     <Column TData="bool" Title="Multiplayer">
         <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
     </Column>
 
     <Column TData="string[]" Title="Developers">
-        @foreach (var dev in context.Developers)
+        @foreach (var dev in context.Developers ?? [])
         {
             <Tag>@dev.Name</Tag>
         }
     </Column>
 
     <Column TData="string[]" Title="Publishers">
-        @foreach (var pub in context.Publishers)
+        @foreach (var pub in context.Publishers ?? [])
         {
             <Tag>@pub.Name</Tag>
         }
     </Column>
 
     <Column TData="string[]" Title="Genres">
-        @foreach (var genre in context.Genres)
+        @foreach (var genre in context.Genres ?? [])
         {
             <Tag>@genre.Name</Tag>
         }
     </Column>
 
     <Column TData="SDK.Enums.MultiplayerType[]" Title="Multiplayer Modes">
-        @foreach (var mode in context.MultiplayerModes.Select(mm => mm.Type).Distinct())
+        @foreach (var mode in context.MultiplayerModes?.Select(mm => mm.Type).Distinct() ?? [])
         {
             <Tag>@mode.GetDisplayName()</Tag>
         }

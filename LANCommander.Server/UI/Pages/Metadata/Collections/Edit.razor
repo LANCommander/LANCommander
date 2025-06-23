@@ -1,5 +1,6 @@
 ﻿@page "/Metadata/Collections/{id:guid}"
 @page "/Metadata/Collections/Add"
+@using Microsoft.EntityFrameworkCore
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject CollectionService CollectionService
 @inject IMessageService MessageService
@@ -80,7 +81,17 @@
             Collection = new Collection();
         else
             Collection = await CollectionService
-                .Include(c => c.Games)
+                .Query(q =>
+                {
+                    return q
+                        .Include(c => c.Games).ThenInclude(g => g.Media)
+                        .Include(c => c.Games).ThenInclude(g => g.Developers)
+                        .Include(c => c.Games).ThenInclude(g => g.Publishers)
+                        .Include(c => c.Games).ThenInclude(g => g.Genres)
+                        .Include(c => c.Games).ThenInclude(g => g.MultiplayerModes)
+                        ;
+                })
+                .AsSplitQuery()
                 .GetAsync(Id);
     }
 

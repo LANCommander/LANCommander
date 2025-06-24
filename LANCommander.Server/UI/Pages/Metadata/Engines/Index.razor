@@ -27,7 +27,10 @@
         </BoundDataColumn>
         <BoundDataColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
         <DataActions TData="string">
-            <a href="@($"/Metadata/Engines/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+            <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
+            @* TODO: Add seperate Edit page and navigate to it *@
+            @* <a href="@($"/Metadata/Engines/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
+
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this engine?">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
             </Popconfirm>
@@ -47,8 +50,6 @@
 </Modal>
 
  @code {
-    IEnumerable<Engine> Engines { get; set; } = new List<Engine>();
-
     bool Loading = true;
 
     bool EditEngineVisible = false;
@@ -93,11 +94,12 @@
         await CloseEdit();
     }
 
-    async Task OpenEdit(Engine engine)
+    async Task OpenEdit(Engine? engine)
     {
-        if (engine != null)
-            EngineContext = engine;
-
+        // query new instance, or create a new Edit context instance
+        EngineContext = engine != null ? await EngineService.GetAsync(engine.Id) : default!;
+        EngineContext ??= new();
+        
         EditEngineVisible = true;
 
         await InvokeAsync(StateHasChanged);

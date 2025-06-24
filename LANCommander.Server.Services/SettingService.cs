@@ -1,4 +1,5 @@
 ﻿using LANCommander.Server.Models;
+using Microsoft.Extensions.DependencyInjection;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -30,7 +31,7 @@ namespace LANCommander.Server.Services
 
                 var deserializer = new DeserializerBuilder()
                     .IgnoreUnmatchedProperties()
-                    .WithNamingConvention(new PascalCaseNamingConvention())
+                    .WithNamingConvention(PascalCaseNamingConvention.Instance)
                     .Build();
 
                 Settings = deserializer.Deserialize<Models.Settings>(contents);
@@ -45,6 +46,18 @@ namespace LANCommander.Server.Services
             return Settings;
         }
 
+        public static void WriteSettings(Models.Settings settings)
+        {
+            if (settings == null)
+                return;
+
+            var serializer = new SerializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .Build();
+
+            File.WriteAllText(SettingsFile, serializer.Serialize(settings));
+        }
+
         public static Models.Settings GetSettings(bool forceLoad = false)
         {
             if (Settings == null || forceLoad)
@@ -53,17 +66,22 @@ namespace LANCommander.Server.Services
             return Settings;
         }
 
-        public static void SaveSettings(Models.Settings settings)
+        public static void SaveSettings(Models.Settings settings, IServiceProvider? serviceProvider = null)
         {
-            if (settings != null)
+            WriteSettings(settings);
+            Settings = settings;
+
+            ReloadSettings(settings, serviceProvider);
+        }
+
+        private static void ReloadSettings(Models.Settings settings, IServiceProvider? serviceProvider)
+        {
+            if (serviceProvider == null || settings == null)
+                return;
+
+            if (serviceProvider.GetService<UserService>() is var service)
             {
-                var serializer = new SerializerBuilder()
-                .WithNamingConvention(new PascalCaseNamingConvention())
-                .Build();
-
-                File.WriteAllText(SettingsFile, serializer.Serialize(settings));
-
-                Settings = settings;
+                service!.Reconfigure(settings);
             }
         }
     }

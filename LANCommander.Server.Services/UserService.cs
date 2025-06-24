@@ -40,6 +40,19 @@ namespace LANCommander.Server.Services
             Cache = cache;
         }
 
+        public void Reconfigure(Settings settings)
+        {
+            var options = IdentityContext.UserManager.Options;
+            if (options == null || settings == null) 
+                return;
+
+            options.Password.RequireNonAlphanumeric = settings.Authentication.PasswordRequireNonAlphanumeric;
+            options.Password.RequireLowercase = settings.Authentication.PasswordRequireLowercase;
+            options.Password.RequireUppercase = settings.Authentication.PasswordRequireUppercase;
+            options.Password.RequireDigit = settings.Authentication.PasswordRequireDigit;
+            options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
+        }
+
         public async Task<User> GetAsync(string userName)
         {
             return await FirstOrDefaultAsync(u => u.UserName.ToUpper() == userName.ToUpper());
@@ -169,6 +182,34 @@ namespace LANCommander.Server.Services
             var user = await GetAsync(userName);
 
             return await IdentityContext.UserManager.CheckPasswordAsync(user, password);
+        }
+
+        public async Task<IdentityResult> CheckRegister(User user, string password)
+        {
+            var registerErrors = new List<IdentityError>();
+            var userManager = IdentityContext.UserManager;
+
+            foreach (var validator in userManager.UserValidators ?? [])
+            {
+                var result = await validator.ValidateAsync(userManager, user);
+                if (!result.Succeeded)
+                {
+                    registerErrors.AddRange(result.Errors);
+                }
+            }
+
+            foreach (var validator in userManager.PasswordValidators ?? [])
+            {
+                var result = await validator.ValidateAsync(userManager, user, password);
+                if (!result.Succeeded)
+                {
+                    registerErrors.AddRange(result.Errors);
+                }
+            }
+
+            return registerErrors.Count > 0
+                ? IdentityResult.Failed(registerErrors.ToArray())
+                : IdentityResult.Success;
         }
 
         public async Task<IdentityResult> ChangePassword(string userName, string currentPassword, string newPassword)

@@ -3,6 +3,7 @@
 @using LANCommander.Server.UI.Pages.Settings.Authentication.Components
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
+@inject IServiceProvider ServiceProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Authentication">
@@ -59,6 +60,7 @@
 </PageContent>
 
 @code {
+
     Settings Settings = SettingService.GetSettings();
 
     string FormatTokenLifetime(int value)
@@ -75,8 +77,9 @@
                 if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
                     authenticationProvider.Slug = authenticationProvider.Name.ToPascalCase();
             }
-            
-            SettingService.SaveSettings(Settings);
+
+            SettingService.SaveSettings(Settings, ServiceProvider);
+
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

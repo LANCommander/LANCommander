@@ -1,3 +1,4 @@
+@using LANCommander.SDK.Exceptions
 @using LANCommander.SDK.Models
 @inject AuthenticationService AuthenticationService
 @inject SDK.Client Client
@@ -12,6 +13,12 @@
     </TitleTemplate>
 </PageHeader>
 <Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
+
+    @foreach (var item in Errors)
+    {
+        <Alert Message="@item" Type="AlertType.Error" ShowIcon="true" Style="margin-bottom: 8px;" />
+    }
+
     <FormItem Label="Server Address">
         <Input Value="ServerAddress" Disabled />
     </FormItem>
@@ -64,20 +71,22 @@
     [Parameter] public string ServerAddress { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnRegister { get; set; }
+    [Parameter] public IEnumerable<string> Errors { get; set; } = [];
 
     List<AuthenticationProvider> AuthenticationProviders = new();
 
     AuthRequest Model = new();
     bool Loading = false;
     AuthenticationProviderDialog AuthenticationProviderDialog;
-    
+
     Models.Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnParametersSetAsync()
     {
         AuthenticationProviders = new();
-        
+
         await Client.ChangeServerAddressAsync(ServerAddress);
+        ClearErrors();
 
         try
         {
@@ -90,7 +99,13 @@
         {
             Logger.LogError(ex, "Could not get authentication providers");
         }
-        
+
+        StateHasChanged();
+    }
+
+    protected void ClearErrors()
+    {
+        Errors = [];
         StateHasChanged();
     }
 
@@ -100,6 +115,8 @@
 
         try
         {
+            ClearErrors();
+
             await AuthenticationService.Login(Client.GetServerAddress(), Model.UserName, Model.Password);
 
             await ImportManagerService.RequestImport();
@@ -108,10 +125,18 @@
             
             MessageService.Success("Welcome back!");
         }
+        catch (AuthFailedException ex)
+        {
+            Errors = ex.ErrorData.Details?.Select(x => x.Message) ?? [];
+            MessageService.Error(ex.Message, 5);
+        }
         catch (Exception ex)
         {
             MessageService.Error(ex.Message, 5);
             Logger.LogError(ex, ex.Message);
+        }
+        finally
+        {
             Loading = false;
         }
     }

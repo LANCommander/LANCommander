@@ -19,13 +19,18 @@ public class ImportService<T>(
         var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
 
         T entity;
-        
-        using (var importZip = ZipFile.OpenRead(importArchivePath))
+
+        try
         {
-            entity = await importer.ImportAsync(objectKey, importZip);
+            using (var importZip = ZipFile.OpenRead(importArchivePath))
+            {
+                entity = await importer.ImportAsync(objectKey, importZip);
+            }
         }
-        
-        await archiveService.DeleteAsync(importArchive);
+        finally
+        {
+            await archiveService.DeleteAsync(importArchive);
+        }
 
         return entity;
     }

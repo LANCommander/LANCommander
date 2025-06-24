@@ -424,17 +424,19 @@ public class GameImporter(
 
             if (manifestMedia != null)
             {
-                media.SourceUrl = manifestMedia.SourceUrl;
-                media.FileId = manifestMedia.FileId;
-                media.Type = manifestMedia.Type;
+                // Skip overriding FileId from imported media, keep use existing file id
+
                 media.MimeType = manifestMedia.MimeType;
+                media.SourceUrl = manifestMedia.SourceUrl;
+                media.Type = manifestMedia.Type;
                 media.CreatedOn = manifestMedia.CreatedOn;
                 media.GameId = game.Id;
 
-                importZip.ExtractEntry($"Media/{media.FileId}", MediaService.GetMediaPath(media), true);
+                importZip.ExtractEntry($"Media/{manifestMedia.FileId}", MediaService.GetMediaPath(media), true);
                 media.Crc32 = SDK.Services.MediaService.CalculateChecksum(MediaService.GetMediaPath(media));
                 await mediaService.UpdateAsync(media);
-                
+                await mediaService.GenerateThumbnailAsync(media);
+
                 updatedMedia.Add(media);
             }
         }
@@ -445,12 +447,14 @@ public class GameImporter(
             {
                 var media = new Media()
                 {
+                    Id = manifestMedia.Id, // set in order to update existing media on re-importing
                     FileId = Guid.NewGuid(),
                     MimeType = manifestMedia.MimeType,
                     SourceUrl = manifestMedia.SourceUrl,
                     Type = manifestMedia.Type,
                     CreatedOn = manifestMedia.CreatedOn,
                     StorageLocationId = mediaStorageLocation.Id,
+                    StorageLocation = mediaStorageLocation, // required for thumbnail generation expecting valid storage location entity
                     GameId = game.Id,
                 };
 
@@ -458,7 +462,8 @@ public class GameImporter(
                 importZip.ExtractEntry($"Media/{manifestMedia.FileId}", mediaPath, true);
                 media.Crc32 = SDK.Services.MediaService.CalculateChecksum(mediaPath);
                 media = await mediaService.AddAsync(media);
-                
+                await mediaService.GenerateThumbnailAsync(media);
+
                 updatedMedia.Add(media);
             }
         }

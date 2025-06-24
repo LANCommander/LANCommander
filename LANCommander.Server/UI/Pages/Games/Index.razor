@@ -38,7 +38,7 @@
         </DataColumn>
 
         <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
-    
+
         <BoundDataColumn Property="g => g.MultiplayerModes" Include="MultiplayerModes" Sortable Title="Multiplayer">
             <Checkbox Disabled="true" Checked="context.MultiplayerModes?.Count > 0" />
         </BoundDataColumn>
@@ -49,7 +49,7 @@
         <BoundDataColumn Property="g => g.Keys" Title="Keys Allocated" Include="Keys" Sortable>
             @context.Keys?.Count(k => k.ClaimedOn.HasValue)
         </BoundDataColumn>
-        
+
         <DataColumn TData="string[]" Title="Collections" Include="Collections">
             @if (context.Collections != null)
                 foreach (var collection in context.Collections)
@@ -105,7 +105,7 @@
         <BoundDataColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable>
             <LocalTime Value="context.UpdatedOn" />
         </BoundDataColumn>
-        
+
         <BoundDataColumn Property="g => g.CreatedBy" Sortable Title="Created By" Include="CreatedBy">
             @context.CreatedBy?.UserName
         </BoundDataColumn>
@@ -212,20 +212,11 @@
             Title = "Import Game",
             DestroyOnClose = true,
             MaskClosable = false,
-            OnOk = (e) =>
-            {
-                Table.Reload();
-                return Task.CompletedTask;
-            },
-            OnCancel = (e) =>
-            {
-                Table.Reload();
-                return Task.CompletedTask;
-            },
             Footer = null,
         };
 
-        ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+        var modalRef = ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+        modalRef.OnOk = modalRef.OnCancel = Reload;
     }
 
     async Task Reload()

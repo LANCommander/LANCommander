@@ -1085,7 +1085,7 @@ namespace LANCommander.SDK.Services
                     {
                         foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                         {
-                            await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            await Client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
                         }
                     }
                     #endregion

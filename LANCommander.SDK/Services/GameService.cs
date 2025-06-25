@@ -1068,14 +1068,17 @@ namespace LANCommander.SDK.Services
                 foreach (var manifest in manifests)
                 {
                     #region Upload Saves
-                    await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
+                    if (Client.IsConnected())
                     {
-                        Logger?.LogTrace("Attempting to upload save");
+                        await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
+                        {
+                            Logger?.LogTrace("Attempting to upload save");
 
-                        await Client.Saves.UploadAsync(installDirectory, manifest.Id);
+                            await Client.Saves.UploadAsync(installDirectory, manifest.Id);
 
-                        return true;
-                    });
+                            return true;
+                        });
+                    }
                     #endregion
 
                     #region Run After Stop Script

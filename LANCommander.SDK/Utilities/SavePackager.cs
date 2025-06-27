@@ -64,43 +64,19 @@ public class SavePacker : IDisposable
 
     public SavePacker AddRegistryPath(SavePath registryPath)
     {
-        throw new NotImplementedException("Registry stuff has to be rebuilt to avoid reg.exe");
-        
-        /*
-            List<string> tempRegFiles = new List<string>();
+        if (registryPath.Type != SavePathType.Registry)
+            return this;
 
-            Logger?.LogTrace("Building registry export file");
+        // outsource export
+        var exporter = new RegistryExportUtility();
+        string regFileContent = exporter.Export(registryPath.Path);
 
-            var exportCommand = new StringBuilder();
+        // write out as UTF8 .reg
+        var bytes = Encoding.UTF8.GetBytes(regFileContent);
+        var file = new MemoryStream(bytes);
 
-            foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.Registry))
-            {
-                var tempRegFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".reg");
-
-                exportCommand.AppendLine($"reg.exe export \"{savePath.Path.Replace(":\\", "\\")}\" \"{tempRegFile}\"");
-                tempRegFiles.Add(tempRegFile);
-            }
-
-            var script = new PowerShellScript(Enums.ScriptType.SaveUpload);
-
-            script.UseInline(exportCommand.ToString());
-
-            if (Client.Scripts.Debug)
-                script.EnableDebug();
-
-            await script.ExecuteAsync<int>();
-
-            var exportFile = new StringBuilder();
-
-            foreach (var tempRegFile in tempRegFiles)
-            {
-                exportFile.AppendLine(File.ReadAllText(tempRegFile));
-                File.Delete(tempRegFile);
-            }
-
-            writer.Write("_registry.reg", new MemoryStream(Encoding.UTF8.GetBytes(exportFile.ToString())));
-         */
-
+        var index = _archive.Entries.Count(x => x.Key?.StartsWith("_registry") ?? false);
+        _archive.AddEntry($"_registry{index}.reg", file);
         return this;
     }
 

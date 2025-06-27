@@ -184,7 +184,7 @@ namespace LANCommander.SDK.PowerShell
                     ps.Runspace = runspace;
 
                     if (Debug)
-                        OnDebugStart?.Invoke(ps);
+                        await (OnDebugStart?.Invoke(ps) ?? Task.CompletedTask);
 
                     ps.AddScript("Write-Host $Logo");
 
@@ -218,7 +218,7 @@ namespace LANCommander.SDK.PowerShell
                     var results = await ps.InvokeAsync();
 
                     if (Debug)
-                        await OnDebugBreak?.Invoke(ps);
+                        await (OnDebugBreak?.Invoke(ps) ?? Task.CompletedTask);
 
                     try
                     {

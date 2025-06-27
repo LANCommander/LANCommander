@@ -109,6 +109,16 @@ public class SavePacker : IDisposable
         _archive.AddEntry(ManifestHelper.ManifestFilename, new MemoryStream(Encoding.UTF8.GetBytes(ManifestHelper.Serialize(manifest))));
     }
 
+    public bool HasEntries()
+    {
+        return _archive.Entries.Any();
+    }
+
+    public bool HasManifest()
+    {
+        return _archive.Entries.Any(entry => string.Equals(ManifestHelper.ManifestFilename, entry.Key, StringComparison.OrdinalIgnoreCase));
+    }
+
     public async Task<Stream> PackAsync()
     {
         _archive.SaveTo(_stream, new WriterOptions(CompressionType.None)

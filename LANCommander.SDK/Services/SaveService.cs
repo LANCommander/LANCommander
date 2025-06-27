@@ -204,12 +204,16 @@ namespace LANCommander.SDK.Services
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        var script = new PowerShellScript(Enums.ScriptType.Install);
+                        var script = new PowerShellScript(Enums.ScriptType.SaveDownload);
 
-                        script.UseInline($"regedit.exe /s \"{registryImportFilePath}\"");
-
+                        string adminArgument = string.Empty;
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
+                        {
                             script.AsAdmin();
+                            adminArgument = " -Verb RunAs";
+                        }
+
+                        script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
 
                         if (Client.Scripts.Debug)
                         {

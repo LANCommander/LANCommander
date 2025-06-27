@@ -198,9 +198,10 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     #region Handle registry importing
-                    var registryImportFilePath = Path.Combine(tempLocation, "_registry.reg");
+                    var registryImportFilePaths = Directory.GetFiles(tempLocation, "_registry*.reg");
+                    var importer = new RegistryImportUtility();
 
-                    if (File.Exists(registryImportFilePath))
+                    foreach (var registryImportFilePath in registryImportFilePaths)
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 

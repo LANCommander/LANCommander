@@ -1,4 +1,6 @@
-﻿@inject GameService GameService
+﻿@using PCGW = LANCommander.PCGamingWiki
+@inject GameService GameService
+@inject ModalService ModalService
 
 <Flex Vertical Gap="FlexGap.Large">
     <Table TItem="MultiplayerMode" DataSource="@MultiplayerModes" HidePagination="true" Responsive>
@@ -30,9 +32,12 @@
         </ActionColumn>
     </Table>
 
-    <Flex Justify="FlexJustify.End">
-        <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
-    </Flex>
+    <GridRow Justify="RowJustify.End">
+        <GridCol>
+            <Button OnClick="LookupMode">Lookup Modes from PCGW</Button>
+            <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
+        </GridCol>
+    </GridRow>
 </Flex>
 
 @code {
@@ -46,7 +51,7 @@
 
         MultiplayerModes = game.MultiplayerModes;
     }
-    
+
     async Task AddMode()
     {
         MultiplayerModes.Add(new MultiplayerMode());
@@ -64,7 +69,56 @@
         game.MultiplayerModes = MultiplayerModes;
 
         await GameService.UpdateAsync(game);
-        
+
         game = await GameService.GetAsync(GameId);
+    }
+
+    private async Task LookupMode()
+    {
+        var game = await GameService.GetAsync(GameId);
+
+        var modalOptions = new ModalOptions()
+        {
+            Title = $"Game Lookup on PCGamingWiki",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Select",
+            Width = 780,
+        };
+
+        var lookupOptions = new MultiplayerModeGameLookupOptions()
+        {
+            GameId = GameId,
+            GameSearch = game.Title,
+            ResultSelected = OnLookupResultSelected,
+        };
+
+        var modalRef = ModalService.CreateModal<MultiplayerModeGameLookupDialog, MultiplayerModeGameLookupOptions>(modalOptions, lookupOptions);
+        await Task.Yield();
+    }
+
+    private async void OnLookupResultSelected(Guid gameId, IEnumerable<PCGWMultiplayerModeLookupResult> modes)
+    {
+        if (modes == null || modes.Count() == 0)
+            return;
+
+        foreach (var mode in modes)
+        {
+            var existingMode = MultiplayerModes.FirstOrDefault(m => m.Type == mode.MultiplayerType);
+            if (existingMode == null)
+            {
+                MultiplayerModes.Add(existingMode = new MultiplayerMode
+                {
+                    Type = mode.MultiplayerType,
+                });
+            }
+
+            existingMode.MinPlayers = 2;
+            existingMode.MaxPlayers = mode.PlayerCount ?? 65536;
+            existingMode.Description = mode.Notes;
+        }
+
+        StateHasChanged();
     }
 }

@@ -31,6 +31,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<EngineService>();
         services.AddScoped<CompanyService>();
         services.AddScoped<IGDBService>();
+        services.AddScoped<SteamService>();
         services.AddScoped<ServerService>();
         services.AddScoped<ServerConsoleService>();
         services.AddScoped<GameSaveService>();

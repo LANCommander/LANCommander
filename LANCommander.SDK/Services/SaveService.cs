@@ -198,21 +198,31 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     #region Handle registry importing
-                    var registryImportFilePath = Path.Combine(tempLocation, "_registry.reg");
+                    var registryImportFilePaths = Directory.GetFiles(tempLocation, "_registry*.reg");
+                    var importer = new RegistryImportUtility();
 
-                    if (File.Exists(registryImportFilePath))
+                    foreach (var registryImportFilePath in registryImportFilePaths)
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        var script = new PowerShellScript(Enums.ScriptType.Install);
+                        var script = new PowerShellScript(Enums.ScriptType.SaveDownload);
 
-                        script.UseInline($"regedit.exe /s \"{registryImportFilePath}\"");
-
+                        string adminArgument = string.Empty;
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
+                        {
                             script.AsAdmin();
+                            adminArgument = " -Verb RunAs";
+                        }
+
+                        script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
 
                         if (Client.Scripts.Debug)
+                        {
                             script.EnableDebug();
+                            script.OnDebugStart = Client.Scripts.OnDebugStart;
+                            script.OnDebugBreak = Client.Scripts.OnDebugBreak;
+                            script.OnOutput = Client.Scripts.OnOutput;
+                        }
 
                         await script.ExecuteAsync<int>();
                     }

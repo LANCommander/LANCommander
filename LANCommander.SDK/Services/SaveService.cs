@@ -261,21 +261,26 @@ namespace LANCommander.SDK.Services
             return await Client.UploadRequestAsync<GameSave>($"/api/Saves/Game/{manifest.Id}/Upload", stream);
         }
 
-        public async Task<GameSave> UploadAsync(string installDirectory, Guid gameId)
+        public async Task<GameSave?> UploadAsync(string installDirectory, Guid gameId)
         {
             using (var savePacker = new SavePacker(installDirectory))
             {
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
-                if (manifest?.SavePaths.Any() ?? false)
+                if (manifest?.SavePaths?.Any() ?? false)
                     savePacker.AddPaths(manifest.SavePaths);
-                
-                await savePacker.AddManifestAsync(manifest);
-                
-                var stream = await savePacker.PackAsync();
 
-                return await UploadAsync(stream, manifest);
+                if (savePacker.HasEntries())
+                {
+                    await savePacker.AddManifestAsync(manifest);
+
+                    var stream = await savePacker.PackAsync();
+
+                    return await UploadAsync(stream, manifest);
+                }
             }
+
+            return null;
         }
 
         public async Task DeleteAsync(Guid id)

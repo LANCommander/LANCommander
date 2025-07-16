@@ -33,6 +33,11 @@
         }
     }
 
+    async Task OnParametersSetAsync()
+    {
+        await Connect();
+    }
+
     async Task Connect() {
         _hubConnection = new HubConnectionBuilder()
             .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))

@@ -7,6 +7,7 @@ using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
+using LANCommander.Server.Services.Importers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,6 @@ namespace LANCommander.Server.Controllers.Api
     public class GamesController : BaseApiController
     {
         private readonly GameService GameService;
-        private readonly ImportService<Game> ImportService;
         private readonly LibraryService LibraryService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
@@ -29,6 +29,7 @@ namespace LANCommander.Server.Controllers.Api
         private readonly PlaySessionService PlaySessionService;
         private readonly ServerService ServerService;
         private readonly IEnumerable<IServerEngine> ServerEngines;
+        private readonly ImportContext ImportContext;
         private readonly IFusionCache Cache;
         private readonly IMapper Mapper;
 
@@ -38,16 +39,16 @@ namespace LANCommander.Server.Controllers.Api
             IFusionCache cache,
             IMapper mapper,
             GameService gameService,
-            ImportService<Game> importService,
             LibraryService libraryService,
             StorageLocationService storageLocationService,
             ArchiveService archiveService,
             UserService userService,
             PlaySessionService playSessionService,
-            ServerService serverService) : base(logger)
+            ServerService serverService,
+            ImportContext importContext) : base(logger)
         {
             GameService = gameService;
-            ImportService = importService;
+
             LibraryService = libraryService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
@@ -55,6 +56,7 @@ namespace LANCommander.Server.Controllers.Api
             PlaySessionService = playSessionService;
             ServerService = serverService;
             ServerEngines = serviceProvider.GetServices<IServerEngine>();
+            ImportContext = importContext;
             Cache = cache;
             Mapper = mapper;
         }
@@ -133,7 +135,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}/Manifest")]
-        public async Task<SDK.GameManifest> GetManifest(Guid id)
+        public async Task<SDK.Models.Manifest.Game> GetManifest(Guid id)
         {
             var manifest = await Cache.GetOrSetAsync($"Games/{id}/Manifest", async _ =>
             {
@@ -339,9 +341,11 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var game = await ImportService.ImportFromUploadArchiveAsync(objectKey);
+                var uploadedPath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
-                return Ok();
+                var result = await ImportContext.InitializeImportAsync(uploadedPath);
+
+                return Ok(result);
             }
             catch (Exception ex)
             {

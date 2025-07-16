@@ -1,9 +1,11 @@
+using System.IO.Compression;
 using System.Text.Json;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.DependencyInjection;
-using SharpCompress.Archives.Zip;
+using SharpCompress.Readers;
+using ZipArchive = SharpCompress.Archives.Zip.ZipArchive;
 
 namespace LANCommander.Server.Services.Importers;
 
@@ -14,6 +16,9 @@ public class ImportContext(
     GameService gameService,
     RedistributableService redistributableService,
     ServerService serverService,
+    ArchiveService archiveService,
+    MediaService mediaService,
+    GameSaveService saveService,
     IImporter<SDK.Models.Manifest.Action, Data.Models.Action> actionImporter,
     IImporter<SDK.Models.Manifest.Archive, Data.Models.Archive> archiveImporter,
     IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection> collectionImporter,
@@ -491,28 +496,75 @@ public class ImportContext(
         }
     }
 
-    public async Task ExportQueueAsync()
+    /// <summary>
+    /// Process the context's data record and write the archive to the supplied stream
+    /// </summary>
+    /// <param name="stream">Output stream for the resulting archive to be written to</param>
+    public async Task ExportQueueAsync(Stream stream)
     {
-        if (DataRecord is Data.Models.Game game)
-            Manifest = await ExportGameQueueAsync(game);
-        else if (DataRecord is Data.Models.Redistributable redistributable)
-            Manifest = await ExportRedistributableQueueAsync(redistributable);
-        else if (DataRecord is Data.Models.Server server)
-            Manifest = await ExportServerQueueAsync(server);
+        SDK.Models.Manifest.Game gameManifest = null;
+        SDK.Models.Manifest.Redistributable redistributableManifest = null;
+        SDK.Models.Manifest.Server serverManifest = null;
         
-        using (var ms = new MemoryStream())
-        using (var writer = new StreamWriter(ms))
-        {
-            writer.Write(ManifestHelper.Serialize(Manifest));
-            writer.Flush();
+        if (DataRecord is Data.Models.Game game)
+            gameManifest = await ExportGameQueueAsync(game);
+        else if (DataRecord is Data.Models.Redistributable redistributable)
+            redistributableManifest = await ExportRedistributableQueueAsync(redistributable);
+        else if (DataRecord is Data.Models.Server server)
+            serverManifest = await ExportServerQueueAsync(server);
 
-            ms.Position = 0;
+        using (var export = new System.IO.Compression.ZipArchive(stream, ZipArchiveMode.Create))
+        {
+            using (var ms = new MemoryStream())
+            using (var writer = new StreamWriter(stream))
+            {
+                writer.Write(ManifestHelper.Serialize(Manifest));
+                writer.Flush();
+
+                var manifestEntry = export.CreateEntry(ManifestHelper.ManifestFilename, CompressionLevel.Fastest);
+
+                using (var entryStream = manifestEntry.Open())
+                {
+                    ms.Seek(0, SeekOrigin.Begin);
+                    await ms.CopyToAsync(entryStream);
+                }
+            }
+
+            #region Add Game Files
+            if (gameManifest != null)
+            {
+                foreach (var archive in gameManifest.Archives)
+                    await AddArchiveToExport(archive, export);
+
+                foreach (var media in gameManifest.Media)
+                    await AddMediaToExport(media, export);
+                
+                foreach (var save in gameManifest.Saves)
+                    await AddSaveToExport(save, export);
+            }
+            #endregion
             
-            Archive.AddEntry(ManifestHelper.ManifestFilename, ms, ms.Length);
+            #region Add Redistributable Files
+            if (redistributableManifest != null)
+            {
+                foreach (var archive in redistributableManifest.Archives)
+                    await AddArchiveToExport(archive, export);
+            }
+            #endregion
+            
+            #region Add Server Files
+            #warning TODO: Expand this out, add all files from the server's root directory.
+            // The server's root directory may be different from its working directory. The server model
+            // should be expanded upon to add this property. When the root directory is changed, the
+            // working directory should be changed as well.
+            //
+            // Should the files from the HTTP paths be included? Maybe the files for those need to be
+            // added as another export flag.
+            #endregion
         }
     }
 
-    public async Task<object> ExportGameQueueAsync(Data.Models.Game game)
+    public async Task<SDK.Models.Manifest.Game> ExportGameQueueAsync(Data.Models.Game game)
     {
         var manifest = await Games.ExportAsync(game);
         
@@ -558,7 +610,7 @@ public class ImportContext(
         return manifest;
     }
 
-    public async Task<object> ExportRedistributableQueueAsync(Data.Models.Redistributable redistributable)
+    public async Task<SDK.Models.Manifest.Redistributable> ExportRedistributableQueueAsync(Data.Models.Redistributable redistributable)
     {
         var manifest = await Redistributables.ExportAsync(redistributable);
         
@@ -573,7 +625,7 @@ public class ImportContext(
         return manifest;
     }
 
-    public async Task<object> ExportServerQueueAsync(Data.Models.Server server)
+    public async Task<SDK.Models.Manifest.Server> ExportServerQueueAsync(Data.Models.Server server)
     {
         var manifest = await Servers.ExportAsync(server);
 
@@ -592,6 +644,42 @@ public class ImportContext(
         return manifest;
     }
 
+    private async Task AddArchiveToExport(SDK.Models.Manifest.Archive archive, System.IO.Compression.ZipArchive zip)
+    {
+        var archiveEntry = zip.CreateEntry($"Archives/{archive.Id}");
+        var archivePath = await archiveService.GetArchiveFileLocationAsync(archive.ObjectKey);
+
+        using (var archiveEntryStream = archiveEntry.Open())
+        using (var archiveFileStream = new FileStream(archivePath, FileMode.Open))
+        {
+            await archiveFileStream.CopyToAsync(archiveEntryStream);
+        }
+    }
+    
+    private async Task AddMediaToExport(SDK.Models.Manifest.Media media, System.IO.Compression.ZipArchive zip)
+    {
+        var mediaEntry = zip.CreateEntry($"Media/{media.Id}");
+        var mediaPath = await mediaService.GetMediaPathAsync(media.Id);
+
+        using (var mediaEntryStream = mediaEntry.Open())
+        using (var mediaFileStream = new FileStream(mediaPath, FileMode.Open))
+        {
+            await mediaFileStream.CopyToAsync(mediaEntryStream);
+        }
+    }
+
+    private async Task AddSaveToExport(SDK.Models.Manifest.Save save, System.IO.Compression.ZipArchive zip)
+    {
+        var saveEntry = zip.CreateEntry($"Saves/{save.Id}");
+        var savePath = await saveService.GetSavePathAsync(save.Id);
+        
+        using (var saveEntryStream = saveEntry.Open())
+        using (var saveFileStream = new FileStream(savePath, FileMode.Open))
+        {
+            await saveFileStream.CopyToAsync(saveEntryStream);
+        }
+    }
+    
     private async IAsyncEnumerable<ImportItemInfo> GetImportItemInfoAsync<TModel, TEntity>(IEnumerable<TModel> records,
         IImporter<TModel, TEntity> importer)
     {

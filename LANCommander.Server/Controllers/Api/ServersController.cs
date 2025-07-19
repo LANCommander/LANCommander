@@ -3,6 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Importers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,17 +17,20 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly ServerService ServerService;
-        private readonly ImportService<Data.Models.Server> ImportService;
+        private readonly ArchiveService ArchiveService;
+        private readonly ImportContext ImportContext;
 
         public ServersController(
             ILogger<ServersController> logger, 
             IMapper mapper,
             ServerService serverService,
-            ImportService<Data.Models.Server> importService) : base(logger)
+            ArchiveService archiveService,
+            ImportContext importContext) : base(logger)
         {
             Mapper = mapper;
             ServerService = serverService;
-            ImportService = importService;
+            ArchiveService = archiveService;
+            ImportContext = importContext;
         }
 
         [HttpGet]
@@ -51,7 +55,11 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var server = await ImportService.ImportFromUploadArchiveAsync(objectKey);
+                var uploadedPath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+                
+                var result = await ImportContext.InitializeImportAsync(uploadedPath);
+
+                return Ok(result);
 
                 return Ok();
             }

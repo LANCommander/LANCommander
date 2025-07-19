@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class MultiplayerModeImporter(
     IMapper mapper,
-    MultiplayerModeService multiplayerModeService,
-    ImportContext importContext) : IImporter<MultiplayerMode, Data.Models.MultiplayerMode>
+    MultiplayerModeService multiplayerModeService) : BaseImporter<MultiplayerMode, Data.Models.MultiplayerMode>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(MultiplayerMode record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(MultiplayerMode record)
     {
         return new ImportItemInfo
         {
@@ -19,25 +18,25 @@ public class MultiplayerModeImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(MultiplayerMode record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(MultiplayerMode record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.MultiplayerModes,
             Name = String.IsNullOrWhiteSpace(record.Description) ? record.Type.ToString() : $"{record.Type} - {record.Description}",
         };
     }
 
-    public bool CanImport(MultiplayerMode record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(MultiplayerMode record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(MultiplayerMode record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(MultiplayerMode record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.MultiplayerMode> AddAsync(MultiplayerMode record)
+    public override async Task<Data.Models.MultiplayerMode> AddAsync(MultiplayerMode record)
     {
         try
         {
             var multiplayerMode = new Data.Models.MultiplayerMode
             {
-                Game = importContext.DataRecord as Data.Models.Game,
+                Game = ImportContext.DataRecord as Data.Models.Game,
                 Description = record.Description,
                 Type = record.Type,
                 Spectators = record.Spectators,
@@ -56,9 +55,9 @@ public class MultiplayerModeImporter(
         } 
     }
 
-    public async Task<Data.Models.MultiplayerMode> UpdateAsync(MultiplayerMode record)
+    public override async Task<Data.Models.MultiplayerMode> UpdateAsync(MultiplayerMode record)
     {
-        var game = importContext.DataRecord as Data.Models.Game;
+        var game = ImportContext.DataRecord as Data.Models.Game;
         
         var existing = await multiplayerModeService.FirstOrDefaultAsync(m => m.GameId == game.Id && m.Type == record.Type);
 
@@ -81,14 +80,14 @@ public class MultiplayerModeImporter(
         }
     }
 
-    public async Task<MultiplayerMode> ExportAsync(Data.Models.MultiplayerMode entity)
+    public override async Task<MultiplayerMode> ExportAsync(Data.Models.MultiplayerMode entity)
     {
         return mapper.Map<MultiplayerMode>(entity);
     }
 
-    public async Task<bool> ExistsAsync(MultiplayerMode record)
+    public override async Task<bool> ExistsAsync(MultiplayerMode record)
     {
-        var game = importContext.DataRecord as Data.Models.Game;
+        var game = ImportContext.DataRecord as Data.Models.Game;
         
         return await multiplayerModeService.ExistsAsync(m => m.GameId == game.Id && m.Type == record.Type);
     }

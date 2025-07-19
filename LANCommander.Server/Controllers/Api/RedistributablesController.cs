@@ -3,6 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Importers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,23 +17,23 @@ namespace LANCommander.Server.Controllers.Api
     {
         private readonly IMapper Mapper;
         private readonly RedistributableService RedistributableService;
-        private readonly ImportService<Redistributable> ImportService;
         private readonly StorageLocationService StorageLocationService;
         private readonly ArchiveService ArchiveService;
+        private readonly ImportContext ImportContext;
 
         public RedistributablesController(
             ILogger<RedistributablesController> logger, 
             IMapper mapper,
             RedistributableService redistributableService,
-            ImportService<Redistributable> importService,
             StorageLocationService storageLocationService,
-            ArchiveService archiveService) : base(logger)
+            ArchiveService archiveService,
+            ImportContext importContext) : base(logger)
         {
             Mapper = mapper;
             RedistributableService = redistributableService;
-            ImportService = importService;
             StorageLocationService = storageLocationService;
             ArchiveService = archiveService;
+            ImportContext = importContext;
         }
 
         [HttpGet]
@@ -84,9 +85,11 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var redistributable = await ImportService.ImportFromUploadArchiveAsync(objectKey);
+                var uploadedPath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
-                return Ok();
+                var result = await ImportContext.InitializeImportAsync(uploadedPath);
+
+                return Ok(result);
             }
             catch (Exception ex)
             {

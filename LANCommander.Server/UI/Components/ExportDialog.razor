@@ -7,55 +7,54 @@
 @inject ILogger<ExportDialog> Logger
 
 
-    <Collapse>
-        @foreach (var group in ImportItems.GroupBy(i => i.Flag))
-        {
-            <Panel ShowArrow="false" Key="@group.Key.ToString()">
-                <HeaderTemplate>
-                    <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
-                    <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                        <Text>@group.Key</Text>
-                        
-                        @{
-                            var size = group.Sum(i => i.Size);
+<Collapse>
+    @foreach (var group in ExportItems.GroupBy(i => i.Flag))
+    {
+        <Panel ShowArrow="false" Key="@group.Key.ToString()">
+            <HeaderTemplate>
+                <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
+                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                    <Text>@group.Key</Text>
+                    
+                    @{
+                        var size = group.Sum(i => i.Size);
 
-                            if (size > 0)
-                            {
-                                <ByteSize Value="size" />
-                            }
+                        if (size > 0)
+                        {
+                            <ByteSize Value="size" />
                         }
-                    </Flex>
-                </HeaderTemplate>
-                <ChildContent>
-                    <AntList DataSource="group">
-                        <ChildContent Context="item">
-                            <ListItem>
-                                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                                    <Text>@item.Name</Text>
+                    }
+                </Flex>
+            </HeaderTemplate>
+            <ChildContent>
+                <AntList DataSource="group">
+                    <ChildContent Context="item">
+                        <ListItem>
+                            <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                                <Text>@item.Name</Text>
 
-                                    @if (item.Size > 0)
-                                    {
-                                        <ByteSize Value="item.Size"/>
-                                    }
-                                </Flex>
-                            </ListItem>
-                        </ChildContent>
-                    </AntList>
-                </ChildContent>
-            </Panel>
-        }
-    </Collapse>
-    
-    <Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
-        <Button OnClick="Export" Type="@ButtonType.Primary">Export</Button>
-        <Button OnClick="Cancel">Cancel</Button>
-    </Flex>
-}
+                                @if (item.Size > 0)
+                                {
+                                    <ByteSize Value="item.Size"/>
+                                }
+                            </Flex>
+                        </ListItem>
+                    </ChildContent>
+                </AntList>
+            </ChildContent>
+        </Panel>
+    }
+</Collapse>
+
+<Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
+    <Button OnClick="Export" Type="@ButtonType.Primary">Export</Button>
+    <Button OnClick="Cancel">Cancel</Button>
+</Flex>
 
 @code {
     ImportContext ImportContext;
 
-    IEnumerable<ImportItemInfo> ImportItems = new List<ImportItemInfo>();
+    IEnumerable<ExportItemInfo> ExportItems = new List<ExportItemInfo>();
 
     Dictionary<ImportRecordFlags, bool> SelectedFlags = Enum.GetValues<ImportRecordFlags>()
         .ToDictionary(
@@ -69,6 +68,9 @@
         ImportContext.OnRecordError += RecordError;
         ImportContext.OnRecordAdded += RecordAdded;
         ImportContext.OnRecordProcessed += RecordProcessed;
+
+        if (Options != null && Options.RecordId != Guid.Empty)
+            ExportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
     }
 
     private void RecordProcessed(object? sender, object e)
@@ -88,21 +90,15 @@
 
     async Task Export()
     {
-        ImportRecordFlags? flags = null;
+        var flags = SelectedFlags
+            .Where(f => f.Value)
+            .Aggregate(ImportRecordFlags.None, (cur, f) => cur | f.Key);
 
-        foreach (var flag in SelectedFlags.Where(d => d.Value))
-        {
-            if (flags == null)
-                flags = flag.Key;
-            else
-                flags &= flag.Key;
-        }
-
-        await ImportContext.PrepareExportQueueAsync(flags.Value);
+        await ImportContext.PrepareExportQueueAsync(flags);
 
         await InvokeAsync(StateHasChanged);
 
-        await ImportContext.ExportQueueAsync();
+        // Do request to export (probably via JS)
     }
 
     async Task Cancel()
@@ -132,7 +128,7 @@
             {
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
-                ImportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+                ExportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
 
                 await InvokeAsync(StateHasChanged);
             }

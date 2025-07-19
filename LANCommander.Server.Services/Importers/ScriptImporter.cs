@@ -7,22 +7,21 @@ namespace LANCommander.Server.Services.Importers;
 
 public class ScriptImporter(
     IMapper mapper,
-    ScriptService scriptService,
-    ImportContext importContext) : IImporter<Script, Data.Models.Script>
+    ScriptService scriptService) : BaseImporter<Script, Data.Models.Script>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Script record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Script record)
     {
         return new ImportItemInfo
         {
             Flag = ImportRecordFlags.Scripts,
             Name = record.Name,
-            Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}")?.Size ?? 0,
+            Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}")?.Size ?? 0,
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Script record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Script record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Scripts,
             Name = record.Name,
@@ -30,23 +29,23 @@ public class ScriptImporter(
         };
     }
 
-    public bool CanImport(Script record) =>
-        importContext.DataRecord is Data.Models.Game
+    public override bool CanImport(Script record) =>
+        ImportContext.DataRecord is Data.Models.Game
         ||
-        importContext.DataRecord is Data.Models.Redistributable
+        ImportContext.DataRecord is Data.Models.Redistributable
         ||
-        importContext.DataRecord is Data.Models.Server;
+        ImportContext.DataRecord is Data.Models.Server;
 
-    public bool CanExport(Script record) =>
-        importContext.DataRecord is Data.Models.Game
+    public override bool CanExport(Script record) =>
+        ImportContext.DataRecord is Data.Models.Game
         ||
-        importContext.DataRecord is Data.Models.Redistributable
+        ImportContext.DataRecord is Data.Models.Redistributable
         ||
-        importContext.DataRecord is Data.Models.Server;
+        ImportContext.DataRecord is Data.Models.Server;
 
-    public async Task<Data.Models.Script> AddAsync(Script record)
+    public override async Task<Data.Models.Script> AddAsync(Script record)
     {
-        var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
+        var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
         
         if (archiveEntry == null)
             throw new ImportSkippedException<Script>(record, "Matching script file does not exist in import archive");
@@ -65,11 +64,11 @@ public class ScriptImporter(
                 Type = record.Type,
             };
 
-            if (importContext.DataRecord is Data.Models.Game game)
+            if (ImportContext.DataRecord is Data.Models.Game game)
                 newScript.Game = game;
-            else if (importContext.DataRecord is Data.Models.Redistributable redistributable)
+            else if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
                 newScript.Redistributable = redistributable;
-            else if (importContext.DataRecord is Data.Models.Server server)
+            else if (ImportContext.DataRecord is Data.Models.Server server)
                 newScript.Server = server;
 
             using (var streamReader = new StreamReader(archiveEntry.OpenEntryStream()))
@@ -90,17 +89,17 @@ public class ScriptImporter(
         }
     }
 
-    public async Task<Data.Models.Script> UpdateAsync(Script record)
+    public override async Task<Data.Models.Script> UpdateAsync(Script record)
     {
-        var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
+        var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}");
 
         Data.Models.Script existing = null;
         
-        if (importContext.DataRecord is Data.Models.Game game)
+        if (ImportContext.DataRecord is Data.Models.Game game)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
-        else if (importContext.DataRecord is Data.Models.Redistributable redistributable)
+        else if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
-        else if (importContext.DataRecord is Data.Models.Server server)
+        else if (ImportContext.DataRecord is Data.Models.Server server)
             existing = await scriptService.FirstOrDefaultAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
 
         try
@@ -126,7 +125,7 @@ public class ScriptImporter(
         }
     }
 
-    public async Task<Script> ExportAsync(Data.Models.Script entity)
+    public override async Task<Script> ExportAsync(Data.Models.Script entity)
     {
         using (var stream = new MemoryStream())
         using (var writer = new StreamWriter(stream))
@@ -136,21 +135,21 @@ public class ScriptImporter(
             
             stream.Position = 0;
             
-            importContext.Archive.AddEntry($"Scripts/{entity.Id}", stream);
+            ImportContext.Archive.AddEntry($"Scripts/{entity.Id}", stream);
         }
         
         return mapper.Map<Script>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Script record)
+    public override async Task<bool> ExistsAsync(Script record)
     {
-        if (importContext.DataRecord is Data.Models.Game game)
+        if (ImportContext.DataRecord is Data.Models.Game game)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.GameId == game.Id);
         
-        if (importContext.DataRecord is Data.Models.Redistributable redistributable)
+        if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.RedistributableId == redistributable.Id);
         
-        if (importContext.DataRecord is Data.Models.Server server)
+        if (ImportContext.DataRecord is Data.Models.Server server)
             return await scriptService.ExistsAsync(s => s.Type == record.Type && s.Name == record.Name && s.ServerId == server.Id);
 
         return false;

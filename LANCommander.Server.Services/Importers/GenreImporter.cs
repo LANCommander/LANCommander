@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class GenreImporter(
     IMapper mapper,
-    GenreService genreService,
-    ImportContext importContext) : IImporter<Genre, Data.Models.Genre>
+    GenreService genreService) : BaseImporter<Genre, Data.Models.Genre>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Genre record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Genre record)
     {
         return new ImportItemInfo
         {
@@ -19,25 +18,25 @@ public class GenreImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Genre record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Genre record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Genres,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Genre record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Genre record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Genre record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Genre record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Genre> AddAsync(Genre record)
+    public override async Task<Data.Models.Genre> AddAsync(Genre record)
     {
         try
         {
             var genre = new Data.Models.Genre
             {
-                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -51,7 +50,7 @@ public class GenreImporter(
         }
     }
 
-    public async Task<Data.Models.Genre> UpdateAsync(Genre record)
+    public override async Task<Data.Models.Genre> UpdateAsync(Genre record)
     {
         var existing = await genreService.Include(g => g.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -60,7 +59,7 @@ public class GenreImporter(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
+            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
             
             existing = await genreService.UpdateAsync(existing);
 
@@ -72,12 +71,12 @@ public class GenreImporter(
         }
     }
 
-    public async Task<Genre> ExportAsync(Data.Models.Genre entity)
+    public override async Task<Genre> ExportAsync(Data.Models.Genre entity)
     {
         return mapper.Map<Genre>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Genre record)
+    public override async Task<bool> ExistsAsync(Genre record)
     {
         return await genreService.ExistsAsync(c => c.Name == record.Name);
     }

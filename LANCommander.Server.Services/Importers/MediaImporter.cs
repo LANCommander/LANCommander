@@ -8,38 +8,42 @@ namespace LANCommander.Server.Services.Importers;
 public class MediaImporter(
     IMapper mapper,
     StorageLocationService storageLocationService,
-    MediaService mediaService,
-    ImportContext importContext) : IImporter<Media, Data.Models.Media>
+    MediaService mediaService) : BaseImporter<Media, Data.Models.Media>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Media record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Media record)
     {
         return new ImportItemInfo
         {
             Flag = ImportRecordFlags.Media,
             Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
-            Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}")?.Size ?? 0,
+            Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}")?.Size ?? 0,
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Media record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Media record)
     {
         var mediaPath = await mediaService.GetMediaPathAsync(record.Id);
+        
+        var info = new ExportItemInfo
+        {
+            Flag = ImportRecordFlags.Archives,
+            Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
+        };
+        
         var fileInfo = new FileInfo(mediaPath);
         
-        return new ImportItemInfo
-        {
-            Flag = ImportRecordFlags.Media,
-            Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
-            Size = fileInfo.Length,
-        };
+        if (fileInfo.Exists)
+            info.Size = fileInfo.Length;
+
+        return info;
     }
 
-    public bool CanImport(Media record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Media record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Media record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Media record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Media> AddAsync(Media record)
+    public override async Task<Data.Models.Media> AddAsync(Media record)
     {
-        var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
+        var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
         
         var defaultMediaLocation =
             await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
@@ -50,7 +54,7 @@ public class MediaImporter(
         {
             media = new Data.Models.Media
             {
-                Game = importContext.DataRecord as Data.Models.Game,
+                Game = ImportContext.DataRecord as Data.Models.Game,
                 CreatedOn = record.CreatedOn,
                 Type = record.Type,
                 UpdatedOn = record.UpdatedOn,
@@ -72,9 +76,9 @@ public class MediaImporter(
         }
     }
 
-    public async Task<Data.Models.Media> UpdateAsync(Media record)
+    public override async Task<Data.Models.Media> UpdateAsync(Media record)
     {
-        var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
+        var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}");
         var existing = await mediaService.Include(m => m.StorageLocation).FirstOrDefaultAsync(m => m.Type == record.Type && m.Game.Id == record.Id);
         var existingPath = MediaService.GetMediaPath(existing);
         
@@ -83,7 +87,7 @@ public class MediaImporter(
 
         try
         {
-            existing.Game = importContext.DataRecord as Data.Models.Game;
+            existing.Game = ImportContext.DataRecord as Data.Models.Game;
             existing.Name = record.Name;
             existing.MimeType = record.MimeType;
             existing.CreatedOn = record.CreatedOn;
@@ -103,20 +107,20 @@ public class MediaImporter(
         }
     }
 
-    public async Task<Media> ExportAsync(Data.Models.Media entity)
+    public override async Task<Media> ExportAsync(Data.Models.Media entity)
     {
         var path = await mediaService.GetMediaPathAsync(entity.Id);
         var fileInfo = new FileInfo(path);
 
         using (var fs = fileInfo.OpenRead())
         {
-            importContext.Archive.AddEntry($"Media/{entity.Id}", fs);
+            ImportContext.Archive.AddEntry($"Media/{entity.Id}", fs);
         }
         
         return mapper.Map<Media>(entity);
     }
 
-    public Task<bool> ExistsAsync(Media media)
+    public override Task<bool> ExistsAsync(Media media)
     {
         return mediaService.ExistsAsync(m => m.Type == media.Type && m.Id == media.Id);
     }

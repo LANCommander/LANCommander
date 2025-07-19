@@ -63,7 +63,7 @@ namespace LANCommander.Server.Controllers
                 Response.ContentType = "application/octet-stream";
                 Response.Headers.Append("Content-Disposition", @$"attachment; filename=""{game.Title}.lcx""");
 
-                await context.PrepareGameExportQueueAsync(game, flags);
+                //await context.PrepareGameExportQueueAsync(game, flags);
                 await context.ExportQueueAsync(Response.BodyWriter.AsStream());
             }
         }

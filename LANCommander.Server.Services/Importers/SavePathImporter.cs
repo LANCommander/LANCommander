@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class SavePathImporter(
     IMapper mapper,
-    SavePathService savePathService,
-    ImportContext importContext) : IImporter<SavePath, Data.Models.SavePath>
+    SavePathService savePathService) : BaseImporter<SavePath, Data.Models.SavePath>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(SavePath record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(SavePath record)
     {
         return new ImportItemInfo
         {
@@ -19,26 +18,26 @@ public class SavePathImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(SavePath record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(SavePath record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.SavePaths,
             Name = record.Path,
         };
     }
 
-    public bool CanImport(SavePath record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(SavePath record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(SavePath record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(SavePath record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.SavePath> AddAsync(SavePath record)
+    public override async Task<Data.Models.SavePath> AddAsync(SavePath record)
     {
         try
         {
             var savePath = new Data.Models.SavePath
             {
                 Id = record.Id,
-                Game = importContext.DataRecord as Data.Models.Game,
+                Game = ImportContext.DataRecord as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 IsRegex = record.IsRegex,
@@ -55,13 +54,13 @@ public class SavePathImporter(
         }
     }
 
-    public async Task<Data.Models.SavePath> UpdateAsync(SavePath record)
+    public override async Task<Data.Models.SavePath> UpdateAsync(SavePath record)
     {
         var existing = await savePathService.FirstOrDefaultAsync(p => p.Id == record.Id);
 
         try
         {
-            existing.Game = importContext.DataRecord as Data.Models.Game;
+            existing.Game = ImportContext.DataRecord as Data.Models.Game;
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.IsRegex = record.IsRegex;
@@ -77,12 +76,12 @@ public class SavePathImporter(
         }
     }
 
-    public async Task<SavePath> ExportAsync(Data.Models.SavePath entity)
+    public override async Task<SavePath> ExportAsync(Data.Models.SavePath entity)
     {
         return mapper.Map<SavePath>(entity);
     }
 
-    public async Task<bool> ExistsAsync(SavePath record)
+    public override async Task<bool> ExistsAsync(SavePath record)
     {
         return await savePathService.ExistsAsync(p => p.Id == record.Id);
     }

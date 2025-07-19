@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class ServerConsoleImporter(
     IMapper mapper,
-    ServerConsoleService serverConsoleService,
-    ImportContext importContext) : IImporter<ServerConsole, Data.Models.ServerConsole>
+    ServerConsoleService serverConsoleService) : BaseImporter<ServerConsole, Data.Models.ServerConsole>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(ServerConsole record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(ServerConsole record)
     {
         return new ImportItemInfo
         {
@@ -19,19 +18,19 @@ public class ServerConsoleImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(ServerConsole record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(ServerConsole record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.ServerConsoles,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(ServerConsole record) => importContext.DataRecord is Data.Models.ServerConsole;
-    public bool CanExport(ServerConsole record) => importContext.DataRecord is Data.Models.ServerConsole;
+    public override bool CanImport(ServerConsole record) => ImportContext.DataRecord is Data.Models.ServerConsole;
+    public override bool CanExport(ServerConsole record) => ImportContext.DataRecord is Data.Models.ServerConsole;
 
-    public async Task<Data.Models.ServerConsole> AddAsync(ServerConsole record)
+    public override async Task<Data.Models.ServerConsole> AddAsync(ServerConsole record)
     {
         try
         {
@@ -42,7 +41,7 @@ public class ServerConsoleImporter(
                 Path = record.Path,
                 Host = record.Host,
                 Port = record.Port,
-                Server = importContext.DataRecord as Data.Models.Server,
+                Server = ImportContext.DataRecord as Data.Models.Server,
             };
 
             serverConsole = await serverConsoleService.AddAsync(serverConsole);
@@ -55,11 +54,11 @@ public class ServerConsoleImporter(
         }
     }
 
-    public async Task<Data.Models.ServerConsole> UpdateAsync(ServerConsole record)
+    public override async Task<Data.Models.ServerConsole> UpdateAsync(ServerConsole record)
     {
         var existing = await serverConsoleService
             .Include(c => c.Server)
-            .FirstOrDefaultAsync(c => c.Name == record.Name && c.Server.Name == (importContext.DataRecord as Data.Models.Server).Name);
+            .FirstOrDefaultAsync(c => c.Name == record.Name && c.Server.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
 
         try
         {
@@ -79,15 +78,15 @@ public class ServerConsoleImporter(
         }
     }
 
-    public async Task<ServerConsole> ExportAsync(Data.Models.ServerConsole entity)
+    public override async Task<ServerConsole> ExportAsync(Data.Models.ServerConsole entity)
     {
         return mapper.Map<ServerConsole>(entity);
     }
 
-    public async Task<bool> ExistsAsync(ServerConsole record)
+    public override async Task<bool> ExistsAsync(ServerConsole record)
     {
         return await serverConsoleService
             .Include(c => c.Server)
-            .ExistsAsync(c => c.Name == record.Name && c.Server.Name == (importContext.DataRecord as Data.Models.Server).Name);
+            .ExistsAsync(c => c.Name == record.Name && c.Server.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
     }
 }

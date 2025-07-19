@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class CollectionImporter(
     IMapper mapper,
-    CollectionService collectionService,
-    ImportContext importContext) : IImporter<Collection, Data.Models.Collection>
+    CollectionService collectionService) : BaseImporter<Collection, Data.Models.Collection>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Collection record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Collection record)
     {
         return new ImportItemInfo
         {
@@ -19,25 +18,25 @@ public class CollectionImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Collection record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Collection record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Collections,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Collection record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Collection record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Collection record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Collection record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Collection> AddAsync(Collection record)
+    public override async Task<Data.Models.Collection> AddAsync(Collection record)
     {
         try
         {
             var collection = new Data.Models.Collection
             {
-                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -51,7 +50,7 @@ public class CollectionImporter(
         }
     }
 
-    public async Task<Data.Models.Collection> UpdateAsync(Collection record)
+    public override async Task<Data.Models.Collection> UpdateAsync(Collection record)
     {
         var existing = await collectionService.Include(c => c.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -60,7 +59,7 @@ public class CollectionImporter(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
+            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
             
             existing = await collectionService.UpdateAsync(existing);
 
@@ -72,12 +71,12 @@ public class CollectionImporter(
         }
     }
 
-    public async Task<Collection> ExportAsync(Data.Models.Collection entity)
+    public override async Task<Collection> ExportAsync(Data.Models.Collection entity)
     {
         return mapper.Map<Collection>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Collection record)
+    public override async Task<bool> ExistsAsync(Collection record)
     {
         return await collectionService.ExistsAsync(c => c.Name == record.Name);
     }

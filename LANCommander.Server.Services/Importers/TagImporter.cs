@@ -6,10 +6,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class TagImporter(
     IMapper mapper,
-    TagService tagService,
-    ImportContext importContext) : IImporter<Tag, Data.Models.Tag>
+    TagService tagService) : BaseImporter<Tag, Data.Models.Tag>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Tag record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Tag record)
     {
         return new ImportItemInfo
         {
@@ -18,25 +17,25 @@ public class TagImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Tag record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Tag record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Tags,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Tag record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Tag record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Tag record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Tag record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Tag> AddAsync(Tag record)
+    public override async Task<Data.Models.Tag> AddAsync(Tag record)
     {
         try
         {
             var tag = new Data.Models.Tag
             {
-                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -50,7 +49,7 @@ public class TagImporter(
         }
     }
 
-    public async Task<Data.Models.Tag> UpdateAsync(Tag record)
+    public override async Task<Data.Models.Tag> UpdateAsync(Tag record)
     {
         var existing = await tagService.Include(t => t.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -59,7 +58,7 @@ public class TagImporter(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
+            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
             
             existing = await tagService.UpdateAsync(existing);
 
@@ -71,12 +70,12 @@ public class TagImporter(
         }
     }
 
-    public async Task<Tag> ExportAsync(Data.Models.Tag entity)
+    public override async Task<Tag> ExportAsync(Data.Models.Tag entity)
     {
         return mapper.Map<Tag>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Tag record)
+    public override async Task<bool> ExistsAsync(Tag record)
     {
         return await tagService.ExistsAsync(c => c.Name == record.Name);
     }

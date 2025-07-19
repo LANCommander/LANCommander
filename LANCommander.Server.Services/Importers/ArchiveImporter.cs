@@ -11,41 +11,45 @@ namespace LANCommander.Server.Services.Importers;
 /// Implements importing for archive records
 /// </summary>
 /// <param name="serviceProvider">Valid service provider for injecting the services we need</param>
-/// <param name="importContext">The context (archive, parent record> of the import</param>
+/// <param name="ImportContext">The context (archive, parent record> of the import</param>
 public class ArchiveImporter(
     IMapper mapper,
-    ArchiveService archiveService,
-    ImportContext importContext) : IImporter<Archive, Data.Models.Archive>
+    ArchiveService archiveService) : BaseImporter<Archive, Data.Models.Archive>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Archive record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Archive record)
     {
         return new ImportItemInfo
         {
             Flag = ImportRecordFlags.Archives,
             Name = record.Version,
-            Size = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}")?.Size ?? 0,
+            Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}")?.Size ?? 0,
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Archive record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Archive record)
     {
         var archivePath = await archiveService.GetArchiveFileLocationAsync(record.ObjectKey);
-        var fileInfo = new FileInfo(archivePath);
-        
-        return new ImportItemInfo
+
+        var info = new ExportItemInfo
         {
             Flag = ImportRecordFlags.Archives,
             Name = record.Version,
-            Size = fileInfo.Length,
         };
+        
+        var fileInfo = new FileInfo(archivePath);
+        
+        if (fileInfo.Exists)
+            info.Size = fileInfo.Length;
+
+        return info;
     }
 
-    public bool CanImport(Archive record) => importContext.DataRecord is Data.Models.Game || importContext.DataRecord is Data.Models.Redistributable;
-    public bool CanExport(Archive record) => importContext.DataRecord is Data.Models.Game || importContext.DataRecord is Data.Models.Redistributable;
+    public override bool CanImport(Archive record) => ImportContext.DataRecord is Data.Models.Game || ImportContext.DataRecord is Data.Models.Redistributable;
+    public override bool CanExport(Archive record) => ImportContext.DataRecord is Data.Models.Game || ImportContext.DataRecord is Data.Models.Redistributable;
 
-    public async Task<Data.Models.Archive> AddAsync(Archive record)
+    public override async Task<Data.Models.Archive> AddAsync(Archive record)
     {
-        var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}");
+        var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}");
 
         if (archiveEntry == null)
             throw new ImportSkippedException<Archive>(record, "Matching archive file does not exist in import archive");
@@ -58,14 +62,14 @@ public class ArchiveImporter(
             var newArchive = new Data.Models.Archive()
             {
                 CreatedOn = record.CreatedOn,
-                StorageLocation = importContext.ArchiveStorageLocation,
+                StorageLocation = ImportContext.ArchiveStorageLocation,
                 Version = record.Version,
                 Changelog = record.Changelog,
             };
 
-            if (importContext.DataRecord is Data.Models.Game game)
+            if (ImportContext.DataRecord is Data.Models.Game game)
                 newArchive.Game = game;
-            else if (importContext.DataRecord is Data.Models.Redistributable redistributable)
+            else if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
                 newArchive.Redistributable = redistributable;
             else
                 throw new ImportSkippedException<Archive>(record,
@@ -85,9 +89,9 @@ public class ArchiveImporter(
         }
     }
 
-    public async Task<Data.Models.Archive> UpdateAsync(Archive archive)
+    public override async Task<Data.Models.Archive> UpdateAsync(Archive archive)
     {
-        var archiveEntry = importContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
+        var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{archive.Id}");
         var existing = await archiveService.Include(a => a.StorageLocation).FirstOrDefaultAsync(a => archive.Id == a.Id);
         var existingPath = await archiveService.GetArchiveFileLocationAsync(existing);
         
@@ -98,7 +102,7 @@ public class ArchiveImporter(
         {
             existing.Version = archive.Version;
             existing.Changelog = archive.Changelog;
-            existing.StorageLocation = importContext.ArchiveStorageLocation;
+            existing.StorageLocation = ImportContext.ArchiveStorageLocation;
             
             existing = await archiveService.UpdateAsync(existing);
             existing = await archiveService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());
@@ -114,27 +118,27 @@ public class ArchiveImporter(
         }
     }
 
-    public async Task<Archive> ExportAsync(Data.Models.Archive entity)
+    public override async Task<Archive> ExportAsync(Data.Models.Archive entity)
     {
         var path = await archiveService.GetArchiveFileLocationAsync(entity);
         var fileInfo = new FileInfo(path);
 
         using (var fs = fileInfo.OpenRead())
         {
-            importContext.Archive.AddEntry($"Archives/{entity.Id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
+            ImportContext.Archive.AddEntry($"Archives/{entity.Id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
         }
         
         return mapper.Map<Archive>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Archive archive)
+    public override async Task<bool> ExistsAsync(Archive archive)
     {
-        if (importContext.DataRecord is Data.Models.Game game)
+        if (ImportContext.DataRecord is Data.Models.Game game)
             return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.GameId == game.Id);
         
-        if (importContext.DataRecord is Data.Models.Redistributable redistributable)
+        if (ImportContext.DataRecord is Data.Models.Redistributable redistributable)
             return await archiveService.ExistsAsync(a => a.Version == archive.Version && a.RedistributableId == redistributable.Id);
         
-        throw new ImportSkippedException<Archive>(archive, $"Cannot import an archive for a {importContext.DataRecord.GetType().Name}");
+        throw new ImportSkippedException<Archive>(archive, $"Cannot import an archive for a {ImportContext.DataRecord.GetType().Name}");
     }
 }

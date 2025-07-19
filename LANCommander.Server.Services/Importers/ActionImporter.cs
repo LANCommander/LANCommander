@@ -6,26 +6,25 @@ namespace LANCommander.Server.Services.Importers;
 
 public class ActionImporter(
     IMapper mapper,
-    ActionService actionService,
-    ImportContext importContext) : IImporter<Action, Data.Models.Action>
+    ActionService actionService) : BaseImporter<Action, Data.Models.Action>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Action record) =>
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Action record) =>
         await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Action record) =>
-        await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Action record) =>
+        await Task.Run(() => new ExportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
 
-    public bool CanImport(Action record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Action record) => ImportContext.DataRecord is Data.Models.Game;
     
-    public bool CanExport(Action record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Action record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Action> AddAsync(Action record)
+    public override async Task<Data.Models.Action> AddAsync(Action record)
     {
         try
         {
             var action = new Data.Models.Action
             {
-                Game = importContext.DataRecord as Data.Models.Game,
+                Game = ImportContext.DataRecord as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,
                 PrimaryAction = record.IsPrimaryAction,
@@ -42,7 +41,7 @@ public class ActionImporter(
         }
     }
 
-    public async Task<Data.Models.Action> UpdateAsync(Action record)
+    public override async Task<Data.Models.Action> UpdateAsync(Action record)
     {
         var existing = await actionService.FirstOrDefaultAsync(a => a.Name == record.Name);
 
@@ -52,7 +51,7 @@ public class ActionImporter(
             existing.WorkingDirectory = record.WorkingDirectory;
             existing.PrimaryAction = record.IsPrimaryAction;
             existing.SortOrder = record.SortOrder;
-            existing.Game = importContext.DataRecord as Data.Models.Game;
+            existing.Game = ImportContext.DataRecord as Data.Models.Game;
             
             existing = await actionService.UpdateAsync(existing);
 
@@ -64,13 +63,13 @@ public class ActionImporter(
         }
     }
 
-    public async Task<Action> ExportAsync(Data.Models.Action entity)
+    public override async Task<Action> ExportAsync(Data.Models.Action entity)
     {
         return mapper.Map<Action>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Action record)
+    public override async Task<bool> ExistsAsync(Action record)
     {
-        return await actionService.ExistsAsync(a => a.Name == record.Name && a.GameId == importContext.DataRecord.Id);
+        return await actionService.ExistsAsync(a => a.Name == record.Name && a.GameId == ImportContext.DataRecord.Id);
     }
 }

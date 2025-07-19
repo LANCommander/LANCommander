@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class PlatformImporter(
     IMapper mapper,
-    PlatformService platformService,
-    ImportContext importContext) : IImporter<Platform, Data.Models.Platform>
+    PlatformService platformService) : BaseImporter<Platform, Data.Models.Platform>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Platform record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Platform record)
     {
         return new ImportItemInfo
         {
@@ -19,25 +18,25 @@ public class PlatformImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Platform record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Platform record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Platforms,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Platform record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Platform record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Platform record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Platform record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Platform> AddAsync(Platform record)
+    public override async Task<Data.Models.Platform> AddAsync(Platform record)
     {
         try
         {
             var platform = new Data.Models.Platform
             {
-                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -51,7 +50,7 @@ public class PlatformImporter(
         }
     }
 
-    public async Task<Data.Models.Platform> UpdateAsync(Platform record)
+    public override async Task<Data.Models.Platform> UpdateAsync(Platform record)
     {
         var existing = await platformService.Include(p => p.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -60,7 +59,7 @@ public class PlatformImporter(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
+            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
             
             existing = await platformService.UpdateAsync(existing);
 
@@ -72,12 +71,12 @@ public class PlatformImporter(
         }
     }
 
-    public async Task<Platform> ExportAsync(Data.Models.Platform entity)
+    public override async Task<Platform> ExportAsync(Data.Models.Platform entity)
     {
         return mapper.Map<Platform>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Platform record)
+    public override async Task<bool> ExistsAsync(Platform record)
     {
         return await platformService.ExistsAsync(c => c.Name == record.Name);
     }

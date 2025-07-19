@@ -8,10 +8,9 @@ namespace LANCommander.Server.Services.Importers;
 public class ServerHttpPathImporter(
     IMapper mapper,
     ServerHttpPathService serverHttpPathService,
-    ServerService serverService,
-    ImportContext importContext) : IImporter<ServerHttpPath, Data.Models.ServerHttpPath>
+    ServerService serverService) : BaseImporter<ServerHttpPath, Data.Models.ServerHttpPath>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(ServerHttpPath record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(ServerHttpPath record)
     {
         return new ImportItemInfo
         {
@@ -20,19 +19,19 @@ public class ServerHttpPathImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(ServerHttpPath record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(ServerHttpPath record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.ServerHttpPaths,
             Name = record.Path,
         };
     }
 
-    public bool CanImport(ServerHttpPath record) => importContext.DataRecord is Data.Models.Server;
-    public bool CanExport(ServerHttpPath record) => importContext.DataRecord is Data.Models.Server;
+    public override bool CanImport(ServerHttpPath record) => ImportContext.DataRecord is Data.Models.Server;
+    public override bool CanExport(ServerHttpPath record) => ImportContext.DataRecord is Data.Models.Server;
 
-    public async Task<Data.Models.ServerHttpPath> AddAsync(ServerHttpPath record)
+    public override async Task<Data.Models.ServerHttpPath> AddAsync(ServerHttpPath record)
     {
         try
         {
@@ -40,7 +39,7 @@ public class ServerHttpPathImporter(
             {
                 LocalPath = record.LocalPath,
                 Path = record.Path,
-                Server = await serverService.FirstOrDefaultAsync(s => s.Name == (importContext.DataRecord as Data.Models.Server).Name),
+                Server = await serverService.FirstOrDefaultAsync(s => s.Name == (ImportContext.DataRecord as Data.Models.Server).Name),
             };
 
             serverHttpPath = await serverHttpPathService.AddAsync(serverHttpPath);
@@ -53,7 +52,7 @@ public class ServerHttpPathImporter(
         }
     }
 
-    public async Task<Data.Models.ServerHttpPath> UpdateAsync(ServerHttpPath record)
+    public override async Task<Data.Models.ServerHttpPath> UpdateAsync(ServerHttpPath record)
     {
         var existing = await serverHttpPathService.FirstOrDefaultAsync(p => p.Path == record.Path);
 
@@ -63,7 +62,7 @@ public class ServerHttpPathImporter(
             existing.Path = record.Path;
             existing.Server =
                 await serverService.FirstOrDefaultAsync(
-                    s => s.Name == (importContext.DataRecord as Data.Models.Server).Name);
+                    s => s.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
             
             existing = await serverHttpPathService.UpdateAsync(existing);
 
@@ -75,16 +74,16 @@ public class ServerHttpPathImporter(
         }
     }
 
-    public async Task<ServerHttpPath> ExportAsync(Data.Models.ServerHttpPath entity)
+    public override async Task<ServerHttpPath> ExportAsync(Data.Models.ServerHttpPath entity)
     {
         // Include all files?
         return mapper.Map<ServerHttpPath>(entity);
     }
 
-    public async Task<bool> ExistsAsync(ServerHttpPath record)
+    public override async Task<bool> ExistsAsync(ServerHttpPath record)
     {
         return await serverHttpPathService
             .Include(p => p.Server)
-            .ExistsAsync(p => p.Path == record.Path && p.Server.Name == (importContext.DataRecord as Data.Models.Server).Name);
+            .ExistsAsync(p => p.Path == record.Path && p.Server.Name == (ImportContext.DataRecord as Data.Models.Server).Name);
     }
 }

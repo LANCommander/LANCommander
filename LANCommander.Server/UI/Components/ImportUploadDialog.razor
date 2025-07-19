@@ -1,6 +1,10 @@
-﻿@inherits FeedbackComponent<ImportDialogOptions>
+﻿@using LANCommander.SDK.Enums
+@using LANCommander.Server.Services.Importers
+@inherits FeedbackComponent<ImportDialogOptions>
 @inject GameService GameService
-@inject ImportService<Game> ImportService
+@inject ArchiveService ArchiveService
+@inject StorageLocationService StorageLocationService
+@inject ImportContextFactory ImportContextFactory
 @inject IMessageService MessageService
 @inject ILogger<ImportUploadDialog> Logger
 
@@ -34,7 +38,7 @@
         Disabled="@(Status != "")">
         Use Local File
     </FilePickerButton>
-    <Button OnClick="Start" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
+    <Button OnClick="Import" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
     <Button OnClick="Cancel">Cancel</Button>
 </Flex>
 
@@ -42,6 +46,9 @@
     IBrowserFile File;
     ChunkUploader ChunkUploader;
     StorageLocation StorageLocation = new();
+    ImportContext ImportContext;
+
+    IEnumerable<ImportItemInfo> ImportItems = new List<ImportItemInfo>();
     
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
@@ -49,9 +56,50 @@
     string Filename;
     string Status;
 
-    async Task Start()
+    Dictionary<ImportRecordFlags, bool> SelectedFlags = Enum.GetValues<ImportRecordFlags>()
+        .ToDictionary(
+            f => f,
+            _ => true);
+
+    protected override async Task OnInitializedAsync()
+    {
+        ImportContext = ImportContextFactory.Create();
+
+        ImportContext.OnRecordError += RecordError;
+        ImportContext.OnRecordAdded += RecordAdded;
+        ImportContext.OnRecordProcessed += RecordProcessed;
+
+        StorageLocation = await StorageLocationService.FirstAsync(l => l.Default && l.Type == StorageLocationType.Archive);
+    }
+
+    private void RecordProcessed(object? sender, object e)
+    {
+        
+    }
+
+    private void RecordAdded(object? sender, object e)
+    {
+        
+    }
+
+    private void RecordError(object? sender, object e)
+    {
+        
+    }
+
+    async Task Upload()
     {
         await ChunkUploader.Start();
+    }
+
+    async Task Import()
+    {
+        var flags = SelectedFlags
+            .Where(f => f.Value)
+            .Aggregate(ImportRecordFlags.None, (cur, f) => cur | f.Key);
+        
+        await ImportContext.PrepareImportQueueAsync(flags);
+        await ImportContext.ImportQueueAsync();
     }
 
     async Task Clear()
@@ -65,19 +113,35 @@
         await CloseFeedbackAsync();
     }
 
+    public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
+    {
+        await Clear();
+
+        ImportContext.Dispose();
+
+        await base.OnFeedbackCancelAsync(args);
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        await ChunkUploader.Clear();
+        
+        ImportContext.Dispose();
+
+        await base.OnFeedbackOkAsync(args);
+    }
+
     public async Task OnUploadCompleted(string data)
     {
         if (Guid.TryParse(data, out var objectKey))
         {
             try
             {
-                var game = await ImportService.ImportFromUploadArchiveAsync(objectKey);
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+
+                ImportItems = await ImportContext.InitializeImportAsync(archivePath);
 
                 await InvokeAsync(StateHasChanged);
-
-                MessageService.Success($"{game.Title} successfully imported!");
-
-                await CloseFeedbackAsync();
             }
             catch (Exception ex)
             {
@@ -90,6 +154,7 @@
             await InvokeAsync(StateHasChanged);
 
             MessageService.Error("Import file failed to upload!");
+            Logger.LogError("Import file failed to upload!");
 
             await CloseFeedbackAsync();
         }
@@ -111,13 +176,9 @@
     {
         try
         {
-            var game = await ImportService.ImportFromLocalFileAsync(path);
+            ImportItems = await ImportContext.InitializeImportAsync(path);
 
             await InvokeAsync(StateHasChanged);
-            
-            MessageService.Success($"{game.Title} successfully imported!");
-
-            await CloseFeedbackAsync();
         }
         catch (Exception ex)
         {

@@ -219,14 +219,16 @@
         
         if (media.Id == Guid.Empty)
         {
-            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
+            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
 
             await MediaService.AddAsync(media);
         }
         else
         {
             MediaService.DeleteLocalMediaFile(media);
-            media = await MediaService.UploadMediaAsync(e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
+            
+            media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
+            
             await MediaService.UpdateAsync(media);
         }
 

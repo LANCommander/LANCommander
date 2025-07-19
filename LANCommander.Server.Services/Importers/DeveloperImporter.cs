@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class DeveloperImporter(
     IMapper mapper,
-    CompanyService companyService,
-    ImportContext importContext) : IImporter<Company, Data.Models.Company>
+    CompanyService companyService) : BaseImporter<Company, Data.Models.Company>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Company record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Company record)
     {
         return new ImportItemInfo
         {
@@ -19,22 +18,22 @@ public class DeveloperImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Company record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Company record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Developers,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Company record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Company record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Company record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Company record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Company> AddAsync(Company record)
+    public override async Task<Data.Models.Company> AddAsync(Company record)
     {
-        if (importContext.DataRecord is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {importContext.DataRecord.GetType().Name}");
+        if (ImportContext.DataRecord is not Data.Models.Game game)
+            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
 
         try
         {
@@ -54,10 +53,10 @@ public class DeveloperImporter(
         }
     }
 
-    public async Task<Data.Models.Company> UpdateAsync(Company record)
+    public override async Task<Data.Models.Company> UpdateAsync(Company record)
     {
-        if (importContext.DataRecord is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {importContext.DataRecord.GetType().Name}");
+        if (ImportContext.DataRecord is not Data.Models.Game game)
+            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
 
         var existing = await companyService.Include(g => g.DevelopedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -78,15 +77,15 @@ public class DeveloperImporter(
         }
     }
 
-    public async Task<Company> ExportAsync(Data.Models.Company entity)
+    public override async Task<Company> ExportAsync(Data.Models.Company entity)
     {
         return mapper.Map<Company>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Company record)
+    public override async Task<bool> ExistsAsync(Company record)
     {
-        if (importContext.DataRecord is not Data.Models.Game game)
-            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {importContext.DataRecord.GetType().Name}");
+        if (ImportContext.DataRecord is not Data.Models.Game game)
+            throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
         
         return await companyService.ExistsAsync(c => c.Name == record.Name);
     }

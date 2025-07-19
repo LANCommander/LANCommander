@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class PublisherImporter(
     IMapper mapper,
-    CompanyService companyService,
-    ImportContext importContext) : IImporter<Company, Data.Models.Company>
+    CompanyService companyService) : BaseImporter<Company, Data.Models.Company>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Company record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Company record)
     {
         return new ImportItemInfo
         {
@@ -19,25 +18,25 @@ public class PublisherImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Company record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Company record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Publishers,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Company record) => importContext.DataRecord is Data.Models.Company;
-    public bool CanExport(Company record) => importContext.DataRecord is Data.Models.Company;
+    public override bool CanImport(Company record) => ImportContext.DataRecord is Data.Models.Company;
+    public override bool CanExport(Company record) => ImportContext.DataRecord is Data.Models.Company;
 
-    public async Task<Data.Models.Company> AddAsync(Company record)
+    public override async Task<Data.Models.Company> AddAsync(Company record)
     {
         try
         {
             var company = new Data.Models.Company
             {
-                PublishedGames = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
+                PublishedGames = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -51,7 +50,7 @@ public class PublisherImporter(
         }
     }
 
-    public async Task<Data.Models.Company> UpdateAsync(Company record)
+    public override async Task<Data.Models.Company> UpdateAsync(Company record)
     {
         var existing = await companyService.Include(g => g.PublishedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -60,7 +59,7 @@ public class PublisherImporter(
             if (existing.PublishedGames == null)
                 existing.PublishedGames = new List<Data.Models.Game>();
             
-            existing.PublishedGames.Add(importContext.DataRecord as Data.Models.Game);
+            existing.PublishedGames.Add(ImportContext.DataRecord as Data.Models.Game);
             
             existing = await companyService.UpdateAsync(existing);
 
@@ -72,12 +71,12 @@ public class PublisherImporter(
         }
     }
 
-    public async Task<Company> ExportAsync(Data.Models.Company entity)
+    public override async Task<Company> ExportAsync(Data.Models.Company entity)
     {
         return mapper.Map<Company>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Company record)
+    public override async Task<bool> ExistsAsync(Company record)
     {
         return await companyService.ExistsAsync(c => c.Name == record.Name);
     }

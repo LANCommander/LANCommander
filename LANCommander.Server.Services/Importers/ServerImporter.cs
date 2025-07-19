@@ -9,12 +9,11 @@ public class ServerImporter(
     IMapper mapper,
     ServerService serverService,
     GameService gameService,
-    UserService userService,
-    ImportContext importContext) : IImporter<SDK.Models.Manifest.Server, Data.Models.Server>
+    UserService userService) : BaseImporter<SDK.Models.Manifest.Server, Data.Models.Server>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(SDK.Models.Manifest.Server record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(SDK.Models.Manifest.Server record)
     {
-        var fileEntries = importContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/"));
+        var fileEntries = ImportContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/"));
         
         return new ImportItemInfo
         {
@@ -23,7 +22,7 @@ public class ServerImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(SDK.Models.Manifest.Server record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(SDK.Models.Manifest.Server record)
     {
         var files = Directory.GetFiles(record.WorkingDirectory, "*", SearchOption.AllDirectories);
 
@@ -36,17 +35,17 @@ public class ServerImporter(
             size += fileInfo.Length;
         }
         
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Name = record.Name,
             Size = size
         };
     }
 
-    public bool CanImport(SDK.Models.Manifest.Server record) => true;
-    public bool CanExport(SDK.Models.Manifest.Server record) => true;
+    public override bool CanImport(SDK.Models.Manifest.Server record) => true;
+    public override bool CanExport(SDK.Models.Manifest.Server record) => true;
 
-    public async Task<Data.Models.Server> AddAsync(SDK.Models.Manifest.Server record)
+    public override async Task<Data.Models.Server> AddAsync(SDK.Models.Manifest.Server record)
     {
         var server = mapper.Map<Data.Models.Server>(record);
 
@@ -62,7 +61,7 @@ public class ServerImporter(
         }
     }
 
-    public async Task<Data.Models.Server> UpdateAsync(SDK.Models.Manifest.Server record)
+    public override async Task<Data.Models.Server> UpdateAsync(SDK.Models.Manifest.Server record)
     {
         var existing = await serverService.FirstOrDefaultAsync(s => s.Id == record.Id || s.Name == record.Name);
 
@@ -99,7 +98,7 @@ public class ServerImporter(
         }
     }
 
-    public async Task<SDK.Models.Manifest.Server> ExportAsync(Data.Models.Server entity)
+    public override async Task<SDK.Models.Manifest.Server> ExportAsync(Data.Models.Server entity)
     {
         var files = Directory.GetFiles(entity.WorkingDirectory, "*", SearchOption.AllDirectories);
 
@@ -110,14 +109,14 @@ public class ServerImporter(
             using (var fs = fileInfo.OpenRead())
             {
                 // Probably need to handle working directory
-                importContext.Archive.AddEntry($"Files/{fileInfo.Name}", fs);
+                ImportContext.Archive.AddEntry($"Files/{fileInfo.Name}", fs);
             }
         }
         
         return mapper.Map<SDK.Models.Manifest.Server>(entity);
     }
 
-    public async Task<bool> ExistsAsync(SDK.Models.Manifest.Server record)
+    public override async Task<bool> ExistsAsync(SDK.Models.Manifest.Server record)
     {
         return await serverService.ExistsAsync(s => s.Id == record.Id || s.Name == record.Name);
     }
@@ -125,7 +124,7 @@ public class ServerImporter(
     private async Task ExtractFiles(Data.Models.Server server)
     {
         
-        foreach (var entry in importContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/")))
+        foreach (var entry in ImportContext.Archive.Entries.Where(e => e.Key.StartsWith("Files/")))
         {
             var destination = entry.Key
                 .Substring(6, entry.Key.Length - 6)

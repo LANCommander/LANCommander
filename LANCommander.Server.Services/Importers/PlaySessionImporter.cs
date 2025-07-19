@@ -8,10 +8,9 @@ namespace LANCommander.Server.Services.Importers;
 public class PlaySessionImporter(
     IMapper mapper,
     PlaySessionService playSessionService,
-    UserService userService,
-    ImportContext importContext) : IImporter<PlaySession, Data.Models.PlaySession>
+    UserService userService) : BaseImporter<PlaySession, Data.Models.PlaySession>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(PlaySession record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(PlaySession record)
     {
         return new ImportItemInfo
         {
@@ -20,19 +19,19 @@ public class PlaySessionImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(PlaySession record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(PlaySession record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.PlaySessions,
             Name = $"{record.User} - {record.Start}-{record.End}",
         };
     }
 
-    public bool CanImport(PlaySession record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(PlaySession record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(PlaySession record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(PlaySession record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.PlaySession> AddAsync(PlaySession record)
+    public override async Task<Data.Models.PlaySession> AddAsync(PlaySession record)
     {
         try
         {
@@ -41,7 +40,7 @@ public class PlaySessionImporter(
                 Start = record.Start,
                 End = record.End,
                 User = await userService.GetAsync(record.User),
-                Game = importContext.DataRecord as Data.Models.Game,
+                Game = ImportContext.DataRecord as Data.Models.Game,
             };
 
             playSession = await playSessionService.AddAsync(playSession);
@@ -54,9 +53,9 @@ public class PlaySessionImporter(
         }
     }
 
-    public async Task<Data.Models.PlaySession> UpdateAsync(PlaySession record)
+    public override async Task<Data.Models.PlaySession> UpdateAsync(PlaySession record)
     {
-        var game = importContext.DataRecord as Data.Models.Game;
+        var game = ImportContext.DataRecord as Data.Models.Game;
         var user = await userService.GetAsync(record.User);
 
         var existing = await playSessionService.FirstOrDefaultAsync(ps => ps.GameId == game.Id && ps.Start == record.Start && ps.UserId == user.Id);
@@ -76,14 +75,14 @@ public class PlaySessionImporter(
         }
     }
 
-    public async Task<PlaySession> ExportAsync(Data.Models.PlaySession entity)
+    public override async Task<PlaySession> ExportAsync(Data.Models.PlaySession entity)
     {
         return mapper.Map<PlaySession>(entity);
     }
 
-    public async Task<bool> ExistsAsync(PlaySession record)
+    public override async Task<bool> ExistsAsync(PlaySession record)
     {
-        var game = importContext.DataRecord as Data.Models.Game;
+        var game = ImportContext.DataRecord as Data.Models.Game;
         var user = await userService.GetAsync(record.User);
         
         return await playSessionService.ExistsAsync(ps => (ps.Game.Id == game.Id || ps.Game.Title == game.Title) && ps.Start == record.Start && ps.UserId == user.Id);

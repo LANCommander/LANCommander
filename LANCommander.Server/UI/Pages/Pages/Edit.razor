@@ -344,7 +344,7 @@
         };
         
         media = await MediaService.AddAsync(media);
-        media = await MediaService.UploadMediaAsync(stream, media);
+        media = await MediaService.WriteToFileAsync(media, stream);
         media = await MediaService.UpdateAsync(media);
 
         entry.UploadUrl = $"/api/Media/{media.Id}/Download?fileId={media.FileId}";

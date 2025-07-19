@@ -5,6 +5,7 @@ namespace LANCommander.SDK.Enums;
 [Flags]
 public enum ImportRecordFlags
 {
+    None = 0,
     Actions = 1 << 0,
     Archives = 1 << 1,
     Collections = 1 << 2,

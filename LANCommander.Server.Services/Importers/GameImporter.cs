@@ -8,10 +8,9 @@ namespace LANCommander.Server.Services.Importers;
 public class GameImporter(
     IMapper mapper,
     GameService gameService,
-    UserService userService,
-    ImportContext importContext) : IImporter<Game, Data.Models.Game>
+    UserService userService) : BaseImporter<Game, Data.Models.Game>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Game record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Game record)
     {
         return new ImportItemInfo
         {
@@ -19,18 +18,18 @@ public class GameImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Game record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Game record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Name = record.Title,
         };
     }
 
-    public bool CanImport(Game record) => true;
-    public bool CanExport(Game record) => true;
+    public override bool CanImport(Game record) => true;
+    public override bool CanExport(Game record) => true;
 
-    public async Task<Data.Models.Game> AddAsync(Game record)
+    public override async Task<Data.Models.Game> AddAsync(Game record)
     {
         var game = mapper.Map<Data.Models.Game>(record);
 
@@ -44,7 +43,7 @@ public class GameImporter(
         }
     }
 
-    public async Task<Data.Models.Game> UpdateAsync(Game record)
+    public override async Task<Data.Models.Game> UpdateAsync(Game record)
     {
         var existing = await gameService.FirstOrDefaultAsync(g => g.Id == record.Id || g.Title == record.Title);
 
@@ -75,12 +74,12 @@ public class GameImporter(
         }
     }
 
-    public async Task<Game> ExportAsync(Data.Models.Game entity)
+    public override async Task<Game> ExportAsync(Data.Models.Game entity)
     {
         return mapper.Map<Game>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Game record)
+    public override async Task<bool> ExistsAsync(Game record)
     {
         return await gameService.ExistsAsync(g => g.Id == record.Id || g.Title == record.Title);
     }

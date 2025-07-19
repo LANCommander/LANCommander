@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class CustomFieldImporter(
     IMapper mapper,
-    GameService gameService,
-    ImportContext importContext) : IImporter<GameCustomField, Data.Models.GameCustomField>
+    GameService gameService) : BaseImporter<GameCustomField, Data.Models.GameCustomField>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(GameCustomField record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(GameCustomField record)
     {
         return new ImportItemInfo
         {
@@ -19,23 +18,23 @@ public class CustomFieldImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(GameCustomField record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(GameCustomField record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.CustomFields,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(GameCustomField record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(GameCustomField record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(GameCustomField record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(GameCustomField record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.GameCustomField> AddAsync(GameCustomField record)
+    public override async Task<Data.Models.GameCustomField> AddAsync(GameCustomField record)
     {
         try
         {
-            var customField = await gameService.SetCustomFieldAsync(importContext.DataRecord.Id, record.Name, record.Value);
+            var customField = await gameService.SetCustomFieldAsync(ImportContext.DataRecord.Id, record.Name, record.Value);
 
             return customField;
         }
@@ -45,14 +44,14 @@ public class CustomFieldImporter(
         }
     }
 
-    public async Task<Data.Models.GameCustomField> UpdateAsync(GameCustomField record)
+    public override async Task<Data.Models.GameCustomField> UpdateAsync(GameCustomField record)
     {
-        var existing = await gameService.GetCustomFieldAsync(importContext.DataRecord.Id, record.Name);
+        var existing = await gameService.GetCustomFieldAsync(ImportContext.DataRecord.Id, record.Name);
 
         try
         {
             if (existing.Value != record.Value)
-                existing = await gameService.SetCustomFieldAsync(importContext.DataRecord.Id, record.Name, record.Value);
+                existing = await gameService.SetCustomFieldAsync(ImportContext.DataRecord.Id, record.Name, record.Value);
 
             return existing;
         }
@@ -62,13 +61,13 @@ public class CustomFieldImporter(
         }
     }
 
-    public async Task<GameCustomField> ExportAsync(Data.Models.GameCustomField entity)
+    public override async Task<GameCustomField> ExportAsync(Data.Models.GameCustomField entity)
     {
         return mapper.Map<GameCustomField>(entity);
     }
 
-    public async Task<bool> ExistsAsync(GameCustomField record)
+    public override async Task<bool> ExistsAsync(GameCustomField record)
     {
-        return (await gameService.GetCustomFieldAsync(importContext.DataRecord.Id, record.Name)) == null;
+        return (await gameService.GetCustomFieldAsync(ImportContext.DataRecord.Id, record.Name)) == null;
     }
 }

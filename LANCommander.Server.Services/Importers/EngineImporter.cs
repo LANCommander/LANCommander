@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class EngineImporter(
     IMapper mapper,
-    EngineService engineService,
-    ImportContext importContext) : IImporter<Engine, Data.Models.Engine>
+    EngineService engineService) : BaseImporter<Engine, Data.Models.Engine>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Engine record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Engine record)
     {
         return new ImportItemInfo
         {
@@ -19,25 +18,25 @@ public class EngineImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Engine record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Engine record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Engine,
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Engine record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Engine record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Engine record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Engine record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Engine> AddAsync(Engine record)
+    public override async Task<Data.Models.Engine> AddAsync(Engine record)
     {
         try
         {
             var engine = new Data.Models.Engine
             {
-                Games = new List<Data.Models.Game>() { importContext.DataRecord as Data.Models.Game },
+                Games = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
                 Name = record.Name,
             };
 
@@ -51,7 +50,7 @@ public class EngineImporter(
         }
     }
 
-    public async Task<Data.Models.Engine> UpdateAsync(Engine record)
+    public override async Task<Data.Models.Engine> UpdateAsync(Engine record)
     {
         var existing = await engineService.Include(g => g.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
 
@@ -60,7 +59,7 @@ public class EngineImporter(
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
             
-            existing.Games.Add(importContext.DataRecord as Data.Models.Game);
+            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
             
             existing = await engineService.UpdateAsync(existing);
 
@@ -72,12 +71,12 @@ public class EngineImporter(
         }
     }
 
-    public async Task<Engine> ExportAsync(Data.Models.Engine entity)
+    public override async Task<Engine> ExportAsync(Data.Models.Engine entity)
     {
         return mapper.Map<Engine>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Engine record)
+    public override async Task<bool> ExistsAsync(Engine record)
     {
         return await engineService.ExistsAsync(c => c.Name == record.Name);
     }

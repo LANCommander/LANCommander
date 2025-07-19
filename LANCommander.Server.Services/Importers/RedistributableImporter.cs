@@ -7,10 +7,9 @@ namespace LANCommander.Server.Services.Importers;
 public class RedistributableImporter(
     IMapper mapper,
     RedistributableService redistributableService,
-    UserService userService,
-    ImportContext importContext) : IImporter<Redistributable, Data.Models.Redistributable>
+    UserService userService) : BaseImporter<Redistributable, Data.Models.Redistributable>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Redistributable record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Redistributable record)
     {
         return new ImportItemInfo()
         {
@@ -18,18 +17,18 @@ public class RedistributableImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Redistributable record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Redistributable record)
     {
-        return new ImportItemInfo()
+        return new ExportItemInfo()
         {
             Name = record.Name,
         };
     }
 
-    public bool CanImport(Redistributable record) => true;
-    public bool CanExport(Redistributable record) => true;
+    public override bool CanImport(Redistributable record) => true;
+    public override bool CanExport(Redistributable record) => true;
 
-    public async Task<Data.Models.Redistributable> AddAsync(Redistributable record)
+    public override async Task<Data.Models.Redistributable> AddAsync(Redistributable record)
     {
         var redistributable = mapper.Map<Data.Models.Redistributable>(record);
 
@@ -44,7 +43,7 @@ public class RedistributableImporter(
         }
     }
 
-    public async Task<Data.Models.Redistributable> UpdateAsync(Redistributable record)
+    public override async Task<Data.Models.Redistributable> UpdateAsync(Redistributable record)
     {
         var existing = await redistributableService.FirstOrDefaultAsync(r => r.Id == record.Id || r.Name == record.Name);
 
@@ -69,12 +68,12 @@ public class RedistributableImporter(
         }
     }
 
-    public async Task<Redistributable> ExportAsync(Data.Models.Redistributable entity)
+    public override async Task<Redistributable> ExportAsync(Data.Models.Redistributable entity)
     {
         return mapper.Map<Redistributable>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Redistributable record)
+    public override async Task<bool> ExistsAsync(Redistributable record)
     {
         return await redistributableService.ExistsAsync(r => r.Id == record.Id || r.Name == record.Name);
     }

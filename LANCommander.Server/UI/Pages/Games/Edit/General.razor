@@ -12,6 +12,7 @@
 @inject RedistributableService RedistributableService
 @inject TagService TagService
 @inject IMessageService MessageService
+@inject ModalService ModalService
 @inject NavigationManager NavigationManager
 @inject ILogger<General> Logger
 
@@ -30,21 +31,7 @@
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
             @if (context != null && context.Id != Guid.Empty)
             {
-                <Dropdown Trigger="@(new Trigger[] { Trigger.Click })" OnClick='e => { Console.WriteLine("Dropdown button clicked."); }'>
-                    <Overlay>
-                        <Menu>
-                            <MenuItem>
-                                <a href="/Games/@(context.Id)/Export/Full" target="_blank">Full</a>
-                            </MenuItem>
-                            <MenuItem>
-                                <a href="/Games/@(context.Id)/Export/Metadata" target="_blank">Metadata</a>
-                            </MenuItem>
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button>Export</Button>
-                    </ChildContent>
-                </Dropdown>
+                <Button OnClick="OpenExportDialog">Export</Button>
             }
 
             <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
@@ -270,5 +257,25 @@
             MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
             Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
         }
+    }
+
+    private async Task OpenExportDialog()
+    {
+        var modalOptions = new ModalOptions()
+        {
+            Title = "Export",
+            Maximizable = false,
+            DefaultMaximized = false,
+            Closable = true,
+            OkText = "Add"
+        };
+
+        var options = new ExportDialogOptions()
+        {
+            RecordId = Id,
+            RecordType = ExportRecordType.Game
+        };
+
+        var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
     }
 }

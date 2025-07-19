@@ -6,10 +6,9 @@ namespace LANCommander.Server.Services.Importers;
 
 public class KeyImporter(
     IMapper mapper,
-    KeyService keyService,
-    ImportContext importContext) : IImporter<Key, Data.Models.Key>
+    KeyService keyService) : BaseImporter<Key, Data.Models.Key>
 {
-    public async Task<ImportItemInfo> GetImportInfoAsync(Key record)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Key record)
     {
         return new ImportItemInfo
         {
@@ -18,25 +17,25 @@ public class KeyImporter(
         };
     }
 
-    public async Task<ImportItemInfo> GetExportInfoAsync(Key record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Key record)
     {
-        return new ImportItemInfo
+        return new ExportItemInfo
         {
             Flag = ImportRecordFlags.Keys,
             Name = new String('*', record.Value.Length),
         };
     }
 
-    public bool CanImport(Key record) => importContext.DataRecord is Data.Models.Game;
-    public bool CanExport(Key record) => importContext.DataRecord is Data.Models.Game;
+    public override bool CanImport(Key record) => ImportContext.DataRecord is Data.Models.Game;
+    public override bool CanExport(Key record) => ImportContext.DataRecord is Data.Models.Game;
 
-    public async Task<Data.Models.Key> AddAsync(Key record)
+    public override async Task<Data.Models.Key> AddAsync(Key record)
     {
         try
         {
             var key = new Data.Models.Key
             {
-                Game = importContext.DataRecord as Data.Models.Game,
+                Game = ImportContext.DataRecord as Data.Models.Game,
                 AllocationMethod = record.AllocationMethod,
                 ClaimedByComputerName = record.ClaimedByComputerName,
                 ClaimedByIpv4Address = record.ClaimedByIpv4Address,
@@ -53,7 +52,7 @@ public class KeyImporter(
         }
     }
 
-    public async Task<Data.Models.Key> UpdateAsync(Key record)
+    public override async Task<Data.Models.Key> UpdateAsync(Key record)
     {
         var existing = await keyService.FirstOrDefaultAsync(k => k.Value == record.Value);
 
@@ -74,12 +73,12 @@ public class KeyImporter(
         }
     }
 
-    public async Task<Key> ExportAsync(Data.Models.Key entity)
+    public override async Task<Key> ExportAsync(Data.Models.Key entity)
     {
         return mapper.Map<Key>(entity);
     }
 
-    public async Task<bool> ExistsAsync(Key record)
+    public override async Task<bool> ExistsAsync(Key record)
     {
         return await keyService.ExistsAsync(k => k.Value == record.Value);
     }

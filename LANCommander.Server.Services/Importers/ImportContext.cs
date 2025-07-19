@@ -10,63 +10,63 @@ using ZipArchive = SharpCompress.Archives.Zip.ZipArchive;
 namespace LANCommander.Server.Services.Importers;
 
 public class ImportContext(
-    GameImporter gameImporter,
-    RedistributableImporter redistributableImporter,
-    ServerImporter serverImporter,
+    BaseImporter<SDK.Models.Manifest.Game, Data.Models.Game> gameImporter,
+    BaseImporter<SDK.Models.Manifest.Redistributable, Data.Models.Redistributable> redistributableImporter,
+    BaseImporter<SDK.Models.Manifest.Server, Data.Models.Server> serverImporter,
     GameService gameService,
     RedistributableService redistributableService,
     ServerService serverService,
     ArchiveService archiveService,
     MediaService mediaService,
     GameSaveService saveService,
-    IImporter<SDK.Models.Manifest.Action, Data.Models.Action> actionImporter,
-    IImporter<SDK.Models.Manifest.Archive, Data.Models.Archive> archiveImporter,
-    IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection> collectionImporter,
-    IImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> customFieldImporter,
-    IImporter<SDK.Models.Manifest.Company, Data.Models.Company> developerImporter,
-    IImporter<SDK.Models.Manifest.Engine, Data.Models.Engine> engineImporter,
-    IImporter<SDK.Models.Manifest.Genre, Data.Models.Genre> genreImporter,
-    IImporter<SDK.Models.Manifest.Key, Data.Models.Key> keyImporter,
-    IImporter<SDK.Models.Manifest.Media, Data.Models.Media> mediaImporter,
-    IImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> multiplayerModeImporter,
-    IImporter<SDK.Models.Manifest.Platform, Data.Models.Platform> platformImporter,
-    IImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> playSessionImporter,
-    IImporter<SDK.Models.Manifest.Company, Data.Models.Company> publisherImporter,
-    IImporter<SDK.Models.Manifest.Save, Data.Models.GameSave> saveImporter,
-    IImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> savePathImporter,
-    IImporter<SDK.Models.Manifest.Script, Data.Models.Script> scriptImporter,
-    IImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> serverConsoleImporter,
-    IImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> serverHttpPathImporter,
-    IImporter<SDK.Models.Manifest.Tag, Data.Models.Tag> tagImporter) : IDisposable
+    BaseImporter<SDK.Models.Manifest.Action, Data.Models.Action> actionImporter,
+    BaseImporter<SDK.Models.Manifest.Archive, Data.Models.Archive> archiveImporter,
+    BaseImporter<SDK.Models.Manifest.Collection, Data.Models.Collection> collectionImporter,
+    BaseImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> customFieldImporter,
+    BaseImporter<SDK.Models.Manifest.Company, Data.Models.Company> developerImporter,
+    BaseImporter<SDK.Models.Manifest.Engine, Data.Models.Engine> engineImporter,
+    BaseImporter<SDK.Models.Manifest.Genre, Data.Models.Genre> genreImporter,
+    BaseImporter<SDK.Models.Manifest.Key, Data.Models.Key> keyImporter,
+    BaseImporter<SDK.Models.Manifest.Media, Data.Models.Media> mediaImporter,
+    BaseImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> multiplayerModeImporter,
+    BaseImporter<SDK.Models.Manifest.Platform, Data.Models.Platform> platformImporter,
+    BaseImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> playSessionImporter,
+    BaseImporter<SDK.Models.Manifest.Company, Data.Models.Company> publisherImporter,
+    BaseImporter<SDK.Models.Manifest.Save, Data.Models.GameSave> saveImporter,
+    BaseImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> savePathImporter,
+    BaseImporter<SDK.Models.Manifest.Script, Data.Models.Script> scriptImporter,
+    BaseImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> serverConsoleImporter,
+    BaseImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> serverHttpPathImporter,
+    BaseImporter<SDK.Models.Manifest.Tag, Data.Models.Tag> tagImporter) : IDisposable
 {
     public object Manifest { get; private set; }
     public BaseModel DataRecord { get; private set; }
     public StorageLocation ArchiveStorageLocation { get; }
     public ZipArchive Archive { get; private set; }
 
-    public GameImporter Games { get; private set; } = gameImporter;
-    public RedistributableImporter Redistributables { get; private set; } = redistributableImporter;
-    public ServerImporter Servers { get; private set; } = serverImporter;
+    public BaseImporter<SDK.Models.Manifest.Game, Data.Models.Game> Games { get; private set; } = gameImporter;
+    public BaseImporter<SDK.Models.Manifest.Redistributable, Data.Models.Redistributable> Redistributables { get; private set; } = redistributableImporter;
+    public BaseImporter<SDK.Models.Manifest.Server, Data.Models.Server> Servers { get; private set; } = serverImporter;
 
-    public IImporter<SDK.Models.Manifest.Action, Data.Models.Action> Actions = actionImporter;
-    public IImporter<SDK.Models.Manifest.Archive, Data.Models.Archive> Archives = archiveImporter;
-    public IImporter<SDK.Models.Manifest.Collection, Data.Models.Collection> Collections = collectionImporter;
-    public IImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> CustomFields = customFieldImporter;
-    public IImporter<SDK.Models.Manifest.Company, Data.Models.Company> Developers = developerImporter;
-    public IImporter<SDK.Models.Manifest.Engine, Data.Models.Engine> Engines = engineImporter;
-    public IImporter<SDK.Models.Manifest.Genre, Data.Models.Genre> Genres = genreImporter;
-    public IImporter<SDK.Models.Manifest.Key, Data.Models.Key> Keys = keyImporter;
-    public IImporter<SDK.Models.Manifest.Media, Data.Models.Media> Media = mediaImporter;
-    public IImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> MultiplayerModes = multiplayerModeImporter;
-    public IImporter<SDK.Models.Manifest.Platform, Data.Models.Platform> Platforms = platformImporter;
-    public IImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> PlaySessions = playSessionImporter;
-    public IImporter<SDK.Models.Manifest.Company, Data.Models.Company> Publishers = publisherImporter;
-    public IImporter<SDK.Models.Manifest.Save, Data.Models.GameSave> Saves = saveImporter;
-    public IImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> SavePaths = savePathImporter;
-    public IImporter<SDK.Models.Manifest.Script, Data.Models.Script> Scripts = scriptImporter;
-    public IImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> ServerConsoles = serverConsoleImporter;
-    public IImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> ServerHttpPaths = serverHttpPathImporter;
-    public IImporter<SDK.Models.Manifest.Tag, Data.Models.Tag> Tags = tagImporter;
+    public BaseImporter<SDK.Models.Manifest.Action, Data.Models.Action> Actions = actionImporter;
+    public BaseImporter<SDK.Models.Manifest.Archive, Data.Models.Archive> Archives = archiveImporter;
+    public BaseImporter<SDK.Models.Manifest.Collection, Data.Models.Collection> Collections = collectionImporter;
+    public BaseImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> CustomFields = customFieldImporter;
+    public BaseImporter<SDK.Models.Manifest.Company, Data.Models.Company> Developers = developerImporter;
+    public BaseImporter<SDK.Models.Manifest.Engine, Data.Models.Engine> Engines = engineImporter;
+    public BaseImporter<SDK.Models.Manifest.Genre, Data.Models.Genre> Genres = genreImporter;
+    public BaseImporter<SDK.Models.Manifest.Key, Data.Models.Key> Keys = keyImporter;
+    public BaseImporter<SDK.Models.Manifest.Media, Data.Models.Media> Media = mediaImporter;
+    public BaseImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> MultiplayerModes = multiplayerModeImporter;
+    public BaseImporter<SDK.Models.Manifest.Platform, Data.Models.Platform> Platforms = platformImporter;
+    public BaseImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> PlaySessions = playSessionImporter;
+    public BaseImporter<SDK.Models.Manifest.Company, Data.Models.Company> Publishers = publisherImporter;
+    public BaseImporter<SDK.Models.Manifest.Save, Data.Models.GameSave> Saves = saveImporter;
+    public BaseImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> SavePaths = savePathImporter;
+    public BaseImporter<SDK.Models.Manifest.Script, Data.Models.Script> Scripts = scriptImporter;
+    public BaseImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> ServerConsoles = serverConsoleImporter;
+    public BaseImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> ServerHttpPaths = serverHttpPathImporter;
+    public BaseImporter<SDK.Models.Manifest.Tag, Data.Models.Tag> Tags = tagImporter;
 
     public int Remaining => _queue.Count;
     public int Processed => _processed.Count;
@@ -79,10 +79,39 @@ public class ImportContext(
     public EventHandler<object> OnRecordAdded;
     public EventHandler<object> OnRecordProcessed;
     public EventHandler<object> OnRecordError;
+
+    private void UseContext(ImportContext context)
+    {
+        Games.UseContext(context);
+        Redistributables.UseContext(context);
+        Servers.UseContext(context);
+        
+        Actions.UseContext(context);
+        Archives.UseContext(context);
+        Collections.UseContext(context);
+        CustomFields.UseContext(context);
+        Developers.UseContext(context);
+        Engines.UseContext(context);
+        Genres.UseContext(context);
+        Keys.UseContext(context);
+        Media.UseContext(context);
+        MultiplayerModes.UseContext(context);
+        Platforms.UseContext(context);
+        PlaySessions.UseContext(context);
+        Publishers.UseContext(context);
+        Saves.UseContext(context);
+        SavePaths.UseContext(context);
+        Scripts.UseContext(context);
+        ServerConsoles.UseContext(context);
+        ServerHttpPaths.UseContext(context);
+        Tags.UseContext(context);
+    }
     
     #region Initialize Import
     public async Task<IEnumerable<ImportItemInfo>> InitializeImportAsync(string archivePath)
     {
+        UseContext(this);
+        
         Archive = ZipArchive.Open(archivePath);
 
         var manifestEntry = Archive.Entries.FirstOrDefault(e => e.Key == ManifestHelper.ManifestFilename);
@@ -159,8 +188,10 @@ public class ImportContext(
     #endregion
     
     #region Initialize Export
-    public async Task<IEnumerable<ImportItemInfo>> InitializeExportAsync(Guid recordId, ExportRecordType recordType)
+    public async Task<IEnumerable<ExportItemInfo>> InitializeExportAsync(Guid recordId, ExportRecordType recordType)
     {
+        UseContext(this);
+        
         switch (recordType)
         {
             case ExportRecordType.Game:
@@ -177,63 +208,63 @@ public class ImportContext(
         }
     }
 
-    private async Task<IEnumerable<ImportItemInfo>> InitializeGameExportAsync(Guid gameId)
+    private async Task<IEnumerable<ExportItemInfo>> InitializeGameExportAsync(Guid gameId)
     {
         var gameManifest = await gameService.GetManifestAsync(gameId);
         
         Manifest = gameManifest;
         
-        var importItemInfo = new List<ImportItemInfo>();
+        var exportItemInfo = new List<ExportItemInfo>();
         
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Actions, Actions).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Archives, Archives).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Collections, Collections).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.CustomFields, CustomFields).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Developers, Developers).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync([gameManifest.Engine], Engines).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Genres, Genres).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Keys, Keys).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Media, Media).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.MultiplayerModes, MultiplayerModes).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Platforms, Platforms).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.PlaySessions, PlaySessions).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Publishers, Publishers).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Saves, Saves).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.SavePaths, SavePaths).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Scripts, Scripts).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Tags, Tags).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Actions, Actions).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Archives, Archives).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Collections, Collections).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.CustomFields, CustomFields).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Developers, Developers).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync([gameManifest.Engine], Engines).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Genres, Genres).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Keys, Keys).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Media, Media).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.MultiplayerModes, MultiplayerModes).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Platforms, Platforms).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.PlaySessions, PlaySessions).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Publishers, Publishers).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Saves, Saves).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.SavePaths, SavePaths).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Scripts, Scripts).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(gameManifest.Tags, Tags).ToListAsync());
 
-        return importItemInfo;
+        return exportItemInfo;
     }
 
-    private async Task<IEnumerable<ImportItemInfo>> InitializeRedistributableExportAsync(Guid redistributableId)
+    private async Task<IEnumerable<ExportItemInfo>> InitializeRedistributableExportAsync(Guid redistributableId)
     {
         var redistributableManifest = await redistributableService.GetManifestAsync(redistributableId);
         
         Manifest = redistributableManifest;
         
-        var importItemInfo = new List<ImportItemInfo>();
+        var exportItemInfo = new List<ExportItemInfo>();
         
-        importItemInfo.AddRange(await GetImportItemInfoAsync(redistributableManifest.Archives, Archives).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(redistributableManifest.Scripts, Scripts).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(redistributableManifest.Archives, Archives).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(redistributableManifest.Scripts, Scripts).ToListAsync());
 
-        return importItemInfo;
+        return exportItemInfo;
     }
 
-    private async Task<IEnumerable<ImportItemInfo>> InitializeServerExportAsync(Guid serverId)
+    private async Task<IEnumerable<ExportItemInfo>> InitializeServerExportAsync(Guid serverId)
     {
         var serverManifest = await serverService.GetManifestAsync(serverId);
         
         Manifest = serverManifest;
         
-        var importItemInfo = new List<ImportItemInfo>();
+        var exportItemInfo = new List<ExportItemInfo>();
         
-        importItemInfo.AddRange(await GetImportItemInfoAsync(serverManifest.Actions, Actions).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(serverManifest.Scripts, Scripts).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(serverManifest.ServerConsoles, ServerConsoles).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync(serverManifest.HttpPaths, ServerHttpPaths).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(serverManifest.Actions, Actions).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(serverManifest.Scripts, Scripts).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(serverManifest.ServerConsoles, ServerConsoles).ToListAsync());
+        exportItemInfo.AddRange(await GetExportItemInfoAsync(serverManifest.HttpPaths, ServerHttpPaths).ToListAsync());
         
-        return importItemInfo;
+        return exportItemInfo;
     }
     #endregion
     
@@ -349,17 +380,17 @@ public class ImportContext(
     #region Prepare Export Queue
     public async Task PrepareExportQueueAsync(ImportRecordFlags importRecordFlags)
     {
-        if (DataRecord is Game game)
+        if (Manifest is SDK.Models.Manifest.Game game)
             await PrepareGameExportQueueAsync(game, importRecordFlags);
         
-        if (DataRecord is Redistributable redistributable)
+        if (Manifest is SDK.Models.Manifest.Redistributable redistributable)
             await PrepareRedistributableExportQueueAsync(redistributable, importRecordFlags);
         
-        if (Manifest is Data.Models.Server server)
+        if (Manifest is SDK.Models.Manifest.Server server)
             await PrepareServerExportQueueAsync(server, importRecordFlags);
     }
     
-    public async Task PrepareGameExportQueueAsync(Game record, ImportRecordFlags importRecordFlags)
+    public async Task PrepareGameExportQueueAsync(SDK.Models.Manifest.Game record, ImportRecordFlags importRecordFlags)
     {
         if (importRecordFlags.HasFlag(ImportRecordFlags.Actions))
             await AddToQueueAsync(record.Actions);
@@ -401,7 +432,7 @@ public class ImportContext(
             await AddToQueueAsync(record.Publishers);
 
         if (importRecordFlags.HasFlag(ImportRecordFlags.Saves))
-            await AddToQueueAsync(record.GameSaves);
+            await AddToQueueAsync(record.Saves);
 
         if (importRecordFlags.HasFlag(ImportRecordFlags.SavePaths))
             await AddToQueueAsync(record.SavePaths);
@@ -413,7 +444,7 @@ public class ImportContext(
             await AddToQueueAsync(record.Tags);
     }
 
-    public async Task PrepareRedistributableExportQueueAsync(Redistributable record,
+    public async Task PrepareRedistributableExportQueueAsync(SDK.Models.Manifest.Redistributable record,
         ImportRecordFlags importRecordFlags)
     {
         if (importRecordFlags.HasFlag(ImportRecordFlags.Archives))
@@ -423,7 +454,7 @@ public class ImportContext(
             await AddToQueueAsync(record.Scripts);
     }
 
-    public async Task PrepareServerExportQueueAsync(Data.Models.Server record,
+    public async Task PrepareServerExportQueueAsync(SDK.Models.Manifest.Server record,
         ImportRecordFlags importRecordFlags)
     {
         if (importRecordFlags.HasFlag(ImportRecordFlags.Actions))
@@ -681,16 +712,28 @@ public class ImportContext(
     }
     
     private async IAsyncEnumerable<ImportItemInfo> GetImportItemInfoAsync<TModel, TEntity>(IEnumerable<TModel> records,
-        IImporter<TModel, TEntity> importer)
+        BaseImporter<TModel, TEntity> importer)
     {
-        foreach (var record in records)
-        {
-            if (record.GetType() == typeof(TModel))
-                yield return await importer.GetImportInfoAsync(record);
-        }
+        if (records != null)
+            foreach (var record in records)
+            {
+                if (record != null && record.GetType() == typeof(TModel))
+                    yield return await importer.GetImportInfoAsync(record);
+            }
     }
 
-    private async Task ImportRecordAsync<TRecord, TEntity>(TRecord record, IImporter<TRecord, TEntity> importer)
+    private async IAsyncEnumerable<ExportItemInfo> GetExportItemInfoAsync<TModel, TEntity>(IEnumerable<TModel> records,
+        BaseImporter<TModel, TEntity> importer)
+    {
+        if (records != null)
+            foreach (var record in records)
+            {
+                if (record != null && record.GetType() == typeof(TModel))
+                    yield return await importer.GetExportInfoAsync(record);
+            }
+    }
+
+    private async Task ImportRecordAsync<TRecord, TEntity>(TRecord record, BaseImporter<TRecord, TEntity> importer)
     {
         try
         {
@@ -712,7 +755,7 @@ public class ImportContext(
         }
     }
     
-    private async Task<TRecord> ExportRecordAsync<TRecord, TEntity>(TEntity entity, IImporter<TRecord, TEntity> importer)
+    private async Task<TRecord> ExportRecordAsync<TRecord, TEntity>(TEntity entity, BaseImporter<TRecord, TEntity> importer)
     {
         try
         {
@@ -737,6 +780,7 @@ public class ImportContext(
 
     public void Dispose()
     {
-        Archive.Dispose();
+        if (Archive != null)
+            Archive.Dispose();
     }
 }

@@ -91,8 +91,8 @@
         if (media.Id == Guid.Empty)
         {
             media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
-
-        if (media.Id != Guid.Empty)
+        }
+        else if (media.Id != Guid.Empty)
         {
             MediaService.DeleteLocalMediaFile(media);
             

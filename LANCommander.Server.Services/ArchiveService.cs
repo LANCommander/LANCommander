@@ -231,6 +231,32 @@ namespace LANCommander.Server.Services
             return size;
         }
 
+        public async Task<Archive> WriteToFileAsync(Archive archive, Stream stream, bool overwrite = true)
+        {
+            if (archive.StorageLocation == null)
+                archive = await Include(a => a.StorageLocation).GetAsync(archive.Id);
+            
+            if (archive.StorageLocation == null)
+                throw new ArgumentException("Archive has no storage location", nameof(archive));
+            
+            var path = GetArchiveFileLocation(archive, archive.StorageLocation);
+            
+            if (overwrite && File.Exists(path))
+                File.Delete(path);
+
+            using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write))
+            {
+                await stream.CopyToAsync(fs);
+            }
+
+            archive.CompressedSize = await GetCompressedSizeAsync(archive);
+            archive.UncompressedSize = await GetUncompressedSizeAsync(archive);
+
+            await UpdateAsync(archive);
+
+            return archive;
+        }
+
         public async Task PatchArchiveAsync(Archive originalArchive, Archive alteredArchive, CompressionLevel compressionLevel = CompressionLevel.Optimal)
         {
             var alteredZipPath = await GetArchiveFileLocationAsync(alteredArchive);

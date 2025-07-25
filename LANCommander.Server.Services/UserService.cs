@@ -115,6 +115,11 @@ namespace LANCommander.Server.Services
                 return new List<Collection>();
             }
         }
+        
+        public async Task<bool> ExistsAsync(Expression<Func<User, bool>> predicate)
+        {
+            return await IdentityContext.DatabaseContext.Users.AnyAsync(predicate);
+        }
 
         public Task<User> AddAsync(User user)
         {

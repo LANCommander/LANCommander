@@ -124,6 +124,22 @@ namespace LANCommander.SDK.Helpers
             return destination;
         }
 
+        public static bool TryDeserialize<T>(string serializedManifest, out T manifest)
+        {
+            try
+            {
+                manifest = Deserialize<T>(serializedManifest);
+
+                return true;
+            }
+            catch
+            {
+                manifest = default(T);
+                
+                return false;
+            }
+        }
+
         public static T Deserialize<T>(string serializedManifest)
         {
             var deserializer = new DeserializerBuilder()

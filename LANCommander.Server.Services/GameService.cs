@@ -115,7 +115,7 @@ namespace LANCommander.Server.Services
             return await GetAsync(g => g.AddonTypes.Contains(g.Type));
         }
 
-        public async Task<GameManifest> GetManifestAsync(Guid id)
+        public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id)
         {
             var game = await Query(q =>
             {
@@ -139,195 +139,37 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Redistributables)
                     .Include(g => g.SavePaths)
                     .Include(g => g.Tags);
-            }).GetAsync(id);
+            }).GetAsync<SDK.Models.Manifest.Game>(id);
 
-            return GetManifest(game);
+            return game;
         }
 
-        public GameManifest GetManifest(Game game)
+        public async Task<GameCustomField> GetCustomFieldAsync(Guid id, string name)
         {
-            if (game == null)
-                return null;
-
-            var manifest = new GameManifest()
-            {
-                Id = game.Id,
-                Title = game.Title,
-                SortTitle = game.SortTitle,
-                Description = game.Description,
-                Notes = game.Notes,
-                ReleasedOn = game.ReleasedOn.GetValueOrDefault(),
-                Singleplayer = game.Singleplayer,
-                Type = (SDK.Enums.GameType)(int)game.Type,
-            };
-
-            if (game.Engine != null)
-                manifest.Engine = game.Engine.Name;
-
-            if (game.Genres != null && game.Genres.Count > 0)
-                manifest.Genre = game.Genres.Select(g => g.Name).ToArray();
-
-            if (game.Tags != null && game.Tags.Count > 0)
-                manifest.Tags = game.Tags.Select(g => g.Name).ToArray();
-
-            if (game.Publishers != null && game.Publishers.Count > 0)
-                manifest.Publishers = game.Publishers.Select(g => g.Name).ToArray();
-
-            if (game.Developers != null && game.Developers.Count > 0)
-                manifest.Developers = game.Developers.Select(g => g.Name).ToArray();
-
-            if (game.Collections != null && game.Collections.Count > 0)
-                manifest.Collections = game.Collections.Select(c => c.Name).ToArray();
-
-            if (game.Archives != null && game.Archives.Count > 0)
-                manifest.Version = game.Archives.OrderByDescending(a => a.CreatedOn).First().Version;
-
-            if (game.Media != null && game.Media.Count > 0)
-                manifest.Media = mapper.Map<IEnumerable<SDK.Models.Media>>(game.Media);
-
-            if (game.Actions != null && game.Actions.Count > 0)
-            {
-                manifest.Actions = game.Actions.Select(a => new SDK.Models.Action()
-                {
-                    Name = a.Name,
-                    Arguments = a.Arguments,
-                    Path = a.Path,
-                    WorkingDirectory = a.WorkingDirectory,
-                    IsPrimaryAction = a.PrimaryAction,
-                    SortOrder = a.SortOrder,
-                }).ToArray();
-            }
-
-            if (game.MultiplayerModes != null && game.MultiplayerModes.Count > 0)
-            {
-                var local = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.Local);
-                var lan = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.LAN);
-                var online = game.MultiplayerModes.FirstOrDefault(m => m.Type == MultiplayerType.Online);
-
-                if (local != null)
-                    manifest.LocalMultiplayer = new MultiplayerInfo()
-                    {
-                        MinPlayers = local.MinPlayers,
-                        MaxPlayers = local.MaxPlayers,
-                        Description = local.Description,
-                        NetworkProtocol = local.NetworkProtocol,
-                    };
-
-                if (lan != null)
-                    manifest.LanMultiplayer = new MultiplayerInfo()
-                    {
-                        MinPlayers = lan.MinPlayers,
-                        MaxPlayers = lan.MaxPlayers,
-                        Description = lan.Description,
-                        NetworkProtocol = lan.NetworkProtocol,
-                    };
-
-                if (online != null)
-                    manifest.OnlineMultiplayer = new MultiplayerInfo()
-                    {
-                        MinPlayers = online.MinPlayers,
-                        MaxPlayers = online.MaxPlayers,
-                        Description = online.Description,
-                        NetworkProtocol = online.NetworkProtocol,
-                    };
-            }
-
-            if (game.SavePaths != null && game.SavePaths.Count > 0)
-            {
-                manifest.SavePaths = game.SavePaths.Select(p => new SDK.Models.SavePath()
-                {
-                    Id = p.Id,
-                    Path = p.Path,
-                    IsRegex = p.IsRegex,
-                    WorkingDirectory = p.WorkingDirectory,
-                    Type = p.Type
-                });
-            }
-
-            if (game.DependentGames != null && game.DependentGames.Count > 0)
-            {
-                manifest.DependentGames = game.DependentGames.Select(g => g.Id).ToArray();
-            }
-
-            if (game.CustomFields != null && game.CustomFields.Count > 0)
-            {
-                manifest.CustomFields = game.CustomFields.Select(cf => new SDK.Models.GameCustomField(cf.Name, cf.Value)).ToArray();
-            }
-
-            return manifest;
-        }
-
-        public async Task<GameManifest> ExportAsync(Guid id)
-        {
-            var game = await Query(q =>
-            {
-                return q
-                    .AsNoTracking()
-                    .AsSplitQuery()
-                    .Include(g => g.Actions)
-                    .Include(g => g.Archives)
-                    .Include(g => g.BaseGame)
-                    .Include(g => g.Categories)
-                    .Include(g => g.Collections)
-                    .Include(g => g.CustomFields)
-                    .Include(g => g.DependentGames)
-                    .Include(g => g.Developers)
-                    .Include(g => g.Engine)
-                    .Include(g => g.Genres)
-                    .Include(g => g.Media)
-                    .Include(g => g.MultiplayerModes)
-                    .Include(g => g.Platforms)
-                    .Include(g => g.Publishers)
-                    .Include(g => g.Redistributables)
-                    .Include(g => g.Scripts)
-                    .Include(g => g.Tags);
-            }).GetAsync(id);
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.CustomFields)
+                .GetAsync(id);
             
-            var manifest = await GetManifestAsync(id);
+            return game.CustomFields.FirstOrDefault(c => c.Name == name);
+        }
 
-            if (game.Media != null && game.Media.Count > 0)
+        public async Task<GameCustomField> SetCustomFieldAsync(Guid id, string name, string value)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.CustomFields)
+                .GetAsync(id);
+            
+            if (game.CustomFields.Any(c => c.Name == name))
+                foreach (var customField in game.CustomFields.Where(c => c.Name == name))
+                    customField.Value = value;
+            else
             {
-                manifest.Media = game.Media.Select(m => new SDK.Models.Media()
-                {
-                    Id = m.Id,
-                    FileId = m.FileId,
-                    MimeType = m.MimeType,
-                    SourceUrl = m.SourceUrl,
-                    Type = (SDK.Enums.MediaType)(int)m.Type,
-                    CreatedOn = m.CreatedOn,
-                }).ToList();
+                game.CustomFields.Add(new GameCustomField());
             }
 
-            if (game.Scripts != null && game.Scripts.Count > 0)
-            {
-                manifest.Scripts = game.Scripts.Select(s => new SDK.Models.Script()
-                {
-                    Id = s.Id,
-                    Name = s.Name,
-                    Description = s.Description,
-                    RequiresAdmin = s.RequiresAdmin,
-                    Type = (SDK.Enums.ScriptType)(int)s.Type,
-                    CreatedOn = s.CreatedOn,
-                    UpdatedOn = s.UpdatedOn,
-                });
-            }
-
-            if (game.Archives != null && game.Archives.Count > 0)
-            {
-                manifest.Archives = game.Archives.Select(a => new SDK.Models.Archive()
-                {
-                    Id = a.Id,
-                    Changelog = a.Changelog,
-                    Version = a.Version,
-                    CreatedOn = a.CreatedOn,
-                    ObjectKey = a.ObjectKey,
-                }).ToList();
-            }
-
-            if (game.Keys != null && game.Keys.Count > 0)
-                manifest.Keys = game.Keys.Select(k => k.Value).ToList();
-
-            return manifest;
+            return await GetCustomFieldAsync(id, name);
         }
     }
 }

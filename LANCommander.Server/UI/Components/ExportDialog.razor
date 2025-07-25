@@ -1,0 +1,162 @@
+﻿@using LANCommander.SDK.Enums
+@using LANCommander.Server.Services.Importers
+@inherits FeedbackComponent<ExportDialogOptions>
+@inject ArchiveService ArchiveService
+@inject ImportService ImportService
+@inject ImportContextFactory ImportContextFactory
+@inject IMessageService MessageService
+@inject NavigationManager NavigationManager
+@inject ILogger<ExportDialog> Logger
+
+<Spin Spinning="_loading">
+    <Collapse>
+        @foreach (var group in ExportItems.GroupBy(i => i.Flag))
+        {
+            <Panel ShowArrow="false" Key="@group.Key.ToString()">
+                <HeaderTemplate>
+                    <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
+                    <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                        <Text>@group.Key</Text>
+
+                        @{
+                            var size = group.Sum(i => i.Size);
+
+                            if (size > 0)
+                            {
+                                <ByteSize Value="size" />
+                            }
+                        }
+                    </Flex>
+                </HeaderTemplate>
+                <ChildContent>
+                    <AntList DataSource="group">
+                        <ChildContent Context="item">
+                            <ListItem>
+                                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                                    <Text>@item.Name</Text>
+
+                                    @if (item.Size > 0)
+                                    {
+                                        <ByteSize Value="item.Size"/>
+                                    }
+                                </Flex>
+                            </ListItem>
+                        </ChildContent>
+                    </AntList>
+                </ChildContent>
+            </Panel>
+        }
+    </Collapse>
+</Spin>
+
+<Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
+    <Button OnClick="Export" Type="@ButtonType.Primary" Disabled="_loading">Export</Button>
+    <Button OnClick="Cancel">Cancel</Button>
+</Flex>
+
+@code {
+    ImportContext ImportContext;
+
+    IEnumerable<ExportItemInfo> ExportItems = new List<ExportItemInfo>();
+
+    Dictionary<ImportRecordFlags, bool> SelectedFlags = Enum.GetValues<ImportRecordFlags>()
+        .ToDictionary(
+            f => f,
+            _ => true);
+
+    bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        
+        ImportContext = ImportContextFactory.Create();
+        
+        ImportContext.OnRecordError += RecordError;
+        ImportContext.OnRecordAdded += RecordAdded;
+        ImportContext.OnRecordProcessed += RecordProcessed;
+
+        if (Options != null && Options.RecordId != Guid.Empty)
+            ExportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+
+        _loading = false;
+    }
+
+    private void RecordProcessed(object? sender, object e)
+    {
+        
+    }
+
+    private void RecordAdded(object? sender, object e)
+    {
+        
+    }
+
+    private void RecordError(object? sender, object e)
+    {
+        
+    }
+
+    async Task Export()
+    {
+        var flags = SelectedFlags
+            .Where(f => f.Value)
+            .Aggregate(ImportRecordFlags.None, (cur, f) => cur | f.Key);
+
+        await ImportContext.PrepareExportQueueAsync(flags);
+
+        await InvokeAsync(StateHasChanged);
+        
+        var contextId = ImportService.EnqueueContext(ImportContext);
+        
+        NavigationManager.NavigateTo($"/api/Export/{contextId}", true);
+    }
+
+    async Task Cancel()
+    {
+        await CloseFeedbackAsync();
+    }
+
+    public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
+    {
+        //ImportContext.Dispose();
+        
+        await base.OnFeedbackCancelAsync(args);
+    }
+
+    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    {
+        //ImportContext.Dispose();
+        
+        await base.OnFeedbackOkAsync(args);
+    }
+
+    public async Task OnUploadCompleted(string data)
+    {
+        if (Guid.TryParse(data, out var objectKey))
+        {
+            try
+            {
+                var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+
+                ExportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error("An unknown error occurred while trying to gather export details");
+                Logger.LogError(ex, "An unknown error occurred while trying to gather export details");
+            }
+        }
+        else
+        {
+            await InvokeAsync(StateHasChanged);
+
+            MessageService.Error("Export file failed to generate!");
+            Logger.LogError("Export file failed to generate!");
+
+            await CloseFeedbackAsync();
+        }
+    }
+}

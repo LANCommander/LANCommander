@@ -1,58 +1,40 @@
-using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Importers;
-using Microsoft.Extensions.Logging;
-using System.IO.Compression;
-using LANCommander.SDK.Enums;
 
 namespace LANCommander.Server.Services;
 
-public class ImportService<T>(
-    ILogger<ImportService<T>> logger,
-    IImporter<T> importer,
-    StorageLocationService storageLocationService,
-    ArchiveService archiveService) : BaseService(logger)
-    where T : class, IBaseModel
+public class ImportService : IDisposable
 {
-    public async Task<T> ImportFromUploadArchiveAsync(Guid objectKey)
+    private Dictionary<Guid, ImportContext> ImportContexts = new();
+
+    public Guid EnqueueContext(ImportContext context)
     {
-        var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
+        var id = Guid.NewGuid();
+        
+        ImportContexts.Add(id, context);
 
-        T entity;
-
-        try
-        {
-            using (var importZip = ZipFile.OpenRead(importArchivePath))
-            {
-                entity = await importer.ImportAsync(objectKey, importZip);
-            }
-        }
-        finally
-        {
-            await archiveService.DeleteAsync(importArchive);
-        }
-
-        return entity;
+        return id;
     }
 
-    public async Task<T> ImportFromLocalFileAsync(string localFilePath)
+    public ImportContext GetContext(Guid id)
     {
-        Guid objectKey = Guid.NewGuid();
-
-        var storageLocation =
-            await storageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == StorageLocationType.Archive);
-
-        var importArchive = await archiveService.AddAsync(new Archive
-        {
-            ObjectKey = objectKey.ToString(),
-            Version = DateTime.UtcNow.ToString(),
-            StorageLocation = storageLocation,
-        });
-
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
-
-        File.Copy(localFilePath, importArchivePath, true);
+        if (ImportContexts.TryGetValue(id, out var context))
+            return context;
         
-        return await ImportFromUploadArchiveAsync(objectKey);
+        return null;
+    }
+
+    public async Task ExportAsync(Guid contextId, Stream outputStream)
+    {
+        if (ImportContexts.TryGetValue(contextId, out var context))
+        {
+            await context.ExportQueueAsync(outputStream);
+            
+            ImportContexts.Remove(contextId);
+        }
+    }
+
+    public void Dispose()
+    {
+        // TODO release managed resources here
     }
 }

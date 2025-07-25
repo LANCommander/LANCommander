@@ -214,13 +214,19 @@ namespace LANCommander.Server.Services
             try
             {
                 using var context = await dbContextFactory.CreateDbContextAsync();
-                
+
                 var queryable = context.Set<T>().AsQueryable();
-                
+
                 foreach (var modifier in _modifiers)
                     queryable = modifier.Invoke(queryable);
 
-                return await queryable.Where(predicate).ProjectTo<U>(mapper.ConfigurationProvider).FirstOrDefaultAsync();
+                var entity = await queryable.Where(predicate).FirstOrDefaultAsync();
+
+                return mapper.Map<U>(entity);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
             finally
             {

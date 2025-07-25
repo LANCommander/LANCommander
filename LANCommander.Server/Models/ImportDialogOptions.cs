@@ -1,4 +1,4 @@
-namespace LANCommander.Server.UI.Pages.Games.Components;
+namespace LANCommander.Server.Models;
 
 public class ImportDialogOptions
 {

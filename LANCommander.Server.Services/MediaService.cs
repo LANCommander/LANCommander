@@ -141,21 +141,27 @@ namespace LANCommander.Server.Services
             // return await UploadMediaAsync(file.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024), media);
         }*/
 
-        public async Task<Media> UploadMediaAsync(Stream stream, Media media)
+        public async Task<Media> WriteToFileAsync(Media media, Stream stream, bool overwrite = false)
         {
-            var fileId = Guid.NewGuid();
-            var storageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
-
-            media.FileId = fileId;
-            media.StorageLocation = storageLocation;
-
+            if (media.StorageLocation == null)
+                media.StorageLocation = await storageLocationService.GetAsync(media.StorageLocationId);
+            
+            if (media.StorageLocation == null)
+                media.StorageLocation = await storageLocationService.FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default);
+            
+            if (media.FileId == Guid.Empty)
+                media.FileId = Guid.NewGuid();
+            
             var path = GetMediaPath(media);
+            
+            if (overwrite && File.Exists(path))
+                File.Delete(path);
 
-            using (var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write))
+            using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
                 await stream.CopyToAsync(fs);
             }
-            
+
             media.Crc32 = SDK.Services.MediaService.CalculateChecksum(path);
 
             await GenerateThumbnailAsync(media);
@@ -165,7 +171,7 @@ namespace LANCommander.Server.Services
             else
                 media = await AddAsync(media);
             
-            await cache.ExpireGameCacheAsync(media.GameId);
+            await cache.ExpireGameCacheAsync(media.Game?.Id ?? media.GameId);
 
             return media;
         }
@@ -289,7 +295,7 @@ namespace LANCommander.Server.Services
             {
                 var response = await http.GetStreamAsync(sourceUrl);
 
-                return await UploadMediaAsync(response, media);
+                return await WriteToFileAsync(media, response);
             }
         }
 

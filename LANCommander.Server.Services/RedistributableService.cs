@@ -47,5 +47,20 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(r => r.Scripts);
             });
         }
+
+        public async Task<SDK.Models.Manifest.Redistributable> GetManifestAsync(Guid manifestId)
+        {
+            var redistributable = await AsNoTracking()
+                .AsSplitQuery()
+                .Query(q =>
+                {
+                    return q
+                        .Include(r => r.Archives)
+                        .Include(r => r.Scripts);
+                })
+                .GetAsync<SDK.Models.Manifest.Redistributable>(manifestId);
+            
+            return redistributable;
+        }
     }
 }

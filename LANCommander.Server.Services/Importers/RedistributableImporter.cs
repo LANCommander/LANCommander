@@ -1,148 +1,81 @@
-using LANCommander.Server.Data.Models;
-using LANCommander.SDK.Helpers;
-using System.IO.Compression;
-using LANCommander.SDK.Enums;
-using LANCommander.Server.Data.Enums;
-using LANCommander.Server.Services.Extensions;
+using LANCommander.SDK.Models.Manifest;
+using AutoMapper;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Importers;
 
 public class RedistributableImporter(
-    ArchiveService archiveService,
-    ScriptService scriptService,
-    RedistributableService redistributableService) : IImporter<Redistributable>
+    IMapper mapper,
+    RedistributableService redistributableService,
+    UserService userService) : BaseImporter<Redistributable, Data.Models.Redistributable>
 {
-    public async Task<Redistributable> ImportAsync(Guid objectKey, ZipArchive importZip)
+    public override async Task<ImportItemInfo> GetImportInfoAsync(Redistributable record)
     {
-        var importArchive = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey.ToString());
-        var importArchivePath = await archiveService.GetArchiveFileLocationAsync(importArchive);
-        var manifest =
-            ManifestHelper.Deserialize<SDK.Models.Redistributable>(
-                await importZip.ReadAllTextAsync(ManifestHelper.ManifestFilename));
-
-        var redistributable = await InitializeFromManifest(manifest);
-
-        redistributable = await UpdateScripts(redistributable, manifest, importZip);
-        redistributable = await UpdateArchives(redistributable, manifest, importZip, importArchive);
-
-        if (await redistributableService.ExistsAsync(redistributable.Id))
-            redistributable = await redistributableService.UpdateAsync(redistributable);
-        else
-            redistributable = await redistributableService.AddAsync(redistributable);
-
-        await archiveService.DeleteAsync(importArchive);
-
-        return redistributable;
+        return new ImportItemInfo()
+        {
+            Name = record.Name,
+        };
     }
 
-    private async Task<Redistributable> InitializeFromManifest(SDK.Models.Redistributable manifest)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Redistributable record)
     {
-        var redistributable = await redistributableService.GetAsync(manifest.Id);
-        var exists = redistributable != null;
-
-        if (!exists)
-            redistributable = new Redistributable();
-
-        redistributable.Id = manifest.Id;
-        redistributable.Name = manifest.Name;
-        redistributable.Description = manifest.Description;
-        redistributable.Notes = manifest.Notes;
-
-        return redistributable;
+        return new ExportItemInfo()
+        {
+            Id = record.Id,
+            Name = record.Name,
+        };
     }
 
-    private async Task<Redistributable> UpdateScripts(Redistributable redistributable, SDK.Models.Redistributable manifest, ZipArchive importZip)
+    public override bool CanImport(Redistributable record) => true;
+    public override bool CanExport(Redistributable record) => true;
+
+    public override async Task<Data.Models.Redistributable> AddAsync(Redistributable record)
     {
-        if (redistributable.Scripts == null)
-            redistributable.Scripts = new List<Script>();
+        var redistributable = mapper.Map<Data.Models.Redistributable>(record);
 
-        foreach (var script in redistributable.Scripts)
+        try
         {
-            var manifestScript = manifest.Scripts.FirstOrDefault(s => s.Id == script.Id);
-
-            if (manifestScript != null)
-            {
-                script.Contents = await importZip.ReadAllTextAsync($"Scripts/{script.Id}");
-                script.Description = manifestScript.Description;
-                script.Name = manifestScript.Name;
-                script.RequiresAdmin = manifestScript.RequiresAdmin;
-                script.Type = (ScriptType)(int)manifestScript.Type;
-            }
-            else
-                redistributable.Scripts.Remove(script);
+            return await redistributableService.AddAsync(redistributable);
         }
-
-        if (manifest.Scripts != null)
+        catch (Exception ex)
         {
-            foreach (var manifestScript in manifest.Scripts.Where(ms => !redistributable.Scripts.Any(s => s.Id == ms.Id)))
-            {
-                var newScript = new Script
-                {
-                    Id = manifestScript.Id,
-                    Contents = await importZip.ReadAllTextAsync($"Scripts/{manifestScript.Id}"),
-                    Description = manifestScript.Description,
-                    Name = manifestScript.Name,
-                    RequiresAdmin = manifestScript.RequiresAdmin,
-                    Type = (ScriptType)(int)manifestScript.Type,
-                    CreatedOn = manifestScript.CreatedOn,
-                };
-
-                newScript = await scriptService.AddAsync(newScript);
-                
-                redistributable.Scripts.Add(newScript);
-            }
+            throw new ImportSkippedException<Redistributable>(record,
+                "An unknown error occurred while trying to add redistributable", ex);
         }
-
-        return redistributable;
     }
 
-    private async Task<Redistributable> UpdateArchives(Redistributable redistributable, SDK.Models.Redistributable manifest, ZipArchive importZip, Archive importArchive)
+    public override async Task<Data.Models.Redistributable> UpdateAsync(Redistributable record)
     {
-        if (redistributable.Archives == null)
-            redistributable.Archives = new List<Archive>();
+        var existing = await redistributableService.FirstOrDefaultAsync(r => r.Id == record.Id || r.Name == record.Name);
 
-        foreach (var archive in redistributable.Archives)
+        try
         {
-            var manifestArchive = manifest.Archives.FirstOrDefault(a => a.Id == archive.Id);
+            existing.Name = record.Name;
+            existing.Description = record.Description;
+            existing.Notes = record.Notes;
+            existing.CreatedOn = record.CreatedOn;
+            existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
+            existing.UpdatedOn = record.UpdatedOn;
+            existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
-            if (manifestArchive != null)
-            {
-                archive.Changelog = manifestArchive.Changelog;
-                archive.ObjectKey = manifestArchive.ObjectKey;
-                archive.Version = manifestArchive.Version;
-                archive.CreatedOn = manifestArchive.CreatedOn;
-                archive.StorageLocation = importArchive.StorageLocation;
+            existing = await redistributableService.UpdateAsync(existing);
 
-                var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
-
-                importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
-
-                archive.CompressedSize = new FileInfo(extractionLocation).Length;
-            }
+            return existing;
         }
+        catch (Exception ex)
+        {
+            throw new ImportSkippedException<Redistributable>(record,
+                "An unknown error occurred while trying to add redistributable", ex);
+        }
+    }
 
-        if (manifest.Archives != null)
-            foreach (var manifestArchive in manifest.Archives.Where(ma => !redistributable.Archives.Any(a => a.Id == ma.Id)))
-            {
-                var archive = new Archive()
-                {
-                    Id = manifestArchive.Id,
-                    ObjectKey = manifestArchive.ObjectKey,
-                    Changelog = manifestArchive.Changelog,
-                    Version = manifestArchive.Version,
-                    CreatedOn = manifestArchive.CreatedOn,
-                    StorageLocation = importArchive.StorageLocation,
-                };
+    public override async Task<Redistributable> ExportAsync(Guid id)
+    {
+        return await redistributableService.GetAsync<Redistributable>(id);
+    }
 
-                var extractionLocation = await archiveService.GetArchiveFileLocationAsync(archive);
-
-                importZip.ExtractEntry($"Archives/{archive.ObjectKey}", extractionLocation, true);
-
-                archive.CompressedSize = new FileInfo(extractionLocation).Length;
-
-                redistributable.Archives.Add(archive);
-            }
-
-        return redistributable;
+    public override async Task<bool> ExistsAsync(Redistributable record)
+    {
+        return await redistributableService.ExistsAsync(r => r.Id == record.Id || r.Name == record.Name);
     }
 } 

@@ -13,11 +13,11 @@ public interface IImporter<TRecord, TEntity>
 {
     void UseContext(ImportContext context);
     Task<ImportItemInfo> GetImportInfoAsync(TRecord record);
-    Task<ExportItemInfo> GetExportInfoAsync(TRecord record);
+    Task<ExportItemInfo> GetExportInfoAsync(TEntity record);
     bool CanImport(TRecord record);
     bool CanExport(TRecord record);
     Task<TEntity> AddAsync(TRecord record);
     Task<TEntity> UpdateAsync(TRecord record);
-    Task<TRecord> ExportAsync(TEntity entity);
+    Task<TRecord> ExportAsync(Guid id);
     Task<bool> ExistsAsync(TRecord record);
 }

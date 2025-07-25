@@ -18,10 +18,11 @@ public class GenreImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Genre record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Genre record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Genres,
             Name = record.Name,
         };
@@ -71,9 +72,9 @@ public class GenreImporter(
         }
     }
 
-    public override async Task<Genre> ExportAsync(Data.Models.Genre entity)
+    public override async Task<Genre> ExportAsync(Guid id)
     {
-        return mapper.Map<Genre>(entity);
+        return await genreService.GetAsync<Genre>(id);
     }
 
     public override async Task<bool> ExistsAsync(Genre record)

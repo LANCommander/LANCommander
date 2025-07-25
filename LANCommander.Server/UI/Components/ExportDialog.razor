@@ -2,52 +2,55 @@
 @using LANCommander.Server.Services.Importers
 @inherits FeedbackComponent<ExportDialogOptions>
 @inject ArchiveService ArchiveService
+@inject ImportService ImportService
 @inject ImportContextFactory ImportContextFactory
 @inject IMessageService MessageService
+@inject NavigationManager NavigationManager
 @inject ILogger<ExportDialog> Logger
 
+<Spin Spinning="_loading">
+    <Collapse>
+        @foreach (var group in ExportItems.GroupBy(i => i.Flag))
+        {
+            <Panel ShowArrow="false" Key="@group.Key.ToString()">
+                <HeaderTemplate>
+                    <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
+                    <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                        <Text>@group.Key</Text>
 
-<Collapse>
-    @foreach (var group in ExportItems.GroupBy(i => i.Flag))
-    {
-        <Panel ShowArrow="false" Key="@group.Key.ToString()">
-            <HeaderTemplate>
-                <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
-                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                    <Text>@group.Key</Text>
-                    
-                    @{
-                        var size = group.Sum(i => i.Size);
+                        @{
+                            var size = group.Sum(i => i.Size);
 
-                        if (size > 0)
-                        {
-                            <ByteSize Value="size" />
+                            if (size > 0)
+                            {
+                                <ByteSize Value="size" />
+                            }
                         }
-                    }
-                </Flex>
-            </HeaderTemplate>
-            <ChildContent>
-                <AntList DataSource="group">
-                    <ChildContent Context="item">
-                        <ListItem>
-                            <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                                <Text>@item.Name</Text>
+                    </Flex>
+                </HeaderTemplate>
+                <ChildContent>
+                    <AntList DataSource="group">
+                        <ChildContent Context="item">
+                            <ListItem>
+                                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                                    <Text>@item.Name</Text>
 
-                                @if (item.Size > 0)
-                                {
-                                    <ByteSize Value="item.Size"/>
-                                }
-                            </Flex>
-                        </ListItem>
-                    </ChildContent>
-                </AntList>
-            </ChildContent>
-        </Panel>
-    }
-</Collapse>
+                                    @if (item.Size > 0)
+                                    {
+                                        <ByteSize Value="item.Size"/>
+                                    }
+                                </Flex>
+                            </ListItem>
+                        </ChildContent>
+                    </AntList>
+                </ChildContent>
+            </Panel>
+        }
+    </Collapse>
+</Spin>
 
 <Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
-    <Button OnClick="Export" Type="@ButtonType.Primary">Export</Button>
+    <Button OnClick="Export" Type="@ButtonType.Primary" Disabled="_loading">Export</Button>
     <Button OnClick="Cancel">Cancel</Button>
 </Flex>
 
@@ -61,8 +64,12 @@
             f => f,
             _ => true);
 
+    bool _loading = true;
+
     protected override async Task OnInitializedAsync()
     {
+        _loading = true;
+        
         ImportContext = ImportContextFactory.Create();
         
         ImportContext.OnRecordError += RecordError;
@@ -71,6 +78,8 @@
 
         if (Options != null && Options.RecordId != Guid.Empty)
             ExportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+
+        _loading = false;
     }
 
     private void RecordProcessed(object? sender, object e)
@@ -97,8 +106,10 @@
         await ImportContext.PrepareExportQueueAsync(flags);
 
         await InvokeAsync(StateHasChanged);
-
-        // Do request to export (probably via JS)
+        
+        var contextId = ImportService.EnqueueContext(ImportContext);
+        
+        NavigationManager.NavigateTo($"/api/Export/{contextId}", true);
     }
 
     async Task Cancel()
@@ -108,14 +119,14 @@
 
     public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
     {
-        ImportContext.Dispose();
+        //ImportContext.Dispose();
         
         await base.OnFeedbackCancelAsync(args);
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        ImportContext.Dispose();
+        //ImportContext.Dispose();
         
         await base.OnFeedbackOkAsync(args);
     }

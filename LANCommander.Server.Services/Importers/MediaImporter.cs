@@ -20,13 +20,14 @@ public class MediaImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Media record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Media record)
     {
         var mediaPath = await mediaService.GetMediaPathAsync(record.Id);
         
         var info = new ExportItemInfo
         {
-            Flag = ImportRecordFlags.Archives,
+            Id = record.Id,
+            Flag = ImportRecordFlags.Media,
             Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
         };
         
@@ -107,17 +108,17 @@ public class MediaImporter(
         }
     }
 
-    public override async Task<Media> ExportAsync(Data.Models.Media entity)
+    public override async Task<Media> ExportAsync(Guid id)
     {
-        var path = await mediaService.GetMediaPathAsync(entity.Id);
+        var path = await mediaService.GetMediaPathAsync(id);
         var fileInfo = new FileInfo(path);
 
         using (var fs = fileInfo.OpenRead())
         {
-            ImportContext.Archive.AddEntry($"Media/{entity.Id}", fs);
+            ImportContext.Archive.AddEntry($"Media/{id}", fs);
         }
         
-        return mapper.Map<Media>(entity);
+        return await mediaService.GetAsync<Media>(id);
     }
 
     public override Task<bool> ExistsAsync(Media media)

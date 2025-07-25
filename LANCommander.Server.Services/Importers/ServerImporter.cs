@@ -22,7 +22,7 @@ public class ServerImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(SDK.Models.Manifest.Server record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Server record)
     {
         var files = Directory.GetFiles(record.WorkingDirectory, "*", SearchOption.AllDirectories);
 
@@ -37,6 +37,7 @@ public class ServerImporter(
         
         return new ExportItemInfo
         {
+            Id = record.Id,
             Name = record.Name,
             Size = size
         };
@@ -98,8 +99,10 @@ public class ServerImporter(
         }
     }
 
-    public override async Task<SDK.Models.Manifest.Server> ExportAsync(Data.Models.Server entity)
+    public override async Task<SDK.Models.Manifest.Server> ExportAsync(Guid id)
     {
+        var entity = await serverService.GetAsync<SDK.Models.Manifest.Server>(id);
+        
         var files = Directory.GetFiles(entity.WorkingDirectory, "*", SearchOption.AllDirectories);
 
         foreach (var file in files)

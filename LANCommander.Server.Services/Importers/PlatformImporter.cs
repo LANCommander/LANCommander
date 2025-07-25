@@ -18,10 +18,11 @@ public class PlatformImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Platform record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Platform record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Platforms,
             Name = record.Name,
         };
@@ -71,9 +72,9 @@ public class PlatformImporter(
         }
     }
 
-    public override async Task<Platform> ExportAsync(Data.Models.Platform entity)
+    public override async Task<Platform> ExportAsync(Guid id)
     {
-        return mapper.Map<Platform>(entity);
+        return await platformService.GetAsync<Platform>(id);
     }
 
     public override async Task<bool> ExistsAsync(Platform record)

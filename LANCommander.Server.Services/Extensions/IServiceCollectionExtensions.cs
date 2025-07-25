@@ -49,7 +49,9 @@ public static class IServiceCollectionExtensions
         services.AddScoped<UserService>();
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
+        services.AddScoped<GameCustomFieldService>();
         services.AddScoped<AuthenticationService>();
+        services.AddSingleton<ImportService>();
         services.AddTransient<SetupService>();
 
         // Register importers
@@ -64,7 +66,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Archive, Data.Models.Archive>, ArchiveImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField>, CustomFieldImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Company, Data.Models.Company>, PublisherImporter>();
+        services.AddScoped<DeveloperImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Engine, Data.Models.Engine>, EngineImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Genre, Data.Models.Genre>, GenreImporter>();
@@ -73,7 +75,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<BaseImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode>, MultiplayerModeImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Platform, Data.Models.Platform>, PlatformImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession>, PlaySessionImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Company, Data.Models.Company>, PublisherImporter>();
+        services.AddScoped<PublisherImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Save, Data.Models.GameSave>, SaveImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath>, SavePathImporter>();
         services.AddScoped<BaseImporter<SDK.Models.Manifest.Script, Data.Models.Script>, ScriptImporter>();

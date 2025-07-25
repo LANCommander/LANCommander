@@ -18,10 +18,11 @@ public class EngineImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Engine record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Engine record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Engine,
             Name = record.Name,
         };
@@ -71,9 +72,9 @@ public class EngineImporter(
         }
     }
 
-    public override async Task<Engine> ExportAsync(Data.Models.Engine entity)
+    public override async Task<Engine> ExportAsync(Guid id)
     {
-        return mapper.Map<Engine>(entity);
+        return await engineService.GetAsync<Engine>(id);
     }
 
     public override async Task<bool> ExistsAsync(Engine record)

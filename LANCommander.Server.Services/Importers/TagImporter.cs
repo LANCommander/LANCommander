@@ -17,10 +17,11 @@ public class TagImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Tag record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Tag record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Tags,
             Name = record.Name,
         };
@@ -70,9 +71,9 @@ public class TagImporter(
         }
     }
 
-    public override async Task<Tag> ExportAsync(Data.Models.Tag entity)
+    public override async Task<Tag> ExportAsync(Guid id)
     {
-        return mapper.Map<Tag>(entity);
+        return await tagService.GetAsync<Tag>(id);
     }
 
     public override async Task<bool> ExistsAsync(Tag record)

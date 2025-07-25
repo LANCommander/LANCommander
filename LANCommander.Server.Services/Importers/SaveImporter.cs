@@ -28,13 +28,14 @@ public class SaveImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Save record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.GameSave record)
     {
         var savePath = await gameSaveService.GetSavePathAsync(record.Id);
         var fileInfo = new FileInfo(savePath);
         
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Saves,
             Name = $"{record.User} - {record.CreatedOn}",
             Size = fileInfo.Length,
@@ -119,14 +120,15 @@ public class SaveImporter(
         }
     }
 
-    public override async Task<Save> ExportAsync(GameSave entity)
+    public override async Task<Save> ExportAsync(Guid id)
     {
-        var path = await gameSaveService.GetSavePathAsync(entity.Id);
+        var entity = await gameSaveService.GetAsync<Data.Models.Game>(id);
+        var path = await gameSaveService.GetSavePathAsync(id);
         var fileInfo = new FileInfo(path);
 
         using (var fs = fileInfo.OpenRead())
         {
-            ImportContext.Archive.AddEntry($"Saves/{entity.Id}", fs);
+            ImportContext.Archive.AddEntry($"Saves/{id}", fs);
         }
         
         return mapper.Map<Save>(entity);

@@ -18,10 +18,11 @@ public class MultiplayerModeImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(MultiplayerMode record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.MultiplayerMode record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.MultiplayerModes,
             Name = String.IsNullOrWhiteSpace(record.Description) ? record.Type.ToString() : $"{record.Type} - {record.Description}",
         };
@@ -80,9 +81,9 @@ public class MultiplayerModeImporter(
         }
     }
 
-    public override async Task<MultiplayerMode> ExportAsync(Data.Models.MultiplayerMode entity)
+    public override async Task<MultiplayerMode> ExportAsync(Guid id)
     {
-        return mapper.Map<MultiplayerMode>(entity);
+        return await multiplayerModeService.GetAsync<MultiplayerMode>(id);
     }
 
     public override async Task<bool> ExistsAsync(MultiplayerMode record)

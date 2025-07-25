@@ -19,10 +19,11 @@ public class ScriptImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Script record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Script record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Scripts,
             Name = record.Name,
             Size = record.Contents.Length,
@@ -125,8 +126,10 @@ public class ScriptImporter(
         }
     }
 
-    public override async Task<Script> ExportAsync(Data.Models.Script entity)
+    public override async Task<Script> ExportAsync(Guid id)
     {
+        var entity = await scriptService.GetAsync<Script>(id);
+        
         using (var stream = new MemoryStream())
         using (var writer = new StreamWriter(stream))
         {

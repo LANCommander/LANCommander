@@ -19,10 +19,11 @@ public class ServerHttpPathImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(ServerHttpPath record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.ServerHttpPath record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.ServerHttpPaths,
             Name = record.Path,
         };
@@ -74,10 +75,10 @@ public class ServerHttpPathImporter(
         }
     }
 
-    public override async Task<ServerHttpPath> ExportAsync(Data.Models.ServerHttpPath entity)
+    public override async Task<ServerHttpPath> ExportAsync(Guid id)
     {
         // Include all files?
-        return mapper.Map<ServerHttpPath>(entity);
+        return await serverHttpPathService.GetAsync<ServerHttpPath>(id);
     }
 
     public override async Task<bool> ExistsAsync(ServerHttpPath record)

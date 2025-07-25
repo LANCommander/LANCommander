@@ -1,26 +1,36 @@
 using LANCommander.Server.Services.Importers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace LANCommander.Server.Services;
 
-public class ImportService(IServiceProvider serviceProvider) : IHostedService, IDisposable
+public class ImportService : IDisposable
 {
-    private ImportContext _importContext;
+    private Dictionary<Guid, ImportContext> ImportContexts = new();
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public Guid EnqueueContext(ImportContext context)
     {
-        using (var scope = serviceProvider.CreateAsyncScope())
-        {
-            scope.ServiceProvider.GetRequiredService<ImportContext>();
-        }
+        var id = Guid.NewGuid();
         
-        return Task.CompletedTask;
+        ImportContexts.Add(id, context);
+
+        return id;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    public ImportContext GetContext(Guid id)
     {
-        throw new NotImplementedException();
+        if (ImportContexts.TryGetValue(id, out var context))
+            return context;
+        
+        return null;
+    }
+
+    public async Task ExportAsync(Guid contextId, Stream outputStream)
+    {
+        if (ImportContexts.TryGetValue(contextId, out var context))
+        {
+            await context.ExportQueueAsync(outputStream);
+            
+            ImportContexts.Remove(contextId);
+        }
     }
 
     public void Dispose()

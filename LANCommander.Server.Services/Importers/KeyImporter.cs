@@ -17,10 +17,11 @@ public class KeyImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Key record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Key record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Keys,
             Name = new String('*', record.Value.Length),
         };
@@ -73,9 +74,9 @@ public class KeyImporter(
         }
     }
 
-    public override async Task<Key> ExportAsync(Data.Models.Key entity)
+    public override async Task<Key> ExportAsync(Guid id)
     {
-        return mapper.Map<Key>(entity);
+        return await keyService.GetAsync<Key>(id);
     }
 
     public override async Task<bool> ExistsAsync(Key record)

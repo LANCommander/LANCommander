@@ -17,10 +17,11 @@ public class RedistributableImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Redistributable record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Redistributable record)
     {
         return new ExportItemInfo()
         {
+            Id = record.Id,
             Name = record.Name,
         };
     }
@@ -68,9 +69,9 @@ public class RedistributableImporter(
         }
     }
 
-    public override async Task<Redistributable> ExportAsync(Data.Models.Redistributable entity)
+    public override async Task<Redistributable> ExportAsync(Guid id)
     {
-        return mapper.Map<Redistributable>(entity);
+        return await redistributableService.GetAsync<Redistributable>(id);
     }
 
     public override async Task<bool> ExistsAsync(Redistributable record)

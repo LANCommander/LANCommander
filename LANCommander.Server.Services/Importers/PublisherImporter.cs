@@ -18,10 +18,11 @@ public class PublisherImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Company record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Company record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Publishers,
             Name = record.Name,
         };
@@ -71,9 +72,9 @@ public class PublisherImporter(
         }
     }
 
-    public override async Task<Company> ExportAsync(Data.Models.Company entity)
+    public override async Task<Company> ExportAsync(Guid id)
     {
-        return mapper.Map<Company>(entity);
+        return await companyService.GetAsync<Company>(id);
     }
 
     public override async Task<bool> ExistsAsync(Company record)

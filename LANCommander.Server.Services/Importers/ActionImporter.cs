@@ -11,8 +11,8 @@ public class ActionImporter(
     public override async Task<ImportItemInfo> GetImportInfoAsync(Action record) =>
         await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Action record) =>
-        await Task.Run(() => new ExportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Action record) =>
+        await Task.Run(() => new ExportItemInfo { Id = record.Id, Name = record.Name, Flag = ImportRecordFlags.Actions });
 
     public override bool CanImport(Action record) => ImportContext.DataRecord is Data.Models.Game;
     
@@ -63,9 +63,9 @@ public class ActionImporter(
         }
     }
 
-    public override async Task<Action> ExportAsync(Data.Models.Action entity)
+    public override async Task<Action> ExportAsync(Guid id)
     {
-        return mapper.Map<Action>(entity);
+        return await actionService.GetAsync<Action>(id);
     }
 
     public override async Task<bool> ExistsAsync(Action record)

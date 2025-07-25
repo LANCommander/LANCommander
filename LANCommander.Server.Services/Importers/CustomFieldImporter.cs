@@ -7,6 +7,7 @@ namespace LANCommander.Server.Services.Importers;
 
 public class CustomFieldImporter(
     IMapper mapper,
+    GameCustomFieldService gameCustomFieldService,
     GameService gameService) : BaseImporter<GameCustomField, Data.Models.GameCustomField>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(GameCustomField record)
@@ -18,10 +19,11 @@ public class CustomFieldImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(GameCustomField record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.GameCustomField record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.CustomFields,
             Name = record.Name,
         };
@@ -61,9 +63,9 @@ public class CustomFieldImporter(
         }
     }
 
-    public override async Task<GameCustomField> ExportAsync(Data.Models.GameCustomField entity)
+    public override async Task<GameCustomField> ExportAsync(Guid id)
     {
-        return mapper.Map<GameCustomField>(entity);
+        return await gameCustomFieldService.GetAsync<GameCustomField>(id);
     }
 
     public override async Task<bool> ExistsAsync(GameCustomField record)

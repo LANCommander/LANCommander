@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace LANCommander.SDK.Models.Manifest;
 
-public class GameCustomField
+public class GameCustomField : BaseModel
 {
     public GameCustomField()
     {

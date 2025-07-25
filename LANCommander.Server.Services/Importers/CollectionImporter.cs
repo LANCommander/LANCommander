@@ -18,10 +18,11 @@ public class CollectionImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Collection record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Collection record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Collections,
             Name = record.Name,
         };
@@ -71,9 +72,9 @@ public class CollectionImporter(
         }
     }
 
-    public override async Task<Collection> ExportAsync(Data.Models.Collection entity)
+    public override async Task<Collection> ExportAsync(Guid id)
     {
-        return mapper.Map<Collection>(entity);
+        return await collectionService.GetAsync<Collection>(id);
     }
 
     public override async Task<bool> ExistsAsync(Collection record)

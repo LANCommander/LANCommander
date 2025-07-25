@@ -26,12 +26,13 @@ public class ArchiveImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(Archive record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Archive record)
     {
         var archivePath = await archiveService.GetArchiveFileLocationAsync(record.ObjectKey);
 
         var info = new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.Archives,
             Name = record.Version,
         };
@@ -118,14 +119,15 @@ public class ArchiveImporter(
         }
     }
 
-    public override async Task<Archive> ExportAsync(Data.Models.Archive entity)
+    public override async Task<Archive> ExportAsync(Guid id)
     {
+        var entity = await archiveService.GetAsync(id);
         var path = await archiveService.GetArchiveFileLocationAsync(entity);
         var fileInfo = new FileInfo(path);
 
         using (var fs = fileInfo.OpenRead())
         {
-            ImportContext.Archive.AddEntry($"Archives/{entity.Id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
+            ImportContext.Archive.AddEntry($"Archives/{id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
         }
         
         return mapper.Map<Archive>(entity);

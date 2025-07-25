@@ -18,10 +18,11 @@ public class ServerConsoleImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(ServerConsole record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.ServerConsole record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.ServerConsoles,
             Name = record.Name,
         };
@@ -78,9 +79,9 @@ public class ServerConsoleImporter(
         }
     }
 
-    public override async Task<ServerConsole> ExportAsync(Data.Models.ServerConsole entity)
+    public override async Task<ServerConsole> ExportAsync(Guid id)
     {
-        return mapper.Map<ServerConsole>(entity);
+        return await serverConsoleService.GetAsync<ServerConsole>(id);
     }
 
     public override async Task<bool> ExistsAsync(ServerConsole record)

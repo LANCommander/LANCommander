@@ -19,10 +19,11 @@ public class PlaySessionImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(PlaySession record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.PlaySession record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.PlaySessions,
             Name = $"{record.User} - {record.Start}-{record.End}",
         };
@@ -75,9 +76,9 @@ public class PlaySessionImporter(
         }
     }
 
-    public override async Task<PlaySession> ExportAsync(Data.Models.PlaySession entity)
+    public override async Task<PlaySession> ExportAsync(Guid id)
     {
-        return mapper.Map<PlaySession>(entity);
+        return await playSessionService.GetAsync<PlaySession>(id);
     }
 
     public override async Task<bool> ExistsAsync(PlaySession record)

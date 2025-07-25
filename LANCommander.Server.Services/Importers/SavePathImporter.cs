@@ -18,10 +18,11 @@ public class SavePathImporter(
         };
     }
 
-    public override async Task<ExportItemInfo> GetExportInfoAsync(SavePath record)
+    public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.SavePath record)
     {
         return new ExportItemInfo
         {
+            Id = record.Id,
             Flag = ImportRecordFlags.SavePaths,
             Name = record.Path,
         };
@@ -76,9 +77,9 @@ public class SavePathImporter(
         }
     }
 
-    public override async Task<SavePath> ExportAsync(Data.Models.SavePath entity)
+    public override async Task<SavePath> ExportAsync(Guid id)
     {
-        return mapper.Map<SavePath>(entity);
+        return await savePathService.GetAsync<SavePath>(id);
     }
 
     public override async Task<bool> ExistsAsync(SavePath record)

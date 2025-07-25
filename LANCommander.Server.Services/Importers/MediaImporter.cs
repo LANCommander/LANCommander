@@ -30,11 +30,14 @@ public class MediaImporter(
             Flag = ImportRecordFlags.Media,
             Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
         };
+
+        if (File.Exists(mediaPath))
+        {
+            var fileInfo = new FileInfo(mediaPath);
         
-        var fileInfo = new FileInfo(mediaPath);
-        
-        if (fileInfo.Exists)
-            info.Size = fileInfo.Length;
+            if (fileInfo.Exists)
+                info.Size = fileInfo.Length;
+        }
 
         return info;
     }
@@ -113,9 +116,12 @@ public class MediaImporter(
         var path = await mediaService.GetMediaPathAsync(id);
         var fileInfo = new FileInfo(path);
 
-        using (var fs = fileInfo.OpenRead())
+        if (fileInfo.Exists)
         {
-            ImportContext.Archive.AddEntry($"Media/{id}", fs);
+            using (var fs = fileInfo.OpenRead())
+            {
+                ImportContext.Archive.AddEntry($"Media/{id}", fs);
+            }
         }
         
         return await mediaService.GetAsync<Media>(id);

@@ -31,15 +31,23 @@ public class SaveImporter(
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.GameSave record)
     {
         var savePath = await gameSaveService.GetSavePathAsync(record.Id);
-        var fileInfo = new FileInfo(savePath);
-        
-        return new ExportItemInfo
+
+        var info = new ExportItemInfo
         {
             Id = record.Id,
             Flag = ImportRecordFlags.Saves,
             Name = $"{record.User} - {record.CreatedOn}",
-            Size = fileInfo.Length,
         };
+
+        if (File.Exists(savePath))
+        {
+            var fileInfo = new FileInfo(savePath);
+            
+            if (fileInfo.Exists)
+                info.Size = fileInfo.Length;
+        }
+
+        return info;
     }
 
     public override bool CanImport(Save record) => ImportContext.DataRecord is Data.Models.Game;
@@ -126,9 +134,12 @@ public class SaveImporter(
         var path = await gameSaveService.GetSavePathAsync(id);
         var fileInfo = new FileInfo(path);
 
-        using (var fs = fileInfo.OpenRead())
+        if (fileInfo.Exists)
         {
-            ImportContext.Archive.AddEntry($"Saves/{id}", fs);
+            using (var fs = fileInfo.OpenRead())
+            {
+                ImportContext.Archive.AddEntry($"Saves/{id}", fs);
+            }
         }
         
         return mapper.Map<Save>(entity);

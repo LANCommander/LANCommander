@@ -36,11 +36,14 @@ public class ArchiveImporter(
             Flag = ImportRecordFlags.Archives,
             Name = record.Version,
         };
+
+        if (File.Exists(archivePath))
+        {
+            var fileInfo = new FileInfo(archivePath);
         
-        var fileInfo = new FileInfo(archivePath);
-        
-        if (fileInfo.Exists)
-            info.Size = fileInfo.Length;
+            if (fileInfo.Exists)
+                info.Size = fileInfo.Length;
+        }
 
         return info;
     }
@@ -125,9 +128,12 @@ public class ArchiveImporter(
         var path = await archiveService.GetArchiveFileLocationAsync(entity);
         var fileInfo = new FileInfo(path);
 
-        using (var fs = fileInfo.OpenRead())
+        if (fileInfo.Exists)
         {
-            ImportContext.Archive.AddEntry($"Archives/{id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
+            using (var fs = fileInfo.OpenRead())
+            {
+                ImportContext.Archive.AddEntry($"Archives/{id}", fs, fileInfo.Length, fileInfo.LastWriteTimeUtc);
+            }
         }
         
         return mapper.Map<Archive>(entity);

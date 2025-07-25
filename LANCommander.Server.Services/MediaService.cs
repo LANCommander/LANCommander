@@ -49,15 +49,17 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(m => m.StorageLocation);
             });
         }
-        
-        private Dictionary<MediaType, Size> ThumbnailSizes = new Dictionary<MediaType, Size>
+
+        private float ThumbnailPercentage = 0.40f;
+
+        private Dictionary<MediaType, (Size MinSize, Size MaxSize)> ThumbnailSizes = new Dictionary<MediaType, (Size MinSize, Size MaxSize)>
         {
-            { MediaType.Cover, new Size(600, 900) },
-            { MediaType.Manual, new Size(600, 900) },
-            { MediaType.Logo, new Size(640, 360) },
-            { MediaType.Background, new Size(1920, 1080) },
-            { MediaType.Icon, new Size(64, 64) },
-            { MediaType.Avatar, new Size(128, 128) }
+            { MediaType.Cover, (new Size(120, 180), MaxSize: new Size(240, 360)) },
+            { MediaType.Manual, (new Size(120, 180), new Size(180, 270)) },
+            { MediaType.Logo, (new Size(160, 90), new Size(320, 180)) },
+            { MediaType.Background, (new Size(320, 180), new Size(960, 540)) },
+            { MediaType.Icon, (new Size(32, 32), new Size(64, 64)) },
+            { MediaType.Avatar, (new Size(64, 64), new Size(128, 128)) }
         };
 
         public override async Task DeleteAsync(Media entity)
@@ -67,6 +69,17 @@ namespace LANCommander.Server.Services
             await cache.ExpireGameCacheAsync(entity.GameId);
 
             await base.DeleteAsync(entity);
+        }
+
+        public override async Task DeleteRangeAsync(IEnumerable<Media> entities)
+        {
+            DeleteLocalMediaFiles(entities);
+
+            var gameIds = entities.Select(x => x.GameId).Distinct();
+            var expirationTasks = gameIds.Select(gameId => cache.ExpireGameCacheAsync(gameId));
+            await Task.WhenAll(expirationTasks);
+
+            await base.DeleteRangeAsync(entities);
         }
 
         public static bool FileExists(Media entity)
@@ -197,10 +210,13 @@ namespace LANCommander.Server.Services
                 {
                     using (var image = await Image.LoadAsync<Rgba32>(stream))
                     {
+                        var (MinSize, MaxSize) = ThumbnailSizes[media.Type];
+                        int thumbsizeX = (int)Math.Clamp(image.Width * ThumbnailPercentage, MinSize.Width, MaxSize.Width);
+                        int thumbsizeY = (int)Math.Clamp(image.Height * ThumbnailPercentage, MinSize.Height, MaxSize.Height);
                         var resizeOptions = new ResizeOptions
                         {
                             Mode = ResizeMode.Max,
-                            Size = ThumbnailSizes[media.Type],
+                            Size = new Size(thumbsizeX, thumbsizeY),
                             Sampler = KnownResamplers.Bicubic,
                         };
 
@@ -263,6 +279,14 @@ namespace LANCommander.Server.Services
         {
             FileHelpers.DeleteIfExists(GetMediaPath(media));
             FileHelpers.DeleteIfExists(GetThumbnailPath(media));
+        }
+
+        public void DeleteLocalMediaFiles(IEnumerable<Media> medias)
+        {
+            foreach (var media in medias)
+            {
+                DeleteLocalMediaFile(media);
+            }
         }
 
         public async Task<Media> DownloadMediaAsync(string sourceUrl, Media media)

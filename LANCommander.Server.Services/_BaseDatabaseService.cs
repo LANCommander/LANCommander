@@ -45,6 +45,24 @@ namespace LANCommander.Server.Services
             return this;
         }
 
+        public IBaseDatabaseService<T> Include(params string[] includes)
+        {
+            return Include(includes);
+        }
+
+        public IBaseDatabaseService<T> Include(IEnumerable<string> includes)
+        {
+            return Query((queryable) =>
+            {
+                foreach (var include in includes)
+                {
+                    queryable = queryable.Include(include);
+                }
+
+                return queryable;
+            });
+        }
+
         public IBaseDatabaseService<T> Include(params Expression<Func<T, object>>[] expressions)
         {
             return Query((queryable) =>
@@ -56,8 +74,6 @@ namespace LANCommander.Server.Services
 
                 return queryable;
             });
-
-            return this;
         }
 
         public IBaseDatabaseService<T> SortBy(Expression<Func<T, object>> expression, SortDirection direction = SortDirection.Ascending)
@@ -245,17 +261,15 @@ namespace LANCommander.Server.Services
                 newEntity.CreatedOn = DateTime.UtcNow;
                 newEntity.CreatedBy = currentUser;
                 //newEntity.CreatedById = currentUser?.Id;
-                
-                newEntity = (await context.AddAsync(newEntity)).Entity;
-                
-                await context.SaveChangesAsync();
-                
+
                 if (additionalMapping != null)
                 {
                     var updateContext = new UpdateEntityContext<T>(context, newEntity, addedEntity);
-                
+
                     additionalMapping?.Invoke(updateContext);
                 }
+
+                newEntity = (await context.AddAsync(newEntity)).Entity;
                 
                 await context.SaveChangesAsync();
 
@@ -346,7 +360,25 @@ namespace LANCommander.Server.Services
                 Reset();
             }
         }
-        
+
+        public virtual async Task DeleteRangeAsync(IEnumerable<T> entities)
+        {
+            try
+            {
+                await cache.ExpireAsync($"{typeof(T).FullName}");
+
+                using var context = await dbContextFactory.CreateDbContextAsync();
+
+                context.Set<T>().RemoveRange(entities);
+
+                await context.SaveChangesAsync();
+            }
+            finally
+            {
+                Reset();
+            }
+        }
+
         private async Task<User?> GetCurrentUserAsync(DatabaseContext context)
         {
             var httpContext = httpContextAccessor?.HttpContext;

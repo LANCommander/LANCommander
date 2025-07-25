@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authentication;
 using ZiggyCreatures.Caching.Fusion;
 using AuthenticationService = LANCommander.Server.Services.AuthenticationService;
 using User = LANCommander.Server.Data.Models.User;
+using LANCommander.Server.Services.Exceptions;
 
 namespace LANCommander.Server.Controllers.Api
 {
@@ -27,7 +28,6 @@ namespace LANCommander.Server.Controllers.Api
     {
         public string UserName { get; set; }
         public string Password { get; set; }
-        public string PasswordConfirmation { get; set; }
     }
 
     [Route("api/[controller]")]
@@ -95,6 +95,24 @@ namespace LANCommander.Server.Controllers.Api
 
                 return Ok(token);
             }
+            catch (UserAuthenticationException ex)
+            {
+                // Optionally, map IdentityResult errors into a string list
+                List<ErrorResponse.ErrorInfo> errorDetails = ex.IdentityResult?.Errors.Select(FromIdentityResult).ToList() ?? [];
+                if (errorDetails.Count == 0)
+                {
+                    errorDetails.Add(new ErrorResponse.ErrorInfo { Message = ex.Message });
+                }
+
+                var errorResponse = new ErrorResponse
+                {
+                    Error = "AuthenticationFailed",
+                    Message = "User authentication failed.",
+                    Details = errorDetails,
+                };
+
+                return Unauthorized(errorResponse);
+            }
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "An error occurred while trying to log in {UserName}", model.UserName);
@@ -142,13 +160,31 @@ namespace LANCommander.Server.Controllers.Api
         {
             try
             {
-                var token = await AuthenticationService.RegisterAsync(model.UserName, model.Password,
-                    model.PasswordConfirmation);
+                var token = await AuthenticationService.RegisterAsync(model.UserName, model.Password);
 
                 return Ok(token);
             }
+            catch (UserRegistrationException ex)
+            {
+                // Optionally, map IdentityResult errors into a string list
+                List<ErrorResponse.ErrorInfo> errorDetails = ex.IdentityResult?.Errors.Select(FromIdentityResult).ToList() ?? [];
+                if (errorDetails.Count == 0)
+                {
+                    errorDetails.Add(new ErrorResponse.ErrorInfo { Message = ex.Message });
+                }
+
+                var errorResponse = new ErrorResponse
+                {
+                    Error = "UserRegistrationFailed",
+                    Message = "User registration failed.",
+                    Details = errorDetails,
+                };
+
+                return Unauthorized(errorResponse);
+            }
             catch (Exception ex)
             {
+                Logger.LogError(ex, ex.Message);
                 return Unauthorized(ex.Message);
             }
         }
@@ -157,6 +193,15 @@ namespace LANCommander.Server.Controllers.Api
         public IActionResult GetAuthenticationProviders()
         {
             return Ok(Mapper.Map<IEnumerable<AuthenticationProvider>>(Settings.Authentication.AuthenticationProviders));
+        }
+
+        static ErrorResponse.ErrorInfo FromIdentityResult(IdentityError error)
+        {
+            return new ErrorResponse.ErrorInfo
+            {
+                Key = error.Code,
+                Message = error.Description,
+            };
         }
     }
 }

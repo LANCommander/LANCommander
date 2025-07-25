@@ -25,20 +25,35 @@ namespace LANCommander.Server.Services
         IGitHubService gitHubService,
         ServerService serverService) : BaseService(logger)
     {
+        public const string ArtifactUrlBase = "/download/Launcher/";
+
         public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
         {
-            if (!_settings.Launcher.HostUpdates)
-                return await GetLauncherArtifactsFromGitHubAsync().ToListAsync();
+            List<LauncherArtifact> launchers = [];
 
-            return GetLauncherArtifactsFromLocalFiles();
+            if (_settings.Launcher.HostUpdates)
+            {
+                launchers.AddRange(GetLauncherArtifactsFromLocalFiles());
+            }
+
+            if (launchers.Count == 0 || _settings.Launcher.IncludeOnlineUpdates)
+            {
+                var githubLaunchers = await GetLauncherArtifactsFromGitHubAsync().ToListAsync();
+                launchers.AddRange(githubLaunchers);
+            }
+
+            return launchers;
         }
 
         public IEnumerable<LauncherArtifact> GetLauncherArtifactsFromLocalFiles()
         {
             var currentVersion = versionProvider.GetCurrentVersion();
-            var downloadedLaunchers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher.*v{currentVersion.WithoutMetadata()}.zip");
-            
-            foreach (var downloadedLauncher in downloadedLaunchers)
+            var downloadedLaunchers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher*v{currentVersion.WithoutMetadata()}.*");
+            var downloadedInstallers = Directory.GetFiles(_settings.Launcher.StoragePath, $"LANCommander.Launcher-{currentVersion.WithoutMetadata()}*Setup*.*");
+
+            var downloads = downloadedLaunchers.Concat(downloadedInstallers).Distinct();
+
+            foreach (var downloadedLauncher in downloads)
                 yield return GetArtifactFromName(downloadedLauncher);
         }
 
@@ -51,36 +66,37 @@ namespace LANCommander.Server.Services
 
             var releaseChannel = versionProvider.GetReleaseChannel(currentVersion);
             
-            if (releaseChannel == ReleaseChannel.Stable || releaseChannel == ReleaseChannel.Prerelease)
-            {
-                logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
-
-                var release = await gitHubService.GetReleaseAsync(currentVersion);
-                
-                var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
-                
-                if (assets.Any())
-                    logger.LogInformation($"Found the following assets:\n{String.Join("\n\t - ", assets.Select(a => a.Name))}");
-                else
-                    logger.LogError($"No assets found for v{currentVersion.WithoutMetadata()}!");
-                
-                foreach (var asset in assets)
-                    yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl);
-            }
+            if (releaseChannel != _settings.Update.ReleaseChannel)
+                releaseChannel = _settings.Update.ReleaseChannel;
+            
+            var tag = $"v{currentVersion.WithoutMetadata()}";
 
             if (releaseChannel == ReleaseChannel.Nightly)
-            {
-                var nightlyArtifacts = await gitHubService.GetNightlyArtifactsAsync(_settings.Launcher.VersionOverride);
-                
-                foreach (var artifact in nightlyArtifacts.Where(a => a.Name.Contains("LANCommander.Launcher")))
-                    yield return GetArtifactFromName(artifact.Name, artifact.ArchiveDownloadUrl);
-            }
+                tag = "nightly";
+            
+            if (!String.IsNullOrWhiteSpace(_settings.Launcher.VersionOverride))
+                tag = _settings.Launcher.VersionOverride;
+            
+            logger.LogInformation($"Searching for artifacts for v{currentVersion.WithoutMetadata()}");
+
+            var release = await gitHubService.GetReleaseAsync(tag);
+            
+            var assets = release.Assets.Where(a => a.Name.Contains("LANCommander.Launcher")).ToList();
+            
+            if (assets.Any())
+                logger.LogInformation($"Found the following assets:\n{String.Join("\n\t - ", assets.Select(a => a.Name))}");
+            else
+                logger.LogError($"No assets found for v{currentVersion.WithoutMetadata()}!");
+            
+            foreach (var asset in assets)
+                yield return GetArtifactFromName(asset.Name, asset.BrowserDownloadUrl, isOnline: true, isPrerelease: release.Prerelease, isNightly: tag == "nightly");
         }
 
-        private LauncherArtifact GetArtifactFromName(string name, string url = "")
+        private LauncherArtifact GetArtifactFromName(string name, string url = "", bool isOnline = false, bool isPrerelease = false, bool isNightly = false)
         {
             var platform = LauncherPlatform.Windows;
             var architecture = LauncherArchitecture.x64;
+            var assetName = Path.GetFileName(name);
 
             if (name.Contains("Windows"))
                 platform = LauncherPlatform.Windows;
@@ -95,7 +111,7 @@ namespace LANCommander.Server.Services
                 architecture = LauncherArchitecture.arm64;
 
             if (String.IsNullOrWhiteSpace(url))
-                url = $"/Launcher/{name}";
+                url = $"{ArtifactUrlBase}{assetName}";
 
             return new LauncherArtifact
             {
@@ -103,6 +119,9 @@ namespace LANCommander.Server.Services
                 Platform = platform,
                 Architecture = architecture,
                 Url = url,
+                IsOnline = isOnline,
+                IsPrerelease = isPrerelease,
+                IsNightly = isNightly,
             };
         }
 
@@ -247,13 +266,32 @@ namespace LANCommander.Server.Services
 
             applicationLifetime.StopApplication();
         }
+
+        public string GetLauncherFileLocation(LauncherArtifact artifact)
+        {
+            return GetLauncherFileLocation(artifact.Name);
+        }
+
+        public string GetLauncherFileLocation(string objectKey)
+        {
+            return Path.Combine(_settings.Launcher.StoragePath, objectKey);
+        }
+
+        public LauncherArtifact GetLauncherArtifact(string objectKey)
+        {
+            string name = Path.Combine(_settings.Launcher.StoragePath, objectKey);
+            return GetArtifactFromName(name);
+        }
     }
 
     public class LauncherArtifact
     {
-        public string Name { get; set; }
-        public string Url { get; set; }
+        public required string Name { get; set; }
+        public required string Url { get; set; }
         public LauncherPlatform Platform { get; set; }
         public LauncherArchitecture Architecture { get; set; }
+        public bool IsOnline { get; set; }
+        public bool IsPrerelease { get; set; }
+        public bool IsNightly { get; set; }
     }
 }

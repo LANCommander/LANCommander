@@ -42,7 +42,12 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        User = await UserService.GetAsync(UserId);
+        await LoadUser();
+    }
+
+    protected async Task LoadUser()
+    {
+        User = await UserService.Include(u => u.Media!).GetAsync(UserId);
 
         await LoadAvatar();
     }
@@ -59,7 +64,7 @@
 
     async Task UploadAvatar(InputFileChangeEventArgs e)
     {
-        var media = User.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
+        var media = User.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Avatar);
 
         if (media == null)
             media = new Media
@@ -87,9 +92,7 @@
         {
             media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: Settings.Media.MaxSize * 1024 * 1024));
 
-            await MediaService.AddAsync(media);
-        }
-        else
+        if (media.Id != Guid.Empty)
         {
             MediaService.DeleteLocalMediaFile(media);
             
@@ -98,6 +101,11 @@
             await MediaService.UpdateAsync(media);
         }
 
-        await LoadAvatar();
+    }
+
+    async Task OnAvatarUploaded()
+    {
+        // reload full user in order to get related media
+        await LoadUser();
     }
 }

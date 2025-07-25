@@ -1,8 +1,8 @@
 ﻿@page "/FirstTimeSetup/Paths"
 @using LANCommander.SDK.Enums
 @layout FirstTimeSetupLayout
-@inject StorageLocationService StorageLocationService
 @inject SetupService SetupService
+@inject StorageLocationService StorageLocationService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -33,7 +33,7 @@
                     </Flex>
                 </ActionColumn>
             </Table>
-            
+
             <Flex Justify="FlexJustify.End">
                 <Button OnClick="AddArchiveStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
             </Flex>
@@ -57,9 +57,9 @@
             <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@MediaStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(MediaStorageLocation, path)" />
         </FormItem>
     }
-    
+
     <Divider Text="Backups" />
-    
+
     <FormItem>
         <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Backups.StoragePath = OnPathSelected(path)" />
     </FormItem>
@@ -89,14 +89,14 @@
     [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
 
     ICollection<StorageLocation> ArchiveStorageLocations = new List<StorageLocation>();
-    
+
     StorageLocation MediaStorageLocation = new()
     {
         Path = Path.Combine(SettingService.WorkingDirectory, "Media"),
         Type = StorageLocationType.Media,
         Default = true,
     };
-    
+
     StorageLocation SavesStorageLocation = new()
     {
         Path = Path.Combine(SettingService.WorkingDirectory, "Saves"),
@@ -112,7 +112,14 @@
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Paths);
-        
+
+        var isSetupInitialized = await SetupService.IsSetupInitialized();
+        if (isSetupInitialized)
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
         try
         {
             ArchiveStorageLocations = await StorageLocationService

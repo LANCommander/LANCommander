@@ -84,6 +84,7 @@ namespace LANCommander.Server.Services
         public override async Task<Archive> UpdateAsync(Archive updatedArchive)
         {
             await cache.ExpireGameCacheAsync(updatedArchive.GameId);
+            await cache.ExpireArchiveCacheAsync(updatedArchive.Id);
             
             return await base.UpdateAsync(updatedArchive, async context =>
             {
@@ -98,6 +99,7 @@ namespace LANCommander.Server.Services
             FileHelpers.DeleteIfExists(await GetArchiveFileLocationAsync(archive));
 
             await cache.ExpireGameCacheAsync(archive.GameId);
+            await cache.ExpireArchiveCacheAsync(archive.Id);
 
             await base.DeleteAsync(archive);
         }

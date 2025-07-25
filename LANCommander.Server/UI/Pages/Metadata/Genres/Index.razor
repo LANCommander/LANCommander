@@ -26,8 +26,11 @@
             <LocalTime Value="context.UpdatedOn" />
         </BoundDataColumn>
         <BoundDataColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <DataActions>
-            <a href="@($"/Metadata/Genres/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+        <DataActions TData="string">
+            <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
+            @* TODO: Add seperate Edit page and navigate to it *@
+            @* <a href="@($"/Metadata/Genres/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
+
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this genre?">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
             </Popconfirm>
@@ -91,10 +94,11 @@
         await CloseEdit();
     }
 
-    async Task OpenEdit(Genre genre)
+    async Task OpenEdit(Genre? genre)
     {
-        if (genre != null)
-            GenreContext = genre;
+        // query new instance, or create a new Edit context instance
+        GenreContext = genre != null ? await GenreService.GetAsync(genre.Id) : default!;
+        GenreContext ??= new();
 
         EditGenreVisible = true;
 

@@ -94,9 +94,6 @@ public static class IServiceCollectionExtensions
         services.AddAutoMapper(typeof(MappingProfile));
         services.AddFusionCache();
 
-        if (settings.Beacon.Enabled)
-            services.AddHostedService<BeaconService>();
-
         return services;
     }
 }

@@ -6,12 +6,17 @@
 <Layout Class="panel-layout" Style="padding: 24px 0;">
     <Sider Width="200">
         <Menu Mode="@MenuMode.Inline" Style="height: 100%;">
-            <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/General")">General</MenuItem>
-
-            @if (Redistributable?.Id != Guid.Empty)
+            @if (Id != Guid.Empty)
             {
-                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Archives")">Archives</MenuItem>
-                <MenuItem RouterLink="@($"/Redistributables/{Redistributable.Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem RouterLink="@($"/Redistributables/{Id}/General")">General</MenuItem>
+
+                <MenuItem RouterLink="@($"/Redistributables/{Id}/Archives")">Archives</MenuItem>
+                <MenuItem RouterLink="@($"/Redistributables/{Id}/Scripts")">Scripts</MenuItem>
+            }
+            else
+            {
+                @* Add button without RouterLink, prevents routing on disabled/inactive menu item *@
+                <MenuItem>General</MenuItem>
             }
         </Menu>
     </Sider>

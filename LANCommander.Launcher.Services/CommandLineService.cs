@@ -93,7 +93,7 @@ namespace LANCommander.Launcher.Services
                     break;
 
                 case SDK.Enums.ScriptType.NameChange:
-                    await Client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias);
+                    await Client.Scripts.RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, options.NewPlayerAlias ?? Settings.DEFAULT_GAME_USERNAME);
                     break;
 
                 case SDK.Enums.ScriptType.KeyChange:

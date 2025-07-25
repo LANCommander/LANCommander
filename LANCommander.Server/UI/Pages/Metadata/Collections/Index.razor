@@ -26,7 +26,7 @@
             <LocalTime Value="context.UpdatedOn" />
         </BoundDataColumn>
         <BoundDataColumn Property="c => c.UpdatedBy != null ? c.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <DataActions>
+        <DataActions TData="string">
             <a href="@($"/Metadata/Collections/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this collection?">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />

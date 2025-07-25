@@ -14,8 +14,11 @@
 
                 localTimeProvider.SetLocalTimeZone(timeZone);
             }
-            catch (JSDisconnectedException)
+            catch
             {
+                var timeZone = await JS.InvokeAsync<string>("eval", "Intl.DateTimeFormat().resolvedOptions().timeZone");
+                
+                localTimeProvider.SetLocalTimeZone(timeZone);
             }
         }
     }

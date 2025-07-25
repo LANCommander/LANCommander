@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Exceptions;
+using LANCommander.Server.Data;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -18,6 +19,7 @@ namespace LANCommander.Server.Services
     {
         private readonly IdentityContext IdentityContext;
         private readonly CollectionService CollectionService;
+        private readonly IDbContextFactory<DatabaseContext> ContextFactory;
         private readonly IMapper Mapper;
         private readonly IFusionCache Cache;
         
@@ -28,12 +30,27 @@ namespace LANCommander.Server.Services
             IMapper mapper,
             IFusionCache cache,
             CollectionService collectionService,
+            IDbContextFactory<DatabaseContext> contextFactory,
             IdentityContextFactory identityContextFactory) : base(logger)
         {
             IdentityContext = identityContextFactory.Create();
             CollectionService = collectionService;
+            ContextFactory = contextFactory;
             Mapper = mapper;
             Cache = cache;
+        }
+
+        public void Reconfigure(Settings settings)
+        {
+            var options = IdentityContext.UserManager.Options;
+            if (options == null || settings == null) 
+                return;
+
+            options.Password.RequireNonAlphanumeric = settings.Authentication.PasswordRequireNonAlphanumeric;
+            options.Password.RequireLowercase = settings.Authentication.PasswordRequireLowercase;
+            options.Password.RequireUppercase = settings.Authentication.PasswordRequireUppercase;
+            options.Password.RequireDigit = settings.Authentication.PasswordRequireDigit;
+            options.Password.RequiredLength = settings.Authentication.PasswordRequiredLength;
         }
 
         public async Task<User> GetAsync(string userName)
@@ -98,16 +115,41 @@ namespace LANCommander.Server.Services
                 return new List<Collection>();
             }
         }
-
+        
         public async Task<bool> ExistsAsync(Expression<Func<User, bool>> predicate)
         {
             return await IdentityContext.DatabaseContext.Users.AnyAsync(predicate);
         }
 
-        public async Task<User> AddAsync(User user)
+        public Task<User> AddAsync(User user)
         {
-            var result = await IdentityContext.UserManager.CreateAsync(user);
-            
+            return AddAsync(user, bypassPasswordPolicy: false);
+        }
+
+        public async Task<User> AddAsync(User user, bool bypassPasswordPolicy, string? password = null)
+        {
+            IdentityResult result;
+            if (bypassPasswordPolicy && !string.IsNullOrEmpty(password))
+            {
+                user.SecurityStamp = Guid.NewGuid().ToString();
+                user.ConcurrencyStamp = Guid.NewGuid().ToString();
+
+                // hash & set password
+                var hasher = new PasswordHasher<User>();
+                user.PasswordHash = hasher.HashPassword(user, password);
+
+                // insert & save
+                using var context = await ContextFactory.CreateDbContextAsync();
+                context.Users!.Add(user);
+                await context.SaveChangesAsync();
+
+                result = IdentityResult.Success;
+            }
+            else
+            {
+                result = await IdentityContext.UserManager.CreateAsync(user);
+            }
+
             if (result.Succeeded)
                 return await IdentityContext.UserManager.FindByNameAsync(user.UserName);
             else
@@ -126,7 +168,7 @@ namespace LANCommander.Server.Services
             var user = await GetAsync(userName);
 
             var result = await IdentityContext.UserManager.AddToRolesAsync(user, roleNames);
-
+            
             await Cache.RemoveByTagAsync(["User/Security", "User/Roles", $"User/{user.Id}", $"Library/{user.Id}"]);
 
             if (!result.Succeeded)
@@ -147,6 +189,34 @@ namespace LANCommander.Server.Services
             return await IdentityContext.UserManager.CheckPasswordAsync(user, password);
         }
 
+        public async Task<IdentityResult> CheckRegister(User user, string password)
+        {
+            var registerErrors = new List<IdentityError>();
+            var userManager = IdentityContext.UserManager;
+
+            foreach (var validator in userManager.UserValidators ?? [])
+            {
+                var result = await validator.ValidateAsync(userManager, user);
+                if (!result.Succeeded)
+                {
+                    registerErrors.AddRange(result.Errors);
+                }
+            }
+
+            foreach (var validator in userManager.PasswordValidators ?? [])
+            {
+                var result = await validator.ValidateAsync(userManager, user, password);
+                if (!result.Succeeded)
+                {
+                    registerErrors.AddRange(result.Errors);
+                }
+            }
+
+            return registerErrors.Count > 0
+                ? IdentityResult.Failed(registerErrors.ToArray())
+                : IdentityResult.Success;
+        }
+
         public async Task<IdentityResult> ChangePassword(string userName, string currentPassword, string newPassword)
         {
             var user = await GetAsync(userName);
@@ -156,13 +226,30 @@ namespace LANCommander.Server.Services
             return result;
         }
 
-        public async Task<IdentityResult> ChangePassword(string userName, string newPassword)
+        public Task<IdentityResult> ChangePassword(string userName, string newPassword)
         {
+            return ChangePassword(userName, newPassword, bypassPolicy: false);
+        }
+
+        public async Task<IdentityResult> ChangePassword(string userName, string newPassword, bool bypassPolicy)
+        {
+            IdentityResult result;
             var user = await GetAsync(userName);
 
-            var token = await IdentityContext.UserManager.GeneratePasswordResetTokenAsync(user);
+            if (bypassPolicy && IdentityContext.UserManager.PasswordValidators.Any())
+            {
+                await IdentityContext.UserManager.RemovePasswordAsync(user);
 
-            return await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+                result = await IdentityContext.UserManager.AddPasswordAsync(user, newPassword);
+            }
+            else
+            {
+                var token = await IdentityContext.UserManager.GeneratePasswordResetTokenAsync(user);
+
+                result = await IdentityContext.UserManager.ResetPasswordAsync(user, token, newPassword);
+            }
+
+            return result;
         }
 
         public async Task SignOut()

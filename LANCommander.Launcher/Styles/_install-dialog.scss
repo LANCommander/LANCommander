@@ -14,3 +14,49 @@
         margin-top: 16px;
     }
 }
+
+.remove-from-library-dialog {
+
+    .game-item {
+          display: grid;
+          grid-template-columns: auto 1fr;
+          grid-template-rows: auto auto;
+          grid-template-areas: "icon pre" "icon title";
+          align-items: center;
+          column-gap: 10px;  /* Spacing between icon and text */
+
+        .icon {
+          grid-area: icon;
+        }
+
+        .pre {
+          grid-area: pre;
+        }
+
+        .title {
+          grid-area: title;
+        }
+    }
+
+    .game-item {
+        color: #aaa;
+
+        .icon {
+            width: 48px;
+            height: 48px;
+
+            img {
+                width: 48px;
+                height: 48px;
+                object-fit: cover;
+            }
+        }
+
+        .title {
+              display: block;
+              font-size: 1.1em;
+              font-weight: bold;
+        }
+    }
+}
+

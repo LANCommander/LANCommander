@@ -107,7 +107,7 @@
         await ChunkUploader.Clear();
     }
 
-     async Task Cancel()
+    async Task Cancel()
     {
         await ChunkUploader.Clear();
         await CloseFeedbackAsync();
@@ -156,6 +156,7 @@
             MessageService.Error("Import file failed to upload!");
             Logger.LogError("Import file failed to upload!");
 
+            await (base.OkCancelRef?.OnCancel?.Invoke() ?? Task.CompletedTask);
             await CloseFeedbackAsync();
         }
 

@@ -45,7 +45,7 @@
                 <BoundDataColumn Property="s => s.ClaimedOn" Title="Claimed" Sortable>
                     <LocalTime Value="context.CreatedOn" Relative />
                 </BoundDataColumn>
-                <DataActions>
+                <DataActions TData="string">
                     @if (context.IsAllocated())
                     {
                         <Button OnClick="() => Release(context)">Release</Button>
@@ -107,7 +107,7 @@
     {
         await KeyService.ReleaseAsync(key);
 
-        await MessageService.Success("Key was unallocated!");
+        await MessageService.SuccessAsync("Key was unallocated!");
     }
 
     async Task Save()

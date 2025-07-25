@@ -17,6 +17,9 @@ namespace LANCommander.SDK.Extensions
 
             filename = colonInTitle.Replace(filename, "$1 - $3");
             filename = removeInvalidChars.Replace(filename, replacement);
+            
+            if (filename.EndsWith('.'))
+                filename = filename.Substring(0, filename.Length - 1);
 
             return filename;
         }

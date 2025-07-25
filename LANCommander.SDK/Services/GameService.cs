@@ -208,7 +208,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                await Client.PostRequestAsync<object>($"/api/Game/{id}/Started");
+                await Client.GetRequestAsync<object>($"/api/Games/{id}/Started");
             }
             catch (Exception ex)
             {
@@ -222,7 +222,7 @@ namespace LANCommander.SDK.Services
 
             try
             { 
-                await Client.PostRequestAsync<object>($"/api/Game/{id}/Stopped");
+                await Client.GetRequestAsync<object>($"/api/Games/{id}/Stopped");
             }
             catch (Exception ex)
             {
@@ -1068,14 +1068,17 @@ namespace LANCommander.SDK.Services
                 foreach (var manifest in manifests)
                 {
                     #region Upload Saves
-                    await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
+                    if (Client.IsConnected())
                     {
-                        Logger?.LogTrace("Attempting to upload save");
+                        await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
+                        {
+                            Logger?.LogTrace("Attempting to upload save");
 
-                        await Client.Saves.UploadAsync(installDirectory, manifest.Id);
+                            await Client.Saves.UploadAsync(installDirectory, manifest.Id);
 
-                        return true;
-                    });
+                            return true;
+                        });
+                    }
                     #endregion
 
                     #region Run After Stop Script
@@ -1085,7 +1088,7 @@ namespace LANCommander.SDK.Services
                     {
                         foreach (var redistributable in manifest.Redistributables.Where(r => r.Scripts != null))
                         {
-                            await Client.Scripts.RunBeforeStartScriptAsync(installDirectory, gameId, redistributable.Id);
+                            await Client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId, redistributable.Id);
                         }
                     }
                     #endregion

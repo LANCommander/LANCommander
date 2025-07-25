@@ -155,14 +155,16 @@ namespace LANCommander.SDK.Services
 
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
-                        foreach (var entry in savePath.Entries)
+                        var entries = Client.Saves.GetFileSavePathEntries(savePath, installDirectory) ?? [];
+
+                        foreach (var entry in entries)
                         {
                             var entryPath = Path.Combine(tempLocation, tempLocationFilePath, savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
                             var destinationPath = entry.ActualPath.ExpandEnvironmentVariables(installDirectory);
 
                             if (File.Exists(entryPath))
                             {
-                                var destinationDirectory = Path.GetDirectoryName(entryPath);
+                                var destinationDirectory = Path.GetDirectoryName(destinationPath);
 
                                 Directory.CreateDirectory(destinationDirectory);
 
@@ -179,11 +181,11 @@ namespace LANCommander.SDK.Services
 
                                 foreach (var entryFile in entryFiles)
                                 {
-                                    var destinationDirectory = Path.GetDirectoryName(entryFile);
+                                    var fileDestination = entryFile.Replace(entryPath, destinationPath);
+                                    
+                                    var destinationDirectory = Path.GetDirectoryName(fileDestination);
 
                                     Directory.CreateDirectory(destinationDirectory);
-
-                                    var fileDestination = entryFile.Replace(entryPath, destinationPath);
 
                                     if (File.Exists(fileDestination))
                                         File.Delete(fileDestination);
@@ -196,21 +198,31 @@ namespace LANCommander.SDK.Services
                     #endregion
 
                     #region Handle registry importing
-                    var registryImportFilePath = Path.Combine(tempLocation, "_registry.reg");
+                    var registryImportFilePaths = Directory.GetFiles(tempLocation, "_registry*.reg");
+                    var importer = new RegistryImportUtility();
 
-                    if (File.Exists(registryImportFilePath))
+                    foreach (var registryImportFilePath in registryImportFilePaths)
                     {
                         var registryImportFileContents = File.ReadAllText(registryImportFilePath);
 
-                        var script = new PowerShellScript(Enums.ScriptType.Install);
+                        var script = new PowerShellScript(Enums.ScriptType.SaveDownload);
 
-                        script.UseInline($"regedit.exe /s \"{registryImportFilePath}\"");
-
+                        string adminArgument = string.Empty;
                         if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
+                        {
                             script.AsAdmin();
+                            adminArgument = " -Verb RunAs";
+                        }
+
+                        script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
 
                         if (Client.Scripts.Debug)
+                        {
                             script.EnableDebug();
+                            script.OnDebugStart = Client.Scripts.OnDebugStart;
+                            script.OnDebugBreak = Client.Scripts.OnDebugBreak;
+                            script.OnOutput = Client.Scripts.OnOutput;
+                        }
 
                         await script.ExecuteAsync<int>();
                     }
@@ -249,21 +261,26 @@ namespace LANCommander.SDK.Services
             return await Client.UploadRequestAsync<GameSave>($"/api/Saves/Game/{manifest.Id}/Upload", stream);
         }
 
-        public async Task<GameSave> UploadAsync(string installDirectory, Guid gameId)
+        public async Task<GameSave?> UploadAsync(string installDirectory, Guid gameId)
         {
             using (var savePacker = new SavePacker(installDirectory))
             {
                 var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
-                if (manifest?.SavePaths.Any() ?? false)
+                if (manifest?.SavePaths?.Any() ?? false)
                     savePacker.AddPaths(manifest.SavePaths);
-                
-                await savePacker.AddManifestAsync(manifest);
-                
-                var stream = await savePacker.PackAsync();
 
-                return await UploadAsync(stream, manifest);
+                if (savePacker.HasEntries())
+                {
+                    await savePacker.AddManifestAsync(manifest);
+
+                    var stream = await savePacker.PackAsync();
+
+                    return await UploadAsync(stream, manifest);
+                }
             }
+
+            return null;
         }
 
         public async Task DeleteAsync(Guid id)

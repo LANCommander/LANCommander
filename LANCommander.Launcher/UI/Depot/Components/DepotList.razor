@@ -39,9 +39,9 @@
     else if (Loaded)
     {
         <Result
-            Status="ResultStatus.Error"
-            Title="No Results"
-            SubTitle="The depot is empty or you are unauthorized. Contact your adminstrator." />
+        Status="ResultStatus.Error"
+        Title="No Results"
+        SubTitle="The depot is empty or you are unauthorized. Contact your adminstrator." />
     }
 </Spin>
 
@@ -53,12 +53,14 @@
     List<string> Groups = new();
 
     bool Loaded = false;
-    
-    protected override async Task OnParametersSetAsync()
+
+    protected override void OnInitialized()
     {
+        base.OnInitialized();
+
         DepotService.OnItemsFiltered += LoadFilteredItems;
     }
-    
+
     async Task LoadFilteredItems(IEnumerable<Models.ListItem> listItems)
     {
         ListItems = listItems;
@@ -76,5 +78,10 @@
             Groups.Add("Uncategorized");
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        DepotService.OnItemsFiltered -= LoadFilteredItems;
     }
 }

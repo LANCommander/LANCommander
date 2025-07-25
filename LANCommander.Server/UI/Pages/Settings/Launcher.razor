@@ -19,7 +19,11 @@
         <FormItem Label="Host Client Updates">
             <Switch @bind-Checked="context.Launcher.HostUpdates" />
         </FormItem>
-        
+
+        <FormItem Label="Always include Online Updates">
+            <Switch @bind-Checked="context.Launcher.IncludeOnlineUpdates" />
+        </FormItem>
+
         <FormItem Label="Architectures">
             <EnumSelect
                 TEnum="LauncherArchitecture"
@@ -27,7 +31,7 @@
                 Disabled="!context.Launcher.HostUpdates"
                 @bind-Values="context.Launcher.Architectures" />
         </FormItem>
-        
+
         <FormItem Label="Platforms">
             <EnumSelect
                 TEnum="LauncherPlatform"

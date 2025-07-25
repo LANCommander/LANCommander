@@ -18,7 +18,7 @@
     <Columns>
         <BoundDataColumn Title="Name" Property="r => r.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
         
-        <DataActions>
+        <DataActions TData="string">
             <a href="/Settings/Roles/@(context.Id)" class="ant-btn ant-btn-primary">Edit</a>
 
             @if (context.Name != RoleService.AdministratorRoleName)
@@ -46,7 +46,9 @@
                 LabelName="Name"
                 ValueName="Id"
                 DefaultActiveFirstOption="false"
-                @bind-Value="Settings.Roles.DefaultRoleId" Disabled="Loading"></Select>
+                Value="Settings.Roles.DefaultRoleId"
+                Disabled="Loading"
+                Style="min-width: 100px;"></Select>
             <Button OnClick="() => ShowNewRoleDialog()" Type="@ButtonType.Primary">Add Role</Button>
         </Flex>
     </RightToolbar>

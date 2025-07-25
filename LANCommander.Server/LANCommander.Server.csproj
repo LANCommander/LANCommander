@@ -80,7 +80,7 @@
     </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AntDesign.Charts" Version="0.5.6" />
+    <PackageReference Include="AntDesign.Charts" Version="0.7.0" />
     <PackageReference Include="CaseConverter" Version="2.0.1" />
     <PackageReference Include="CoreRCON" Version="5.0.5" />
     <PackageReference Include="Elastic.Serilog.Sinks" Version="8.12.3" />

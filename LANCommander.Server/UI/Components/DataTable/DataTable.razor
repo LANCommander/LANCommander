@@ -23,12 +23,12 @@
             {
                 <Search Placeholder="Search" OnChange="SearchChanged" @bind-Value="Search" />                
             }
-            
+
             @if (ColumnPicker)
             {
                 <Button Icon="@IconType.Outline.Control" Type="@ButtonType.Text" OnClick="OpenDrawer"/>                
             }
-            
+
             @LeftToolbar
         </Flex>
 
@@ -39,7 +39,7 @@
             </Flex>
         }
     </Flex>
-    
+
     <CascadingValue Value="Includes" IsFixed>
         <CascadingValue Value="ColumnVisibility" IsFixed>
             <div id="@Id" class="ant-table-visibility-container">
@@ -68,6 +68,7 @@
     [Parameter] public bool ColumnPicker { get; set; }
     [Parameter] public Expression<Func<TItem, string>> SearchProperty { get; set; }
     [Parameter] public Expression<Func<TItem, bool>> Query { get; set; }
+    [Parameter] public Expression<Func<TItem, TItem, bool>> Children { get; set; }
 
     string Search { get; set; } = "";
     string Url;
@@ -75,64 +76,29 @@
 
     internal Dictionary<int, bool> ColumnVisibility = new();
     List<string> Includes = new();
+    Dictionary<Guid, IEnumerable<TItem>> _children = new();
 
     RenderFragment RenderBase() => builder => base.BuildRenderTree(builder);
 
     protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += LocationChanged;
-        
+
         Url = NavigationManager.Uri;
-        
+
         OnChange = EventCallback.Factory.Create<QueryModel<TItem>>(this,
             async (queryModel) =>
             {
                 if (queryModel == null)
                     return;
-                
+
                 Loading = true;
                 await InvokeAsync(StateHasChanged);
                 await Task.Yield();
-                
+
                 using (var context = DatabaseContextFactory.CreateDbContext())
                 {
-                    var queryable = context
-                        .Set<TItem>()
-                        .AsSplitQuery();
-
-                    foreach (var include in Includes)
-                    {
-                        queryable = queryable.Include(include);
-                    }
-
-                    if (Query != null)
-                    {
-                        queryable = queryable.Where(Query);
-                    }
-
-                    if (!String.IsNullOrWhiteSpace(Search) && SearchProperty != null)
-                    {
-                        var search = Search.ToLower().Trim();
-
-                        var parameter = SearchProperty.Parameters[0];
-                        var propertyAccess = SearchProperty.Body;
-                        
-                        // Apply .ToLower()
-                        var toLowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
-                        var toLowerExpression = Expression.Call(propertyAccess, toLowerMethod);
-
-                        // Apply .Contains(search)
-                        var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) });
-                        var searchExpression = Expression.Constant(search, typeof(string));
-                        var containsExpression = Expression.Call(toLowerExpression, containsMethod, searchExpression);
-
-                        // Create the final lambda: x => x.Property.ToLower().Contains(search)
-                        var lambda = Expression.Lambda<Func<TItem, bool>>(containsExpression, parameter);
-                        
-                        queryable = queryable.Where(lambda);
-                    }
-                    
-                    queryable = queryable.ExecuteTableQuery(queryModel);
+                    var queryable = BuildQueryable(context, queryModel);
 
                     Total = await queryable.CountAsync();
 
@@ -145,7 +111,37 @@
                         DataSource = await queryable.CurrentPagedRecords(queryModel).ToListAsync();
                     else
                         DataSource = await queryable.Take(PageSize).ToListAsync();
-                    
+
+                    if (Children != null)
+                    {
+                        _children = new Dictionary<Guid, IEnumerable<TItem>>();
+
+                        var childrenQueryable = context
+                            .Set<TItem>()
+                            .AsQueryable()
+                            .AsNoTracking()
+                            .AsSplitQuery();
+
+                        foreach (var include in Includes)
+                        {
+                            childrenQueryable.Include(include);
+                        }
+
+                        foreach (var item in DataSource)
+                        {
+                            var childPredicate = InjectParent(Children, item);
+                            var children = await childrenQueryable.Where(childPredicate).ToListAsync();
+
+                            if (children.Any())
+                                _children[item.Id] = children;
+                        }
+
+                        TreeChildren = item =>
+                        {
+                            return _children.ContainsKey(item.Id) ? _children[item.Id] : [];
+                        };
+                    }
+
                     await base.OnParametersSetAsync();
                     base.OnParametersSet();
                 }
@@ -154,7 +150,9 @@
                 await InvokeAsync(StateHasChanged);
                 await Task.Yield();
             });
-        
+
+
+
         await base.OnInitializedAsync();
     }
 
@@ -168,25 +166,107 @@
     {
         if (Columns != null)
             ChildContent = Columns;
-        
+
         /*base.OnPageSizeChange = EventCallback.Factory.Create<PaginationEventArgs>(
-            this,
+        this,
             async (args) =>
             {
                 PageSizeChanged(args);
             });
 
         base.OnPageIndexChange = EventCallback.Factory.Create<PaginationEventArgs>(
-            this,
-            async (args) =>
-            {
-                PageIndexChanged(args);
+        this,
+        async (args) =>
+        {
+            PageIndexChanged(args);
             });*/
 
 
-        await base.OnParametersSetAsync();
+    await base.OnParametersSetAsync();
     }
-    
+
+    Expression<Func<TItem, bool>> InjectParent<TItem>(
+        Expression<Func<TItem, TItem, bool>> expression,
+        TItem parent)
+    {
+        var childParameter = expression.Parameters[1];
+
+        var body = new ReplaceParameterVisitor(expression.Parameters[0], Expression.Constant(parent)).Visit(expression.Body);
+
+        return Expression.Lambda<Func<TItem, bool>>(body, childParameter);
+    }
+
+    class ReplaceParameterVisitor : ExpressionVisitor
+    {
+        private readonly ParameterExpression _parameter;
+        private readonly Expression _replacement;
+
+        public ReplaceParameterVisitor(ParameterExpression parameter, Expression replacement)
+        {
+            _parameter = parameter;
+            _replacement = replacement;
+        }
+
+        protected override Expression VisitParameter(ParameterExpression node)
+        {
+            if (node == _parameter)
+                return _replacement;
+
+            return base.VisitParameter(node);
+        }
+    }
+
+    IQueryable<TItem>? BuildQueryable(DatabaseContext context, QueryModel<TItem> queryModel)
+    { 
+        var queryable = context
+            .Set<TItem>()
+            .AsSplitQuery();
+
+        foreach (var include in Includes)
+        {
+            queryable = queryable.Include(include);
+        }
+
+        if (Query != null)
+        {
+            queryable = queryable.Where(Query);
+        }
+
+        if (!String.IsNullOrWhiteSpace(Search) && SearchProperty != null)
+        {
+            var search = Search.StripPunctuation().ToLower().Trim();
+
+            var parameter = SearchProperty.Parameters[0];
+
+            Expression body = SearchProperty.Body;
+
+            // Apply multiple REPLACE(...) calls to strip punctuation
+            string[] punctuationToStrip = { ".", ",", "!", "?", ";", ":", "'", "\"", "-", "(", ")", "[", "]", "{", "}", "/" };
+
+            foreach (var symbol in punctuationToStrip)
+            {
+                var replaceMethod = typeof(string).GetMethod(nameof(string.Replace), new[] { typeof(string), typeof(string) });
+                body = Expression.Call(body, replaceMethod, Expression.Constant(symbol), Expression.Constant(""));
+            }
+
+            // Apply .ToLower()
+            var toLowerMethod = typeof(string).GetMethod(nameof(string.ToLower), Type.EmptyTypes);
+            var toLowerExpression = Expression.Call(body, toLowerMethod);
+
+            // Apply .Contains(search)
+            var containsMethod = typeof(string).GetMethod(nameof(string.Contains), new[] { typeof(string) });
+            var searchExpression = Expression.Constant(search, typeof(string));
+            var containsExpression = Expression.Call(toLowerExpression, containsMethod, searchExpression);
+
+            // Create the final lambda: x => x.Property.ToLower().Contains(search)
+            var lambda = Expression.Lambda<Func<TItem, bool>>(containsExpression, parameter);
+
+            queryable = queryable.Where(lambda);
+        }
+
+        return queryable.ExecuteTableQuery(queryModel);
+    }
+
     new void PageIndexChanged(PaginationEventArgs args)
     {
         var uri = NavigationManager.ToAbsoluteUri(Url);
@@ -213,10 +293,10 @@
 
         var uri = NavigationManager.ToAbsoluteUri(Url);
         var query = HttpUtility.ParseQueryString(uri.Query);
-        
+
         if (query.AllKeys.Contains("Page"))
             PageIndex = int.TryParse(query["Page"], out var index) ? index > 0 ? index : 1 : 1;
-        
+
         if (query.AllKeys.Contains("Size"))
             PageSize = int.TryParse(query["Size"], out var size) ? size > 0 ? size : 50 : 50;
 
@@ -226,7 +306,7 @@
 
             await SearchChanged();
         }
-        
+
         await InvokeStateHasChangedAsync();
     }
 
@@ -237,16 +317,21 @@
         Dictionary<string, string> parameters = new();
 
         PageIndex = 1;
-        
+
         if (PageSize > 1)
             parameters.Add("PageSize", PageSize.ToString());
-        
+
         if (!String.IsNullOrWhiteSpace(Search))
             parameters.Add("Search", Search);
-        
+
         // NavigationManager.NavigateTo(QueryHelpers.AddQueryString(uri.AbsolutePath, parameters));
 
         Reload();
+    }
+
+    public IEnumerable<string> GetIncludes()
+    {
+        return Includes;
     }
 
     public async Task OpenDrawer()

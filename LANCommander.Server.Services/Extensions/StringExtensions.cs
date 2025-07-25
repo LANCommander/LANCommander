@@ -38,6 +38,11 @@ namespace LANCommander.Server.Services.Extensions
             return (sb.ToString().Normalize(NormalizationForm.FormC));
         }
 
+        public static string StripPunctuation(this string value)
+        {
+            return new string(value.Where(c => !char.IsPunctuation(c)).ToArray());
+        }
+
         public static string SanitizeFilename(this string filename, string replacement = "")
         {
             var removeInvalidChars = new Regex($"[{Regex.Escape(new string(Path.GetInvalidFileNameChars()))}]", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);

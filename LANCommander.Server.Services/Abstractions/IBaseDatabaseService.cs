@@ -35,5 +35,7 @@ namespace LANCommander.Server.Services.Abstractions
         Task<T> UpdateAsync(T entity);
 
         Task DeleteAsync(T entity);
+        // TODO: Add IBaseDatabaseService<>.DeleteRangeAsync
+        //Task DeleteRangeAsync(IEnumerable<T> entities);
     }
 }

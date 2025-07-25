@@ -49,5 +49,11 @@ namespace LANCommander.SDK.Services
         {
             return await Client.PostRequestAsync<bool>($"/api/Library/RemoveFromLibrary/{gameId}");
         }
+
+        public async Task<bool> RemoveFromLibrary(Guid gameId, Guid[] addonIds)
+        {
+            var requestBody = new GenericGuidsRequest { Guids = addonIds };
+            return await Client.PostRequestAsync<bool>($"/api/Library/RemoveFromLibrary/{gameId}/addons", requestBody);
+        }
     }
 }

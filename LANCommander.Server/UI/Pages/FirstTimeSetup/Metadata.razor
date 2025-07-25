@@ -1,5 +1,6 @@
 ﻿@page "/FirstTimeSetup/Metadata"
 @layout FirstTimeSetupLayout
+@inject SetupService SetupService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -21,7 +22,7 @@
         <Input @bind-Value="context.IGDBClientId" />
     </FormItem>
     <FormItem Label="Client Secret">
-        <InputPassword @bind-Value="context.IGDBClientSecret" />
+        <InputPassword @bind-Value="context.IGDBClientSecret" AutoComplete="false" />
     </FormItem>
 
     <Divider Text="SteamGridDB Credentials" />
@@ -31,7 +32,7 @@
     </p>
 
     <FormItem Label="API Key">
-        <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" />
+        <InputPassword @bind-Value="context.Media.SteamGridDbApiKey" AutoComplete="false" />
     </FormItem>
 
     <FormItem>
@@ -55,6 +56,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var isSetupInitialized = await SetupService.IsSetupInitialized();
+        if (isSetupInitialized)
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Metadata);
 
         Settings = SettingService.GetSettings();

@@ -1,7 +1,11 @@
 ﻿using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell.Cmdlets;
 using LANCommander.SDK.Services;
+using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Exceptions;
+
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using RestSharp;
 using RestSharp.Interceptors;
 using Semver;
@@ -16,7 +20,6 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 using System.ServiceModel.Channels;
 using System.Threading.Tasks;
-using LANCommander.SDK.Extensions;
 
 namespace LANCommander.SDK
 {
@@ -47,6 +50,7 @@ namespace LANCommander.SDK
         public readonly ServerService Servers;
         public readonly PlaySessionService PlaySessions;
         public readonly TagService Tags;
+        public readonly BeaconService Beacon;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -83,6 +87,7 @@ namespace LANCommander.SDK
             Servers = new ServerService(this);
             PlaySessions = new PlaySessionService(this);
             Tags = new TagService(this);
+            Beacon = new BeaconService(this);
 
             BaseCmdlet.Client = this;
 
@@ -121,6 +126,7 @@ namespace LANCommander.SDK
             Servers = new ServerService(this, logger);
             PlaySessions = new PlaySessionService(this, logger);
             Tags = new TagService(this, logger);
+            Beacon = new BeaconService(this, logger);
 
             BaseCmdlet.Client = this;
 
@@ -632,11 +638,12 @@ namespace LANCommander.SDK
 
                 var response = await ApiClient.ExecuteAsync<AuthToken>(request);
 
-                if (response.ErrorException != null)
+                ErrorResponse errorResponse = null;
+                if (response.ResponseStatus == ResponseStatus.Error || response.ErrorException != null)
                 {
-                    Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}", username);
-
-                    throw new Exception(response.Content);
+                    string message = response.ErrorMessage ?? response?.ErrorException.Message;
+                    Logger?.LogError(response.ErrorException, "Authentication failed for user {UserName}: {Message}", username, message);
+                    errorResponse = ParseErrorResponse(response);
                 }
 
                 switch (response.StatusCode)
@@ -660,19 +667,19 @@ namespace LANCommander.SDK
                     case HttpStatusCode.Unauthorized:
                         Connected = false;
                         Logger?.LogError("Authentication failed for user {UserName}: invalid username or password", username);
-                        throw new WebException("Invalid username or password");
+                        throw new AuthFailedException(AuthFailedException.AuthenticationErrorCode.InvalidCredentials, "Invalid username or password", errorData: errorResponse, innerException: response.ErrorException);
 
                     default:
                         Connected = false;
                         Logger?.LogError("Authentication failed for user {UserName}: could not communicate with the server", username);
-                        throw new WebException("Could not communicate with the server");
+                        throw new WebException("Could not communicate with the server", innerException: response.ErrorException);
                 }
             }
             catch (Exception ex)
             {
                 OnError?.Invoke(this, ex);
                 
-                return default;
+                throw;
             }
         }
 
@@ -691,51 +698,56 @@ namespace LANCommander.SDK
 
         public async Task<AuthToken> RegisterAsync(string username, string password, string passwordConfirmation)
         {
-            var response = await ApiClient.ExecuteAsync<AuthResponse>(new RestRequest("/api/Auth/Register", Method.Post).AddJsonBody(new AuthRequest()
+            try
             {
-                UserName = username,
-                Password = password
-            }));
-
-            if (response.ErrorException != null)
-            {
-                Logger?.LogError(response.ErrorException, "Registration failed for user {UserName}", username);
-
-                if (!String.IsNullOrWhiteSpace(response?.Data?.Message))
+                var request = new RestRequest("/api/Auth/Register", Method.Post);
+                request.AddJsonBody(new AuthRequest()
                 {
-                    Logger?.LogError(response.Data.Message);
-                    
-                    OnError?.Invoke(this, response.ErrorException);
+                    UserName = username,
+                    Password = password
+                });
 
-                    throw new Exception(response.Data.Message);
+                var response = await ApiClient.ExecuteAsync<AuthResponse>(request);
+
+                ErrorResponse errorResponse = null;
+                if (response.ResponseStatus == ResponseStatus.Error || response.ErrorException != null)
+                {
+                    string message = response.ErrorMessage ?? response?.ErrorException.Message;
+                    Logger?.LogError(response.ErrorException, "Registration failed for user {UserName}: {Message}", username, message);
+                    errorResponse = ParseErrorResponse(response);
                 }
-                else
-                    throw response.ErrorException;
+
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.OK:
+                        Token = new AuthToken
+                        {
+                            AccessToken = response.Data.AccessToken,
+                            RefreshToken = response.Data.RefreshToken,
+                            Expiration = response.Data.Expiration
+                        };
+
+                        Connected = true;
+
+                        return Token;
+
+                    case HttpStatusCode.BadRequest:
+                    case HttpStatusCode.Forbidden:
+                    case HttpStatusCode.Unauthorized:
+                        Connected = false;
+                        throw new RegisterFailedException(response.Data.Message, errorData: errorResponse, innerException: response.ErrorException);
+
+                    default:
+                        Connected = false;
+                        Logger?.LogError("Registering failed for user {UserName}: could not communicate with the server", username);
+                        throw new WebException("Could not communicate with the server", innerException: response.ErrorException);
+                }
             }
-
-            switch (response.StatusCode)
+            catch (Exception ex)
             {
-                case HttpStatusCode.OK:
-                    Token = new AuthToken
-                    {
-                        AccessToken = response.Data.AccessToken,
-                        RefreshToken = response.Data.RefreshToken,
-                        Expiration = response.Data.Expiration
-                    };
+                OnError?.Invoke(this, ex);
 
-                    Connected = true;
-
-                    return Token;
-
-                case HttpStatusCode.BadRequest:
-                case HttpStatusCode.Forbidden:
-                case HttpStatusCode.Unauthorized:
-                    Connected = false;
-                    throw new WebException(response.Data.Message);
-
-                default:
-                    Connected = false;
-                    throw new WebException("Could not communicate with the server");
+                throw;
             }
         }
 
@@ -934,6 +946,32 @@ namespace LANCommander.SDK
                 host = entry.AddressList.First().ToString();
 
             return host;
+        }
+
+        internal ErrorResponse ParseErrorResponse(RestResponse response, bool defaultToGenericResponse = false)
+        {
+            ErrorResponse errorResponse = null;
+
+            // Try to deserialize the error response.
+            try
+            {
+                errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
+                return errorResponse;
+            }
+            catch (Exception deserializationEx)
+            {
+                // Log error and create a fallback message if deserialization fails.
+                if (defaultToGenericResponse)
+                {
+                    Logger?.LogError(deserializationEx, "Error deserializing error response for route {Route}", response.Request);
+                    errorResponse = new ErrorResponse
+                    {
+                        Message = "Could not process the server response."
+                    };
+                }
+            }
+
+            return errorResponse;
         }
     }
 }

@@ -46,7 +46,7 @@
             </BoundDataColumn>
         }
         
-        <DataActions>
+        <DataActions TData="string">
             <DropdownButton Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Settings/Users/{context.UserName}"))">
                 <Overlay>
                     <Menu>
@@ -113,7 +113,7 @@
 
             user.Approved = true;
 
-            await MessageService.Success($"Approved {user.UserName}!");
+            await MessageService.SuccessAsync($"Approved {user.UserName}!");
         }
     }
 
@@ -123,7 +123,7 @@
 
         await UserService.AddToRoleAsync(dbUser.UserName, RoleService.AdministratorRoleName);
 
-        await MessageService.Success($"Promoted {user.UserName}!");
+        await MessageService.SuccessAsync($"Promoted {user.UserName}!");
 
         Table.Reload();
     }

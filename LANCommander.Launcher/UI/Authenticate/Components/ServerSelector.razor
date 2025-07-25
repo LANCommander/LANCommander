@@ -1,4 +1,3 @@
-@using BeaconLib
 @using LANCommander.Launcher.Models
 @using LANCommander.SDK.Models
 @using ListItem = AntDesign.ListItem
@@ -56,19 +55,27 @@
     AuthRequest Model = new();
     List<DiscoveredServer> DiscoveredServers = new();
     Models.Settings Settings = SettingService.GetSettings();
-    Probe Probe;
 
     protected override async Task OnInitializedAsync()
     {
         OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
         
+        Client.Beacon.OnBeaconResponse += OnBeaconResponse;
+        
         ActivateBeacon();
+    }
+
+    private void OnBeaconResponse(object sender, BeaconResponseArgs e)
+    {
+        var discoveredServer = new DiscoveredServer(e.Message, e.EndPoint);
+        
+        if (DiscoveredServers.All(s => s.Address != discoveredServer.Address))
+            DiscoveredServers.Add(discoveredServer);
     }
 
     async Task SelectServer(string serverAddress)
     {
-        Probe.Stop();
-        Probe.Dispose();
+        await Client.Beacon.StopProbeAsync();
 
         BeaconActive = false;
 
@@ -78,30 +85,13 @@
     
     async Task ActivateBeacon()
     {
-        Probe = new Probe("LANCommander");
-        
-        Probe.BeaconsUpdated += (beacons) =>
-        {
-            foreach (var beacon in beacons)
-            {
-                if (!String.IsNullOrWhiteSpace(beacon.Data))
-                {
-                    var server = new DiscoveredServer(beacon.Data, beacon.Address);
-
-                    if (!DiscoveredServers.Any(s => s.Address.ToString() == server.Address.ToString()))
-                        DiscoveredServers.Add(server);
-                }
-            }
-        };
-        
         BeaconActive = true;
 
-        Probe.Start();
+        await Client.Beacon.StartProbeAsync();
 
         await Task.Delay(10000);
-        
-        Probe.Stop();
-        Probe.Dispose();
+
+        await Client.Beacon.StopProbeAsync();
         
         BeaconActive = false;
 

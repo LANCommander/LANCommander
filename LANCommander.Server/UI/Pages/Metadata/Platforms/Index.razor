@@ -26,8 +26,11 @@
             <LocalTime Value="context.UpdatedOn" />
         </BoundDataColumn>
         <BoundDataColumn Property="p => p.UpdatedBy != null ? p.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <DataActions>
-            <a href="@($"/Metadata/Platforms/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a>
+        <DataActions TData="string">
+            <Button OnClick="() => OpenEdit(context)" Type="@ButtonType.Primary">Edit</Button>
+            @* TODO: Add seperate Edit page and navigate to it *@
+            @* <a href="@($"/Metadata/Platforms/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
+
             <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this platform?">
                 <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
             </Popconfirm>
@@ -47,8 +50,6 @@
 </Modal>
 
  @code {
-    IEnumerable<Platform> Platforms { get; set; } = new List<Platform>();
-
     bool Loading = true;
 
     bool EditPlatformVisible = false;
@@ -93,10 +94,11 @@
         await CloseEdit();
     }
 
-    async Task OpenEdit(Platform platform)
+    async Task OpenEdit(Platform? platform)
     {
-        if (platform != null)
-            PlatformContext = platform;
+        // query new instance, or create a new Edit context instance
+        PlatformContext = platform != null ? await PlatformService.GetAsync(platform.Id) : default!;
+        PlatformContext ??= new();
 
         EditPlatformVisible = true;
 

@@ -127,7 +127,7 @@
                                     <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
                                 </div>
                             }
-                            
+
                             @if (SelectedGame.Publishers != null && SelectedGame.Publishers.Any())
                             {
                                 <div class="game-metadata-publishers">
@@ -135,7 +135,7 @@
                                     <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
                                 </div>
                             }
-                            
+
                             @if (SelectedGame.Genres != null && SelectedGame.Genres.Any())
                             {
                                 <div class="game-metadata-genres">
@@ -189,9 +189,10 @@
         InstallService.OnQueueChanged += OnQueueChanged;
         InstallService.OnInstallFail += OnInstallFail;
         InstallService.OnInstallComplete += OnInstallComplete;
+
         GameService.OnUninstall += OnUninstall;
         GameService.OnUninstallComplete += OnUninstallComplete;
-        
+
         await LoadData();
     }
 
@@ -390,5 +391,15 @@
             return "Never";
         else
             return lastSession.End.Value.ToRelativeDate();
+    }
+
+    public void Dispose()
+    {
+        InstallService.OnQueueChanged -= OnQueueChanged;
+        InstallService.OnInstallFail -= OnInstallFail;
+        InstallService.OnInstallComplete -= OnInstallComplete;
+
+        GameService.OnUninstall -= OnUninstall;
+        GameService.OnUninstallComplete -= OnUninstallComplete;
     }
 }

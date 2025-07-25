@@ -110,6 +110,11 @@ namespace LANCommander.Server.Services
             await base.DeleteAsync(game);
         }
 
+        public async Task<ICollection<Game>> GetAddonsAsync(Game game)
+        {
+            return await GetAsync(g => g.AddonTypes.Contains(g.Type));
+        }
+
         public async Task<SDK.Models.Manifest.Game> GetManifestAsync(Guid id)
         {
             var game = await Query(q =>

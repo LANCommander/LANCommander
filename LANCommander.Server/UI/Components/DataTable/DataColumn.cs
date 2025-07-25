@@ -27,7 +27,7 @@ namespace LANCommander.Server.UI.Components
                 ColumnVisibility.Add(ColIndex, !Hide);
             
             ClassMapper.If("column-hidden", () => ColumnVisibility.ContainsKey(ColIndex) && !ColumnVisibility[ColIndex]);
-
+            
             StateHasChanged();
 
             if (!String.IsNullOrWhiteSpace(Include))

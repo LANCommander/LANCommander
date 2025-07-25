@@ -73,7 +73,7 @@ namespace LANCommander.Server.Data.Models
 
         [JsonIgnore]
         [Display(Name = "Created On")]
-        public DateTime CreatedOn { get; set; }
+        public DateTime CreatedOn { get; set; } = DateTime.UtcNow;
 
         [JsonIgnore]
         public Guid? CreatedById { get; set; }
@@ -85,7 +85,7 @@ namespace LANCommander.Server.Data.Models
 
         [JsonIgnore]
         [Display(Name = "Updated On")]
-        public DateTime UpdatedOn { get; set; }
+        public DateTime UpdatedOn { get; set; } = DateTime.UtcNow;
 
         [JsonIgnore]
         public Guid? UpdatedById { get; set; }

@@ -208,7 +208,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                await Client.PostRequestAsync<object>($"/api/Game/{id}/Started");
+                await Client.GetRequestAsync<object>($"/api/Games/{id}/Started");
             }
             catch (Exception ex)
             {
@@ -222,7 +222,7 @@ namespace LANCommander.SDK.Services
 
             try
             { 
-                await Client.PostRequestAsync<object>($"/api/Game/{id}/Stopped");
+                await Client.GetRequestAsync<object>($"/api/Games/{id}/Stopped");
             }
             catch (Exception ex)
             {

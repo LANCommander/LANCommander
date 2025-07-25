@@ -598,78 +598,79 @@ public class ImportContext(
         else if (DataRecord is Data.Models.Server server)
             serverManifest = await ExportServerQueueAsync(server);
 
-        var export = new System.IO.Compression.ZipArchive(stream, ZipArchiveMode.Create);
-        
-        using (var ms = new MemoryStream())
-        using (var writer = new StreamWriter(ms))
+        using (var export = new System.IO.Compression.ZipArchive(stream, ZipArchiveMode.Create))
         {
-            if (gameManifest != null)
-                await writer.WriteAsync(ManifestHelper.Serialize(gameManifest));
-            else if (redistributableManifest != null)
-                await writer.WriteAsync(ManifestHelper.Serialize(redistributableManifest));
-            else if (serverManifest != null)
-                await writer.WriteAsync(ManifestHelper.Serialize(serverManifest));
-            
-            await writer.FlushAsync();
-
-            var manifestEntry = export.CreateEntry(ManifestHelper.ManifestFilename, CompressionLevel.NoCompression);
-
-            await using (var entryStream = manifestEntry.Open())
+            using (var ms = new MemoryStream())
+            using (var writer = new StreamWriter(ms))
             {
-                ms.Seek(0, SeekOrigin.Begin);
-                await ms.CopyToAsync(entryStream);
+                if (gameManifest != null)
+                    await writer.WriteAsync(ManifestHelper.Serialize(gameManifest));
+                else if (redistributableManifest != null)
+                    await writer.WriteAsync(ManifestHelper.Serialize(redistributableManifest));
+                else if (serverManifest != null)
+                    await writer.WriteAsync(ManifestHelper.Serialize(serverManifest));
+                
+                await writer.FlushAsync();
+
+                var manifestEntry = export.CreateEntry(ManifestHelper.ManifestFilename, CompressionLevel.NoCompression);
+
+                await using (var entryStream = manifestEntry.Open())
+                {
+                    ms.Seek(0, SeekOrigin.Begin);
+                    await ms.CopyToAsync(entryStream);
+                }
             }
-        }
 
-        #region Add Game Files
-        if (gameManifest != null)
-        {
-            if (gameManifest.Archives != null)
-                foreach (var archive in gameManifest.Archives)
-                    if (archive != null)
-                        await AddArchiveToExport(archive, export);
+            #region Add Game Files
+            if (gameManifest != null)
+            {
+                if (gameManifest.Archives != null)
+                    foreach (var archive in gameManifest.Archives)
+                        if (archive != null)
+                            await AddArchiveToExport(archive, export);
 
-            if (gameManifest.Media != null)
-                foreach (var media in gameManifest.Media)
-                    if (media != null)
-                        await AddMediaToExport(media, export);
+                if (gameManifest.Media != null)
+                    foreach (var media in gameManifest.Media)
+                        if (media != null)
+                            await AddMediaToExport(media, export);
+                
+                if (gameManifest.Saves != null)
+                    foreach (var save in gameManifest.Saves)
+                        if (save != null)
+                            await AddSaveToExport(save, export);
+                
+                if (gameManifest.Scripts != null)
+                    foreach (var script in gameManifest.Scripts)
+                        if (script != null)
+                            await AddScriptToExport(script, export);
+            }
+            #endregion
             
-            if (gameManifest.Saves != null)
-                foreach (var save in gameManifest.Saves)
-                    if (save != null)
-                        await AddSaveToExport(save, export);
+            #region Add Redistributable Files
+            if (redistributableManifest != null)
+            {
+                if (redistributableManifest.Archives != null)
+                    foreach (var archive in redistributableManifest.Archives)
+                        if (archive != null)
+                            await AddArchiveToExport(archive, export);
+                
+                if (redistributableManifest.Scripts != null)
+                    foreach (var script in redistributableManifest.Scripts)
+                        if (script != null)
+                            await AddScriptToExport(script, export);
+            }
+            #endregion
             
-            if (gameManifest.Scripts != null)
-                foreach (var script in gameManifest.Scripts)
-                    if (script != null)
-                        await AddScriptToExport(script, export);
+            #region Add Server Files
+            #warning TODO: Expand this out, add all files from the server's root directory.
+            // The server's root directory may be different from its working directory. The server model
+            // should be expanded upon to add this property. When the root directory is changed, the
+            // working directory should be changed as well.
+            //
+            // Should the files from the HTTP paths be included? Maybe the files for those need to be
+            // added as another export flag.
+            #endregion
         }
-        #endregion
-        
-        #region Add Redistributable Files
-        if (redistributableManifest != null)
-        {
-            if (redistributableManifest.Archives != null)
-                foreach (var archive in redistributableManifest.Archives)
-                    if (archive != null)
-                        await AddArchiveToExport(archive, export);
-            
-            if (redistributableManifest.Scripts != null)
-                foreach (var script in redistributableManifest.Scripts)
-                    if (script != null)
-                        await AddScriptToExport(script, export);
-        }
-        #endregion
-        
-        #region Add Server Files
-        #warning TODO: Expand this out, add all files from the server's root directory.
-        // The server's root directory may be different from its working directory. The server model
-        // should be expanded upon to add this property. When the root directory is changed, the
-        // working directory should be changed as well.
-        //
-        // Should the files from the HTTP paths be included? Maybe the files for those need to be
-        // added as another export flag.
-        #endregion
     }
 
     public async Task<SDK.Models.Manifest.Game> ExportGameQueueAsync(Data.Models.Game game)

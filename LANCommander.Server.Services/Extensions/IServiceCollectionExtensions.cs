@@ -34,6 +34,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<CompanyService>();
         services.AddScoped<MultiplayerModeService>();
         services.AddScoped<IGDBService>();
+        services.AddScoped<PCGWService>();
         services.AddScoped<ServerService>();
         services.AddScoped<ServerHttpPathService>();
         services.AddScoped<ServerConsoleService>();

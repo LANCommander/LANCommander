@@ -11,6 +11,7 @@ namespace LANCommander.Launcher.Models
     {
         Guid Id { get; set; }
         Guid[] AddonIds { get; set; }
+        Dictionary<Guid, string?> AddonVersions { get; set; }
         string Title { get; set; }
         string Version { get; set; }
         string InstallDirectory { get; set; }

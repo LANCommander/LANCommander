@@ -50,6 +50,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LANCommander.Tests", "LANCo
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LANCommander.Launcher", "LANCommander.Launcher", "{21913D6E-E036-41BD-A49E-19E65ADDE0DA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LANCommander.Server.ImportExport", "LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj", "{8CFB23C4-4D93-4448-9F1E-575633AAE4AD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -124,6 +126,10 @@ Global
 		{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C6B4CEDF-761B-48FC-B6FE-5A66EF2412BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8CFB23C4-4D93-4448-9F1E-575633AAE4AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CFB23C4-4D93-4448-9F1E-575633AAE4AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CFB23C4-4D93-4448-9F1E-575633AAE4AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CFB23C4-4D93-4448-9F1E-575633AAE4AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -146,5 +152,6 @@ Global
 		{DEF4735D-DF0A-4CE7-931B-7CCE91191FF9} = {21913D6E-E036-41BD-A49E-19E65ADDE0DA}
 		{8719E821-2D43-4780-B13F-D4BD2EA17BFB} = {21913D6E-E036-41BD-A49E-19E65ADDE0DA}
 		{4F7C36A2-6F3F-440B-BEAE-148DA7DA6856} = {E760E41E-DED0-45DA-9443-AC77715AC6CA}
+		{8CFB23C4-4D93-4448-9F1E-575633AAE4AD} = {E760E41E-DED0-45DA-9443-AC77715AC6CA}
 	EndGlobalSection
 EndGlobal

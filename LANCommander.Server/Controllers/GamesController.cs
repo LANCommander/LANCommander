@@ -1,11 +1,7 @@
-﻿using LANCommander.SDK.Helpers;
-using LANCommander.Server.Services;
+﻿using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using System.IO.Compression;
 using LANCommander.SDK.Enums;
-using LANCommander.Server.Services.Factories;
-using LANCommander.Server.Services.Importers;
+using LANCommander.Server.ImportExport.Factories;
 
 namespace LANCommander.Server.Controllers
 {
@@ -13,26 +9,20 @@ namespace LANCommander.Server.Controllers
     public class GamesController : BaseController
     {
         private readonly GameService GameService;
-        private readonly MediaService MediaService;
-        private readonly ArchiveService ArchiveService;
-        private readonly ImportContextFactory ImportContextFactory;
+        private readonly ExportContextFactory ExportContextFactory;
 
         public GamesController(
             ILogger<GamesController> logger,
             GameService gameService,
-            MediaService mediaService,
-            ArchiveService archiveService,
-            ImportContextFactory importContextFactory) : base(logger)
+            ExportContextFactory exportContextFactory) : base(logger)
         {
             GameService = gameService;
-            MediaService = mediaService;
-            ArchiveService = archiveService;
-            ImportContextFactory = importContextFactory;
+            ExportContextFactory = exportContextFactory;
         }
 
         public async Task ExportAsync(Guid id, ImportRecordFlags flags)
         {
-            using (var context = ImportContextFactory.Create())
+            using (var context = ExportContextFactory.Create())
             {
                 var game = await GameService
                     .Include(g => g.Actions)

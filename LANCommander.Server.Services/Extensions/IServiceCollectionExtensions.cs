@@ -2,7 +2,6 @@ using LANCommander.SDK;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Factories;
-using LANCommander.Server.Services.Importers;
 using LANCommander.Server.Services.MediaGrabbers;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,38 +49,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<GameCustomFieldService>();
-        services.AddScoped<AuthenticationService>();
-        services.AddSingleton<ImportService>();
         services.AddTransient<SetupService>();
-
-        // Register importers
-        services.AddScoped<ImportContextFactory>();
-        services.AddScoped<ImportContext>();
-        
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Game, Data.Models.Game>, GameImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Redistributable, Data.Models.Redistributable>, RedistributableImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Server, Data.Models.Server>, ServerImporter>();
-        
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Action, Data.Models.Action>, ActionImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Archive, Data.Models.Archive>, ArchiveImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField>, CustomFieldImporter>();
-        services.AddScoped<DeveloperImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Collection, Data.Models.Collection>, CollectionImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Engine, Data.Models.Engine>, EngineImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Genre, Data.Models.Genre>, GenreImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Key, Data.Models.Key>, KeyImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Media, Data.Models.Media>, MediaImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode>, MultiplayerModeImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Platform, Data.Models.Platform>, PlatformImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession>, PlaySessionImporter>();
-        services.AddScoped<PublisherImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Save, Data.Models.GameSave>, SaveImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath>, SavePathImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Script, Data.Models.Script>, ScriptImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole>, ServerConsoleImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath>, ServerHttpPathImporter>();
-        services.AddScoped<BaseImporter<SDK.Models.Manifest.Tag, Data.Models.Tag>, TagImporter>();
         
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();

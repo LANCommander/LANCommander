@@ -1,5 +1,8 @@
 ﻿@using LANCommander.SDK.Enums
-@using LANCommander.Server.Services.Importers
+@using LANCommander.Server.ImportExport
+@using LANCommander.Server.ImportExport.Factories
+@using LANCommander.Server.ImportExport.Models
+@using LANCommander.Server.ImportExport.Services
 @inherits FeedbackComponent<ImportDialogOptions>
 @inject GameService GameService
 @inject ArchiveService ArchiveService
@@ -49,20 +52,22 @@ else
     <Collapse>
         @foreach (var group in ImportItems.GroupBy(i => i.Flag))
         {
-            <Panel ShowArrow="false" Key="@group.Key.ToString()">
+            <Panel Key="@group.Key.ToString()">
                 <HeaderTemplate>
-                    <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
-                    <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                        <Text>@group.Key</Text>
+                    <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Small">
+                        <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
+                        <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                            <Text>@group.Key (@(group.Count()))</Text>
 
-                        @{
-                            var size = group.Sum(i => i.Size);
+                            @{
+                                var size = group.Sum(i => i.Size);
 
-                            if (size > 0)
-                            {
-                                <ByteSize Value="size" />
+                                if (size > 0)
+                                {
+                                    <ByteSize Value="size" />
+                                }
                             }
-                        }
+                        </Flex>
                     </Flex>
                 </HeaderTemplate>
                 <ChildContent>

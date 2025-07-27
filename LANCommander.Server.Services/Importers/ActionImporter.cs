@@ -24,6 +24,7 @@ public class ActionImporter(
         {
             var action = new Data.Models.Action
             {
+                Name = record.Name,
                 Game = ImportContext.DataRecord as Data.Models.Game,
                 Path = record.Path,
                 WorkingDirectory = record.WorkingDirectory,

@@ -7,7 +7,8 @@ namespace LANCommander.Server.Services.Importers;
 
 public class GenreImporter(
     IMapper mapper,
-    GenreService genreService) : BaseImporter<Genre, Data.Models.Genre>
+    GenreService genreService,
+    GameService gameService) : BaseImporter<Genre, Data.Models.Genre>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Genre record)
     {
@@ -54,15 +55,19 @@ public class GenreImporter(
     public override async Task<Data.Models.Genre> UpdateAsync(Genre record)
     {
         var existing = await genreService.Include(g => g.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
-
+        var game = ImportContext.DataRecord as Data.Models.Game;
+        
         try
         {
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
-            
-            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
-            
-            existing = await genreService.UpdateAsync(existing);
+
+            if (!existing.Games.Any(g => g.Id == game.Id))
+            {
+                existing.Games.Add(await gameService.GetAsync(game.Id));
+                
+                existing = await genreService.UpdateAsync(existing);
+            }
 
             return existing;
         }

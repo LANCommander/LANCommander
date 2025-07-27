@@ -7,7 +7,8 @@ namespace LANCommander.Server.Services.Importers;
 
 public class CollectionImporter(
     IMapper mapper,
-    CollectionService collectionService) : BaseImporter<Collection, Data.Models.Collection>
+    CollectionService collectionService,
+    GameService gameService) : BaseImporter<Collection, Data.Models.Collection>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Collection record)
     {
@@ -54,15 +55,19 @@ public class CollectionImporter(
     public override async Task<Data.Models.Collection> UpdateAsync(Collection record)
     {
         var existing = await collectionService.Include(c => c.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
-
+        var game = ImportContext.DataRecord as Data.Models.Game;
+        
         try
         {
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
-            
-            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
-            
-            existing = await collectionService.UpdateAsync(existing);
+
+            if (!existing.Games.Any(g => g.Id == game.Id))
+            {
+                existing.Games.Add(await gameService.GetAsync(game.Id));
+                
+                existing = await collectionService.UpdateAsync(existing);
+            }
 
             return existing;
         }

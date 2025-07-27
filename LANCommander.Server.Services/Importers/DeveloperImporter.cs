@@ -7,7 +7,8 @@ namespace LANCommander.Server.Services.Importers;
 
 public class DeveloperImporter(
     IMapper mapper,
-    CompanyService companyService) : BaseImporter<Company, Data.Models.Company>
+    CompanyService companyService,
+    GameService gameService) : BaseImporter<Company, Data.Models.Company>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Company record)
     {
@@ -33,14 +34,16 @@ public class DeveloperImporter(
 
     public override async Task<Data.Models.Company> AddAsync(Company record)
     {
-        if (ImportContext.DataRecord is not Data.Models.Game game)
+        if (ImportContext.DataRecord is not Data.Models.Game)
             throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
 
         try
         {
+            var game = ImportContext.DataRecord as Data.Models.Game;
+            
             var company = new Data.Models.Company
             {
-                DevelopedGames = new List<Data.Models.Game>() { game },
+                DevelopedGames = [await gameService.GetAsync(game.Id)],
                 Name = record.Name,
             };
 
@@ -56,19 +59,24 @@ public class DeveloperImporter(
 
     public override async Task<Data.Models.Company> UpdateAsync(Company record)
     {
-        if (ImportContext.DataRecord is not Data.Models.Game game)
+        if (ImportContext.DataRecord is not Data.Models.Game)
             throw new ImportSkippedException<Company>(record, $"Cannot import developers for a {ImportContext.DataRecord.GetType().Name}");
 
         var existing = await companyService.Include(g => g.DevelopedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
 
         try
         {
+            var game = ImportContext.DataRecord as Data.Models.Game;
+            
             if (existing.DevelopedGames == null)
                 existing.DevelopedGames = new List<Data.Models.Game>();
+
+            if (!existing.DevelopedGames.Any(g => g.Id == game.Id))
+            {
+                existing.DevelopedGames.Add(await gameService.GetAsync(game.Id));
             
-            existing.DevelopedGames.Add(game);
-            
-            existing = await companyService.UpdateAsync(existing);
+                existing = await companyService.UpdateAsync(existing);
+            }
 
             return existing;
         }

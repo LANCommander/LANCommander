@@ -8,39 +8,88 @@
 @inject IMessageService MessageService
 @inject ILogger<ImportUploadDialog> Logger
 
-<Flex Vertical Gap="FlexGap.Small">
-    <ChunkUploader
-        @ref="ChunkUploader"
-        Accept=".lcx"
-        @bind-File="File"
-        @bind-Status="Status"
-        StorageLocationId="StorageLocation.Id"
-        OnUploadCompleted="OnUploadCompleted"
-        OnUploadError="OnUploadError">
-        <Text>
-            <p>Drag and Drop</p>
-            <p>or</p>
-            <p>
-                <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
-            </p>
-        </Text>
-        <Hint>@Options.Hint</Hint>
-    </ChunkUploader>
+@if (!Uploaded)
+{
+    <Flex Vertical Gap="FlexGap.Small">
+        <ChunkUploader
+            @ref="ChunkUploader"
+            Accept=".lcx"
+            @bind-File="File"
+            @bind-Status="Status"
+            StorageLocationId="StorageLocation.Id"
+            OnUploadCompleted="OnUploadCompleted"
+            OnUploadError="OnUploadError">
+            <Text>
+                <p>Drag and Drop</p>
+                <p>or</p>
+                <p>
+                    <Button Type="@ButtonType.Primary" Style="margin-top: 8px;">Browse</Button>
+                </p>
+            </Text>
+            <Hint>@Options.Hint</Hint>
+        </ChunkUploader>
 
-    <StorageLocationSelector @bind-Value="StorageLocation" Type="StorageLocationType.Archive"/>
-</Flex>
+        <StorageLocationSelector @bind-Value="StorageLocation" Type="StorageLocationType.Archive"/>
+    </Flex>
+    
+    <Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
+        <FilePickerButton
+            EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
+            OnSelected="OnLocalFileSelected"
+            Root="@RootPath"
+            Disabled="@(Status != "")">
+            Use Local File
+        </FilePickerButton>
+        <Button OnClick="Upload" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
+        <Button OnClick="Cancel">Cancel</Button>
+    </Flex>
+}
+else
+{
+    <Collapse>
+        @foreach (var group in ImportItems.GroupBy(i => i.Flag))
+        {
+            <Panel ShowArrow="false" Key="@group.Key.ToString()">
+                <HeaderTemplate>
+                    <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
+                    <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                        <Text>@group.Key</Text>
 
-<Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
-    <FilePickerButton
-        EntrySelectable="@(entry => !String.IsNullOrWhiteSpace(entry.Name) && entry.Name.ToLower().EndsWith(".lcx"))"
-        OnSelected="OnLocalFileSelected"
-        Root="@RootPath"
-        Disabled="@(Status != "")">
-        Use Local File
-    </FilePickerButton>
-    <Button OnClick="Import" Disabled="@(File == null || Status != "")" Type="@ButtonType.Primary">Upload</Button>
-    <Button OnClick="Cancel">Cancel</Button>
-</Flex>
+                        @{
+                            var size = group.Sum(i => i.Size);
+
+                            if (size > 0)
+                            {
+                                <ByteSize Value="size" />
+                            }
+                        }
+                    </Flex>
+                </HeaderTemplate>
+                <ChildContent>
+                    <AntList DataSource="group">
+                        <ChildContent Context="item">
+                            <ListItem>
+                                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                                    <Text>@item.Name</Text>
+
+                                    @if (item.Size > 0)
+                                    {
+                                        <ByteSize Value="item.Size"/>
+                                    }
+                                </Flex>
+                            </ListItem>
+                        </ChildContent>
+                    </AntList>
+                </ChildContent>
+            </Panel>
+        }
+    </Collapse>
+
+    <Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
+        <Button OnClick="Import" Type="@ButtonType.Primary">Import</Button>
+        <Button OnClick="Cancel">Cancel</Button>
+    </Flex>
+}
 
 @code {
     IBrowserFile File;
@@ -52,6 +101,7 @@
     
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
+    bool Uploaded = false;
     bool IsValid = false;
     string Filename;
     string Status;
@@ -98,8 +148,22 @@
             .Where(f => f.Value)
             .Aggregate(ImportRecordFlags.None, (cur, f) => cur | f.Key);
         
-        await ImportContext.PrepareImportQueueAsync(flags);
-        await ImportContext.ImportQueueAsync();
+        try
+        {
+            await ImportContext.PrepareImportQueueAsync(flags);
+            await ImportContext.ImportQueueAsync();
+            
+            MessageService.Success("Game successfully imported!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("Game could not be imported!");
+            Logger?.LogError(ex, "An unknown error occurred while trying to import");
+        }
+        
+        await Clear();
+        ImportContext.Dispose();
+        await CloseFeedbackAsync();
     }
 
     async Task Clear()
@@ -140,6 +204,8 @@
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
                 ImportItems = await ImportContext.InitializeImportAsync(archivePath);
+                
+                Uploaded = true;
 
                 await InvokeAsync(StateHasChanged);
             }
@@ -178,6 +244,8 @@
         try
         {
             ImportItems = await ImportContext.InitializeImportAsync(path);
+            
+            Uploaded = true;
 
             await InvokeAsync(StateHasChanged);
         }

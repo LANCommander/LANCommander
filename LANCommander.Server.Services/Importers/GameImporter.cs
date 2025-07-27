@@ -32,7 +32,26 @@ public class GameImporter(
 
     public override async Task<Data.Models.Game> AddAsync(Game record)
     {
-        var game = mapper.Map<Data.Models.Game>(record);
+        var game = new Data.Models.Game
+        {
+            Title = record.Title,
+            SortTitle = record.SortTitle,
+            Description = record.Description,
+            Notes = record.Notes,
+            ReleasedOn = record.ReleasedOn,
+            Singleplayer = record.Singleplayer,
+            Type = record.Type,
+            IGDBId = record.IGDBId,
+            CreatedOn = record.CreatedOn,
+            UpdatedOn = record.UpdatedOn,
+            DirectoryName = record.DirectoryName,
+        };
+        
+        if (!String.IsNullOrWhiteSpace(record.CreatedBy))
+            game.CreatedBy = await userService.GetAsync(record.CreatedBy);
+        
+        if (!String.IsNullOrWhiteSpace(record.UpdatedBy))
+            game.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
         try
         {
@@ -58,10 +77,14 @@ public class GameImporter(
             existing.Singleplayer = record.Singleplayer;
             existing.Type = record.Type;
             existing.IGDBId = record.IGDBId;
-            existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
             existing.CreatedOn = record.CreatedOn;
-            existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
             existing.DirectoryName = record.DirectoryName;
+            
+            if (!String.IsNullOrWhiteSpace(record.CreatedBy))
+                existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
+        
+            if (!String.IsNullOrWhiteSpace(record.UpdatedBy))
+                existing.UpdatedBy = await userService.GetAsync(record.UpdatedBy);
 
             existing = await gameService.UpdateAsync(existing);
             

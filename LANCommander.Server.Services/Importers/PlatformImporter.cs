@@ -7,7 +7,8 @@ namespace LANCommander.Server.Services.Importers;
 
 public class PlatformImporter(
     IMapper mapper,
-    PlatformService platformService) : BaseImporter<Platform, Data.Models.Platform>
+    PlatformService platformService,
+    GameService gameService) : BaseImporter<Platform, Data.Models.Platform>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Platform record)
     {
@@ -54,15 +55,19 @@ public class PlatformImporter(
     public override async Task<Data.Models.Platform> UpdateAsync(Platform record)
     {
         var existing = await platformService.Include(p => p.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
-
+        var game = ImportContext.DataRecord as Data.Models.Game;
+        
         try
         {
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
-            
-            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
-            
-            existing = await platformService.UpdateAsync(existing);
+
+            if (!existing.Games.Any(g => g.Id == game.Id))
+            {
+                existing.Games.Add(await gameService.GetAsync(game.Id));
+
+                existing = await platformService.UpdateAsync(existing);
+            }
 
             return existing;
         }

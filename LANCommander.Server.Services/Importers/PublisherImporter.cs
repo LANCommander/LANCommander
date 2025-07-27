@@ -7,7 +7,8 @@ namespace LANCommander.Server.Services.Importers;
 
 public class PublisherImporter(
     IMapper mapper,
-    CompanyService companyService) : BaseImporter<Company, Data.Models.Company>
+    CompanyService companyService,
+    GameService gameService) : BaseImporter<Company, Data.Models.Company>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Company record)
     {
@@ -35,9 +36,11 @@ public class PublisherImporter(
     {
         try
         {
+            var game = ImportContext.DataRecord as Data.Models.Game;
+            
             var company = new Data.Models.Company
             {
-                PublishedGames = new List<Data.Models.Game>() { ImportContext.DataRecord as Data.Models.Game },
+                PublishedGames = [await gameService.GetAsync(game.Id)],
                 Name = record.Name,
             };
 
@@ -54,15 +57,19 @@ public class PublisherImporter(
     public override async Task<Data.Models.Company> UpdateAsync(Company record)
     {
         var existing = await companyService.Include(g => g.PublishedGames).FirstOrDefaultAsync(c => c.Name == record.Name);
+        var game = ImportContext.DataRecord as Data.Models.Game;
 
         try
         {
             if (existing.PublishedGames == null)
                 existing.PublishedGames = new List<Data.Models.Game>();
             
-            existing.PublishedGames.Add(ImportContext.DataRecord as Data.Models.Game);
+            if (!existing.PublishedGames.Any(g => g.Id == game.Id))
+            {
+                existing.PublishedGames.Add(await gameService.GetAsync(game.Id));
             
-            existing = await companyService.UpdateAsync(existing);
+                existing = await companyService.UpdateAsync(existing);
+            }
 
             return existing;
         }

@@ -145,7 +145,10 @@ public class ImportContext(
         importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Collections, Collections).ToListAsync());
         importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.CustomFields, CustomFields).ToListAsync());
         importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Developers, Developers).ToListAsync());
-        importItemInfo.AddRange(await GetImportItemInfoAsync([gameManifest.Engine], Engines).ToListAsync());
+        
+        if (gameManifest.Engine != null)
+            importItemInfo.AddRange(await GetImportItemInfoAsync([gameManifest.Engine], Engines).ToListAsync());
+        
         importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Genres, Genres).ToListAsync());
         importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Keys, Keys).ToListAsync());
         importItemInfo.AddRange(await GetImportItemInfoAsync(gameManifest.Media, Media).ToListAsync());
@@ -350,7 +353,7 @@ public class ImportContext(
         if (importRecordFlags.HasFlag(ImportRecordFlags.Developers))
             await AddToImportQueueAsync(ImportRecordFlags.Developers, gameManifest.Developers);
         
-        if (importRecordFlags.HasFlag(ImportRecordFlags.Engine))
+        if (importRecordFlags.HasFlag(ImportRecordFlags.Engine) && gameManifest.Engine != null)
             await AddToImportQueueAsync(ImportRecordFlags.Engine, [gameManifest.Engine]);
         
         if (importRecordFlags.HasFlag(ImportRecordFlags.Genres))
@@ -377,13 +380,13 @@ public class ImportContext(
         if (importRecordFlags.HasFlag(ImportRecordFlags.Saves))
             await AddToImportQueueAsync(ImportRecordFlags.Saves, gameManifest.Saves);
 
-        if (importRecordFlags.HasFlag(ImportRecordFlags.Scripts))
+        if (importRecordFlags.HasFlag(ImportRecordFlags.SavePaths))
             await AddToImportQueueAsync(ImportRecordFlags.SavePaths, gameManifest.SavePaths);
         
         if (importRecordFlags.HasFlag(ImportRecordFlags.Scripts))
             await AddToImportQueueAsync(ImportRecordFlags.Scripts, gameManifest.Scripts);
         
-        if (importRecordFlags.HasFlag(ImportRecordFlags.Archives))
+        if (importRecordFlags.HasFlag(ImportRecordFlags.Tags))
             await AddToImportQueueAsync(ImportRecordFlags.Tags, gameManifest.Tags);
     }
 

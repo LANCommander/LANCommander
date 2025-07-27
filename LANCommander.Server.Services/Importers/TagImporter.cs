@@ -6,7 +6,8 @@ namespace LANCommander.Server.Services.Importers;
 
 public class TagImporter(
     IMapper mapper,
-    TagService tagService) : BaseImporter<Tag, Data.Models.Tag>
+    TagService tagService,
+    GameService gameService) : BaseImporter<Tag, Data.Models.Tag>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Tag record)
     {
@@ -53,15 +54,19 @@ public class TagImporter(
     public override async Task<Data.Models.Tag> UpdateAsync(Tag record)
     {
         var existing = await tagService.Include(t => t.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
-
+        var game = ImportContext.DataRecord as Data.Models.Game;
+        
         try
         {
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
-            
-            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
-            
-            existing = await tagService.UpdateAsync(existing);
+
+            if (!existing.Games.Any(g => g.Id == game.Id))
+            {
+                existing.Games.Add(await gameService.GetAsync(game.Id));
+                
+                existing = await tagService.UpdateAsync(existing);
+            }
 
             return existing;
         }

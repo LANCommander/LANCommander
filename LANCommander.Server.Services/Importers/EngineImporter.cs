@@ -7,7 +7,8 @@ namespace LANCommander.Server.Services.Importers;
 
 public class EngineImporter(
     IMapper mapper,
-    EngineService engineService) : BaseImporter<Engine, Data.Models.Engine>
+    EngineService engineService,
+    GameService gameService) : BaseImporter<Engine, Data.Models.Engine>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Engine record)
     {
@@ -54,15 +55,20 @@ public class EngineImporter(
     public override async Task<Data.Models.Engine> UpdateAsync(Engine record)
     {
         var existing = await engineService.Include(g => g.Games).FirstOrDefaultAsync(c => c.Name == record.Name);
-
+        var game = ImportContext.DataRecord as Data.Models.Game;
+        
         try
         {
+            
             if (existing.Games == null)
                 existing.Games = new List<Data.Models.Game>();
-            
-            existing.Games.Add(ImportContext.DataRecord as Data.Models.Game);
-            
-            existing = await engineService.UpdateAsync(existing);
+
+            if (!existing.Games.Any(g => g.Id == game.Id))
+            {
+                existing.Games.Add(await gameService.GetAsync(game.Id));
+                
+                existing = await engineService.UpdateAsync(existing);
+            }
 
             return existing;
         }

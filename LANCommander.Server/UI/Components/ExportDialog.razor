@@ -1,9 +1,12 @@
 ﻿@using LANCommander.SDK.Enums
-@using LANCommander.Server.Services.Importers
+@using LANCommander.Server.ImportExport
+@using LANCommander.Server.ImportExport.Factories
+@using LANCommander.Server.ImportExport.Models
+@using LANCommander.Server.ImportExport.Services
 @inherits FeedbackComponent<ExportDialogOptions>
 @inject ArchiveService ArchiveService
-@inject ImportService ImportService
-@inject ImportContextFactory ImportContextFactory
+@inject ExportService ExportService
+@inject ExportContextFactory ExportContextFactory
 @inject IMessageService MessageService
 @inject NavigationManager NavigationManager
 @inject ILogger<ExportDialog> Logger
@@ -14,18 +17,20 @@
         {
             <Panel ShowArrow="false" Key="@group.Key.ToString()">
                 <HeaderTemplate>
-                    <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
-                    <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                        <Text>@group.Key</Text>
+                    <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Small">
+                        <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
+                        <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
+                            <Text>@group.Key (@(group.Count()))</Text>
 
-                        @{
-                            var size = group.Sum(i => i.Size);
+                            @{
+                                var size = group.Sum(i => i.Size);
 
-                            if (size > 0)
-                            {
-                                <ByteSize Value="size" />
+                                if (size > 0)
+                                {
+                                    <ByteSize Value="size" />
+                                }
                             }
-                        }
+                        </Flex>
                     </Flex>
                 </HeaderTemplate>
                 <ChildContent>
@@ -55,11 +60,11 @@
 </Flex>
 
 @code {
-    ImportContext ImportContext;
+    ExportContext ExportContext;
 
     IEnumerable<ExportItemInfo> ExportItems = new List<ExportItemInfo>();
 
-    Dictionary<ImportRecordFlags, bool> SelectedFlags = Enum.GetValues<ImportRecordFlags>()
+    Dictionary<ExportRecordFlags, bool> SelectedFlags = Enum.GetValues<ExportRecordFlags>()
         .ToDictionary(
             f => f,
             _ => true);
@@ -70,14 +75,14 @@
     {
         _loading = true;
         
-        ImportContext = ImportContextFactory.Create();
+        ExportContext = ExportContextFactory.Create();
         
-        ImportContext.OnRecordError += RecordError;
-        ImportContext.OnRecordAdded += RecordAdded;
-        ImportContext.OnRecordProcessed += RecordProcessed;
+        ExportContext.OnRecordError += RecordError;
+        ExportContext.OnRecordAdded += RecordAdded;
+        ExportContext.OnRecordProcessed += RecordProcessed;
 
         if (Options != null && Options.RecordId != Guid.Empty)
-            ExportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+            ExportItems = await ExportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
 
         _loading = false;
     }
@@ -101,13 +106,13 @@
     {
         var flags = SelectedFlags
             .Where(f => f.Value)
-            .Aggregate(ImportRecordFlags.None, (cur, f) => cur | f.Key);
+            .Aggregate(ExportRecordFlags.None, (cur, f) => cur | f.Key);
 
-        await ImportContext.PrepareExportQueueAsync(flags);
+        await ExportContext.PrepareExportQueueAsync(flags);
 
         await InvokeAsync(StateHasChanged);
         
-        var contextId = ImportService.EnqueueContext(ImportContext);
+        var contextId = ExportService.EnqueueContext(ExportContext);
         
         NavigationManager.NavigateTo($"/api/Export/{contextId}", true);
     }
@@ -119,14 +124,14 @@
 
     public override async Task OnFeedbackCancelAsync(ModalClosingEventArgs args)
     {
-        //ImportContext.Dispose();
+        //ExportContext.Dispose();
         
         await base.OnFeedbackCancelAsync(args);
     }
 
     public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
     {
-        //ImportContext.Dispose();
+        //ExportContext.Dispose();
         
         await base.OnFeedbackOkAsync(args);
     }
@@ -139,7 +144,7 @@
             {
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
-                ExportItems = await ImportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+                ExportItems = await ExportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
 
                 await InvokeAsync(StateHasChanged);
             }

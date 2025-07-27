@@ -1,3 +1,4 @@
+using LANCommander.Server.ImportExport.Extensions;
 using LANCommander.Server.Providers;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
@@ -15,6 +16,7 @@ public static class Services
         Log.Debug("Registering services");
         
         builder.Services.AddLANCommanderServer(settings);
+        builder.Services.AddLANCommanderImportExport();
         builder.Services.AddLANCommanderUI();
 
         builder.Services.AddSingleton<IVersionProvider, VersionProvider>();

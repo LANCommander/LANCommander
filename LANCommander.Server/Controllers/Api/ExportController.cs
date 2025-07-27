@@ -1,6 +1,6 @@
 using System.Net.Mime;
 using LANCommander.Server.Services;
-using LANCommander.Server.Services.Importers;
+using LANCommander.Server.ImportExport.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -12,20 +12,20 @@ namespace LANCommander.Server.Controllers.Api;
 [ApiController]
 public class ExportController : BaseApiController
 {
-    private readonly ImportService ImportService;
+    private readonly ExportService ExportService;
     
     public ExportController(
-        ImportService importService,
+        ExportService exportService,
         ILogger<ExportController> logger) : base(logger)
     {
-        ImportService = importService;
+        ExportService = exportService;
     }
 
     //[Authorize(Roles = RoleService.AdministratorRoleName)]
     [HttpGet("{contextId:guid}")]
     public async Task ExportAsync(Guid contextId)
     {
-        var context = ImportService.GetContext(contextId);
+        var context = ExportService.GetContext(contextId);
         
         var syncIOFeature = HttpContext.Features.Get<IHttpBodyControlFeature>();
         
@@ -35,6 +35,6 @@ public class ExportController : BaseApiController
         Response.ContentType = MediaTypeNames.Application.Octet;
         Response.Headers.Append("Content-Disposition", $"attachment; filename=\"export.lcx\"");
 
-        await ImportService.ExportAsync(contextId, Response.Body);
+        await ExportService.ExportAsync(contextId, Response.Body);
     }
 }

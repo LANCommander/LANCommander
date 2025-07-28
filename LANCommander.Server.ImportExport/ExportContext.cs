@@ -14,34 +14,31 @@ using ZipArchive = System.IO.Compression.ZipArchive;
 namespace LANCommander.Server.ImportExport;
 
 public class ExportContext(
-    BaseExporter<SDK.Models.Manifest.Game, Data.Models.Game> gameExporter,
-    BaseExporter<SDK.Models.Manifest.Redistributable, Data.Models.Redistributable> redistributableExporter,
-    BaseExporter<SDK.Models.Manifest.Server, Data.Models.Server> serverExporter,
+    GameExporter gameExporter,
+    RedistributableExporter redistributableExporter,
+    ServerExporter serverExporter,
     GameService gameService,
     RedistributableService redistributableService,
     ServerService serverService,
-    ArchiveService archiveService,
-    MediaService mediaService,
-    GameSaveService saveService,
-    BaseExporter<SDK.Models.Manifest.Action, Data.Models.Action> actionExporter,
-    BaseExporter<SDK.Models.Manifest.Archive, Data.Models.Archive> archiveExporter,
-    BaseExporter<SDK.Models.Manifest.Collection, Data.Models.Collection> collectionExporter,
-    BaseExporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> customFieldExporter,
+    ActionExporter actionExporter,
+    ArchiveExporter archiveExporter,
+    CollectionExporter collectionExporter,
+    CustomFieldExporter customFieldExporter,
     DeveloperExporter developerExporter,
     PublisherExporter publisherExporter,
-    BaseExporter<SDK.Models.Manifest.Engine, Data.Models.Engine> engineExporter,
-    BaseExporter<SDK.Models.Manifest.Genre, Data.Models.Genre> genreExporter,
-    BaseExporter<SDK.Models.Manifest.Key, Data.Models.Key> keyExporter,
-    BaseExporter<SDK.Models.Manifest.Media, Data.Models.Media> mediaExporter,
-    BaseExporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> multiplayerModeExporter,
-    BaseExporter<SDK.Models.Manifest.Platform, Data.Models.Platform> platformExporter,
-    BaseExporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> playSessionExporter,
-    BaseExporter<SDK.Models.Manifest.Save, Data.Models.GameSave> saveExporter,
-    BaseExporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> savePathExporter,
-    BaseExporter<SDK.Models.Manifest.Script, Data.Models.Script> scriptExporter,
-    BaseExporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> serverConsoleExporter,
-    BaseExporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> serverHttpPathExporter,
-    BaseExporter<SDK.Models.Manifest.Tag, Data.Models.Tag> tagExporter,
+    EngineExporter engineExporter,
+    GenreExporter genreExporter,
+    KeyExporter keyExporter,
+    MediaExporter mediaExporter,
+    MultiplayerModeExporter multiplayerModeExporter,
+    PlatformExporter platformExporter,
+    PlaySessionExporter playSessionExporter,
+    SaveExporter saveExporter,
+    SavePathExporter savePathExporter,
+    ScriptExporter scriptExporter,
+    ServerConsoleExporter serverConsoleExporter,
+    ServerHttpPathExporter serverHttpPathExporter,
+    TagExporter tagExporter,
     IMapper mapper,
     ILogger<ExportContext> logger) : IDisposable
 {
@@ -50,29 +47,29 @@ public class ExportContext(
     public StorageLocation ArchiveStorageLocation { get; }
     public ZipArchive Archive { get; private set; }
 
-    public BaseExporter<SDK.Models.Manifest.Game, Data.Models.Game> Games { get; private set; } = gameExporter;
-    public BaseExporter<SDK.Models.Manifest.Redistributable, Data.Models.Redistributable> Redistributables { get; private set; } = redistributableExporter;
-    public BaseExporter<SDK.Models.Manifest.Server, Data.Models.Server> Servers { get; private set; } = serverExporter;
+    public GameExporter Games = gameExporter;
+    public RedistributableExporter Redistributables = redistributableExporter;
+    public ServerExporter Servers = serverExporter;
 
-    public BaseExporter<SDK.Models.Manifest.Action, Data.Models.Action> Actions = actionExporter;
-    public BaseExporter<SDK.Models.Manifest.Archive, Data.Models.Archive> Archives = archiveExporter;
-    public BaseExporter<SDK.Models.Manifest.Collection, Data.Models.Collection> Collections = collectionExporter;
-    public BaseExporter<SDK.Models.Manifest.GameCustomField, Data.Models.GameCustomField> CustomFields = customFieldExporter;
-    public BaseExporter<SDK.Models.Manifest.Company, Data.Models.Company> Developers = developerExporter;
-    public BaseExporter<SDK.Models.Manifest.Engine, Data.Models.Engine> Engines = engineExporter;
-    public BaseExporter<SDK.Models.Manifest.Genre, Data.Models.Genre> Genres = genreExporter;
-    public BaseExporter<SDK.Models.Manifest.Key, Data.Models.Key> Keys = keyExporter;
-    public BaseExporter<SDK.Models.Manifest.Media, Data.Models.Media> Media = mediaExporter;
-    public BaseExporter<SDK.Models.Manifest.MultiplayerMode, Data.Models.MultiplayerMode> MultiplayerModes = multiplayerModeExporter;
-    public BaseExporter<SDK.Models.Manifest.Platform, Data.Models.Platform> Platforms = platformExporter;
-    public BaseExporter<SDK.Models.Manifest.PlaySession, Data.Models.PlaySession> PlaySessions = playSessionExporter;
-    public BaseExporter<SDK.Models.Manifest.Company, Data.Models.Company> Publishers = publisherExporter;
-    public BaseExporter<SDK.Models.Manifest.Save, Data.Models.GameSave> Saves = saveExporter;
-    public BaseExporter<SDK.Models.Manifest.SavePath, Data.Models.SavePath> SavePaths = savePathExporter;
-    public BaseExporter<SDK.Models.Manifest.Script, Data.Models.Script> Scripts = scriptExporter;
-    public BaseExporter<SDK.Models.Manifest.ServerConsole, Data.Models.ServerConsole> ServerConsoles = serverConsoleExporter;
-    public BaseExporter<SDK.Models.Manifest.ServerHttpPath, Data.Models.ServerHttpPath> ServerHttpPaths = serverHttpPathExporter;
-    public BaseExporter<SDK.Models.Manifest.Tag, Data.Models.Tag> Tags = tagExporter;
+    public ActionExporter Actions = actionExporter;
+    public ArchiveExporter Archives = archiveExporter;
+    public CollectionExporter Collections = collectionExporter;
+    public CustomFieldExporter CustomFields = customFieldExporter;
+    public DeveloperExporter Developers = developerExporter;
+    public EngineExporter Engines = engineExporter;
+    public GenreExporter Genres = genreExporter;
+    public KeyExporter Keys = keyExporter;
+    public MediaExporter Media = mediaExporter;
+    public MultiplayerModeExporter MultiplayerModes = multiplayerModeExporter;
+    public PlatformExporter Platforms = platformExporter;
+    public PlaySessionExporter PlaySessions = playSessionExporter;
+    public PublisherExporter Publishers = publisherExporter;
+    public SaveExporter Saves = saveExporter;
+    public SavePathExporter SavePaths = savePathExporter;
+    public ScriptExporter Scripts = scriptExporter;
+    public ServerConsoleExporter ServerConsoles = serverConsoleExporter;
+    public ServerHttpPathExporter ServerHttpPaths = serverHttpPathExporter;
+    public TagExporter Tags = tagExporter;
 
     public int Remaining => _queue.Count;
     public int Processed => _queue.Count(qi => qi.Processed);
@@ -458,29 +455,6 @@ public class ExportContext(
         }
 
         return manifest;
-    }
-
-    private async Task AddSaveToExport(SDK.Models.Manifest.Save save, System.IO.Compression.ZipArchive zip)
-    {
-        try
-        {
-            var savePath = await saveService.GetSavePathAsync(save.Id);
-
-            if (Path.Exists(savePath))
-            {
-                var saveEntry = zip.CreateEntry($"Saves/{save.Id}");
-
-                using (var saveEntryStream = saveEntry.Open())
-                using (var saveFileStream = new FileStream(savePath, FileMode.Open))
-                {
-                    await saveFileStream.CopyToAsync(saveEntryStream);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, $"Could not add save {save.Id} to export file");
-        }
     }
     
     private async IAsyncEnumerable<ExportItemInfo> GetExportItemInfoAsync<TModel, TEntity>(IEnumerable<TEntity> records,

@@ -346,36 +346,37 @@ public class ExportContext(
         SDK.Models.Manifest.Redistributable redistributableManifest = null;
         SDK.Models.Manifest.Server serverManifest = null;
         
+        Archive = new ZipArchive(stream, ZipArchiveMode.Create);
+        
         if (DataRecord is Data.Models.Game game)
             gameManifest = await ExportGameQueueAsync(game);
         else if (DataRecord is Data.Models.Redistributable redistributable)
             redistributableManifest = await ExportRedistributableQueueAsync(redistributable);
         else if (DataRecord is Data.Models.Server server)
             serverManifest = await ExportServerQueueAsync(server);
-
-        using (var export = new ZipArchive(stream, ZipArchiveMode.Create))
+        
+        using (var ms = new MemoryStream())
+        using (var writer = new StreamWriter(ms))
         {
-            using (var ms = new MemoryStream())
-            using (var writer = new StreamWriter(ms))
+            if (gameManifest != null)
+                await writer.WriteAsync(ManifestHelper.Serialize(gameManifest));
+            else if (redistributableManifest != null)
+                await writer.WriteAsync(ManifestHelper.Serialize(redistributableManifest));
+            else if (serverManifest != null)
+                await writer.WriteAsync(ManifestHelper.Serialize(serverManifest));
+            
+            await writer.FlushAsync();
+
+            var manifestEntry = Archive.CreateEntry(ManifestHelper.ManifestFilename, CompressionLevel.NoCompression);
+
+            await using (var entryStream = manifestEntry.Open())
             {
-                if (gameManifest != null)
-                    await writer.WriteAsync(ManifestHelper.Serialize(gameManifest));
-                else if (redistributableManifest != null)
-                    await writer.WriteAsync(ManifestHelper.Serialize(redistributableManifest));
-                else if (serverManifest != null)
-                    await writer.WriteAsync(ManifestHelper.Serialize(serverManifest));
-                
-                await writer.FlushAsync();
-
-                var manifestEntry = export.CreateEntry(ManifestHelper.ManifestFilename, CompressionLevel.NoCompression);
-
-                await using (var entryStream = manifestEntry.Open())
-                {
-                    ms.Seek(0, SeekOrigin.Begin);
-                    await ms.CopyToAsync(entryStream);
-                }
+                ms.Seek(0, SeekOrigin.Begin);
+                await ms.CopyToAsync(entryStream);
             }
         }
+        
+        Archive.Dispose();
     }
 
     public async Task<SDK.Models.Manifest.Game> ExportGameQueueAsync(Data.Models.Game game)

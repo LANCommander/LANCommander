@@ -152,6 +152,7 @@ public class ExportContext(
                 .Include(g => g.Platforms)
                 .Include(g => g.Publishers)
                 .Include(g => g.Redistributables)
+                .Include(g => g.Scripts)
                 .Include(g => g.SavePaths)
                 .Include(g => g.Tags);
         }).GetAsync(gameId);

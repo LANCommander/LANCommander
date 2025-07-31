@@ -1,0 +1,92 @@
+@using LANCommander.Server.Services.Abstractions
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
+    <Progress Percent="_cpuPercent" Size="ProgressSize.Small" />
+    <Progress Percent="_memoryPercent" Size="ProgressSize.Small" />
+</Flex>
+
+@code {
+    [Parameter] public Guid ServerId { get; set; }
+
+    HubConnection? _hubConnection;
+    IServerState _state;
+
+    double _cpuPercent
+    {
+        get
+        {
+            return _state?.ProcessorLoad ?? 0;
+        }
+    }
+
+    double _memoryPercent
+    {
+        get
+        {
+            if (_state is null)
+                return 0;
+
+            return _state.MemoryUsage / (double)_state.TotalMemory;
+        }
+    }
+
+    async Task OnParametersSetAsync()
+    {
+        await Connect();
+    }
+
+    async Task Connect() {
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hubConnection.On<string>("OnConnected", async connectionId =>
+        {
+            await _hubConnection.InvokeAsync("GetState", ServerId);
+        });
+
+        _hubConnection.On<IServerState, Guid>("StateUpdate", (state, serverId) =>
+        {
+            if (ServerId == serverId)
+            {
+                _state = state;
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (true)
+                {
+                    await Task.Delay(1000);
+
+                    if (_hubConnection.State == HubConnectionState.Connected)
+                        await _hubConnection.SendAsync("UpdateStateAsync", ServerId.ToString());
+                }
+            }
+            catch
+            {
+            }
+        });
+
+        try
+        {
+            await _hubConnection.StartAsync();
+        }
+        catch
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection is not null)
+            await _hubConnection.DisposeAsync();
+    }
+}

@@ -9,7 +9,7 @@ public interface IServerEngine
     public bool IsManaging(Guid serverId);
     public Task StartAsync(Guid serverId);
     public Task StopAsync(Guid serverId);
-    public Task<ServerProcessStatus> GetStatusAsync(Guid serverId);
+    public Task<IServerState> GetStateAsync(Guid serverId);
     public event EventHandler<ServerStatusUpdateEventArgs> OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs> OnServerLog;
 }

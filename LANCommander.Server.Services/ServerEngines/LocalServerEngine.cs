@@ -1,6 +1,7 @@
 using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.PowerShell;
 using LANCommander.Server.Data.Enums;
 using LANCommander.Server.Data.Models;
@@ -22,9 +23,7 @@ public class LocalServerEngine(
 {
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
     public event EventHandler<ServerLogEventArgs>? OnServerLog;
-    
-    private Dictionary<Guid, CancellationTokenSource> _running { get; set; } = new();
-    private Dictionary<Guid, ServerProcessStatus> _status { get; set; } = new();
+    private Dictionary<Guid, ServerProcessState> _state { get; set; } = new();
     private Dictionary<Guid, LogFileMonitor> _logFileMonitors { get; set; } = new();
 
     public async Task InitializeAsync()
@@ -38,14 +37,14 @@ public class LocalServerEngine(
 
             foreach (var server in servers)
             {
-                _status[server.Id] = ServerProcessStatus.Stopped;
+                UpdateStatus(server, ServerProcessStatus.Stopped);
             }
         }
     }
 
     public bool IsManaging(Guid serverId)
     {
-        return _running.ContainsKey(serverId) || _status.ContainsKey(serverId);
+        return _state.ContainsKey(serverId);
     }
 
     public async Task StartAsync(Guid serverId)
@@ -70,7 +69,7 @@ public class LocalServerEngine(
                 return;
 
             // Don't start the server if it's already started
-            if (await GetStatusAsync(serverId) != ServerProcessStatus.Stopped)
+            if (!IsStopped(serverId))
                 return;
             
             UpdateStatus(server, ServerProcessStatus.Starting);
@@ -122,13 +121,12 @@ public class LocalServerEngine(
                     UpdateStatus(server, ServerProcessStatus.Running);
                     
                     var cancellationTokenSource = new CancellationTokenSource();
-                    
-                    _running[server.Id] = cancellationTokenSource;
+
+                    _state[server.Id].EntryProcess = executionContext.GetProcess();
+                    _state[server.Id].Processes = _state[server.Id].EntryProcess.GetChildren().ToList();
+                    _state[server.Id].CancellationToken = cancellationTokenSource;
 
                     await executionContext.ExecuteServerAsync(mapper.Map<SDK.Models.Server>(server), cancellationTokenSource);
-                    
-                    if (_running.ContainsKey(server.Id))
-                        _running.Remove(server.Id);
                     
                     UpdateStatus(server, ServerProcessStatus.Stopped);
                 }
@@ -161,13 +159,9 @@ public class LocalServerEngine(
             logger?.LogInformation("Stopping server \"{ServerName}\" for game {GameName}", server.Name, server.Game?.Title);
 
             UpdateStatus(server, ServerProcessStatus.Stopping);
-
-            if (_running.ContainsKey(server.Id))
-            {
-                await _running[server.Id].CancelAsync();
-
-                _running.Remove(server.Id);
-            }
+            
+            if (!_state[server.Id].CancellationToken.IsCancellationRequested)
+                await _state[server.Id].CancellationToken.CancelAsync();
 
             if (_logFileMonitors.ContainsKey(server.Id))
             {
@@ -204,33 +198,92 @@ public class LocalServerEngine(
         }
     }
 
-    public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
+    public async Task<IServerState> GetStateAsync(Guid serverId)
     {
-        var status = ServerProcessStatus.Stopped;
+        if (serverId == Guid.Empty)
+            return null!;
         
-        if (_running.ContainsKey(serverId) && _running[serverId].IsCancellationRequested)
-            status = ServerProcessStatus.Stopping;
-        else if (_running.ContainsKey(serverId) && !_running[serverId].IsCancellationRequested)
-            status = ServerProcessStatus.Running;
+        if (!_state.ContainsKey(serverId))
+            _state[serverId] = new ServerProcessState();
 
-        return await Task.FromResult(status);
+        _state[serverId].Processes = _state[serverId].EntryProcess.GetChildren().ToList();
+
+        if (IsRunning(serverId))
+        {
+            var processorTime = TimeSpan.FromMilliseconds(_state[serverId].Processes.Sum(p => p.TotalProcessorTime.TotalMilliseconds));
+            
+            _state[serverId].Status = ServerProcessStatus.Running;
+            _state[serverId].MemoryUsage = (ulong)_state[serverId].Processes.Sum(p => p.PrivateMemorySize64);
+            _state[serverId].ProcessorLoad =
+                (processorTime - _state[serverId].LastMeasuredProcessorTime).TotalMilliseconds /
+                (Environment.ProcessorCount * _state[serverId].ProcessTimer.ElapsedMilliseconds);
+
+            if (Double.IsNaN(_state[serverId].ProcessorLoad))
+                _state[serverId].ProcessorLoad = 0;
+            
+            _state[serverId].ProcessTimer.Restart();
+            _state[serverId].LastMeasuredProcessorTime = processorTime;
+        }
+        else if (IsStopped(serverId))
+            _state[serverId].Status = ServerProcessStatus.Stopped;
+        else if (IsStopping(serverId))
+            _state[serverId].Status = ServerProcessStatus.Stopping;
+        
+        return await Task.FromResult(_state[serverId]);
     }
     
+    private bool IsRunning(Guid serverId)
+    {
+        bool exited;
+
+        try
+        {
+            exited = _state[serverId].Processes.All(p => p.HasExited);
+        }
+        catch
+        {
+            exited = true;
+        }
+        
+        return !_state[serverId].CancellationToken.IsCancellationRequested && !exited;
+    }
+
+    private bool IsStopped(Guid serverId)
+    {
+        bool exited;
+
+        try
+        {
+            exited = _state[serverId].Processes.All(p => p.HasExited);
+        }
+        catch
+        {
+            exited = true;
+        }
+        
+        return _state[serverId].CancellationToken == null || !_state[serverId].Processes.Any() || exited;
+    }
+
+    private bool IsStopping(Guid serverId)
+    {
+        return _state[serverId].CancellationToken.IsCancellationRequested &&
+               (!_state[serverId].Processes.Any() || _state[serverId].Processes.All(p => p.HasExited));
+    }
+    
+
     private void UpdateStatus(Data.Models.Server server, ServerProcessStatus status, Exception ex = null)
     {
+        if (!_state.ContainsKey(server.Id))
+            _state[server.Id] = new ServerProcessState();
+        
         if (ex != null)
         {
-            _status[server.Id] = ServerProcessStatus.Error;
+            _state[server.Id].Status = ServerProcessStatus.Error;
             OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, ServerProcessStatus.Error, ex));
         }
-        else if (!_status.ContainsKey(server.Id))
+        else if (_state[server.Id].Status != status)
         {
-            _status[server.Id] = status;
-            OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
-        }
-        else if (_status[server.Id] != status)
-        {
-            _status[server.Id] = status;
+            _state[server.Id].Status = status;
             OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, status));
         }
     }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LANCommander.Server.Controllers.Api
 {
+    [IgnoreAntiforgeryToken]
     public abstract class BaseApiController : ControllerBase
     {
         protected readonly ILogger Logger;

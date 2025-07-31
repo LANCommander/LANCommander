@@ -19,7 +19,7 @@ namespace LANCommander.SDK
         private readonly Client Client;
         private readonly ILogger Logger;
 
-        private Process Process = new();
+        private Process Process;
 
         private Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
 
@@ -78,6 +78,7 @@ namespace LANCommander.SDK
         public async Task ExecuteServerAsync(Models.Server server,
             CancellationTokenSource cancellationTokenSource = default)
         {
+            Process = new Process();
             Process.EnableRaisingEvents = true;
 
             var processStartInfo = new ProcessStartInfo();
@@ -121,8 +122,8 @@ namespace LANCommander.SDK
             
             if (processStartInfo.RedirectStandardOutput)
                 Process.BeginOutputReadLine();
-
-            await Process.WaitForAllExitAsync(cancellationTokenSource.Token);
+            
+            cancellationTokenSource?.Token.WaitHandle.WaitOne();
             
             if (server.ProcessTerminationMethod == ProcessTerminationMethod.Close)
                 Process.CloseMainWindow();
@@ -159,8 +160,6 @@ namespace LANCommander.SDK
                     await terminator.WaitForExitAsync();
                 }
             }
-
-            Process = null;
         }
 
         public async Task ExecuteGameActionAsync(string installDirectory, Guid gameId, Models.Action action, string args = "", CancellationToken cancellationToken = default)
@@ -177,6 +176,8 @@ namespace LANCommander.SDK
                     AddVariable(customField.Name, customField.Value);
                 }
             }
+
+            Process = new Process();
 
             Process.StartInfo.Arguments = ExpandVariables(action.Arguments, installDirectory, skipSlashes: true);
             Process.StartInfo.FileName = ExpandVariables(action.Path, installDirectory);

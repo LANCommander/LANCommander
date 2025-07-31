@@ -1,5 +1,4 @@
-﻿@using LANCommander.Server.Services.Abstractions
-@using LANCommander.Server.Services.Enums
+﻿@using LANCommander.Server.Services.Enums
 @using Microsoft.AspNetCore.SignalR.Client
 @inject ServerService ServerService
 @inject IMessageService MessageService
@@ -35,7 +34,16 @@
             break;
     }
 
-    <Switch Checked="_switchState" Loading="_loading" Control OnClick="ToggleState" Disabled="_loading" />
+    @if (Status != ServerProcessStatus.Running)
+    {
+        <Button Type="@ButtonType.Primary" OnClick="() => Start()" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
+    }
+    else
+    {
+        <Popconfirm OnConfirm="() => Stop()" Title="Are you sure you want to kill this server process?">
+            <Button Danger Type="@ButtonType.Primary">Stop</Button>
+        </Popconfirm>
+    }
 </Flex>
 
 @code {
@@ -44,22 +52,7 @@
 
     HubConnection? HubConnection;
     Server Server;
-
-    bool _switchState
-    {
-        get
-        {
-            return Status == ServerProcessStatus.Starting || Status == ServerProcessStatus.Running;
-        }
-    }
-
-    bool _loading
-    {
-        get
-        {
-            return Status == ServerProcessStatus.Retrieving || Status == ServerProcessStatus.Stopping || Status == ServerProcessStatus.Starting;
-        }
-    }
+    Timer Timer;
 
     ServerProcessStatus Status = ServerProcessStatus.Retrieving;
 
@@ -74,17 +67,9 @@
             Status = ServerProcessStatus.Stopped;
         else
             Status = CurrentServerStatus[ServerId];
-
+        
         await Task.Yield();
         await InvokeAsync(StateHasChanged);
-    }
-
-    async Task ToggleState()
-    {
-        if (!_switchState && !_loading)
-            await Start();
-        else if (!_loading)
-            await Stop();
     }
 
     async Task Connect()
@@ -96,14 +81,14 @@
 
         HubConnection.On<string>("OnConnected", async connectionId =>
         {
-            await HubConnection.InvokeAsync("GetState", ServerId);
+            await HubConnection.InvokeAsync("GetStatus", ServerId);
         });
 
-        HubConnection.On<IServerState, Guid>("StateUpdate", (state, serverId) =>
+        HubConnection.On<ServerProcessStatus, Guid>("StatusUpdate", (status, serverId) =>
         {
-            if (ServerId == serverId && Status != state.Status)
+            if (ServerId == serverId && Status != status)
             {
-                Status = state.Status;
+                Status = status;
                 InvokeAsync(StateHasChanged);
             }
         });
@@ -117,7 +102,7 @@
                     await Task.Delay(1000);
 
                     if (HubConnection.State == HubConnectionState.Connected)
-                        await HubConnection.SendAsync("UpdateStateAsync", ServerId.ToString());
+                        await HubConnection.SendAsync("UpdateStatusAsync", ServerId.ToString());
                 }
             }
             catch

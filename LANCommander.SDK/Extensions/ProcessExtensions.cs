@@ -11,52 +11,6 @@ namespace LANCommander.SDK.Extensions
 {
     public static class ProcessExtensions
     {
-        public static IEnumerable<Process> GetChildren(this Process parentProcess)
-        {
-
-            int pid;
-
-            try
-            {
-                pid = parentProcess.Id;
-            }
-            catch
-            {
-                yield break;
-            }
-
-            IEnumerable<int> processIds = Process.GetProcesses().Select(p => p.Id);
-            
-            yield return parentProcess;
-
-            foreach (var processId in processIds.Where(p => p > pid))
-            {
-                int? parentProcessId = null;
-
-                try
-                {
-                    // This could be adapted better for non-Windows platforms.
-                    // Not even sure how Process works on other platforms, but
-                    // there's other ways of tracking child processes. One way
-                    // that would need to be tested out would be to get the
-                    // child process at this point and check the executable's
-                    // file location. If it's in {InstallDir}, track it!
-                    parentProcessId = ProcessHelper.GetParentProcessId(processId);
-                }
-                catch
-                {
-                    // Probably an access denied error, checking processes we don't have access to
-                }
-
-                if (parentProcessId.GetValueOrDefault() == pid)
-                {
-                    var process = Process.GetProcessById(processId);
-
-                    yield return process;
-                }
-            }
-        }
-        
         public static async Task WaitForAllExitAsync(this Process parentProcess, CancellationToken cancellationToken = default)
         {
             var exited = parentProcess.HasExited;
@@ -68,8 +22,7 @@ namespace LANCommander.SDK.Extensions
             {
                 await parentProcess.WaitForExitAsync();
 
-                IEnumerable<int> newProcessIds = Process.GetProcesses().Where(p => !existingProcessIds.Contains(p.Id))
-                    .Select(p => p.Id);
+                IEnumerable<int> newProcessIds = Process.GetProcesses().Where(p => !existingProcessIds.Contains(p.Id)).Select(p => p.Id);
 
                 foreach (var processId in newProcessIds)
                 {
@@ -89,7 +42,7 @@ namespace LANCommander.SDK.Extensions
 
                         if (!process.HasExited)
                         {
-
+                            
                             try
                             {
                                 await process.WaitForExitAsync(cancellationToken);
@@ -108,8 +61,7 @@ namespace LANCommander.SDK.Extensions
             }
             catch (OperationCanceledException)
             {
-                var childProcessIds = Process.GetProcesses().Where(p => ProcessHelper.GetParentProcessId(p.Id) == pid)
-                    .Select(p => p.Id);
+                var childProcessIds = Process.GetProcesses().Where(p => ProcessHelper.GetParentProcessId(p.Id) == pid).Select(p => p.Id);
 
                 foreach (var childProcessId in childProcessIds)
                 {
@@ -123,9 +75,7 @@ namespace LANCommander.SDK.Extensions
                                 childProcess.Kill();
                         });
                     }
-                    catch
-                    {
-                    }
+                    catch { }
                 }
 
                 await Task.Run(() =>
@@ -133,10 +83,6 @@ namespace LANCommander.SDK.Extensions
                     if (!parentProcess.HasExited)
                         parentProcess.Kill();
                 });
-            }
-            catch
-            {
-                // Probably an access denied error, checking processes we don't have access to
             }
         }
     }

@@ -64,7 +64,12 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseAntiforgery();
+
+// Apply antiforgery only to non-API routes
+app.MapWhen(context => !context.Request.Path.StartsWithSegments("/api"), appBuilder =>
+{
+    appBuilder.UseAntiforgery();
+});
 
 app.UseSignalR();
 

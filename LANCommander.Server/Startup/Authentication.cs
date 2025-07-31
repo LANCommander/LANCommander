@@ -18,11 +18,6 @@ public static class Authentication
     public static WebApplicationBuilder ConfigureAuthentication(this WebApplicationBuilder builder, Settings settings)
     {
         builder.Services.AddCascadingAuthenticationState();
-        builder.Services.AddAntiforgery(options =>
-        {
-            options.Cookie.SameSite = settings.Authentication.MinimumSameSitePolicy;
-            options.Cookie.SecurePolicy = settings.Authentication.CookieSecurePolicy;
-        });
 
         return builder;
     }

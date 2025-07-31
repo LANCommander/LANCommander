@@ -19,8 +19,6 @@ public static class Endpoints
     {
         Log.Debug("Registering Endpoints");
         
-        app.UseMvcWithDefaultRoute();
-        
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapDownloadEndpoints();

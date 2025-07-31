@@ -90,7 +90,6 @@ export class Uploader {
                 url: this.ChunkRoute,
                 data: formData,
                 headers: {
-                    "RequestVerificationToken": this.GetAntiforgeryToken(),
                     "Content-Type": "multipart/form-data"
                 },
                 onUploadProgress: (progressEvent: AxiosProgressEvent) => {
@@ -146,11 +145,6 @@ export class Uploader {
         } while (Math.round(Math.abs(bytes) * r) / r >= thresh && u < units.length - 1);
 
         return bytes.toFixed(dp) + ' ' + units[u];
-    }
-
-    GetAntiforgeryToken(): string | null {
-        const tokenElement = document.querySelector('meta[name="request-verification-token"]') as HTMLMetaElement;
-        return tokenElement ? tokenElement.content : null;
     }
 
     Clear() {

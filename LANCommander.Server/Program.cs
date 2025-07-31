@@ -1,3 +1,4 @@
+using LANCommander.Server;
 using LANCommander.Server.Services;
 using Serilog;
 using LANCommander.Server.Services.Models;
@@ -60,16 +61,10 @@ app.UseHangfire();
 app.UseStaticFiles();
 
 app.UseCookiePolicy();
-app.UseRouting();
 
+app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Apply antiforgery only to non-API routes
-app.MapWhen(context => !context.Request.Path.StartsWithSegments("/api"), appBuilder =>
-{
-    appBuilder.UseAntiforgery();
-});
 
 app.UseSignalR();
 
@@ -79,6 +74,7 @@ app.MapScalar();
 app.MapEndpoints();
 
 app.MapRazorComponents<App>()
+    .DisableAntiforgery()
     .AddInteractiveServerRenderMode();
 
 app.PrepareDirectories();

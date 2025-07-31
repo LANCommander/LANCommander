@@ -22,7 +22,7 @@ public static class SaveEndpoints
         group.MapGet("/{id:guid}/Download", DownloadSaveByIdAsync);
         group.MapDelete("/{id:guid}", DeleteByIdAsync);
         group.MapGet("/Game/{gameId:guid}", GetSavesByGameAsync);
-        group.MapPost("/Game/{gameId:guid}/Upload", UploadSaveByGameAsync).DisableAntiforgery();
+        group.MapPost("/Game/{gameId:guid}/Upload", UploadSaveByGameAsync);
         group.MapGet("/Game/{gameId:guid}/Latest", GetLatestSaveByGameAsync);
         group.MapGet("/Game/{gameId:guid}/Latest/Download", DownloadLatestSaveByGameAsync);
     }

@@ -14,7 +14,7 @@ public class DeveloperExporter(
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Developers,
+            Type = ImportExportRecordType.Developer,
             Name = record.Name,
         };
     }

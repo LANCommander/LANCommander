@@ -4,6 +4,6 @@ namespace LANCommander.Server.Models;
 
 public class ExportDialogOptions
 {
-    public ExportRecordType RecordType { get; set; }
+    public ImportExportRecordType RecordType { get; set; }
     public Guid RecordId { get; set; }
 }

@@ -16,7 +16,7 @@ public class MediaImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Media,
+            Type = ImportExportRecordType.Media,
             Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Media/{record.Id}")?.Size ?? 0,
         };
@@ -42,6 +42,9 @@ public class MediaImporter(
                 Type = record.Type,
                 UpdatedOn = record.UpdatedOn,
                 StorageLocation = defaultMediaLocation,
+                SourceUrl = record.SourceUrl,
+                MimeType = record.MimeType,
+                Crc32 = record.Crc32,
             };
 
             media = await mediaService.AddAsync(media);
@@ -75,6 +78,8 @@ public class MediaImporter(
             existing.MimeType = record.MimeType;
             existing.CreatedOn = record.CreatedOn;
             existing.UpdatedOn = record.UpdatedOn;
+            existing.Crc32 = record.Crc32;
+            existing.SourceUrl = record.SourceUrl;
 
             existing = await mediaService.UpdateAsync(existing);
             existing = await mediaService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream());

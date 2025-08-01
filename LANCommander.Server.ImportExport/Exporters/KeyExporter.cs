@@ -14,7 +14,7 @@ public class KeyExporter(
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Keys,
+            Type = ImportExportRecordType.Key,
             Name = new String('*', record.Value.Length),
         };
     }

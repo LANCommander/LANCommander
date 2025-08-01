@@ -17,7 +17,7 @@ public class MediaExporter(
         var info = new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Media,
+            Type = ImportExportRecordType.Media,
             Name = String.IsNullOrWhiteSpace(record.Name) ? record.Type.ToString() : $"{record.Type} - {record.Name}",
         };
 

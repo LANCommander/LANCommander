@@ -14,7 +14,7 @@ public class EngineExporter(
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Engine,
+            Type = ImportExportRecordType.Engine,
             Name = record.Name,
         };
     }

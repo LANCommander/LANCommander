@@ -16,7 +16,7 @@ public class PublisherImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Publishers,
+            Type = ImportExportRecordType.Publisher,
             Name = record.Name,
         };
     }

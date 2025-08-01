@@ -14,7 +14,7 @@ public class CollectionExporter(
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Collections,
+            Type = ImportExportRecordType.Collection,
             Name = record.Name,
         };
     }

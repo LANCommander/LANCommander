@@ -15,7 +15,7 @@ public class MultiplayerModeImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.MultiplayerModes,
+            Type = ImportExportRecordType.MultiplayerMode,
             Name = String.IsNullOrWhiteSpace(record.Description) ? record.Type.ToString() : $"{record.Type} - {record.Description}",
         };
     }

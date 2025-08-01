@@ -15,7 +15,7 @@ public class ScriptImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Scripts,
+            Type = ImportExportRecordType.Script,
             Name = record.Name,
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Scripts/{record.Id}")?.Size ?? 0,
         };

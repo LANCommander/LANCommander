@@ -19,6 +19,7 @@
 @use '_page-editor';
 @use '_uploader';
 @use '_mobile';
+@use '_tree';
 
 // Fix Blazor rejoin dialog font color being white, force to black
 // see: https://github.com/dotnet/aspnetcore/issues/57453

@@ -15,7 +15,7 @@ public class KeyImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Keys,
+            Type = ImportExportRecordType.Key,
             Name = new String('*', record.Value.Length),
         };
     }

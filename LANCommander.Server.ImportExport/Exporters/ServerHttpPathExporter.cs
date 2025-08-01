@@ -13,7 +13,7 @@ public class ServerHttpPathExporter(ServerHttpPathService serverHttpPathService)
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.ServerHttpPaths,
+            Type = ImportExportRecordType.ServerHttpPath,
             Name = record.Path,
         };
     }

@@ -16,7 +16,7 @@ public class ScriptExporter(
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Scripts,
+            Type = ImportExportRecordType.Script,
             Name = record.Name,
             Size = record.Contents.Length,
         };

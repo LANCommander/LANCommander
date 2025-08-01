@@ -13,7 +13,7 @@ public class PublisherExporter(CompanyService companyService) : BaseExporter<Com
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Publishers,
+            Type = ImportExportRecordType.Publisher,
             Name = record.Name,
         };
     }

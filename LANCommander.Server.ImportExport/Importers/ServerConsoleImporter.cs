@@ -15,7 +15,7 @@ public class ServerConsoleImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.ServerConsoles,
+            Type = ImportExportRecordType.ServerConsole,
             Name = record.Name,
         };
     }

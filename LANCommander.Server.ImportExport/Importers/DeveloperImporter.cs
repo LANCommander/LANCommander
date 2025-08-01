@@ -16,7 +16,7 @@ public class DeveloperImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Developers,
+            Type = ImportExportRecordType.Developer,
             Name = record.Name,
         };
     }

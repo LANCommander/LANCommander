@@ -16,7 +16,7 @@ public class PlatformImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Platforms,
+            Type = ImportExportRecordType.Platform,
             Name = record.Name,
         };
     }

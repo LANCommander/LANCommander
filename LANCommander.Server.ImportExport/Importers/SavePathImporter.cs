@@ -15,7 +15,7 @@ public class SavePathImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.SavePaths,
+            Type = ImportExportRecordType.SavePath,
             Name = record.Path,
         };
     }

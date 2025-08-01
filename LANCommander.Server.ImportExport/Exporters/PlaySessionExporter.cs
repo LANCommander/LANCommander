@@ -13,7 +13,7 @@ public class PlaySessionExporter(PlaySessionService playSessionService) : BaseEx
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.PlaySessions,
+            Type = ImportExportRecordType.PlaySession,
             Name = $"{record.User} - {record.Start}-{record.End}",
         };
     }

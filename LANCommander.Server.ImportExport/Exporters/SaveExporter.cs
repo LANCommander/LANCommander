@@ -18,7 +18,7 @@ public class SaveExporter(
         var info = new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Saves,
+            Type = ImportExportRecordType.Save,
             Name = $"{record.User} - {record.CreatedOn}",
         };
 

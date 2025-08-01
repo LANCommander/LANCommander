@@ -16,7 +16,7 @@ public class CollectionImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Collections,
+            Type = ImportExportRecordType.Collection,
             Name = record.Name,
         };
     }

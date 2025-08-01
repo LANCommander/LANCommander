@@ -16,7 +16,7 @@ public class ServerHttpPathImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.ServerHttpPaths,
+            Type = ImportExportRecordType.ServerHttpPath,
             Name = record.Path,
         };
     }

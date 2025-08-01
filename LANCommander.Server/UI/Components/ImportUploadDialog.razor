@@ -11,7 +11,7 @@
 @inject IMessageService MessageService
 @inject ILogger<ImportUploadDialog> Logger
 
-@if (!Uploaded)
+@if (_stage == ImportStage.Upload)
 {
     <Flex Vertical Gap="FlexGap.Small">
         <ChunkUploader
@@ -47,56 +47,57 @@
         <Button OnClick="Cancel">Cancel</Button>
     </Flex>
 }
-else
+else if (_stage == ImportStage.RecordSelection)
 {
-    <Collapse>
-        @foreach (var group in ImportItems.GroupBy(i => i.Flag))
+    <Tree TItem="string"
+        Checkable
+        Multiple
+        CheckOnClickNode="false"
+        @bind-CheckedKeys="_selectedKeys">
+        @foreach (var group in ImportItems.GroupBy(i => i.Type))
         {
-            <Panel Key="@group.Key.ToString()">
-                <HeaderTemplate>
-                    <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Small">
-                        <Checkbox @bind-Checked="SelectedFlags[group.Key]" />
-                        <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                            <Text>@group.Key (@(group.Count()))</Text>
+            <TreeNode Title="@($"{group.Key} ({group.Count()})")">
+                @foreach (var item in group)
+                {
+                    <TreeNode Key="@item.Id.ToString()">
+                        <TitleTemplate>
+                            <GridRow>
+                                <GridCol Flex=@("auto")>
+                                    @item.Name
+                                </GridCol>
 
-                            @{
-                                var size = group.Sum(i => i.Size);
-
-                                if (size > 0)
+                                @if (item.Size > 0)
                                 {
-                                    <ByteSize Value="size" />
+                                    <GridCol Flex=@("none")>
+                                        <ByteSize Value="@item.Size" />
+                                    </GridCol>
                                 }
-                            }
-                        </Flex>
-                    </Flex>
-                </HeaderTemplate>
-                <ChildContent>
-                    <AntList DataSource="group">
-                        <ChildContent Context="item">
-                            <ListItem>
-                                <Flex Direction="FlexDirection.Horizontal" Justify="FlexJustify.SpaceBetween">
-                                    <Text>@item.Name</Text>
-
-                                    @if (item.Size > 0)
-                                    {
-                                        <ByteSize Value="item.Size"/>
-                                    }
-                                </Flex>
-                            </ListItem>
-                        </ChildContent>
-                    </AntList>
-                </ChildContent>
-            </Panel>
+                            </GridRow>
+                        </TitleTemplate>
+                    </TreeNode>
+                }
+            </TreeNode>
         }
-    </Collapse>
+    </Tree>
 
     <Flex Justify="FlexJustify.End" Gap="FlexGap.Small" Style="margin-top: 16px;">
         <Button OnClick="Import" Type="@ButtonType.Primary">Import</Button>
         <Button OnClick="Cancel">Cancel</Button>
     </Flex>
 }
+else if (_stage == ImportStage.Importing)
+{
+    <Progress Type="ProgressType.Circle" Percent="_progress" />
+}
 
 @code {
+    enum ImportStage
+    {
+        Upload,
+        RecordSelection,
+        Importing
+    };
+
     IBrowserFile File;
     ChunkUploader ChunkUploader;
     StorageLocation StorageLocation = new();
@@ -106,15 +107,18 @@ else
     
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-    bool Uploaded = false;
     bool IsValid = false;
     string Filename;
     string Status;
 
-    Dictionary<ImportRecordFlags, bool> SelectedFlags = Enum.GetValues<ImportRecordFlags>()
-        .ToDictionary(
-            f => f,
-            _ => true);
+    ImportStage _stage = ImportStage.Upload;
+    string[] _selectedKeys;
+    int _progress {
+        get
+        {
+            return ImportContext.Processed / ImportContext.Total;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -149,13 +153,16 @@ else
 
     async Task Import()
     {
-        var flags = SelectedFlags
-            .Where(f => f.Value)
-            .Aggregate(ImportRecordFlags.None, (cur, f) => cur | f.Key);
+        _stage = ImportStage.Importing;
+
+        var selectedGuids = _selectedKeys
+            .Select(k => Guid.TryParse(k, out var id) ? (Guid?)id : null)
+            .Where(id => id.HasValue)
+            .Select(g => g!.Value);
         
         try
         {
-            await ImportContext.PrepareImportQueueAsync(flags);
+            await ImportContext.PrepareImportQueueAsync(selectedGuids, StorageLocation.Id);
             await ImportContext.ImportQueueAsync();
             
             MessageService.Success("Game successfully imported!");
@@ -209,8 +216,10 @@ else
                 var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey.ToString());
 
                 ImportItems = await ImportContext.InitializeImportAsync(archivePath);
+
+                _selectedKeys = ImportItems.Select(i => i.Id.ToString()).ToArray();
                 
-                Uploaded = true;
+                _stage = ImportStage.RecordSelection;
 
                 await InvokeAsync(StateHasChanged);
             }
@@ -250,7 +259,7 @@ else
         {
             ImportItems = await ImportContext.InitializeImportAsync(path);
             
-            Uploaded = true;
+            _stage = ImportStage.RecordSelection;
 
             await InvokeAsync(StateHasChanged);
         }

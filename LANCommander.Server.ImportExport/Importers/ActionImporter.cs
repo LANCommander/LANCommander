@@ -12,7 +12,7 @@ public class ActionImporter(
     ActionService actionService) : BaseImporter<Action, Data.Models.Action>
 {
     public override async Task<ImportItemInfo> GetImportInfoAsync(Action record) =>
-        await Task.Run(() => new ImportItemInfo { Name = record.Name, Flag = ImportRecordFlags.Actions });
+        await Task.Run(() => new ImportItemInfo { Name = record.Name, Type = ImportExportRecordType.Action });
 
     public override bool CanImport(Action record) => ImportContext.DataRecord is Data.Models.Game;
     

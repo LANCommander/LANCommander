@@ -16,7 +16,7 @@ public class CustomFieldImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.CustomFields,
+            Type = ImportExportRecordType.CustomField,
             Name = record.Name,
         };
     }

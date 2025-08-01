@@ -13,7 +13,7 @@ public class ServerConsoleExporter(ServerConsoleService serverConsoleService) : 
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.ServerConsoles,
+            Type = ImportExportRecordType.ServerConsole,
             Name = record.Name,
         };
     }

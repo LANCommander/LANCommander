@@ -278,7 +278,7 @@
         var options = new ExportDialogOptions()
         {
             RecordId = Id,
-            RecordType = ExportRecordType.Game
+            RecordType = ImportExportRecordType.Game
         };
 
         var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);

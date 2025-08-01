@@ -16,7 +16,7 @@ public class TagImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Tags,
+            Type = ImportExportRecordType.Tag,
             Name = record.Name,
         };
     }

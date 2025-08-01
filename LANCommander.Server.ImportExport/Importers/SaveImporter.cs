@@ -23,7 +23,7 @@ public class SaveImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Saves,
+            Type = ImportExportRecordType.Save,
             Name = $"{record.User} - {record.CreatedOn}",
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Saves/{record.Id}")?.Size ?? 0,
         };

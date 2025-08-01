@@ -13,7 +13,7 @@ public class PlatformExporter(PlatformService platformService) : BaseExporter<Pl
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Platforms,
+            Type = ImportExportRecordType.Platform,
             Name = record.Name,
         };
     }

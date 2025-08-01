@@ -16,7 +16,7 @@ public class EngineImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Engine,
+            Type = ImportExportRecordType.Engine,
             Name = record.Name,
         };
     }

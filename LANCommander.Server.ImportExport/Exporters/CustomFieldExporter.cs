@@ -14,7 +14,7 @@ public class CustomFieldExporter(
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.CustomFields,
+            Type = ImportExportRecordType.CustomField,
             Name = record.Name,
         };
     }

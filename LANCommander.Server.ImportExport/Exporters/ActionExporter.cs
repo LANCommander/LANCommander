@@ -9,7 +9,7 @@ public class ActionExporter(
     ActionService actionService) : BaseExporter<Action, Data.Models.Action>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Action record) =>
-        await Task.Run(() => new ExportItemInfo { Id = record.Id, Name = record.Name, Flag = ExportRecordFlags.Actions });
+        await Task.Run(() => new ExportItemInfo { Id = record.Id, Name = record.Name, Type = ImportExportRecordType.Action });
     
     public override bool CanExport(Action record) => ExportContext.DataRecord is Data.Models.Game;
     

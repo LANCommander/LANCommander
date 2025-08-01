@@ -16,7 +16,7 @@ public class PlaySessionImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.PlaySessions,
+            Type = ImportExportRecordType.PlaySession,
             Name = $"{record.User} - {record.Start}-{record.End}",
         };
     }

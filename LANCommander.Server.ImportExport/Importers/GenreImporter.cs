@@ -16,7 +16,7 @@ public class GenreImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Genres,
+            Type = ImportExportRecordType.Genre,
             Name = record.Name,
         };
     }

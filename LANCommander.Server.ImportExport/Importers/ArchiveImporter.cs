@@ -20,7 +20,7 @@ public class ArchiveImporter(
     {
         return new ImportItemInfo
         {
-            Flag = ImportRecordFlags.Archives,
+            Type = ImportExportRecordType.Archive,
             Name = record.Version,
             Size = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == $"Archives/{record.Id}")?.Size ?? 0,
         };
@@ -46,6 +46,9 @@ public class ArchiveImporter(
                 StorageLocation = ImportContext.ArchiveStorageLocation,
                 Version = record.Version,
                 Changelog = record.Changelog,
+                ObjectKey = record.ObjectKey,
+                CompressedSize = record.CompressedSize,
+                UncompressedSize = record.UncompressedSize,
             };
 
             if (ImportContext.DataRecord is Data.Models.Game game)

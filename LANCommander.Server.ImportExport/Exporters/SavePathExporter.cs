@@ -13,7 +13,7 @@ public class SavePathExporter(SavePathService savePathService) : BaseExporter<Sa
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.SavePaths,
+            Type = ImportExportRecordType.SavePath,
             Name = record.Path,
         };
     }

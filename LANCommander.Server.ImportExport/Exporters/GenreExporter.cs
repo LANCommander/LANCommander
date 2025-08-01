@@ -14,7 +14,7 @@ public class GenreExporter(
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Genres,
+            Type = ImportExportRecordType.Genre,
             Name = record.Name,
         };
     }

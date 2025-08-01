@@ -13,7 +13,7 @@ public class TagExporter(TagService tagService) : BaseExporter<Tag, Data.Models.
         return new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Tags,
+            Type = ImportExportRecordType.Tag,
             Name = record.Name,
         };
     }

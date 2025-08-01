@@ -23,7 +23,7 @@ public class ArchiveExporter(
         var info = new ExportItemInfo
         {
             Id = record.Id,
-            Flag = ExportRecordFlags.Archives,
+            Type = ImportExportRecordType.Archive,
             Name = record.Version,
         };
 

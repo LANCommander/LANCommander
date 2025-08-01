@@ -20,7 +20,7 @@ namespace LANCommander.Server.Controllers
             ExportContextFactory = exportContextFactory;
         }
 
-        public async Task ExportAsync(Guid id, ImportRecordFlags flags)
+        public async Task ExportAsync(Guid id)
         {
             using (var context = ExportContextFactory.Create())
             {

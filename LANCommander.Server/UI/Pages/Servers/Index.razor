@@ -86,7 +86,6 @@
 
     int Total;
 
-    ImportUploadDialog ImportUploadDialog;
     IEnumerable<Server> SelectedServers;
 
     protected override async Task OnInitializedAsync()
@@ -152,27 +151,18 @@
     {
         var options = new ImportDialogOptions
         {
-            Hint = "Only LCX files are supported for importing servers"
+            Hint = "Only LCX files are supported for importing games"
         };
 
         var modalOptions = new ModalOptions
         {
-            Title = "Import Server",
+            Title = "Import Game",
             DestroyOnClose = true,
             MaskClosable = false,
-            OnOk = (e) =>
-            {
-                Table.Reload();
-                return Task.CompletedTask;
-            },
-            OnCancel = (e) =>
-            {
-                Table.Reload();
-                return Task.CompletedTask;
-            },
-            Footer = null
+            Footer = null,
         };
 
-        ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+        var modalRef = ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+        modalRef.OnOk = modalRef.OnCancel;
     }
 }

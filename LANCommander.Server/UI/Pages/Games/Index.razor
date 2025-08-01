@@ -25,7 +25,7 @@
     <RightToolbar>
         @if (Selected != null && Selected.Count() > 0)
         {
-            <Button OnClick="() => AddToCollection()" Type="@ButtonType.Primary">Add to Collection</Button>
+            <Button OnClick="() => AddToCollection()" Type="@ButtonType.Default">Add to Collection</Button>
         }
         <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>
         <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Game</Button>
@@ -141,7 +141,6 @@
     int Total;
 
     DataTable<Game> Table;
-    ImportUploadDialog ImportUploadDialog;
 
     string GetIcon(Game game)
     {

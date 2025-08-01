@@ -2,6 +2,7 @@
 @using LANCommander.Server.UI.Pages.Redistributables.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject RedistributableService RedistributableService
+@inject ModalService ModalService
 @inject NavigationManager NavigationManager
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
@@ -18,6 +19,7 @@
     Searchable
     SearchProperty="r => r.Name">
     <RightToolbar>
+        <Button Type="@ButtonType.Default" OnClick="OpenImportDialog">Import</Button>
         <Button OnClick="() => Add()" Type="@ButtonType.Primary">Add Redistributable</Button>
     </RightToolbar>
     <Columns>
@@ -52,15 +54,12 @@
     </PaginationTemplate>
 </DataTable>
 
-<ImportUploadDialog @ref="ImportUploadDialog" />
-
  @code {
     bool Loading = true;
 
     int Total;
 
     DataTable<Redistributable> Table;
-    ImportUploadDialog ImportUploadDialog;
 
     protected override async Task OnInitializedAsync()
     {
@@ -91,6 +90,25 @@
         }
 
         await Reload();
+    }
+
+    async Task OpenImportDialog()
+    {
+        var options = new ImportDialogOptions
+        {
+            Hint = "Only LCX files are supported for importing redistributables"
+        };
+
+        var modalOptions = new ModalOptions
+        {
+            Title = "Import Redistributable",
+            DestroyOnClose = true,
+            MaskClosable = false,
+            Footer = null,
+        };
+
+        var modalRef = ModalService.CreateModal<ImportUploadDialog, ImportDialogOptions>(modalOptions, options);
+        modalRef.OnOk = modalRef.OnCancel = Reload;
     }
 
     async Task Reload()

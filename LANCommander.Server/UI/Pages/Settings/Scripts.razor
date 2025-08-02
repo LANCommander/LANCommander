@@ -1,9 +1,45 @@
 ﻿@page "/Settings/Scripts"
 @using LANCommander.SDK.Enums
+@inject MessageService MessageService
+@inject ILogger<Scripts> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Scripts" />
 
 <PageContent>
-    <ScriptEditor AllowedTypes="new [] { ScriptType.UserLogin, ScriptType.UserRegistration }" />
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="Automatically Repackage">
+            <Switch @bind-Checked="context.Scripts.EnableAutomaticRepackaging" />
+        </FormItem>
+        <FormItem Label="Repackage Every">
+            <Flex Direction="FlexDirection.Horizontal">
+                <AntDesign.InputNumber @bind-Value="context.Scripts.RepackageEvery" Min="1" DefaultValue="25" />
+                <Text>Hours</Text>
+            </Flex>
+        </FormItem>
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+    
+    <ScriptEditor AllowedTypes="new[] { ScriptType.UserLogin, ScriptType.UserRegistration }"/>
 </PageContent>
+
+@code {
+    Settings Settings = SettingService.GetSettings();
+
+    void Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

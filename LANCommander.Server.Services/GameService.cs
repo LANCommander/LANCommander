@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.IO.Compression;
+using AutoMapper;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
@@ -170,6 +171,47 @@ namespace LANCommander.Server.Services
             }
 
             return await GetCustomFieldAsync(id, name);
+        }
+
+        public async Task PackageAsync(Guid id)
+        {
+            var game = await AsNoTracking()
+                .AsSplitQuery()
+                .Include(g => g.Archives)
+                .Include(g => g.CustomFields)
+                .Include(g => g.Scripts)
+                .GetAsync(id);
+
+            var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
+            var storageLocationId = latestArchive?.StorageLocationId;
+
+            if (game.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
+            {
+                var client = new SDK.Client(_settings.Beacon.Address, "", logger);
+                
+                foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
+                {
+                    var package = await client.Scripts.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));
+                    
+                    var archive = new Archive
+                    {
+                        Version = package.Version,
+                        GameId = game.Id,
+                        ObjectKey = Guid.NewGuid().ToString(),
+                        LastVersion = latestArchive,
+                        StorageLocationId = storageLocationId.GetValueOrDefault(),
+                    };
+
+                    archive = await archiveService.AddAsync(archive);
+
+                    if (Directory.Exists(package.Path))
+                    {
+                        var destination = await archiveService.GetArchiveFileLocationAsync(archive);
+                        
+                        ZipFile.CreateFromDirectory(package.Path, destination);
+                    }
+                }
+            }
         }
     }
 }

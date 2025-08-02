@@ -29,6 +29,11 @@
     </TitleTemplate>
     <TitleExtraTemplate>
         <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
+            @if (context != null && (context.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false))
+            {
+                <Button OnClick="Package" Loading="Packaging">Package</Button>
+            }
+            
             @if (context != null && context.Id != Guid.Empty)
             {
                 <Button OnClick="OpenExportDialog">Export</Button>
@@ -152,6 +157,7 @@
 
     bool Loaded;
     bool Success;
+    bool Packaging;
 
     IEnumerable<Engine> Engines = new List<Engine>();
     IEnumerable<Company> Companies = new List<Company>();
@@ -284,5 +290,14 @@
         };
 
         var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
+    }
+
+    private async Task Package()
+    {
+        Packaging = true;
+
+        await GameService.PackageAsync(Id);
+
+        Packaging = false;
     }
 }

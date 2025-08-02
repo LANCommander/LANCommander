@@ -31,5 +31,7 @@ namespace LANCommander.SDK.Enums
         UserLogin,
         [Display(Name = "Application Start")]
         ApplicationStart,
+        [Display(Name = "Package")]
+        Package,
     }
 }

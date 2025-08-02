@@ -83,6 +83,7 @@ namespace LANCommander.Server.Services.Models
         public LauncherSettings Launcher { get; set; } = new LauncherSettings();
         public LogSettings Logs { get; set; } = new LogSettings();
         public LibrarySettings Library { get; set; } = new LibrarySettings();
+        public ScriptSettings Scripts { get; set; } = new ScriptSettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
         public DriveInfo[] GetDrives()
@@ -272,5 +273,11 @@ namespace LANCommander.Server.Services.Models
     public class LibrarySettings
     {
         public bool EnableUserLibraries { get; set; } = true;
+    }
+
+    public class ScriptSettings
+    {
+        public bool EnableAutomaticRepackaging { get; set; } = false;
+        public int RepackageEvery { get; set; } = 24;
     }
 }

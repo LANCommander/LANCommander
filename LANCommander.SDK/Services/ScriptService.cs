@@ -1132,6 +1132,42 @@ namespace LANCommander.SDK.Services
 
             return result;
         }
+
+        public async Task<Package> RunPackageScriptAsync(Script packageScript, Game game)
+        {
+            try
+            {
+                using (var op = Logger.BeginOperation("Executing game package script"))
+                {
+                    var script = new PowerShellScript(Enums.ScriptType.Package);
+
+                    script.AddVariable("Game", game);
+
+                    script.UseInline(packageScript.Contents);
+
+                    try
+                    {
+                        op
+                            .Enrich("GameId", game.Id)
+                            .Enrich("GameTitle", game.Title)
+                            .Enrich("ScriptId", packageScript.Id)
+                            .Enrich("ScriptName", packageScript.Name);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger?.LogError(ex, "Could not enrich logs");
+                    }
+
+                    return await script.ExecuteAsync<Package>();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not execute game package script");
+            }
+
+            return null;
+        }
         #endregion
     }
 }

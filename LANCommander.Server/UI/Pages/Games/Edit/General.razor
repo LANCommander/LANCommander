@@ -265,9 +265,11 @@
 
     private async Task OpenExportDialog()
     {
+        var game = await GameService.GetAsync(Id);
+        
         var modalOptions = new ModalOptions()
         {
-            Title = "Export",
+            Title = $"Export {game.Title}",
             Maximizable = false,
             DefaultMaximized = false,
             Closable = true,

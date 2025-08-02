@@ -19,26 +19,44 @@
         @bind-CheckedKeys="_selectedKeys">
         @foreach (var group in ExportItems.GroupBy(i => i.Type))
         {
-            <TreeNode Title="@($"{group.Key} ({group.Count()})")">
-                @foreach (var item in group)
-                {
-                    <TreeNode Key="@item.Id.ToString()">
-                        <TitleTemplate>
-                            <GridRow>
-                                <GridCol Flex=@("auto")>
-                                    @item.Name
-                                </GridCol>
-
-                                @if (item.Size > 0)
-                                {
-                                    <GridCol Flex=@("none")>
-                                        <ByteSize Value="@item.Size" />
+            var size = group.Sum(i => i.Size);
+            
+            <TreeNode Title="@($"{group.Key.GetDisplayName()} ({group.Count()})")">
+                <TitleTemplate>
+                    <GridRow>
+                        <GridCol Flex=@("auto")>
+                            @group.Key.GetDisplayName() (@group.Count())
+                        </GridCol>
+                        
+                        @if (size > 0)
+                        {
+                            <GridCol Flex=@("none")>
+                                <ByteSize Value="@size" />
+                            </GridCol>
+                        }
+                    </GridRow>
+                </TitleTemplate>
+                <ChildContent>
+                    @foreach (var item in group)
+                    {
+                        <TreeNode Key="@item.Id.ToString()">
+                            <TitleTemplate>
+                                <GridRow>
+                                    <GridCol Flex=@("auto")>
+                                        @item.Name
                                     </GridCol>
-                                }
-                            </GridRow>
-                        </TitleTemplate>
-                    </TreeNode>
-                }
+
+                                    @if (item.Size > 0)
+                                    {
+                                        <GridCol Flex=@("none")>
+                                            <ByteSize Value="@item.Size"/>
+                                        </GridCol>
+                                    }
+                                </GridRow>
+                            </TitleTemplate>
+                        </TreeNode>
+                    }
+                </ChildContent>
             </TreeNode>
         }
     </Tree>
@@ -69,6 +87,8 @@
 
         if (Options != null && Options.RecordId != Guid.Empty)
             ExportItems = await ExportContext.InitializeExportAsync(Options.RecordId, Options.RecordType);
+
+        _selectedKeys = ExportItems.Select(i => i.Id.ToString()).ToArray();
 
         _loading = false;
     }

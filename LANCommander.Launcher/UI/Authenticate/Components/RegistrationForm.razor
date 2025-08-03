@@ -45,20 +45,26 @@
 
     RegistrationRequest Model = new();
     bool Loading = false;
+    private string? PreviousServerAddress;
 
     Models.Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnParametersSetAsync()
     {
-        await Client.ChangeServerAddressAsync(ServerAddress);
-        ClearErrors();
-    }
+        if (ServerAddress != PreviousServerAddress)
+            await Client.ChangeServerAddressAsync(ServerAddress);
 
+        PreviousServerAddress = ServerAddress;
+
+		ClearErrors();
+    
+    }
+    
     protected void ClearErrors()
     {
-        Errors = [];
-        StateHasChanged();
-    }
+    	Errors = [];
+    	StateHasChanged();
+	}
 
     async Task OnFinish(EditContext editContext)
     {

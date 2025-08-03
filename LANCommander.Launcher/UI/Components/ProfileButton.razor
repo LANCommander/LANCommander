@@ -16,12 +16,16 @@
                 Settings
             </MenuItem>
 
-            @if (!ConnectionState.OfflineModeEnabled)
+            @if (!Settings.Authentication.OfflineMode)
             {
-                <MenuItem OnClick="Logout">
-                    Logout
+                <MenuItem OnClick="SwitchToOfflineMode">
+                    Switch to offline mode
                 </MenuItem>
             }
+
+            <MenuItem OnClick="Logout">
+                Logout
+            </MenuItem>
         </Menu>
     </Overlay>
 
@@ -39,7 +43,7 @@
 
 @code {
     [CascadingParameter] public ConnectionState ConnectionState { get; set; }
-    Models.Settings Settings = null;
+    Models.Settings Settings = SettingService.GetSettings();
 
     User User;
     Guid AvatarId = Guid.Empty;
@@ -54,8 +58,16 @@
             AvatarId = User?.Avatar?.Id ?? Guid.Empty;
             Alias = String.IsNullOrWhiteSpace(User?.Alias) ? User?.UserName ?? Settings.DEFAULT_GAME_USERNAME : User.Alias;
         };
-        
-        await ProfileService.DownloadProfileInfoAsync();
+
+        if (ConnectionState.OfflineModeEnabled)
+        {
+            string userName = AuthenticationService.GetCurrentUserName();
+            Alias = string.IsNullOrEmpty(userName) ? Alias : userName;
+        }
+        else
+        {
+            await ProfileService.DownloadProfileInfoAsync();
+        }
     }
     
 
@@ -88,5 +100,12 @@
         await AuthenticationService.Logout();
 
         NavigationManager.NavigateTo("/Authenticate");
+    }
+
+    void SwitchToOfflineMode()
+    {
+        AuthenticationService.SetOfflineMode(true);
+
+        NavigationManager.NavigateTo("/", forceLoad: true);
     }
 }

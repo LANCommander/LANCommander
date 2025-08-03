@@ -93,7 +93,7 @@ namespace LANCommander.SDK
 
             try
             {
-                ChangeServerAddressAsync(baseUrl).Wait();
+                ConfigureServerAddress(baseUrl);
             }
             catch
             {
@@ -104,7 +104,7 @@ namespace LANCommander.SDK
         {
             try
             {
-                ChangeServerAddressAsync(baseUrl).Wait();
+                ConfigureServerAddress(baseUrl);
             }
             catch
             {
@@ -160,11 +160,51 @@ namespace LANCommander.SDK
             BaseCmdlet.Client = this;
         }
 
+        public void ConfigureServerAddress(string baseUrl)
+        {
+            if (!String.IsNullOrWhiteSpace(baseUrl))
+            {
+                var urisToTry = baseUrl.SuggestValidUris();
+
+                foreach (var uri in urisToTry)
+                {
+                    Logger?.LogInformation("Attempting to configure server at {ServerAddress}", uri.ToString());
+
+                    try
+                    {
+                        ApiClient = new RestClient(uri);
+                        BaseUrl = uri;
+
+                        // Successful! Found our service
+                        Logger?.LogInformation("Using server address {ServerAddress}", uri.ToString());
+
+                        return;
+                    }
+                    catch
+                    {
+                        Logger?.LogError("Could not configure server at {ServerAddress}", uri.ToString());
+                    }
+                }
+
+                throw new Exception("Could not configure a server at that address");
+            }
+        }
+
         public async Task ChangeServerAddressAsync(string baseUrl)
         {
             if (!String.IsNullOrWhiteSpace(baseUrl))
             {
                 var urisToTry = baseUrl.SuggestValidUris();
+
+                // if url is fully qualified, limit specific urls
+                if (Uri.TryCreate(baseUrl, UriKind.RelativeOrAbsolute, out var baseUri))
+                {
+                    var hasPort = baseUrl.Replace(Uri.SchemeDelimiter, "").Contains(':');
+                    if (hasPort)
+                    {
+                        urisToTry = urisToTry.Take(baseUri.IsAbsoluteUri ? 1 : 2);
+                    }
+                }
 
                 foreach (var uri in urisToTry)
                 {
@@ -192,6 +232,11 @@ namespace LANCommander.SDK
 
                 throw new Exception("Could not find a server at that address");
             }
+        }
+
+        public bool IsConfigured()
+        {
+            return ApiClient != null && !string.IsNullOrWhiteSpace(BaseUrl?.ToString());
         }
 
         public bool IsConnected()
@@ -791,8 +836,10 @@ namespace LANCommander.SDK
             {
                 var guid = Guid.NewGuid().ToString();
                 var request = new RestRequest("/api/Ping", Method.Head);
-                
                 request.AddHeader("X-Ping", guid);
+
+                // specify timeout for ping response
+                request.Timeout = TimeSpan.FromSeconds(4);
 
                 var response = await ApiClient.ExecuteAsync(request);
 
@@ -822,6 +869,9 @@ namespace LANCommander.SDK
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {Token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            // specify timeout for auth response
+            request.Timeout = TimeSpan.FromSeconds(8);
 
             if (!ignoreVersion && !IgnoreVersion)
                 request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };
@@ -873,6 +923,9 @@ namespace LANCommander.SDK
             var request = new RestRequest("/api/Auth/Validate")
                 .AddHeader("Authorization", $"Bearer {token.AccessToken}")
                 .AddHeader("X-API-Version", GetCurrentVersion().ToString());
+
+            // specify timeout for auth response
+            request.Timeout = TimeSpan.FromSeconds(8);
 
             if (!ignoreVersion && !IgnoreVersion)
                 request.Interceptors = new List<Interceptor>() { new VersionInterceptor() };

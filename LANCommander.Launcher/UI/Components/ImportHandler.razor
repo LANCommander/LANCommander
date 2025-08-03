@@ -1,0 +1,126 @@
+@using LANCommander.Launcher.Models
+@implements IDisposable
+@inject ImportManagerService ImportManagerService
+@inject ImportService ImportService
+@inject IMessageService MessageService
+@inject ILogger<ImportHandler> Logger
+
+@code 
+{
+    [Parameter] public EventCallback<ImportProgressEventArgs> Progress { get; set; }
+
+    public bool Importing;
+    int ImportStatusIndex = 0;
+    int ImportStatusTotal = 0;
+
+    protected override void OnInitialized()
+    {
+        ImportManagerService.OnImportRequested += Import;
+    }
+
+    public void Dispose()
+    {
+        if (ImportManagerService != null)
+        {
+            ImportManagerService.OnImportRequested -= Import;
+        }
+
+        if (ImportService != null)
+        {
+            // Clear any existing handlers
+            ImportService.OnImportComplete -= OnImportCompleteHandler;
+            ImportService.OnImportFailed -= OnImportFailedHandler;
+            ImportService.OnImportUpdated -= OnImportUpdatedHandler;
+        }
+    }
+
+    public async Task Import()
+    {
+        if (!Importing)
+        {
+            Logger?.LogInformation("Starting import process");
+
+            // Clear any existing handlers
+            ImportService.OnImportComplete -= OnImportCompleteHandler;
+            ImportService.OnImportFailed -= OnImportFailedHandler;
+            ImportService.OnImportUpdated -= OnImportUpdatedHandler;
+
+            // Add our handlers
+            ImportService.OnImportComplete += OnImportCompleteHandler;
+            ImportService.OnImportFailed += OnImportFailedHandler;
+            ImportService.OnImportUpdated += OnImportUpdatedHandler;
+
+            // Now start the import process
+            Importing = true;
+            ImportStatusIndex = 0;
+            ImportStatusTotal = 0;
+            await NotifyProgress(ImportProgressState.Importing);
+
+            await InvokeAsync(StateHasChanged);
+            MessageService.Info("Import Started", 2.5);
+
+            Logger?.LogInformation("Starting import");
+            await ImportService.ImportLibraryAsync(); // Call directly instead of using JS
+        }
+    }
+
+    private async Task NotifyProgress(ImportProgressState state)
+    {
+        if (!Progress.HasDelegate)
+            return;
+
+        await Progress.InvokeAsync(new ImportProgressEventArgs
+        {
+            State = state,
+            Index = ImportStatusIndex,
+            Total = ImportStatusTotal,
+        });
+    }
+
+    private async Task OnImportCompleteHandler()
+    {
+        Logger?.LogInformation("Import Complete handler called");
+        Importing = false;
+        ImportStatusIndex = 0;
+        ImportStatusTotal = 0;
+
+        await NotifyProgress(ImportProgressState.Imported);
+        MessageService.Success("Import Complete", 3);
+    }
+
+    private async Task OnImportFailedHandler(Exception ex)
+    {
+        Importing = false;
+        ImportStatusIndex = 0;
+        ImportStatusTotal = 0;
+
+        await NotifyProgress(ImportProgressState.Failed);
+        MessageService.Error("Import Failed", 3);
+    }
+
+    private async Task OnImportUpdatedHandler(ImportStatusUpdate status)
+    {
+        Logger?.LogInformation("Import Update handler called: {Index}/{Total}", status.Index, status.Total);
+        ImportStatusIndex = status.Index;
+        ImportStatusTotal = status.Total;
+
+        await NotifyProgress(ImportProgressState.Updated);
+    }
+
+    public enum ImportProgressState
+    {
+        None = 0,
+        Importing,
+        Updated,
+        Imported,
+        Failed,
+    }
+
+    public class ImportProgressEventArgs
+    {
+        public int Index { get; set; } = 0;
+        public int Total { get; set; } = 0;
+        public ImportProgressState State { get; set; } = ImportProgressState.None;
+        public bool IsActive => State > ImportProgressState.None && State < ImportProgressState.Imported;
+    }
+}

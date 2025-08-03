@@ -12,10 +12,21 @@
 </PageHeader>
 
 <Form Model="Model" OnFinish="() => SelectServer(ServerAddress)">
+
+    @if (OfflineModeAvailable)
+    {
+        <Alert Message="The server appears to be offline. Please try reconnecting or use offline mode." Type="AlertType.Warning" ShowIcon="true" Style="margin-bottom: 16px;" />
+    }
+
     <FormItem>
         <Flex Gap="FlexGap.Small">
             <Input @bind-Value="ServerAddress" Placeholder="Server Address" AutoFocus Disabled="Connecting" />
             <Button Type="ButtonType.Primary" HtmlType="submit" Disabled="Connecting" Loading="Connecting">Connect</Button>
+
+            @if (OfflineModeAvailable)
+            {
+                <Button OnClick="() => OfflineMode()">Offline</Button>
+            }
         </Flex>
     </FormItem>
 </Form>
@@ -33,7 +44,16 @@
         <Flex Justify="FlexJustify.Center" Class="load-more">
             @if (BeaconActive)
             {
-                <Button Type="ButtonType.Primary" Loading="true" Disabled>Scanning</Button>
+                <Dropdown Trigger="@(new [] { Trigger.Hover })">
+                    <Overlay>
+                        <Menu>
+                            <MenuItem Key="Cancel" OnClick="CancelBeacon">Cancel</MenuItem>
+                        </Menu>
+                    </Overlay>
+                    <ChildContent>
+                        <Button Type="ButtonType.Primary" Loading="true" Disabled>Scanning</Button>
+                    </ChildContent>
+                </Dropdown>
             }
             else
             {
@@ -46,29 +66,46 @@
 @code {
     [Parameter] public EventCallback<string> OnSelected { get; set; }
     [Parameter] public bool Connecting { get; set; } = false;
-    
+    bool IsInitializing = false;
+
     bool BeaconActive = false;
     bool OfflineModeAvailable = false;
 
     string ServerAddress = String.Empty;
-    
+
     AuthRequest Model = new();
     List<DiscoveredServer> DiscoveredServers = new();
+    private CancellationTokenSource DiscoveryToken = new CancellationTokenSource();
+
     Models.Settings Settings = SettingService.GetSettings();
 
     protected override async Task OnInitializedAsync()
     {
+        IsInitializing = true;
+
+        if (Client.IsConfigured())
+        {
+            ServerAddress = Client.GetServerAddress() ?? string.Empty;
+        }
+
+        Connecting = true;
         OfflineModeAvailable = await AuthenticationService.OfflineModeAvailableAsync();
-        
+
         Client.Beacon.OnBeaconResponse += OnBeaconResponse;
-        
-        ActivateBeacon();
+
+        if (!OfflineModeAvailable)
+        {
+            ActivateBeacon();
+        }
+
+        Connecting = false;
+        IsInitializing = false;
     }
 
     private void OnBeaconResponse(object sender, BeaconResponseArgs e)
     {
         var discoveredServer = new DiscoveredServer(e.Message, e.EndPoint);
-        
+
         if (DiscoveredServers.All(s => s.Address != discoveredServer.Address))
             DiscoveredServers.Add(discoveredServer);
     }
@@ -82,19 +119,52 @@
         if (OnSelected.HasDelegate)
             await OnSelected.InvokeAsync(serverAddress);
     }
-    
+
+    void OfflineMode()
+    {
+        AuthenticationService.LoginOffline();
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
+
+    void CancelBeacon()
+    {
+        DiscoveryToken?.Cancel();
+    }
+
     async Task ActivateBeacon()
     {
-        BeaconActive = true;
+        try
+        {
+            BeaconActive = true;
+            await InvokeAsync(StateHasChanged);
 
-        await Client.Beacon.StartProbeAsync();
+            // give the UI a chance to render:
+            await Task.Yield();
 
-        await Task.Delay(10000);
+            if ((DiscoveryToken?.TryReset() ?? false) == false)
+            {
+                DiscoveryToken = new();
+            }
 
-        await Client.Beacon.StopProbeAsync();
-        
-        BeaconActive = false;
+            await Client.Beacon.StartProbeAsync(cancellationToken: DiscoveryToken.Token);
+            await Task.Delay(10000, DiscoveryToken.Token);
+            await Client.Beacon.StopProbeAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // ignore, handled in finally
+        }
+        finally
+        {
+            Client.Beacon.CleanupProbe();
+            BeaconActive = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
-        await InvokeAsync(StateHasChanged);
+    public void Dispose()
+    {
+        DiscoveryToken?.Cancel();
+        DiscoveryToken?.Dispose();
     }
 }

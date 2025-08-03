@@ -8,6 +8,7 @@
     protected override void OnInitialized()
     {
         KeepAliveService.ConnectionSevered += OnConnectionSevered;
+        KeepAliveService.ConnectionRetryNext += OnConnectionRetryNext;
         KeepAliveService.ConnectionLostPermanently += OnConnectionLostPermanently;
         KeepAliveService.ConnectionEstablished += OnConnectionEstablished;
     }
@@ -19,6 +20,21 @@
             Key = ConnectionMessageKey,
             Type = MessageType.Loading,
             Content = "Lost connection, retrying...",
+            Duration = 0,
+        };
+
+        MessageService.Open(messageConfig);
+    }
+
+    void OnConnectionRetryNext(object? sender, EventArgs e)
+    {
+        // show same lost-connection-message by replacing the message by its key
+        var retry = KeepAliveService.GetRetryCount();
+        var messageConfig = new MessageConfig
+        {
+            Key = ConnectionMessageKey,
+            Type = MessageType.Loading,
+            Content = $"Lost connection, retrying ({retry.current}/{retry.total}) ...",
             Duration = 0,
         };
 
@@ -54,6 +70,7 @@
     public void Dispose()
     {
         KeepAliveService.ConnectionSevered -= OnConnectionSevered;
+        KeepAliveService.ConnectionRetryNext -= OnConnectionRetryNext;
         KeepAliveService.ConnectionLostPermanently -= OnConnectionLostPermanently;
         KeepAliveService.ConnectionEstablished -= OnConnectionEstablished;
     }

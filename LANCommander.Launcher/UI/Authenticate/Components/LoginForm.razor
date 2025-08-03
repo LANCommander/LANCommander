@@ -77,11 +77,12 @@
 
     AuthRequest Model = new();
     bool Loading = false;
+    private string? PreviousServerAddress;
     AuthenticationProviderDialog AuthenticationProviderDialog;
 
     Models.Settings Settings = SettingService.GetSettings();
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnInitializedAsync()
     {
         AuthenticationProviders = new();
 
@@ -107,6 +108,15 @@
     {
         Errors = [];
         StateHasChanged();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ServerAddress != PreviousServerAddress)
+        {
+            await Client.ChangeServerAddressAsync(ServerAddress);
+        }
+        PreviousServerAddress = ServerAddress;
     }
 
     async Task OnFinish(EditContext editContext)

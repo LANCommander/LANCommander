@@ -1,13 +1,14 @@
 @using ConnectionState = LANCommander.Launcher.Models.ConnectionState
 @inject AuthenticationService AuthenticationService
 @inject NavigationManager NavigationManager
+@inject KeepAliveService KeepAliveService
 
 <CascadingValue Value="ConnectionState">
     @if (ConnectionState.IsConnected || ConnectionState.OfflineModeEnabled)
     {
         @Authenticated
     }
-    else
+    else if (!IsValidating)
     {
         @NotAuthenticated
     }
@@ -16,11 +17,15 @@
 @code {
     [Parameter] public RenderFragment Authenticated { get; set; }
     [Parameter] public RenderFragment NotAuthenticated { get; set; }
+    [Parameter] public bool NoAutoValidate { get; set; }
 
-    public ConnectionState ConnectionState = new();
+    private ConnectionState ConnectionState = default!;
+    private bool IsValidating = false;
 
     protected override async Task OnInitializedAsync()
     {
+        ConnectionState = KeepAliveService.GetConnectionState();
+
         AuthenticationService.OnLogin += async (sender, args) =>
         {
             await Validate();
@@ -30,13 +35,22 @@
             await Validate();
         };
 
-        await Validate();
+        if (!NoAutoValidate)
+            await Validate();
     }
 
     public async Task Validate()
     {
-        ConnectionState.IsConnected = await AuthenticationService.ValidateConnectionAsync();
-        ConnectionState.OfflineModeEnabled = AuthenticationService.OfflineModeEnabled();
+        try
+        {
+            IsValidating = true;
+            ConnectionState.IsConnected = await AuthenticationService.ValidateConnectionAsync();
+            ConnectionState.OfflineModeEnabled = AuthenticationService.OfflineModeEnabled();
+        }
+        finally
+        {
+            IsValidating = false;
+        }
 
         await InvokeAsync(StateHasChanged);
     }

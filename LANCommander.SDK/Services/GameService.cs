@@ -39,6 +39,25 @@ namespace LANCommander.SDK.Services
         public TimeSpan TimeRemaining { get; set; }
     }
 
+    public class InstallResult
+    {
+        public InstallResult()
+        {
+        }
+        public InstallResult(string installDirectory, Guid gameId)
+        {
+            FileList = new GameInstallationFileList(installDirectory, gameId);
+        }
+
+        public string InstallDirectory 
+        {
+            get => FileList.InstallDirectory;
+            internal set => FileList.InstallDirectory = value;
+        }
+
+        public GameInstallationFileList FileList { get; set; } = GameInstallationFileList.Empty;
+    }
+
     public class GameService
     {
         private readonly ILogger Logger;
@@ -113,10 +132,13 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
+                        if (ManifestHelper.Exists(installDirectory, dependentGameId))
+                        {
+                            var dependentGameManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, dependentGameId);
 
-                        if (dependentGameManifest.Type == GameType.Expansion || dependentGameManifest.Type == GameType.Mod)
-                            manifests.Add(dependentGameManifest);
+                            if (dependentGameManifest?.Type == GameType.Expansion || dependentGameManifest?.Type == GameType.Mod)
+                                manifests.Add(dependentGameManifest);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -299,12 +321,20 @@ namespace LANCommander.SDK.Services
         /// <summary>
         /// Downloads, extracts, and runs post-install scripts for the specified game
         /// </summary>
-        /// <param name="game">Game to install</param>
+        /// <param name="gameId">Unique identifier of the game to install.</param>
+        /// <param name="installDirectory">Optional custom installation directory.</param>
+        /// <param name="addonIds">Optional list of add-on identifiers to install alongside the game.</param>
         /// <param name="maxAttempts">Maximum attempts in case of transmission error</param>
-        /// <returns>Final install path</returns>
-        /// <exception cref="Exception"></exception>
-        public async Task<string> InstallAsync(Guid gameId, string installDirectory = "", Guid[] addonIds = null, int maxAttempts = 10)
+        /// <returns>
+        /// An <see cref="InstallResult"/> containing details about the installation outcome such as  the final install path.
+        /// </returns>
+        /// <exception cref="Exception">
+        /// Thrown if installation fails after the maximum retry attempts.
+        /// </exception>
+        public async Task<InstallResult> InstallAsync(Guid gameId, string installDirectory = "", Guid[] addonIds = null, int maxAttempts = 10)
         {
+            var installResult = new InstallResult(installDirectory, gameId);
+            var gameFileList = installResult.FileList;
             GameManifest manifest = null;
 
             if (string.IsNullOrWhiteSpace(installDirectory))
@@ -331,7 +361,10 @@ namespace LANCommander.SDK.Services
                 destination = await GetInstallDirectory(baseGame, installDirectory);
 
                 if (!Directory.Exists(destination))
-                    destination = await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts);
+                {
+                    var baseGameFileList = await InstallAsync(game.BaseGameId, installDirectory, null, maxAttempts);
+                    destination = installResult.InstallDirectory;
+                }
             }
 
             try
@@ -360,15 +393,13 @@ namespace LANCommander.SDK.Services
                 throw new InstallCanceledException("Game install was canceled");
 
             game.InstallDirectory = result.Directory;
+            installResult.InstallDirectory = result.Directory;
 
             // Game is extracted, get metadata
             var writeManifestSuccess = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromSeconds(1), false, async () =>
             {
                 Logger?.LogTrace("Attempting to get game manifest");
-
-                manifest = GetManifest(game.Id);
-
-                await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
+                manifest = await WriteManifestAsync(game.InstallDirectory, game);
 
                 return true;
             });
@@ -376,12 +407,19 @@ namespace LANCommander.SDK.Services
             if (!writeManifestSuccess)
                 throw new InstallException("Could not grab the manifest file. Retry the install or check your connection");
 
-            Logger?.LogTrace("Saving scripts");
+            // store scripts locally
+            await WriteScriptsAsync(game.InstallDirectory, game);
 
-            foreach (var script in game.Scripts)
+
+            // store manifest and files for current game (could be base game, or any dependent game as this point due to recursive call)
+            gameFileList.BaseGame.Manifest = manifest;
+            var gameFiles = result?.Files?.Where(x => !x.EntryPath.EndsWith("/")).Select(x => new GameInstallationFileListEntry.FileEntry
             {
-                await ScriptHelper.SaveScriptAsync(game, script.Type);
-            }
+                EntryPath = x.EntryPath,
+                LocalPath = x.LocalPath,
+            });
+            gameFileList.BaseGame.AddFiles(gameFiles ?? []);
+
 
             _installProgress.Progress = 1;
             _installProgress.BytesTransferred = _installProgress.TotalBytes;
@@ -411,7 +449,10 @@ namespace LANCommander.SDK.Services
             await RunPostInstallScripts(game);
 
             if (addonIds != null)
-                await InstallAddonsAsync(installDirectory, game, addonIds);
+            {
+                var addonsResult = await InstallAddonsAsync(installDirectory, game, addonIds);
+                gameFileList.MergeDependentGames(addonsResult.FileList);
+            }
 
             _installProgress.Status = InstallStatus.Complete;
             _installProgress.Progress = 1;
@@ -419,18 +460,21 @@ namespace LANCommander.SDK.Services
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
-            return game.InstallDirectory;
+            return installResult;
         }
 
-        public async Task InstallAddonsAsync(string installDirectory, Guid baseGameId, IEnumerable<Guid> addonIds)
+        public async Task<InstallResult> InstallAddonsAsync(string installDirectory, Guid baseGameId, IEnumerable<Guid> addonIds)
         {
             var game = await Client.Games.GetAsync(baseGameId);
 
-            await InstallAddonsAsync(installDirectory, game, addonIds);
+            return await InstallAddonsAsync(installDirectory, game, addonIds);
         }
 
-        public async Task InstallAddonsAsync(string installDirectory, Game game, IEnumerable<Guid> addonIds)
+        public async Task<InstallResult> InstallAddonsAsync(string installDirectory, Game game, IEnumerable<Guid> addonIds)
         {
+            var installResult = new InstallResult(installDirectory, game.Id);
+            var gameFileList = installResult.FileList;
+
             if (addonIds != null)
             {
                 var addons = new List<Game>();
@@ -448,7 +492,6 @@ namespace LANCommander.SDK.Services
                 }
 
                 var expansions = addons.Where(a => a?.Type == GameType.Expansion).ToList();
-                
 
                 foreach (var expansion in expansions)
                 {
@@ -462,8 +505,9 @@ namespace LANCommander.SDK.Services
                         _installProgress.BytesTransferred = 0;
 
                         OnInstallProgressUpdate?.Invoke(_installProgress);
-                        
-                        await InstallAddonAsync(installDirectory, expansion);
+
+                        var expansionResult = await InstallAddonAsync(installDirectory, expansion);
+                        gameFileList.MergeBaseAsDependentGame(expansion.Id, expansionResult.FileList);
                     }
                     catch (Exception ex)
                     {
@@ -485,8 +529,9 @@ namespace LANCommander.SDK.Services
                         _installProgress.BytesTransferred = 0;
 
                         OnInstallProgressUpdate?.Invoke(_installProgress);
-                        
-                        await InstallAddonAsync(installDirectory, mod);
+
+                        var modResult = await InstallAddonAsync(installDirectory, mod);
+                        gameFileList.MergeBaseAsDependentGame(mod.Id, modResult.FileList);
                     }
                     catch (Exception ex)
                     {
@@ -494,18 +539,24 @@ namespace LANCommander.SDK.Services
                     }
                 }
             }
+
+            return installResult;
         }
 
-        public async Task InstallAddonAsync(string installDirectory, Game addon)
+        public async Task<InstallResult> InstallAddonAsync(string installDirectory, Game addon)
         {
+            var installResult = new InstallResult(installDirectory, addon.Id);
+            var gameFileList = installResult.FileList;
+
             if (!addon.IsAddon)
-                return;
+                return installResult;
 
             OnInstallProgressUpdate?.Invoke(_installProgress);
 
             try
             {
-                await InstallAsync(addon.Id, installDirectory);
+                var addonResult = await InstallAsync(addon.Id, installDirectory);
+                gameFileList.Merge(addonResult.FileList);
             }
             catch (InstallCanceledException ex)
             {
@@ -527,11 +578,24 @@ namespace LANCommander.SDK.Services
             }
 
             await RunPostInstallScripts(addon);
+            return installResult;
         }
 
-        public async Task UninstallAsync(string installDirectory, Guid gameId)
+        public async Task<InstallResult> UninstallAsync(string installDirectory, Guid gameId)
         {
+            var installResult = new InstallResult(installDirectory, gameId);
+            var gameFileList = installResult.FileList;
+
             var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
+            if (manifest == null)
+            {
+                Logger?.LogInformation("Unable to read or find manifest for game with ID {GameId}. Skip uninstallation!", gameId);
+                return installResult;
+            }
+
+            // store manifest for current game (could be base game, or any dependent game as this point due to recursive call)
+            gameFileList.BaseGame.Manifest = manifest;
+            var baseFileList = gameFileList.BaseGame;
 
             #region Uninstall Dependent Games
             if (manifest.DependentGames != null)
@@ -540,7 +604,11 @@ namespace LANCommander.SDK.Services
                 {
                     try
                     {
-                        await UninstallAsync(installDirectory, dependentGame);
+                        if (ManifestHelper.Exists(installDirectory, dependentGame))
+                        {
+                            var dependentResult = await UninstallAsync(installDirectory, dependentGame);
+                            gameFileList.MergeDependentGames(dependentResult.FileList);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -563,6 +631,11 @@ namespace LANCommander.SDK.Services
                 foreach (var file in files.Where(f => !f.EndsWith("/")))
                 {
                     var localPath = Path.Combine(installDirectory, file);
+                    baseFileList.AddFile(new GameInstallationFileListEntry.FileEntry
+                    {
+                        EntryPath = file,
+                        LocalPath = localPath,
+                    });
 
                     try
                     {
@@ -602,6 +675,61 @@ namespace LANCommander.SDK.Services
 
             DirectoryHelper.DeleteEmptyDirectories(installDirectory);
             #endregion
+
+            return installResult;
+        }
+
+        public async Task<InstallResult> UninstallAddonsAsync(string installDirectory, Guid baseGameId, IEnumerable<Guid> addonIds)
+        {
+            var installResult = new InstallResult(installDirectory, baseGameId);
+            var gameFileList = installResult.FileList;
+
+            var baseManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, baseGameId);
+            if (baseManifest == null)
+            {
+                Logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
+                return installResult;
+            }
+
+            // store manifest for current addon game, skip any files
+            gameFileList.BaseGame.Manifest = baseManifest;
+            gameFileList.InstallDirectory = installDirectory;
+
+            addonIds ??= [];
+            foreach (var dependentGame in baseManifest.DependentGames)
+            {
+                if (!addonIds.Contains(dependentGame))
+                    continue;
+
+                try
+                {
+                    var dependentResult = await UninstallAddonAsync(installDirectory, dependentGame);
+                    gameFileList.MergeBaseAsDependentGame(dependentGame, dependentResult.FileList);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, $"Could not uninstall dependent game {dependentGame} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
+                }
+            }
+
+            return installResult;
+        }
+
+        public async Task<InstallResult> UninstallAddonAsync(string installDirectory, Guid addonGameId)
+        {
+            var installResult = new InstallResult(installDirectory, addonGameId);
+            var gameFileList = installResult.FileList;
+
+            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, addonGameId);
+
+            if (manifest != null)
+            {
+                var dependentResult = await UninstallAsync(installDirectory, manifest.Id);
+                gameFileList.BaseGame.Manifest = manifest;
+                gameFileList.Merge(dependentResult.FileList);
+            }
+
+            return installResult;
         }
 
         public async Task<string> MoveAsync(Guid gameId, string oldInstallDirectory, string newInstallDirectory)
@@ -725,7 +853,33 @@ namespace LANCommander.SDK.Services
 
             return File.Exists(metadataPath);
         }
-         
+
+        public async Task UpdateGameInstallationAsync(string installDirectory, Game game)
+        {
+            // update game and scripts locally
+            await WriteManifestAsync(installDirectory, game);
+            await WriteScriptsAsync(installDirectory, game);
+        }
+
+        private async Task<GameManifest> WriteManifestAsync(string installDirectory, Game game)
+        {
+            Logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
+            GameManifest manifest = GetManifest(game.Id);
+            Logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
+            await ManifestHelper.WriteAsync(manifest, installDirectory);
+            return manifest;
+        }
+
+        private async Task WriteScriptsAsync(string installDirectory, Game game)
+        {
+            Logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
+
+            foreach (var script in game.Scripts)
+            {
+                await ScriptHelper.SaveScriptAsync(game, script.Type, installDirectory);
+            }
+        }
+
         private async Task RunPostInstallScripts(Game game)
         {
             if (game.Scripts != null && game.Scripts.Any())
@@ -766,6 +920,7 @@ namespace LANCommander.SDK.Services
             };
 
             var fileManifest = new StringBuilder();
+            var files = new List<ExtractionResult.FileEntry>();
 
             try
             {
@@ -833,6 +988,11 @@ namespace LANCommander.SDK.Services
                         }
 
                         fileManifest.AppendLine($"{Reader.Entry.Key} | {Reader.Entry.Crc.ToString("X")}");
+                        files.Add(new ExtractionResult.FileEntry
+                        {
+                            EntryPath = Reader.Entry.Key,
+                            LocalPath = localFile,
+                        });
 
                         if (crc == 0 || crc != Reader.Entry.Crc)
                             Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
@@ -896,6 +1056,7 @@ namespace LANCommander.SDK.Services
             {
                 extractionResult.Success = true;
                 extractionResult.Directory = destination;
+                extractionResult.Files = files;
 
                 var fileListDestination = Path.Combine(destination, ".lancommander", game.Id.ToString(), "FileList.txt");
 
@@ -917,9 +1078,18 @@ namespace LANCommander.SDK.Services
 
             if ((game.Type == GameType.Expansion || game.Type == GameType.Mod || game.Type == GameType.StandaloneMod) && game.BaseGameId != Guid.Empty)
             {
-                var baseGame = await Client.Games.GetAsync(game.BaseGameId);
+                // modify installation passes the original installation of the game including the game folder, use the existing folder,
+                // otherwise a name change could lead to installing files into differnt folder
+                if (Path.Exists(installDirectory) && Path.Exists(Path.Combine(installDirectory, ".lancommander")))
+                {
+                    return installDirectory;
+                }
+                else
+                {
+                    var baseGame = await Client.Games.GetAsync(game.BaseGameId);
 
-                return await GetInstallDirectory(baseGame, installDirectory);
+                    return await GetInstallDirectory(baseGame, installDirectory);
+                }
             }
             else
                 return Path.Combine(installDirectory, game.Title.SanitizeFilename());
@@ -959,6 +1129,74 @@ namespace LANCommander.SDK.Services
             }
 
             return manifests;
+        }
+
+        /// <summary>
+        /// Retrieves the archive entries of the current game installation from the server for the specified game
+        /// </summary>
+        /// <param name="gameId">The unique identifier of the game.</param>
+        /// <param name="manifest">The manifest containing metadata of the game's installation.</param>
+        /// <returns>
+        /// A collection of <see cref="ArchiveEntry"/> representing the archive entries.
+        /// Returns an empty list if no entries are found.
+        /// </returns>
+        /// <exception cref="Exception">
+        /// Thrown if the request to retrieve archive entries encounters an error.
+        /// </exception>
+        protected async Task<IEnumerable<ArchiveEntry>> GetGameInstallationArchiveEntries(Guid gameId, GameManifest manifest)
+        {
+            var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/Contents/{manifest.Id}/{manifest.Version}");
+            return entries ?? [];
+        }
+
+        /// <summary>
+        /// Retrieves the archive entries for a game installation, including its base game and dependencies.
+        /// </summary>
+        /// <param name="installDirectory">The directory where the game is installed.</param>
+        /// <param name="gameId">The unique identifier of the game.</param>
+        /// <returns>
+        /// An instance of <see cref="GameInstallationArchiveEntries"/> containing archive entries
+        /// for the base game and any dependent games.
+        /// </returns>
+        protected async Task<GameInstallationArchiveEntries> GetGameInstallationArchivesEntries(string installDirectory, Guid gameId)
+        {
+            var gameArchives = new GameInstallationArchiveEntries();
+
+            var manifests = await GetManifestsAsync(installDirectory, gameId);
+            if (manifests == null || !manifests.Any())
+                return gameArchives;
+
+            // Retrieves and processes the base game manifest and its archive entries.
+            var baseManifest = gameArchives.BaseGame.Manifest = manifests.FirstOrDefault(mf => mf.Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
+            if (baseManifest != null)
+            {
+                var entries = await GetGameInstallationArchiveEntries(gameId, baseManifest);
+                gameArchives.BaseGame.Entries.AddRange(entries);
+                manifests = manifests.Except([baseManifest]);
+
+                var savePathEntries = baseManifest.SavePaths?.SelectMany(p => Client.Saves.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
+                gameArchives.BaseGame.SavePaths = savePathEntries;
+            }
+
+            // Processes dependent game manifests and their corresponding archive entries.
+            foreach (var depManifest in manifests ?? [])
+            {
+                var depEntries = await GetGameInstallationArchiveEntries(gameId, depManifest);
+
+                if (!gameArchives.DependentGames.TryGetValue(depManifest.Id, out var depArchiveInfo))
+                {
+                    depArchiveInfo = new();
+                    gameArchives.DependentGames.Add(depManifest.Id, depArchiveInfo);
+                }
+
+                depArchiveInfo.Manifest = depManifest;
+                depArchiveInfo.Entries.AddRange(depEntries);
+
+                var savePathEntries = depManifest.SavePaths?.SelectMany(p => Client.Saves.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
+                depArchiveInfo.SavePaths = savePathEntries;
+            }
+
+            return gameArchives;
         }
 
         public async Task RunAsync(string installDirectory, Guid gameId, Models.Action action, DateTime? lastRun, string args = "")
@@ -1155,12 +1393,38 @@ namespace LANCommander.SDK.Services
         /// <returns>List of file conflicts</returns>
         public async Task<IEnumerable<ArchiveValidationConflict>> ValidateFilesAsync(string installDirectory, Guid gameId)
         {
-            var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
-            var entries = await Client.GetRequestAsync<IEnumerable<ArchiveEntry>>($"/api/Archives/Contents/{gameId}/{manifest.Version}");
+            var archives = await GetGameInstallationArchivesEntries(installDirectory, gameId);
+            var manifest = archives?.BaseGame?.Entries;
+            var entries = archives?.BaseGame?.Entries?.ToList() ?? [];
+
+            foreach ((var dependentGameId, var dependentGameInfo) in archives?.DependentGames ?? [])
+            {
+                foreach (var depArchive in dependentGameInfo.Entries ?? [])
+                {
+                    if (depArchive.FullName.EndsWith('/'))
+                        continue;
+
+                    var archiveIndex = entries.FindLastIndex(archive => string.Equals(archive.FullName, depArchive.FullName));
+                    if (archiveIndex < 0)
+                    {
+                        entries.Add(depArchive);
+                        continue;
+                    }
+
+                    entries[archiveIndex] = depArchive;
+                }
+            }
+
+            // lookup for dependent games
+            var lookupEntry = archives?.DependentGames?
+                .SelectMany(dep => dep.Value?.Entries?.Select(entry => new { GameId = (Guid?)dep.Key, ArchiveEntry = entry }) ?? [])
+                .ToLookup(tentry => tentry.ArchiveEntry, tentry => tentry.GameId) ?? Enumerable.Empty<Guid?>().ToLookup(x => default(ArchiveEntry));
 
             var conflictedEntries = new List<ArchiveValidationConflict>();
 
-            var savePathEntries = manifest.SavePaths?.SelectMany(p => Client.Saves.GetFileSavePathEntries(p, installDirectory)) ?? new List<SavePathEntry>();
+            var savePathEntries = archives?.BaseGame?.SavePaths.ToList() ?? [];
+            var depSavePathEntries = archives?.DependentGames?.SelectMany(dep => dep.Value?.SavePaths ?? []).ToList() ?? [];
+            savePathEntries.AddRange(depSavePathEntries);
 
             foreach (var entry in entries)
             {
@@ -1175,6 +1439,8 @@ namespace LANCommander.SDK.Services
                 if (!Path.Exists(localFile))
                     conflictedEntries.Add(new ArchiveValidationConflict
                     {
+                        GameId = lookupEntry[entry]?.FirstOrDefault() ?? gameId,
+
                         Name = entry.Name,
                         FullName = entry.FullName,
                         Crc32 = entry.Crc32,
@@ -1205,6 +1471,8 @@ namespace LANCommander.SDK.Services
                     if (crc == 0 || crc != entry.Crc32)
                         conflictedEntries.Add(new ArchiveValidationConflict
                         {
+                            GameId = lookupEntry[entry]?.FirstOrDefault() ?? gameId,
+
                             Name = entry.Name,
                             FullName = entry.FullName,
                             Crc32 = entry.Crc32,
@@ -1216,6 +1484,28 @@ namespace LANCommander.SDK.Services
             return conflictedEntries;
         }
 
+        /// <summary>
+        /// Downloads the specified files for multiple games (base game, mods, expansions).
+        /// </summary>
+        /// <param name="installDirectory">The directory where the games are installed.</param>
+        /// <param name="entries">
+        /// A collection of tuples containing the game ID and the corresponding file path.
+        /// </param>
+        public async Task DownloadFilesAsync(string installDirectory, IEnumerable<(Guid GameId, string FilePath)> entries)
+        {
+            var groups = entries.GroupBy(x => x.GameId);
+            foreach (var group in groups)
+            {
+                await DownloadFilesAsync(installDirectory, group.Key, group.Select(x => x.FilePath));
+            }
+        }
+
+        /// <summary>
+        /// Downloads the specified files for a single game.
+        /// </summary>
+        /// <param name="installDirectory">The directory where the game is installed.</param>
+        /// <param name="gameId">The unique identifier of the game.</param>
+        /// <param name="entries">A collection of file paths to download.</param>
         public async Task DownloadFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
         {
             var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
@@ -1274,6 +1564,39 @@ namespace LANCommander.SDK.Services
                     throw new Exception("The game archive could not be extracted, is it corrupted? Please try again");
                 }
             });
+        }
+
+        public Task RestoreFilesAsync(string installDirectory, Guid gameId, GameInstallationFileList fileListRemoved, GameInstallationFileList fileListAdded)
+        {
+            var listRemoved = fileListRemoved?.ToFlatDistinctFileEntries() ?? [];
+            var listAdded = fileListAdded?.ToFlatDistinctFileEntries() ?? [];
+
+            var uniqueList = listRemoved.ExceptBy(listAdded.Select(x => x.EntryPath), x => x.EntryPath, StringComparer.OrdinalIgnoreCase);
+            var possibleRestoreEntries = uniqueList.Select(x => x.EntryPath).ToArray();
+            return RestoreFilesAsync(installDirectory, gameId, possibleRestoreEntries);
+        }
+
+        /// <summary>
+        /// Restores invalidated files matching the specified files.
+        /// </summary>
+        /// <param name="installDirectory">The directory where the game is installed.</param>
+        /// <param name="gameId">The unique identifier of the game.</param>
+        /// <param name="entries">A collection of file paths to check and compare with invalidated files.</param>
+        public async Task RestoreFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
+        {
+            // early out if no files were removed which would require checking
+            if (entries == null || !entries.Any())
+                return;
+
+            // validate files, which takes addons into account
+            var conflicts = await ValidateFilesAsync(installDirectory, gameId) ?? [];
+            
+            // build list of files to download by matching up removed files with conflicting files, split by game/addon
+            var downloadEntries = conflicts
+                .IntersectBy(entries, x => x.FullName, StringComparer.OrdinalIgnoreCase)
+                .Select(x => (x.GameId ?? gameId, x.FullName)).ToArray();
+
+            await DownloadFilesAsync(installDirectory, downloadEntries);
         }
 
         public static string GetMetadataDirectoryPath(string installDirectory, Guid gameId)

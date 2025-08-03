@@ -11,5 +11,13 @@ namespace LANCommander.SDK
         public bool Success { get; set; }
         public bool Canceled { get; set; }
         public string Directory { get; set; }
+
+        public List<FileEntry> Files { get; internal set; } = [];
+
+        public class FileEntry
+        {
+            public string EntryPath { get; set; }
+            public string LocalPath { get; set; }
+        }
     }
 }

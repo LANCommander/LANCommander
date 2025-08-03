@@ -231,6 +231,33 @@ namespace LANCommander.Server.Services
             return size;
         }
 
+        public async Task<bool> RecalculateFileSizeArchiveAsync(Archive archive)
+        {
+            try
+            {
+                var path = await GetArchiveFileLocationAsync(archive);
+
+                if (File.Exists(path))
+                {
+                    archive.CompressedSize = await GetCompressedSizeAsync(archive);
+                    archive.UncompressedSize = await GetUncompressedSizeAsync(archive);
+
+                    await UpdateAsync(archive);
+                    return true;
+                }
+                else
+                {
+                    _logger?.LogWarning("No local file found for archive {ArchiveId} on path: {path}", archive.Id, path);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Could not recalculate file size for archive {ArchiveId}", archive.Id);
+            }
+
+            return false;
+        }
+        
         public async Task<Archive> WriteToFileAsync(Archive archive, Stream stream, bool overwrite = true)
         {
             if (archive.StorageLocation == null)

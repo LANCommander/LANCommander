@@ -50,6 +50,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
         services.AddScoped<GameCustomFieldService>();
+        services.AddScoped<SteamCMDService>();
         services.AddTransient<SetupService>();
         
         // Register server engines

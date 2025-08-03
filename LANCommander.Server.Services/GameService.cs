@@ -181,6 +181,8 @@ namespace LANCommander.Server.Services
                 .Include(g => g.CustomFields)
                 .Include(g => g.Scripts)
                 .GetAsync(id);
+            
+            logger?.LogInformation("Packaging game {GameTitle}", game.Title);
 
             var latestArchive = game.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault();
             var storageLocationId = latestArchive?.StorageLocationId;
@@ -209,8 +211,20 @@ namespace LANCommander.Server.Services
                         var destination = await archiveService.GetArchiveFileLocationAsync(archive);
                         
                         ZipFile.CreateFromDirectory(package.Path, destination);
+                        
+                        logger?.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
+                    }
+                    else
+                    {
+                        logger?.LogError("Could not package game {GameTitle}, the path {Path} could not be found", game.Title, package.Path);
+                        
+                        await archiveService.DeleteAsync(archive);
                     }
                 }
+            }
+            else
+            {
+                logger?.LogWarning("Could not package game {GameTitle}, no packaging scripts are defined", game.Title);
             }
         }
     }

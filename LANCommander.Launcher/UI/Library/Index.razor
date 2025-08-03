@@ -238,7 +238,7 @@
 
         var addons = await Client.Games.GetAddonsAsync(game.Id);
 
-        if (Settings.Games.InstallDirectories.Length > 1 || addons.Any())
+        if (Settings.Games.InstallDirectories.Length > 1 || (addons != null && addons.Any()))
         {
             var modalOptions = new ModalOptions()
             {

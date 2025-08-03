@@ -14,13 +14,7 @@ install_steamcmd() {
         ca-certificates \
         software-properties-common \
         lib32gcc-s1 \
-        lib32stdc++6 \
-        libc6-i386 \
-        libstdc++6:i386 \
-        libgcc-s1:i386 \
-        lib32tinfo6 \
-        libtinfo6:i386 \
-        libcurl4-gnutls-dev:i386
+        lib32stdc++6
     
     # Create steam user and directory
     useradd -m -d /home/steam steam

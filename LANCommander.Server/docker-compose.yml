@@ -8,6 +8,8 @@ services:
       - TZ=Etc/UTC
       # Uncomment the line below to install SteamCMD
       # - STEAMCMD=1
+      # Uncomment the line below to install WINE
+      # - WINE=1
     volumes:
       - /path/to/appdata/config:/app/config
     ports:

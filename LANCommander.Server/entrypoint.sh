@@ -41,12 +41,51 @@ install_steamcmd() {
     echo "SteamCMD installed successfully!"
 }
 
+# Function to install WINE
+install_wine() {
+    echo "Installing WINE..."
+    
+    # Update package list
+    apt-get update
+    
+    # Install WINE and dependencies
+    apt-get install -y \
+        wine \
+        wine32 \
+        wine64 \
+        libwine \
+        fonts-wine \
+        winetricks \
+        cabextract \
+        unzip \
+        wget \
+        ca-certificates
+    
+    # Create wine user and directory
+    useradd -m -d /home/wine wine
+    mkdir -p /home/wine/.wine
+    chown -R wine:wine /home/wine/.wine
+    
+    # Set up WINE environment
+    su - wine -c "winecfg /v" || true
+    
+    echo "WINE installed successfully!"
+}
+
 # Check if SteamCMD should be installed
 if [ "$STEAMCMD" = "1" ]; then
     echo "STEAMCMD=1 detected, installing SteamCMD..."
     install_steamcmd
 else
     echo "STEAMCMD not set to 1, skipping SteamCMD installation"
+fi
+
+# Check if WINE should be installed
+if [ "$WINE" = "1" ]; then
+    echo "WINE=1 detected, installing WINE..."
+    install_wine
+else
+    echo "WINE not set to 1, skipping WINE installation"
 fi
 
 # Start the LANCommander server

@@ -34,6 +34,8 @@ services:
       - TZ=Etc/UTC
       # Uncomment the line below to install SteamCMD
       # - STEAMCMD=1
+      # Uncomment the line below to install WINE
+      # - WINE=1
     volumes:
       - /path/to/appdata/config:/app/config
     ports:
@@ -46,6 +48,9 @@ All config files are available from `/config`. This include any archive uploads 
 
 ### SteamCMD Support
 The Docker image supports optional SteamCMD installation. To enable this feature, set the `STEAMCMD=1` environment variable in your docker-compose.yml file. When enabled, SteamCMD will be installed in `/home/steam/steamcmd` and made available as `steamcmd` command.
+
+### WINE Support
+The Docker image supports optional WINE installation. To enable this feature, set the `WINE=1` environment variable in your docker-compose.yml file. When enabled, WINE will be installed with wine32, wine64, and winetricks support. A `wine` user will be created with a configured WINE environment in `/home/wine/.wine`.
 
 _Note: The Docker image runs the Linux build and features such as server management may be limited._
 

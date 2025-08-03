@@ -1,0 +1,103 @@
+﻿@page "/Settings/Integrations/Steam"
+@using LANCommander.Server.Services.Enums
+@using LANCommander.SDK
+@inject SteamCMDService SteamCMDService
+@inject Client Client
+@inject IMessageService MessageService
+@inject ILogger<Beacon> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Steam" />
+
+<PageContent>
+    <Form Model="Settings" Layout="@FormLayout.Vertical">
+        <FormItem Label="SteamCMD Path">
+            <FilePicker @bind-Value="Settings.SteamCMD.Path" Title="Choose SteamCMD Executable Path" />
+        </FormItem>
+        
+        @if (_connectionStatus == SteamCMDConnectionStatus.Unauthenticated)
+        {
+            if (_processingLogin)
+            {
+                <Alert Message="Attempting login... You may receive a login request via Steam Guard"
+                       Type="AlertType.Info"/>
+            }
+
+            <FormItem Label="Username">
+                <Input @bind-Value="_username" Disabled="_processingLogin" />
+            </FormItem>
+            <FormItem Label="Password">
+                <InputPassword @bind-Value="_password" Disabled="_processingLogin" />
+            </FormItem>
+            <FormItem>
+                <Button OnClick="Authenticate" Type="@ButtonType.Primary" Loading="_processingLogin">Login</Button>
+            </FormItem>
+        }
+        else if (_connectionStatus == SteamCMDConnectionStatus.NotInstalled)
+        {
+            <Result Status="ResultStatus.Warning" Title="SteamCMD could not be found" />
+        }
+
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    Settings Settings = SettingService.GetSettings();
+
+    SteamCMDConnectionStatus _connectionStatus;
+
+    string _username;
+    string _password;
+
+    bool _processingLogin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _connectionStatus = SteamCMDService.GetConnectionStatus();
+    }
+
+    async Task Authenticate()
+    {
+        _processingLogin = true;
+        await InvokeAsync(StateHasChanged);
+
+        var success = await SteamCMDService.LoginToSteamAsync(_username, _password);
+        
+        _connectionStatus = SteamCMDService.GetConnectionStatus();
+
+        _processingLogin = false;
+        await InvokeAsync(StateHasChanged);
+
+        if (success)
+        {
+            MessageService.Success("Successfully authenticated to Steam!");
+            _password = String.Empty;
+        }
+        else
+        {
+            MessageService.Error("Could not authenticate to Steam!");
+        }
+    }
+
+    async Task Save()
+    {
+        try
+        {
+            SettingService.SaveSettings(Settings);
+            MessageService.Success("Settings saved!");
+
+            if (Settings.Beacon.Enabled)
+                await Client.Beacon.StartBeaconAsync(Settings.Beacon.Port, Settings.Beacon.Address, Settings.Beacon.Name);
+            else
+                await Client.Beacon.StopBeaconAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error("An unknown error occurred.");
+            Logger.LogError(ex, "An unknown error occurred.");
+        }
+    }
+}

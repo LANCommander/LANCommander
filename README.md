@@ -41,6 +41,7 @@ services:
     ports:
       - 1337:1337/tcp   # Webinterface
       - 35891:35891/udp # Beacon Broadcast
+      - 213:213/udp # IPX Relay
     restart: unless-stopped
 ```
 

@@ -33,6 +33,8 @@ install_steamcmd() {
     ln -sf /home/steam/steamcmd/steamcmd.sh /usr/local/bin/steamcmd
     
     echo "SteamCMD installed successfully!"
+
+    cd -
 }
 
 # Function to install WINE
@@ -81,6 +83,8 @@ if [ "$WINE" = "1" ]; then
 else
     echo "WINE not set to 1, skipping WINE installation"
 fi
+
+cd /app
 
 # Start the LANCommander server
 echo "Starting LANCommander Server..."

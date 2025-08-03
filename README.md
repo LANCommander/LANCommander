@@ -32,6 +32,8 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      # Uncomment the line below to install SteamCMD
+      # - STEAMCMD=1
     volumes:
       - /path/to/appdata/config:/app/config
     ports:
@@ -41,6 +43,9 @@ services:
 ```
 
 All config files are available from `/config`. This include any archive uploads for games. Many of these paths can be changed under Settings if you wish to add additional volume mappings.
+
+### SteamCMD Support
+The Docker image supports optional SteamCMD installation. To enable this feature, set the `STEAMCMD=1` environment variable in your docker-compose.yml file. When enabled, SteamCMD will be installed in `/home/steam/steamcmd` and made available as `steamcmd` command.
 
 _Note: The Docker image runs the Linux build and features such as server management may be limited._
 

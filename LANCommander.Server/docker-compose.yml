@@ -6,6 +6,8 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      # Uncomment the line below to install SteamCMD
+      # - STEAMCMD=1
     volumes:
       - /path/to/appdata/config:/app/config
     ports:

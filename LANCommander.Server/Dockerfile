@@ -6,5 +6,9 @@ EXPOSE 213/udp
 EXPOSE 35891/udp
 
 COPY ./published /app
+COPY entrypoint.sh /app/entrypoint.sh
 
-ENTRYPOINT ["dotnet", "LANCommander.Server.dll", "--docker"]
+# Make entrypoint script executable
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]

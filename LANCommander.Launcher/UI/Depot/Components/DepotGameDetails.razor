@@ -21,19 +21,13 @@
             @if (SelectedGame != null)
             {
                 <div class="game-hero">
-                    @if (SelectedGame.Media.HasAny(m => m.Type == SDK.Enums.MediaType.Logo))
-                    {
-                        <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo)))" class="game-details-logo" />
-                    }
-                    else
-                    {
+                    <SafeImage Media="@(SelectedGame.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Logo))" Class="game-details-logo">
                         <h1>@SelectedGame.Title</h1>
-                    }
-
-                    @if (SelectedGame.Media.HasAny(m => m.Type == SDK.Enums.MediaType.Background))
-                    {
-                        <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background)))" class="game-details-background" />
-                    }
+                    </SafeImage>
+                
+                    <SafeImage Media="@(SelectedGame.Media.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Background))" Class="game-details-background">
+                        <div class="game-details-background-fallback"></div>
+                    </SafeImage>
                 </div>
 
                 <GridRow Gutter="32" Class="game-info" Wrap="false">
@@ -141,7 +135,11 @@
                     <GridCol Flex="@("256px")" Class="game-cover">
                         @if (SelectedGame.Media.HasAny(m => m.Type == SDK.Enums.MediaType.Cover))
                         {
-                            <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)))" />
+                            <SafeImage Media="@(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover))">
+                                <div class="depot-game-default-cover">
+                                    <span>@SelectedGame.Title</span>
+                                </div>
+                            </SafeImage>
                         }
                     </GridCol>
                 </GridRow>

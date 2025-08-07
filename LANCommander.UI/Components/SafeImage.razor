@@ -1,0 +1,49 @@
+@using LANCommander.SDK.Models
+@inject SDK.Client Client
+
+<Spin Spinning="_loading">
+    @if (!_error)
+    {
+        if (!String.IsNullOrWhiteSpace(Source))
+        {
+            <img src="@Source" @onload="OnLoad" @onerror="OnError" class="@Class" style="@Style" />
+        }
+        else if (Media != null)
+        {
+            <img src="@(Client.Media.GetAbsoluteThumbnailUrl(Media))" @onload="OnLoad" @onerror="OnError" class="@Class" style="@Style" />
+        }
+        else
+        {
+            @ChildContent
+        }
+    }
+    else
+    {
+        @ChildContent
+    }
+</Spin>
+
+@code {
+    [Parameter] public string Source { get; set; }
+    [Parameter] public Media Media { get; set; }
+    [Parameter] public string Class { get; set; }
+    [Parameter] public string Style { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; }
+
+    bool _loading = true;
+    bool _error = false;
+
+    void OnLoad()
+    {
+        _loading = false;
+        Console.WriteLine("Image error " + Source);
+        StateHasChanged();
+    }
+
+    void OnError()
+    {
+        _error = true;
+        _loading = false;
+        StateHasChanged();
+    }
+}

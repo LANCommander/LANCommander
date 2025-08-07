@@ -8,9 +8,13 @@
 
 <div class="depot-game">
     <div class="depot-game-cover" @onclick="() => OnClick.InvokeAsync(Item)">
-        @if (Item.DataItem is DepotGame game && game.Cover != null)
+        @if (Item.DataItem is DepotGame game)
         {
-            <img src="@Client.Media.GetAbsoluteThumbnailUrl(game.Cover)" />
+            <SafeImage Media="game.Cover">
+                <div class="depot-game-default-cover">
+                    <span>@Item.Name</span>
+                </div>
+            </SafeImage>
         }
         else
         {
@@ -21,7 +25,7 @@
 
         @if ((Item.DataItem is DepotGame game2 && !game2.InLibrary) || (Item != null && !LibraryService.IsInLibrary(Item!.Key)))
         {
-            <Button class="depot-game-add-btn" Type="ButtonType.Primary" Icon="@IconType.Outline.Plus" Loading="Importing" OnClickStopPropagation="true" OnClick="AddToLibrary" />
+            <Button class="depot-game-add-btn" Type="ButtonType.Primary" Icon="@IconType.Outline.Plus" Loading="Importing" OnClickStopPropagation="true" OnClick="AddToLibrary"/>
         }
     </div>
 </div>

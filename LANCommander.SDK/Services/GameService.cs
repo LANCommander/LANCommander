@@ -872,11 +872,14 @@ namespace LANCommander.SDK.Services
 
         private async Task WriteScriptsAsync(string installDirectory, Game game)
         {
-            Logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
-
-            foreach (var script in game.Scripts)
+            if (game.Scripts != null)
             {
-                await ScriptHelper.SaveScriptAsync(game, script.Type, installDirectory);
+                Logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
+                
+                foreach (var script in game.Scripts)
+                {
+                    await ScriptHelper.SaveScriptAsync(game, script.Type, installDirectory);
+                }
             }
         }
 

@@ -15,6 +15,10 @@
             <FilePicker @bind-Value="Settings.SteamCMD.Path" Title="Choose SteamCMD Executable Path" />
         </FormItem>
         
+        <FormItem>
+            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+        </FormItem>
+        
         @if (_connectionStatus == SteamCMDConnectionStatus.Unauthenticated)
         {
             if (_processingLogin)
@@ -37,10 +41,6 @@
         {
             <Result Status="ResultStatus.Warning" Title="SteamCMD could not be found" />
         }
-
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
     </Form>
 </PageContent>
 
@@ -88,11 +88,6 @@
         {
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
-
-            if (Settings.Beacon.Enabled)
-                await Client.Beacon.StartBeaconAsync(Settings.Beacon.Port, Settings.Beacon.Address, Settings.Beacon.Name);
-            else
-                await Client.Beacon.StopBeaconAsync();
         }
         catch (Exception ex)
         {

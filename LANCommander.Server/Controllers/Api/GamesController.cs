@@ -135,7 +135,7 @@ namespace LANCommander.Server.Controllers.Api
         }
 
         [HttpGet("{id}/Manifest")]
-        public async Task<SDK.Models.Manifest.Game> GetManifest(Guid id)
+        public async Task<SDK.GameManifest> GetManifest(Guid id)
         {
             var manifest = await Cache.GetOrSetAsync($"Games/{id}/Manifest", async _ =>
             {

@@ -8,9 +8,7 @@ public static class ApplicationSettings
 {
     public static WebApplicationBuilder AddSettings(this WebApplicationBuilder builder, out Settings settings)
     {
-        // Add services to the container.
-        Log.Debug("Loading settings");
-
+        // Ensure that our default settings are persisted
         if (!File.Exists(SettingService.SettingsFile))
         {
             var workingDirectory = Path.GetDirectoryName(SettingService.SettingsFile);
@@ -21,8 +19,15 @@ public static class ApplicationSettings
             settings = new Settings();
             SettingService.SaveSettings(settings);
         }
-        else
-            settings = SettingService.GetSettings(true);
+        
+        builder.Configuration.AddYamlFile(SettingService.SettingsFile);
+        builder.Services.Configure<Settings>(builder.Configuration);
+        
+        settings = new Settings();
+        builder.Configuration.Bind(settings);
+        
+        // Add services to the container.
+        Log.Debug("Loading settings");
 
         Log.Debug("Validating settings");
         

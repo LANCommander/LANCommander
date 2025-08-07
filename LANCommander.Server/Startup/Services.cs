@@ -24,6 +24,7 @@ public static class Services
         builder.Services.AddAntDesign();
         builder.Services.AddHttpClient();
         builder.Services.AddHttpContextAccessor();
+        builder.AddServiceDefaults();
 
         return builder;
     }

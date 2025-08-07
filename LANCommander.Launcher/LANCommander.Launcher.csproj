@@ -78,6 +78,7 @@
         <ProjectReference Include="..\LANCommander.Launcher.Models\LANCommander.Launcher.Models.csproj" />
         <ProjectReference Include="..\LANCommander.Launcher.Services\LANCommander.Launcher.Services.csproj" />
         <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+        <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
         <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />
     </ItemGroup>
 

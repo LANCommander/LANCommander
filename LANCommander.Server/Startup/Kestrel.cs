@@ -15,8 +15,6 @@ public static class Kestrel
             options.Limits.MaxRequestBodySize = long.MaxValue;
             options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
             
-            options.Listen(IPAddress.Any, settings.Port);
-            
             if (settings.UseSSL)
             {
                 options.Listen(IPAddress.Any, settings.SSLPort, listenOptions =>

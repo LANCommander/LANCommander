@@ -63,11 +63,20 @@ namespace LANCommander.Launcher
                 loggingBuilder.AddSerilog(Logger);
             });
             #endregion
-
+            
             builder.RootComponents.Add<App>("app");
 
             Logger?.Debug("Registering services...");
 
+            #region Aspire
+            builder.Services.AddServiceDiscovery();
+            builder.Services.ConfigureHttpClientDefaults(http =>
+            {
+                http.AddStandardResilienceHandler();
+                http.AddServiceDiscovery();
+            });
+            #endregion
+            
             builder.Services.AddCustomWindow();
             builder.Services.AddAntDesign();
             builder.Services.AddLANCommander(options =>

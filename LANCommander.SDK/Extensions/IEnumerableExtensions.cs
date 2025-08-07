@@ -44,5 +44,11 @@ namespace LANCommander.SDK.Extensions
                     return items.OrderBy(keySelector);
             }
         }
+        
+        public static bool HasAny<T>(this IEnumerable<T>? source)
+            => source?.Any() == true;
+        
+        public static bool HasAny<T>(this IEnumerable<T>? source, Func<T, bool> predicate)
+            => source?.Any(predicate) == true;
     }
 }

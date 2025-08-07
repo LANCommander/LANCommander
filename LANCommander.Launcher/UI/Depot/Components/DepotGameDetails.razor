@@ -1,5 +1,6 @@
 ﻿@using LANCommander.Launcher.Data.Models
 @using LANCommander.Launcher.Models
+@using LANCommander.SDK.Extensions
 @inject DepotService DepotService
 @inject LibraryService LibraryService
 @inject GameService GameService
@@ -20,7 +21,7 @@
             @if (SelectedGame != null)
             {
                 <div class="game-hero">
-                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Logo))
+                    @if (SelectedGame.Media.HasAny(m => m.Type == SDK.Enums.MediaType.Logo))
                     {
                         <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Logo)))" class="game-details-logo" />
                     }
@@ -29,7 +30,7 @@
                         <h1>@SelectedGame.Title</h1>
                     }
 
-                    @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Background))
+                    @if (SelectedGame.Media.HasAny(m => m.Type == SDK.Enums.MediaType.Background))
                     {
                         <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Background)))" class="game-details-background" />
                     }
@@ -77,7 +78,7 @@
                                     </SpaceItem>
                                 }
 
-                                @if (SelectedGame.PlaySessions.Any())
+                                @if (SelectedGame.PlaySessions.HasAny())
                                 {
                                     <SpaceItem>
                                         <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
@@ -103,7 +104,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame?.Developers != null && SelectedGame.Developers.Any())
+                            @if (SelectedGame.Developers.HasAny())
                             {
                                 <div class="game-metadata-developers">
                                     <h3>Developers</h3>
@@ -111,7 +112,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame?.Publishers != null && SelectedGame.Publishers.Any())
+                            @if (SelectedGame.Publishers.HasAny())
                             {
                                 <div class="game-metadata-publishers">
                                     <h3>Publishers</h3>
@@ -119,7 +120,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame?.Genres != null && SelectedGame.Genres.Any())
+                            @if (SelectedGame.Genres.HasAny())
                             {
                                 <div class="game-metadata-genres">
                                     <h3>Genres</h3>
@@ -127,7 +128,7 @@
                                 </div>
                             }
 
-                            @if (SelectedGame?.Tags != null && SelectedGame.Tags.Any())
+                            @if (SelectedGame.Tags.HasAny())
                             {
                                 <div class="game-metadata-tags">
                                     <h3>Tags</h3>
@@ -138,7 +139,7 @@
                     </GridCol>
 
                     <GridCol Flex="@("256px")" Class="game-cover">
-                        @if (SelectedGame.Media.Any(m => m.Type == SDK.Enums.MediaType.Cover))
+                        @if (SelectedGame.Media.HasAny(m => m.Type == SDK.Enums.MediaType.Cover))
                         {
                             <img src="@(Client.Media.GetAbsoluteThumbnailUrl(SelectedGame.Media.First(m => m.Type == SDK.Enums.MediaType.Cover)))" />
                         }

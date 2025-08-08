@@ -125,6 +125,7 @@ namespace LANCommander.Server.Controllers.Api
                     .Include(g => g.Platforms)
                     .Include(g => g.Publishers)
                     .Include(g => g.Redistributables)
+                    .Include(g => g.Scripts)
                     .Include(g => g.Tags)
                     .AsNoTracking()
                     .AsSplitQuery()

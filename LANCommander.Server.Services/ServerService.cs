@@ -3,10 +3,13 @@ using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
+using LANCommander.Server.Services.Abstractions;
+using LANCommander.Server.Services.Enums;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Services
@@ -17,6 +20,7 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
+        IServiceProvider serviceProvider,
         UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Data.Models.Server> AddAsync(Data.Models.Server entity)
@@ -65,6 +69,41 @@ namespace LANCommander.Server.Services
                 .GetAsync<SDK.Models.Manifest.Server>(serverId);
 
             return server;
+        }
+
+        public async Task StartAsync(Guid serverId)
+        {
+            var serverEngines = serviceProvider.GetServices<IServerEngine>();
+
+            foreach (var serverEngine in serverEngines)
+            {
+                if (serverEngine.IsManaging(serverId))
+                    await serverEngine.StartAsync(serverId);
+            }
+        }
+
+        public async Task StopAsync(Guid serverId)
+        {
+            var serverEngines = serviceProvider.GetServices<IServerEngine>();
+
+            foreach (var serverEngine in serverEngines)
+            {
+                if (serverEngine.IsManaging(serverId))
+                    await serverEngine.StopAsync(serverId);
+            }
+        }
+
+        public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
+        {
+            var serverEngines = serviceProvider.GetServices<IServerEngine>();
+
+            foreach (var serverEngine in serverEngines)
+            {
+                if (serverEngine.IsManaging(serverId))
+                    return await serverEngine.GetStatusAsync(serverId);
+            }
+
+            return ServerProcessStatus.Stopped;
         }
 
         public async Task RunGameStartedScriptsAsync(Guid serverId, Guid userId)

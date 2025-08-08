@@ -23,6 +23,7 @@ public static class Endpoints
         {
             endpoints.MapDownloadEndpoints();
             endpoints.MapSaveEndpoints();
+            endpoints.MapServerEndpoints();
             endpoints.MapTagEndpoints();
             endpoints.MapControllers();
             endpoints.MapFallbackToPage("/_Host");

@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data.Models;
@@ -6,6 +5,8 @@ using LANCommander.Server.Extensions;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
+using System.DirectoryServices.AccountManagement;
+using System.Security.Claims;
 using File = System.IO.File;
 using SortDirection = LANCommander.Server.Data.Enums.SortDirection;
 
@@ -27,17 +28,40 @@ public static class SaveEndpoints
         group.MapGet("/Game/{gameId:guid}/Latest/Download", DownloadLatestSaveByGameAsync);
     }
 
-    public static async Task<IResult> GetAsync([FromServices] GameSaveService saveService)
+    public static async Task<IResult> GetAsync(
+        ClaimsPrincipal userPrincipal,
+        [FromServices] UserService userService,
+        [FromServices] GameSaveService saveService)
     {
-        var saves = await saveService.GetAsync<SDK.Models.GameSave>();
+        var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
+
+        if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+
+            return TypedResults.Unauthorized();
+        }
+
+        var saves = await saveService.GetAsync<SDK.Models.GameSave>(gs => gs.UserId == user.Id);
 
         return TypedResults.Ok(saves);
     }
 
     public static async Task<IResult> GetByIdAsync(
         Guid id,
+        ClaimsPrincipal userPrincipal,
+        [FromServices] UserService userService,
         [FromServices] GameSaveService saveService)
     {
+        var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
+
+        if (user == null)
+        {
+            Log.Error("Could not find user from claim principal: {UserName}", userPrincipal?.Identity?.Name);
+
+            return TypedResults.Unauthorized();
+        }
+
         var save = await saveService.FirstOrDefaultAsync<SDK.Models.GameSave>(s => s.Id == id);
         
         if (save == null)
@@ -108,7 +132,7 @@ public static class SaveEndpoints
         
         var latestSave = await saveService
             .SortBy(s => s.CreatedOn, SortDirection.Descending)
-            .FirstOrDefaultAsync<SDK.Models.GameSave>(gs => gs.GameId == gameId);
+            .FirstOrDefaultAsync<SDK.Models.GameSave>(gs => gs.GameId == gameId && gs.UserId == user.Id);
         
         if (latestSave == null)
             return TypedResults.NotFound();
@@ -135,7 +159,7 @@ public static class SaveEndpoints
             .SortBy(s => s.CreatedOn, SortDirection.Descending)
             .Include(gs => gs.Game)
             .Include(gs => gs.StorageLocation)
-            .FirstOrDefaultAsync(gs => gs.GameId == gameId);
+            .FirstOrDefaultAsync(gs => gs.GameId == gameId && gs.UserId == user.Id);
         
         if (latestSave == null)
             return TypedResults.NotFound();

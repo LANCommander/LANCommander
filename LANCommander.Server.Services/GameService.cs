@@ -139,6 +139,7 @@ namespace LANCommander.Server.Services
                     .Include(g => g.Publishers)
                     .Include(g => g.Redistributables)
                     .Include(g => g.SavePaths)
+                    .Include(g => g.Scripts)
                     .Include(g => g.Tags);
             }).GetAsync(id);
 
@@ -242,6 +243,18 @@ namespace LANCommander.Server.Services
                     IsRegex = p.IsRegex,
                     WorkingDirectory = p.WorkingDirectory,
                     Type = p.Type
+                });
+            }
+
+            if (game.Scripts != null && game.Scripts.Count > 0)
+            {
+                manifest.Scripts = game.Scripts.Select(p => new SDK.Models.Script()
+                {
+                    Id = p.Id,
+                    Type = p.Type,
+                    Name = p.Name,
+                    Description = p.Description,
+                    RequiresAdmin = p.RequiresAdmin
                 });
             }
 

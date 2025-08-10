@@ -124,7 +124,7 @@ namespace LANCommander.Server.Controllers.Api
                     .Include(g => g.MultiplayerModes)
                     .Include(g => g.Platforms)
                     .Include(g => g.Publishers)
-                    .Include(g => g.Redistributables)
+                    .Query(q => q.Include(d => d.Redistributables).ThenInclude(r => r.Scripts))
                     .Include(g => g.Scripts)
                     .Include(g => g.Tags)
                     .AsNoTracking()

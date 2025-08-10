@@ -258,6 +258,17 @@ namespace LANCommander.Server.Services
                 });
             }
 
+            if (game.Redistributables != null && game.Redistributables.Count > 0)
+            {
+                manifest.Redistributables = game.Redistributables.Select(p => new SDK.Models.Redistributable()
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Notes = p.Notes
+                });
+            }
+
             if (game.DependentGames != null && game.DependentGames.Count > 0)
             {
                 manifest.DependentGames = game.DependentGames.Select(g => g.Id).ToArray();

@@ -8,10 +8,15 @@ public static class Kestrel
 {
     public static WebApplicationBuilder ConfigureKestrel(this WebApplicationBuilder builder)
     {
+        var settings = builder.Configuration.Get<Settings>();
+
+        if (settings?.UseSSL ?? false)
+            builder.WebHost.UseUrls($"http://*:{settings.Port}", $"https://*:{settings.SSLPort}");
+        else
+            builder.WebHost.UseUrls($"http://*:{settings.Port}");
+        
         builder.WebHost.ConfigureKestrel(options =>
         {
-            var settings = options.ApplicationServices.GetRequiredService<Settings>();
-            
             options.Limits.MaxRequestBodySize = long.MaxValue;
             options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
             

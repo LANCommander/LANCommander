@@ -391,7 +391,7 @@ namespace LANCommander.Server.Services
         }
         
         private static async Task<User?> GetUserAsync(string? username, DatabaseContext context) =>
-            await context.Users.FirstOrDefaultAsync(u => u.UserName == username);
+            await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserName == username);
 
         protected void Reset()
         {

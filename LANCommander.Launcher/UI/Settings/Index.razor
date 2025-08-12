@@ -109,7 +109,9 @@
     {
         var updateVersion = await UpdateService.CheckForUpdateAsync();
 
-        if (updateVersion == null)
+        Logger.LogDebug("Checked for update: {UpdateVersion}", updateVersion.Version);
+
+        if (updateVersion.Version == null)
             MessageService.Success("You are on the latest version!");
     }
 

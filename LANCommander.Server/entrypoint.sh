@@ -31,8 +31,6 @@ install_steamcmd() {
 
     cd -
     
-    cp /home/steam/steamcmd/steamcmd.sh /usr/local/bin/steamcmd
-    
     echo "SteamCMD installed successfully!"
 }
 

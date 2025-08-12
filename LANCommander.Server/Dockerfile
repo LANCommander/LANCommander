@@ -7,8 +7,10 @@ EXPOSE 35891/udp
 
 COPY ./published /app
 COPY entrypoint.sh /app/entrypoint.sh
+COPY steamcmd.sh /usr/local/bin/steamcmd
 
 # Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
+RUN chmod +x /usr/local/bin/steamcmd
 
 ENTRYPOINT ["/app/entrypoint.sh"]

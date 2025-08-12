@@ -1,53 +1,54 @@
 ﻿@page "/Settings/Integrations/Steam"
 @using LANCommander.Server.Services.Enums
-@using LANCommander.SDK
-@inject SteamCMDService SteamCMDService
-@inject Client Client
+@using LANCommander.Server.UI.Pages.Settings.Components
+@inject SteamCMDService SteamCmdService
 @inject IMessageService MessageService
 @inject ILogger<Beacon> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Steam" />
+<PageHeader Title="Steam">
+    <PageHeaderExtra>
+        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+    </PageHeaderExtra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings" Layout="@FormLayout.Vertical">
         <FormItem Label="SteamCMD Path">
-            <FilePicker @bind-Value="Settings.SteamCMD.Path" Title="Choose SteamCMD Executable Path" />
+            <FilePicker @bind-Value="Settings.SteamCMD.Path" Title="Choose SteamCMD Executable Path"/>
         </FormItem>
-        
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
-        
-        @if (_connectionStatus == SteamCMDConnectionStatus.Unauthenticated)
-        {
-            if (_processingLogin)
-            {
-                <Alert Message="Attempting login... You may receive a login request via Steam Guard"
-                       Type="AlertType.Info"/>
-            }
-
-            <FormItem Label="Username">
-                <Input @bind-Value="_username" Disabled="_processingLogin" />
-            </FormItem>
-            <FormItem Label="Password">
-                <InputPassword @bind-Value="_password" Disabled="_processingLogin" />
-            </FormItem>
-            <FormItem>
-                <Button OnClick="Authenticate" Type="@ButtonType.Primary" Loading="_processingLogin">Login</Button>
-            </FormItem>
-        }
-        else if (_connectionStatus == SteamCMDConnectionStatus.NotInstalled)
-        {
-            <Result Status="ResultStatus.Warning" Title="SteamCMD could not be found" />
-        }
     </Form>
+    
+    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+        <Collapse>
+            @foreach (var profile in Settings.SteamCMD.Profiles)
+            {
+                <Panel Header="@(String.IsNullOrWhiteSpace(profile.Username) ? "New Profile" : profile.Username)">
+                    <ExtraTemplate>
+                        <Flex Gap="FlexGap.Small">
+                            <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => RemoveProfile(profile)"/>
+                        </Flex>
+                    </ExtraTemplate>
+                    <ChildContent>
+                        <SteamProfileEditor
+                            @bind-Username="profile.Username"
+                            @bind-InstallDirectory="profile.InstallDirectory"
+                            OnAuthenticated="Save"/>
+                    </ChildContent>
+                </Panel>
+            }
+        </Collapse>
+
+        <Flex Justify="FlexJustify.End">
+            <Button OnClick="AddProfile">Add Profile</Button>
+        </Flex>
+    </Flex>
 </PageContent>
 
 @code {
     Settings Settings = SettingService.GetSettings();
 
-    SteamCMDConnectionStatus _connectionStatus;
+    SteamCmdConnectionStatus _connectionStatus;
 
     string _username;
     string _password;
@@ -56,36 +57,47 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _connectionStatus = SteamCMDService.GetConnectionStatus();
+        if (!Settings.SteamCMD.Profiles.Any())
+            AddProfile();
     }
 
-    async Task Authenticate()
+    void AddProfile()
     {
-        _processingLogin = true;
-        await InvokeAsync(StateHasChanged);
+        Settings.SteamCMD.Profiles.Add(new SteamCmdProfile());
+    }
 
-        var success = await SteamCMDService.LoginToSteamAsync(_username, _password);
+    async Task RemoveProfile(SteamCmdProfile profile)
+    {
+        Settings.SteamCMD.Profiles.Remove(profile);
+
+        if (!String.IsNullOrWhiteSpace(profile.Username))
+        {
+            var logoutMessage = new MessageConfig
+            {
+                Content = "Logging out of Steam...",
+                Duration = 0,
+                Key = Guid.NewGuid().ToString()
+            };
         
-        _connectionStatus = SteamCMDService.GetConnectionStatus();
+            MessageService.Loading(logoutMessage);
 
-        _processingLogin = false;
-        await InvokeAsync(StateHasChanged);
+            await SteamCmdService.LogoutAsync(profile.Username);
 
-        if (success)
-        {
-            MessageService.Success("Successfully authenticated to Steam!");
-            _password = String.Empty;
+            logoutMessage.Content = "Successfully logged out from Steam!";
+            logoutMessage.Duration = 3;
+            
+            MessageService.Success(logoutMessage);
         }
-        else
-        {
-            MessageService.Error("Could not authenticate to Steam!");
-        }
+
+        if (!Settings.SteamCMD.Profiles.Any())
+            AddProfile();
     }
 
     async Task Save()
     {
         try
         {
+            Settings.SteamCMD.Profiles = Settings.SteamCMD.Profiles.Where(p => !String.IsNullOrWhiteSpace(p.Username)).ToList();
             SettingService.SaveSettings(Settings);
             MessageService.Success("Settings saved!");
         }

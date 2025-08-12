@@ -1,7 +1,8 @@
 namespace LANCommander.Server.Services.Enums;
 
-public enum SteamCMDConnectionStatus
+public enum SteamCmdConnectionStatus
 {
+    Unknown,
     NotInstalled,
     Unauthenticated,
     Authenticated

@@ -1,0 +1,102 @@
+@using LANCommander.Server.Services.Enums
+@inject SteamCMDService SteamCmdService
+@inject IMessageService MessageService
+
+<Form Model="this" Layout="@FormLayout.Vertical" OnFinish="Authenticate" Loading="_connectionStatus == SteamCmdConnectionStatus.Unknown">
+    @if (_connectionStatus == SteamCmdConnectionStatus.Unauthenticated)
+    {
+        <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Middle" Align="FlexAlign.End">
+            <FormItem Label="Username" Style="flex-grow: 1;">
+                <Input Value="Username" ValueChanged="UsernameChanged" Disabled="_processingLogin" />
+            </FormItem>
+            <FormItem Label="Password" Style="flex-grow: 1;">
+                <InputPassword @bind-Value="_password" Disabled="_processingLogin"/>
+            </FormItem>
+            <FormItem>
+                <Button Type="ButtonType.Primary" Loading="_processingLogin" HtmlType="submit">Login</Button>
+            </FormItem>
+        </Flex>
+    }
+</Form>
+
+<Form Model="this" Layout="FormLayout.Vertical">
+    @if (_connectionStatus != SteamCmdConnectionStatus.Unauthenticated)
+    {
+        <FormItem Label="Username">
+            <Input Value="Username" Disabled />
+        </FormItem>
+    }
+    
+    <FormItem Label="Install Directory">
+        <FilePicker @bind-Value="InstallDirectory"/>
+    </FormItem>
+</Form>
+
+@code {
+    [Parameter] public string Username { get; set; }
+    [Parameter] public EventCallback<string> UsernameChanged { get; set; }
+    [Parameter] public string InstallDirectory { get; set; }
+    [Parameter] public EventCallback<string> InstallDirectoryChanged { get; set; }
+    [Parameter] public EventCallback OnAuthenticated { get; set; }
+
+    SteamCmdConnectionStatus _connectionStatus = SteamCmdConnectionStatus.Unknown;
+    
+    bool _processingLogin = false;
+    string _password = String.Empty;
+
+    MessageConfig _loginMessage = new MessageConfig();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!String.IsNullOrWhiteSpace(Username))
+            _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
+        else
+            _connectionStatus = SteamCmdConnectionStatus.Unauthenticated;
+    }
+
+    async Task Authenticate()
+    {
+        _processingLogin = true;
+        await InvokeAsync(StateHasChanged);
+
+        _loginMessage.Content = "Logging into Steam...";
+        _loginMessage.Key = Guid.NewGuid().ToString();
+        _loginMessage.Duration = 0;
+
+        MessageService.Loading(_loginMessage);
+        MessageService.Info("Check the Steam mobile app to confirm this login", 10);
+        
+        var success = await SteamCmdService.LoginToSteamAsync(Username, _password);
+
+        _connectionStatus = await SteamCmdService.GetConnectionStatusAsync(Username);
+
+        _processingLogin = false;
+        await InvokeAsync(StateHasChanged);
+
+        if (success)
+        {
+            _loginMessage.Content = "Successfully authenticated to Steam!";
+            _loginMessage.Duration = 3;
+            
+            MessageService.Success(_loginMessage);
+            
+            _password = String.Empty;
+
+            if (UsernameChanged.HasDelegate)
+                await UsernameChanged.InvokeAsync(Username);
+
+            if (InstallDirectoryChanged.HasDelegate)
+                await InstallDirectoryChanged.InvokeAsync(InstallDirectory);
+
+            if (OnAuthenticated.HasDelegate)
+                await OnAuthenticated.InvokeAsync();
+        }
+        else
+        {
+            _loginMessage.Content = "Could not authenticate to Steam!";
+            _loginMessage.Duration = 5;
+            
+            MessageService.Error(_loginMessage);
+        }
+    }
+}

@@ -84,7 +84,7 @@ namespace LANCommander.Server.Services.Models
         public LogSettings Logs { get; set; } = new LogSettings();
         public LibrarySettings Library { get; set; } = new LibrarySettings();
         public ScriptSettings Scripts { get; set; } = new ScriptSettings();
-        public SteamCMDSettings SteamCMD { get; set; } = new SteamCMDSettings();
+        public SteamCmdSettings SteamCMD { get; set; } = new SteamCmdSettings();
 
         private DriveInfo[] Drives { get; set; } = DriveInfo.GetDrives();
         public DriveInfo[] GetDrives()
@@ -282,8 +282,16 @@ namespace LANCommander.Server.Services.Models
         public int RepackageEvery { get; set; } = 24;
     }
 
-    public class SteamCMDSettings
+    public class SteamCmdSettings
     {
         public string Path { get; set; } = "";
+        public string InstallDirectory { get; set; } = "";
+        public ICollection<SteamCmdProfile> Profiles { get; set; } = new List<SteamCmdProfile>();
+    }
+
+    public class SteamCmdProfile
+    {
+        public string Username { get; set; }
+        public string InstallDirectory { get; set; }
     }
 }

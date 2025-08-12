@@ -5,7 +5,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<MediaEditor> Logger
 
-<Flex Vertical Gap="FlexGap.Large" Style="width: 100%" Class="media-editor">
+<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large" Style="width: 100%" Class="media-editor">
     <Table @ref="ResultsTable" TItem="Media" DataSource="@Values" RowKey="c => c.Id" @bind-SelectedRows="Selected" HidePagination="true" Responsive>
         <TitleTemplate>
             <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="@("10")">

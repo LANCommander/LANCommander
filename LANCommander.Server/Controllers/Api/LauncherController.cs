@@ -65,7 +65,7 @@ namespace LANCommander.Server.Controllers.Api
                 {
                     response.UpdateAvailable = true;
                     response.Version = currentVersion.ToString();
-                    response.DownloadUrl = Url.Action(nameof(DownloadAsync));
+                    response.DownloadUrl = Url.Action("Download", "Launcher");
                 }
             }
 

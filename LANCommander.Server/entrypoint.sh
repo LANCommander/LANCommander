@@ -28,13 +28,12 @@ install_steamcmd() {
     # Set permissions
     chown -R steam:steam /home/steam/steamcmd
     chmod +x /home/steam/steamcmd/steamcmd.sh
-    
-    # Create symlink for easy access
-    ln -sf /home/steam/steamcmd/steamcmd.sh /usr/local/bin/steamcmd
-    
-    echo "SteamCMD installed successfully!"
 
     cd -
+    
+    cp /home/steam/steamcmd/steamcmd.sh /usr/local/bin/steamcmd
+    
+    echo "SteamCMD installed successfully!"
 }
 
 # Function to install WINE

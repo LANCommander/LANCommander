@@ -41,22 +41,25 @@ namespace LANCommander.Launcher.Services
 
             Logger?.LogInformation("Update version {Version} has been downloaded", version);
 
-            Logger?.LogInformation("New autoupdater is being extracted");
+            string processExecutable = "LANCommander.AutoUpdater.exe";
 
-            string processExecutable = String.Empty;
-
-            if (File.Exists("LANCommander.AutoUpdater.exe"))
-                processExecutable = "LANCommander.AutoUpdater.exe";
-            else if (File.Exists("LANCommander.AutoUpdater"))
+            if (File.Exists("LANCommander.AutoUpdater"))
                 processExecutable = "LANCommander.AutoUpdater";
+
+            Logger?.LogInformation("New autoupdater is being extracted");
 
             using (ZipArchive archive = ZipFile.OpenRead(path))
             {
+                Logger?.LogTrace("Looping entries");
                 foreach (ZipArchiveEntry entry in archive.Entries.Where(e => e.FullName == processExecutable))
                 {
-                    entry.ExtractToFile(Path.Combine(processExecutable, entry.FullName));
+                    entry.ExtractToFile(entry.FullName, true);
+                    Logger?.LogTrace("Extracted {Entry}", entry);
                 }
+                Logger?.LogTrace("Entries loop over");
             }
+
+            Logger?.LogInformation("Sarting Autoupdater");
 
             var process = new ProcessStartInfo();
 

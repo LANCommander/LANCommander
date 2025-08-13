@@ -30,7 +30,7 @@ namespace LANCommander.Server.Controllers.Api
         {
             var version = _versionProvider.GetCurrentVersion();
             var settings = SettingService.GetSettings();
-            var fileName = $"LANCommander.Launcher-Windows-x64-v{version}.zip";
+            var fileName = $"LANCommander.Launcher-Windows-x64-v{version.WithoutMetadata()}.zip";
             var path = Path.Combine(settings.Launcher.StoragePath, fileName);
 
             if (!System.IO.File.Exists(path) || !settings.Launcher.HostUpdates)
@@ -65,7 +65,7 @@ namespace LANCommander.Server.Controllers.Api
                 {
                     response.UpdateAvailable = true;
                     response.Version = currentVersion.ToString();
-                    response.DownloadUrl = Url.Action(nameof(DownloadAsync));
+                    response.DownloadUrl = Url.Action("Download", "Launcher");
                 }
             }
 

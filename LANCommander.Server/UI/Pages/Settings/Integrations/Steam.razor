@@ -13,15 +13,17 @@
 </PageHeader>
 
 <PageContent>
-    <Form Model="Settings" Layout="@FormLayout.Vertical">
+    <Form Model="_settings" Layout="@FormLayout.Vertical">
         <FormItem Label="SteamCMD Path">
-            <FilePicker @bind-Value="Settings.SteamCMD.Path" Title="Choose SteamCMD Executable Path"/>
+            <FilePicker @bind-Value="_settings.SteamCMD.Path" Title="Choose SteamCMD Executable Path" Root="@_rootPath" />
         </FormItem>
     </Form>
     
+    <h2>Profiles</h2>
+    
     <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
         <Collapse>
-            @foreach (var profile in Settings.SteamCMD.Profiles)
+            @foreach (var profile in _settings.SteamCMD.Profiles)
             {
                 <Panel Header="@(String.IsNullOrWhiteSpace(profile.Username) ? "New Profile" : profile.Username)">
                     <ExtraTemplate>
@@ -46,7 +48,9 @@
 </PageContent>
 
 @code {
-    Settings Settings = SettingService.GetSettings();
+    Settings _settings = SettingService.GetSettings();
+    
+    string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     SteamCmdConnectionStatus _connectionStatus;
 
@@ -57,18 +61,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!Settings.SteamCMD.Profiles.Any())
+        if (!_settings.SteamCMD.Profiles.Any())
             AddProfile();
     }
 
     void AddProfile()
     {
-        Settings.SteamCMD.Profiles.Add(new SteamCmdProfile());
+        _settings.SteamCMD.Profiles.Add(new SteamCmdProfile());
     }
 
     async Task RemoveProfile(SteamCmdProfile profile)
     {
-        Settings.SteamCMD.Profiles.Remove(profile);
+        _settings.SteamCMD.Profiles.Remove(profile);
 
         if (!String.IsNullOrWhiteSpace(profile.Username))
         {
@@ -89,7 +93,7 @@
             MessageService.Success(logoutMessage);
         }
 
-        if (!Settings.SteamCMD.Profiles.Any())
+        if (!_settings.SteamCMD.Profiles.Any())
             AddProfile();
     }
 
@@ -97,8 +101,8 @@
     {
         try
         {
-            Settings.SteamCMD.Profiles = Settings.SteamCMD.Profiles.Where(p => !String.IsNullOrWhiteSpace(p.Username)).ToList();
-            SettingService.SaveSettings(Settings);
+            _settings.SteamCMD.Profiles = _settings.SteamCMD.Profiles.Where(p => !String.IsNullOrWhiteSpace(p.Username)).ToList();
+            SettingService.SaveSettings(_settings);
             MessageService.Success("Settings saved!");
         }
         catch (Exception ex)

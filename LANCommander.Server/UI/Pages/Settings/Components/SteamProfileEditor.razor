@@ -2,35 +2,37 @@
 @inject SteamCMDService SteamCmdService
 @inject IMessageService MessageService
 
-<Form Model="this" Layout="@FormLayout.Vertical" OnFinish="Authenticate" Loading="_connectionStatus == SteamCmdConnectionStatus.Unknown">
-    @if (_connectionStatus == SteamCmdConnectionStatus.Unauthenticated)
-    {
-        <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Middle" Align="FlexAlign.End">
-            <FormItem Label="Username" Style="flex-grow: 1;">
-                <Input Value="Username" ValueChanged="UsernameChanged" Disabled="_processingLogin" />
-            </FormItem>
-            <FormItem Label="Password" Style="flex-grow: 1;">
-                <InputPassword @bind-Value="_password" Disabled="_processingLogin"/>
-            </FormItem>
-            <FormItem>
-                <Button Type="ButtonType.Primary" Loading="_processingLogin" HtmlType="submit">Login</Button>
-            </FormItem>
-        </Flex>
-    }
-</Form>
+<Spin Spinning="_connectionStatus == SteamCmdConnectionStatus.Unknown">
+    <Form Model="this" Layout="@FormLayout.Vertical" OnFinish="Authenticate">
+        @if (_connectionStatus == SteamCmdConnectionStatus.Unauthenticated)
+        {
+            <Flex Direction="FlexDirection.Horizontal" Gap="FlexGap.Middle" Align="FlexAlign.End">
+                <FormItem Label="Username" Style="flex-grow: 1;">
+                    <Input Value="Username" ValueChanged="UsernameChanged" Disabled="_processingLogin" />
+                </FormItem>
+                <FormItem Label="Password" Style="flex-grow: 1;">
+                    <InputPassword @bind-Value="_password" Disabled="_processingLogin"/>
+                </FormItem>
+                <FormItem>
+                    <Button Type="ButtonType.Primary" Loading="_processingLogin" HtmlType="submit">Login</Button>
+                </FormItem>
+            </Flex>
+        }
+    </Form>
 
-<Form Model="this" Layout="FormLayout.Vertical">
-    @if (_connectionStatus != SteamCmdConnectionStatus.Unauthenticated)
-    {
-        <FormItem Label="Username">
-            <Input Value="Username" Disabled />
-        </FormItem>
-    }
+    <Form Model="this" Layout="FormLayout.Vertical">
+        @if (_connectionStatus != SteamCmdConnectionStatus.Unauthenticated)
+        {
+            <FormItem Label="Username">
+                <Input Value="Username" Disabled />
+            </FormItem>
+        }
     
-    <FormItem Label="Install Directory">
-        <FilePicker @bind-Value="InstallDirectory"/>
-    </FormItem>
-</Form>
+        <FormItem Label="Install Directory">
+            <FilePicker Value="@InstallDirectory" ValueChanged="InstallDirectoryChanged" Root="@_rootPath" />
+        </FormItem>
+    </Form>
+</Spin>
 
 @code {
     [Parameter] public string Username { get; set; }
@@ -38,6 +40,8 @@
     [Parameter] public string InstallDirectory { get; set; }
     [Parameter] public EventCallback<string> InstallDirectoryChanged { get; set; }
     [Parameter] public EventCallback OnAuthenticated { get; set; }
+    
+    string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
     SteamCmdConnectionStatus _connectionStatus = SteamCmdConnectionStatus.Unknown;
     

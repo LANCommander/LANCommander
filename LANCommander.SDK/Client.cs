@@ -23,7 +23,22 @@ using System.Threading.Tasks;
 
 namespace LANCommander.SDK
 {
-    public class Client
+    public class Client(
+        BeaconService beaconService,
+        DepotService depotService,
+        GameService gameService,
+        IssueService issueService,
+        LauncherService launcherService,
+        LibraryService libraryService,
+        LobbyService lobbyService,
+        MediaService mediaService,
+        PlaySessionService playSessionService,
+        ProfileService profileService,
+        RedistributableService redistributableService,
+        SaveService saveService,
+        ScriptService scriptService,
+        ServerService serverService,
+        TagService tagService)
     {
         private readonly ILogger Logger;
 
@@ -36,21 +51,21 @@ namespace LANCommander.SDK
         public Uri BaseUrl;
         public string DefaultInstallDirectory;
 
-        public readonly GameService Games;
-        public readonly LibraryService Library;
-        public readonly DepotService Depot;
-        public readonly SaveService Saves;
-        public readonly RedistributableService Redistributables;
-        public readonly ScriptService Scripts;
-        public readonly ProfileService Profile;
-        public readonly MediaService Media;
-        public readonly LauncherService Launcher;
-        public readonly IssueService Issues;
-        public readonly LobbyService Lobbies;
-        public readonly ServerService Servers;
-        public readonly PlaySessionService PlaySessions;
-        public readonly TagService Tags;
-        public readonly BeaconService Beacon;
+        public readonly BeaconService Beacon = beaconService;
+        public readonly DepotService Depot = depotService;
+        public readonly GameService Games = gameService;
+        public readonly IssueService Issues = issueService;
+        public readonly LauncherService Launcher = launcherService;
+        public readonly LibraryService Library = libraryService;
+        public readonly LobbyService Lobbies = lobbyService;
+        public readonly MediaService Media = mediaService;
+        public readonly PlaySessionService PlaySessions = playSessionService;
+        public readonly ProfileService Profile = profileService;
+        public readonly RedistributableService Redistributables = redistributableService;
+        public readonly SaveService Saves = saveService;
+        public readonly ScriptService Scripts = scriptService;
+        public readonly ServerService Servers = serverService;
+        public readonly TagService Tags = tagService;
 
         private Settings _Settings { get; set; }
         public Settings Settings
@@ -68,97 +83,6 @@ namespace LANCommander.SDK
         
         public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
-
-        public Client(string baseUrl, string defaultInstallDirectory)
-        {
-            DefaultInstallDirectory = defaultInstallDirectory;
-
-            Games = new GameService(this, DefaultInstallDirectory);
-            Library = new LibraryService(this);
-            Depot = new DepotService(this);
-            Saves = new SaveService(this);
-            Redistributables = new RedistributableService(this);
-            Scripts = new ScriptService(this);
-            Profile = new ProfileService(this);
-            Media = new MediaService(this);
-            Launcher = new LauncherService(this);
-            Issues = new IssueService(this);
-            Lobbies = new LobbyService(this);
-            Servers = new ServerService(this);
-            PlaySessions = new PlaySessionService(this);
-            Tags = new TagService(this);
-            Beacon = new BeaconService(this);
-
-            BaseCmdlet.Client = this;
-
-            try
-            {
-                ConfigureServerAddress(baseUrl);
-            }
-            catch
-            {
-            }
-        }
-
-        public Client(string baseUrl, string defaultInstallDirectory, ILogger logger)
-        {
-            try
-            {
-                ConfigureServerAddress(baseUrl);
-            }
-            catch
-            {
-            }
-
-            DefaultInstallDirectory = defaultInstallDirectory;
-
-            Games = new GameService(this, DefaultInstallDirectory, logger);
-            Library = new LibraryService(this, logger);
-            Depot = new DepotService(this, logger);
-            Saves = new SaveService(this, logger);
-            Redistributables = new RedistributableService(this, logger);
-            Scripts = new ScriptService(this, logger);
-            Profile = new ProfileService(this, logger);
-            Media = new MediaService(this, logger);
-            Launcher = new LauncherService(this);
-            Issues = new IssueService(this);
-            Lobbies = new LobbyService(this, logger);
-            Servers = new ServerService(this, logger);
-            PlaySessions = new PlaySessionService(this, logger);
-            Tags = new TagService(this, logger);
-            Beacon = new BeaconService(this, logger);
-
-            BaseCmdlet.Client = this;
-
-            Logger = logger;
-        }
-
-        // Constructor for tests
-        internal Client(HttpClient httpClient, string defaultInstallDirectory)
-        {
-            ApiClient = new RestClient(httpClient);
-            
-            DefaultInstallDirectory = defaultInstallDirectory;
-
-            Games = new GameService(this, DefaultInstallDirectory);
-            Library = new LibraryService(this);
-            Depot = new DepotService(this);
-            Saves = new SaveService(this);
-            Redistributables = new RedistributableService(this);
-            Scripts = new ScriptService(this);
-            Profile = new ProfileService(this);
-            Media = new MediaService(this);
-            Launcher = new LauncherService(this);
-            Issues = new IssueService(this);
-            Lobbies = new LobbyService(this);
-            Servers = new ServerService(this);
-            PlaySessions = new PlaySessionService(this);
-            Tags = new TagService(this);
-
-            IgnoreVersion = true;
-
-            BaseCmdlet.Client = this;
-        }
 
         public void ConfigureServerAddress(string baseUrl)
         {

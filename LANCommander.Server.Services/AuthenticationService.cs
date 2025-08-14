@@ -18,7 +18,8 @@ namespace LANCommander.Server.Services
         IMapper mapper,
         UserService userService,
         RoleService roleService,
-        ScriptService scriptService) : BaseService(logger)
+        ScriptService scriptService,
+        SDK.Client client) : BaseService(logger)
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
@@ -34,8 +35,6 @@ namespace LANCommander.Server.Services
 
                 if (scripts.Any())
                 {
-                    var client = new SDK.Client(_settings.Beacon.Address, "", logger);
-
                     client.UseToken(token);
 
                     foreach (var script in scripts)
@@ -188,8 +187,6 @@ namespace LANCommander.Server.Services
 
                         if (scripts.Any())
                         {
-                            var client = new SDK.Client(_settings.Beacon.Address, "", logger);
-
                             client.UseToken(token);
 
                             foreach (var script in scripts)

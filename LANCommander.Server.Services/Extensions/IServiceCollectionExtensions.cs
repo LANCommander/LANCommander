@@ -1,4 +1,5 @@
 using LANCommander.SDK;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Factories;
@@ -13,7 +14,11 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddLANCommanderServer(this IServiceCollection services, Settings settings)
     {
-        services.AddSingleton(new Client("", ""));
+        services.AddLANCommanderClient(options =>
+        {
+            options.BaseUrl = settings.Beacon.Address;
+        });
+        
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IdentityContextFactory>();
         services.AddScoped<SettingService>();

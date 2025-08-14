@@ -14,6 +14,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK.Extensions;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
@@ -47,13 +48,14 @@ namespace LANCommander.Launcher.Services.Extensions
             var options = new LANCommanderOptions();
 
             configure(options);
-
-            var client = new SDK.Client(options.ServerAddress, settings.Games.InstallDirectories.First(), options.Logger);
-
-            client.Scripts.Debug = settings.Debug.EnableScriptDebugging;
-            client.Scripts.ExternalScriptRunner += Scripts_ExternalScriptRunner;
-
-            services.AddSingleton(client);
+            services.AddLANCommanderClient(opt =>
+            {
+                opt.BaseUrl = options.ServerAddress;
+                opt.InstallDirectory = settings.Games.InstallDirectories.First();
+                opt.EnableScriptDebugging = settings.Debug.EnableScriptDebugging;
+                opt.ExternalScriptRunner += Scripts_ExternalScriptRunner;
+            });
+            
             services.AddSingleton<MessageBusService>();
             services.AddSingleton<AuthenticationService>();
             services.AddSingleton<KeepAliveService>();

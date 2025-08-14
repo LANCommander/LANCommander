@@ -21,7 +21,8 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ArchiveService archiveService,
-        MediaService mediaService) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
+        MediaService mediaService,
+        SDK.Client client) : BaseDatabaseService<Game>(logger, cache, mapper, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
         {
@@ -326,8 +327,6 @@ namespace LANCommander.Server.Services
 
             if (game.Scripts?.Any(s => s.Type == ScriptType.Package) ?? false)
             {
-                var client = new SDK.Client(_settings.Beacon.Address, "", logger);
-                
                 foreach (var script in game.Scripts.Where(s => s.Type == ScriptType.Package))
                 {
                     var package = await client.Scripts.RunPackageScriptAsync(mapper.Map<SDK.Models.Script>(script), mapper.Map<SDK.Models.Game>(game));

@@ -259,8 +259,7 @@ namespace LANCommander.Server.Services
                 context.Entry(newEntity).CurrentValues.SetValues(addedEntity);
                 
                 newEntity.CreatedOn = DateTime.UtcNow;
-                newEntity.CreatedBy = currentUser;
-                //newEntity.CreatedById = currentUser?.Id;
+                newEntity.CreatedById = currentUser?.Id;
 
                 if (additionalMapping != null)
                 {

@@ -238,7 +238,7 @@ public class SteamCMDService(
         }
     }
     
-    public async Task<bool> InstallContentAsync(uint appId, string installDirectory, string username = null, string password = null)
+    public async Task<bool> InstallContentAsync(uint appId, string installDirectory, string username)
     {
         try
         {
@@ -262,9 +262,8 @@ public class SteamCMDService(
             // Add login command if credentials provided
             if (!string.IsNullOrWhiteSpace(username))
             {
-                var loginCommand = string.IsNullOrWhiteSpace(password) 
-                    ? $"+login {username}" 
-                    : $"+login {username} {password}";
+                var loginCommand = $"+login {username}";
+                
                 commands.Add(loginCommand);
             }
             else
@@ -327,11 +326,11 @@ public class SteamCMDService(
         }
     }
 
-    private async Task<SteamCmdResult> ExecuteSteamCmdCommandAsync(string arguments, string steamCmdPath = null)
+    private async Task<SteamCmdResult> ExecuteSteamCmdCommandAsync(string arguments, string steamCmdPath = "")
     {
         try
         {
-            var executablePath = steamCmdPath ?? _settings.SteamCMD.Path;
+            var executablePath = String.IsNullOrWhiteSpace(steamCmdPath) ? _settings.SteamCMD.Path : steamCmdPath;
             
             var processStartInfo = new ProcessStartInfo
             {

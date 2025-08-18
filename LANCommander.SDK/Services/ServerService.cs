@@ -1,16 +1,7 @@
-﻿using LANCommander.SDK.Enums;
-using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Helpers;
-using LANCommander.SDK.Models;
-using LANCommander.SDK.PowerShell;
+﻿using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
-using SharpCompress.Common;
-using SharpCompress.Readers;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LANCommander.SDK.Services

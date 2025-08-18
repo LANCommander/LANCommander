@@ -3,24 +3,17 @@ using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
-using RestSharp;
-using SharpCompress.Archives;
-using SharpCompress.Archives.Zip;
 using SharpCompress.Common;
 using SharpCompress.Readers;
-using SharpCompress.Writers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LANCommander.SDK.Utilities;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 // Some terms for this file since they're probabably going to be needed in the future:
 // Local path - The full path of the file/directory on the local disk. No variables used, just the raw path for current machine

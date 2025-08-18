@@ -1,11 +1,6 @@
-﻿using Force.Crc32;
-using LANCommander.SDK.Extensions;
-using LANCommander.SDK.Helpers;
-using LANCommander.SDK.Models;
+﻿using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using LANCommander.SDK.Exceptions;
 

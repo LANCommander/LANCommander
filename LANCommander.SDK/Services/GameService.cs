@@ -60,7 +60,7 @@ namespace LANCommander.SDK.Services
 
     public class GameService
     {
-        private readonly ILogger Logger;
+        private readonly ILogger _logger;
         private Client Client { get; set; }
         private string DefaultInstallDirectory { get; set; }
 
@@ -73,15 +73,15 @@ namespace LANCommander.SDK.Services
         public delegate void OnInstallProgressUpdateHandler(InstallProgress e);
         public event OnInstallProgressUpdateHandler OnInstallProgressUpdate;
 
-        public const string PlayerAliasFilename = "PlayerAlias";
-        public const string KeyFilename = "Key";
+        private const string PlayerAliasFilename = "PlayerAlias";
+        private const string KeyFilename = "Key";
 
-        private TrackableStream TransferStream;
-        private IReader Reader;
+        private TrackableStream _transferStream;
+        private IReader _reader;
 
-        private InstallProgress _installProgress = new();
+        private readonly InstallProgress _installProgress = new();
 
-        private Dictionary<Guid, CancellationTokenSource> Running = new();
+        private readonly Dictionary<Guid, CancellationTokenSource> _running = new();
 
         public GameService(Client client, string defaultInstallDirectory)
         {
@@ -93,7 +93,7 @@ namespace LANCommander.SDK.Services
         {
             Client = client;
             DefaultInstallDirectory = defaultInstallDirectory;
-            Logger = logger;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<Game>> GetAsync()
@@ -142,7 +142,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogError(ex, $"Could not load manifest from dependent game {dependentGameId}");
+                        _logger?.LogError(ex, $"Could not load manifest from dependent game {dependentGameId}");
                     }
                 }
             }
@@ -161,7 +161,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not get actions from server");
+                _logger?.LogError(ex, "Could not get actions from server");
             }
             
             var manifests = await GetManifestsAsync(installDirectory, id);
@@ -202,7 +202,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "Could not get lobbies");
+                    _logger?.LogError(ex, "Could not get lobbies");
                 }
             }
 
@@ -226,7 +226,7 @@ namespace LANCommander.SDK.Services
 
         public async Task StartedAsync(Guid id)
         {
-            Logger?.LogTrace("Signaling to the server that we started the game...");
+            _logger?.LogTrace("Signaling to the server that we started the game...");
 
             try
             {
@@ -234,13 +234,13 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Failed sending start request to server");
+                _logger?.LogError(ex, "Failed sending start request to server");
             }
         }
 
         public async Task StoppedAsync(Guid id)
         {
-            Logger?.LogTrace("Signaling to the server that we stopped the game...");
+            _logger?.LogTrace("Signaling to the server that we stopped the game...");
 
             try
             { 
@@ -248,13 +248,13 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Failed sending stop request to server");
+                _logger?.LogError(ex, "Failed sending stop request to server");
             }
         }
 
         public string GetAllocatedKey(Guid id)
         {
-            Logger?.LogTrace("Requesting allocated key...");
+            _logger?.LogTrace("Requesting allocated key...");
 
             var macAddress = Client.GetMacAddress();
 
@@ -276,7 +276,7 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> GetAllocatedKeyAsync(Guid id)
         {
-            Logger?.LogTrace("Requesting allocated key...");
+            _logger?.LogTrace("Requesting allocated key...");
 
             var macAddress = Client.GetMacAddress();
 
@@ -298,7 +298,7 @@ namespace LANCommander.SDK.Services
 
         public string GetNewKey(Guid id)
         {
-            Logger?.LogTrace("Requesting new key allocation...");
+            _logger?.LogTrace("Requesting new key allocation...");
 
             var macAddress = Client.GetMacAddress();
 
@@ -374,15 +374,15 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogTrace(ex, "Error reading manifest before install");
+                _logger?.LogTrace(ex, "Error reading manifest before install");
             }
 
-            Logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
+            _logger?.LogTrace("Installing game {GameTitle} ({GameId})", game.Title, game.Id);
 
             // Download and extract
             var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromMilliseconds(500), new ExtractionResult(), async () =>
             {
-                Logger?.LogTrace("Attempting to download and extract game");
+                _logger?.LogTrace("Attempting to download and extract game");
 
                 return await Task.Run(() => DownloadAndExtract(game, destination));
             });
@@ -398,7 +398,7 @@ namespace LANCommander.SDK.Services
             // Game is extracted, get metadata
             var writeManifestSuccess = await RetryHelper.RetryOnExceptionAsync(maxAttempts, TimeSpan.FromSeconds(1), false, async () =>
             {
-                Logger?.LogTrace("Attempting to get game manifest");
+                _logger?.LogTrace("Attempting to get game manifest");
                 manifest = await WriteManifestAsync(game.InstallDirectory, game);
 
                 return true;
@@ -430,14 +430,14 @@ namespace LANCommander.SDK.Services
             #region Install Redistributables
             if (game.Redistributables != null && game.Redistributables.Any())
             {
-                Logger?.LogTrace("Installing redistributables");
+                _logger?.LogTrace("Installing redistributables");
 
                 await Client.Redistributables.InstallAsync(game);
             }
             #endregion
 
             #region Download Latest Save
-            Logger?.LogTrace("Attempting to download the latest save");
+            _logger?.LogTrace("Attempting to download the latest save");
 
             _installProgress.Status = InstallStatus.DownloadingSaves;
 
@@ -487,7 +487,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogError(ex, "Could not get information for addon with ID {AddonId}, skipping install", addonId);
+                        _logger?.LogError(ex, "Could not get information for addon with ID {AddonId}, skipping install", addonId);
                     }
                 }
 
@@ -511,7 +511,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogError(ex, "Could not install expansion with ID {AddonId}", expansion.Id);
+                        _logger?.LogError(ex, "Could not install expansion with ID {AddonId}", expansion.Id);
                     }
                 }
                 
@@ -535,7 +535,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogError(ex, "Could not install mod with ID {AddonId}", mod.Id);
+                        _logger?.LogError(ex, "Could not install mod with ID {AddonId}", mod.Id);
                     }
                 }
             }
@@ -560,7 +560,7 @@ namespace LANCommander.SDK.Services
             }
             catch (InstallCanceledException ex)
             {
-                Logger?.LogDebug("Install canceled");
+                _logger?.LogDebug("Install canceled");
 
                 _installProgress.Status = InstallStatus.Canceled;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -569,7 +569,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Failed to install addon {AddonTitle} ({AddonId})", addon.Title, addon.Id);
+                _logger?.LogError(ex, "Failed to install addon {AddonTitle} ({AddonId})", addon.Title, addon.Id);
 
                 _installProgress.Status = InstallStatus.Failed;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -589,7 +589,7 @@ namespace LANCommander.SDK.Services
             var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             if (manifest == null)
             {
-                Logger?.LogInformation("Unable to read or find manifest for game with ID {GameId}. Skip uninstallation!", gameId);
+                _logger?.LogInformation("Unable to read or find manifest for game with ID {GameId}. Skip uninstallation!", gameId);
                 return installResult;
             }
 
@@ -612,7 +612,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogWarning("Could not uninstall dependent game with ID {GameId}. Assuming it's already uninstalled or never installed...", gameId);
+                        _logger?.LogWarning("Could not uninstall dependent game with ID {GameId}. Assuming it's already uninstalled or never installed...", gameId);
                     }
                 }
             }
@@ -626,7 +626,7 @@ namespace LANCommander.SDK.Services
                 var fileList = await File.ReadAllLinesAsync(fileListPath);
                 var files = fileList.Select(l => l.Split('|').FirstOrDefault()?.Trim());
 
-                Logger?.LogDebug("Attempting to delete the install files");
+                _logger?.LogDebug("Attempting to delete the install files");
 
                 foreach (var file in files.Where(f => f != null && !f.EndsWith("/")))
                 {
@@ -642,22 +642,22 @@ namespace LANCommander.SDK.Services
                         if (File.Exists(localPath))
                             File.Delete(localPath);
 
-                        Logger?.LogTrace("Deleted file {LocalPath}", localPath);
+                        _logger?.LogTrace("Deleted file {LocalPath}", localPath);
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogWarning(ex, "Could not remove file {LocalPath}", localPath);
+                        _logger?.LogWarning(ex, "Could not remove file {LocalPath}", localPath);
                     }
                 }
 
-                Logger?.LogDebug("Attempting to delete any empty directories");
+                _logger?.LogDebug("Attempting to delete any empty directories");
 
                 DirectoryHelper.DeleteEmptyDirectories(installDirectory);
 
                 if (!Directory.Exists(installDirectory))
-                    Logger?.LogDebug("Deleted install directory {InstallDirectory}", installDirectory);
+                    _logger?.LogDebug("Deleted install directory {InstallDirectory}", installDirectory);
                 else
-                    Logger?.LogTrace("Removed game files for {GameTitle} ({GameId})", manifest.Title, gameId);
+                    _logger?.LogTrace("Removed game files for {GameTitle} ({GameId})", manifest.Title, gameId);
             }
             else
             {
@@ -687,7 +687,7 @@ namespace LANCommander.SDK.Services
             var baseManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, baseGameId);
             if (baseManifest == null)
             {
-                Logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
+                _logger?.LogInformation("Unable to read or find manifest for addon game with ID {GameId}. Skip uninstallation!", baseGameId);
                 return installResult;
             }
 
@@ -708,7 +708,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogWarning(ex, $"Could not uninstall dependent game {dependentGame} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
+                    _logger?.LogWarning(ex, $"Could not uninstall dependent game {dependentGame} of base game {baseGameId}. Assuming it's already uninstalled or never installed...");
                 }
             }
 
@@ -863,9 +863,9 @@ namespace LANCommander.SDK.Services
 
         private async Task<GameManifest> WriteManifestAsync(string installDirectory, Game game)
         {
-            Logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
+            _logger?.LogTrace($"Retrieving game manifest for game {game.Title} with id {game.Id}");
             GameManifest manifest = GetManifest(game.Id);
-            Logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
+            _logger?.LogTrace($"Saving Manifest for game {game.Id} into {installDirectory}");
             await ManifestHelper.WriteAsync(manifest, installDirectory);
             return manifest;
         }
@@ -874,7 +874,7 @@ namespace LANCommander.SDK.Services
         {
             if (game.Scripts != null)
             {
-                Logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
+                _logger?.LogTrace($"Saving scripts for game {game.Title} with id {game.Id} into {installDirectory}");
                 
                 foreach (var script in game.Scripts)
                 {
@@ -901,7 +901,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "Scripts failed to execute for game/addon {GameTitle} ({GameId})", game.Title, game.Id);
+                    _logger?.LogError(ex, "Scripts failed to execute for game/addon {GameTitle} ({GameId})", game.Title, game.Id);
                 }
             }
         }
@@ -910,12 +910,12 @@ namespace LANCommander.SDK.Services
         {
             if (game == null)
             {
-                Logger?.LogTrace("Game failed to download, no game was specified");
+                _logger?.LogTrace("Game failed to download, no game was specified");
 
                 throw new ArgumentNullException("No game was specified");
             }
 
-            Logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
+            _logger?.LogTrace("Downloading and extracting {Game} to path {Destination}", game.Title, destination);
 
             var extractionResult = new ExtractionResult
             {
@@ -929,12 +929,12 @@ namespace LANCommander.SDK.Services
             {
                 Directory.CreateDirectory(destination);
 
-                TransferStream = Stream(game.Id);
-                Reader = ReaderFactory.Open(TransferStream);
+                _transferStream = Stream(game.Id);
+                _reader = ReaderFactory.Open(_transferStream);
 
-                using (var monitor = new FileTransferMonitor(TransferStream.Length))
+                using (var monitor = new FileTransferMonitor(_transferStream.Length))
                 {
-                    TransferStream.OnProgress += (pos, len) =>
+                    _transferStream.OnProgress += (pos, len) =>
                     {
                         if (monitor.CanUpdate())
                         {
@@ -950,7 +950,7 @@ namespace LANCommander.SDK.Services
                     };
                 }
 
-                Reader.EntryExtractionProgress += (sender, e) =>
+                _reader.EntryExtractionProgress += (sender, e) =>
                 {
                     // Do we need this granular of control? If so, invocations should be rate limited
                     OnArchiveEntryExtractionProgress?.Invoke(this, new ArchiveEntryExtractionProgressArgs
@@ -961,14 +961,14 @@ namespace LANCommander.SDK.Services
                     });
                 };
 
-                while (Reader.MoveToNextEntry())
+                while (_reader.MoveToNextEntry())
                 {
-                    if (Reader.Cancelled)
+                    if (_reader.Cancelled)
                         break;
 
                     try
                     {
-                        var localFile = Path.Combine(destination, Reader.Entry.Key);
+                        var localFile = Path.Combine(destination, _reader.Entry.Key);
 
                         uint crc = 0;
 
@@ -990,15 +990,15 @@ namespace LANCommander.SDK.Services
                             }
                         }
 
-                        fileManifest.AppendLine($"{Reader.Entry.Key} | {Reader.Entry.Crc.ToString("X")}");
+                        fileManifest.AppendLine($"{_reader.Entry.Key} | {_reader.Entry.Crc.ToString("X")}");
                         files.Add(new ExtractionResult.FileEntry
                         {
-                            EntryPath = Reader.Entry.Key,
+                            EntryPath = _reader.Entry.Key,
                             LocalPath = localFile,
                         });
 
-                        if (crc == 0 || crc != Reader.Entry.Crc)
-                            Reader.WriteEntryToDirectory(destination, new ExtractionOptions()
+                        if (crc == 0 || crc != _reader.Entry.Crc)
+                            _reader.WriteEntryToDirectory(destination, new ExtractionOptions()
                             {
                                 ExtractFullPath = true,
                                 Overwrite = true,
@@ -1007,11 +1007,11 @@ namespace LANCommander.SDK.Services
                         else // Skip to next entry
                             try
                             {
-                                Reader.OpenEntryStream().Dispose();
+                                _reader.OpenEntryStream().Dispose();
                             }
                             catch
                             {
-                                Logger?.LogError("Could not skip to next entry in archive");
+                                _logger?.LogError("Could not skip to next entry in archive");
                             }
                     }
                     catch (IOException ex)
@@ -1021,36 +1021,36 @@ namespace LANCommander.SDK.Services
                         if (errorCode == 87)
                             throw ex;
                         else
-                            Logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                            _logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
 
                         // Skip to next entry
-                        Reader.OpenEntryStream().Dispose();
+                        _reader.OpenEntryStream().Dispose();
                     }
                 }
 
-                Reader.Dispose();
-                TransferStream.Dispose();
+                _reader.Dispose();
+                _transferStream.Dispose();
             }
             catch (ReaderCancelledException ex)
             {
-                Logger?.LogTrace(ex, "User cancelled the download");
+                _logger?.LogTrace(ex, "User cancelled the download");
 
                 extractionResult.Canceled = true;
 
                 if (Directory.Exists(destination))
                 {
-                    Logger?.LogTrace("Cleaning up orphaned files after cancelled install");
+                    _logger?.LogTrace("Cleaning up orphaned files after cancelled install");
 
                     Directory.Delete(destination, true);
                 }
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+                _logger?.LogError(ex, "Could not extract to path {Destination}", destination);
 
                 if (Directory.Exists(destination))
                 {
-                    Logger?.LogTrace("Cleaning up orphaned install files after bad install");
+                    _logger?.LogTrace("Cleaning up orphaned install files after bad install");
 
                     Directory.Delete(destination, true);
                 }
@@ -1071,7 +1071,7 @@ namespace LANCommander.SDK.Services
 
                 File.WriteAllText(fileListDestination, fileManifest.ToString());
 
-                Logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
+                _logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
             }
 
             return extractionResult;
@@ -1103,7 +1103,7 @@ namespace LANCommander.SDK.Services
 
         public void CancelInstall()
         {
-            Reader?.Cancel();
+            _reader?.Cancel();
         }
 
         public async Task<ICollection<GameManifest>> ReadManifestsAsync(string installDirectory, Guid gameId)
@@ -1129,7 +1129,7 @@ namespace LANCommander.SDK.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger?.LogError(ex, "Could not load manifest from dependent game {DependentGameId}", dependentGameId);
+                        _logger?.LogError(ex, "Could not load manifest from dependent game {DependentGameId}", dependentGameId);
                     }
                 }
             }
@@ -1209,7 +1209,7 @@ namespace LANCommander.SDK.Services
         {
             var screen = DisplayHelper.GetScreen();
 
-            using (var context = new ProcessExecutionContext(Client, Logger))
+            using (var context = new ProcessExecutionContext(Client, _logger))
             {
                 context.AddVariable("ServerAddress", Client.GetServerAddress());
                 
@@ -1222,7 +1222,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "Could not get display information for execution context variables");
+                    _logger?.LogError(ex, "Could not get display information for execution context variables");
                 }
 
                 try
@@ -1235,7 +1235,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "Could not connect to IPXRelay host");
+                    _logger?.LogError(ex, "Could not connect to IPXRelay host");
                 }
 
                 #region Run Scripts
@@ -1282,7 +1282,7 @@ namespace LANCommander.SDK.Services
                     {
                         await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                         {
-                            Logger?.LogTrace("Attempting to download save");
+                            _logger?.LogTrace("Attempting to download save");
 
                             var latestSave = await Client.Saves.GetLatestAsync(manifest.Id);
 
@@ -1313,17 +1313,17 @@ namespace LANCommander.SDK.Services
                     var cancellationTokenSource = new CancellationTokenSource();
                     var task = context.ExecuteGameActionAsync(installDirectory, gameId, action, "", cancellationTokenSource.Token);
 
-                    Running[gameId] = cancellationTokenSource;
+                    _running[gameId] = cancellationTokenSource;
 
                     await task;
 
-                    Running.Remove(gameId);
+                    _running.Remove(gameId);
 
                     await UploadSavesAsync(manifests, installDirectory);
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "Game failed to run");
+                    _logger?.LogError(ex, "Game failed to run");
                 }
 
                 foreach (var manifest in manifests)
@@ -1351,7 +1351,7 @@ namespace LANCommander.SDK.Services
                 {
                     await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
                     {
-                        Logger?.LogTrace("Attempting to upload save");
+                        _logger?.LogTrace("Attempting to upload save");
 
                         await Client.Saves.UploadAsync(installDirectory, manifest.Id);
 
@@ -1363,20 +1363,20 @@ namespace LANCommander.SDK.Services
 
         public async Task Stop(Guid gameId)
         {
-            if (Running.ContainsKey(gameId))
+            if (_running.ContainsKey(gameId))
             {
-                await Running[gameId].CancelAsync();
+                await _running[gameId].CancelAsync();
 
-                Running.Remove(gameId);
+                _running.Remove(gameId);
             }
         }
 
         public bool IsRunning(Guid gameId)
         {
-            if (!Running.ContainsKey(gameId))
+            if (!_running.ContainsKey(gameId))
                 return false;
 
-            return !Running[gameId].IsCancellationRequested;
+            return !_running[gameId].IsCancellationRequested;
         }
 
         public async Task ImportAsync(string archivePath)
@@ -1542,21 +1542,21 @@ namespace LANCommander.SDK.Services
             {
                 try
                 {
-                    TransferStream = Stream(gameId);
-                    Reader = ReaderFactory.Open(TransferStream);
+                    _transferStream = Stream(gameId);
+                    _reader = ReaderFactory.Open(_transferStream);
 
-                    while (Reader.MoveToNextEntry())
+                    while (_reader.MoveToNextEntry())
                     {
-                        if (Reader.Cancelled)
+                        if (_reader.Cancelled)
                             break;
 
                         try
                         {
-                            if (entries.Contains(Reader.Entry.Key))
+                            if (entries.Contains(_reader.Entry.Key))
                             {
-                                var destination = Path.Combine(installDirectory, Reader.Entry.Key?.Replace('/', Path.DirectorySeparatorChar) ?? string.Empty);
+                                var destination = Path.Combine(installDirectory, _reader.Entry.Key?.Replace('/', Path.DirectorySeparatorChar) ?? string.Empty);
 
-                                Reader.WriteEntryToFile(destination, new ExtractionOptions
+                                _reader.WriteEntryToFile(destination, new ExtractionOptions
                                 {
                                     Overwrite = true,
                                     PreserveFileTime = true,
@@ -1565,11 +1565,11 @@ namespace LANCommander.SDK.Services
                             else // Skip to next entry
                                 try
                                 {
-                                    Reader.OpenEntryStream().Dispose();
+                                    _reader.OpenEntryStream().Dispose();
                                 }
                                 catch (Exception ex)
                                 {
-                                    Logger?.LogError(ex, "Could not skip to the next entry in the archive");
+                                    _logger?.LogError(ex, "Could not skip to the next entry in the archive");
                                 }
                         }
                         catch (IOException ex)
@@ -1579,15 +1579,15 @@ namespace LANCommander.SDK.Services
                             if (errorCode == 87)
                                 throw;
                             else
-                                Logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
+                                _logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
 
                             // Skip to next entry
-                            Reader.OpenEntryStream().Dispose();
+                            _reader.OpenEntryStream().Dispose();
                         }
                     }
 
-                    Reader.Dispose();
-                    TransferStream.Dispose();
+                    _reader.Dispose();
+                    _transferStream.Dispose();
                 }
                 catch (Exception ex)
                 {

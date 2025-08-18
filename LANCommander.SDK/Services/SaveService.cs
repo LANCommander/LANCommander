@@ -351,7 +351,7 @@ namespace LANCommander.SDK.Services
             var actualPath = path.DeflateEnvironmentVariables(installDirectory);
 
             if (Path.DirectorySeparatorChar == '\\')
-                actualPath.Replace(Path.DirectorySeparatorChar, '/');
+                actualPath = path.Replace('/', Path.DirectorySeparatorChar);
 
             return actualPath;
         }

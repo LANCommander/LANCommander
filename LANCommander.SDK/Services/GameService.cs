@@ -116,7 +116,7 @@ namespace LANCommander.SDK.Services
             return Client.GetRequest<GameManifest>($"/api/Games/{id}/Manifest");
         }
 
-        public async Task<IEnumerable<GameManifest>> GetManifestsAsync(string installDirectory, Guid id)
+        public async Task<ICollection<GameManifest>> GetManifestsAsync(string installDirectory, Guid id)
         {
             var manifests = new List<GameManifest>();
             var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, id);
@@ -624,11 +624,11 @@ namespace LANCommander.SDK.Services
             if (File.Exists(fileListPath))
             {
                 var fileList = await File.ReadAllLinesAsync(fileListPath);
-                var files = fileList.Select(l => l.Split('|').FirstOrDefault().Trim());
+                var files = fileList.Select(l => l.Split('|').FirstOrDefault()?.Trim());
 
                 Logger?.LogDebug("Attempting to delete the install files");
 
-                foreach (var file in files.Where(f => !f.EndsWith("/")))
+                foreach (var file in files.Where(f => f != null && !f.EndsWith("/")))
                 {
                     var localPath = Path.Combine(installDirectory, file);
                     baseFileList.AddFile(new GameInstallationFileListEntry.FileEntry
@@ -1009,7 +1009,10 @@ namespace LANCommander.SDK.Services
                             {
                                 Reader.OpenEntryStream().Dispose();
                             }
-                            catch { }
+                            catch
+                            {
+                                Logger?.LogError("Could not skip to next entry in archive");
+                            }
                     }
                     catch (IOException ex)
                     {
@@ -1030,7 +1033,7 @@ namespace LANCommander.SDK.Services
             }
             catch (ReaderCancelledException ex)
             {
-                Logger?.LogTrace("User cancelled the download");
+                Logger?.LogTrace(ex, "User cancelled the download");
 
                 extractionResult.Canceled = true;
 
@@ -1103,7 +1106,7 @@ namespace LANCommander.SDK.Services
             Reader?.Cancel();
         }
 
-        public async Task<IEnumerable<GameManifest>> ReadManifestsAsync(string installDirectory, Guid gameId)
+        public async Task<ICollection<GameManifest>> ReadManifestsAsync(string installDirectory, Guid gameId)
         {
             var manifests = new List<GameManifest>();
             var mainManifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
@@ -1175,7 +1178,7 @@ namespace LANCommander.SDK.Services
             {
                 var entries = await GetGameInstallationArchiveEntries(gameId, baseManifest);
                 gameArchives.BaseGame.Entries.AddRange(entries);
-                manifests = manifests.Except([baseManifest]);
+                manifests = manifests.Except([baseManifest]).ToList();
 
                 var savePathEntries = baseManifest.SavePaths?.SelectMany(p => Client.Saves.GetFileSavePathEntries(p, installDirectory)).ToList() ?? [];
                 gameArchives.BaseGame.SavePaths = savePathEntries;
@@ -1520,7 +1523,7 @@ namespace LANCommander.SDK.Services
             var groups = entries.GroupBy(x => x.GameId);
             foreach (var group in groups)
             {
-                await DownloadFilesAsync(installDirectory, group.Key, group.Select(x => x.FilePath));
+                await DownloadFilesAsync(installDirectory, group.Key, group.Select(x => x.FilePath).ToList());
             }
         }
 
@@ -1530,7 +1533,7 @@ namespace LANCommander.SDK.Services
         /// <param name="installDirectory">The directory where the game is installed.</param>
         /// <param name="gameId">The unique identifier of the game.</param>
         /// <param name="entries">A collection of file paths to download.</param>
-        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, IEnumerable<string> entries)
+        public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries)
         {
             var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
             var archive = await Client.GetRequestAsync<Archive>($"/api/Archives/ByVersion/{manifest.Version}");
@@ -1551,7 +1554,7 @@ namespace LANCommander.SDK.Services
                         {
                             if (entries.Contains(Reader.Entry.Key))
                             {
-                                var destination = Path.Combine(installDirectory, Reader.Entry.Key.Replace('/', Path.DirectorySeparatorChar));
+                                var destination = Path.Combine(installDirectory, Reader.Entry.Key?.Replace('/', Path.DirectorySeparatorChar) ?? string.Empty);
 
                                 Reader.WriteEntryToFile(destination, new ExtractionOptions
                                 {
@@ -1564,14 +1567,17 @@ namespace LANCommander.SDK.Services
                                 {
                                     Reader.OpenEntryStream().Dispose();
                                 }
-                                catch { }
+                                catch (Exception ex)
+                                {
+                                    Logger?.LogError(ex, "Could not skip to the next entry in the archive");
+                                }
                         }
                         catch (IOException ex)
                         {
                             var errorCode = ex.HResult & 0xFFFF;
 
                             if (errorCode == 87)
-                                throw ex;
+                                throw;
                             else
                                 Logger?.LogTrace("Not replacing existing file/folder on disk: {Message}", ex.Message);
 

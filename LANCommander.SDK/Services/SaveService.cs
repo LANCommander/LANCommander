@@ -15,7 +15,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using LANCommander.SDK.Utilities;
 
-// Some terms for this file since they're probabably going to be needed in the future:
+// Some terms for this file since they're probably going to be needed in the future:
 // Local path - The full path of the file/directory on the local disk. No variables used, just the raw path for current machine
 // Actual path - The path where the entries should be extracted to, before expanding environemnt variables.
 // Archive path - The path of where the entries are located in the ZIP

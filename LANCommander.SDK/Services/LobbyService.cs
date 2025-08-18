@@ -9,18 +9,18 @@ namespace LANCommander.SDK.Services
 {
     public class LobbyService
     {
-        private readonly ILogger Logger;
-        private readonly Client Client;
+        private readonly ILogger _logger;
+        private readonly Client _client;
 
         public LobbyService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public LobbyService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         /// <summary>
@@ -45,13 +45,13 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                Logger?.LogTrace("Initializing Steamworks with app ID {AppId}", appId);
+                _logger?.LogTrace("Initializing Steamworks with app ID {AppId}", appId);
 
                 SteamClient.Init(appId, true);
 
                 foreach (var friend in SteamFriends.GetFriends())
                 {
-                    if (friend.IsPlayingThisGame && friend.GameInfo.HasValue && friend.GameInfo.Value.Lobby.HasValue)
+                    if (friend is { IsPlayingThisGame: true, GameInfo.Lobby: not null })
                     {
                         var lobby = new Lobby
                         {
@@ -64,13 +64,13 @@ namespace LANCommander.SDK.Services
 
                         lobbies.Add(lobby);
 
-                        Logger?.LogTrace("Found lobby | {FriendName} ({FriendId}): {LobbyId}", lobby.ExternalUsername, lobby.ExternalUserId, lobby.Id);
+                        _logger?.LogTrace("Found lobby | {FriendName} ({FriendId}): {LobbyId}", lobby.ExternalUsername, lobby.ExternalUserId, lobby.Id);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Couldn't initialize Steamworks");
+                _logger?.LogError(ex, "Couldn't initialize Steamworks");
             }
 
             return lobbies;

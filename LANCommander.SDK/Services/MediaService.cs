@@ -9,34 +9,34 @@ namespace LANCommander.SDK.Services
 {
     public class MediaService
     {
-        private readonly ILogger Logger;
+        private readonly ILogger _logger;
 
-        private readonly Client Client;
+        private readonly Client _client;
 
         public MediaService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public MediaService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         public async Task<Media> Get(Guid mediaId)
         {
-            return await Client.GetRequestAsync<Media>($"/api/Media/{mediaId}");
+            return await _client.GetRequestAsync<Media>($"/api/Media/{mediaId}");
         }
 
         public async Task<string> DownloadAsync(Media media, string destination)
         {
-            return await Client.DownloadRequestAsync(GetDownloadPath(media), destination);
+            return await _client.DownloadRequestAsync(GetDownloadPath(media), destination);
         }
 
         public string GetAbsoluteUrl(Media media)
         {
-            return new Uri(Client.BaseUrl, GetDownloadPath(media)).ToString();
+            return new Uri(_client.BaseUrl, GetDownloadPath(media)).ToString();
         }
 
         public string GetDownloadPath(Media media)
@@ -46,7 +46,7 @@ namespace LANCommander.SDK.Services
 
         public string GetAbsoluteThumbnailUrl(Media media)
         {
-            return new Uri(Client.BaseUrl, GetThumbnailPath(media)).ToString();
+            return new Uri(_client.BaseUrl, GetThumbnailPath(media)).ToString();
         }
 
         public string GetThumbnailPath(Media media)

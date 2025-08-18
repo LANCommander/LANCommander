@@ -8,28 +8,28 @@ namespace LANCommander.SDK.Services
 {
     public class PlaySessionService
     {
-        private readonly ILogger Logger;
-        private Client Client { get; set; }
+        private readonly ILogger _logger;
+        private readonly Client _client;
 
         public PlaySessionService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public PlaySessionService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<EntityReference>> GetAsync()
         {
-            return await Client.GetRequestAsync<IEnumerable<EntityReference>>("/api/PlaySessions");
+            return await _client.GetRequestAsync<IEnumerable<EntityReference>>("/api/PlaySessions");
         }
 
         public async Task<IEnumerable<PlaySession>> GetAsync(Guid gameId)
         {
-            return await Client.PostRequestAsync<IEnumerable<PlaySession>>($"/api/PlaySessions/{gameId}");
+            return await _client.PostRequestAsync<IEnumerable<PlaySession>>($"/api/PlaySessions/{gameId}");
         }
     }
 }

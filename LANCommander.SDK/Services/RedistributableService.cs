@@ -15,8 +15,8 @@ namespace LANCommander.SDK.Services
 {
     public class RedistributableService
     {
-        private readonly ILogger Logger;
-        private Client Client { get; set; }
+        private readonly ILogger _logger;
+        private readonly Client _client;
 
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
@@ -31,18 +31,18 @@ namespace LANCommander.SDK.Services
 
         public RedistributableService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public RedistributableService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         public TrackableStream Stream(Guid id)
         {
-            return Client.StreamRequest($"/api/Redistributables/{id}/Download");
+            return _client.StreamRequest($"/api/Redistributables/{id}/Download");
         }
 
         public async Task InstallAsync(Game game)
@@ -70,34 +70,34 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                Logger?.LogTrace("Saving manifest");
+                _logger?.LogTrace("Saving manifest");
 
                 await ManifestHelper.WriteAsync(redistributable, game.InstallDirectory);
                 
-                Logger?.LogTrace("Saving scripts");
+                _logger?.LogTrace("Saving scripts");
                     
                 foreach (var script in redistributable.Scripts)
                 {
                     await ScriptHelper.SaveScriptAsync(game, redistributable, script.Type);
                 }
                 
-                var installed = await Client.Scripts.RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
+                var installed = await _client.Scripts.RunDetectInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
 
-                Logger?.LogTrace("Redistributable install detection returned {Result}", installed);
+                _logger?.LogTrace("Redistributable install detection returned {Result}", installed);
 
                 if (!installed)
                 {
-                    Logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
+                    _logger?.LogTrace("Redistributable {RedistributableName} not installed", redistributable.Name);
                     
                     if (redistributable.Archives.Any())
                     {
-                        Logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
+                        _logger?.LogTrace("Archives for redistributable {RedistributableName} exist. Attempting to download...", redistributable.Name);
 
                         var result = await RetryHelper.RetryOnExceptionAsync(maxAttempts,
                             TimeSpan.FromMilliseconds(500), new ExtractionResult(),
                             async () =>
                             {
-                                Logger?.LogTrace("Attempting to download and extract redistributable");
+                                _logger?.LogTrace("Attempting to download and extract redistributable");
 
                                 return await Task.Run(() => DownloadAndExtract(redistributable, game));
                             });
@@ -109,14 +109,14 @@ namespace LANCommander.SDK.Services
 
                         extractTempPath = result.Directory;
                         
-                        Logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
-                        Logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
+                        _logger?.LogTrace("Extraction of redistributable successful. Extracted path is {Path}", extractTempPath);
+                        _logger?.LogTrace("Running install script for redistributable {RedistributableName}", redistributable.Name);
 
                         await RunPostInstallScripts(game, redistributable);
                     }
                     else
                     {
-                        Logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
+                        _logger?.LogTrace("No archives exist for redistributable {RedistributableName}. Running install script anyway...", redistributable.Name);
 
                         await RunPostInstallScripts(game, redistributable);
                     }
@@ -124,7 +124,7 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Redistributable {Redistributable} failed to install", redistributable.Name);
+                _logger?.LogError(ex, "Redistributable {Redistributable} failed to install", redistributable.Name);
             }
             finally
             {
@@ -143,12 +143,12 @@ namespace LANCommander.SDK.Services
 
                 try
                 {
-                    await Client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
-                    await Client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, redistributable.Id, await Client.Profile.GetAliasAsync());
+                    await _client.Scripts.RunInstallScriptAsync(game.InstallDirectory, game.Id, redistributable.Id);
+                    await _client.Scripts.RunNameChangeScriptAsync(game.InstallDirectory, game.Id, redistributable.Id, await _client.Profile.GetAliasAsync());
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "Scripts failed to execute for redistributable {RedistributableName} ({GameId})", redistributable.Name, redistributable.Id);
+                    _logger?.LogError(ex, "Scripts failed to execute for redistributable {RedistributableName} ({GameId})", redistributable.Name, redistributable.Id);
                 }
             }
         }
@@ -157,14 +157,14 @@ namespace LANCommander.SDK.Services
         {
             if (redistributable == null)
             {
-                Logger?.LogTrace("Redistributable failed to download! No redistributable was specified");
-                throw new ArgumentNullException("No redistributable was specified");
+                _logger?.LogTrace("Redistributable failed to download! No redistributable was specified");
+                throw new ArgumentNullException(nameof(redistributable));
             }
 
             var destination = Path.Combine(GameService.GetMetadataDirectoryPath(game.InstallDirectory, redistributable.Id), "Files");
             var files = new List<ExtractionResult.FileEntry>();
 
-            Logger?.LogTrace("Downloading and extracting {Redistributable} to path {Destination}", redistributable.Name, destination);
+            _logger?.LogTrace("Downloading and extracting {Redistributable} to path {Destination}", redistributable.Name, destination);
 
             try
             {
@@ -214,11 +214,11 @@ namespace LANCommander.SDK.Services
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not extract to path {Destination}", destination);
+                _logger?.LogError(ex, "Could not extract to path {Destination}", destination);
 
                 if (Directory.Exists(destination))
                 {
-                    Logger?.LogTrace("Cleaning up orphaned files after bad install");
+                    _logger?.LogTrace("Cleaning up orphaned files after bad install");
 
                     Directory.Delete(destination, true);
                 }
@@ -236,7 +236,7 @@ namespace LANCommander.SDK.Services
                 extractionResult.Success = true;
                 extractionResult.Directory = destination;
                 extractionResult.Files = files;
-                Logger?.LogTrace("Redistributable {Redistributable} successfully downloaded and extracted to {Destination}", redistributable.Name, destination);
+                _logger?.LogTrace("Redistributable {Redistributable} successfully downloaded and extracted to {Destination}", redistributable.Name, destination);
             }
 
             return extractionResult;
@@ -246,26 +246,26 @@ namespace LANCommander.SDK.Services
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
+                var objectKey = await _client.ChunkedUploadRequestAsync("", fs);
 
                 if (objectKey != Guid.Empty)
-                    await Client.PostRequestAsync<object>($"/api/Redistributables/Import/{objectKey}");
+                    await _client.PostRequestAsync<object>($"/api/Redistributables/Import/{objectKey}");
             }
         }
 
         public async Task ExportAsync(string destinationPath, Guid redistributableId)
         {
-            await Client.DownloadRequestAsync($"/Redistributables/{redistributableId}/Export/Full", destinationPath);
+            await _client.DownloadRequestAsync($"/Redistributables/{redistributableId}/Export/Full", destinationPath);
         }
 
         public async Task UploadArchiveAsync(string archivePath, Guid redistributableId, string version, string changelog = "")
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
-                var objectKey = await Client.ChunkedUploadRequestAsync("", fs);
+                var objectKey = await _client.ChunkedUploadRequestAsync("", fs);
 
                 if (objectKey != Guid.Empty)
-                    await Client.PostRequestAsync<object>($"/api/Redistributables/UploadArchive", new UploadArchiveRequest
+                    await _client.PostRequestAsync<object>($"/api/Redistributables/UploadArchive", new UploadArchiveRequest
                     {
                         Id = redistributableId,
                         ObjectKey = objectKey,

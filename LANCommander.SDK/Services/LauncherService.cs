@@ -8,18 +8,18 @@ namespace LANCommander.SDK.Services
 {
     public class LauncherService
     {
-        private readonly ILogger Logger;
-        private Client Client { get; set; }
+        private readonly ILogger _logger;
+        private readonly Client _client;
 
         public LauncherService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public LauncherService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         public async Task<CheckForUpdateResponse> CheckForUpdateAsync()
@@ -28,11 +28,11 @@ namespace LANCommander.SDK.Services
             {
                 var request = new RestRequest("/api/Launcher", Method.Get);
 
-                return await Client.GetRequestAsync<CheckForUpdateResponse>("/api/Launcher/CheckForUpdate", true);
+                return await _client.GetRequestAsync<CheckForUpdateResponse>("/api/Launcher/CheckForUpdate", true);
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not check for updates from server");
+                _logger?.LogError(ex, "Could not check for updates from server");
             }
 
             return null;
@@ -40,9 +40,9 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> DownloadAsync(string destination)
         {
-            Logger?.LogTrace("Downloading the launcher");
+            _logger?.LogTrace("Downloading the launcher");
 
-            return await Client.DownloadRequestAsync("/api/Launcher/Download", destination);
+            return await _client.DownloadRequestAsync("/api/Launcher/Download", destination);
         }
     }
 }

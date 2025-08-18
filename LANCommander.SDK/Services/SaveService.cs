@@ -27,9 +27,9 @@ namespace LANCommander.SDK.Services
 {
     public class SaveService
     {
-        private readonly ILogger Logger;
+        private readonly ILogger _logger;
 
-        private readonly Client Client;
+        private readonly Client _client;
 
         public delegate void OnDownloadProgressHandler(DownloadProgressChangedEventArgs e);
         public event OnDownloadProgressHandler OnDownloadProgress;
@@ -39,43 +39,43 @@ namespace LANCommander.SDK.Services
 
         public SaveService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public SaveService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         private async Task<string> DownloadAsync(Guid id, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return await Client.DownloadRequestAsync($"/api/Saves/{id}/Download", progressHandler, completeHandler);
+            return await _client.DownloadRequestAsync($"/api/Saves/{id}/Download", progressHandler, completeHandler);
         }
 
         public async Task<string> DownloadLatestAsync(Guid gameId, Action<DownloadProgressChangedEventArgs> progressHandler, Action<AsyncCompletedEventArgs> completeHandler)
         {
-            return await Client.DownloadRequestAsync($"/api/Saves/Game/{gameId}/Latest/Download", progressHandler, completeHandler);
+            return await _client.DownloadRequestAsync($"/api/Saves/Game/{gameId}/Latest/Download", progressHandler, completeHandler);
         }
 
         public IEnumerable<GameSave> Get(Guid gameId)
         {
-            return Client.GetRequest<IEnumerable<GameSave>>($"/api/Saves/Game/{gameId}");
+            return _client.GetRequest<IEnumerable<GameSave>>($"/api/Saves/Game/{gameId}");
         }
 
         public async Task<IEnumerable<GameSave>> GetAsync(Guid gameId)
         {
-            return await Client.GetRequestAsync<IEnumerable<GameSave>>($"/api/Saves/Game/{gameId}");
+            return await _client.GetRequestAsync<IEnumerable<GameSave>>($"/api/Saves/Game/{gameId}");
         }
 
         public GameSave GetLatest(Guid gameId)
         {
-            return Client.GetRequest<GameSave>($"/api/Saves/Game/{gameId}/Latest");
+            return _client.GetRequest<GameSave>($"/api/Saves/Game/{gameId}/Latest");
         }
 
         public Task<GameSave> GetLatestAsync(Guid gameId)
         {
-            return Client.GetRequestAsync<GameSave>($"/api/Saves/Game/{gameId}/Latest");
+            return _client.GetRequestAsync<GameSave>($"/api/Saves/Game/{gameId}/Latest");
         }
 
         public async Task DownloadAsync(string installDirectory, Guid gameId, Guid? saveId = null)
@@ -114,7 +114,7 @@ namespace LANCommander.SDK.Services
                 if (string.IsNullOrWhiteSpace(destination))
                     return;
 
-                Logger?.LogTrace("Game save archive downloaded to {SaveTempLocation}", destination);
+                _logger?.LogTrace("Game save archive downloaded to {SaveTempLocation}", destination);
 
                 tempFile = destination;
 
@@ -127,7 +127,7 @@ namespace LANCommander.SDK.Services
 
                     bool success = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(200), false, () =>
                     {
-                        Logger?.LogTrace("Attempting to extracting save entries to the temporary location {TempPath}");
+                        _logger?.LogTrace("Attempting to extracting save entries to the temporary location {TempPath}", tempLocation);
 
                         ExtractFilesFromZip(tempFile, tempLocation);
 
@@ -148,7 +148,7 @@ namespace LANCommander.SDK.Services
 
                     foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File))
                     {
-                        var entries = Client.Saves.GetFileSavePathEntries(savePath, installDirectory) ?? [];
+                        var entries = _client.Saves.GetFileSavePathEntries(savePath, installDirectory) ?? [];
 
                         foreach (var entry in entries)
                         {
@@ -209,12 +209,12 @@ namespace LANCommander.SDK.Services
 
                         script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
 
-                        if (Client.Scripts.Debug)
+                        if (_client.Scripts.Debug)
                         {
                             script.EnableDebug();
-                            script.OnDebugStart = Client.Scripts.OnDebugStart;
-                            script.OnDebugBreak = Client.Scripts.OnDebugBreak;
-                            script.OnOutput = Client.Scripts.OnOutput;
+                            script.OnDebugStart = _client.Scripts.OnDebugStart;
+                            script.OnDebugBreak = _client.Scripts.OnDebugBreak;
+                            script.OnOutput = _client.Scripts.OnOutput;
                         }
 
                         await script.ExecuteAsync<int>();
@@ -226,7 +226,7 @@ namespace LANCommander.SDK.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger?.LogError(ex, "The files in a save could not be extracted to their destination");
+                    _logger?.LogError(ex, "The files in a save could not be extracted to their destination");
                 }
                 finally
                 {
@@ -251,7 +251,7 @@ namespace LANCommander.SDK.Services
 
         public async Task<GameSave> UploadAsync(Stream stream, GameManifest manifest)
         {
-            return await Client.UploadRequestAsync<GameSave>($"/api/Saves/Game/{manifest.Id}/Upload", stream);
+            return await _client.UploadRequestAsync<GameSave>($"/api/Saves/Game/{manifest.Id}/Upload", stream);
         }
 
         public async Task<GameSave?> UploadAsync(string installDirectory, Guid gameId)
@@ -278,7 +278,7 @@ namespace LANCommander.SDK.Services
 
         public async Task DeleteAsync(Guid id)
         {
-            await Client.DeleteRequestAsync<bool>($"/api/Saves/{id}");
+            await _client.DeleteRequestAsync<bool>($"/api/Saves/{id}");
         }
 
         public IEnumerable<SavePathEntry> GetFileSavePathEntries(SavePath savePath, string installDirectory)

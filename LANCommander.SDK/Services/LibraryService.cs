@@ -8,39 +8,39 @@ namespace LANCommander.SDK.Services
 {
     public class LibraryService
     {
-        private readonly ILogger Logger;
-        private Client Client { get; set; }
+        private readonly ILogger _logger;
+        private readonly Client _client;
 
         public LibraryService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public LibraryService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<EntityReference>> GetAsync()
         {
-            return await Client.GetRequestAsync<IEnumerable<EntityReference>>("/api/Library");
+            return await _client.GetRequestAsync<IEnumerable<EntityReference>>("/api/Library");
         }
 
         public async Task<bool> AddToLibrary(Guid gameId)
         {
-            return await Client.PostRequestAsync<bool>($"/api/Library/AddToLibrary/{gameId}");
+            return await _client.PostRequestAsync<bool>($"/api/Library/AddToLibrary/{gameId}");
         }
 
         public async Task<bool> RemoveFromLibrary(Guid gameId)
         {
-            return await Client.PostRequestAsync<bool>($"/api/Library/RemoveFromLibrary/{gameId}");
+            return await _client.PostRequestAsync<bool>($"/api/Library/RemoveFromLibrary/{gameId}");
         }
 
         public async Task<bool> RemoveFromLibrary(Guid gameId, Guid[] addonIds)
         {
             var requestBody = new GenericGuidsRequest { Guids = addonIds };
-            return await Client.PostRequestAsync<bool>($"/api/Library/RemoveFromLibrary/{gameId}/addons", requestBody);
+            return await _client.PostRequestAsync<bool>($"/api/Library/RemoveFromLibrary/{gameId}/addons", requestBody);
         }
     }
 }

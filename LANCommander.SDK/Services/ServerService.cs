@@ -8,7 +8,7 @@ namespace LANCommander.SDK.Services
 {
     public class ServerService
     {
-        private readonly ILogger Logger;
+        private readonly ILogger _logger;
         private Client Client { get; set; }
 
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
@@ -25,7 +25,7 @@ namespace LANCommander.SDK.Services
         public ServerService(Client client, ILogger logger)
         {
             Client = client;
-            Logger = logger;
+            _logger = logger;
         }
 
         public async Task ImportAsync(string archivePath)

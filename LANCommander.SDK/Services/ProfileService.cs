@@ -8,66 +8,66 @@ namespace LANCommander.SDK.Services
 {
     public class ProfileService
     {
-        private readonly ILogger Logger;
-        private Client Client { get; set; }
+        private readonly ILogger _logger;
+        private readonly Client _client;
 
-        private User User { get; set; }
+        private User _user;
 
         public ProfileService(Client client)
         {
-            Client = client;
+            _client = client;
         }
 
         public ProfileService(Client client, ILogger logger)
         {
-            Client = client;
-            Logger = logger;
+            _client = client;
+            _logger = logger;
         }
 
         public User Get(bool forceLoad = false)
         {
-            Logger?.LogTrace("Requesting player's profile...");
+            _logger?.LogTrace("Requesting player's profile...");
 
-            if (User == null || forceLoad)
-                User = Client.GetRequest<User>("/api/Profile");
+            if (_user == null || forceLoad)
+                _user = _client.GetRequest<User>("/api/Profile");
 
-            return User;
+            return _user;
         }
 
         public async Task<User> GetAsync(bool forceLoad = false)
         {
-            Logger?.LogTrace("Requesting player's profile...");
+            _logger?.LogTrace("Requesting player's profile...");
 
-            if (User == null || forceLoad)
-                User = await Client.GetRequestAsync<User>("/api/Profile");
+            if (_user == null || forceLoad)
+                _user = await _client.GetRequestAsync<User>("/api/Profile");
 
-            return User;
+            return _user;
         }
 
         public async Task<string> GetAliasAsync()
         {
             try
             {
-                User = await GetAsync();
+                _user = await GetAsync();
             }
             catch (Exception ex)
             {
-                Logger?.LogError(ex, "Could not get user alias from server");
+                _logger?.LogError(ex, "Could not get user alias from server");
             }
 
-            return String.IsNullOrWhiteSpace(User.Alias) ? User.UserName : User.Alias;
+            return String.IsNullOrWhiteSpace(_user.Alias) ? _user.UserName : _user.Alias;
         }
 
         public async Task<string> ChangeAliasAsync(string alias)
         {
-            Logger?.LogTrace("Requesting to change player alias...");
+            _logger?.LogTrace("Requesting to change player alias...");
 
-            if (User == null)
-                User = new User();
+            if (_user == null)
+                _user = new User();
 
-            User.Alias = alias;
+            _user.Alias = alias;
 
-            var response = await Client.PutRequestAsync<string>("/api/Profile/ChangeAlias", new
+            var response = await _client.PutRequestAsync<string>("/api/Profile/ChangeAlias", new
             {
                 Alias = alias
             });
@@ -77,11 +77,11 @@ namespace LANCommander.SDK.Services
 
         public async Task<byte[]> GetAvatarAsync()
         {
-            Logger?.LogTrace("Requesting avatar contents...");
+            _logger?.LogTrace("Requesting avatar contents...");
 
             using (var ms = new MemoryStream())
             {
-                var stream = Client.StreamRequest("/api/Profile/Avatar");
+                var stream = _client.StreamRequest("/api/Profile/Avatar");
                 
                 await stream.CopyToAsync(ms);
                 
@@ -91,25 +91,25 @@ namespace LANCommander.SDK.Services
 
         public async Task<string> DownloadAvatar()
         {
-            Logger?.LogTrace("Retrieving player's avatar...");
+            _logger?.LogTrace("Retrieving player's avatar...");
 
             var tempFile = Path.GetTempFileName();
 
-            return await Client.DownloadRequestAsync("/api/Profile/Avatar", tempFile);
+            return await _client.DownloadRequestAsync("/api/Profile/Avatar", tempFile);
         }
 
         public async Task<string> GetCustomField(string name)
         {
-            Logger?.LogTrace("Getting player custom field with name {CustomFieldName}...", name);
+            _logger?.LogTrace("Getting player custom field with name {CustomFieldName}...", name);
 
-            return await Client.GetRequestAsync<string>($"/api/Profile/CustomField/{name}");
+            return await _client.GetRequestAsync<string>($"/api/Profile/CustomField/{name}");
         }
 
         public async Task<string> UpdateCustomField(string name, string value)
         {
-            Logger?.LogTrace("Updating player custom fields: {CustomFieldName} = {CustomFieldValue}", name, value);
+            _logger?.LogTrace("Updating player custom fields: {CustomFieldName} = {CustomFieldValue}", name, value);
 
-            return await Client.PutRequestAsync<string>($"/api/Profile/CustomField/{name}", value);
+            return await _client.PutRequestAsync<string>($"/api/Profile/CustomField/{name}", value);
         }
     }
 }

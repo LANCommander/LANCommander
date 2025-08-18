@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LANCommander.SDK;
 
 namespace LANCommander.Launcher.Services
 {
@@ -51,7 +52,7 @@ namespace LANCommander.Launcher.Services
         {
             var settings = SettingService.GetSettings();
 
-            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, settings.Media.StoragePath);
+            return Path.Combine(AppPaths.GetConfigDirectory(), settings.Media.StoragePath);
         }
 
         public static string GetImagePath(Media entity)

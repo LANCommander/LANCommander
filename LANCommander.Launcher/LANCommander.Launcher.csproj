@@ -6,6 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
 		<ApplicationIcon>LANCommanderDark.ico</ApplicationIcon>
+		<Company>LANCommander</Company>
+		<Product>Launcher</Product>
     </PropertyGroup>
 
 	<PropertyGroup>

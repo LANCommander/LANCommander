@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization.NamingConventions;
 using LANCommander.Launcher.Models;
+using LANCommander.SDK;
 
 namespace LANCommander.Launcher.Services
 {
@@ -15,7 +16,7 @@ namespace LANCommander.Launcher.Services
         {
             get
             {
-                return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SettingsFilename);
+                return Path.Combine(AppPaths.GetConfigDirectory(), SettingsFilename);
             }
         }
 

@@ -7,6 +7,8 @@
     <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
     <TypeScriptModuleKind>none</TypeScriptModuleKind>
 	<Version>1.1.0</Version>
+	<Company>LANCommander</Company>
+	<Product>Server</Product>
   </PropertyGroup>
 
   <PropertyGroup>

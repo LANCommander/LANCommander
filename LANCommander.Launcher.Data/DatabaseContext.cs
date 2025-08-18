@@ -1,5 +1,6 @@
 ﻿using LANCommander.Launcher.Data.Interceptors;
 using LANCommander.Launcher.Data.Models;
+using LANCommander.SDK;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -19,7 +20,7 @@ namespace LANCommander.Launcher.Data
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            var dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LANCommander.db");
+            var dbPath = Path.Combine(AppPaths.GetConfigDirectory(), "LANCommander.db");
 
             optionsBuilder.AddInterceptors(new AuditingInterceptor());
             optionsBuilder.UseLoggerFactory(LoggerFactory);

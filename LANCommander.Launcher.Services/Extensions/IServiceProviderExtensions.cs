@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using LANCommander.SDK;
 
 namespace LANCommander.Launcher.Services.Extensions
 {
@@ -41,7 +42,7 @@ namespace LANCommander.Launcher.Services.Extensions
 
                     foreach (var directory in requiredDirectories)
                     {
-                        var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, directory);
+                        var path = Path.Combine(AppPaths.GetConfigDirectory(), directory);
 
                         if (!Directory.Exists(path))
                         {
@@ -69,10 +70,10 @@ namespace LANCommander.Launcher.Services.Extensions
                         if (Directory.Exists(settings.Database.BackupsPath))
                             backupPath = settings.Database.BackupsPath;
                         else
-                            backupPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, settings.Database.BackupsPath);
+                            backupPath = Path.Combine(AppPaths.GetConfigDirectory(), settings.Database.BackupsPath);
 
                         if (!File.Exists(dataSource))
-                            dataSource = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, dataSource);
+                            dataSource = Path.Combine(AppPaths.GetConfigDirectory(), dataSource);
 
                         var backupName = Path.Combine(backupPath, $"LANCommander.db.{DateTime.Now.ToString("dd-MM-yyyy-HH.mm.ss")}.bak");
 

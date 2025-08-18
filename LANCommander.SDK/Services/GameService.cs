@@ -1209,15 +1209,30 @@ namespace LANCommander.SDK.Services
             using (var context = new ProcessExecutionContext(Client, Logger))
             {
                 context.AddVariable("ServerAddress", Client.GetServerAddress());
-                context.AddVariable("DisplayWidth", screen.Width.ToString());
-                context.AddVariable("DisplayHeight", screen.Height.ToString());
-                context.AddVariable("DisplayRefreshRate", screen.RefreshRate.ToString());
-                context.AddVariable("DisplayBitDepth", screen.BitsPerPixel.ToString());
                 
-                if (Client.IsConnected())
+                try
                 {
-                    context.AddVariable("IPXRelayHost", await Client.GetIPXRelayHostAsync());
-                    context.AddVariable("IPXRelayPort", Client.Settings.IPXRelayPort.ToString());                    
+                    context.AddVariable("DisplayWidth", screen.Width.ToString());
+                    context.AddVariable("DisplayHeight", screen.Height.ToString());
+                    context.AddVariable("DisplayRefreshRate", screen.RefreshRate.ToString());
+                    context.AddVariable("DisplayBitDepth", screen.BitsPerPixel.ToString());
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Could not get display information for execution context variables");
+                }
+
+                try
+                {
+                    if (Client.IsConnected() && !String.IsNullOrWhiteSpace(Client.Settings.IPXRelayHost))
+                    {
+                        context.AddVariable("IPXRelayHost", await Client.GetIPXRelayHostAsync());
+                        context.AddVariable("IPXRelayPort", Client.Settings.IPXRelayPort.ToString());
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Could not connect to IPXRelay host");
                 }
 
                 #region Run Scripts

@@ -18,8 +18,6 @@ public class BeaconService
     public delegate void OnBeaconResponseHandler(object sender, BeaconResponseArgs e);
     public event OnBeaconResponseHandler OnBeaconResponse;
     
-    
-    private UdpClient _udpClient;
     private readonly Client _client;
     private readonly ILogger _logger;
     

@@ -82,7 +82,7 @@ namespace LANCommander.SDK.Services
         {
             var manifest = await ManifestHelper.ReadAsync<GameManifest>(installDirectory, gameId);
 
-            string tempFile = string.Empty;
+            string tempFile;
             string tempLocation = string.Empty;
 
             if (manifest != null)
@@ -254,7 +254,7 @@ namespace LANCommander.SDK.Services
             return await _client.UploadRequestAsync<GameSave>($"/api/Saves/Game/{manifest.Id}/Upload", stream);
         }
 
-        public async Task<GameSave?> UploadAsync(string installDirectory, Guid gameId)
+        public async Task UploadAsync(string installDirectory, Guid gameId)
         {
             using (var savePacker = new SavePacker(installDirectory))
             {
@@ -269,11 +269,9 @@ namespace LANCommander.SDK.Services
 
                     var stream = await savePacker.PackAsync();
 
-                    return await UploadAsync(stream, manifest);
+                    await UploadAsync(stream, manifest);
                 }
             }
-
-            return null;
         }
 
         public async Task DeleteAsync(Guid id)
@@ -311,7 +309,7 @@ namespace LANCommander.SDK.Services
 
                 var localPath = Path.Combine(workingDirectory, GetLocalPath(savePath.Path, installDirectory));
 
-                localPaths = new string[] { localPath };
+                localPaths = new[] { localPath };
             }
 
             var entries = new List<SavePathEntry>();

@@ -61,26 +61,19 @@ public class DiscoveryProbe : IDisposable
     public async Task BindSocketAsync(int port)
     {
         _port = port;
-        
-        try
-        {
-            var addressInformation = _networkInterface
-                .GetIPProperties()
-                .UnicastAddresses
-                .FirstOrDefault(ua => ua.Address.AddressFamily == AddressFamily.InterNetwork);
 
-            if (addressInformation == null)
-                throw new NetworkInformationException();
+        var addressInformation = _networkInterface
+            .GetIPProperties()
+            .UnicastAddresses
+            .FirstOrDefault(ua => ua.Address.AddressFamily == AddressFamily.InterNetwork);
 
-            EndPoint fromEndpoint = new IPEndPoint(IPAddress.Any, 0);
+        if (addressInformation == null)
+            throw new NetworkInformationException();
 
-            _socket.Bind(new IPEndPoint(addressInformation.Address, _port));
-            _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref fromEndpoint, ReceiveCallback, null);
-        }
-        catch (SocketException)
-        {
-            throw;
-        }
+        EndPoint fromEndpoint = new IPEndPoint(IPAddress.Any, 0);
+
+        _socket.Bind(new IPEndPoint(addressInformation.Address, _port));
+        _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref fromEndpoint, ReceiveCallback, null);
     }
 
     /// <summary>

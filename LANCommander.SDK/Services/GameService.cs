@@ -1315,6 +1315,8 @@ namespace LANCommander.SDK.Services
                     await task;
 
                     Running.Remove(gameId);
+
+                    await UploadSavesAsync(manifests, installDirectory);
                 }
                 catch (Exception ex)
                 {
@@ -1323,20 +1325,6 @@ namespace LANCommander.SDK.Services
 
                 foreach (var manifest in manifests)
                 {
-                    #region Upload Saves
-                    if (Client.IsConnected())
-                    {
-                        await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
-                        {
-                            Logger?.LogTrace("Attempting to upload save");
-
-                            await Client.Saves.UploadAsync(installDirectory, manifest.Id);
-
-                            return true;
-                        });
-                    }
-                    #endregion
-
                     #region Run After Stop Script
                     await Client.Scripts.RunAfterStopScriptAsync(installDirectory, gameId);
                     
@@ -1348,6 +1336,24 @@ namespace LANCommander.SDK.Services
                         }
                     }
                     #endregion
+                }
+            }
+        }
+
+        private async Task UploadSavesAsync(ICollection<GameManifest> manifests, string installDirectory)
+        {
+            if (Client.IsConnected())
+            {
+                foreach (var manifest in manifests)
+                {
+                    await RetryHelper.RetryOnExceptionAsync(10, TimeSpan.FromSeconds(1), false, async () =>
+                    {
+                        Logger?.LogTrace("Attempting to upload save");
+
+                        await Client.Saves.UploadAsync(installDirectory, manifest.Id);
+
+                        return true;
+                    });
                 }
             }
         }

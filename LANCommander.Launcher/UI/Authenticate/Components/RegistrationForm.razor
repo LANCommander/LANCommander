@@ -6,10 +6,11 @@
 @inject IMessageService MessageService
 @inject ILogger<RegistrationForm> Logger
 @inject ImportManagerService ImportManagerService
+@inject LocalizationService LocalizationService
 
 <PageHeader OnBack="OnBack">
     <TitleTemplate>
-        Register
+        @LocalizationService.GetString("Register")
     </TitleTemplate>
 </PageHeader>
 <Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
@@ -19,21 +20,21 @@
         <Alert Message="@item" Type="AlertType.Error" ShowIcon="true" Style="margin-bottom: 8px;" />
     }
 
-    <FormItem Label="Server Address">
+    <FormItem Label="@LocalizationService.GetString("ServerAddress")">
         <Input Value="ServerAddress" Disabled />
     </FormItem>
-    <FormItem Label="Username">
+    <FormItem Label="@LocalizationService.GetString("Username")">
         <Input @bind-Value="@context.UserName" AutoFocus />
     </FormItem>
-    <FormItem Label="Password">
+    <FormItem Label="@LocalizationService.GetString("Password")">
         <InputPassword @bind-Value="@context.Password"/>
     </FormItem>
-    <FormItem Label="Confirm Password">
+    <FormItem Label="@LocalizationService.GetString("ConfirmPassword")">
         <InputPassword @bind-Value="@context.PasswordConfirmation" />
     </FormItem>
     <FormItem>
         <Button Type="ButtonType.Primary" HtmlType="submit">
-            Register
+            @LocalizationService.GetString("Register")
         </Button>
     </FormItem>
 </Form>

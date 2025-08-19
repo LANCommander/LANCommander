@@ -11,6 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject ModalService ModalService
 @inject IMessageService MessageService
+@inject LocalizationService LocalizationService
 
 <Drawer Placement="DrawerPlacement.Bottom" Class="depot-game-details" @bind-Visible="@Visible" OnClose="Hide">
     @if (SelectedGame != null)
@@ -39,27 +40,27 @@
                                     {
                                         if (IsInLibrary)
                                         {
-                                            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="ViewInLibrary">View in Library</Button>
+                                            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" OnClick="ViewInLibrary">@LocalizationService.GetString("ViewInLibrary")</Button>
                                         }
                                         else
                                         {
-                                            <Button Type="ButtonType.Dashed" Size="ButtonSize.Large" Style="pointer-events: none;">Installed</Button>
+                                            <Button Type="ButtonType.Dashed" Size="ButtonSize.Large" Style="pointer-events: none;">@LocalizationService.GetString("Installed")</Button>
                                         }
                                     }
                                     else
                                     {
-                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install" Loading="Installing">Install</Button>
+                                        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.Download" OnClick="Install" Loading="Installing">@LocalizationService.GetString("Install")</Button>
                                     }
 
                                     @if (IsInLibrary || SelectedGame.InLibrary)
                                     {
-                                        <Tooltip Title="Remove from Library">
+                                        <Tooltip Title="@LocalizationService.GetString("RemoveFromLibrary")">
                                             <Button Size="ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Close" Danger OnClick="RemoveFromLibrary" Loading="RemovingFromLibrary" />
                                         </Tooltip>
                                     }
                                     else
                                     {
-                                        <Tooltip Title="Add to Library">
+                                        <Tooltip Title="@LocalizationService.GetString("AddToLibrary")">
                                             <Button Size="ButtonSize.Large" Type="@ButtonType.Text" Icon="@IconType.Outline.Plus" OnClick="AddToLibrary" Loading="AddingToLibrary" />
                                         </Tooltip>
                                     }
@@ -68,17 +69,17 @@
                                 @if (!IsInstalled && Client.IsConnected())
                                 {
                                     <SpaceItem>
-                                        <Statistic Title="Download Size" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
+                                        <Statistic Title="@LocalizationService.GetString("DownloadSize")" Value="@ByteSizeLib.ByteSize.FromBytes(GetDownloadSize()).ToString()" />
                                     </SpaceItem>
                                 }
 
                                 @if (SelectedGame.PlaySessions.HasAny())
                                 {
                                     <SpaceItem>
-                                        <Statistic Title="Play Time" Value="@GetPlayTime(SelectedGame)" />
-                                    </SpaceItem>
-                                    <SpaceItem>
-                                        <Statistic Title="Last Played" Value="@GetLastPlayed(SelectedGame)" />
+                                                                            <Statistic Title="@LocalizationService.GetString("PlayTime")" Value="@GetPlayTime(SelectedGame)" />
+                                </SpaceItem>
+                                <SpaceItem>
+                                    <Statistic Title="@LocalizationService.GetString("LastPlayed")" Value="@GetLastPlayed(SelectedGame)" />
                                     </SpaceItem>
                                 }
                             </Space>
@@ -93,7 +94,7 @@
                             @if (SelectedGame!.ReleasedOn > DateTime.MinValue)
                             {
                                 <div class="game-metadata-released-on">
-                                    <h3>Released On</h3>
+                                    <h3>@LocalizationService.GetString("ReleasedOn")</h3>
                                     <span>@SelectedGame.ReleasedOn.ToString("MMMM d, yyyy")</span>
                                 </div>
                             }
@@ -101,7 +102,7 @@
                             @if (SelectedGame.Developers.HasAny())
                             {
                                 <div class="game-metadata-developers">
-                                    <h3>Developers</h3>
+                                    <h3>@LocalizationService.GetString("Developers")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Developers.Select(c => c.Name)))</span>
                                 </div>
                             }
@@ -109,7 +110,7 @@
                             @if (SelectedGame.Publishers.HasAny())
                             {
                                 <div class="game-metadata-publishers">
-                                    <h3>Publishers</h3>
+                                    <h3>@LocalizationService.GetString("Publishers")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Publishers.Select(c => c.Name)))</span>
                                 </div>
                             }
@@ -117,7 +118,7 @@
                             @if (SelectedGame.Genres.HasAny())
                             {
                                 <div class="game-metadata-genres">
-                                    <h3>Genres</h3>
+                                    <h3>@LocalizationService.GetString("Genres")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Genres.Select(g => g.Name)))</span>
                                 </div>
                             }
@@ -125,7 +126,7 @@
                             @if (SelectedGame.Tags.HasAny())
                             {
                                 <div class="game-metadata-tags">
-                                    <h3>Tags</h3>
+                                    <h3>@LocalizationService.GetString("Tags")</h3>
                                     <span>@(String.Join(", ", SelectedGame.Tags.Select(t => t.Name)))</span>
                                 </div>
                             }

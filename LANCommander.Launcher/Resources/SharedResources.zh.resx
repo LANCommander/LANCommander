@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="AppTitle" xml:space="preserve">
+    <value>LANCommander</value>
+  </data>
+  <data name="LauncherCrashed" xml:space="preserve">
+    <value>启动器崩溃了</value>
+  </data>
+  <data name="ReimportLibrary" xml:space="preserve">
+    <value>重新导入库</value>
+  </data>
+  <data name="ReconnectToServer" xml:space="preserve">
+    <value>重新连接到服务器</value>
+  </data>
+  <data name="ViewLibrary" xml:space="preserve">
+    <value>查看库</value>
+  </data>
+  <data name="YouDied" xml:space="preserve">
+    <value>你死了。</value>
+  </data>
+  <data name="NewName" xml:space="preserve">
+    <value>新名称</value>
+  </data>
+  <data name="ImportStarted" xml:space="preserve">
+    <value>导入已开始</value>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>连接</value>
+  </data>
+  <data name="BrowseDepot" xml:space="preserve">
+    <value>浏览仓库</value>
+  </data>
+  <data name="CheckForUpdates" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="DownloadSize" xml:space="preserve">
+    <value>下载大小</value>
+  </data>
+  <data name="Install" xml:space="preserve">
+    <value>安装</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="SpaceRequired" xml:space="preserve">
+    <value>所需空间</value>
+  </data>
+  <data name="Addons" xml:space="preserve">
+    <value>附加组件</value>
+  </data>
+  <data name="InstallLocation" xml:space="preserve">
+    <value>安装位置</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>手册</value>
+  </data>
+  <data name="ManageSaves" xml:space="preserve">
+    <value>管理存档</value>
+  </data>
+  <data name="Modify" xml:space="preserve">
+    <value>修改</value>
+  </data>
+  <data name="BrowseFiles" xml:space="preserve">
+    <value>浏览文件</value>
+  </data>
+  <data name="ValidateFiles" xml:space="preserve">
+    <value>验证文件</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Uninstall" xml:space="preserve">
+    <value>卸载</value>
+  </data>
+  <data name="RunInstallScripts" xml:space="preserve">
+    <value>运行安装脚本</value>
+  </data>
+  <data name="RunUninstallScripts" xml:space="preserve">
+    <value>运行卸载脚本</value>
+  </data>
+  <data name="RunNameChangeScripts" xml:space="preserve">
+    <value>运行名称更改脚本</value>
+  </data>
+  <data name="RunKeyChangeScripts" xml:space="preserve">
+    <value>运行密钥更改脚本</value>
+  </data>
+  <data name="ReportIssue" xml:space="preserve">
+    <value>报告问题</value>
+  </data>
+  <data name="InstallGame" xml:space="preserve">
+    <value>安装{0}</value>
+  </data>
+  <data name="ModifyGame" xml:space="preserve">
+    <value>修改{0}</value>
+  </data>
+  <data name="FileConflicts" xml:space="preserve">
+    <value>文件冲突</value>
+  </data>
+  <data name="ReplaceSelected" xml:space="preserve">
+    <value>替换选中的</value>
+  </data>
+  <data name="UninstallGameMessageWithSaves" xml:space="preserve">
+    <value>您确定要卸载{0}吗？所有本地存档将被删除。</value>
+  </data>
+  <data name="UninstallGameMessageWithoutSaves" xml:space="preserve">
+    <value>您确定要卸载{0}吗？</value>
+  </data>
+  <data name="UninstallGame" xml:space="preserve">
+    <value>卸载游戏</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="RemoveGameFromLibrary" xml:space="preserve">
+    <value>从库中删除游戏</value>
+  </data>
+  <data name="Submit" xml:space="preserve">
+    <value>提交</value>
+  </data>
+  <data name="BaseGame" xml:space="preserve">
+    <value>基础游戏</value>
+  </data>
+  <data name="AddonsToRemove" xml:space="preserve">
+    <value>要删除的附加组件</value>
+  </data>
+  <data name="CouldNotRemoveGame" xml:space="preserve">
+    <value>无法删除游戏</value>
+  </data>
+  <data name="IssueReported" xml:space="preserve">
+    <value>问题已报告！</value>
+  </data>
+  <data name="UnknownErrorIssueNotReported" xml:space="preserve">
+    <value>未知错误：问题未报告</value>
+  </data>
+  <data name="CreatedOn" xml:space="preserve">
+    <value>创建于</value>
+  </data>
+  <data name="AreYouSureReplaceLocalSaves" xml:space="preserve">
+    <value>您确定吗？这将替换所有本地存档！</value>
+  </data>
+  <data name="AreYouSureDeleteSave" xml:space="preserve">
+    <value>您确定要删除此存档吗？</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>上传</value>
+  </data>
+  <data name="SaveDownloaded" xml:space="preserve">
+    <value>存档已下载！</value>
+  </data>
+  <data name="SaveDeleted" xml:space="preserve">
+    <value>存档已删除！</value>
+  </data>
+  <data name="SaveUploaded" xml:space="preserve">
+    <value>存档已上传！</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="GroupBy" xml:space="preserve">
+    <value>分组方式</value>
+  </data>
+  <data name="SortBy" xml:space="preserve">
+    <value>排序方式</value>
+  </data>
+  <data name="Engine" xml:space="preserve">
+    <value>引擎</value>
+  </data>
+  <data name="Genre" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Platform" xml:space="preserve">
+    <value>平台</value>
+  </data>
+  <data name="Developers" xml:space="preserve">
+    <value>开发者</value>
+  </data>
+  <data name="Publishers" xml:space="preserve">
+    <value>发行商</value>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>玩家数</value>
+  </data>
+  <data name="Minimum" xml:space="preserve">
+    <value>最小</value>
+  </data>
+  <data name="Maximum" xml:space="preserve">
+    <value>最大</value>
+  </data>
+  <data name="Installed" xml:space="preserve">
+    <value>已安装</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="DoYouWantToStopGame" xml:space="preserve">
+    <value>您要停止此游戏吗？</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>是</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="Starting" xml:space="preserve">
+    <value>启动中</value>
+  </data>
+  <data name="Stopping" xml:space="preserve">
+    <value>停止中</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>游戏</value>
+  </data>
+  <data name="NoActionsFound" xml:space="preserve">
+    <value>未找到操作！</value>
+  </data>
+  <data name="NoPrimaryActionFound" xml:space="preserve">
+    <value>未找到主要操作！</value>
+  </data>
+  <data name="PlayGame" xml:space="preserve">
+    <value>游戏{0}</value>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>导入中：{0}</value>
+  </data>
+  <data name="StartingImport" xml:space="preserve">
+    <value>开始导入...</value>
+  </data>
+  <data name="SignInUsingProvider" xml:space="preserve">
+    <value>使用{0}登录</value>
+  </data>
+  <data name="CouldNotProcessLogin" xml:space="preserve">
+    <value>无法处理登录</value>
+  </data>
+  <data name="LostConnectionRetrying" xml:space="preserve">
+    <value>连接丢失，重试中...</value>
+  </data>
+  <data name="LostConnectionRetryingWithCount" xml:space="preserve">
+    <value>连接丢失，重试中（{0}/{1}）...</value>
+  </data>
+  <data name="ServerUnavailableEnablingOfflineMode" xml:space="preserve">
+    <value>服务器不可用，启用离线模式</value>
+  </data>
+  <data name="ConnectionEstablished" xml:space="preserve">
+    <value>连接已建立！</value>
+  </data>
+  <data name="InProgress" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="UpNext" xml:space="preserve">
+    <value>下一个</value>
+  </data>
+  <data name="TheQueueIsEmpty" xml:space="preserve">
+    <value>队列为空</value>
+  </data>
+  <data name="Completed" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="ViewInLibrary" xml:space="preserve">
+    <value>在库中查看</value>
+  </data>
+  <data name="GameAddedToLibrary" xml:space="preserve">
+    <value>{0}已添加到您的库！</value>
+  </data>
+  <data name="GameCouldNotBeAddedToLibrary" xml:space="preserve">
+    <value>无法将{0}添加到您的库！</value>
+  </data>
+  <data name="ServerAddress" xml:space="preserve">
+    <value>服务器地址</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>用户名</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>密码</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="Register" xml:space="preserve">
+    <value>注册</value>
+  </data>
+  <data name="Or" xml:space="preserve">
+    <value>或</value>
+  </data>
+  <data name="WelcomeBack" xml:space="preserve">
+    <value>欢迎回来！</value>
+  </data>
+  <data name="ConfirmPassword" xml:space="preserve">
+    <value>确认密码</value>
+  </data>
+  <data name="ServerOfflineMessage" xml:space="preserve">
+    <value>服务器似乎离线...</value>
+  </data>
+  <data name="ServerAddressPlaceholder" xml:space="preserve">
+    <value>服务器地址</value>
+  </data>
+  <data name="Offline" xml:space="preserve">
+    <value>离线</value>
+  </data>
+  <data name="Discovered" xml:space="preserve">
+    <value>已发现</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>扫描中</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>重新扫描</value>
+  </data>
+  <data name="NoResultsFound" xml:space="preserve">
+    <value>未找到结果</value>
+  </data>
+  <data name="ResetFilter" xml:space="preserve">
+    <value>重置过滤器</value>
+  </data>
+  <data name="Uncategorized" xml:space="preserve">
+    <value>未分类</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Games" xml:space="preserve">
+    <value>游戏</value>
+  </data>
+  <data name="StoragePaths" xml:space="preserve">
+    <value>存储路径</value>
+  </data>
+  <data name="AddPath" xml:space="preserve">
+    <value>添加路径</value>
+  </data>
+  <data name="Media" xml:space="preserve">
+    <value>媒体</value>
+  </data>
+  <data name="StoragePath" xml:space="preserve">
+    <value>存储路径</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>调试</value>
+  </data>
+  <data name="EnableScriptDebugging" xml:space="preserve">
+    <value>启用脚本调试</value>
+  </data>
+  <data name="LoggingPath" xml:space="preserve">
+    <value>日志路径</value>
+  </data>
+  <data name="LoggingLevel" xml:space="preserve">
+    <value>日志级别</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>设置已保存！</value>
+  </data>
+  <data name="AnUnknownErrorOccurred" xml:space="preserve">
+    <value>发生未知错误。</value>
+  </data>
+  <data name="YouAreOnLatestVersion" xml:space="preserve">
+    <value>您使用的是最新版本！</value>
+  </data>
+  <data name="Update" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Queued" xml:space="preserve">
+    <value>排队中</value>
+  </data>
+  <data name="Installing" xml:space="preserve">
+    <value>安装中</value>
+  </data>
+  <data name="Uninstalling" xml:space="preserve">
+    <value>卸载中</value>
+  </data>
+  <data name="PlayTime" xml:space="preserve">
+    <value>游戏时间</value>
+  </data>
+  <data name="LastPlayed" xml:space="preserve">
+    <value>最后游戏</value>
+  </data>
+  <data name="ReleasedOn" xml:space="preserve">
+    <value>发布日期</value>
+  </data>
+  <data name="InstallationFailed" xml:space="preserve">
+    <value>安装失败</value>
+  </data>
+  <data name="InstallationFailedMessage" xml:space="preserve">
+    <value>{0}的安装失败。重试下载？</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>无</value>
+  </data>
+  <data name="PlayTimeMinutes" xml:space="preserve">
+    <value>{0}分钟</value>
+  </data>
+  <data name="PlayTimeHours" xml:space="preserve">
+    <value>{0}小时</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>从未</value>
+  </data>
+  <data name="DepotResultsCouldNotBeFetched" xml:space="preserve">
+    <value>无法获取仓库结果</value>
+  </data>
+  <data name="UnexpectedErrorFetchingDepotResults" xml:space="preserve">
+    <value>获取仓库结果时发生意外错误</value>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>未找到</value>
+  </data>
+  <data name="NotFoundMessage" xml:space="preserve">
+    <value>抱歉，此地址没有任何内容。</value>
+  </data>
+  <data name="NoResults" xml:space="preserve">
+    <value>无结果</value>
+  </data>
+  <data name="DepotEmptyOrUnauthorized" xml:space="preserve">
+    <value>仓库为空或您未授权。请联系您的管理员。</value>
+  </data>
+  <data name="RemoveFromLibrary" xml:space="preserve">
+    <value>从库中删除</value>
+  </data>
+  <data name="AddToLibrary" xml:space="preserve">
+    <value>添加到库</value>
+  </data>
+  <data name="Collection" xml:space="preserve">
+    <value>收藏</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="StartingUpLauncher" xml:space="preserve">
+    <value>启动启动器v{0}...</value>
+  </data>
+  <data name="LoadingSettingsFromFile" xml:space="preserve">
+    <value>从文件加载设置</value>
+  </data>
+  <data name="ConfiguringLogging" xml:space="preserve">
+    <value>配置日志记录...</value>
+  </data>
+  <data name="RegisteringServices" xml:space="preserve">
+    <value>注册服务...</value>
+  </data>
+  <data name="BuildingApplication" xml:space="preserve">
+    <value>构建应用程序...</value>
+  </data>
+  <data name="ImageNotFoundLocally" xml:space="preserve">
+    <value>本地未找到图像</value>
+  </data>
+  <data name="FatalException" xml:space="preserve">
+    <value>致命异常</value>
+  </data>
+  <data name="StartingApplication" xml:space="preserve">
+    <value>启动应用程序...</value>
+  </data>
+  <data name="ClosingApplication" xml:space="preserve">
+    <value>关闭应用程序...</value>
+  </data>
+  <data name="ErrorCopiedToClipboard" xml:space="preserve">
+    <value>错误已复制到剪贴板！</value>
+  </data>
+  <data name="BackOnline" xml:space="preserve">
+    <value>重新上线！</value>
+  </data>
+  <data name="CouldNotReconnect" xml:space="preserve">
+    <value>无法重新连接！</value>
+  </data>
+  <data name="CouldNotReconnectMessage" xml:space="preserve">
+    <value>无法到达LANCommander服务器。您要注销并重试吗？</value>
+  </data>
+  <data name="Logout" xml:space="preserve">
+    <value>注销</value>
+  </data>
+  <data name="StayOffline" xml:space="preserve">
+    <value>保持离线</value>
+  </data>
+  <data name="ChangeName" xml:space="preserve">
+    <value>更改名称</value>
+  </data>
+  <data name="SwitchToOfflineMode" xml:space="preserve">
+    <value>切换到离线模式</value>
+  </data>
+  <data name="YouAreCurrentlyOffline" xml:space="preserve">
+    <value>您当前离线</value>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>即将推出！</value>
+  </data>
+  <data name="Friends" xml:space="preserve">
+    <value>好友</value>
+  </data>
+  <data name="Downloads" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="Depot" xml:space="preserve">
+    <value>仓库</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="SignIn" xml:space="preserve">
+    <value>登入</value>
+  </data>
+  <data name="SourceGame" xml:space="preserve">
+    <value>源码游戏</value>
+  </data>
+  <data name="UninstallGameMessage" xml:space="preserve">
+    <value>您想卸载 {0} 吗</value>
+  </data>
+  <data name="UpdateAvailableMessage" xml:space="preserve">
+    <value>v{0} 有可用的更新。要下载并安装吗？</value>
+  </data>
+  <data name="UpdateNow" xml:space="preserve">
+    <value>立即更新</value>
+  </data>
+  <data name="ImportComplete" xml:space="preserve">
+    <value>导入完成</value>
+  </data>
+  <data name="ImportFailed" xml:space="preserve">
+    <value>导入失败</value>
+  </data>
+  <data name="Later" xml:space="preserve">
+    <value>稍后</value>
+  </data>
+  <data name="LauncherUpdate" xml:space="preserve">
+    <value>启动器更新</value>
+  </data>
+  <data name="Library" xml:space="preserve">
+    <value>库</value>
+  </data>
+  <data name="LocalSize" xml:space="preserve">
+    <value>本地大小</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>移动</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="OriginalSize" xml:space="preserve">
+    <value>原始大小</value>
+  </data>
+</root> 

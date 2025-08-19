@@ -3,29 +3,30 @@
 @inject SaveService SaveService
 @inject SDK.Client Client
 @inject IMessageService MessageService
+@inject LocalizationService LocalizationService
 
 <Table DataSource="Conflicts" Resizable Size="TableSize.Small" RowKey="c => c.FullName" @bind-SelectedRows="Selected" Loading="Loading">
     <Selection Type="SelectionType.Checkbox" />
-    <PropertyColumn Property="c => c.FullName" Title="Name" />
-    <Column TData="string" Title="Created">
+    <PropertyColumn Property="c => c.FullName" Title="@LocalizationService.GetString("Name")" />
+    <Column TData="string" Title="@LocalizationService.GetString("Created")">
         @context.LocalFileInfo?.CreationTime
     </Column>
-    <Column TData="string" Title="Modified">
+    <Column TData="string" Title="@LocalizationService.GetString("Modified")">
         @context.LocalFileInfo?.LastWriteTime
     </Column>
-    <Column TData="string" Title="Local Size">
+    <Column TData="string" Title="@LocalizationService.GetString("LocalSize")">
         @if (context.LocalFileInfo?.Length > 0)
         {
             <ByteSize Value="context.LocalFileInfo.Length" />
         }
     </Column>
-    <PropertyColumn Property="c => c.Length" Title="Original Size">
+    <PropertyColumn Property="c => c.Length" Title="@LocalizationService.GetString("OriginalSize")">
         @if (context.Length > 0)
         {
             <ByteSize Value="context.Length" />
         }
     </PropertyColumn>
-    <Column TData="string" Title="Source Game">
+    <Column TData="string" Title="@LocalizationService.GetString("SourceGame")">
         @{
             GameTitleMap.TryGetValue(context.GameId.GetValueOrDefault(Guid.Empty), out var title);
         }

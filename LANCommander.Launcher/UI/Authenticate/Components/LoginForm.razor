@@ -6,10 +6,11 @@
 @inject IMessageService MessageService
 @inject ILogger<LoginForm> Logger
 @inject ImportManagerService ImportManagerService
+@inject LocalizationService LocalizationService
 
 <PageHeader OnBack="OnBack">
     <TitleTemplate>
-        Sign In
+        @LocalizationService.GetString("SignIn")
     </TitleTemplate>
 </PageHeader>
 <Form Model="@Model" Loading="@Loading" Layout="FormLayout.Vertical" OnFinish="OnFinish">
@@ -19,29 +20,29 @@
         <Alert Message="@item" Type="AlertType.Error" ShowIcon="true" Style="margin-bottom: 8px;" />
     }
 
-    <FormItem Label="Server Address">
+    <FormItem Label="@LocalizationService.GetString("ServerAddress")">
         <Input Value="ServerAddress" Disabled />
     </FormItem>
-    <FormItem Label="Username">
+    <FormItem Label="@LocalizationService.GetString("Username")">
         <Input @bind-Value="@context.UserName" AutoFocus />
     </FormItem>
-    <FormItem Label="Password">
+    <FormItem Label="@LocalizationService.GetString("Password")">
         <InputPassword @bind-Value="@context.Password"/>
     </FormItem>
     <FormItem>
         <Button Type="ButtonType.Primary" HtmlType="submit">
-            Login
+            @LocalizationService.GetString("Login")
         </Button>
 
         <Button Type="ButtonType.Text" OnClick="OnRegister">
-            Register
+            @LocalizationService.GetString("Register")
         </Button>
     </FormItem>
 </Form>
 
 @if (AuthenticationProviders.Any())
 {
-    <Divider Orientation="DividerOrientation.Center" Text="Or" Style="margin-bottom: 16px" />
+    <Divider Orientation="DividerOrientation.Center" Text="@LocalizationService.GetString("Or")" Style="margin-bottom: 16px" />
 
     <div class="authentication-provider-container">
         <div class="authentication-provider-button-group">
@@ -57,7 +58,7 @@
                         {
                             <BootstrapIcon Type="@authenticationProvider.Icon"/>
                         }
-                        Sign in using @authenticationProvider.Name
+                        @LocalizationService.GetString("SignInUsingProvider", authenticationProvider.Name)
                     </Button>
                 </div>
             }
@@ -133,7 +134,7 @@
 
             NavigationManager.NavigateTo("/");
             
-            MessageService.Success("Welcome back!");
+            MessageService.Success(LocalizationService.GetString("WelcomeBack"));
         }
         catch (AuthFailedException ex)
         {

@@ -48,13 +48,14 @@ namespace LANCommander.Launcher
 #endif
                 .CreateLogger();
 
-            Logger?.Information($"Starting up launcher v{UpdateService.GetCurrentVersion()}...");
-            Logger?.Debug("Loading settings from file");
+            var localizationService = new LocalizationService();
+            Logger?.Information(localizationService.GetString("StartingUpLauncher", UpdateService.GetCurrentVersion()));
+            Logger?.Debug(localizationService.GetString("LoadingSettingsFromFile"));
 
             var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
             #region Configure Logging
-            Logger?.Debug("Configuring logging...");
+            Logger?.Debug(localizationService.GetString("ConfiguringLogging"));
 
             builder.Services.AddLogging(loggingBuilder =>
             {
@@ -66,7 +67,7 @@ namespace LANCommander.Launcher
             
             builder.RootComponents.Add<App>("app");
 
-            Logger?.Debug("Registering services...");
+            Logger?.Debug(localizationService.GetString("RegisteringServices"));
 
             #region Aspire
             builder.Services.AddServiceDiscovery();
@@ -79,6 +80,7 @@ namespace LANCommander.Launcher
             
             builder.Services.AddCustomWindow();
             builder.Services.AddAntDesign();
+            builder.Services.AddSingleton<LocalizationService>();
             builder.Services.AddLANCommander(options =>
             {
                 options.ServerAddress = settings.Authentication.ServerAddress;
@@ -86,12 +88,12 @@ namespace LANCommander.Launcher
             });
 
             #region Build Application
-            Logger?.Debug("Building application...");
+            Logger?.Debug(localizationService.GetString("BuildingApplication"));
 
             var app = builder.Build();
 
             app.MainWindow
-                .SetTitle("LANCommander")
+                .SetTitle(localizationService.GetString("AppTitle"))
                 .SetChromeless(true)
                 .RegisterCustomSchemeHandler("media", (object sender, string scheme, string url, out string contentType) =>
                 {
@@ -117,7 +119,7 @@ namespace LANCommander.Launcher
                     }
                     catch (Exception ex)
                     {
-                        Logger?.Warning(ex, "Image not found locally");
+                        Logger?.Warning(ex, localizationService.GetString("ImageNotFoundLocally"));
 
                         contentType = "";
                     }
@@ -164,7 +166,7 @@ namespace LANCommander.Launcher
 
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
             {
-                app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
+                app.MainWindow.ShowMessage(localizationService.GetString("FatalException"), error.ExceptionObject.ToString());
             };
 
             app.Services.InitializeLANCommander();
@@ -186,13 +188,13 @@ namespace LANCommander.Launcher
 
                 SettingService.SaveSettings(settings);
 
-                Logger?.Debug("Starting application...");
+                Logger?.Debug(localizationService.GetString("StartingApplication"));
 
                 app.MainWindow.WindowClosing += MainWindow_WindowClosing;
 
                 app.Run();
 
-                Logger?.Debug("Closing application...");
+                Logger?.Debug(localizationService.GetString("ClosingApplication"));
             }
         }
 

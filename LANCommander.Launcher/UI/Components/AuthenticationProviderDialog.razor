@@ -5,6 +5,7 @@
 @inject IJSRuntime JSRuntime
 @inject IMessageService MessageService
 @inject ILogger<AuthenticationProviderDialog> Logger
+@inject LocalizationService LocalizationService
 
 @code {
     [Parameter] public EventCallback<AuthToken> OnTokenReceived { get; set; }
@@ -20,7 +21,7 @@
         AuthenticationProviderLoginUrl = Client.GetAuthenticationProviderLoginUrl(authenticationProvider.Slug);
 
         Window = new PhotinoWindow()
-            .SetTitle($"Sign in using {authenticationProvider.Name}")
+            .SetTitle(LocalizationService.GetString("SignInUsingProvider", authenticationProvider.Name))
             .Load(AuthenticationProviderLoginUrl)
             .SetContextMenuEnabled(false);
 
@@ -43,7 +44,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "Could not process login");
-            MessageService.Error("Could not process login");
+            MessageService.Error(LocalizationService.GetString("CouldNotProcessLogin"));
         }
         finally
         {

@@ -1,51 +1,61 @@
 ﻿@page "/Settings"
+@using System.Globalization
 @using LANCommander.Launcher.Models
 @inject NavigationManager NavigationManager
 @inject UpdateService UpdateService
 @inject SDK.Client Client
 @inject IMessageService MessageService
 @inject ILogger<Index> Logger
+@inject LocalizationService LocalizationService
 
 <div style="flex-grow: 1">
     <PageHeader Title="Settings" OnBack="@(() => { NavigationManager.NavigateTo("/"); })" Style="padding-top: 48px">
         <PageHeaderExtra>
             <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-                <Button OnClick="CheckForUpdates">Check for Updates</Button>
-                <Button OnClick="Save" Type="ButtonType.Primary">Save</Button>
+                            <Button OnClick="CheckForUpdates">@LocalizationService.GetString("CheckForUpdates")</Button>
+            <Button OnClick="Save" Type="ButtonType.Primary">@LocalizationService.GetString("Save")</Button>
             </Flex>
         </PageHeaderExtra>
     </PageHeader>
 
-    <Form Model="Settings" Layout="@FormLayout.Vertical" Style="padding: 0 24px">
-        <Divider Orientation="DividerOrientation.Left" Plain>Games</Divider>
-        <FormItem Label="Storage Paths">
+    <Form Model="_settings" Layout="@FormLayout.Vertical" Style="padding: 0 24px">
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("Games")</Divider>
+        <FormItem Label="@LocalizationService.GetString("StoragePaths")">
             <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Middle">
-                @foreach (var installDirectory in InstallDirectories)
+                @foreach (var installDirectory in _installDirectories)
                 {
                     <Flex Gap="FlexGap.Small">
                         <Input @bind-Value="installDirectory.Path"/>
-                        <Button OnClick="() => RemoveInstallDirectory(installDirectory)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" Disabled="InstallDirectories.Count == 1"/>
+                        <Button OnClick="() => RemoveInstallDirectory(installDirectory)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close" Disabled="_installDirectories.Count == 1"/>
                     </Flex>
                 }
                 <Flex Justify="FlexJustify.End">
-                    <Button OnClick="AddInstallDirectory" Type="ButtonType.Primary">Add Path</Button>
+                    <Button OnClick="AddInstallDirectory" Type="ButtonType.Primary">@LocalizationService.GetString("AddPath")</Button>
                 </Flex>
             </Flex>
         </FormItem>
 
-        <Divider Orientation="DividerOrientation.Left" Plain>Media</Divider>
-        <FormItem Label="Storage Path">
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("Media")</Divider>
+        <FormItem Label="@LocalizationService.GetString("StoragePath")">
             <Input @bind-Value="@context.Media.StoragePath" />
         </FormItem>
+        
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("UI")</Divider>
+        <FormItem Label="@LocalizationService.GetString("Language")">
+            <Select @bind-Value="@context.Culture" TItem="string" TItemValue="string" DataSource="_supportedCultures">
+                <LabelTemplate Context="Value">@(CultureInfo.GetCultureInfo(Value).NativeName)</LabelTemplate>
+                <ItemTemplate Context="Value">@(CultureInfo.GetCultureInfo(Value).NativeName)</ItemTemplate>
+            </Select>
+        </FormItem>
 
-        <Divider Orientation="DividerOrientation.Left" Plain>Debug</Divider>
-        <FormItem Label="Enable Script Debugging">
+        <Divider Orientation="DividerOrientation.Left" Plain>@LocalizationService.GetString("Debug")</Divider>
+        <FormItem Label="@LocalizationService.GetString("EnableScriptDebugging")">
             <Switch @bind-Checked="@context.Debug.EnableScriptDebugging" />
         </FormItem>
-        <FormItem Label="Logging Path">
+        <FormItem Label="@LocalizationService.GetString("LoggingPath")">
             <Input @bind-Value="@context.Debug.LoggingPath" />
         </FormItem>
-        <FormItem Label="Logging Level">
+        <FormItem Label="@LocalizationService.GetString("LoggingLevel")">
             <Select @bind-Value="@context.Debug.LoggingLevel" TItem="LogLevel" TItemValue="LogLevel" DataSource="Enum.GetValues<LogLevel>()">
                 <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
                 <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
@@ -59,9 +69,24 @@
 </Flex>
 
 @code {
-    Settings Settings;
+    Settings _settings;
 
-    List<InstallDirectory> InstallDirectories = new List<InstallDirectory>();
+    List<InstallDirectory> _installDirectories = new();
+
+    string[] _supportedCultures = new[]
+    {
+        "en-US",
+        "de",
+        "es",
+        "fr",
+        "it",
+        "pt-BR",
+        "nl",
+        "ja",
+        "zh",
+        "ko",
+        "uk"
+    };
 
     internal class InstallDirectory
     {
@@ -77,11 +102,11 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Settings = SettingService.GetSettings();
+        _settings = SettingService.GetSettings();
 
-        foreach (var installDirectory in Settings.Games.InstallDirectories)
+        foreach (var installDirectory in _settings.Games.InstallDirectories)
         {
-            InstallDirectories.Add(new InstallDirectory(installDirectory));
+            _installDirectories.Add(new InstallDirectory(installDirectory));
         }
     }
 
@@ -89,18 +114,18 @@
     {
         try
         {
-            Settings.Games.InstallDirectories = InstallDirectories.Where(d => !String.IsNullOrWhiteSpace(d.Path)).Select(d => d.Path).ToArray();
+            _settings.Games.InstallDirectories = _installDirectories.Where(d => !String.IsNullOrWhiteSpace(d.Path)).Select(d => d.Path).ToArray();
 
-            SettingService.SaveSettings(Settings);
+            SettingService.SaveSettings(_settings);
 
-            Client.DefaultInstallDirectory = Settings.Games.InstallDirectories.First();
-            Client.Scripts.Debug = Settings.Debug.EnableScriptDebugging;
+            Client.DefaultInstallDirectory = _settings.Games.InstallDirectories.First();
+            Client.Scripts.Debug = _settings.Debug.EnableScriptDebugging;
 
-            MessageService.Success("Settings saved!");
+            MessageService.Success(LocalizationService.GetString("SettingsSaved"));
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
+            MessageService.Error(LocalizationService.GetString("AnUnknownErrorOccurred"));
             Logger.LogError(ex, "An unknown error occurred.");
         }
     }
@@ -112,18 +137,18 @@
         Logger.LogDebug("Checked for update: {UpdateVersion}", updateVersion.Version);
 
         if (updateVersion.Version == null)
-            MessageService.Success("You are on the latest version!");
+            MessageService.Success(LocalizationService.GetString("YouAreOnLatestVersion"));
     }
 
     async Task AddInstallDirectory()
     {
-        InstallDirectories.Add(new InstallDirectory(""));
+        _installDirectories.Add(new InstallDirectory(""));
 
         StateHasChanged();
     }
 
     async Task RemoveInstallDirectory(InstallDirectory installDirectory)
     {
-        InstallDirectories.Remove(installDirectory);
+        _installDirectories.Remove(installDirectory);
     }
 }

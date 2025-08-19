@@ -1,6 +1,7 @@
 @implements IDisposable
 @inject KeepAliveService KeepAliveService
 @inject IMessageService MessageService
+@inject LocalizationService LocalizationService
 
 @code {
     string ConnectionMessageKey = Guid.NewGuid().ToString();
@@ -19,7 +20,7 @@
         {
             Key = ConnectionMessageKey,
             Type = MessageType.Loading,
-            Content = "Lost connection, retrying...",
+            Content = LocalizationService.GetString("LostConnectionRetrying"),
             Duration = 0,
         };
 
@@ -34,7 +35,7 @@
         {
             Key = ConnectionMessageKey,
             Type = MessageType.Loading,
-            Content = $"Lost connection, retrying ({retry.current}/{retry.total}) ...",
+            Content = LocalizationService.GetString("LostConnectionRetryingWithCount", retry.current, retry.total),
             Duration = 0,
         };
 
@@ -47,7 +48,7 @@
         {
             Key = ConnectionMessageKey,
             Type = MessageType.Error,
-            Content = "Server unavailable, enabling offline mode",
+            Content = LocalizationService.GetString("ServerUnavailableEnablingOfflineMode"),
             Duration = 2.5,
         };
 
@@ -60,7 +61,7 @@
         {
             Key = ConnectionMessageKey,
             Type = MessageType.Success,
-            Content = "Connection established!",
+            Content = LocalizationService.GetString("ConnectionEstablished"),
             Duration = 2.5,
         };
 

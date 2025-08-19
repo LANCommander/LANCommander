@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="AppTitle" xml:space="preserve">
+    <value>LANCommander</value>
+  </data>
+  <data name="LauncherCrashed" xml:space="preserve">
+    <value>Launcher abgestürzt</value>
+  </data>
+  <data name="ReimportLibrary" xml:space="preserve">
+    <value>Bibliothek neu importieren</value>
+  </data>
+  <data name="ReconnectToServer" xml:space="preserve">
+    <value>Mit Server neu verbinden</value>
+  </data>
+  <data name="ViewLibrary" xml:space="preserve">
+    <value>Bibliothek anzeigen</value>
+  </data>
+  <data name="YouDied" xml:space="preserve">
+    <value>Du bist gestorben.</value>
+  </data>
+  <data name="NewName" xml:space="preserve">
+    <value>Neuer Name</value>
+  </data>
+  <data name="ImportStarted" xml:space="preserve">
+    <value>Import gestartet</value>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>Verbinden</value>
+  </data>
+  <data name="BrowseDepot" xml:space="preserve">
+    <value>Depot durchsuchen</value>
+  </data>
+  <data name="CheckForUpdates" xml:space="preserve">
+    <value>Nach Updates suchen</value>
+  </data>
+  <data name="DownloadSize" xml:space="preserve">
+    <value>Download-Größe</value>
+  </data>
+  <data name="Install" xml:space="preserve">
+    <value>Installieren</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="SpaceRequired" xml:space="preserve">
+    <value>Benötigter Speicherplatz</value>
+  </data>
+  <data name="Addons" xml:space="preserve">
+    <value>Add-ons</value>
+  </data>
+  <data name="InstallLocation" xml:space="preserve">
+    <value>Installationsort</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>Handbuch</value>
+  </data>
+  <data name="ManageSaves" xml:space="preserve">
+    <value>Speicherstände verwalten</value>
+  </data>
+  <data name="Modify" xml:space="preserve">
+    <value>Ändern</value>
+  </data>
+  <data name="BrowseFiles" xml:space="preserve">
+    <value>Dateien durchsuchen</value>
+  </data>
+  <data name="ValidateFiles" xml:space="preserve">
+    <value>Dateien validieren</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="Uninstall" xml:space="preserve">
+    <value>Deinstallieren</value>
+  </data>
+  <data name="RunInstallScripts" xml:space="preserve">
+    <value>Installationsskripte ausführen</value>
+  </data>
+  <data name="RunUninstallScripts" xml:space="preserve">
+    <value>Deinstallationsskripte ausführen</value>
+  </data>
+  <data name="RunNameChangeScripts" xml:space="preserve">
+    <value>Namensänderungsskripte ausführen</value>
+  </data>
+  <data name="RunKeyChangeScripts" xml:space="preserve">
+    <value>Schlüsseländerungsskripte ausführen</value>
+  </data>
+  <data name="ReportIssue" xml:space="preserve">
+    <value>Problem melden</value>
+  </data>
+  <data name="InstallGame" xml:space="preserve">
+    <value>{0} installieren</value>
+  </data>
+  <data name="ModifyGame" xml:space="preserve">
+    <value>{0} ändern</value>
+  </data>
+  <data name="FileConflicts" xml:space="preserve">
+    <value>Dateikonflikte</value>
+  </data>
+  <data name="ReplaceSelected" xml:space="preserve">
+    <value>Ausgewählte ersetzen</value>
+  </data>
+  <data name="UninstallGameMessageWithSaves" xml:space="preserve">
+    <value>Möchten Sie {0} wirklich deinstallieren? Alle lokalen Speicherstände werden gelöscht.</value>
+  </data>
+  <data name="UninstallGameMessageWithoutSaves" xml:space="preserve">
+    <value>Möchten Sie {0} wirklich deinstallieren?</value>
+  </data>
+  <data name="UninstallGame" xml:space="preserve">
+    <value>Spiel deinstallieren</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="RemoveGameFromLibrary" xml:space="preserve">
+    <value>Spiel aus Bibliothek entfernen</value>
+  </data>
+  <data name="Submit" xml:space="preserve">
+    <value>Absenden</value>
+  </data>
+  <data name="BaseGame" xml:space="preserve">
+    <value>Basisspiel</value>
+  </data>
+  <data name="AddonsToRemove" xml:space="preserve">
+    <value>Zu entfernende Add-ons</value>
+  </data>
+  <data name="CouldNotRemoveGame" xml:space="preserve">
+    <value>Spiel konnte nicht entfernt werden</value>
+  </data>
+  <data name="IssueReported" xml:space="preserve">
+    <value>Problem gemeldet!</value>
+  </data>
+  <data name="UnknownErrorIssueNotReported" xml:space="preserve">
+    <value>Unbekannter Fehler: Problem nicht gemeldet</value>
+  </data>
+  <data name="CreatedOn" xml:space="preserve">
+    <value>Erstellt am</value>
+  </data>
+  <data name="AreYouSureReplaceLocalSaves" xml:space="preserve">
+    <value>Sind Sie sicher? Dies wird alle lokalen Speicherstände ersetzen!</value>
+  </data>
+  <data name="AreYouSureDeleteSave" xml:space="preserve">
+    <value>Sind Sie sicher, dass Sie diesen Speicherstand löschen möchten?</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>Hochladen</value>
+  </data>
+  <data name="SaveDownloaded" xml:space="preserve">
+    <value>Speicherstand heruntergeladen!</value>
+  </data>
+  <data name="SaveDeleted" xml:space="preserve">
+    <value>Speicherstand gelöscht!</value>
+  </data>
+  <data name="SaveUploaded" xml:space="preserve">
+    <value>Speicherstand hochgeladen!</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Titel</value>
+  </data>
+  <data name="GroupBy" xml:space="preserve">
+    <value>Gruppieren nach</value>
+  </data>
+  <data name="SortBy" xml:space="preserve">
+    <value>Sortieren nach</value>
+  </data>
+  <data name="Engine" xml:space="preserve">
+    <value>Engine</value>
+  </data>
+  <data name="Genre" xml:space="preserve">
+    <value>Genre</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Platform" xml:space="preserve">
+    <value>Plattform</value>
+  </data>
+  <data name="Developers" xml:space="preserve">
+    <value>Entwickler</value>
+  </data>
+  <data name="Publishers" xml:space="preserve">
+    <value>Herausgeber</value>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>Spieler</value>
+  </data>
+  <data name="Minimum" xml:space="preserve">
+    <value>Minimum</value>
+  </data>
+  <data name="Maximum" xml:space="preserve">
+    <value>Maximum</value>
+  </data>
+  <data name="Installed" xml:space="preserve">
+    <value>Installiert</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>Anwenden</value>
+  </data>
+  <data name="DoYouWantToStopGame" xml:space="preserve">
+    <value>Möchten Sie dieses Spiel stoppen?</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>Ja</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>Läuft</value>
+  </data>
+  <data name="Starting" xml:space="preserve">
+    <value>Startet</value>
+  </data>
+  <data name="Stopping" xml:space="preserve">
+    <value>Stoppt</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>Spielen</value>
+  </data>
+  <data name="NoActionsFound" xml:space="preserve">
+    <value>Keine Aktionen gefunden!</value>
+  </data>
+  <data name="NoPrimaryActionFound" xml:space="preserve">
+    <value>Keine primäre Aktion gefunden!</value>
+  </data>
+  <data name="PlayGame" xml:space="preserve">
+    <value>{0} spielen</value>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>Importiere: {0}</value>
+  </data>
+  <data name="StartingImport" xml:space="preserve">
+    <value>Import startet...</value>
+  </data>
+  <data name="SignInUsingProvider" xml:space="preserve">
+    <value>Mit {0} anmelden</value>
+  </data>
+  <data name="CouldNotProcessLogin" xml:space="preserve">
+    <value>Anmeldung konnte nicht verarbeitet werden</value>
+  </data>
+  <data name="LostConnectionRetrying" xml:space="preserve">
+    <value>Verbindung verloren, versuche erneut...</value>
+  </data>
+  <data name="LostConnectionRetryingWithCount" xml:space="preserve">
+    <value>Verbindung verloren, versuche erneut ({0}/{1})...</value>
+  </data>
+  <data name="ServerUnavailableEnablingOfflineMode" xml:space="preserve">
+    <value>Server nicht verfügbar, Offline-Modus aktiviert</value>
+  </data>
+  <data name="ConnectionEstablished" xml:space="preserve">
+    <value>Verbindung hergestellt!</value>
+  </data>
+  <data name="InProgress" xml:space="preserve">
+    <value>In Bearbeitung</value>
+  </data>
+  <data name="UpNext" xml:space="preserve">
+    <value>Als nächstes</value>
+  </data>
+  <data name="TheQueueIsEmpty" xml:space="preserve">
+    <value>Die Warteschlange ist leer</value>
+  </data>
+  <data name="Completed" xml:space="preserve">
+    <value>Abgeschlossen</value>
+  </data>
+  <data name="ViewInLibrary" xml:space="preserve">
+    <value>In Bibliothek anzeigen</value>
+  </data>
+  <data name="GameAddedToLibrary" xml:space="preserve">
+    <value>{0} wurde zu Ihrer Bibliothek hinzugefügt!</value>
+  </data>
+  <data name="GameCouldNotBeAddedToLibrary" xml:space="preserve">
+    <value>{0} konnte nicht zu Ihrer Bibliothek hinzugefügt werden!</value>
+  </data>
+  <data name="ServerAddress" xml:space="preserve">
+    <value>Server-Adresse</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>Benutzername</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Passwort</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Anmelden</value>
+  </data>
+  <data name="Register" xml:space="preserve">
+    <value>Registrieren</value>
+  </data>
+  <data name="Or" xml:space="preserve">
+    <value>Oder</value>
+  </data>
+  <data name="WelcomeBack" xml:space="preserve">
+    <value>Willkommen zurück!</value>
+  </data>
+  <data name="ConfirmPassword" xml:space="preserve">
+    <value>Passwort bestätigen</value>
+  </data>
+  <data name="ServerOfflineMessage" xml:space="preserve">
+    <value>Der Server scheint offline zu sein...</value>
+  </data>
+  <data name="ServerAddressPlaceholder" xml:space="preserve">
+    <value>Server-Adresse</value>
+  </data>
+  <data name="Offline" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="Discovered" xml:space="preserve">
+    <value>Entdeckt</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>Scanne</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>Erneut scannen</value>
+  </data>
+  <data name="NoResultsFound" xml:space="preserve">
+    <value>Keine Ergebnisse gefunden</value>
+  </data>
+  <data name="ResetFilter" xml:space="preserve">
+    <value>Filter zurücksetzen</value>
+  </data>
+  <data name="Uncategorized" xml:space="preserve">
+    <value>Nicht kategorisiert</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Games" xml:space="preserve">
+    <value>Spiele</value>
+  </data>
+  <data name="StoragePaths" xml:space="preserve">
+    <value>Speicherpfade</value>
+  </data>
+  <data name="AddPath" xml:space="preserve">
+    <value>Pfad hinzufügen</value>
+  </data>
+  <data name="Media" xml:space="preserve">
+    <value>Medien</value>
+  </data>
+  <data name="StoragePath" xml:space="preserve">
+    <value>Speicherpfad</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+  <data name="EnableScriptDebugging" xml:space="preserve">
+    <value>Skript-Debugging aktivieren</value>
+  </data>
+  <data name="LoggingPath" xml:space="preserve">
+    <value>Protokollierungspfad</value>
+  </data>
+  <data name="LoggingLevel" xml:space="preserve">
+    <value>Protokollierungsebene</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>Einstellungen gespeichert!</value>
+  </data>
+  <data name="AnUnknownErrorOccurred" xml:space="preserve">
+    <value>Ein unbekannter Fehler ist aufgetreten.</value>
+  </data>
+  <data name="YouAreOnLatestVersion" xml:space="preserve">
+    <value>Sie haben die neueste Version!</value>
+  </data>
+  <data name="Update" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="Queued" xml:space="preserve">
+    <value>In Warteschlange</value>
+  </data>
+  <data name="Installing" xml:space="preserve">
+    <value>Installiert</value>
+  </data>
+  <data name="Uninstalling" xml:space="preserve">
+    <value>Deinstalliert</value>
+  </data>
+  <data name="PlayTime" xml:space="preserve">
+    <value>Spielzeit</value>
+  </data>
+  <data name="LastPlayed" xml:space="preserve">
+    <value>Zuletzt gespielt</value>
+  </data>
+  <data name="ReleasedOn" xml:space="preserve">
+    <value>Veröffentlicht am</value>
+  </data>
+  <data name="InstallationFailed" xml:space="preserve">
+    <value>Installation fehlgeschlagen</value>
+  </data>
+  <data name="InstallationFailedMessage" xml:space="preserve">
+    <value>Die Installation für {0} ist fehlgeschlagen. Download wiederholen?</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>Keine</value>
+  </data>
+  <data name="PlayTimeMinutes" xml:space="preserve">
+    <value>{0} Minuten</value>
+  </data>
+  <data name="PlayTimeHours" xml:space="preserve">
+    <value>{0} Stunden</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>Nie</value>
+  </data>
+  <data name="DepotResultsCouldNotBeFetched" xml:space="preserve">
+    <value>Depot-Ergebnisse konnten nicht abgerufen werden</value>
+  </data>
+  <data name="UnexpectedErrorFetchingDepotResults" xml:space="preserve">
+    <value>Unerwarteter Fehler beim Abrufen der Depot-Ergebnisse</value>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>Nicht gefunden</value>
+  </data>
+  <data name="NotFoundMessage" xml:space="preserve">
+    <value>Entschuldigung, es gibt nichts an dieser Adresse.</value>
+  </data>
+  <data name="NoResults" xml:space="preserve">
+    <value>Keine Ergebnisse</value>
+  </data>
+  <data name="DepotEmptyOrUnauthorized" xml:space="preserve">
+    <value>Das Depot ist leer oder Sie sind nicht autorisiert. Kontaktieren Sie Ihren Administrator.</value>
+  </data>
+  <data name="RemoveFromLibrary" xml:space="preserve">
+    <value>Aus Bibliothek entfernen</value>
+  </data>
+  <data name="AddToLibrary" xml:space="preserve">
+    <value>Zur Bibliothek hinzufügen</value>
+  </data>
+  <data name="Collection" xml:space="preserve">
+    <value>Sammlung</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="StartingUpLauncher" xml:space="preserve">
+    <value>Starte Launcher v{0}...</value>
+  </data>
+  <data name="LoadingSettingsFromFile" xml:space="preserve">
+    <value>Lade Einstellungen aus Datei</value>
+  </data>
+  <data name="ConfiguringLogging" xml:space="preserve">
+    <value>Konfiguriere Protokollierung...</value>
+  </data>
+  <data name="RegisteringServices" xml:space="preserve">
+    <value>Registriere Dienste...</value>
+  </data>
+  <data name="BuildingApplication" xml:space="preserve">
+    <value>Erstelle Anwendung...</value>
+  </data>
+  <data name="ImageNotFoundLocally" xml:space="preserve">
+    <value>Bild nicht lokal gefunden</value>
+  </data>
+  <data name="FatalException" xml:space="preserve">
+    <value>Fataler Fehler</value>
+  </data>
+  <data name="StartingApplication" xml:space="preserve">
+    <value>Starte Anwendung...</value>
+  </data>
+  <data name="ClosingApplication" xml:space="preserve">
+    <value>Schließe Anwendung...</value>
+  </data>
+  <data name="ErrorCopiedToClipboard" xml:space="preserve">
+    <value>Fehler in Zwischenablage kopiert!</value>
+  </data>
+  <data name="BackOnline" xml:space="preserve">
+    <value>Wieder online!</value>
+  </data>
+  <data name="CouldNotReconnect" xml:space="preserve">
+    <value>Wiederverbindung nicht möglich!</value>
+  </data>
+  <data name="CouldNotReconnectMessage" xml:space="preserve">
+    <value>Der LANCommander-Server konnte nicht erreicht werden. Möchten Sie sich abmelden und es erneut versuchen?</value>
+  </data>
+  <data name="Logout" xml:space="preserve">
+    <value>Abmelden</value>
+  </data>
+  <data name="StayOffline" xml:space="preserve">
+    <value>Offline bleiben</value>
+  </data>
+  <data name="ChangeName" xml:space="preserve">
+    <value>Namen ändern</value>
+  </data>
+  <data name="SwitchToOfflineMode" xml:space="preserve">
+    <value>Zum Offline-Modus wechseln</value>
+  </data>
+  <data name="YouAreCurrentlyOffline" xml:space="preserve">
+    <value>Sie sind derzeit offline</value>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Demnächst verfügbar!</value>
+  </data>
+  <data name="Friends" xml:space="preserve">
+    <value>Freunde</value>
+  </data>
+  <data name="Downloads" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="SignIn" xml:space="preserve">
+    <value>Anmelden</value>
+  </data>
+  <data name="SourceGame" xml:space="preserve">
+    <value>Quellspiel</value>
+  </data>
+  <data name="UninstallGameMessage" xml:space="preserve">
+    <value>Möchten Sie {0} deinstallieren?</value>
+  </data>
+  <data name="UpdateAvailableMessage" xml:space="preserve">
+    <value>Ein Update für v{0} ist verfügbar. Möchten Sie es herunterladen und installieren?</value>
+  </data>
+  <data name="UpdateNow" xml:space="preserve">
+    <value>Jetzt aktualisieren</value>
+  </data>
+  <data name="Depot" xml:space="preserve">
+    <value>Depot</value>
+  </data>
+  <data name="ImportComplete" xml:space="preserve">
+    <value>Import abgeschlossen</value>
+  </data>
+  <data name="ImportFailed" xml:space="preserve">
+    <value>Import fehlgeschlagen</value>
+  </data>
+  <data name="Later" xml:space="preserve">
+    <value>Später</value>
+  </data>
+  <data name="LauncherUpdate" xml:space="preserve">
+    <value>Launcher-Update</value>
+  </data>
+  <data name="Library" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
+  <data name="LocalSize" xml:space="preserve">
+    <value>Lokale Größe</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>Verschieben</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="OriginalSize" xml:space="preserve">
+    <value>Ursprüngliche Größe</value>
+  </data>
+</root> 

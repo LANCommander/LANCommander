@@ -5,20 +5,21 @@
 @inject ImportService ImportService
 @inject MessageBusService MessageBusService
 @inject NavigationManager NavigationManager
+@inject LocalizationService LocalizationService
 
 <Flex Vertical Class="library-list">
     @if (LibraryService.Items == null || !LibraryService.Items.Any())
     {
         <Empty Simple Description="false">
-            <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Browse Depot</Button>
+            <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">@LocalizationService.GetString("BrowseDepot")</Button>
         </Empty>
     }
     else
     {
         if (LibraryItems == null || !LibraryItems.Any())
         {
-            <Empty Simple Description="@("No Results Found")">
-                <Button Type="ButtonType.Primary" OnClick="Filter.ResetFilter">Reset Filter</Button>
+            <Empty Simple Description="@LocalizationService.GetString("NoResultsFound")">
+                <Button Type="ButtonType.Primary" OnClick="Filter.ResetFilter">@LocalizationService.GetString("ResetFilter")</Button>
             </Empty>
         }
         else
@@ -84,7 +85,7 @@
         Groups = LibraryItems.SelectMany(i => i.Groups).Distinct().ToList();
 
         if (LibraryItems.Any(i => i.Groups == null || i.Groups.Length == 0))
-            Groups.Add("Uncategorized");
+            Groups.Add(LocalizationService.GetString("Uncategorized"));
 
         await InvokeAsync(StateHasChanged);
     }

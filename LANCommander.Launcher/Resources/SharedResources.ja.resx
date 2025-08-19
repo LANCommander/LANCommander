@@ -1,0 +1,540 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="AppTitle" xml:space="preserve">
+    <value>LANCommander</value>
+  </data>
+  <data name="LauncherCrashed" xml:space="preserve">
+    <value>ランチャーがクラッシュしました</value>
+  </data>
+  <data name="ReimportLibrary" xml:space="preserve">
+    <value>ライブラリを再インポート</value>
+  </data>
+  <data name="ReconnectToServer" xml:space="preserve">
+    <value>サーバーに再接続</value>
+  </data>
+  <data name="ViewLibrary" xml:space="preserve">
+    <value>ライブラリを表示</value>
+  </data>
+  <data name="YouDied" xml:space="preserve">
+    <value>あなたは死にました。</value>
+  </data>
+  <data name="NewName" xml:space="preserve">
+    <value>新しい名前</value>
+  </data>
+  <data name="ImportStarted" xml:space="preserve">
+    <value>インポート開始</value>
+  </data>
+  <data name="Connect" xml:space="preserve">
+    <value>接続</value>
+  </data>
+  <data name="BrowseDepot" xml:space="preserve">
+    <value>デポを閲覧</value>
+  </data>
+  <data name="CheckForUpdates" xml:space="preserve">
+    <value>アップデートを確認</value>
+  </data>
+  <data name="DownloadSize" xml:space="preserve">
+    <value>ダウンロードサイズ</value>
+  </data>
+  <data name="Install" xml:space="preserve">
+    <value>インストール</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="SpaceRequired" xml:space="preserve">
+    <value>必要な容量</value>
+  </data>
+  <data name="Addons" xml:space="preserve">
+    <value>アドオン</value>
+  </data>
+  <data name="InstallLocation" xml:space="preserve">
+    <value>インストール場所</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>マニュアル</value>
+  </data>
+  <data name="ManageSaves" xml:space="preserve">
+    <value>セーブデータを管理</value>
+  </data>
+  <data name="Modify" xml:space="preserve">
+    <value>変更</value>
+  </data>
+  <data name="BrowseFiles" xml:space="preserve">
+    <value>ファイルを閲覧</value>
+  </data>
+  <data name="ValidateFiles" xml:space="preserve">
+    <value>ファイルを検証</value>
+  </data>
+  <data name="Remove" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Uninstall" xml:space="preserve">
+    <value>アンインストール</value>
+  </data>
+  <data name="RunInstallScripts" xml:space="preserve">
+    <value>インストールスクリプトを実行</value>
+  </data>
+  <data name="RunUninstallScripts" xml:space="preserve">
+    <value>アンインストールスクリプトを実行</value>
+  </data>
+  <data name="RunNameChangeScripts" xml:space="preserve">
+    <value>名前変更スクリプトを実行</value>
+  </data>
+  <data name="RunKeyChangeScripts" xml:space="preserve">
+    <value>キー変更スクリプトを実行</value>
+  </data>
+  <data name="ReportIssue" xml:space="preserve">
+    <value>問題を報告</value>
+  </data>
+  <data name="InstallGame" xml:space="preserve">
+    <value>{0}をインストール</value>
+  </data>
+  <data name="ModifyGame" xml:space="preserve">
+    <value>{0}を変更</value>
+  </data>
+  <data name="FileConflicts" xml:space="preserve">
+    <value>ファイルの競合</value>
+  </data>
+  <data name="ReplaceSelected" xml:space="preserve">
+    <value>選択されたものを置換</value>
+  </data>
+  <data name="UninstallGameMessageWithSaves" xml:space="preserve">
+    <value>本当に{0}をアンインストールしますか？すべてのローカルセーブデータが削除されます。</value>
+  </data>
+  <data name="UninstallGameMessageWithoutSaves" xml:space="preserve">
+    <value>本当に{0}をアンインストールしますか？</value>
+  </data>
+  <data name="UninstallGame" xml:space="preserve">
+    <value>ゲームをアンインストール</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="RemoveGameFromLibrary" xml:space="preserve">
+    <value>ライブラリからゲームを削除</value>
+  </data>
+  <data name="Submit" xml:space="preserve">
+    <value>送信</value>
+  </data>
+  <data name="BaseGame" xml:space="preserve">
+    <value>ベースゲーム</value>
+  </data>
+  <data name="AddonsToRemove" xml:space="preserve">
+    <value>削除するアドオン</value>
+  </data>
+  <data name="CouldNotRemoveGame" xml:space="preserve">
+    <value>ゲームを削除できませんでした</value>
+  </data>
+  <data name="IssueReported" xml:space="preserve">
+    <value>問題が報告されました！</value>
+  </data>
+  <data name="UnknownErrorIssueNotReported" xml:space="preserve">
+    <value>不明なエラー：問題が報告されていません</value>
+  </data>
+  <data name="CreatedOn" xml:space="preserve">
+    <value>作成日</value>
+  </data>
+  <data name="AreYouSureReplaceLocalSaves" xml:space="preserve">
+    <value>本当ですか？これによりすべてのローカルセーブデータが置換されます！</value>
+  </data>
+  <data name="AreYouSureDeleteSave" xml:space="preserve">
+    <value>このセーブデータを削除してもよろしいですか？</value>
+  </data>
+  <data name="Upload" xml:space="preserve">
+    <value>アップロード</value>
+  </data>
+  <data name="SaveDownloaded" xml:space="preserve">
+    <value>セーブデータがダウンロードされました！</value>
+  </data>
+  <data name="SaveDeleted" xml:space="preserve">
+    <value>セーブデータが削除されました！</value>
+  </data>
+  <data name="SaveUploaded" xml:space="preserve">
+    <value>セーブデータがアップロードされました！</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
+  <data name="GroupBy" xml:space="preserve">
+    <value>グループ化</value>
+  </data>
+  <data name="SortBy" xml:space="preserve">
+    <value>並び替え</value>
+  </data>
+  <data name="Engine" xml:space="preserve">
+    <value>エンジン</value>
+  </data>
+  <data name="Genre" xml:space="preserve">
+    <value>ジャンル</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>タグ</value>
+  </data>
+  <data name="Platform" xml:space="preserve">
+    <value>プラットフォーム</value>
+  </data>
+  <data name="Developers" xml:space="preserve">
+    <value>開発者</value>
+  </data>
+  <data name="Publishers" xml:space="preserve">
+    <value>パブリッシャー</value>
+  </data>
+  <data name="Players" xml:space="preserve">
+    <value>プレイヤー数</value>
+  </data>
+  <data name="Minimum" xml:space="preserve">
+    <value>最小</value>
+  </data>
+  <data name="Maximum" xml:space="preserve">
+    <value>最大</value>
+  </data>
+  <data name="Installed" xml:space="preserve">
+    <value>インストール済み</value>
+  </data>
+  <data name="Apply" xml:space="preserve">
+    <value>適用</value>
+  </data>
+  <data name="DoYouWantToStopGame" xml:space="preserve">
+    <value>このゲームを停止しますか？</value>
+  </data>
+  <data name="Yes" xml:space="preserve">
+    <value>はい</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>実行中</value>
+  </data>
+  <data name="Starting" xml:space="preserve">
+    <value>開始中</value>
+  </data>
+  <data name="Stopping" xml:space="preserve">
+    <value>停止中</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>プレイ</value>
+  </data>
+  <data name="NoActionsFound" xml:space="preserve">
+    <value>アクションが見つかりません！</value>
+  </data>
+  <data name="NoPrimaryActionFound" xml:space="preserve">
+    <value>プライマリアクションが見つかりません！</value>
+  </data>
+  <data name="PlayGame" xml:space="preserve">
+    <value>{0}をプレイ</value>
+  </data>
+  <data name="Importing" xml:space="preserve">
+    <value>インポート中：{0}</value>
+  </data>
+  <data name="StartingImport" xml:space="preserve">
+    <value>インポート開始中...</value>
+  </data>
+  <data name="SignInUsingProvider" xml:space="preserve">
+    <value>{0}でサインイン</value>
+  </data>
+  <data name="CouldNotProcessLogin" xml:space="preserve">
+    <value>ログインを処理できませんでした</value>
+  </data>
+  <data name="LostConnectionRetrying" xml:space="preserve">
+    <value>接続が失われました、再試行中...</value>
+  </data>
+  <data name="LostConnectionRetryingWithCount" xml:space="preserve">
+    <value>接続が失われました、再試行中（{0}/{1}）...</value>
+  </data>
+  <data name="ServerUnavailableEnablingOfflineMode" xml:space="preserve">
+    <value>サーバーが利用できません、オフラインモードを有効化</value>
+  </data>
+  <data name="ConnectionEstablished" xml:space="preserve">
+    <value>接続が確立されました！</value>
+  </data>
+  <data name="InProgress" xml:space="preserve">
+    <value>進行中</value>
+  </data>
+  <data name="UpNext" xml:space="preserve">
+    <value>次</value>
+  </data>
+  <data name="TheQueueIsEmpty" xml:space="preserve">
+    <value>キューが空です</value>
+  </data>
+  <data name="Completed" xml:space="preserve">
+    <value>完了</value>
+  </data>
+  <data name="ViewInLibrary" xml:space="preserve">
+    <value>ライブラリで表示</value>
+  </data>
+  <data name="GameAddedToLibrary" xml:space="preserve">
+    <value>{0}がライブラリに追加されました！</value>
+  </data>
+  <data name="GameCouldNotBeAddedToLibrary" xml:space="preserve">
+    <value>{0}をライブラリに追加できませんでした！</value>
+  </data>
+  <data name="ServerAddress" xml:space="preserve">
+    <value>サーバーアドレス</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>ユーザー名</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>パスワード</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>ログイン</value>
+  </data>
+  <data name="Register" xml:space="preserve">
+    <value>登録</value>
+  </data>
+  <data name="Or" xml:space="preserve">
+    <value>または</value>
+  </data>
+  <data name="WelcomeBack" xml:space="preserve">
+    <value>おかえりなさい！</value>
+  </data>
+  <data name="ConfirmPassword" xml:space="preserve">
+    <value>パスワードを確認</value>
+  </data>
+  <data name="ServerOfflineMessage" xml:space="preserve">
+    <value>サーバーがオフラインのようです...</value>
+  </data>
+  <data name="ServerAddressPlaceholder" xml:space="preserve">
+    <value>サーバーアドレス</value>
+  </data>
+  <data name="Offline" xml:space="preserve">
+    <value>オフライン</value>
+  </data>
+  <data name="Discovered" xml:space="preserve">
+    <value>発見済み</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>スキャン中</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>再スキャン</value>
+  </data>
+  <data name="NoResultsFound" xml:space="preserve">
+    <value>結果が見つかりません</value>
+  </data>
+  <data name="ResetFilter" xml:space="preserve">
+    <value>フィルターをリセット</value>
+  </data>
+  <data name="Uncategorized" xml:space="preserve">
+    <value>未分類</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Games" xml:space="preserve">
+    <value>ゲーム</value>
+  </data>
+  <data name="StoragePaths" xml:space="preserve">
+    <value>ストレージパス</value>
+  </data>
+  <data name="AddPath" xml:space="preserve">
+    <value>パスを追加</value>
+  </data>
+  <data name="Media" xml:space="preserve">
+    <value>メディア</value>
+  </data>
+  <data name="StoragePath" xml:space="preserve">
+    <value>ストレージパス</value>
+  </data>
+  <data name="Debug" xml:space="preserve">
+    <value>デバッグ</value>
+  </data>
+  <data name="EnableScriptDebugging" xml:space="preserve">
+    <value>スクリプトデバッグを有効化</value>
+  </data>
+  <data name="LoggingPath" xml:space="preserve">
+    <value>ログパス</value>
+  </data>
+  <data name="LoggingLevel" xml:space="preserve">
+    <value>ログレベル</value>
+  </data>
+  <data name="SettingsSaved" xml:space="preserve">
+    <value>設定が保存されました！</value>
+  </data>
+  <data name="AnUnknownErrorOccurred" xml:space="preserve">
+    <value>不明なエラーが発生しました。</value>
+  </data>
+  <data name="YouAreOnLatestVersion" xml:space="preserve">
+    <value>最新バージョンです！</value>
+  </data>
+  <data name="Update" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Queued" xml:space="preserve">
+    <value>キュー中</value>
+  </data>
+  <data name="Installing" xml:space="preserve">
+    <value>インストール中</value>
+  </data>
+  <data name="Uninstalling" xml:space="preserve">
+    <value>アンインストール中</value>
+  </data>
+  <data name="PlayTime" xml:space="preserve">
+    <value>プレイ時間</value>
+  </data>
+  <data name="LastPlayed" xml:space="preserve">
+    <value>最後にプレイ</value>
+  </data>
+  <data name="ReleasedOn" xml:space="preserve">
+    <value>リリース日</value>
+  </data>
+  <data name="InstallationFailed" xml:space="preserve">
+    <value>インストールに失敗</value>
+  </data>
+  <data name="InstallationFailedMessage" xml:space="preserve">
+    <value>{0}のインストールに失敗しました。ダウンロードを再試行しますか？</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>なし</value>
+  </data>
+  <data name="PlayTimeMinutes" xml:space="preserve">
+    <value>{0}分</value>
+  </data>
+  <data name="PlayTimeHours" xml:space="preserve">
+    <value>{0}時間</value>
+  </data>
+  <data name="Never" xml:space="preserve">
+    <value>一度も</value>
+  </data>
+  <data name="DepotResultsCouldNotBeFetched" xml:space="preserve">
+    <value>デポの結果を取得できませんでした</value>
+  </data>
+  <data name="UnexpectedErrorFetchingDepotResults" xml:space="preserve">
+    <value>デポの結果を取得中に予期しないエラーが発生しました</value>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>見つかりません</value>
+  </data>
+  <data name="NotFoundMessage" xml:space="preserve">
+    <value>申し訳ございませんが、このアドレスには何もありません。</value>
+  </data>
+  <data name="NoResults" xml:space="preserve">
+    <value>結果なし</value>
+  </data>
+  <data name="DepotEmptyOrUnauthorized" xml:space="preserve">
+    <value>デポが空であるか、権限がありません。管理者にお問い合わせください。</value>
+  </data>
+  <data name="RemoveFromLibrary" xml:space="preserve">
+    <value>ライブラリから削除</value>
+  </data>
+  <data name="AddToLibrary" xml:space="preserve">
+    <value>ライブラリに追加</value>
+  </data>
+  <data name="Collection" xml:space="preserve">
+    <value>コレクション</value>
+  </data>
+  <data name="Tag" xml:space="preserve">
+    <value>タグ</value>
+  </data>
+  <data name="StartingUpLauncher" xml:space="preserve">
+    <value>ランチャーv{0}を起動中...</value>
+  </data>
+  <data name="LoadingSettingsFromFile" xml:space="preserve">
+    <value>ファイルから設定を読み込み中</value>
+  </data>
+  <data name="ConfiguringLogging" xml:space="preserve">
+    <value>ログ設定中...</value>
+  </data>
+  <data name="RegisteringServices" xml:space="preserve">
+    <value>サービス登録中...</value>
+  </data>
+  <data name="BuildingApplication" xml:space="preserve">
+    <value>アプリケーション構築中...</value>
+  </data>
+  <data name="ImageNotFoundLocally" xml:space="preserve">
+    <value>画像がローカルに見つかりません</value>
+  </data>
+  <data name="FatalException" xml:space="preserve">
+    <value>致命的な例外</value>
+  </data>
+  <data name="StartingApplication" xml:space="preserve">
+    <value>アプリケーション起動中...</value>
+  </data>
+  <data name="ClosingApplication" xml:space="preserve">
+    <value>アプリケーション終了中...</value>
+  </data>
+  <data name="ErrorCopiedToClipboard" xml:space="preserve">
+    <value>エラーがクリップボードにコピーされました！</value>
+  </data>
+  <data name="BackOnline" xml:space="preserve">
+    <value>オンラインに戻りました！</value>
+  </data>
+  <data name="CouldNotReconnect" xml:space="preserve">
+    <value>再接続できませんでした！</value>
+  </data>
+  <data name="CouldNotReconnectMessage" xml:space="preserve">
+    <value>LANCommanderサーバーに到達できません。ログアウトして再試行しますか？</value>
+  </data>
+  <data name="Logout" xml:space="preserve">
+    <value>ログアウト</value>
+  </data>
+  <data name="StayOffline" xml:space="preserve">
+    <value>オフラインのまま</value>
+  </data>
+  <data name="ChangeName" xml:space="preserve">
+    <value>名前を変更</value>
+  </data>
+  <data name="SwitchToOfflineMode" xml:space="preserve">
+    <value>オフラインモードに切り替え</value>
+  </data>
+  <data name="YouAreCurrentlyOffline" xml:space="preserve">
+    <value>現在オフラインです</value>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>近日公開！</value>
+  </data>
+  <data name="Friends" xml:space="preserve">
+    <value>フレンド</value>
+  </data>
+  <data name="Downloads" xml:space="preserve">
+    <value>ダウンロード</value>
+  </data>
+  <data name="Depot" xml:space="preserve">
+    <value>デポ</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="SignIn" xml:space="preserve">
+    <value>サインイン</value>
+  </data>
+  <data name="SourceGame" xml:space="preserve">
+    <value>ソースゲーム</value>
+  </data>
+  <data name="UninstallGameMessage" xml:space="preserve">
+    <value>{0} をアンインストールしますか?</value>
+  </data>
+  <data name="UpdateAvailableMessage" xml:space="preserve">
+    <value>v{0} のアップデートが利用可能です。ダウンロードしてインストールしますか?</value>
+  </data>
+  <data name="UpdateNow" xml:space="preserve">
+    <value>今すぐアップデート</value>
+  </data>
+  <data name="ImportComplete" xml:space="preserve">
+    <value>インポート完了</value>
+  </data>
+  <data name="ImportFailed" xml:space="preserve">
+    <value>インポート失敗</value>
+  </data>
+  <data name="Later" xml:space="preserve">
+    <value>後で</value>
+  </data>
+  <data name="LauncherUpdate" xml:space="preserve">
+    <value>ランチャーアップデート</value>
+  </data>
+  <data name="Library" xml:space="preserve">
+    <value>ライブラリ</value>
+  </data>
+  <data name="LocalSize" xml:space="preserve">
+    <value>ローカルサイズ</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>移動</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>名前</value>
+  </data>
+  <data name="OriginalSize" xml:space="preserve">
+    <value>元のサイズ</value>
+  </data>
+</root> 

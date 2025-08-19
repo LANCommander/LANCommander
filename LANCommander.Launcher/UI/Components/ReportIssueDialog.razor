@@ -2,6 +2,7 @@
 @inherits FeedbackComponent<Data.Models.Game, SDK.Models.Issue>
 @inject SDK.Client Client
 @inject IMessageService MessageService
+@inject LocalizationService LocalizationService
 
 <Form Model="Issue">
     <FormItem Style="margin-bottom: 0">
@@ -21,20 +22,20 @@
 
             if (success)
             {
-                MessageService.Success("Issue reported!");
+                MessageService.Success(LocalizationService.GetString("IssueReported"));
 
                 await base.FeedbackRef.CloseAsync();
             }
             else
             {
-                MessageService.Error("Unknown error: issue not reported");
+                MessageService.Error(LocalizationService.GetString("UnknownErrorIssueNotReported"));
 
                 args.Reject();
             }
         }
         catch (Exception ex)
         {
-            MessageService.Error("Unknown error: issue not reported");
+            MessageService.Error(LocalizationService.GetString("UnknownErrorIssueNotReported"));
 
             args.Reject();
         }

@@ -4,12 +4,13 @@
 @inject InstallService InstallService
 @inject GameService GameService
 @inject NavigationManager NavigationManager
+@inject LocalizationService LocalizationService
 
 <Flex Justify="FlexJustify.Center" Align="FlexAlign.Center" Gap="FlexGap.Small" Class="footer">
     <div style="flex: 1;">
         @if (NavigationManager.Uri.Contains("/Depot"))
         {
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">Library</Button>
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Hdd" OnClick="@(() => NavigationManager.NavigateTo("/"))">@LocalizationService.GetString("Library")</Button>
         }
         else
         {
@@ -17,11 +18,11 @@
             {
                 <ConnectionStateView>
                     <Online>
-                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">Depot</Button>
+                        <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" OnClick="@(() => NavigationManager.NavigateTo("/Depot"))">@LocalizationService.GetString("Depot")</Button>
                     </Online>
                     <Offline>
-                        <Tooltip Title="You are currently offline" Placement="Placement.TopLeft">
-                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>Depot</Button>
+                        <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")" Placement="Placement.TopLeft">
+                            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.AppstoreAdd" Disabled>@LocalizationService.GetString("Depot")</Button>
                         </Tooltip>
                     </Offline>
                 </ConnectionStateView>
@@ -39,19 +40,19 @@
             }
             else
             {
-                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">Downloads</Button>
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" OnClick="() => ShowDownloadQueue()">@LocalizationService.GetString("Downloads")</Button>
             }
         </Online>
         <Offline>
-            <Tooltip Title="You are currently offline" Placement="Placement.TopLeft">
-                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" Disabled>Downloads</Button>
+            <Tooltip Title="@LocalizationService.GetString("YouAreCurrentlyOffline")" Placement="Placement.TopLeft">
+                <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Download" Disabled>@LocalizationService.GetString("Downloads")</Button>
             </Tooltip>
         </Offline>
     </ConnectionStateView>
 
     <div style="flex: 1; text-align:  right;">
-        <Tooltip Title="Coming soon!" Placement="Placement.TopRight">
-            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Team" Disabled>Friends</Button>
+        <Tooltip Title="@LocalizationService.GetString("ComingSoon")" Placement="Placement.TopRight">
+            <Button Type="@ButtonType.Text" Icon="@IconType.Outline.Team" Disabled>@LocalizationService.GetString("Friends")</Button>
         </Tooltip>
     </div>
 </Flex>

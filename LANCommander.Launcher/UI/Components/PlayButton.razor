@@ -10,26 +10,27 @@
 @inject ModalService ModalService
 @inject MessageService MessageService
 @inject MessageBusService MessageBusService
+@inject LocalizationService LocalizationService
 
 @if (State == PlayButtonState.Running)
 {
-    <Popconfirm Title="Do you want to stop this game?" OkText="Yes" OnConfirm="() => Stop()">
-        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight">Running</Button>
+    <Popconfirm Title="@LocalizationService.GetString("DoYouWantToStopGame")" OkText="@LocalizationService.GetString("Yes")" OnConfirm="() => Stop()">
+        <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight">@LocalizationService.GetString("Running")</Button>
     </Popconfirm>
 }
 else if (State == PlayButtonState.Starting)
 {
-    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading="true">Starting</Button>
+    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading="true">@LocalizationService.GetString("Starting")</Button>
 }
 else if (State == PlayButtonState.Stopping)
 {
-    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading="true">Stopping</Button>
+    <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Loading="true">@LocalizationService.GetString("Stopping")</Button>
 }
 else
 {
     <Space Direction="SpaceDirection.Horizontal">
         <SpaceItem>
-            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">Play</Button>
+            <Button Type="ButtonType.Primary" Size="ButtonSize.Large" Icon="@IconType.Outline.CaretRight" OnClick="() => Run()">@LocalizationService.GetString("Play")</Button>
         </SpaceItem>
 
         <SpaceItem>
@@ -105,7 +106,7 @@ else
 
         if (actions == null || actions.Count() == 0)
         {
-            MessageService.Error("No actions found!");
+            MessageService.Error(LocalizationService.GetString("NoActionsFound"));
 
             await ChangeState(PlayButtonState.Idle);
             return;
@@ -115,7 +116,7 @@ else
 
         if (primaryActions.Count() == 0)
         {
-            MessageService.Error("No primary action found!");
+            MessageService.Error(LocalizationService.GetString("NoPrimaryActionFound"));
             
             await ChangeState(PlayButtonState.Idle);
             return;
@@ -133,7 +134,7 @@ else
         {
             var modalOptions = new ModalOptions()
             {
-                Title = $"Play {game.Title}",
+                Title = LocalizationService.GetString("PlayGame", game.Title),
                 Maximizable = false,
                 DefaultMaximized = false,
                 Closable = true,
